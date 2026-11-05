@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "kind": "receipt-ocr-post105-acl-source-freeze-followup",
+  "recordedAt": "2026-10-18T16:17:37Z",
+  "status": "source_frozen_operating_pg17_execution_admitted",
+  "history": {
+    "priorReceiptPath": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-source-freeze-20261019.json",
+    "priorReceiptSha256": "52054f4bc047ed4c8bb92b3d7185313d3e45b135b695b3fda1fa46658cec4163",
+    "priorCandidate": {
+      "migrationSha256": "f6a56dd93c17487d91ea5fd59a7d6d929f9beac58d0564957900ceaae6746e35",
+      "operatingAggregateSha256": "89ce75136f16f44dc30d7bb21697f232ff3fc6e3fd00603763b5558d1954595f",
+      "operatingTargetRoot": "dbf556b0f98f80c06ceffe69d2ae24a6090daab19c5dc5868d92bcbd23dbc17b"
+    },
+    "disposition": "historical_source_candidate_preserved_not_current"
+  },
+  "sourceBindings": {
+    "migration": {
+      "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+      "sha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+      "statementCount": 44,
+      "statementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e"
+    },
+    "manifest": {
+      "path": ".github/receipt-ocr-post105-sql-successor.v1.json",
+      "sha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81"
+    },
+    "compiler": {
+      "path": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
+      "sha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda"
+    },
+    "catalogReadinessFixture": {
+      "path": "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql",
+      "sha256": "3fb993b19e4972b4683be0493b21211ce4961583ff298811612af2a2f2972acd"
+    },
+    "successorTest": {
+      "path": "apps/web/tests-unit/receipt-ocr-post105-sql-successor.test.ts",
+      "sha256": "6134b41c2bf0be61b203598c9bd22e7965b020bdf1a668afb69d492b2527dde0"
+    }
+  },
+  "identity": {
+    "operating": {
+      "predecessorLedgerCount": 105,
+      "predecessorRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+      "targetLedgerCount": 106,
+      "targetRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1"
+    },
+    "rehearsal": {
+      "predecessorLedgerCount": 105,
+      "predecessorRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+      "targetLedgerCount": 106,
+      "targetRoot": "b6184e8b14977dcba0d66959d1ef266b29268f5420b86451a7d213b81d5c6e24"
+    },
+    "migrationIdentityRoot": "17dc235a7c78f273a2e4c1d9030995f712da1a2e42e8cca28c8c7b732b37e65a",
+    "suffixRoot": "a1d19693f49105141cb75c37645824a41637e5a8047aaca837fd853d4fbe4b07"
+  },
+  "compiledPlans": {
+    "operating": {
+      "bytes": 221984,
+      "sha256": "f0ccf9c5a27d021b50e7e8512d80de947044150d304d0b9c0ad493f59d333ec1"
+    },
+    "rehearsal": {
+      "bytes": 221984,
+      "sha256": "5fe84b3194ab0f7d074b0793e8ba7ddfaad5233eb0faa6d3966de58596552fa0"
+    },
+    "constituentExecution": {
+      "bytes": 41974,
+      "sha256": "0ed8e8d3cc79f8bf739917ed4efc4d2d17d6783112c33d07881eab9eff1394d3"
+    }
+  },
+  "runtimeContract": {
+    "terminalQueryCallsExactCapability": true,
+    "functionContractIncludes": [
+      "definition_sha256",
+      "language",
+      "volatility",
+      "owner",
+      "normalized_proacl"
+    ],
+    "tableContractIncludes": [
+      "owner",
+      "normalized_relacl"
+    ],
+    "preservedExplicitChecks": [
+      "composite primary key",
+      "RLS and FORCE RLS",
+      "exact policy count and definition",
+      "SECURITY DEFINER",
+      "search_path",
+      "allowlists",
+      "known-role grants",
+      "ledger count/root/vector"
+    ],
+    "note": "The compiler is byte-identical. Its terminal runtime.ready predicate includes the exact capability ready readback; the final capability now compares normalized proacl, relacl, and relowner contracts. The prior phase intentionally omits the capability call because the new objects do not exist yet."
+  },
+  "operatingFixtureInputs": {
+    "hostedMapping": {
+      "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+      "sha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a"
+    },
+    "historicalVariant": {
+      "privateRuntimePath": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/historical-ledger-20261008124858-exact-source.json",
+      "sha256": "4370c06f4ac1036b6a6ebe6421e16ec89bcaa9e06476698a4ce4f5a095eb467a",
+      "rawSourcePersistedToRepo": false
+    },
+    "remainingLegacyRows": {
+      "privateRuntimePath": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/ocr105-unresolved-base86-exact-source.json",
+      "sha256": "ad60950727559bdbc4fc47cd5f2d27ca1d83629d294167e4d33a9248b25fec8b",
+      "rowCount": 25,
+      "rawSourcePersistedToRepo": false
+    }
+  },
+  "verification": [
+    {
+      "command": "cd apps/web && bun test ./tests-unit/receipt-ocr-post105-sql-successor.test.ts",
+      "result": "7 pass, 0 fail, 59 assertions"
+    },
+    {
+      "kind": "independent_identity_recalculation",
+      "result": "migration vector, migration root, operating/rehearsal target roots, suffix root, and both aggregate hashes match the final manifest/compiler output"
+    },
+    {
+      "kind": "source_owner_pg17_11_catalog_fixture",
+      "sourceReceipt": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-acl-owner-followup/resolution.json",
+      "sourceReceiptSha256": "90b931820d036e8298d38b4a2c3333f780538cfe9450112867753e3df1c5ae9e",
+      "result": "ACL and owner drift held; baseline ready restored"
+    }
+  ],
+  "executionAdmission": {
+    "state": "admitted_for_two_fresh_disposable_pg17_operating_targets",
+    "requirements": [
+      "Materialize all exact hosted base-86 statements only in each disposable target and require live ledger count/root 105/3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c.",
+      "Require migration version 20261018152032 absent before each execution.",
+      "Run the exact frozen constituent source/vector on one target and exact operating aggregate SHA-256 f0ccf9c5a27d021b50e7e8512d80de947044150d304d0b9c0ad493f59d333ec1 on the other target.",
+      "Require terminal ledger count/root 106/83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1, exact migration row vector, six runtime objects, and exact capability ready on both paths.",
+      "Run the catalog-readiness and durable release SQL fixtures only after terminal readiness, preserving constituent and aggregate results separately.",
+      "Verify retained source and rehearsal catalog-105 fixture hashes unchanged, remove only task-owned targets, and keep raw hosted statements out of repository receipts and logs."
+    ]
+  },
+  "boundaries": [
+    "No 106 SQL was executed by this follow-up receipt.",
+    "No hosted database, provider, Storage, deployment, Git, or PostgreSQL 17.11 resource was changed by this follow-up.",
+    "The successor remains held and is not connected to any existing runner."
+  ]
+}

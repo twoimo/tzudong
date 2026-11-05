@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "passed": false,
+  "failureCode": "setup:expect(locator).toBeVisible() failed\n\nLocator: getByRole('region', { name: '리뷰 상세 작업 패널' }).getByRole('button', { name: 'OCR 복구', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('region', { name: '리뷰 상세 작업 패널' }).getByRole('button', { name: 'OCR 복구', exact: true }) with timeout 5000ms\n  - waiting for getByRole('region', { name: '리뷰 상세 작업 패널' }).getByRole('button', { name: 'OCR 복구', exact: true })\n",
+  "kind": "actual-admin-ui-with-loopback-synthetic-ocr-endpoints",
+  "story": "pending review OCR recovery button -> preview -> explicit confirmation -> guarded recovery request -> rendered success/refusal/conflict state",
+  "sourceHead": "cfba8fbbf532c0337c8443c719e5b0d7bf9baf48",
+  "sourceStart": [
+    {
+      "path": "components/admin/SubmissionListView.tsx",
+      "bytes": 147579,
+      "sha256": "ed727f0701963ee40ac96caa2530ec1326f731f3c59d85b54a3a5a3835290619"
+    },
+    {
+      "path": "lib/admin/ocr-recovery-confirmation.ts",
+      "bytes": 563,
+      "sha256": "4c37ff1aa59ac23bc7df4022a3c907784fb6cbe971ac44c0d15778aeaa643b18"
+    },
+    {
+      "path": "app/api/admin/ocr-receipts/rerun/route.ts",
+      "bytes": 19828,
+      "sha256": "4426abc96721bb401f1debc71559e3368d97d85dee95ccf5ea78211cfe656f62"
+    },
+    {
+      "path": "lib/ocr/admin-receipt-recovery.ts",
+      "bytes": 12116,
+      "sha256": "8f4d8eb1cc47c40df4be41c3772681f16d2e690aeccff825bb4a34744bd0ac07"
+    },
+    {
+      "path": "lib/runtime-feature-readiness-contract.ts",
+      "bytes": 2169,
+      "sha256": "83761d3ae754f4ebfc7b2be23b4bdf0788f3b7dd3f1bfac03f3801859e0b3bba"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "bytes": 24268,
+      "sha256": "9c124f7118651b4e15089a73c994ae2163f0f1a301e152c5c790459157ca9e0a"
+    },
+    {
+      "path": "scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "bytes": 21894,
+      "sha256": "8fba89adef40a9ade62a456e06536b30111860ada160102f66bbf97430cad180"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/SubmissionListView.tsx",
+      "bytes": 147579,
+      "sha256": "ed727f0701963ee40ac96caa2530ec1326f731f3c59d85b54a3a5a3835290619"
+    },
+    {
+      "path": "lib/admin/ocr-recovery-confirmation.ts",
+      "bytes": 563,
+      "sha256": "4c37ff1aa59ac23bc7df4022a3c907784fb6cbe971ac44c0d15778aeaa643b18"
+    },
+    {
+      "path": "app/api/admin/ocr-receipts/rerun/route.ts",
+      "bytes": 19828,
+      "sha256": "4426abc96721bb401f1debc71559e3368d97d85dee95ccf5ea78211cfe656f62"
+    },
+    {
+      "path": "lib/ocr/admin-receipt-recovery.ts",
+      "bytes": 12116,
+      "sha256": "8f4d8eb1cc47c40df4be41c3772681f16d2e690aeccff825bb4a34744bd0ac07"
+    },
+    {
+      "path": "lib/runtime-feature-readiness-contract.ts",
+      "bytes": 2169,
+      "sha256": "83761d3ae754f4ebfc7b2be23b4bdf0788f3b7dd3f1bfac03f3801859e0b3bba"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "bytes": 24268,
+      "sha256": "9c124f7118651b4e15089a73c994ae2163f0f1a301e152c5c790459157ca9e0a"
+    },
+    {
+      "path": "scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "bytes": 21894,
+      "sha256": "8fba89adef40a9ade62a456e06536b30111860ada160102f66bbf97430cad180"
+    }
+  ],
+  "environment": {
+    "origin": "http://127.0.0.1:18794",
+    "fakeSupabaseOrigin": "http://127.0.0.1:18793",
+    "browser": "155.0.8059.82",
+    "node": "v26.3.0",
+    "viewport": {
+      "width": 1423,
+      "height": 954
+    },
+    "loopbackOnly": true
+  },
+  "counts": {
+    "assertions": 1,
+    "previews": 0,
+    "applies": 0,
+    "confirmations": 0,
+    "externalBlocked": 0,
+    "unexpectedMutationsBlocked": 0,
+    "expectedAckLossNetworkFailures": 0,
+    "unexpectedLocalNetworkFailures": 1,
+    "pageErrorCount": 0,
+    "unexpectedConsoleErrors": 3,
+    "forwardedExternalRequests": 0,
+    "realProviderCalls": 0,
+    "hostedDatabaseCalls": 0,
+    "hostedMutations": 0
+  },
+  "geometry": {
+    "recoveryButton": null,
+    "reviewPanel": {
+      "x": 1043,
+      "y": 173,
+      "width": 352,
+      "height": 757
+    }
+  },
+  "assertions": [
+    {
+      "name": "synthetic-session-cookie-created",
+      "passed": true
+    }
+  ],
+  "confirmationMessages": [],
+  "recoveryRequests": [],
+  "localNetworkFailureDetails": [
+    {
+      "phase": "setup",
+      "method": "GET",
+      "pathname": "/api/admin/evaluations",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "consoleErrorDetails": [
+    {
+      "phase": "setup",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18793/realtime/v1/websocket?apikey=fixture-local-anon-key&eventsPerSecond=2&vsn=2.0.0' failed: Error during WebSocket handshake: Unexpected response code: 200"
+    },
+    {
+      "phase": "setup",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18793/realtime/v1/websocket?apikey=fixture-local-anon-key&eventsPerSecond=2&vsn=2.0.0' failed: Error during WebSocket handshake: Unexpected response code: 200"
+    },
+    {
+      "phase": "setup",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18793/realtime/v1/websocket?apikey=fixture-local-anon-key&eventsPerSecond=2&vsn=2.0.0' failed: Error during WebSocket handshake: Unexpected response code: 200"
+    },
+    {
+      "phase": "setup",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18793/realtime/v1/websocket?apikey=fixture-local-anon-key&eventsPerSecond=2&vsn=2.0.0' failed: Error during WebSocket handshake: Unexpected response code: 200"
+    },
+    {
+      "phase": "setup",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18793/realtime/v1/websocket?apikey=fixture-local-anon-key&eventsPerSecond=2&vsn=2.0.0' failed: Error during WebSocket handshake: Unexpected response code: 200"
+    },
+    {
+      "phase": "setup",
+      "text": "WebSocket connection to 'ws://127.0.0.1:18793/realtime/v1/websocket?apikey=fixture-local-anon-key&eventsPerSecond=2&vsn=2.0.0' failed: Error during WebSocket handshake: Unexpected response code: 200"
+    }
+  ],
+  "screenshots": [],
+  "limitations": {
+    "browserUiAndRequestContractOnly": true,
+    "realRouteHandlerExecution": false,
+    "sqlRpcExecution": false,
+    "githubWorkflowDispatch": false,
+    "providerAccuracyEvaluated": false,
+    "hostedDeploymentEvaluated": false
+  }
+}

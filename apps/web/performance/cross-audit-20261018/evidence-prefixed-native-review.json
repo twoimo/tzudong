@@ -1,0 +1,175 @@
+{
+  "schema": "tzudong-evidence-prefixed-native-review/v1",
+  "generatedAt": "2026-10-18T22:11:17+09:00",
+  "kind": "independent-native-source-preflight",
+  "verdict": "PASS_WITH_LIMITATIONS",
+  "deepResearchReplacement": false,
+  "scope": {
+    "sourceReview": true,
+    "existingTestsExecuted": true,
+    "existingPg17ReceiptInspected": true,
+    "databaseStartedOrQueried": false,
+    "externalCalls": 0,
+    "projectSourceOrManifestEdited": false,
+    "purpose": "Check concrete counterexamples against the evidence-prefixed SQL successor contracts before the separate web Deep Research audit."
+  },
+  "inputs": [
+    {
+      "path": ".github/review-media-evidence-prefixed-predecessor-successor.v1.json",
+      "sha256": "dbec21b6a2d7b26a2c4a40da189347facd3fd255ac19e3301737c2d683aa92b5"
+    },
+    {
+      "path": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
+      "sha256": "b8a8f7c3495ceea1c57e687d8e1fda7266bb88077bebba30d35b863ae7a33cd8"
+    },
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+      "sha256": "bdb9a30dca157e3c55bc639dc64d983c597f586130be0a5a0a90641cb6e29654"
+    },
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-predecessor-sql-successor.mjs",
+      "sha256": "54d5a66695938c66b75c2c89b456dbfae9e876592fcbe3d5f9310ffc7cf2a07f"
+    },
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-feature-sql-successor.mjs",
+      "sha256": "1abc26c0bc4a2546f0e8930067a2d0e089d156b37ed5d160eee6a3e53e5ef618"
+    },
+    {
+      "path": "apps/web/tests-unit/review-media-evidence-prefixed-sql-successors.test.ts",
+      "sha256": "10b466eaa744e6a6b481014e38059422de456901b0c24e9872ab4f366f5e3233"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-evidence-prefixed-successors-20261018.json",
+      "sha256": "88d1fd0d382ebdfbfe84828b7abe6864e29a6160538d57a65bedaff3e5bb2e9e"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-local-readiness-20261018.json",
+      "sha256": "7e9a89ddd73b2b73f5ee67267b5924ad055f508e3545ea0306024f5e74466650"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+      "sha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a"
+    }
+  ],
+  "preservedLegacyContracts": [
+    {
+      "path": ".github/review-media-sql-successor.v1.json",
+      "sha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6",
+      "transition": "86->97",
+      "migrationCount": 11,
+      "changedByEvidencePrefixedWork": false
+    },
+    {
+      "path": ".github/review-media-feature-sql-successor.v1.json",
+      "sha256": "360e5b56fd2214523ee5738eec94e1d77f9050f899dd243136abff3b6b1cb3df",
+      "transition": "97->102",
+      "migrationCount": 5,
+      "changedByEvidencePrefixedWork": false
+    }
+  ],
+  "counterexamples": [
+    {
+      "id": "EP-NATIVE-CE-001",
+      "target": "existing 86->97 and 97->102 contract preservation",
+      "counterexample": "Change either legacy manifest or its SQL source root while retaining the new evidence-prefixed wrapper.",
+      "result": "REJECTED",
+      "reason": "Each new manifest pins the legacy manifest id, path, exact manifest SHA-256, sourceRoot and targetCount. loadEvidencePrefixedSuccessorManifest compares those fields to the independently loaded legacy records before building any state query. Current legacy manifest bytes match their retained hashes and have no diff."
+    },
+    {
+      "id": "EP-NATIVE-CE-002",
+      "target": "hosted 86-row projection",
+      "counterexample": "Add, remove or alter a non-evidence/non-target ledger row while keeping total operating counts superficially plausible.",
+      "result": "REJECTED",
+      "reason": "Operating validation requires baseRowCount=86, operatingBaseReady=true, the exact hosted baseIdentityRoot 394d3517244d79a673b0595dec0fefa40e6d8257b3762c27dd56a01cc198115d, exact prefix root and the per-stage full-ledger root. The bounded hosted mapping contains 86 exact version/name/statement-count/vector-hash identities and preserves the historical one-statement row."
+    },
+    {
+      "id": "EP-NATIVE-CE-003",
+      "target": "three evidence migrations",
+      "counterexample": "Omit one evidence migration, add another row under an evidence version, or change an evidence SQL statement vector while retaining its version/name.",
+      "result": "REJECTED",
+      "reason": "Manifest loading verifies exactly three ordered evidence entries, source bytes, parsed statement count and statement-vector SHA. Runtime state requires evidenceCount=3, the exact evidence identity root and evidenceReady=true at every stage."
+    },
+    {
+      "id": "EP-NATIVE-CE-004",
+      "target": "stage order and cumulative suffix",
+      "counterexample": "Skip, reorder, duplicate or replace a target migration while reporting only the expected terminal count.",
+      "result": "REJECTED",
+      "reason": "targetStageIndex is derived from the exact cumulative target identity root for every stage. Validation requires the exact stage index/root, constant exact prefix, incrementing ledger count, target count equal to the stage, per-stage full-ledger root in operating mode, and the suffixRoot only at the terminal 11th or 5th stage. The inherited legacy validators independently enforce schema/readiness transitions."
+    },
+    {
+      "id": "EP-NATIVE-CE-005",
+      "target": "predecessor and feature phase separation",
+      "counterexample": "Run feature rows before the full predecessor phase, or reuse a predecessor admission for the feature compiler.",
+      "result": "REJECTED",
+      "reason": "The predecessor phase requires featureCount=0. The feature phase requires predecessorCount=11, predecessorReady=true and an exact predecessor identity root. Admissions bind phase, manifest SHA and base mapping SHA; the direct test rejects cross-phase admission."
+    },
+    {
+      "id": "EP-NATIVE-CE-006",
+      "target": "operating versus rehearsal identity",
+      "counterexample": "Promote synthetic PG17 fixture stages as operating admission evidence.",
+      "result": "REJECTED",
+      "reason": "Operating mode additionally requires the hosted base root, operating prefix root, historical variant readiness and exact operating ledgerStageRoots. Direct tests show rehearsal stages fail operating validation. The retained PG17 rehearsal prefixes 1a9d040a... and 7257f93f... differ from the operating prefixes 2a924739... and 3bddf89c..., and the receipt explicitly classifies the fixture as separate from hosted identity."
+    },
+    {
+      "id": "EP-NATIVE-CE-007",
+      "target": "historical applied one-statement variant",
+      "counterexample": "Normalize hosted migration 20261008124858 to a current source vector or silently replace its one-statement applied identity.",
+      "result": "REJECTED",
+      "reason": "Both manifests pin version, name, statementCount=1 and statement-vector SHA 8bab7119608afa8cf4fec529fb5cab6546fbd0c9326e08b56c9a053daa21b360. Loader validation requires that exact row in the hosted 86-row mapping; the SQL state also emits historicalAppliedVariantReady and operating validation requires true."
+    },
+    {
+      "id": "EP-NATIVE-CE-008",
+      "target": "stale or forged local admission",
+      "counterexample": "Compile from a stale hosted mapping SHA, different manifest SHA, wrong kind, wrong phase, or altered operating stage state.",
+      "result": "REJECTED",
+      "reason": "compileEvidencePrefixedApplyPlan exact-key validates kind, phase, manifest SHA, base-mapping SHA and then reruns operating stage validation. Direct tests mutate evidence identity, historical readiness, stage index and ledger count and reject each case."
+    },
+    {
+      "id": "EP-NATIVE-CE-009",
+      "target": "compile-only and launch-held boundary",
+      "counterexample": "Invoke either shipped entrypoint as an apply/compile runner or treat contract validation as launch approval.",
+      "result": "REJECTED",
+      "reason": "Both entrypoints accept exactly one argument, --check, and only print a canonical contract summary. --compile and missing-argument invocations return EVIDENCE_PREFIXED_ARGUMENT_INVALID. Both manifests are held, assertEvidencePrefixedLaunchReady throws the phase-specific held code, and repository search finds no production caller that executes the compiled SQL. Plan compilation remains a local pure-data operation and does not execute SQL."
+    }
+  ],
+  "verification": {
+    "unit": {
+      "command": "cd apps/web && bun test tests-unit/review-media-evidence-prefixed-sql-successors.test.ts tests-unit/review-media-sql-successor-harness.test.ts tests-unit/review-media-feature-sql-successor.test.ts",
+      "passed": 38,
+      "failed": 0,
+      "expectations": 235
+    },
+    "entrypoints": {
+      "predecessorCheck": "passed",
+      "featureCheck": "passed",
+      "predecessorCompileArgument": "EVIDENCE_PREFIXED_ARGUMENT_INVALID",
+      "featureMissingArgument": "EVIDENCE_PREFIXED_ARGUMENT_INVALID"
+    },
+    "pg17Receipt": {
+      "status": "passed",
+      "findings": 0,
+      "engine": "17.6",
+      "evidencePrefixRows": 3,
+      "predecessorStages": 12,
+      "featureStages": 6,
+      "terminalLedgerRows": 105,
+      "sourceCatalogUnchanged": true,
+      "ownedContainerRemoved": true,
+      "classification": "synthetic rehearsal behavior and stage-query evidence, not operating hosted admission"
+    }
+  },
+  "findings": [],
+  "limitations": [
+    "This is a native source/test/retained-receipt preflight. It does not replace the requested web Deep Research review or its independent citations and challenge set.",
+    "The PG17 receipt applies the constituent migrations and evaluates all stage queries in rehearsal mode. It does not execute the final aggregate SQL string returned by compileEvidencePrefixedApplyPlan.",
+    "No fresh hosted SELECT, protected-source admission, writer-fence readback, DDL, deployment or operating apply was performed in this review.",
+    "requiredWriterFences and protectedSource are held manifest metadata in this compile-only surface; this review does not promote them to live operating evidence.",
+    "The reviewed evidence-prefixed files are currently untracked or dirty candidate work. Exact hashes above bind this review but do not prove commit, PR, CI, promotion or deployment."
+  ],
+  "nextMinimumChecks": [
+    "Keep both launch policies held while the external Deep Research audit challenges these exact bytes.",
+    "Before any launch-state change, add a fresh protected-source and writer-fence operating admission bound to the same hosted mapping and re-read the current hosted ledger.",
+    "Execute the final compiled bundle SQL once only in an isolated disposable PG17 target, preserving prior, per-stage terminal and final readbacks; do not reuse the rehearsal receipt as hosted evidence.",
+    "After any accepted finding or source change, regenerate manifests and rerun the direct tests and PG17 receipt with new exact hashes."
+  ]
+}

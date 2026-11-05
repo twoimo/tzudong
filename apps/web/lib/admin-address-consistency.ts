@@ -865,7 +865,7 @@ export function explainAddressConsistency(record: AddressConsistencyInput): Addr
 export function getAddressConsistencyBadgeClass(record: Pick<EvaluationRecord, 'geocoding_success' | 'geocoding_false_stage' | 'status' | 'is_not_selected'>): string {
   switch (getAddressConsistencyStatus(record)) {
     case 'true':
-      return 'bg-green-600';
+      return 'admin-evaluation-positive';
     case 'failed':
       return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
     case 'review':
@@ -873,8 +873,8 @@ export function getAddressConsistencyBadgeClass(record: Pick<EvaluationRecord, '
     case 'candidate':
       return 'bg-emerald-100 text-emerald-800 border border-emerald-200';
     case 'false':
-      return 'bg-red-500';
+      return 'admin-evaluation-negative';
     default:
-      return 'bg-slate-500';
+      return 'admin-evaluation-neutral';
   }
 }

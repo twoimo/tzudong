@@ -68,20 +68,15 @@ describe("admin youtube thumbnail history", () => {
     expect(routeSource).toContain("'Cache-Control': 'no-store'");
   });
 
-  test("keeps the admin route wired to non-fatal server-side history persistence", () => {
-    const routeSource = readFileSync(new URL("../app/api/admin/youtube-thumbnail-generator/route.ts", import.meta.url), "utf8");
-
-    expect(routeSource).toContain("persistLocalThumbnailHistory");
-    expect(routeSource).toContain("buildThumbnailProviderRequestEnv");
-    expect(routeSource).toContain("providerEnv: providerRequestEnv");
-    expect(routeSource).toContain("const responseResult = {");
-    expect(routeSource).toContain("thumbnail_retrieval_status:${retrieval.diagnostics.status}");
-    expect(routeSource).toContain("retrieval,");
-    expect(routeSource.indexOf("const result = payload.generationMode")).toBeLessThan(
-      routeSource.indexOf("await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });"),
-    );
-    expect(routeSource).toContain("thumbnail_history_persist_failed");
-    expect(routeSource).toContain("return NextResponse.json(buildThumbnailGenerationRouteResponse(responseResult), { headers: noStoreHeaders });");
+  test("stale direct generation cannot produce a new untracked local history entry", async () => {
+    const { createRetiredThumbnailGenerationApi } = await import('../lib/admin/youtube-thumbnail-generator/retired-api');
+    const api = createRetiredThumbnailGenerationApi((async () => ({ ok: true,
+      userId: '6f5d42d6-d122-4d32-b8bb-2779de58b423' })) as never);
+    const request = new Request('https://thumbnail.test/api/admin/youtube-thumbnail-generator', {
+      method: 'POST', headers: { Origin: 'https://thumbnail.test' }, body: 'old generation input' });
+    const response = await api.POST(request);
+    expect(response.status).toBe(410); expect(request.bodyUsed).toBe(false);
+    expect(await response.json()).toMatchObject({ error: 'thumbnail_legacy_generation_retired' });
   });
 
   test("resolves the default canonical root outside public history", () => {

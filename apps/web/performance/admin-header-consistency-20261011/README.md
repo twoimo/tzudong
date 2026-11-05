@@ -21,7 +21,7 @@ cd /Users/twoimo/.codex/worktrees/goal-followthrough-20261011/tzudong/apps/web
 /opt/homebrew/opt/node@24/bin/node performance/admin-header-consistency-20261011/verify-package.mjs
 ```
 
-이 검사는 서버와 브라우저를 시작하지 않는다. 실제 transport 순수 함수에 대해 고정 `127.0.0.1:18820` 목적지, Host/Origin, GET/HEAD, Next 16 `/_next/hmr`와 호환 `/_next/webpack-hmr`의 정확한 WebSocket 경로, 요청 헤더 allowlist, 인증·쿠키·proxy 헤더 제거를 확인한다. 결과와 패키지/입력 소스 SHA-256은 `source-verification.json`에 기록한다.
+이 검사는 서버와 브라우저를 시작하지 않는다. 실제 transport 순수 함수에 대해 고정 `127.0.0.1:18820` 목적지, Host/Origin, GET/HEAD, Next 16 `/_next/hmr`와 호환 `/_next/webpack-hmr`의 정확한 WebSocket 경로, 요청 헤더 allowlist, 임의 인증·쿠키·proxy 헤더 제거, gateway가 발급한 정확한 합성 세션 쿠키의 제한적 재구성, CSP의 고정 mock Supabase origin 허용을 확인한다. 결과와 패키지/입력 소스 SHA-256은 `source-verification.json`에 기록한다.
 
 ## Root 실행 명령
 
@@ -92,7 +92,7 @@ BUILD_ID `GKEnGiPgevGdstEfWZX7W`의 `mobile-focus-render-readback.json`은 45/45
   - `read_public_profile_leaderboard_page`
   - `read_public_profile_leaderboard`
 - 알 수 없는 Supabase auth/table/RPC endpoint는 404다. 테이블 쓰기와 그 밖의 POST는 405다.
-- incoming Authorization, Cookie, proxy, forwarded header를 Next로 전달하지 않는다. Next 응답도 allowlist만 browser에 전달하고 upstream Set-Cookie를 전달하지 않는다.
+- incoming Authorization, proxy, forwarded header와 임의 Cookie는 Next로 전달하지 않는다. 예외는 현재 gateway의 `/__fixture/session`이 발급하고 브라우저가 그대로 돌려준 정확한 합성 세션 쿠키 하나이며, transport가 자체 보유 값으로 재구성해 Next SSR에 전달한다. Next 응답은 allowlist만 browser에 전달하고 upstream Set-Cookie를 전달하지 않으며, CSP의 기존 `connect-src`에는 고정된 합성 Supabase origin만 추가한다.
 - provider 호출, hosted DB 호출, 외부 HTTP 요청은 구현 경로에 없다. 모델 호출, 데이터 mutation, 운영 readback을 검증하지 않는다.
 - 실제 페이지에서 지원하지 않는 endpoint는 빈 성공으로 위장하지 않고 bounded 404를 반환하므로, 그 상태는 화면에서 오류/비가용 상태로 드러날 수 있다.
 

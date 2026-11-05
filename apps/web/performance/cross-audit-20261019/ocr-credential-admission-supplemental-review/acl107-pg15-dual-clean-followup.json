@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "kind": "receipt-ocr-acl107-pg15-dual-clean-source-only-followup",
+  "status": "passed",
+  "scope": {
+    "classification": "local source-only PG15 catalog replay",
+    "operatingApply": false,
+    "hostedAccess": false,
+    "providerAccess": false,
+    "sharedRepositoryGitMutation": false,
+    "ephemeralSourceSnapshotCommit": true
+  },
+  "sourceBinding": {
+    "frozenBaseHead": "cfba8fbbf532c0337c8443c719e5b0d7bf9baf48",
+    "ephemeralSnapshotCommit": "688401c2fb90b96aab1a1dde7edeef8c9ceb9e30",
+    "ephemeralSnapshotTree": "e42547f435743253f5658ceddc0b063853d1e44a",
+    "migration": {
+      "path": "backend/supabase/migrations/20261019120000_receipt_ocr_credential_release_acl_admission_v2.sql",
+      "sha256": "512f778b71a196e28f092266782fe5938b7d15ec72b61bf05978f3b1696faec9",
+      "statementCount": 27,
+      "statementVectorSha256": "37decc48cfcd3cbb9e40afd6511929262da2400264aa1f18e51317a01d92e9bf"
+    },
+    "manifest": {
+      "path": ".github/receipt-ocr-post106-acl-admission-sql-successor.v1.json",
+      "sha256": "58adb514cbdf4221952b9bddfc75dead6a91f74d6fedc0d39445983c542e9b5a"
+    },
+    "compiler": {
+      "path": "apps/web/scripts/receipt-ocr-post106-acl-admission-sql-successor.mjs",
+      "sha256": "5dd0c66725e14ee9584dd162dccda4419c304ddbda6f3f28b1e645b7aa686b21"
+    },
+    "adapter": {
+      "path": "backend/supabase/scripts/transform_receipt_ocr_acl_admission_pg15_replay.py",
+      "sha256": "a4e76e43566f4334404edd4ad703543fdb3dc24aeb3ff8f1e07807f2dcc7e519"
+    },
+    "generator": {
+      "path": "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh",
+      "sha256": "337ce47d62c7b7090c25f65a8a68dfa536e6ec66d4a401227ac10e9aa2c01ccd"
+    },
+    "operatingTerminalIdentityRoot": "cd04aebfc1efcc5588486adf3b7ba47fc5b5b76e39a9c23e316768f2919d9d9e",
+    "rehearsalTerminalIdentityRoot": "1b869222e1efc419e744eeabda52fd1d1900a6a71308a7227a583859136706f7"
+  },
+  "immutable106Readback": {
+    "migrationSha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "manifestSha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "compilerSha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda"
+  },
+  "sourceChecks": {
+    "status": "passed",
+    "bun": {
+      "passed": 43,
+      "failed": 0,
+      "assertions": 264,
+      "stdoutSha256": "335ab4d3d0d98d4c3b3478fa50c807da6d2740deb186a27fa4aed967dcd71e94",
+      "stderrSha256": "deb43c18f7f66699072db7f4b669d230818d6c5e1b2226b26e39882e588e9f13"
+    },
+    "python": {
+      "passed": 4,
+      "failed": 0,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "18056df3a90ddc1117a21bc8cc83f86e9a18e52d1094c438a1805dbb0fac4d9c"
+    },
+    "compiler": {
+      "exitCode": 0,
+      "stdoutSha256": "f9997e4a34f4ecc690ce949c042427a1ea23761c4b1ebd5c1db36e7059d61ce5",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "eslint": {
+      "exitCode": 0,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "statusArtifactSha256": "43758a81bc21f606cd7f8e47187d8d30dafe73ee49e974e74f51aec2849e497b"
+  },
+  "reproducedFailures": [
+    {
+      "candidateMigrationSha256": "e50fa734387debfd57b0296f3967c0b2d5b55581c333e734069538042b2f84d7",
+      "fixedCode": "PG15_NOSUPER_DIRECT_ALLOWLIST_INSERT_PERMISSION_DENIED",
+      "generatorExitCode": 3,
+      "cleanupPassed": true,
+      "stderrSha256": "78d48496d2a22ccb4cd07627c289ebf1f06be8f8d9bca4b437c85d3f4b465c0b",
+      "ownershipReceiptSha256": "8ba3771986e48f7afd9f68209502037e64a0a26a93ecf0bffe4097f5ce1f9e0e"
+    },
+    {
+      "candidateMigrationSha256": "7ab7aa42a1701ff11e6fca97597b5a1756c01377ce02c17cc45cd58405613c6b",
+      "fixedCode": "PG15_NOSUPER_OWNER_ASSERTION_AFTER_ROLE_RESET_PERMISSION_DENIED",
+      "generatorExitCode": 3,
+      "cleanupPassed": true,
+      "stderrSha256": "ee3369c124bf5b9777e98d8b7ea661f4e4444cdbe38c8e5a8c2e520e15c4416f",
+      "ownershipReceiptSha256": "970667b8edf07d0bdf926332e353d8760af8dca6f4aa1f484b1b0102b9afa1f5"
+    }
+  ],
+  "dualCleanReplay": {
+    "status": "passed",
+    "engine": "15.8",
+    "psqlClient": "psql (PostgreSQL) 15.8",
+    "sourceGitOid": "688401c2fb90b96aab1a1dde7edeef8c9ceb9e30",
+    "rowCountEach": 1960,
+    "candidateHashCountEach": 57,
+    "comparedHashCount": 58,
+    "artifactManifestSha256": "ec7f3771722786fa0e8bb93e1cf7a00239dbf0477ee184d989eba53ffad3bc42",
+    "sha256sumsSha256": "736f0e81e2ad9d6384b8d681fbd87fb12d9464e6bb0bd9087754cba28b61d911",
+    "metadataSha256": "ac408676c2a2a566c42fe5218114ca7a4d879c898fe2b504df036579c09ebc3d",
+    "comparisonSha256": "e9900acf25886f50fe9e69b87797ffd5f46ec1c1ae33c701e6b74567162dfcda",
+    "replayA": {
+      "generatorExitCode": 0,
+      "monitorExitCode": 0,
+      "stdoutSha256": "aa061ae0629afe8ed04c749c8cb18d4dbf14b5034918776fffb72ddd8d338704",
+      "stderrSha256": "c8e622c39b3f764cf50d8cce7ca42059a8089f9eb65b91ca25f8b69f18b9a049",
+      "ownershipReceiptSha256": "cd44f2626c22f8149a3360fe90c84acfe547f813427359dd10d77569167ad9f0"
+    },
+    "replayB": {
+      "generatorExitCode": 0,
+      "monitorExitCode": 0,
+      "stdoutSha256": "6e479e88a35555f16ffd52438f2d8879277b6b226bc774e3460e59cf0d1b3f6b",
+      "stderrSha256": "85b76ef1c6d3f3d33db701ff57a31495fd7ac93e83761c48ed763b52a50769d3",
+      "ownershipReceiptSha256": "3732b321afc29b8e5e8acc79cb4f4bdad18b365e2779b3e1e9e1b33b572bb782"
+    },
+    "ownedResourceCountsEach": {
+      "containers": 4,
+      "volumes": 2,
+      "networks": 1
+    },
+    "exactInspectFailuresEach": true,
+    "residualResourceCounts": {
+      "containers": 0,
+      "volumes": 0,
+      "networks": 0
+    }
+  },
+  "preservation": {
+    "historical14AArtifactTreeSha256Before": "e682a590a19d67b2784cc47a6377e5f9057359b9240f25c503b509b5157c5342",
+    "historical14AArtifactTreeSha256After": "e682a590a19d67b2784cc47a6377e5f9057359b9240f25c503b509b5157c5342",
+    "sourceDumpSha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "sourceDumpSha256After": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "retained105DumpSha256Before": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+    "retained105DumpSha256After": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda"
+  },
+  "privacy": {
+    "rawLogsStoredPrivateOnly": true,
+    "composeProjectNamesOmitted": true,
+    "resourceIdentifiersOmitted": true,
+    "ownerTokensRecorded": false
+  },
+  "limitations": [
+    "This proves deterministic local PG15 source-only catalog replay, not the compiled 105-to-107 operating transaction.",
+    "It does not prove PG17 membership-option restoration, hosted readiness, deployment, provider behavior or operating apply.",
+    "The ephemeral snapshot commit exists only inside the private runtime clone and is not a shared repository commit."
+  ]
+}

@@ -1,0 +1,446 @@
+
+===== ACTUAL HOST EVIDENCE finding-adjudication-working.json =====
+{
+  "observed_at": "2026-10-22T21:09:38.360326+00:00",
+  "accepted_fixes": [
+    {
+      "ids": [
+        "TH-M-02",
+        "GEM-M-01.refresh"
+      ],
+      "change": "Same SDK marker receives latest HTML only when changed, current onclick, coordinates and selection. Invalid/sentinel coordinates remove the marker.",
+      "path": "apps/web/components/map/OverseasMap.tsx",
+      "verification": "overseas-marker-refresh-browser.test.ts:390,820,1440; latest callback exactly once, marker reused"
+    },
+    {
+      "ids": [
+        "TH-M-03"
+      ],
+      "change": "GeoJSON field/tier freshness and Seoul regional entry tier invalidate in-place caches.",
+      "path": "apps/web/lib/clustering.ts",
+      "verification": "clustering-region-district.test.ts tier-only mutation and all23existing cases"
+    },
+    {
+      "ids": [
+        "TH-P-02",
+        "GEM-P-01.name",
+        "GEM-P-01.latitude"
+      ],
+      "change": "Fail entire publication on unapproved rows, missing/invalid/zero-sentinel coordinates BEFORE merge and empty names; preserve approved name, align33..39 latitude with share map. No posted JSON regenerated.",
+      "path": "apps/web/scripts/build-public-popularity.ts",
+      "verification": "Boundary tests red3fail before correction; all5pass; frozen735publication reproduced unchanged"
+    },
+    {
+      "ids": [
+        "TH-P-01.policy"
+      ],
+      "change": "New evidence policy records actual P98/P95/P85 v2, historical evidence retained.",
+      "path": "apps/web/scripts/build-public-popularity.ts"
+    },
+    {
+      "ids": [
+        "GEM-E-01.conflict"
+      ],
+      "change": "Strict union still throws; public read boundaries catch only EvidenceContractError and omit conflicting frame set while preserving other restaurant media.",
+      "paths": [
+        "apps/web/lib/evidence-engineering/frames.ts",
+        "apps/web/lib/restaurant-merged-media.ts",
+        "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx"
+      ],
+      "verification": "Three executable duplicate identity/moderation/storage-key conflicts, strict rejection plus both safe boundaries"
+    },
+    {
+      "ids": [
+        "TH-E-01.heading",
+        "TH-E-03.failure"
+      ],
+      "change": "Context-only title omits sign claim; failed image gives explicit original-video notice and keeps seek link; changed URL resets image failure state.",
+      "path": "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+      "verification": "Actual640x360WebP,404failure,newURLrecovery in390/820/1440 Chromium"
+    }
+  ],
+  "rejected_claims": [
+    {
+      "id": "GEM-E-01.image_url",
+      "decision": "REJECT",
+      "evidence": "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql has NO image_url column. Static immutable key is the intended DB read path and all12manifest frames have image_url:null. Adding proposed SELECT column would break deployed query; generic optional URL support is not a promised DB field."
+    },
+    {
+      "id": "GEM-S-01.escape",
+      "decision": "REJECT as demonstrated current escaping write; CONDITIONAL for hostile concurrent filesystem mutator",
+      "evidence": "formatStorageObjectKey is exactly videoId/leaf.webp with validated video ID, no deeper ancestor creation. Existing symlink-parent test confirms rejection before file write; source is hash verified and writes wx. Trusted owner-controlled staging root must have no concurrent untrusted writer. Multi-file atomicity not claimed."
+    },
+    {
+      "id": "GEM-P-01.null_patch",
+      "decision": "REJECT Gemini fallback-to-domestic proposal",
+      "evidence": "We do not guess unknown-coordinate cohort. Invalid input fails closed before merge; actual763approved rows have zero missingcoordinates and frozen735entries unchanged."
+    },
+    {
+      "id": "LOCAL-AUDIT-MATH-01",
+      "decision": "REJECT Gemini section3.2 n<=20 degeneracy claim at n=20",
+      "evidence": "ceil(.95*20)=19 !=20; ceil(.98*20)=20. Native19/20distinct-metric groups show0 vs1ember. Production nearest-rank code was correct and unchanged."
+    }
+  ],
+  "conditions": [
+    {
+      "id": "TH-M-01",
+      "decision": "CONDITIONAL",
+      "guard": "Existing DOM helper tier keys and source render guard native tests pass; actual provider/runtime source and production UI receipts must be linked. No physical performance claim."
+    },
+    {
+      "id": "TH-P-01.distribution",
+      "decision": "ACCEPT",
+      "evidence": "Frozen763approved rows and1098metrics reproduce all735published entries exactly; ties/finitecohorts not exactpercentagequotas."
+    },
+    {
+      "id": "TH-P-03",
+      "decision": "ACCEPT for historical label",
+      "evidence": "Raw1098metrics fetched range June18..July16UTC2026; no live foodquality orfreshness claim. Ember absent detail badge is existing explicit product choice, flames are on map."
+    },
+    {
+      "id": "TH-P-04",
+      "decision": "ACCEPT protections; REJECT arbitrarypromotion",
+      "evidence": "Native membership/conflict/readback tests; unknown member=>standard."
+    },
+    {
+      "id": "TH-E-02",
+      "decision": "ACCEPT for actual4restaurant/12context publication only",
+      "evidence": "Every local/live asset hash and approvedowner video relation in live-assets-readback.json; merged sibling context is intentional, not L1 proof or allrestaurant coverage."
+    },
+    {
+      "id": "TH-R-01",
+      "decision": "CONDITIONAL",
+      "guard": "Existing production ac80/dpl3FXDY remains independent from new unmerged corrections. Local native and future protected release/readback not implied by report."
+    },
+    {
+      "id": "TH-R-02",
+      "decision": "ACCEPT separation",
+      "guard": "Nightly39457197351 historical failure remains failed; not rerun or fixed by this audit. No current raw Nightly failure diagnosis is asserted."
+    }
+  ],
+  "id_drift": "TH-P IDs in thesis part1 vs part2/3 differ. Gemini section1.1 mapping is retained. Use TH-P-01@part1=>distribution and TH-P-02@part1=>ties, TH-P-04@part1=>classification; final fixes use @part2/3 plus explicit subclaim names. No earlier meaning overwritten.",
+  "limits": [
+    "Gemini complete report has explicit SOURCE_MISSING; reviewer claims of NaverMapView being in earlier60scope are not accepted. Deliver necessary actual integration source to Pro reverse in smaller nonoverlapping files, exclude generated types/publication from code-body bundle.",
+    "Native browser fixtures use actual components with SDK/data stubs: they do not prove physical/provider performance.",
+    "Local Next runtime atfirst failed401 due invalid verification-only public key; operational key/config untouched; readiness being reconciled."
+  ]
+}
+
+===== ACTUAL HOST EVIDENCE native-final-affected.log =====
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-map-cluster-visuals.test.ts:
+(pass) naver map cluster visuals > hashes string keys deterministically [0.19ms]
+(pass) naver map cluster visuals > builds cluster feature with lng/lat coordinates [0.05ms]
+(pass) naver map cluster visuals > builds cluster marker html content [0.17ms]
+(pass) naver map cluster visuals > returns naver cluster marker visual payload [0.13ms]
+(pass) naver map cluster visuals > builds cluster marker render plan from position and current animation index [0.06ms]
+(pass) naver map cluster visuals > builds animation icon plan from key and injected index resolver [0.07ms]
+(pass) naver map cluster visuals > skips a marker icon write when the content and anchor are unchanged [0.02ms]
+
+tests-unit/evidence-frame-failure-browser.test.ts:
+(pass) context-only frames keep an honest heading and original video link after image failure, and recover for a new source [6409.81ms]
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > refreshes both cached selection states when the public popularity tier changes in place [0.33ms]
+(pass) naver map marker visuals > keeps shared visual cache entries distinct across refreshed rows and overlay markers [0.12ms]
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.03ms]
+(pass) naver map marker visuals > returns selected marker payload [0.02ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.02ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.03ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.02ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.03ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.04ms]
+
+tests-unit/clustering-region-district.test.ts:
+(pass) tier-only mutations invalidate retained Seoul and GeoJSON caches without promoting unknown tiers [0.42ms]
+(pass) getRegionalClusters > 빈 목록은 빈 배열을 돌려준다
+(pass) getRegionalClusters > 행정구역 키 순서대로 돌려주고 중심은 고정 중심 좌표를 쓴다 [0.03ms]
+(pass) getRegionalClusters > 주소에 정식 명칭이 있으면 그 행정구역으로 묶는다 [0.01ms]
+(pass) getRegionalClusters > 주소가 약어로 시작하면 정식 명칭으로 바꾼다 [0.02ms]
+(pass) getRegionalClusters > 주소에서 행정구역을 못 찾으면 좌표상 가장 가까운 중심으로 묶는다 [0.04ms]
+(pass) getRegionalClusters > 좌표가 없는 행정구역은 클러스터에서 빠진다 [0.02ms]
+(pass) getRegionalClusters > restaurantIds 는 입력 순서를 유지한다 [0.02ms]
+(pass) getRegionalClusters > 카테고리는 빈도 내림차순 상위 3개이고 동률은 먼저 나온 순서를 따른다 [0.03ms]
+(pass) getRegionalClusters > 행정구역 클러스터는 묶인 맛집 중 가장 높은 불꽃 등급을 남긴다 [0.02ms]
+(pass) getSeoulDistrictClusters > 빈 목록은 빈 결과를 돌려준다 [0.03ms]
+(pass) getSeoulDistrictClusters > 자치구 키 순서대로 돌려주고 중심은 소속 맛집들의 평균 좌표다 [0.04ms]
+(pass) getSeoulDistrictClusters > 주소에 서울이 없으면 자치구 클러스터에서 빠진다 [0.01ms]
+(pass) getSeoulDistrictClusters > 주소가 비어 있으면 자치구 클러스터에서 빠진다 [0.01ms]
+(pass) getSeoulDistrictClusters > 주소에 구 이름이 없으면 좌표상 가장 가까운 구로 묶는다 [0.03ms]
+(pass) getSeoulDistrictClusters > 좌표가 없는 맛집은 빠진다 [0.02ms]
+(pass) getSeoulDistrictClusters > minClusterSize=1 은 맛집이 있는 구를 모두 클러스터로 돌려준다 [0.02ms]
+(pass) getSeoulDistrictClusters > minClusterSize=3 은 3개 미만 구를 개별 마커로 내보낸다 [0.03ms]
+(pass) clustering 캐시 동작 > 같은 목록을 다시 넘기면 같은 결과를 돌려준다 [0.05ms]
+(pass) clustering 캐시 동작 > 맛집 필드를 제자리에서 바꾸면 결과가 따라 바뀐다 [0.03ms]
+(pass) clustering 캐시 동작 > 목록에 항목을 추가하거나 제거하면 결과가 따라 바뀐다 [0.05ms]
+(pass) clustering 캐시 동작 > 돌려준 restaurantIds 를 수정해도 다음 호출 결과가 오염되지 않는다 [0.04ms]
+(pass) getDistance > 같은 좌표는 0 이고 3-4-5 삼각형을 따른다 [0.02ms]
+
+tests-unit/evidence-frame-conflict.test.ts:
+(pass) frame conflicts fail closed at both public read boundaries while strict publication validation still rejects [1.40ms]
+
+tests-unit/public-popularity-publication.test.ts:
+(pass) operator-published public popularity > rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts [0.07ms]
+(pass) operator-published public popularity > bounds entry count and serialized bytes and freezes independent copies [3.67ms]
+(pass) operator-published public popularity > list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it [0.55ms]
+(pass) operator-published public popularity > merged representatives use their published identity and do not inherit a child grade [0.17ms]
+(pass) operator-published public popularity > explicit canonical membership keeps compact, full, partial, and direct-detail grades identical [0.13ms]
+(pass) operator-published public popularity > new members or conflicting cohorts fail closed for either display representative [0.11ms]
+(pass) operator-published public popularity > rejects ambiguous/incomplete canonical membership and bounds the whole member index [2.83ms]
+(pass) operator-published public popularity > published membership overrides a stale caller tier and the detail panel does not mention flame counts [0.50ms]
+(pass) operator-published public popularity > published endpoint returns the reviewed public snapshot and stable ETag without raw scores [378.33ms]
+(pass) public tier reaches the outer Naver render guard > same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip [0.29ms]
+(pass) public tier reaches the outer Naver render guard > retained selection/search grades also invalidate the unchanged-query guard [0.02ms]
+
+tests-unit/evidence-engineering-remaining.test.ts:
+(pass) evidence engineering remaining tasks > uploads only the immutable webp key and refuses collisions [0.33ms]
+(pass) evidence engineering remaining tasks > moderation requires preview, confirm, apply, and readback before an audit record [0.39ms]
+(pass) evidence engineering remaining tasks > public carousel keeps approved sign evidence and its seek url [0.31ms]
+(pass) evidence engineering remaining tasks > operational caution ignores a plain search miss and does not use device coordinates [0.04ms]
+(pass) evidence engineering remaining tasks > marker wrapper stays on transform and opacity [0.21ms]
+(pass) evidence engineering remaining tasks > merged media unions approved frames and does not promote a higher tier [0.23ms]
+(pass) evidence engineering remaining tasks > missing evidence embed falls back without dropping restaurants [0.38ms]
+(pass) evidence engineering remaining tasks > badge viewer stays closed until experimental mode is opened and can close again [0.10ms]
+(pass) evidence engineering remaining tasks > open cross-check clauses stay locked without new formulas [0.69ms]
+(pass) evidence engineering remaining tasks > render summary records percentiles without a 60fps gate [0.06ms]
+
+tests-unit/evidence-publication-runtime.test.ts:
+(pass) reviewed evidence publication > publishes hash-verified WebP idempotently and refuses a wrong confirmation or immutable collision [3.54ms]
+(pass) reviewed evidence publication > rejects unreviewed frames, altered bytes, source traversal and mismatched restaurant videos [1.79ms]
+(pass) reviewed evidence publication > refuses publication through an output symlink [1.50ms]
+(pass) actual public popularity cohort > reproduces every published member from the frozen public business rows and observed video metrics [14.75ms]
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [1.62ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [3.27ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [0.57ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [1.33ms]
+(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [1.81ms]
+
+tests-unit/restaurant-merged-media.test.ts:
+(pass) restaurant merged media helpers > collects every youtube video and tzuyang review from merged restaurant records [0.19ms]
+(pass) restaurant merged media helpers > feeds merged media counts into natural detail copy [0.12ms]
+(pass) restaurant merged media helpers > keeps distinct youtube metadata when different videos share the same title [0.12ms]
+(pass) restaurant merged media helpers > hydrates a fetched single detail row with the selected merge context [0.22ms]
+(pass) restaurant merged media helpers > keeps a known tzuyang review when the fetched row has an empty review [0.06ms]
+(pass) restaurant merged media helpers > collects tzuyang reviews stored as arrays or review objects [0.03ms]
+(pass) restaurant merged media helpers > pairs each tzuyang review with its video title and publish date [0.08ms]
+
+tests-unit/overseas-map-marker-helpers.test.ts:
+(pass) overseas map marker helpers > builds class-only marker HTML with valid local and HTTPS images [0.12ms]
+(pass) overseas map marker helpers > fails closed for unsafe marker image values and escapes alt text [0.08ms]
+(pass) overseas map marker helpers > prefers selected restaurant id over searched id [0.02ms]
+(pass) overseas map marker helpers > toggles only fixed size and selected classes without style mutation [0.09ms]
+
+tests-unit/overseas-marker-refresh-browser.test.ts:
+(pass) retained overseas markers refresh content, location and click data without recreating or losing selection [1869.84ms]
+
+ 83 pass
+ 0 fail
+ 1252 expect() calls
+Ran 83 tests across 12 files. [9.06s]
+
+===== ACTUAL HOST EVIDENCE tzudong-audit-typecheck.log =====
+
+> web@1.2.4 typecheck:parity
+> node scripts/run-typecheck.mjs --compiler parity
+
+{"status":"passed","diagnostics":0,"logicalInputs":3379,"logicalInputNamesSha256":"c0097c3416d3a35e7a9c9e60d8c0b5b091d263a597ec94f6db9ec95ea26de80d","nonLibraryContentSha256":"c1fa35e7b73e902e78d27d351f0a173133a83f858d8dceec6fa1c0066c573555","standardLibraryContentSha256":{"native":"d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64","compat":"82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"}}
+
+===== ACTUAL HOST EVIDENCE native-lint-final.log =====
+lint_exit=0
+
+===== ACTUAL HOST EVIDENCE tzudong-audit-build.log =====
+
+> web@1.2.4 build
+> node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs
+
+▲ Next.js 16.3.8 (webpack) - Environments: .env.local ✓ Running next.config.mjs took 241ms - Experiments (use with caution):   · clientTraceMetadata   · optimizePackageImports   · staleTimes    Creating an optimized production build ... ✓ Compiled successfully in 24.6s   Running TypeScript ...    We detected TypeScript in your project and reconfigured your tsconfig.json file for you.   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:     - include was updated to add '.next-audit-[REDACTED:phone]/types/**/*.ts'    - include was updated to add '.next-audit-[REDACTED:phone]/dev/types/**/*.ts'    Finished TypeScript in 14.2s ...   Collecting page data using 17 workers ...   Generating static pages using 17 workers (0/56) ...   Generating static pages using 17 workers (14/56)     Generating static pages using 17 workers (28/56)     Generating static pages using 17 workers (42/56)   ✓ Generating static pages using 17 workers (56/56) in 363ms   Finalizing page optimization ...   Collecting build traces ...  [REDACTED:bounded] ○  (Static)   prerendered as static content ƒ  (Dynamic)  server-rendered on demand  Verified route CSS boundaries: home 196742 bytes; general app 330748 bytes; admin 354837 bytes; deferred 196742 bytes.
+
+===== ACTUAL HOST EVIDENCE live-assets-readback.json =====
+{
+  "observed_at": "2026-10-22T21:04:53.650954+00:00",
+  "actual_frame_count": 12,
+  "actual_restaurant_count": 4,
+  "all_asset_bytes_match": true,
+  "frames": [
+    {
+      "restaurant_id": "00e97a0d-b54e-4bcc-85e6-5db8f739e0c0",
+      "frame_id": "yt_m3FE0WmS8xU_264200_5748b6c61c76",
+      "video_id": "m3FE0WmS8xU",
+      "timestamp_ms": 264200,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/m3FE0WmS8xU/264200_5748b6c61c76.webp",
+      "bytes": 96120,
+      "sha256": "5748b6c61c76d9381ec4f8158190b56bd50829e25b592b911674e6167c1595e7",
+      "live_sha256": "5748b6c61c76d9381ec4f8158190b56bd50829e25b592b911674e6167c1595e7",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "00e97a0d-b54e-4bcc-85e6-5db8f739e0c0",
+      "frame_id": "yt_m3FE0WmS8xU_273200_65690d485ef2",
+      "video_id": "m3FE0WmS8xU",
+      "timestamp_ms": 273200,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/m3FE0WmS8xU/273200_65690d485ef2.webp",
+      "bytes": 172016,
+      "sha256": "65690d485ef26db0aafcb8d99549acd4fe47bd1740567001d8564176eec4ddf4",
+      "live_sha256": "65690d485ef26db0aafcb8d99549acd4fe47bd1740567001d8564176eec4ddf4",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "00e97a0d-b54e-4bcc-85e6-5db8f739e0c0",
+      "frame_id": "yt_m3FE0WmS8xU_281200_bf094709c299",
+      "video_id": "m3FE0WmS8xU",
+      "timestamp_ms": 281200,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/m3FE0WmS8xU/281200_bf094709c299.webp",
+      "bytes": 175724,
+      "sha256": "bf094709c299718563508c3aa6030a14c51a041c689404a7189a6d891e06500b",
+      "live_sha256": "bf094709c299718563508c3aa6030a14c51a041c689404a7189a6d891e06500b",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "11952225-45b2-4faa-ae95-bfcfcaa424ce",
+      "frame_id": "yt_JXGKeq14Lbk_435540_aef974647332",
+      "video_id": "JXGKeq14Lbk",
+      "timestamp_ms": 435540,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/JXGKeq14Lbk/435540_aef974647332.webp",
+      "bytes": 91444,
+      "sha256": "aef97464733204da7e3ac4ffd0d81f5b467121a8625538ed099a268a31b5ca39",
+      "live_sha256": "aef97464733204da7e3ac4ffd0d81f5b467121a8625538ed099a268a31b5ca39",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "11952225-45b2-4faa-ae95-bfcfcaa424ce",
+      "frame_id": "yt_JXGKeq14Lbk_449540_9518f882d70b",
+      "video_id": "JXGKeq14Lbk",
+      "timestamp_ms": 449540,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/JXGKeq14Lbk/449540_9518f882d70b.webp",
+      "bytes": 171948,
+      "sha256": "9518f882d70b09dda8eeb9a6a7d539d9946a29d9d3bf5452d8d5de22913d312e",
+      "live_sha256": "9518f882d70b09dda8eeb9a6a7d539d9946a29d9d3bf5452d8d5de22913d312e",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "11952225-45b2-4faa-ae95-bfcfcaa424ce",
+      "frame_id": "yt_JXGKeq14Lbk_462540_1e3d893efb20",
+      "video_id": "JXGKeq14Lbk",
+      "timestamp_ms": 462540,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/JXGKeq14Lbk/462540_1e3d893efb20.webp",
+      "bytes": 231238,
+      "sha256": "1e3d893efb20c529c6e03312810632953a8d761cea94cd3c259f3ccd71558d1e",
+      "live_sha256": "1e3d893efb20c529c6e03312810632953a8d761cea94cd3c259f3ccd71558d1e",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "0e0fb0fc-ccff-44d2-908b-e902d4b0232c",
+      "frame_id": "yt_fcWQMtEjwJY_642560_9db5584da64d",
+      "video_id": "fcWQMtEjwJY",
+      "timestamp_ms": 642560,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/fcWQMtEjwJY/642560_9db5584da64d.webp",
+      "bytes": 193838,
+      "sha256": "9db5584da64de26ed0d10b45c120a4f0a0c38e585062b1d2a2c37115188ba496",
+      "live_sha256": "9db5584da64de26ed0d10b45c120a4f0a0c38e585062b1d2a2c37115188ba496",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "0e0fb0fc-ccff-44d2-908b-e902d4b0232c",
+      "frame_id": "yt_fcWQMtEjwJY_652560_f7815425a3ca",
+      "video_id": "fcWQMtEjwJY",
+      "timestamp_ms": 652560,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/fcWQMtEjwJY/652560_f7815425a3ca.webp",
+      "bytes": 190016,
+      "sha256": "f7815425a3ca7f0420231779a60d6a3ef51f95e91435fa6497023436344ce3db",
+      "live_sha256": "f7815425a3ca7f0420231779a60d6a3ef51f95e91435fa6497023436344ce3db",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "0e0fb0fc-ccff-44d2-908b-e902d4b0232c",
+      "frame_id": "yt_fcWQMtEjwJY_662560_fd506f09859e",
+      "video_id": "fcWQMtEjwJY",
+      "timestamp_ms": 662560,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/fcWQMtEjwJY/662560_fd506f09859e.webp",
+      "bytes": 237246,
+      "sha256": "fd506f09859e918e3838f493874d3bfac8f0ef360d17e92a3f2adf717bd84e1d",
+      "live_sha256": "fd506f09859e918e3838f493874d3bfac8f0ef360d17e92a3f2adf717bd84e1d",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "4f08bf24-9faf-42e5-a4c9-5660d45248e3",
+      "frame_id": "yt_jEM5_8SsSVE_398900_a992949c616e",
+      "video_id": "jEM5_8SsSVE",
+      "timestamp_ms": 398900,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/jEM5_8SsSVE/398900_a992949c616e.webp",
+      "bytes": 123900,
+      "sha256": "a992949c616eaff30bfd0b754834e75825764190735449c0f907a631424bdcc2",
+      "live_sha256": "a992949c616eaff30bfd0b754834e75825764190735449c0f907a631424bdcc2",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "4f08bf24-9faf-42e5-a4c9-5660d45248e3",
+      "frame_id": "yt_jEM5_8SsSVE_412900_0cd5099a7dbc",
+      "video_id": "jEM5_8SsSVE",
+      "timestamp_ms": 412900,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/jEM5_8SsSVE/412900_0cd5099a7dbc.webp",
+      "bytes": 213512,
+      "sha256": "0cd5099a7dbc6a1d77301e0eda5785a649d57deae5326de6fbc9c493774339af",
+      "live_sha256": "0cd5099a7dbc6a1d77301e0eda5785a649d57deae5326de6fbc9c493774339af",
+      "approved_owner_video_match": true
+    },
+    {
+      "restaurant_id": "4f08bf24-9faf-42e5-a4c9-5660d45248e3",
+      "frame_id": "yt_jEM5_8SsSVE_425900_46d6da9de06d",
+      "video_id": "jEM5_8SsSVE",
+      "timestamp_ms": 425900,
+      "kind": "on_site_scene",
+      "url": "https://www.tzudong.app/evidence-frames/jEM5_8SsSVE/425900_46d6da9de06d.webp",
+      "bytes": 242046,
+      "sha256": "46d6da9de06d167b9f624711645beedcd35297f39d21e205335c732355f44090",
+      "live_sha256": "46d6da9de06d167b9f624711645beedcd35297f39d21e205335c732355f44090",
+      "approved_owner_video_match": true
+    }
+  ],
+  "public_popularity_matches_local": true,
+  "live_public_popularity_sha256": "ae4c8a7d47cc5b22fc071fd5fe862b27d6e73a3c366498005e5bfbddaafc4239",
+  "health": {
+    "ok": true,
+    "service": "tzudong-web",
+    "releaseId": "5445fa71104b2408962c1c5d369babf3bb778838",
+    "gitSha": "ac80e35da566db242420a62bbf3e3320b5c00e76",
+    "deploymentId": "dpl_3FXDYZuaJ2cjy8d2Zvdb4Uba4riV",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "host": "www.tzudong.app"
+  },
+  "transport": "Public curl requests. Python urllib returned403; no protection/account settings changed.",
+  "limits": [
+    "No physical-device evidence",
+    "Context frames are not L1 identity proof",
+    "Nightly not rerun or inferred from production"
+  ]
+}
+
+===== ACTUAL HOST EVIDENCE local-next-runtime-boundary.json =====
+{
+  "at": "2026-10-22T21:11:40.323842+00:00",
+  "next_version": "16.3.8",
+  "build": "Passed compile, TypeScript,56static routes and CSS boundaries",
+  "runtime": "Actual next start port18081; SSR shell and clienthydration render without observed hydration exceptions; hosted restaurants401 => detail frame realdata path is NOT localHOST_TESTED",
+  "observed": [
+    "Supabase restaurants401",
+    "Naver auth401",
+    "localVercelspeedinsights404"
+  ],
+  "cause": "Ignored .env.local and supported currentproductionenvpull both return a non-JWT/nonpublishable11character placeholder for the public client key. No key value logged, no hosted setting altered.",
+  "next_allowed": "Native component/data/SDK boundary fixtures already passed; preserve actual hosted data validation for protected preview/production environment and readback. Never replace anon with service-role key.",
+  "nightly": "Separate historicalfailure, not rerun"
+}

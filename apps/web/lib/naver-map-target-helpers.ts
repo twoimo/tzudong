@@ -5,6 +5,7 @@ export function resolveNaverMapTarget({
     currentMapZoom,
     getDeviceAdjustedZoom,
     mapFocusZoom,
+    isSelectionChanged = false,
     selectedRegion,
     selectedRestaurant,
     urlLat,
@@ -14,6 +15,7 @@ export function resolveNaverMapTarget({
     currentMapZoom: number;
     getDeviceAdjustedZoom: (baseZoom: number, isNational?: boolean) => number;
     mapFocusZoom?: number | null;
+    isSelectionChanged?: boolean;
     selectedRegion: Region | null;
     selectedRestaurant: Restaurant | null;
     urlLat: number;
@@ -21,11 +23,14 @@ export function resolveNaverMapTarget({
     urlZoom: number;
 }) {
     if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
+        const hasSavedViewport = !Number.isNaN(urlLat) && !Number.isNaN(urlLng) && !Number.isNaN(urlZoom);
         return {
             skip: false,
             targetLat: selectedRestaurant.lat,
             targetLng: selectedRestaurant.lng,
-            targetZoom: mapFocusZoom || currentMapZoom,
+            targetZoom: mapFocusZoom || (isSelectionChanged && !hasSavedViewport
+                ? Math.max(currentMapZoom, 15)
+                : currentMapZoom),
         } as const;
     }
 

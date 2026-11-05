@@ -1,0 +1,393 @@
+{
+  "schemaVersion": 1,
+  "kind": "review-fixes-evidence-index",
+  "recordedAt": "2026-10-18T17:30:41.692513+00:00",
+  "baseHead": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "status": "local_source_app_browser_and_role_qualified_pg17_6_proofs_verified_external_delivery_pending",
+  "evidenceRules": {
+    "currentVsHistorical": "Only current proofs bind the final source. Historical receipts remain provenance and are not current-source claims.",
+    "testCounting": "Overlapping reruns and subset suites are linked but never added together; no aggregate test total is reported.",
+    "performanceClaims": "Behavioral fixes use reproduced failure conditions and explicit denominators. Test counts and one build duration are not performance improvements.",
+    "pendingReceipt": "Final local PG17.6 receipt is sealed by its actual file SHA. Failed and noncanonical earlier events remain historical; Event009 race and Event011 core have different role evidence.",
+    "diffCheck": "All62 source and non-raw staged files pass git diff --cached --check.15 verbatim psql output .txt evidence files retain native trailing-space formatting; their original bytes and hashes are preserved, and a full raw-inclusive whitespace check is not reported as passed."
+  },
+  "currentProofs": {
+    "bannerStatusBinding": {
+      "receipt": {
+        "path": "apps/web/performance/cross-audit-20261018/banner-upload-rejection-status-binding-source-receipt.json",
+        "sha256": "5818107ed82bda444b0538bf6ab9b4e90f2de28e5c22493534977c8153388797"
+      },
+      "status": "current_source_freeze",
+      "behavior": {
+        "reproducedFailure": "HTTP 500 carrying banner_mutation_invalid previously reached definite cleanup.",
+        "result": "Only exact 400/403/404/409 code pairs clean current-operation uploads; 5xx, transport and malformed or mismatched responses preserve them.",
+        "denominator": "Four admitted definite status-code pairs and two owned upload paths in the cleanup counterexample."
+      }
+    },
+    "p1RowFailureHeldFollowup": {
+      "receipt": {
+        "path": "apps/web/performance/cross-audit-20261019/admin-receipt-row-failure-progress/source-binding-capability-held-followup.json",
+        "sha256": "49a45a37c5ea297eee5ea4fcdf33d7bed76e34df7069ee035f50eea8d5cbb306"
+      },
+      "status": "current_source_freeze",
+      "behavior": {
+        "reproducedFailure": "A deterministic oldest-row defect could remain pending and starve later rows; uncertain failures must not be quarantined.",
+        "result": "Only deterministic local input or exact missing-object failures reach exact snapshot CAS plus terminal readback. Capability-held, authorization, transport, provider, quota and persistence uncertainty remain pending and stop the batch.",
+        "denominator": "Two selected rows for the stop boundary and three consecutive selections for terminalize-then-advance readback."
+      }
+    },
+    "storyboard35PathBinding": {
+      "ownerReceipt": {
+        "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-binding-p2-followup-20261019.json",
+        "sha256": "05464572c246b473bdbf0cefad07b854e4d72df3de3e54cdcd80370f50bf2e41"
+      },
+      "independentReview": {
+        "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-binding-p2-independent-review-20261019.json",
+        "sha256": "c00db2c4d7eab58e1e1df5c3cda26a015e984e7ed583777129d0210771112878",
+        "currentEvent": "STORYBOARD-RUNTIME-SOURCE-BINDING-INDEPENDENT-P2-20261019-003"
+      },
+      "status": "current_35_path_source_freeze",
+      "runtimeSourceBindingSha256": "c0da765eafb23620c32ea8de6d4990ebfff4132de337560a8a1993706b3853c9",
+      "canonicalPolicySha256": "7b6569433db7a1a826d4004fd0a66ebc1fcb9ca022b070575b291ded6d011618",
+      "behavior": {
+        "reproducedFailure": "Three first-party execution dependencies were outside the prior source compatibility digest.",
+        "result": "The dynamic budget wrapper, Python budget module and privileged Storage client are included in the current source binding.",
+        "denominator": "35 declared first-party runtime paths, including the three added dependencies; prior binding covered 32."
+      }
+    },
+    "ocrFinalAclAndCompilerAdmission": {
+      "aclSourceProof": {
+        "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-acl-owner-followup/resolution.json",
+        "sha256": "90b931820d036e8298d38b4a2c3333f780538cfe9450112867753e3df1c5ae9e"
+      },
+      "independentReview": {
+        "path": "apps/web/performance/cross-audit-20261018/ocr-catalog-recovery-independent-source-review-20261019.json",
+        "sha256": "7c91a587555874b3a16b84bbcf89ed5bd2f2c9d6da448477d33f1d01dfdd580a",
+        "currentEvent": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-005"
+      },
+      "finalCompilerAdmission": {
+        "path": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-acl-source-freeze-followup-20261019.json",
+        "sha256": "8ac7156a1218be427bb123c98095e09e7f682d522b4f06f0eee672a1a609cbe6",
+        "status": "source_frozen_operating_pg17_execution_admitted"
+      },
+      "status": "current_source_with_final_pg17_6_catalog_and_canonical_nosuperuser_nonrace_proof",
+      "operatingPlanSha256": "f0ccf9c5a27d021b50e7e8512d80de947044150d304d0b9c0ad493f59d333ec1",
+      "targetLedger": {
+        "count": 106,
+        "root": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1"
+      },
+      "behavior": {
+        "reproducedFailure": "Extra table SELECT, extra function EXECUTE, release-table owner drift and catalog-table owner drift could evade the earlier finite privilege checks.",
+        "result": "Final PG17.6 constituent and aggregate catalog paths passed all10 mutation markers with zero warnings and membership restoration. Canonical durable nonrace core separately passed under postgres NOSUPERUSER; the full dblink race remains temporary-SUPERUSER local evidence.",
+        "denominator": "Two fresh 105-to-106 path targets;10 catalog mutation markers per path; one canonical15387-byte nonrace prefix on a separate fresh target."
+      },
+      "correctedFixtureReadmission": {
+        "path": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-default-acl-fixture-admission-20261019.json",
+        "sha256": "28458429d1dfd341ba0955585553053f054b81f94f4279ffd1de291bdc27c812"
+      },
+      "disposableCleanupReadmission": {
+        "path": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-disposable-cleanup-readmission-20261019.json",
+        "sha256": "b6f70f301ae34b4d1eb878c41b4142ed623913ec84d2b3c7938c46a78dc7ff87"
+      }
+    },
+    "rootIntegratedVerification": {
+      "verification": {
+        "path": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/verification.json",
+        "sha256": "02f25347635728ee4e8a7e1ac8b215908a8c13b237c25c17292a4983263bf626"
+      },
+      "appSourceContinuity": {
+        "path": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/app-source-continuity-cleanup-followup.json",
+        "sha256": "cd87e9189ad6df89c1d34acb4a803ba4e0960eb776d0ed8b4611fa455e846ec5"
+      },
+      "status": "passed_with_compile_source_continuity",
+      "checks": {
+        "targetedEslint": {
+          "exitCode": 0,
+          "artifact": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/targeted-eslint.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "nativeTypeScriptParity": {
+          "status": "passed",
+          "logicalInputs": 3351,
+          "diagnostics": 0,
+          "artifact": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/compiler-parity.txt",
+          "sha256": "2da0b815c66d282d696599ad3bfd4f9be69d0aa9f0a1526d34dc90ca0537c857"
+        },
+        "productionBuild": {
+          "exitCode": 0,
+          "staticPages": "54/54",
+          "artifact": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/production-build.txt",
+          "sha256": "6df84f840d8ffda558521b90fd53bbbe00a5eda50481afa5ff6738b1df0f3498"
+        },
+        "compileSourceContinuity": {
+          "matched": 20,
+          "mismatched": 0
+        }
+      },
+      "behavior": {
+        "result": "All 20 compile-related source inputs remained byte-identical after the separate SQL ACL-only delta, and the compiled storyboard route contains the 35-path binding.",
+        "denominator": "20 compile inputs, 3,351 TypeScript logical inputs with zero diagnostics, and 54 generated static pages.",
+        "performanceInterpretation": "The single local build duration is retained only as execution metadata and is not evidence of a speed improvement."
+      },
+      "previousAppSourceContinuity": {
+        "path": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/app-source-continuity-followup.json",
+        "sha256": "476abb9645484dc6c485add9cf795a78e2e4845d6a04eba4d52e5182ec4577a3"
+      },
+      "fixtureOnlyAppSourceContinuity": {
+        "path": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/app-source-continuity-fixture-followup.json",
+        "sha256": "91156ca5d26c7d8e7f6b5c0cc69d6b775ddcd1ddce71dd598ebd44fa12db2717"
+      }
+    },
+    "durableCredentialRejectionClient": {
+      "receipt": {
+        "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/resolution.json",
+        "sha256": "507029a10ebf649187c3a8be67fbf63c2657df5d415bcc3ace69734747be0314"
+      },
+      "status": "app_source_hashes_current_sql_part_of_receipt_historical",
+      "currentSourceHashes": {
+        "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+        "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0"
+      },
+      "behavior": {
+        "result": "Only trusted definitive credential rejection releases the exact durable claim; uncertain outcomes retain the replay fence. A missing or malformed versioned recovery capability holds before claim, quota and provider.",
+        "denominator": "32 durable client tests,195 assertions; the SQL snapshot in the same older receipt is superseded by the final ACL and compiler proofs."
+      },
+      "verification": {
+        "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/durable-receipt-ocr.test.ts --timeout 30000",
+        "result": "32 pass, 0 fail, 195 assertions",
+        "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/durable-bun.txt",
+        "rawSha256": "e5b5034c7ff5b4c655a5556e9e4ddd542a05217daaa274c0564f1d380fa66786"
+      },
+      "changedFixtureSourceContractSubset": {
+        "path": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/durable-fixture-source-contract-followup.json",
+        "sha256": "aca47fb1fcdd85f5232b489f77badd52775a368f79ca3dcc453314ff96e71a92",
+        "result": "1 pass,31 filtered,0 fail,18 assertions; not added to32-pass baseline"
+      }
+    },
+    "pg17_6AclCounterexample": {
+      "receipt": {
+        "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+        "sha256": "9a0639afa3b1da37ed118c85a0f132d667cf96fec6a085ef526b1cd5bb6b009d",
+        "failureEvent": "OCR105-PG17-005"
+      },
+      "status": "historical_fixture_failure_understood_not_a_proven_source_defect",
+      "finding": "OCR106-ACL-001",
+      "result": "The original constituent fixture failed before durable/aggregate execution. Follow-up role-matched reproduction establishes a warning/no-op GRANT in the fixture; no source ACL detector defect is claimed. See pg17_6FixtureCorrection."
+    },
+    "pg17_6FixtureCorrection": {
+      "receipt": {
+        "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/resolution.json",
+        "sha256": "18f05ee00bffc333d256a9da01116980710e53757731f525705c0f9c8b5b8544"
+      },
+      "status": "corrected_fixture_final_pg17_6_catalog_paths_passed",
+      "result": "Original GRANT was reproduced as warning/no-op under postgres NOSUPERUSER and owner SET=false. Actual owner GRANT changed proacl and the unchanged capability seal returned held. The corrected fixture leases owner SET within the transaction, asserts actual ACL/owner mutations and restores membership. Final Event009 constituent and aggregate catalog replays passed."
+    },
+    "postSealAclScope": {
+      "decision": "CONDITIONAL_SCOPE",
+      "evidence": {
+        "path": "apps/web/performance/cross-audit-20261018/ocr-catalog-recovery-independent-source-review-20261019.json",
+        "sha256": "7c91a587555874b3a16b84bbcf89ed5bd2f2c9d6da448477d33f1d01dfdd580a",
+        "event": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-005"
+      },
+      "condition": "Catalog seal equality verifies post-seal drift. It does not independently prove a canonical initial allowlist under arbitrary creator default ACLs. The observed PG17.6 privacy_workflow_owner had no such default ACL. No wider installation claim is made."
+    },
+    "bannerActualComponentTitleBoundary": {
+      "receipt": {
+        "path": "apps/web/performance/cross-audit-20261019/banner-title-media-browser-receipt.json",
+        "sha256": "4c07009f09dfda8324a6bf24df36d0211e28a74b45072b99df16728e3bb3d8ef"
+      },
+      "status": "historical_http_origin_limitation_resolved_by_https_followup",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "behavior": {
+        "title101": {
+          "uploadRequests": 0,
+          "patchRequests": 0,
+          "cleanupRequests": 0,
+          "draftPreserved": true,
+          "errorVisible": true
+        },
+        "title100": "Advanced past title validation, but loopback HTTP/port media URL was rejected before Storage upload; no successful upload or 400/500 browser cleanup claim."
+      },
+      "sourceHashReadbackMatched": 8,
+      "hostedRequests": 0,
+      "externalWorkerRequestBlocked": 1,
+      "teardownVerified": true,
+      "gatewaySourceVerification": {
+        "path": "apps/web/performance/cross-audit-20261019/banner-browser-gateway-source-verification.json",
+        "sha256": "cfd58c444fe48cd377b041cb0a395e7af6541c180e7052d7efa6bdd986abab8a",
+        "historicalReceiptRestored": true,
+        "historicalReceiptSha256": "92c80b5ec94e4fb4e56a853f1d9e40d65887ea3afecf1e0ed7b751205c972292"
+      }
+    },
+    "pg17_6CatalogPassDurableCleanupFailure": {
+      "receipt": {
+        "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+        "sha256": "9a0639afa3b1da37ed118c85a0f132d667cf96fec6a085ef526b1cd5bb6b009d",
+        "event": "OCR105-PG17-008"
+      },
+      "status": "catalog_passed_durable_final_cleanup_failed",
+      "result": "Corrected catalog fixture passed with zero warnings and10/10 mutation markers plus terminal/membership restoration. Durable assertions,dblink race and disconnect passed before synthetic auth-user DELETE failed on privacy_consent_events permissions. Aggregate was not created. No overall durable/integration pass is claimed."
+    },
+    "durableFixtureCleanupCorrection": {
+      "receipt": {
+        "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/durable-cleanup-resolution.json",
+        "sha256": "533b5e633ffab3cac1513875c7ef781e334ac4bdfa31a6fbc6987fd95285ba82"
+      },
+      "status": "exact_pg17_6_target_teardown_verified",
+      "result": "No production ACL change. Explicit disposable marker is required before insert; all assertions and dblink race/disconnect remain, bounded residual handoff must be followed by exact owned target and volume removal. Marker is not authority or ownership proof."
+    },
+    "pg17_6RoleQualifiedIntegration": {
+      "receipt": {
+        "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+        "sha256": "9a0639afa3b1da37ed118c85a0f132d667cf96fec6a085ef526b1cd5bb6b009d",
+        "fullPathsEvent": "OCR105-PG17-009",
+        "canonicalNonraceEvent": "OCR105-PG17-011"
+      },
+      "independentReview": {
+        "path": "apps/web/performance/cross-audit-20261018/ocr-catalog-recovery-independent-source-review-20261019.json",
+        "sha256": "7c91a587555874b3a16b84bbcf89ed5bd2f2c9d6da448477d33f1d01dfdd580a",
+        "currentEvent": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-005"
+      },
+      "status": "passed_with_explicit_role_boundaries",
+      "results": {
+        "constituent": "passed",
+        "aggregate": "passed",
+        "terminalLedgerCount": 106,
+        "catalogMutationMarkersPerPath": "10/10",
+        "catalogWarningsPerPath": 0,
+        "canonicalNonracePrefixBytes": 15387,
+        "canonicalNonracePrefixSha256": "7c2c382282682bee0437b9f6352e6e26f0d60525fc406837c920b22479a6965b",
+        "postgresRolsuperBeforeAndAfter": false,
+        "targetDumpUnchanged": true,
+        "exactOwnedTargetsRemoved": true,
+        "sourceAndRetained105DumpsUnchanged": true
+      },
+      "roleLimits": {
+        "nonraceCore": "Verified on canonical frozen prefix under postgres NOSUPERUSER.",
+        "dblinkRace": "Verified only under temporary postgres SUPERUSER lease in Event009; operating-role evidence remains false.",
+        "event010": "Historical semantically equal15388-byte slice with one extra blank line; not canonical binding.",
+        "hosted": "unverified"
+      }
+    },
+    "bannerActualComponentHttpsFollowup": {
+      "receipt": {
+        "path": "apps/web/performance/cross-audit-20261019/banner-title-media-browser-https-followup.json",
+        "sha256": "16591841d1ee9242a50e12c84b6a29dc79dcc4a39d83da055c0e0346deb1e7b2"
+      },
+      "status": "three_source_bound_browser_cases_passed",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "requestsByCase": {
+        "title101": {
+          "upload": 0,
+          "patch": 0,
+          "cleanup": 0
+        },
+        "title100Definite400": {
+          "upload": 1,
+          "patch": 1,
+          "cleanup": 1
+        },
+        "title100Uncertain500": {
+          "upload": 1,
+          "patch": 1,
+          "cleanup": 0
+        }
+      },
+      "draftPreservedInAllCases": true,
+      "sourceHashReadbackMatched": 7,
+      "externalHttpRequests": 0,
+      "hostedRequests": 0,
+      "providerCalls": 0,
+      "syntheticWebSocketsClosedBeforeConnection": 2,
+      "teardownVerified": true,
+      "limit": "Synthetic HTTPS Storage was fulfilled locally in the task-owned browser context; this is not operational Storage readback."
+    }
+  },
+  "historicalProofs": [
+    {
+      "path": "apps/web/performance/cross-audit-20261018/banner-upload-rejection-cleanup-source-receipt.json",
+      "sha256": "57d8b903793efd6612870d994e825b5fc0698bc9fba61f156162c3013c45136c",
+      "reason": "Superseded by HTTP status-code binding follow-up."
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261019/admin-receipt-row-failure-progress/receipt.json",
+      "sha256": "0041f3ab93c3bf4f4b61efbc1f3ebcf6ae927e4150298e93469404a0179170ff",
+      "reason": "P1 findings remain valid; processor full-file SHA predates capability-held mapping."
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261019/admin-receipt-row-failure-progress/independent-review.json",
+      "sha256": "3a2adf1e9cd1030f3a86dec69d500c46751689b8b87b2f521fd65051deea37b0",
+      "reason": "Independent verdict preserved; source identity superseded by held follow-up."
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-binding-p2-20261019.json",
+      "sha256": "81d3cefea418ee8cd6d3be059117f92b538c5a3228d70eb09c0141fd537bf408",
+      "reason": "Historical 32-path predecessor."
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-source-freeze-20261019.json",
+      "sha256": "52054f4bc047ed4c8bb92b3d7185313d3e45b135b695b3fda1fa46658cec4163",
+      "reason": "Historical pre-ACL candidate; not current compiler admission."
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/ocr-catalog-recovery-independent-source-review-20261019.json",
+      "event": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-001",
+      "reason": "Historical conditional event within the current append-only independent review; event 002 resolves the reported ACL and owner counterexamples."
+    }
+  ],
+  "verificationGroups": {
+    "aggregateTestCount": null,
+    "bannerContractAndUrl": {
+      "result": "18 pass, 0 fail, 151 assertions",
+      "countedOnce": true
+    },
+    "p1RowFailureAndCapabilityHeld": {
+      "result": "26 pass, 0 fail, 155 assertions",
+      "subgroups": {
+        "p1": 22,
+        "capabilityHeld": 4
+      },
+      "countedOnce": true
+    },
+    "storyboardBroadSourceBinding": {
+      "result": "38 pass, 0 fail, 264 assertions",
+      "targetedSubset": "9 pass, 0 fail, 82 assertions",
+      "subsetAddedToBroadCount": false,
+      "independentRerunAdded": false
+    },
+    "ocrFinalSuccessorAcl": {
+      "result": "7 pass, 0 fail, 59 assertions",
+      "duplicateOwnerAndAdmissionRunsAdded": false,
+      "capabilityHeldFourAlreadyCountedInP1Group": true
+    },
+    "integratedChecks": {
+      "testsAdded": false,
+      "targetedEslint": "passed",
+      "nativeParity": "passed",
+      "productionBuild": "passed"
+    },
+    "durableCredentialRejectionClient": {
+      "result": "32 pass, 0 fail, 195 assertions",
+      "sourceContinuityVerified": true,
+      "prior31SubsetAdded": false
+    }
+  },
+  "pendingProofs": {
+    "newHeadCI": "Not yet pushed. Baseline b1c505cd31success/2skipped is not evidence for the new source.",
+    "externalCrossAudit": "Original Gemini adversarial and final ChatGPT reverse review incomplete; no upload or dispatch for the queued Gemini job.",
+    "hostedAndDeployment": "Held source-only SQL successor, hosted capability/recovery readback, protected promotion, deployment and authenticated whole-menu verification remain separate gates."
+  },
+  "limits": [
+    "Historical fixture failures and noncanonical Event010 remain preserved and are not counted as successful canonical proof.",
+    "The dblink race is privileged local concurrency evidence only; the canonical nonrace core has separate NOSUPERUSER proof.",
+    "Catalog seal equality verifies post-seal drift, not a universal canonical initial allowlist under arbitrary creator default ACLs.",
+    "Local source, tests, synthetic browser and database proofs do not establish hosted database apply, provider billing, deployment, authenticated production readback or field behavior.",
+    "No operational performance improvement or95percent confidence interval is inferred from deterministic test counts or the single local build observation."
+  ]
+}

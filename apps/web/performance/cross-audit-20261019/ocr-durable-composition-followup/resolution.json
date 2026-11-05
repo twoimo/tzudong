@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "tzudong-source-bound-runtime-resolution-v1",
+  "receiptId": "OCR-DURABLE-MIXED-HISTORY-COMPOSITION-REGRESSION-20261019",
+  "recordedAt": "2026-10-18T18:40:44Z",
+  "baseHead": "7d04fca8469c9d282f8885714435bd5124f3e826",
+  "reviewAnchor": {
+    "path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/chatgpt-full-report.md",
+    "sha256": "117b7a0f220af81c5283b385a1b5f46b440c628521fc5ca3522f3a5e7517a215",
+    "readScope": "필수 직접 regression sequence only"
+  },
+  "sourceBindings": {
+    "fixedHelper": {
+      "path": "apps/web/lib/ocr/gemini.ts",
+      "sha256": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef",
+      "modifiedByThisTask": false
+    },
+    "testBeforeSha256": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0",
+    "testAfter": {
+      "path": "apps/web/tests-unit/durable-receipt-ocr.test.ts",
+      "sha256": "17d21c2ff3e9f43cdcb9247a2be4f80e8b582eaff14ded428935d674614b8e76"
+    }
+  },
+  "applicationComposition": [
+    {
+      "id": "OCR-DURABLE-COMP-001",
+      "case": "no-payload initial analysis",
+      "providerSequence": [
+        "model-a returned synthetic non-JSON text",
+        "model-b returned structured API_KEY_INVALID 400"
+      ],
+      "observedProviderCalls": 2,
+      "callsBeyondModelB": 0,
+      "nextCredentialCalls": 0,
+      "credentialReleaseStoreCalls": 0,
+      "markIndeterminateStoreCalls": 1,
+      "publicTerminalRead": "indeterminate",
+      "decision": "passed"
+    },
+    {
+      "id": "OCR-DURABLE-COMP-002",
+      "case": "force refresh with existing verified payload P and revision R",
+      "providerSequence": [
+        "model-a returned synthetic non-JSON text",
+        "model-b returned structured API_KEY_INVALID 400"
+      ],
+      "observedProviderCalls": 2,
+      "callsBeyondModelB": 0,
+      "nextCredentialCalls": 0,
+      "credentialReleaseStoreCalls": 0,
+      "markIndeterminateStoreCalls": 1,
+      "preservation": [
+        "same resultRef",
+        "same payload P",
+        "same revision R"
+      ],
+      "retryBoundary": "subsequent force refresh reused the uncertain verified result and invoked provider zero times",
+      "decision": "passed"
+    }
+  ],
+  "preservedRegressions": [
+    "credential-only definitive rejection still releases and allows repaired credential retry",
+    "credential1 definitive rejection then credential2 transport uncertainty remains non-definitive with prior attempts",
+    "committed definitive release acknowledgement loss remains recoverable",
+    "stale old-token release cannot overwrite a newer claim",
+    "possibly-dispatched uncertainty remains non-retryable"
+  ],
+  "evidenceSeparation": {
+    "applicationEvidence": "The tests connect the real callGeminiReceiptOcrWithCredentialFallback helper to executeDurableReceiptOcr and observe store method dispatch, public readback, payload/revision continuity, and retry blocking through the existing fakeStore pattern.",
+    "databaseEvidence": "No database or RPC was executed. Exact-token release, persisted dispatch stages, ACLs, idempotency, and SQL races remain covered by the separate PostgreSQL fixtures and receipts; this test does not claim to re-prove them.",
+    "sqlPatchRequired": false
+  },
+  "verification": [
+    {
+      "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/durable-receipt-ocr.test.ts --timeout 30000 -t \"mixed model\"",
+      "result": "2 pass, 0 fail, 12 assertions",
+      "rawPath": "apps/web/performance/cross-audit-20261019/ocr-durable-composition-followup/composition-bun.txt",
+      "rawSha256": "370386f6ef085170cdbe35352a56b4dc2c125ff6f270e8bf626195ad13fd92f4"
+    },
+    {
+      "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/durable-receipt-ocr.test.ts --timeout 30000",
+      "result": "34 pass, 0 fail, 207 assertions",
+      "rawPath": "apps/web/performance/cross-audit-20261019/ocr-durable-composition-followup/full-durable-bun.txt",
+      "rawSha256": "f8880005e2f793ced011d03b99fe29e60a9a85d9927eec95768156fd800542d9"
+    },
+    {
+      "command": "node scripts/run-web-tool.mjs eslint tests-unit/durable-receipt-ocr.test.ts --max-warnings=0",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261019/ocr-durable-composition-followup/targeted-eslint.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check -- apps/web/tests-unit/durable-receipt-ocr.test.ts",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261019/ocr-durable-composition-followup/diff-check.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "privacy": {
+    "realProviderCalls": 0,
+    "databaseCalls": 0,
+    "rawOcrPersisted": false,
+    "credentialsPersisted": false,
+    "fixtures": "non-credential synthetic markers only"
+  },
+  "limits": [
+    "The force-refresh succeeded/uncertain stage is evidenced through preserved payload/revision plus a blocked provider retry in the existing application fakeStore; it is not a PostgreSQL row-level readback.",
+    "The report required exactly model-a and model-b. Provider call count=2 proves no call beyond model-b; the fixed helper unit regression separately covers an explicitly configured third model.",
+    "Root already passed helper integration/parity/build. This task changes tests only, so app build was not repeated."
+  ],
+  "externalEffects": {
+    "providerCalls": 0,
+    "hostedDatabaseWrites": 0,
+    "storageCalls": 0,
+    "gitWrites": 0
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "schema": "tzudong-ocr-admission-recovery-app-integrated-verification/v1",
+  "startedAt": "2026-10-18T20:29:18.039968+00:00",
+  "baseHead": "cfba8fbbf532c0337c8443c719e5b0d7bf9baf48",
+  "sourceIntegrity": {
+    "apps/web/app/api/admin/ocr-receipts/rerun/route.ts": "4426abc96721bb401f1debc71559e3368d97d85dee95ccf5ea78211cfe656f62",
+    "apps/web/components/admin/SubmissionListView.tsx": "1d7b5a06139091e0280548f56e689be4b5d0438539af4ff5ef3b193fca192b69",
+    "apps/web/integrations/supabase/types.ts": "484fec0a6c979280cfad372c7edb2f6c9586d8bb9d39be14e01c7c721a0c4bd2",
+    "apps/web/lib/admin/ocr-recovery-confirmation.ts": "4c37ff1aa59ac23bc7df4022a3c907784fb6cbe971ac44c0d15778aeaa643b18",
+    "apps/web/lib/ocr/admin-receipt-batch.ts": "ae96e7c6dc6b886a109256f3f85d2343bc330fa0c9e5a6c7df7e186d5d7712a1",
+    "apps/web/lib/ocr/admin-receipt-processor.ts": "5ce863fe85f5edb279c66605f99d68d15d4c63dd15229fa3fb8166c80ddbb6f1",
+    "apps/web/lib/ocr/admin-receipt-recovery.ts": "890f628bc4222a0bd68026ba6013985cb0b48ce6b05051ec6b19a14e87a4c70d",
+    "apps/web/lib/ocr/durable-result.ts": "2551b9147fc0ee6a639823f745bd8530866a444d4812e60768e134fce589bc3f",
+    "apps/web/lib/ocr/workflow-dispatch.ts": "dcc5c502246e6521e2d19ed40b02b3b2a228077f734e15831d16c407b300e58f",
+    "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts": "4b6f89370b59d0bcc525af8118637e5bce8b1eca2c023d6cad5185b8317463a1",
+    "apps/web/tests-unit/admin-receipt-recovery.test.ts": "6d1db4c79fe9060e07a1f40f3a9e1ba3fc690615b09c58aa8f155a96fe72c8d0",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "5652f73bb63d5839ae9f1fb4c283b5f02f724daee7c61fede6a4acc2645ee156",
+    "apps/web/tests-unit/receipt-ocr-post106-acl-admission-sql-successor.test.ts": "66bb1d2db1597b99979e5170e1279827d4eca67196703325933d9b84b534d4d7",
+    "apps/web/tests-unit/receipt-ocr-recovery108-sql-successor.test.ts": "ec3167b7d24c325d48111bfe70324d87c0a7959ca36629603fb565da125f52f0",
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": "9a8073d40fd9a5bafbfdcb300c58abef2a392373f2dd3e2ac0157068c43e43fb",
+    "apps/web/scripts/run-admin-receipt-ocr-workflow.ts": "d8753a793bd682f5a1d9f6045c58ea73c7e96433d81d1862ec2b3dc64e0563f2",
+    ".github/workflows/ocr-review-receipts.yml": "9974c65adac49994b8ce95829ef50f9fbf1bf563cc144c20a0eef21fa7bccbbe",
+    "apps/web/lib/ocr/gemini.ts": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef",
+    "apps/web/package.json": "7b2d5f52d2c5fb32aa2d17db674ccd3f3823be18ca2d70c47d996d78b9d64c69",
+    "apps/web/package-lock.json": "b4ba1fbdc9aada044c495e6a1591700758ee74edc62c3311991f8d0d49cd86eb",
+    "apps/web/tsconfig.json": "42fa4271abb1177f6c171d2740f71012247c8f75dd05fd58ffa288231d9f2bc6",
+    "apps/web/next.config.mjs": "71327b5cc6278b06eeb3af07c09c7ee020350602c9310df53c8db5614d7af76c",
+    ".github/receipt-ocr-post106-acl-admission-sql-successor.v1.json": "58adb514cbdf4221952b9bddfc75dead6a91f74d6fedc0d39445983c542e9b5a",
+    ".github/receipt-ocr-recovery108-sql-successor.v1.json": "22b7f13a11800cffec67a96b834d10600f7b318c0c9e147e0cdbe5dc15b325a6",
+    "backend/supabase/migrations/20261019120000_receipt_ocr_credential_release_acl_admission_v2.sql": "512f778b71a196e28f092266782fe5938b7d15ec72b61bf05978f3b1696faec9",
+    "backend/supabase/migrations/20261019130000_receipt_ocr_indeterminate_recovery.sql": "d3258b679cbf42ecd97edeab941a5bbaf30fa7b15d968081b60b8b600a3ecd1a",
+    "apps/web/scripts/receipt-ocr-post106-acl-admission-sql-successor.mjs": "5dd0c66725e14ee9584dd162dccda4419c304ddbda6f3f28b1e645b7aa686b21",
+    "apps/web/scripts/receipt-ocr-recovery108-sql-successor.mjs": "5a9154f51cfe19f25007ce1737eee969faa32c166698b977884218c370ad20f8",
+    "backend/supabase/tests/receipt_ocr_indeterminate_recovery.sql": "095128056aa744abec6daf42d062cc2d2026673f18f7efb88855f580b47a4940",
+    "backend/supabase/tests/receipt_ocr_indeterminate_recovery_acl_initial_default.sql": "01a712df0fa0de40c3b0760f52d51c8238bc0f4ecb5ebb8f53160eb1fa5a9e20",
+    "backend/supabase/tests/receipt_ocr_indeterminate_recovery_acl_admission.sql": "76317420f3be8199fccfbf716ad024573dad324d6f906c3a811c70e4e28df66e",
+    "apps/web/scripts/verify-admin-receipt-ocr-recovery-browser.ts": "d3ddce93f0ebf0d75b72a03c2b727341a050d037212e8c2213663cac1dc72bb5",
+    "apps/web/scripts/preview-design-fixtures.mjs": "9c124f7118651b4e15089a73c994ae2163f0f1a301e152c5c790459157ca9e0a"
+  },
+  "scope": "Final app runtime, compiler parity, scoped lint and production build; actual SQL behavior is established only by separate database proofs.",
+  "environment": {
+    "node": "v24.22.0",
+    "bun": "1.4.0",
+    "npmReleaseAuthority": "11.6.2",
+    "dotenvAutoLoad": false,
+    "credentialInputs": "none supplied",
+    "outboundNetwork": "not instrumented"
+  },
+  "checks": {
+    "helper-durable": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.178,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/helper-durable.txt",
+      "sha256": "d9bfb9651b947745632c7d2df4c750866ef491eed3b49db85506af3ca663f665"
+    },
+    "admin-recovery": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.106,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/admin-recovery.txt",
+      "sha256": "4eff70e6955e3cbca39d2c1a63ef04a0d0736649fb57adc99aafb6ee0a7d1f26"
+    },
+    "admin-workflow": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.308,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/admin-workflow.txt",
+      "sha256": "7dd45f90e517b2205b681b2394b29ad8881fbdd4831d9bf246d1b224a1be38c3"
+    },
+    "admin-processor": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.082,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/admin-processor.txt",
+      "sha256": "21da2ab149c0752151a594e23d55f986f8070f1d6d0a029e280161c952ed5274"
+    },
+    "held-routes": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.064,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/held-routes.txt",
+      "sha256": "5c0c1619d52e3fc09741cd14b7b363d616e05612c4d4aeb96d8190ea76f4e64a"
+    },
+    "held-107-108-compilers": {
+      "exitCode": 0,
+      "elapsedSeconds": 4.344,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/held-107-108-compilers.txt",
+      "sha256": "22a648b23b99dd033c4ff0dc4ddf624bb1d980c58cdc40e03c5dbb60a4bb0e5e"
+    },
+    "route-contract": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.213,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/route-contract.txt",
+      "sha256": "e1c44145378080dfe54956cf8ee8da3cbf4ac2cd2beab59e964a8ad033cfdacf"
+    },
+    "worker-cli": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.437,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/worker-cli.txt",
+      "sha256": "3df356da35e664af334f49c68b655045fabeac5b9d34017e0e3e59254089953a"
+    },
+    "receipt-replacement": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.055,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/receipt-replacement.txt",
+      "sha256": "d3ad97823b90debad6860e1890c9cbd56fc372567f4a14e9282be0eaec089692"
+    },
+    "scoped-eslint": {
+      "exitCode": 0,
+      "elapsedSeconds": 2.463,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/scoped-eslint.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "compiler-parity": {
+      "exitCode": 0,
+      "elapsedSeconds": 17.349,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/compiler-parity.txt",
+      "sha256": "4687f98cb8c74400d9c5c61b86425e14629cc46946aaf12987f11ff8bcc827c2"
+    },
+    "production-build": {
+      "exitCode": 0,
+      "elapsedSeconds": 54.794,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/production-build.txt",
+      "sha256": "9de17875d0733be67c8b7fc9211ec07df7d43290cd331d970471fa13f8e872af"
+    }
+  },
+  "limitations": [
+    "Local compiler and production-mode build only; no hosted database, provider billing, deployment or authenticated production flow is established.",
+    "Elapsed times are uncontrolled single observations and do not establish a performance change."
+  ],
+  "databaseBehaviorProofSeparate": true,
+  "taskTsconfigIncludesRestored": true,
+  "sourceIntegrityUnchanged": true,
+  "finishedAt": "2026-10-18T20:30:38.543808+00:00"
+}

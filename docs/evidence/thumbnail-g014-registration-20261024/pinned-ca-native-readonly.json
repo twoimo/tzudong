@@ -1,0 +1,69 @@
+{
+  "schema": "thumbnail-pinned-ca-readonly-local-v1",
+  "recordedAt": "2026-10-24T12:34:35.866005+00:00",
+  "sourceParent": "322ded7d161e671811b17ce9b52b4cafc6021b46",
+  "files": [
+    {
+      "path": "apps/web/scripts/thumbnail-production-successor.mjs",
+      "sha256": "5f5001880e367199dd63c5d93c2716c818fe93f78c0420cabd1ce8bb9df2791a"
+    },
+    {
+      "path": "apps/web/scripts/thumbnail-operating-collector.mjs",
+      "sha256": "7b3bcb3bdbcbd28752877b8c969fe3609b14764f4c5d808a2f30457fba81bac5"
+    },
+    {
+      "path": "apps/web/tests-unit/thumbnail-production-successor.test.ts",
+      "sha256": "fd7688c41dbaf316e905c6e1f75ddb6ccc82920adf60394df4a149c9077f69bc"
+    },
+    {
+      "path": "backend/supabase/certificates/prod-ca-2021.crt",
+      "sha256": "700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7"
+    },
+    {
+      "path": ".github/thumbnail-production-successor.v2.json",
+      "sha256": "381465961c5820d7074e8a318db6b5129a3ae81aa868da9254af26748d67d849"
+    },
+    {
+      "path": "apps/web/scripts/admin-record-sql-successor.mjs",
+      "sha256": "c9b2c3335598bc21a5a721182ae45aae0d009be8684e7a1a2a0871e0cb921466"
+    },
+    {
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "sha256": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4"
+    }
+  ],
+  "nativeTransport": {
+    "receiptSha256": "8a12f072ccc6d52ea0b98bf55fea20bcfc0474d2277dc0e86a3b1af1f005706c",
+    "defaultLibpqTrustPreflight": "TLS_TRUST_REJECTED",
+    "fixedPath": "backend/supabase/certificates/prod-ca-2021.crt",
+    "sslmode": "verify-full",
+    "clientProtocol": "TLSv1.3",
+    "defaultTrustUnchanged": true,
+    "serverVersionNum": 170006,
+    "executorMatched": true,
+    "databaseMatched": true,
+    "transactionReadOnly": true,
+    "proxyBackendTlsIsNotClientTls": true
+  },
+  "checks": {
+    "tests": 53,
+    "pass": 53,
+    "fail": 0,
+    "assertions": 705,
+    "testFiles": 3,
+    "focusedLintFiles": 3,
+    "lintErrors": 0,
+    "lintWarnings": 0
+  },
+  "limits": [
+    "Native probe reads only system identity and connection metadata",
+    "pg_stat_ssl describes the pooler-to-database connection and does not measure client TLS",
+    "Unit database and owner transports remain substituted",
+    "No global trust-store or frozen common helper change",
+    "New-head CI and protected promotion remain separate"
+  ],
+  "hostedWrites": 0,
+  "userRowsCopied": 0,
+  "providerCalls": 0,
+  "operatingApplied": false
+}

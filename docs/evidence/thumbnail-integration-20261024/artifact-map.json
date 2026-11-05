@@ -1,0 +1,90 @@
+{
+  "baseHead": "ee1a518d6017fc613749c613f4027a7ea0978896",
+  "artifacts": [
+    {
+      "path": "input-correspondence.json",
+      "bytes": 974,
+      "sha256": "a561aba0a553ccf7a10da02c8573e64459ec2c028a7808b6b298d8e345688b52"
+    },
+    {
+      "path": "browser-selected-build.json",
+      "bytes": 1182,
+      "sha256": "2bd0857d25b7d65be00d45898ecbddf0846f5a19b45473615bdd4ac7cb09d097"
+    },
+    {
+      "path": "full-production-proof-final.json",
+      "bytes": 3119,
+      "sha256": "0bfa4311e6495acdc35cea73ff1f3b34f8089a4431611bd124e4a93108973a35"
+    },
+    {
+      "path": "provider-budget-missing-driver.json",
+      "bytes": 200,
+      "sha256": "9fe1125a541c65e706b48832b7509460262a7df681fb4151a6e0af066e1bb774"
+    },
+    {
+      "path": "production-probe-result.json",
+      "bytes": 464,
+      "sha256": "6178b774b8c3a27772ad82b00ae7af4fd551e80b34089e3f2cbf8ae17a920d2b"
+    },
+    {
+      "path": "production-probe-after.json",
+      "bytes": 2505,
+      "sha256": "8b0c54465ad8a60e52b44647ae2198453ca85b9495fbf616d7fc0f28801d1d08"
+    },
+    {
+      "path": "thumbnail-pg17.json",
+      "bytes": 21148,
+      "sha256": "aa08a2218b9f1375dafbce36fb44fe48896529bc25be5ba698c75b45bbb80593"
+    },
+    {
+      "path": "provider-budget-pg17-portable.json",
+      "bytes": 2786,
+      "sha256": "953b02f40e3cb38d033b679d9b3cd5fe63a0bba03146b7b7fab3432666ffb5a9"
+    },
+    {
+      "path": "parity-final.json",
+      "bytes": 580,
+      "sha256": "682243bc3e622c904ff954295800e558f175c7a1ed236640b294ad7755b04fe2"
+    },
+    {
+      "path": "eof-normalization.json",
+      "bytes": 777,
+      "sha256": "8379c30ec7182e17fdd2c81347077fa2a46d1376269cec1c777145ca628331e9"
+    },
+    {
+      "path": "thumbnail-pg17-eof-final.json",
+      "bytes": 21149,
+      "sha256": "02bd26e172a3596acdc4fb402fa6535eb487ee909795e5c04311c7df451d5e63"
+    },
+    {
+      "path": "parity-eof-final.json",
+      "bytes": 468,
+      "sha256": "590d6cd794b3b22d484ac466daffb2ae6109a88c5c767d8f4b9c2105df25abf9"
+    },
+    {
+      "path": "canonical-unit-combined-failure.json",
+      "bytes": 799,
+      "sha256": "8215918dde87cb641b10e9493d3f6748c5a8186c7517652a022e7beee000fcb4"
+    },
+    {
+      "path": "canonical-unit-isolated-final.json",
+      "bytes": 8329,
+      "sha256": "e90f09d1ee822480b29f2e313ec76e4ba7630ecc211f3302a0c705b3277ebfdd"
+    },
+    {
+      "path": "ci-a287916a-terminal.json",
+      "bytes": 4489,
+      "sha256": "e22366bedec7de4e3231753964a3e61a07f0007677076bdf31d7498e518ec346"
+    }
+  ],
+  "hostedWrites": 0,
+  "providerGeneratorsInvoked": 0,
+  "scope": "Local integration and regression evidence, not hosted installation or a performance claim.",
+  "canonicalUnitTotals": {
+    "pass": 4386,
+    "skip": 12,
+    "fail": 0,
+    "assertions": 97860
+  },
+  "finalSourceHead": "a287916afe9f13cd2bae1fd0fcd1d6d145a30b57"
+}

@@ -2,3 +2,6 @@
 # Runtime/provider dependencies remain in their component-specific manifests.
 hypothesis==6.165.10
 PyYAML==6.0.3
+# The freshness tests execute the real rule cache probe, whose module imports
+# requests. Keep the component pin from restaurant-crawling/scripts/requirements.txt.
+requests==2.34.2

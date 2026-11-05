@@ -1,5 +1,7 @@
+import { normalizeSponsorshipInfo } from '@/lib/sponsorship-state';
 import type { DbConflictInfo, EvaluationRecord, EvaluationRecordStatus, RestaurantInfo } from '@/types/evaluation';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
+import { getRecordApprovalEligibility } from './evaluation-approval-eligibility';
 
 export function isEvaluationRecordStatus(value: unknown): value is EvaluationRecordStatus {
   switch (value) {
@@ -240,14 +242,12 @@ export function parseEvaluationResults(value: unknown): EvaluationRecord['evalua
 }
 
 export function parseYoutubeMeta(value: unknown): EvaluationRecord['youtube_meta'] {
-  if (!isRecord(value) || !isRecord(value.ads_info)) return null;
+  if (!isRecord(value)) return null;
   if (
     typeof value.title !== 'string'
     || typeof value.publishedAt !== 'string'
     || typeof value.is_shorts !== 'boolean'
-    || typeof value.duration !== 'number'
-    || typeof value.ads_info.is_ads !== 'boolean'
-    || !isNullableString(value.ads_info.what_ads)
+    || typeof value.duration !== 'number' || !Number.isFinite(value.duration) || value.duration < 0
   ) {
     return null;
   }
@@ -257,10 +257,7 @@ export function parseYoutubeMeta(value: unknown): EvaluationRecord['youtube_meta
     publishedAt: value.publishedAt,
     is_shorts: value.is_shorts,
     duration: value.duration,
-    ads_info: {
-      is_ads: value.ads_info.is_ads,
-      what_ads: value.ads_info.what_ads,
-    },
+    ads_info: normalizeSponsorshipInfo(value.ads_info),
   };
   return parsedMeta;
 }
@@ -412,6 +409,9 @@ export function buildEvaluationConflictInfo(source: EvaluationRecord, target: Ev
 export function normalizeEvaluationRecord(value: unknown): EvaluationRecord | null {
   if (!isRecord(value) || typeof value.id !== 'string') return null;
 
+  // Evaluate BEFORE status/provider/evidence parsing can discard raw blockers.
+  const approvalEligibility = getRecordApprovalEligibility(value);
+
   const status = isEvaluationRecordStatus(value.status) ? value.status : 'pending';
   const name = getString(value.name);
   const roadAddress = getNullableString(value.road_address);
@@ -428,6 +428,7 @@ export function normalizeEvaluationRecord(value: unknown): EvaluationRecord | nu
   const conflict = parseDbConflictInfo(value.db_conflict_info);
 
   return {
+    approval_eligibility: approvalEligibility,
     ...(conflict && conflict.existing_restaurant.id !== value.id ? { db_conflict_info: conflict } : {}),
     ...(parseEvaluationReadSummary(value.read_summary) ? { read_summary: parseEvaluationReadSummary(value.read_summary)! } : {}),
     id: value.id,

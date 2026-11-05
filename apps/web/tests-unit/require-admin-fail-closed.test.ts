@@ -83,11 +83,20 @@ async function withRequireAdmin<T>(
           queriedTables.push(table);
           const row = table === "user_roles" ? state.role : state.accountStatus;
           const error = table === "user_roles" ? state.roleError : state.accountStatusError;
+          let selectedColumns: string[] = [];
           const builder: Record<string, unknown> = {};
-          builder.select = () => builder;
+          builder.select = (columns: string) => {
+            selectedColumns = columns.split(',').map(column => column.trim());
+            return builder;
+          };
           builder.eq = () => builder;
           builder.maybeSingle = () => builder;
-          builder.returns = async () => ({ data: row, error });
+          builder.returns = async () => ({
+            data: row === null ? null : Object.fromEntries(
+              selectedColumns.filter(column => column in row).map(column => [column, row[column]]),
+            ),
+            error,
+          });
           return builder;
         },
       };
@@ -124,7 +133,7 @@ function grantActiveAdmin() {
   state.sessionError = null;
   state.role = { role: "admin" };
   state.roleError = null;
-  state.accountStatus = { account_status: "active" };
+  state.accountStatus = { account_status: "active", disabled_at: null };
   state.accountStatusError = null;
 }
 
@@ -245,6 +254,22 @@ describe("requireAdmin fail-closed contract", () => {
       expect(result.response.status).toBe(403);
     });
   });
+
+  for (const disabledAt of ["2026-10-23T00:00:00Z", undefined]) {
+    test(`denies an active admin with ${disabledAt === undefined ? 'missing' : 'non-null'} disabled_at`, async () => {
+      await withRequireAdmin({}, async (requireAdmin) => {
+        grantActiveAdmin();
+        state.accountStatus = { account_status: "active", disabled_at: disabledAt };
+
+        const result = await requireAdmin();
+
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.response.status).toBe(403);
+        expect(await result.response.json()).toEqual({ error: "Forbidden" });
+      });
+    });
+  }
 
   test("allows an active admin and returns the session user id", async () => {
     await withRequireAdmin({}, async (requireAdmin) => {

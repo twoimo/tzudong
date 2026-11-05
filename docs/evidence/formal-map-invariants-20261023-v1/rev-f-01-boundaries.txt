@@ -1,0 +1,34 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/retained-marker-accessibility.test.ts:
+(pass) outside-padded mask is owned, reversible and has no geometry or focus changes [0.28ms]
+(pass) does not remove a hidden state owned by another source [0.12ms]
+(pass) release/replacement cleanup allows the newly generated SDK root to be masked [0.09ms]
+(pass) SDK root not yet present stays retryable; removed root clears release ownership [0.03ms]
+(pass) delayed SDK roots share one observer and are masked on insertion without another render [0.17ms]
+(pass) visible/released marker cancels a pending root and does not later hide a replacement [0.03ms]
+(pass) changing map target disconnects the old pending observer [0.03ms]
+(pass) an SDK root replacement with the same desired state is masked again [0.07ms]
+(pass) hides the app overlay anchor containing a sibling review button and restores it [0.12ms]
+(pass) a disconnected old root stays pending and release cancels its insertion observer [0.18ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > failed provider detachment is discarded and does not strand clear or reuse a corrupt marker [0.52ms]
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.14ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.13ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.19ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.11ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.04ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.17ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.08ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.03ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.02ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.32ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.07ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [1.50ms]
+
+ 24 pass
+ 0 fail
+ 1163 expect() calls
+Ran 24 tests across 2 files. [175.00ms]

@@ -144,7 +144,7 @@ type PopularRankSnapshotPeriodRow = {
   period_start: string;
 };
 
-type PopularRankSnapshotResult = {
+export type PopularRankSnapshotResult = {
   snapshots: Map<string, PopularRankSnapshotRow>;
   hasSnapshotPeriod: boolean;
 };
@@ -155,6 +155,11 @@ type RestaurantListArgs = {
   selectedRegion?: string | null;
   isKoreanOnly?: boolean;
   sort?: LatestRestaurantSort;
+};
+
+export type PopularRestaurantListArgs = RestaurantListArgs & {
+  /** Home can render the ranked list before fetching optional historical trends. */
+  includeRankTrends?: boolean;
 };
 
 type LatestRestaurantPageArgs = Omit<RestaurantListArgs, 'limit'> & {
@@ -172,8 +177,21 @@ export const getPopularRestaurantsQueryKey = ({
   limit,
   selectedRegion,
   isKoreanOnly = false,
-}: RestaurantListArgs) => [
+  includeRankTrends = true,
+}: PopularRestaurantListArgs) => [
   ...POPULAR_RESTAURANTS_QUERY_KEY,
+  limit,
+  selectedRegion ?? 'all',
+  isKoreanOnly ? 'korean' : 'global',
+  ...(includeRankTrends ? [] : ['without-rank-trends']),
+];
+
+export const getPopularRankSnapshotsQueryKey = ({
+  limit,
+  selectedRegion,
+  isKoreanOnly = false,
+}: RestaurantListArgs) => [
+  ...POPULAR_RANK_SNAPSHOTS_QUERY_KEY,
   limit,
   selectedRegion ?? 'all',
   isKoreanOnly ? 'korean' : 'global',
@@ -215,10 +233,7 @@ export function getRestaurantRegionAddressKeywords(
 
   const overseasRegion = OVERSEAS_REGIONS[normalizedRegion];
   if (overseasRegion) {
-    return uniqueAddressKeywords([
-      overseasRegion.country,
-      ...overseasRegion.keywords,
-    ]);
+    return uniqueAddressKeywords(overseasRegion.keywords);
   }
 
   const overseasCountryKeywords = Object.values(OVERSEAS_REGIONS)
@@ -249,13 +264,14 @@ export const matchesRestaurantAddressContext = (
     restaurant.english_address,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(' ')
+    .toLowerCase();
 
   const selectedRegionKeywords =
     getRestaurantRegionAddressKeywords(selectedRegion);
   if (
     selectedRegionKeywords.length > 0 &&
-    !selectedRegionKeywords.some((keyword) => address.includes(keyword))
+    !selectedRegionKeywords.some((keyword) => address.includes(keyword.toLowerCase()))
   ) {
     return false;
   }
@@ -299,7 +315,7 @@ const applyRestaurantRegionAddressFilter = (
 };
 
 // Rank snapshots are a public read, so they use the REST client instead of the auth browser client.
-const fetchPopularRankSnapshots = async ({
+export const fetchPopularRankSnapshots = async ({
   limit,
   selectedRegion,
   isKoreanOnly = false,
@@ -460,7 +476,8 @@ export async function fetchPopularRestaurants({
   fetchLimit = Math.max(limit * 4, 12),
   selectedRegion,
   isKoreanOnly = false,
-}: RestaurantListArgs): Promise<PopularRestaurantWithTrend[]> {
+  includeRankTrends = true,
+}: PopularRestaurantListArgs): Promise<PopularRestaurantWithTrend[]> {
   const data = await fetchSupabaseRows<Restaurant>(
     'restaurants',
     applyRestaurantRegionAddressFilter(
@@ -475,16 +492,19 @@ export async function fetchPopularRestaurants({
     ),
   );
 
-  const restaurants = (await attachPopularYouTubeMetrics(
-    mergeRestaurants(data ?? [])
-      .filter(isApprovedRestaurant)
-      .filter((restaurant) =>
-        matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
-      ),
-  ))
-    .sort((a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0));
+  const cohort = mergeRestaurants(data ?? [])
+    .filter(isApprovedRestaurant)
+    .filter((restaurant) =>
+      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+    );
 
-  const reviewLikesById = await fetchReviewLikeTotals(restaurants.map((restaurant) => restaurant.id));
+  // KPI enrichment preserves the cohort's IDs, membership and order, so the
+  // independent like totals can load alongside it before any final ranking.
+  const [restaurants, reviewLikesById] = await Promise.all([
+    attachPopularYouTubeMetrics(cohort),
+    fetchReviewLikeTotals(cohort.map((restaurant) => restaurant.id)),
+  ]);
+  restaurants.sort((a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0));
   restaurants.sort((a, b) => comparePopularRestaurants(a, b, reviewLikesById));
   restaurants.splice(limit);
 
@@ -501,6 +521,10 @@ export async function fetchPopularRestaurants({
         .filter((restaurant) => !existingIds.has(restaurant.id))
         .slice(0, limit - restaurants.length),
     );
+  }
+
+  if (!includeRankTrends) {
+    return attachPopularRankTrends(restaurants, new Map(), false);
   }
 
   try {

@@ -1,0 +1,364 @@
+{
+  "schema": "tzudong-remaining-request-evidence-audit/v1",
+  "generatedAt": "2026-10-18T21:48:43+09:00",
+  "scope": {
+    "startingPoint": "docs/operations/goal-resume-20261018.md#전체-요청의-완료-감사",
+    "repositoryEvidenceOnly": true,
+    "rawTranscriptsRead": false,
+    "personalMemoryRead": false,
+    "externalCalls": 0,
+    "databaseCalls": 0,
+    "sqlChanges": 0,
+    "modelOrLimitChanges": 0,
+    "rootGoalDocumentEdited": false,
+    "rule": "External observations without a fresh read in this audit are dated and labeled last-known. Local source, tests, rendering, deployment, and operating behavior are separate evidence stages."
+  },
+  "stageValues": {
+    "verified_local": "Direct repository source or a retained local execution receipt verifies this stage.",
+    "partial_local": "Some requested behavior is implemented or locally exercised, but the full requested scope is not verified.",
+    "last_known_external": "A dated external readback exists but was not refreshed in this audit and does not prove the entire request.",
+    "not_verified": "No sufficient directly linked evidence closes this stage.",
+    "not_applicable": "This evidence stage does not apply to the request."
+  },
+  "sourceDocuments": [
+    {
+      "path": "docs/operations/goal-resume-20261018.md",
+      "sha256": "f1b094f2d940888561bef2681d611f8c75b41fd49efa9e9527fff4e1724969f8"
+    },
+    {
+      "path": "docs/operations/project-request-todos-20261009.md",
+      "sha256": "096db134648febae6d36e6545033000ceb38b936b5d13128efca49e8c45564b8"
+    },
+    {
+      "path": "docs/operations/feature-completion-20261013.md",
+      "sha256": "21beb5dfafa6f9ada881c47ad55ac32412f8447ef4f7e0f8e83a7b47572f64b0"
+    },
+    {
+      "path": "docs/operations/admin-taste-20261015.md",
+      "sha256": "c31d409db42178baf8ee857704d77d57ea530d38bbe5f6ba302b497ad4832740"
+    },
+    {
+      "path": "apps/web/performance/admin-tables-20261018/README.md",
+      "sha256": "d2fbe78852ad1121f1c3796250db6c7d0c95dacafdcbefec994053b44ecba518"
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/integration-20261018/verification.json",
+      "sha256": "dc334c1e99d8f8d92e21ffe8ff865cfb49cda04f63224aa7d6de49fefde66202"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/final-verification/verification.json",
+      "sha256": "830376946afd30a5b1e885d4e498322223631871d409a6aa6f44b928ded6a9ea"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json",
+      "sha256": "9ce142b2de2a9e3980afbe85981a2a6cc29d9705a63fb1cb8d1ced46141af29d"
+    }
+  ],
+  "summary": {
+    "requestItems": 15,
+    "overallComplete": 0,
+    "openPartial": 15,
+    "freshOperatingVerificationPerformedHere": 0,
+    "strongestCurrentLocalEvidence": "Source revision 457023a656c7d17671527870679f093ee01e5aeb has CMS 131 tests, provider 40 tests, lineage 86 tests, layout 42 tests, zero diagnostics, and a 54-page build in final-verification/verification.json. This remains local source/test/build evidence.",
+    "latestBoundedProductionReadback": "last-known 2026-10-18T11:50:47.647479+00:00: Vercel project tzudong production was READY at main commit b4eb780c532c9ba02a1af456b17459debc59a757; one existing-session restaurant admin page loaded. No deployment was performed and full admin behavior was not verified.",
+    "latestBoundedHostedDatabaseReadback": "last-known 2026-10-18T12:22:45.566417+00:00: PostgreSQL 17.6 ledger count 89, feature migration count 0, upstream evidence count 3, target feature helpers/triggers absent."
+  },
+  "items": [
+    {
+      "id": "REQ-AUDIT-01",
+      "goalLine": 23,
+      "request": "전체 웹 브랜드, 로그인 로고/불꽃 대체, 공통 헤더, 타이포, 여백, 모바일, dark mode, 접근성, reduced motion",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "partial_local",
+        "localValidation": "verified_local",
+        "rendering": "partial_local",
+        "operational": "last_known_external"
+      },
+      "evidence": [
+        "docs/operations/admin-taste-20261015.md:3-27 — admin 15-menu typography, headers, focus, reduced motion, responsive and dark-mode source/render evidence",
+        "apps/web/performance/admin-taste-20261015/view-summary-final.json — 45 light captures, 12 dark captures, with synthetic transport limitations",
+        "apps/web/performance/feature-completion-20261013/integration-20261018/production-readback-20261018.json — last-known 2026-10-18 one restaurant-admin page only"
+      ],
+      "remainingGate": "Public routes and login branding were not covered end to end; synthetic admin captures contain preserved network failures and do not prove real auth or deployed accessibility.",
+      "minimumNextTask": "After the current head is deployed, run one route inventory across public, login, and all admin destinations at desktop/tablet/mobile with real auth, dark mode, keyboard focus, and reduced-motion assertions."
+    },
+    {
+      "id": "REQ-AUDIT-02",
+      "goalLine": 24,
+      "request": "대시보드 KPI/차트 제목과 도구의 한 행 정렬 및 작은 화면 비겹침",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "partial_local",
+        "localValidation": "verified_local",
+        "rendering": "partial_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "docs/operations/admin-taste-20261015.md:19-27 — local production-bundle layout and interaction checks",
+        "docs/operations/project-request-todos-20261009.md:801-805 — 15-menu three-width synthetic render and chart focus restoration",
+        "apps/web/performance/admin-taste-20261015/view-summary-final.json — overview/insights captures at 1440, 834 and 390"
+      ],
+      "remainingGate": "The captures are synthetic and do not establish deployed dashboard data loading or real toolbar behavior.",
+      "minimumNextTask": "Verify the deployed overview/insights pages with live data at the three canonical widths, measuring title/tool overlap and preserving one failure capture if any control wraps incorrectly."
+    },
+    {
+      "id": "REQ-AUDIT-03",
+      "goalLine": 25,
+      "request": "맛집 최신화·이력 통합과 중복 헤더·불필요 설명 제거",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "partial_local",
+        "localValidation": "verified_local",
+        "rendering": "verified_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "apps/web/performance/admin-tables-20261018/README.md:3-17 — final one-row restaurant header, three widths, zero inner overflow, automation history/policy interaction",
+        "apps/web/performance/admin-tables-20261018/interaction-cua.json — local synthetic restaurant detail, focus, search/state reset and history/policy interactions"
+      ],
+      "remainingGate": "The fixture explicitly leaves automation settings disabled because the judgment connection is unverified; actual source/evaluation/statistics/UI-cache freshness is not read back.",
+      "minimumNextTask": "Use the deployed restaurant page to trace one freshness operation from request through history and cache readback, without applying automated approvals."
+    },
+    {
+      "id": "REQ-AUDIT-04",
+      "goalLine": 26,
+      "request": "맛집 자동 운영의 Gemini 판단, 자동 분류·재검수·자동 승인, 보호 적용, readback, 감사",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "partial_local",
+        "localValidation": "partial_local",
+        "rendering": "partial_local",
+        "operational": "last_known_external"
+      },
+      "evidence": [
+        "docs/operations/project-request-todos-20261009.md:269-325 — requested state machine, CAS, audit and stop contracts",
+        "apps/web/performance/admin-tables-20261018/README.md:13-17 — local UI opens policy/history but records judgment connection as unverified",
+        "docs/operations/project-request-todos-20261009.md:793-797 — last-known 2026-10-11 operating read reported automatic review OFF, version 1, runs 0, items 0"
+      ],
+      "remainingGate": "No protected operating Gemini judgment, apply, readback, or audit receipt exists; automatic approval remains unproven.",
+      "minimumNextTask": "After SQL/deploy gates are met, preview one bounded candidate and verify recommendation, explicit approval boundary, CAS-protected apply, readback, and audit under one operation ID."
+    },
+    {
+      "id": "REQ-AUDIT-05",
+      "goalLine": 27,
+      "request": "제보·리뷰·사용자·배너 관리의 일관된 CMS 검색/필터/목록/상세/작업 구조",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "verified_local",
+        "localValidation": "verified_local",
+        "rendering": "verified_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "docs/operations/admin-taste-20261015.md:5-27 — common CMS structure, filters/details and synthetic interaction coverage",
+        "apps/web/performance/admin-tables-20261018/README.md:3-17 — later dense-table and focus verification for submissions/reviews/restaurants",
+        "apps/web/performance/cross-audit-20261018/final-verification/verification.json — CMS 131 tests, 4,033 assertions, ESLint/parity passed"
+      ],
+      "remainingGate": "No fresh deployed real-admin pass covers all four modules and their mutations; only the restaurant page has a bounded last-known production load.",
+      "minimumNextTask": "Run one deployed read-only traversal of submissions, reviews, users and banners with real filters/details, then separately authorize and verify any mutation cases."
+    },
+    {
+      "id": "REQ-AUDIT-06",
+      "goalLine": 28,
+      "request": "영상 성과 분석 명칭·구조, 크롤러 데이터 흐름 중심 화면, 지식 그래프 중심 화면",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "verified_local",
+        "localValidation": "verified_local",
+        "rendering": "verified_local",
+        "operational": "last_known_external"
+      },
+      "evidence": [
+        "docs/operations/admin-taste-20261015.md:5,24-27 — pipeline and knowledge graph use visualizations as primary views and were locally exercised",
+        "docs/operations/project-request-todos-20261009.md:785-797 — three-width evidence rendering, corrected untimed citations, and last-known 2026-10-11 READY preview showing 30 nodes/88 edges",
+        "docs/operations/project-request-todos-20261009.md:632-646 — local materialization and title/search followthrough; operating viewer deployment remains open"
+      ],
+      "remainingGate": "The preview evidence is dated, the current deployment was not traversed, and graph evidence remains incomplete for the full longform inventory.",
+      "minimumNextTask": "After deployment, verify pipeline stage selection and graph source/timestamp search against the current graph revision, including one untimed and one timed citation."
+    },
+    {
+      "id": "REQ-AUDIT-07",
+      "goalLine": 29,
+      "request": "Sentry 연결과 관리자 메뉴, 감사 로그, 운영 보조 및 동선 추천",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "partial_local",
+        "localValidation": "partial_local",
+        "rendering": "verified_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "docs/operations/admin-taste-20261015.md:24-27 — synthetic Sentry/audit/routes menu render and navigation coverage",
+        "docs/operations/project-request-todos-20261009.md:623-640 — Sentry organization/project/region remained unanswered",
+        "apps/web/performance/admin-taste-20261015/view-summary-final.json — local Sentry, routes and audit captures"
+      ],
+      "remainingGate": "No real Sentry organization/project/region/DSN binding or synthetic event ingestion/readback is recorded; menu rendering is not monitoring connectivity.",
+      "minimumNextTask": "Resolve the exact Sentry project/region, send one authorized sanitized synthetic event, and read it back through both Sentry and the deployed admin menu."
+    },
+    {
+      "id": "REQ-AUDIT-08",
+      "goalLine": 30,
+      "request": "영수증 OCR의 승인 Gemini 프로젝트·크레딧, 중복 방지, quota, 저장 binding, 실패 복구의 실제 요청 확인",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "verified_local",
+        "localValidation": "verified_local",
+        "rendering": "partial_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "docs/operations/feature-completion-20261013.md:5-18,92-106 — durable claim/revision/storage contracts and explicit operating gaps",
+        "apps/web/performance/feature-completion-20261013/integration-20261018/verification.json — 188 web tests plus provider budget, caption and eligibility checks",
+        "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json — exact local PG17.6 replay to ledger 102",
+        "apps/web/performance/cross-audit-20261018/hosted-catalog-metadata-20261018.json — last-known 2026-10-18 hosted feature_count 0 and target helpers/triggers absent"
+      ],
+      "remainingGate": "No hosted feature install, live OCR request, Storage byte/readback, provider response binding, or billed debit is proven.",
+      "minimumNextTask": "First prepare the topology-correct hosted successor; only after deploy/readiness gates, run one bounded OCR request and bind request, provider response, Storage object, saved revision, readback, and billing observation."
+    },
+    {
+      "id": "REQ-AUDIT-09",
+      "goalLine": 31,
+      "request": "썸네일·스토리보드 승인 모델 쌍과 Gemini-only 실행, 과거 비Gemini 보존 및 신규 차단",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "verified_local",
+        "localValidation": "verified_local",
+        "rendering": "partial_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "docs/operations/feature-completion-20261013.md:9-10,18,26 — Gemini-only source policy, legacy preservation and current model IDs",
+        "docs/operations/admin-taste-20261015.md:31-37,47-51 — catalog retry/hold and worker boundaries with local tests",
+        "apps/web/performance/admin-taste-20261015/view-summary-final.json — synthetic thumbnail/storyboard views, including held state"
+      ],
+      "remainingGate": "Official support and project access were not reconfirmed through a current live catalog/run; hosted migration, queue cutover, generation and stored-output readback are absent.",
+      "minimumNextTask": "After policy/readiness deployment, perform one catalog readback and one bounded storyboard job, proving the exact text/image pair and rejection of a non-Gemini request while preserving legacy history."
+    },
+    {
+      "id": "REQ-AUDIT-10",
+      "goalLine": 32,
+      "request": "쯔양 롱폼 전체 분석의 최신 대상·처리·미완료 수와 claude-video·OSK 근거 상태",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "verified_local",
+        "localValidation": "verified_local",
+        "rendering": "partial_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "docs/operations/feature-completion-20261013.md:11-14 — eligible 1,071 and full audiovisual analysis 0/1,071 at that evidence date",
+        "docs/operations/project-request-todos-20261009.md:18-24,632-646 — last-known 2026-10-15 three stored semantic results, zero independent full-video verification, caption/OSK partial materialization",
+        "apps/web/performance/admin-taste-review-20261015/longform-inventory-review2.json — 50/50 inventory/materializer tests, with collection and inference both zero"
+      ],
+      "remainingGate": "The current public inventory was not recollected in this audit; full visual/audio analysis and independent claim verification remain incomplete.",
+      "minimumNextTask": "Refresh the inventory once, freeze its hash, reconcile completed checkpoints, and resume only the missing videos with per-video visual/audio/source verification before publishing graph updates."
+    },
+    {
+      "id": "REQ-AUDIT-11",
+      "goalLine": 33,
+      "request": "크롤링→영상/자막→추출→평가→저장→검수의 정확도·관리자 수정 보존과 비용/시간/자원 성과 감사",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "partial_local",
+        "localValidation": "verified_local",
+        "rendering": "partial_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "apps/web/performance/feature-completion-20261013/integration-20261018/verification.json — local contract, build and bounded backend checks",
+        "apps/web/performance/cross-audit-20261018/final-verification/verification.json — local source/test/build verification and explicit no-operating limitation",
+        "docs/operations/project-request-todos-20261009.md:648-650,839-855 — non-admitted resource measurements, PG/source checks and preserved operating gaps"
+      ],
+      "remainingGate": "No same-condition baseline/followup covers the full operating path; accuracy, latency, RSS and cost improvements are not admitted.",
+      "minimumNextTask": "Choose one fixed input cohort and record baseline plus post-deploy end-to-end outputs, admin-preservation checks, wall time, CPU/RSS, request count and cost under the same environment."
+    },
+    {
+      "id": "REQ-AUDIT-12",
+      "goalLine": 34,
+      "request": "지정 Gmail 코드 조치, Gemini 리딤·결제 연결·1만원 충전, 롯데카드 삭제 영수증",
+      "overall": "OPEN_MIXED",
+      "stages": {
+        "source": "not_applicable",
+        "localValidation": "not_applicable",
+        "rendering": "not_applicable",
+        "operational": "last_known_external"
+      },
+      "evidence": [
+        "apps/web/performance/pipeline-20261002/billing-readback.json — 2026-10-02 top-up KRW 10,000 and project billing link confirmed; debit attribution absent",
+        "apps/web/performance/funded-gemini-followthrough-20261009/billing-before.json — last-known 2026-10-08 prepay KRW 10,000, compact credit display, auto reload off, no billing mutation",
+        "apps/web/performance/longform-resume-readiness-20261009/card-removal-readback.json — 2026-10-09 card 0488 remained because a valid replacement was required",
+        "docs/operations/goal-resume-20261018.md:66 — last-known 2026-10-15 paid tier/credit display; exact balance and request debit attribution still unverified"
+      ],
+      "remainingGate": "No directly linked receipt closes the requested Gmail code action; exact Gemini debit attribution is absent; card deletion was canceled and remains incomplete.",
+      "minimumNextTask": "Do not retry payment actions. First reconcile the exact Gmail request and current billing/card state read-only; request a user decision only if card replacement or another monetary mutation is still required."
+    },
+    {
+      "id": "REQ-AUDIT-13",
+      "goalLine": 35,
+      "request": "GitHub CI 중복 benchmark/report·I/O 병목의 동일 조건 측정과 검증/scorer/표본 유지",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "verified_local",
+        "localValidation": "partial_local",
+        "rendering": "not_applicable",
+        "operational": "last_known_external"
+      },
+      "evidence": [
+        "docs/operations/project-request-todos-20261009.md:780-789 — PR #3168 had success 24/skipped 2/failure 0 but A/A p95 noise 28.28% exceeded the 5% gate, so performance admission was false",
+        "docs/operations/admin-taste-20261015.md:43-45 — later lint/orchestration fixes passed locally, while the next remote head remained separate",
+        "docs/operations/goal-resume-20261018.md:9,16 — last-known 2026-10-18 PR #3215 open with earlier-head CI success and merge conflict; latest-head required CI still open"
+      ],
+      "remainingGate": "No admitted same-condition performance comparison exists, and the latest PR head's mandatory CI/review result was not refreshed here.",
+      "minimumNextTask": "Finish the queued cross audit, freeze the latest head, then run one controlled A/A and A/B measurement with the existing 5% noise gate before any protected promotion."
+    },
+    {
+      "id": "REQ-AUDIT-14",
+      "goalLine": 36,
+      "request": "사용 스킬의 가변 소프트웨어 정보를 공식 문서·설치 인터페이스로 확인하고 pins/patches 보존",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "partial_local",
+        "localValidation": "partial_local",
+        "rendering": "not_applicable",
+        "operational": "not_applicable"
+      },
+      "evidence": [
+        "docs/operations/admin-taste-20261015.md:3-7 — official taste-skill commit pin and local classification preserved",
+        "docs/operations/project-request-todos-20261009.md:631-633,652 — Gemini-only docs alignment and OSK pin checks, with an unresolved managed env-vars package issue",
+        "docs/operations/goal-resume-20261018.md:36 — the full cross-skill requirement remains unchecked"
+      ],
+      "remainingGate": "There is no finite repository inventory proving that every mutable software claim used across the whole request was refreshed against its official source and installed interface.",
+      "minimumNextTask": "Build a bounded inventory from the actually used skills and mutable claims, reuse existing fresh lookups, and refresh only stale entries without changing installed pins."
+    },
+    {
+      "id": "REQ-AUDIT-15",
+      "goalLine": 37,
+      "request": "최종 정량 보고의 절대차·변화율·가능한 95% 구간·표본·환경·회귀·불확실성 및 증거 단계 구분",
+      "overall": "OPEN_PARTIAL",
+      "stages": {
+        "source": "verified_local",
+        "localValidation": "partial_local",
+        "rendering": "partial_local",
+        "operational": "not_verified"
+      },
+      "evidence": [
+        "apps/web/performance/admin-tables-20261018/README.md:5-17 — absolute/relative row-height changes, n=1 environment and no-CI limitation",
+        "docs/operations/admin-taste-20261015.md:9-17 — absolute/relative design metrics with deterministic no-CI rationale",
+        "apps/web/performance/cross-audit-20261018/final-verification/verification.json — source/test/build environment and explicit performance non-admission",
+        "apps/web/performance/cross-audit-20261018/completion-manifest.json — cross audit remains incomplete pending antithesis and final reverse audit"
+      ],
+      "remainingGate": "A final end-to-end report cannot close while deployment, hosted SQL, full menu readback, provider debit, full longform processing and admitted performance measurements remain open.",
+      "minimumNextTask": "Complete only the remaining external gates that are authorized, then compile one final report table with separate source, local test, render, hosted, deployment and field columns; use confidence intervals only for genuine repeated samples."
+    }
+  ],
+  "globalMinimumSequence": [
+    "Complete the queued Gemini antithesis and final GPT reverse audit without treating those reports as deployment evidence.",
+    "Freeze and verify the latest PR #3215 head, required CI/reviews, and protected develop-to-data-to-main promotion.",
+    "Re-read the exact Vercel project and rollback SHA immediately before deployment; prepare the topology-correct hosted SQL successor for the observed ledger-89 state.",
+    "Deploy/apply only through the release gates, then read back deployment SHA, hosted ledger/readiness, and all admin routes with a real admin session.",
+    "Run bounded real OCR/storyboard and pipeline cohorts only after readiness, and preserve billing, Storage, output, accuracy and resource evidence separately.",
+    "Refresh the longform inventory and resume only missing checkpoints; finish independent evidence verification before claiming full analysis.",
+    "Reconcile Gmail/billing/card state read-only before any monetary or deletion action, then produce the final quantitative report."
+  ]
+}

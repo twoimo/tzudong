@@ -1,0 +1,92 @@
+{
+  "schema_version": "tzudong.banner-upload-rejection-cleanup-source-receipt.v1",
+  "captured_at": "2026-10-19T00:11:44+0900",
+  "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "review_finding": {
+    "thread": "PRRT_kwDOQGRyNc6tra7I",
+    "url": "https://github.com/twoimo/tzudong/pull/3215#discussion_r4307435748",
+    "verdict": "ACCEPT",
+    "counterexample": "After a new banner media upload, a PATCH with a title longer than 100 characters returned banner_mutation_invalid before the CAS mutation. The page preserved the uploaded path, so each retry could create another orphan."
+  },
+  "source_boundary": {
+    "definite_rejections": [
+      "banner_mutation_invalid",
+      "banner_mutation_forbidden",
+      "banner_revision_conflict",
+      "banner_not_found"
+    ],
+    "uncertain_results_preserved": [
+      "banner_update_failed",
+      "banner_readback_failed",
+      "banner_invalid_response",
+      "transport_or_unknown_error"
+    ],
+    "owned_media_only": "Cleanup receives only uploadedPaths created by the current handleSubmit invocation. Persisted prior media is never passed to this cleanup.",
+    "api_or_cas_changes": 0
+  },
+  "implemented_contract": {
+    "client_preflight": "The trimmed title is required and limited to 100 characters before the first upload call. Exactly 100 characters remains valid; 101 is rejected without upload or mutation dispatch.",
+    "server_authority": "AdminBannerMutationError remains authoritative after dispatch. A banner_mutation_invalid response cleans the current operation uploads even if client preflight did not catch the rejection.",
+    "definite_cleanup": "Confirmed pre-mutation or zero-row CAS rejections clean all current-operation upload paths and report partial cleanup failure.",
+    "uncertain_preservation": "5xx, invalid-response, transport, and unknown outcomes keep uploaded media so a possibly committed banner cannot be left pointing at deleted media.",
+    "post_upload_client_rejection": "If the uploaded media tuple cannot be normalized before mutation dispatch, current-operation paths are also cleaned."
+  },
+  "counterexample_results": [
+    {
+      "case": "trimmed title length 100",
+      "result": "client validation accepts"
+    },
+    {
+      "case": "trimmed title length 101",
+      "result": "client validation returns before the first upload call"
+    },
+    {
+      "case": "PATCH title length 101",
+      "result": "400 banner_mutation_invalid; private no-store retained; service-role client count unchanged; database fixture row unchanged"
+    },
+    {
+      "case": "two current-operation uploads followed by banner_mutation_invalid",
+      "result": "both owned paths passed to cleanup"
+    },
+    {
+      "case": "two current-operation uploads followed by banner_update_failed",
+      "result": "cleanup not attempted; both paths preserved"
+    }
+  ],
+  "verification": {
+    "primary": {
+      "command": "bun test tests-unit/admin-banners-functional-contract.test.ts",
+      "result": "9 pass, 0 fail, 72 expect calls"
+    },
+    "companion": {
+      "command": "bun test tests-unit/admin-banners-functional-contract.test.ts tests-unit/ad-banner-url-security.test.ts",
+      "result": "18 pass, 0 fail, 134 expect calls before the final route-counter assertion addition; the changed primary file was rerun afterward"
+    },
+    "lint": {
+      "command": "bunx eslint app/admin/banners/page.tsx tests-unit/admin-banners-functional-contract.test.ts",
+      "result": "passed"
+    },
+    "typecheck": {
+      "command": "npm run typecheck:parity",
+      "result": "passed; diagnostics=0"
+    },
+    "diff_check": "passed"
+  },
+  "source_sha256": {
+    "apps/web/app/admin/banners/page.tsx": "6fdbe24f04eeef74ab6286b3377ca23b61c798f7fd2acc5ac349f2e74dad960c",
+    "apps/web/app/api/admin/banners/route.ts": "5c2bb24c1f0b4c1e6cbff87bd12fd7e5ebb3716668933ed82990e27cd8bbf54e",
+    "apps/web/tests-unit/admin-banners-functional-contract.test.ts": "5ab7f981bf5fa4c827bbae37c2de708a871307c5c38e930d998dba3ae69e0917",
+    "apps/web/tests-unit/ad-banner-url-security.test.ts": "09a0935b913536aaa17250825413efd231f901e1f6369683d5d92f5daa31bbec"
+  },
+  "boundaries": {
+    "hosted_database_reads": 0,
+    "hosted_database_writes": 0,
+    "external_storage_calls": 0,
+    "application_server_runs": 0,
+    "browser_runs": 0,
+    "deployment_writes": 0,
+    "git_mutations": 0,
+    "sealed_bundle_edits": 0,
+    "user_temp_edits": 0
+  }
+}

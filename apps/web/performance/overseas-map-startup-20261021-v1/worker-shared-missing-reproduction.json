@@ -1,0 +1,65 @@
+{
+  "ready": false,
+  "elapsedMs": 20322,
+  "browser": "153.0.8010.12",
+  "facts": {
+    "state": "error",
+    "canvas": true,
+    "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+    "text": "해외 지도 열기\n일본\n헝가리\n핀 준비 완료\nOpenFreeMap © OpenMapTiles Data from OpenStreetMap\n\n해외 지도를 불러오지 못했어요.\n\n다시 불러오기"
+  },
+  "errors": [
+    "OVERSEAS_MAP_RESOURCE_FAILED",
+    "console_error"
+  ],
+  "events": [
+    {
+      "event": "response",
+      "origin": "http://127.0.0.1:18924",
+      "path": "/_next/static/media/maplibre-gl-worker.5b88598f.mjs",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8"
+    },
+    {
+      "event": "response",
+      "origin": "http://127.0.0.1:18924",
+      "path": "/_next/static/media/maplibre-gl-shared.mjs",
+      "status": 404,
+      "contentType": "text/plain; charset=utf-8"
+    },
+    {
+      "event": "failed",
+      "origin": "http://127.0.0.1:18924",
+      "path": "/_next/static/media/maplibre-gl-shared.mjs",
+      "code": "net::ERR_ABORTED"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/styles/positron",
+      "status": 200,
+      "contentType": "application/json"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/sprites/ofm_f384/ofm.json",
+      "status": 200,
+      "contentType": "application/json"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/planet",
+      "status": 200,
+      "contentType": "application/json"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/sprites/ofm_f384/ofm.png",
+      "status": 200,
+      "contentType": "image/png"
+    }
+  ]
+}

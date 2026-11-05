@@ -1,0 +1,35 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/public-popularity-publication.test.ts:
+(pass) operator-published public popularity > rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts [0.15ms]
+(pass) operator-published public popularity > bounds entry count and serialized bytes and freezes independent copies [7.74ms]
+(pass) operator-published public popularity > list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it [2.21ms]
+(pass) operator-published public popularity > merged representatives use their published identity and do not inherit a child grade [0.69ms]
+(pass) operator-published public popularity > explicit canonical membership keeps compact, full, partial, and direct-detail grades identical [0.27ms]
+(pass) operator-published public popularity > new members or conflicting cohorts fail closed for either display representative [0.19ms]
+(pass) operator-published public popularity > rejects ambiguous/incomplete canonical membership and bounds the whole member index [4.83ms]
+(pass) operator-published public popularity > published membership overrides a stale caller tier and the detail panel does not mention flame counts [0.41ms]
+(pass) operator-published public popularity > published endpoint returns the reviewed public snapshot and stable ETag without raw scores [612.45ms]
+(pass) public tier reaches the outer Naver render guard > same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip [0.61ms]
+(pass) public tier reaches the outer Naver render guard > retained selection/search grades also invalidate the unchanged-query guard [0.07ms]
+
+tests-unit/evidence-publication-runtime.test.ts:
+(pass) reviewed evidence publication > publishes hash-verified WebP idempotently and refuses a wrong confirmation or immutable collision [8.76ms]
+(pass) reviewed evidence publication > rejects unreviewed frames, altered bytes, source traversal and mismatched restaurant videos [5.33ms]
+(pass) reviewed evidence publication > refuses publication through an output symlink [4.99ms]
+(pass) actual public popularity cohort > reproduces every published member from the frozen public business rows and observed video metrics [25.27ms]
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [3.89ms]
+(pass) malformed count values remain missing instead of coercing into a public flame [8.14ms]
+(pass) conflicting metrics for the same video fail in either input order [2.83ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [6.76ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [1.20ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [2.79ms]
+(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [3.24ms]
+(pass) duplicate observations reject timestamp conflicts in either order and normalize video identity [6.73ms]
+
+ 23 pass
+ 0 fail
+ 903 expect() calls
+Ran 23 tests across 3 files. [902.00ms]

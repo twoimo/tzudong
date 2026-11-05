@@ -1,0 +1,103 @@
+{
+  "version": "postgres (PostgreSQL) 17.11 (Homebrew)",
+  "sourceBefore": {
+    "backend/supabase/tests/test_thumbnail_install_boundary_pg17.py": "63906202e8b811f09c50daef35e8c46de6d5647fe1a6956102d09c90b262a716",
+    "backend/supabase/candidates/20261024071000_thumbnail_production_install.sql": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "backend/supabase/tests/fixtures/thumbnail-install-hosted-storage-20261024.json": "00072e1f2ecb6807a3ea5379a3b3d2472893b096a1b6a96cc9744408f6f9e369",
+    ".github/thumbnail-production-installation.draft.v1.json": "51a7c5b61cc268e7a8fe23261548d1950ecfda122e12a6b0d13645e297563bbc",
+    "backend/supabase/tests/test_thumbnail_g014_contract_pg17.py": "02d901cd42e61b2d6cc189569306534e84bc891e4d98363bd929a74ad89f4887",
+    "apps/web/scripts/supabase-migration-transaction.mjs": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26",
+    "backend/supabase/scripts/g037_supabase_statement_vector.mjs": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+  },
+  "sourceAfter": {
+    "backend/supabase/tests/test_thumbnail_install_boundary_pg17.py": "63906202e8b811f09c50daef35e8c46de6d5647fe1a6956102d09c90b262a716",
+    "backend/supabase/candidates/20261024071000_thumbnail_production_install.sql": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "backend/supabase/tests/fixtures/thumbnail-install-hosted-storage-20261024.json": "00072e1f2ecb6807a3ea5379a3b3d2472893b096a1b6a96cc9744408f6f9e369",
+    ".github/thumbnail-production-installation.draft.v1.json": "51a7c5b61cc268e7a8fe23261548d1950ecfda122e12a6b0d13645e297563bbc",
+    "backend/supabase/tests/test_thumbnail_g014_contract_pg17.py": "02d901cd42e61b2d6cc189569306534e84bc891e4d98363bd929a74ad89f4887",
+    "apps/web/scripts/supabase-migration-transaction.mjs": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26",
+    "backend/supabase/scripts/g037_supabase_statement_vector.mjs": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+  },
+  "sourceStable": true,
+  "cases": {
+    "test_browser_bypass_and_superuser_are_denied": {
+      "reason": "thumbnail_install_storage_browser_boundary_denied",
+      "sqlstate": "42501",
+      "preserved": true
+    },
+    "test_browser_effective_owner_or_set_membership_is_denied": {
+      "reason": "thumbnail_install_storage_browser_boundary_denied",
+      "sqlstate": "42501",
+      "preserved": true
+    },
+    "test_existing_select_insert_without_lock_privilege_is_denied": {
+      "reason": "thumbnail_install_storage_lock_denied",
+      "sqlstate": "42501",
+      "preserved": true
+    },
+    "test_late_failure_rolls_back_bucket_and_metadata": {
+      "bucketComponentRollback": true,
+      "fullInstallationRollback": false
+    },
+    "test_manifest_compiles_with_existing_transaction_and_reconciliation": {
+      "candidateSha256": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+      "statements": 43,
+      "compilerSha256": "847fe6ba735a3c72b5d7196e5dfa065ec7c5dfdd73b758da483c401563c88bf7",
+      "reconciliationSha256": "9e2168122879e8518b1e8bc57a12000397d7b7327bece74c0a1aba4655c29d3f",
+      "executionEnabled": false,
+      "hostedWrites": 0
+    },
+    "test_manifest_readback_exact_components_and_policy_contexts": {
+      "exactComponents": true,
+      "incomingPaths": 4,
+      "assertionsExecutedForPatch": 2,
+      "fixtureLedgerRows": 0,
+      "hosted89RowAdmissionProved": false,
+      "fullG014GraphExecuted": false
+    },
+    "test_old_deparser_context_reproduces_nominal_policy_rejection": {
+      "inMemoryOldContext": true,
+      "reason": "thumbnail_install_bucket_prior_conflict",
+      "sourceMutated": false
+    },
+    "test_policy_digest_is_independent_of_incoming_search_path": {
+      "incomingPaths": 4,
+      "restored": true
+    },
+    "test_policy_drift_is_denied_and_preserved": {
+      "reason": "thumbnail_install_bucket_prior_conflict",
+      "sqlstate": "55000",
+      "preserved": true
+    },
+    "test_preexisting_private_bucket_is_not_overwritten": {
+      "reason": "thumbnail_install_bucket_prior_conflict",
+      "sqlstate": "55000",
+      "preserved": true
+    },
+    "test_private_bucket_commit_server_access_and_browser_denial": {
+      "bucketCommittedAndIndependentlyRead": true,
+      "serverInsertAndSelect": true,
+      "browserRoles": 2,
+      "browserSelectUpdateDeleteRows": 0,
+      "browserInsert": "42501",
+      "storageHttpVerified": false
+    },
+    "test_whole_source_autocommit_rejects_before_persistent_changes": {
+      "exit": 3,
+      "reason": "thumbnail_install_outer_transaction_required",
+      "preserved": true,
+      "wholeSourceSubmitted": true,
+      "fullInstallationExecuted": false
+    }
+  },
+  "cleanup": {
+    "ownedPid": 94573,
+    "statusExit": 3,
+    "pidFileAbsent": true,
+    "socketAbsent": true,
+    "tcpClosed": true
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "limits": "Actual PG17.11 entry/Storage component checks, not full installation proof.\n\nReuse the owned G014 fixture's cluster lifecycle, without running its test suite.\nThe Storage fixture models the observed table columns, owners, browser/server\nprivileges and exact ten policy expressions. It does not emulate Storage HTTP,\nmanaged triggers, the complete G014 graph or hosted PG17.6. No provider calls.\n"
+}

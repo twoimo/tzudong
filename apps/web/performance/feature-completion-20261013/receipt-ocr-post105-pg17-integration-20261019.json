@@ -1,0 +1,1428 @@
+{
+  "schemaVersion": 1,
+  "kind": "receipt-ocr-post105-pg17-integration",
+  "appendOnly": true,
+  "scope": {
+    "purpose": "Preserve an exact local PostgreSQL 17.6 catalog-105 fixture for the pending OCR 105-to-106 successor verification.",
+    "ownedMutation": "This receipt and one uniquely labelled disposable local target container only.",
+    "excluded": [
+      "application source",
+      "migration source",
+      "successor compiler or manifest source",
+      "Git state",
+      "hosted database or provider state",
+      "the existing source catalog",
+      "another agent's PostgreSQL 17.11 cluster"
+    ]
+  },
+  "events": [
+    {
+      "eventId": "OCR105-PG17-001",
+      "recordedAt": "2026-10-18T15:50:22Z",
+      "decision": "PREPARED",
+      "status": "catalog105_fixture_prepared_waiting_for_final_106_freeze",
+      "sourceBindings": {
+        "priorAggregateReceipt": {
+          "path": "apps/web/performance/feature-sql-integration-20261013/pg17-evidence-prefixed-aggregate-compiled-20261018.json",
+          "sha256": "0efdf7f1c9c60feda3d14d9473c464fa8ce91a23d5f12d9427bfbac2d4ccc0c6"
+        },
+        "aggregateReviewReceipt": {
+          "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-aggregate-execution-20261018.json",
+          "sha256": "dedd656403e1f2577c75eab435ea27acf7adcdb57cd3b34b244f0849f5e5ca2b"
+        },
+        "reusedHarness": {
+          "path": "apps/web/performance/feature-sql-integration-20261013/verify-evidence-prefixed-aggregate-compiled.mjs",
+          "sha256": "10ba2c13767738a70e71332d4a2534ab015b84356b165299cb70a938339f2fc3"
+        },
+        "controller": {
+          "path": "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+          "sha256": "d76e45f0d3284d47a32231495409843b640f8107969ebf23814498f277827d3d"
+        },
+        "predecessorManifestSha256": "a48f4d883db91a2b4f44869476c9fe9e4f329468c1e406e3703823ffef1d6f92",
+        "featureManifestSha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+        "frozenSourceCount": 33,
+        "frozenSourceSnapshotSha256": "636df5911ddddc9082d0db708b2590b9c49d3416d1151fe151cb019f0dc56d70",
+        "oneTimeWrapper": {
+          "path": "/tmp/prepare-ocr105-fixture.mjs",
+          "sha256": "2f182ebed0bcdb5b63cae8c508c89abe569b498bf64dffca4f0937cab8f56275",
+          "generatedHarnessPath": "/tmp/prepare-ocr105-fixture.generated.mjs",
+          "generatedHarnessSha256": "f1d7ae721aec4593822da2bfdda47e2401c6f64a383f5399d2b8107253e7f44d",
+          "rawProofPath": "/tmp/pg17-evidence-prefixed-aggregate-compiled-ocr105-fixture.json",
+          "rawProofSha256": "b145e16661dfbfcec1ff577f2049c6754ae56d6dc164bdc709b19eba5b04becc",
+          "note": "The wrapper made strict hash-checked temporary substitutions only to retain the second owned container and expose its readback. It did not edit repository harness, manifest, compiler or migration sources."
+        }
+      },
+      "environment": {
+        "dockerContext": "colima-tzudong-catalog-20261007",
+        "profileInitialState": "running",
+        "profileRecordedState": "running",
+        "sourceContainer": "tzudong-ranking-clone-20261008",
+        "sourceContainerInitialState": "running_healthy",
+        "sourceContainerRecordedState": "running_healthy",
+        "sourceDatabase": "ranking_clone",
+        "sourceEngine": "17.6",
+        "targetEngine": "17.6",
+        "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+        "imageId": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+        "otherAgentPg17_11Cluster": "not_inspected_or_touched"
+      },
+      "sourceCatalogPreservation": {
+        "deterministicDumpBytes": 2633559,
+        "sha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sha256AfterHarness": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sha256IndependentReadback": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "unchanged": true,
+        "normalization": "Removed pg_dump random \\restrict and \\unrestrict lines before hashing."
+      },
+      "fixture105": {
+        "container": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+        "containerId": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+        "ownershipLabel": "tzudong.ocr105-fixture.owner=dd2ea1c5e4725827ab76a384b0aace35",
+        "recordedState": "running_healthy",
+        "database": "postgres",
+        "ledgerCount": 105,
+        "ledgerVersionRange": "00000000000001:20261017160000",
+        "deterministicDumpBytes": 3158171,
+        "deterministicDumpSha256": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "terminalStateSha256": "5bda81daada3c6da08601751c04e732c68b01f6f0b7bb9d90b8dbf7228c03a0a",
+        "catalog105Root": "c2ef2498a3ca1616cdf57a18f5c15615e6e000f1ab3e2896f129e9a79319baa6",
+        "ledgerIdentityRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+        "featureIdentityRoot": "a52c56662c26a3e2fca757b43f36103f4b1c265e25d3e3133881047f23a96332",
+        "featureSuffixRoot": "4972cda4640fb8f23708efd166bc3ddc3d6cfb743db7dbd2714daf8c05102e2a",
+        "stateReadback": {
+          "serverMajor": 17,
+          "sessionUser": "postgres",
+          "currentUser": "postgres",
+          "databaseName": "postgres",
+          "baseRowCount": 86,
+          "evidenceCount": 3,
+          "predecessorCount": 11,
+          "featureCount": 5,
+          "targetStageIndex": 5,
+          "baseReviewReady": true,
+          "evidenceReady": true,
+          "predecessorReady": true,
+          "featureReady": true,
+          "featureRuntimeReady": true,
+          "ocrReady": true,
+          "runtimePredicateReady": true,
+          "reviewPolicyEnabled": false,
+          "operatingBaseReady": false,
+          "historicalAppliedVariantReady": false
+        },
+        "retentionReason": "Preserved as the immutable 105 source for separate 106 constituent and compiled-aggregate targets after the owner supplies the final freeze."
+      },
+      "executedProof": {
+        "constituentReplay": {
+          "predecessorStageCount": 12,
+          "predecessorStageStatesSha256": "121f42b62e88a4d07bce19cda5432eb72fa6a09da9df9f958d256950341ff571",
+          "featureStageCount": 6,
+          "featureStageStatesSha256": "0c4402a3300d799fe040490db56be50737c2edbff733832fc3f1d23b738d0626",
+          "terminalLedger": 105
+        },
+        "compiledAggregate": {
+          "predecessor": {
+            "transition": "89->100",
+            "planCount": 11,
+            "aggregateSqlBytes": 6786264,
+            "aggregateSqlSha256": "597c152d9cae6fc199989b2f63b2f03d9b97b65aadd51a9af9675ca5d55efd67",
+            "terminalStateSha256": "91d90ee2f5bfb6a2f7288232fe73bf6dfc46ae10287efc4b503d6ae5c4b198e2"
+          },
+          "feature": {
+            "transition": "100->105",
+            "planCount": 5,
+            "aggregateSqlBytes": 6045945,
+            "aggregateSqlSha256": "b71e2cf372ce6b8fec200ccaa8a6c1fed9c0224a48b1bd09c311124dd51c4a8e",
+            "terminalStateSha256": "5bda81daada3c6da08601751c04e732c68b01f6f0b7bb9d90b8dbf7228c03a0a"
+          },
+          "baselineDumpSha256": "6b9f2bddf656f6b6d05bc7a21bd2aa02b98c482d8868098802e06e344e33ab34",
+          "terminalLedger": 105
+        }
+      },
+      "pending106": {
+        "migrationPath": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+        "observedCandidateSha256": "dbd023e08cd469f2419f32d1d7ed21edfdfe0b758a384176cef2b23c76e3f4e9",
+        "observedCandidateBytes": 26982,
+        "observedCandidateMtime": "2026-10-19T00:49:20+0900",
+        "bindingStatus": "not_frozen_not_bound_not_executed",
+        "requiredNextEvidence": [
+          "owner-provided final migration freeze and exact SHA-256",
+          "a fresh constituent 105-to-106 target cloned from this fixture",
+          "a separate fresh compiled-aggregate 105-to-106 target cloned from this fixture",
+          "matching terminal output, readback, ledger 106 and state roots",
+          "source catalog and retained 105 fixture unchanged after both paths"
+        ]
+      },
+      "commands": [
+        "node /tmp/prepare-ocr105-fixture.mjs",
+        "docker --context colima-tzudong-catalog-20261007 inspect <owned-target>",
+        "docker --context colima-tzudong-catalog-20261007 exec <owned-target> psql -XAtq -U postgres -d postgres -c 'SHOW server_version;'",
+        "docker --context colima-tzudong-catalog-20261007 exec <owned-target> psql -XAtq -U postgres -d postgres -c 'SELECT count(*) FROM supabase_migrations.schema_migrations;'",
+        "docker --context colima-tzudong-catalog-20261007 exec <owned-target> pg_dump -U postgres -d postgres | deterministic-normalize | sha256",
+        "docker --context colima-tzudong-catalog-20261007 exec tzudong-ranking-clone-20261008 pg_dump -U postgres -d ranking_clone | deterministic-normalize | sha256"
+      ],
+      "boundaries": [
+        "This is local synthetic catalog integration evidence, not hosted readiness or deployment evidence.",
+        "No new RPC was introduced or used.",
+        "The candidate 106 migration was deliberately not executed because its final freeze had not been supplied.",
+        "The retained 105 fixture is disposable local infrastructure and must not be confused with the protected source container."
+      ],
+      "findings": []
+    },
+    {
+      "eventId": "OCR105-PG17-002",
+      "recordedAt": "2026-10-18T15:54:11Z",
+      "previousReceiptSha256": "71d520a0e166c9d036c5a528e1b7562f1c9ebcacdc206b3432d69712ba2ae49c",
+      "decision": "CONDITIONAL",
+      "status": "rehearsal_fixture_confirmed_operating_predecessor_unmaterialized_compiler_query_blocked",
+      "rootClassification": {
+        "algorithm": "review-media-ledger-identity/v1",
+        "actualFixtureLedgerCount": 105,
+        "actualFixtureLedgerIdentityRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+        "manifestRehearsalPredecessorRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+        "manifestOperatingPredecessorRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+        "actualEmptyTargetVersionRoot": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sameAlgorithm": true,
+        "sameProjection": false,
+        "reason": "The fixture uses 86 synthetic local_predecessor rows before the exact evidence, predecessor and feature identities. The operating root uses the sanitized hosted 86-row identity mapping before the same 19 later identities."
+      },
+      "actualDatabaseReadback": {
+        "container": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+        "containerId": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+        "engine": "17.6",
+        "ledgerCount": 105,
+        "targetVersion": "20261018152032",
+        "targetVersionRowCount": 0,
+        "queryClass": "read_only_same_algorithm_direct_ledger_identity_select",
+        "mutation": false
+      },
+      "operatingProjectionEvidence": {
+        "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+        "sha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a",
+        "rowCount": 86,
+        "baseIdentityRoot": "394d3517244d79a673b0595dec0fefa40e6d8257b3762c27dd56a01cc198115d",
+        "derivedOperating105Root": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+        "historicalAppliedVariant": {
+          "version": "20261008124858",
+          "name": "public_profile_leaderboard_read_boundary",
+          "statementCount": 1,
+          "statementVectorSha256": "8bab7119608afa8cf4fec529fb5cab6546fbd0c9326e08b56c9a053daa21b360",
+          "originalStatementArrayAvailableInRepositoryEvidence": false,
+          "sourceContainerRowPresent": false
+        },
+        "materializationDecision": "DEFER",
+        "reason": "The post105 state query recomputes the vector hash from the stored statements array. Identity metadata alone cannot reconstruct an unknown SHA-256 preimage, and the retained source container has no row for this historical version."
+      },
+      "compilerAssessment": {
+        "manifestPath": ".github/receipt-ocr-post105-sql-successor.v1.json",
+        "observedManifestSha256": "803176f20ced3c0e3211d15a6d6b2b6c5fa2ddc3155488a8f54193249f39a0af",
+        "compilerPath": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
+        "observedCompilerSha256": "24f0cc442e6dc02fc6cd930aeadfba34bc51c5936e3475e8fedebc744b9875ed",
+        "manifestBoundCompilerSha256": "2d9e1206f7ee6ceb4720ee520f056f7cbe3bf4698c1c445c9900e391766ceb5c",
+        "checkResult": "RECEIPT_OCR_POST105_SOURCE_DRIFT",
+        "stateQueryResult": "syntax_error_at_FROM_runtime",
+        "finding": "buildPost105StateQuery references predecessor_scope, target_scope, ledger_scope and stage in its final SELECT but the final FROM clause contains only runtime.",
+        "requiredSourceCorrection": "The final SELECT must include the single-row predecessor_scope, target_scope, ledger_scope and stage CTEs in addition to runtime, then the frozen query must execute successfully on PG17 before constituent or aggregate evidence is accepted.",
+        "ownerState": "in_flux_not_frozen"
+      },
+      "permittedVerificationAfterFreeze": {
+        "rehearsal": {
+          "predecessorRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+          "fixtureAvailable": true,
+          "mode": "compilePost105RehearsalPlan",
+          "conditions": [
+            "final manifest, compiler and migration hashes agree",
+            "the corrected rehearsal prior query returns predecessorReady=true against the retained fixture",
+            "constituent and compiled aggregate execute on separate clones of the retained fixture",
+            "both paths reach the same ledger-106 terminal state and leave the retained 105 fixture unchanged"
+          ]
+        },
+        "operating": {
+          "predecessorRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+          "fixtureAvailable": false,
+          "conditions": [
+            "obtain the exact original statements array for historical row 20261008124858 from an authorized immutable receipt or exact database clone, or execute the read-only same-algorithm preflight against the actual operating ledger",
+            "do not replace the pinned historical identity with the current 20261008084856 source",
+            "do not change the operating root pin to match the synthetic rehearsal fixture"
+          ]
+        }
+      },
+      "preservationReadback": {
+        "fixtureState": "running_healthy",
+        "fixtureLedgerCount": 105,
+        "sourceCatalogSha256": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "fixtureMutated": false,
+        "sourceMutated": false,
+        "pg17_11ClusterTouched": false
+      },
+      "findings": [
+        {
+          "id": "OCR105-ROOT-001",
+          "decision": "ACCEPT",
+          "finding": "The root mismatch is intentional operating-versus-rehearsal projection separation; the retained fixture exactly satisfies only the rehearsal predecessor root."
+        },
+        {
+          "id": "OCR105-QUERY-001",
+          "decision": "REJECT",
+          "finding": "The observed in-flux post105 state query is not executable SQL on PG17 because its final FROM clause omits four referenced CTEs."
+        },
+        {
+          "id": "OCR105-OPERATING-FIXTURE-001",
+          "decision": "DEFER",
+          "finding": "No exact operating-105 local fixture can be reconstructed from repository evidence because the original statements array for the pinned historical one-statement variant is absent."
+        }
+      ]
+    },
+    {
+      "eventId": "OCR105-PG17-003",
+      "recordedAt": "2026-10-18T16:02:47Z",
+      "previousReceiptSha256": "3b0d22d246eddcbc351e1e540fe88544fa0d4728c9c4484dca613b226afa8499",
+      "decision": "ACCEPT",
+      "status": "operating105_metadata_projection_verified_waiting_for_final_106_freeze",
+      "recoveredHistoricalSource": {
+        "path": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/historical-ledger-20261008124858-exact-source.json",
+        "fileSha256": "4370c06f4ac1036b6a6ebe6421e16ec89bcaa9e06476698a4ce4f5a095eb467a",
+        "statementCount": 1,
+        "statementSha256": "15615ff122f66aeca8ad95de7d16535267d4ff7c818a268c23cea5484cb5aaa7",
+        "statementVectorSha256": "8bab7119608afa8cf4fec529fb5cab6546fbd0c9326e08b56c9a053daa21b360",
+        "hostedMappingRowMatched": true,
+        "sourceStringLoggedOrCopiedToRepository": false
+      },
+      "projectionExecution": {
+        "environment": "local disposable PostgreSQL 17.6 clone",
+        "dockerContext": "colima-tzudong-catalog-20261007",
+        "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+        "cloneContainer": "tzudong-ocr105-operating-projection-70024-fbdd18ca2c",
+        "cloneContainerId": "cea9663a2588537f40fa005e4921b9482cf0c9a70cf98859d884002a8f8708a6",
+        "cloneRemoved": true,
+        "wrapperPath": "/tmp/prepare-ocr105-operating-projection.mjs",
+        "wrapperSha256": "71f1858bb9b3e248d12d471f0a9c30276d892c1166322ae4703665e57a505310",
+        "rawProofPath": "/tmp/ocr105-operating-projection-proof.json",
+        "rawProofSha256": "3659c5b07efcfb03dbb5c124f808b89cdb58666f00868113a079a819b24b33df"
+      },
+      "projectionReadback": {
+        "baseRowCount": 86,
+        "baseIdentityRoot": "394d3517244d79a673b0595dec0fefa40e6d8257b3762c27dd56a01cc198115d",
+        "laterRowCount": 19,
+        "laterIdentityMismatchCount": 0,
+        "projectedLedgerCount": 105,
+        "projectedLedgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+        "expectedOperatingRootMatched": true,
+        "cloneActualLedgerCount": 105,
+        "cloneActualLedgerIdentityRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+        "cloneActualLedgerRemainedRehearsal": true
+      },
+      "sourceBindings": {
+        "hostedBase86MappingPath": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+        "hostedBase86MappingSha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a",
+        "featureManifestSha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+        "algorithm": "review-media-ledger-identity/v1"
+      },
+      "preservationReadback": {
+        "retainedFixtureContainer": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+        "retainedFixtureState": "running_healthy",
+        "retainedFixtureLedgerCount": 105,
+        "retainedFixtureDumpSha256Before": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "retainedFixtureDumpSha256After": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "retainedFixtureUnchanged": true,
+        "projectionCloneDumpSha256": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "projectionCloneMatchedFixture": true,
+        "sourceCatalogSha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sourceCatalogSha256After": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sourceCatalogUnchanged": true,
+        "pg17_11ClusterTouched": false
+      },
+      "boundaries": [
+        "The hosted base86 rows were supplied to the SQL calculation as exact identity metadata. No historical DDL was executed.",
+        "The recovered historical source was used only to verify its statement and vector SHA-256 values against the hosted mapping; its string was not logged or copied into this receipt.",
+        "The 3ef9d904... result proves the exact operating identity projection, not a materialized operating schema_migrations ledger and not hosted readiness.",
+        "The retained 105 fixture remains the exact rehearsal predecessor for compilePost105RehearsalPlan only.",
+        "The post105 compiler state-query defect from OCR105-PG17-002 remains open until the owner supplies a corrected final freeze."
+      ],
+      "findings": [
+        {
+          "id": "OCR105-HISTORICAL-SOURCE-001",
+          "decision": "ACCEPT",
+          "finding": "The recovered one-statement source exactly reproduces the pinned historical vector identity without exposing or replaying the SQL."
+        },
+        {
+          "id": "OCR105-OPERATING-PROJECTION-001",
+          "decision": "ACCEPT",
+          "finding": "The full hosted base86 identity mapping plus the clone's exact later 19 identities produces the required operating 105 root 3ef9d904...."
+        },
+        {
+          "id": "OCR105-OPERATING-MATERIALIZATION-001",
+          "decision": "DEFER",
+          "finding": "No operating ledger was materialized. The projection must not be used as constituent or aggregate execution evidence for the actual schema_migrations table."
+        }
+      ],
+      "nextGate": "Wait for an owner-provided final manifest/compiler/migration freeze that resolves OCR105-QUERY-001 and all source-drift checks before any 106 constituent or compiled-aggregate execution."
+    },
+    {
+      "eventId": "OCR105-PG17-004",
+      "recordedAt": "2026-10-18T16:07:53Z",
+      "previousReceiptSha256": "1d0122e9feb62ea70c75ade9385ba36962c2b6b035ca3c183ebe4bbe0c7734e0",
+      "decision": "DEFER",
+      "status": "final_freeze_valid_pre_apply_stopped_missing_exact_base86_statement_vectors",
+      "finalAdmission": {
+        "compilerOwnerConfirmed": true,
+        "sourceFreezeReceipt": {
+          "path": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-source-freeze-20261019.json",
+          "sha256": "52054f4bc047ed4c8bb92b3d7185313d3e45b135b695b3fda1fa46658cec4163",
+          "status": "source_frozen_execution_pending"
+        },
+        "migration": {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "sha256": "f6a56dd93c17487d91ea5fd59a7d6d929f9beac58d0564957900ceaae6746e35",
+          "statementCount": 44,
+          "statementVectorSha256": "b0ec57adf97b5547c7fcb00cdd5976a453e728ce164720cc327464cae42d745e"
+        },
+        "compiler": {
+          "path": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
+          "sha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+          "check": "passed",
+          "priorStateQueryOnPg17": "passed",
+          "priorRehearsalRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+          "priorRehearsalReady": true,
+          "priorOperatingReadyOnRehearsalFixture": false
+        },
+        "manifest": {
+          "path": ".github/receipt-ocr-post105-sql-successor.v1.json",
+          "sha256": "aaabf30561daf2d40c346d51a2a69c1bfd4fedff7885eefb1b52fe43686d6dec"
+        },
+        "operatingAggregate": {
+          "bytes": 197742,
+          "sha256": "89ce75136f16f44dc30d7bb21697f232ff3fc6e3fd00603763b5558d1954595f"
+        },
+        "operatingTransition": {
+          "beforeCount": 105,
+          "beforeRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+          "afterCount": 106,
+          "afterRoot": "dbf556b0f98f80c06ceffe69d2ae24a6090daab19c5dc5868d92bcbd23dbc17b"
+        }
+      },
+      "preApplyOperatingLedgerAudit": {
+        "requiredBaseRowCount": 86,
+        "exactStatementVectorsResolved": 61,
+        "exactStatementVectorsUnresolved": 25,
+        "resolvedBreakdown": {
+          "workingTreeExact": 53,
+          "exactEmptyVector": 7,
+          "recoveredHistoricalExactSource": 1
+        },
+        "resolverPath": "/tmp/resolve-ocr105-operating-base86.mjs",
+        "resolverSha256": "e79b8b62e8e3d45ee1aa62d0b50d50ebb8e1e504c7b10da495b8c44ae0a1d451",
+        "unresolvedIdentityMetadataSha256": "b301b5032c766e71816a97cfbe6e4e1516194cfa690592b72fe18ae149286c20",
+        "unresolvedVersionNameSetSha256": "fc114c548ce879f3d17708eeaa3bf32e6fb8b9a2b7708021bba608f56b3b3b2f",
+        "sourcesSearched": [
+          "current backend/supabase/migrations exact version/name files",
+          "all locally available Git history for backend/supabase/migrations",
+          "exact empty applied vectors",
+          "the recovered 20261008124858 read-only source"
+        ],
+        "firstUnresolved": {
+          "version": "20251219",
+          "name": "db_performance_optimization",
+          "statementCount": 85,
+          "statementVectorSha256": "1bf32699724ac34c4b57653cb44db6e933756bec73b292bc8092c13823173eaf"
+        },
+        "lastUnresolved": {
+          "version": "20261004123034",
+          "name": "g016_onboarding_allowlist_identity_correction",
+          "statementCount": 1,
+          "statementVectorSha256": "f18f3ab22b084963c08818fc4f15cf70c4c8f469fd91a0a07fa1565b0058b467"
+        },
+        "reasonExecutionStopped": "The compiler computes each identity from array_to_json(statements). Hosted version/name/count/vector-hash metadata proves the 3ef9 projection but cannot populate an actual schema_migrations row without the exact statements array. Inventing arrays or changing the pinned root would violate the contract.",
+        "requiredInput": "Provide an exact read-only dump or exact statements arrays for the 25 unresolved hosted base rows, or provide an already-materialized disposable operating-105 database whose same-algorithm live root is 3ef9d904...."
+      },
+      "execution": {
+        "constituentTargetCreated": false,
+        "aggregateTargetCreated": false,
+        "migrationExecuted": false,
+        "aggregateExecuted": false,
+        "reason": "Stopped before target creation because the mandatory actual operating predecessor root cannot yet be materialized."
+      },
+      "preservationReadback": {
+        "retainedFixtureState": "running_healthy",
+        "retainedFixtureLedgerCount": 105,
+        "retainedFixtureRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+        "sourceCatalogSha256": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "retainedFixtureMutated": false,
+        "sourceMutated": false,
+        "pg17_11ClusterTouched": false
+      },
+      "findings": [
+        {
+          "id": "OCR105-QUERY-001",
+          "decision": "ACCEPT",
+          "finding": "The final compiler joins every referenced state CTE and the frozen prior query executes successfully on PG17."
+        },
+        {
+          "id": "OCR105-FREEZE-001",
+          "decision": "ACCEPT",
+          "finding": "Migration, compiler, manifest, compiled aggregate and source-freeze receipt hashes are mutually consistent."
+        },
+        {
+          "id": "OCR105-OPERATING-MATERIALIZATION-002",
+          "decision": "DEFER",
+          "finding": "The exact operating projection is proven, but an actual schema_migrations predecessor with root 3ef9 cannot be materialized from the currently available statement-array evidence."
+        }
+      ]
+    },
+    {
+      "eventId": "OCR105-PG17-005",
+      "recordedAt": "2026-10-18T16:40:57Z",
+      "previousReceiptSha256": "e9ff31c7c7656379e06cdda491206aa93775c62556e1e6cc8d6f9b8bb2cf3bb9",
+      "decision": "REJECT",
+      "status": "constituent_106_terminal_verified_catalog_readiness_acl_counterexample_failed_aggregate_not_started",
+      "finalAdmission": {
+        "path": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-acl-source-freeze-followup-20261019.json",
+        "sha256": "8ac7156a1218be427bb123c98095e09e7f682d522b4f06f0eee672a1a609cbe6",
+        "migrationSha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+        "migrationStatementCount": 44,
+        "migrationStatementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+        "compilerSha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+        "manifestSha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+        "operatingAggregateBytes": 221984,
+        "operatingAggregateSha256": "f0ccf9c5a27d021b50e7e8512d80de947044150d304d0b9c0ad493f59d333ec1",
+        "constituentExecutionBytes": 41974,
+        "constituentExecutionSha256": "0ed8e8d3cc79f8bf739917ed4efc4d2d17d6783112c33d07881eab9eff1394d3"
+      },
+      "privateSourceBindings": {
+        "historicalSourceSha256": "4370c06f4ac1036b6a6ebe6421e16ec89bcaa9e06476698a4ce4f5a095eb467a",
+        "recovered25SourceSha256": "ad60950727559bdbc4fc47cd5f2d27ca1d83629d294167e4d33a9248b25fec8b",
+        "mode": "0600",
+        "exactBaseRows": 86,
+        "resolutionCounts": {
+          "workingTree": 53,
+          "exactEmpty": 7,
+          "historical": 1,
+          "recovered25": 25
+        },
+        "rawSourceLoggedOrCopiedToRepository": false
+      },
+      "executionHarness": {
+        "path": "/tmp/execute-ocr105-106-operating-pg17.mjs",
+        "sha256": "56c8e55396de98b897e6857e135ad0bbe3a787a9b1b1f1a5a730cafc9bd1d0ed",
+        "mode": "0700",
+        "g014OidFixtureNormalization": "Applied only in fresh clones because restored extension type OIDs differ from cached g014_public_rpc_allowlist.identity_arguments; the same normalization is used by the retained aggregate harness.",
+        "harnessOnlyCorrectionsBeforeFinalAttempt": [
+          "Move G014 cached-OID normalization before dropping postgres superuser authority.",
+          "Restore explicit SQL delimiters between extracted ledger registration and compiler catalog seal statements."
+        ]
+      },
+      "constituentTarget": {
+        "container": "tzudong-ocr106-constituent-16115-51d5dc9152c9",
+        "containerId": "80135ae7f66c3a8954460fa4e5cf62f3c041a6438380b6ad92be95389e6753a0",
+        "engine": "17.6",
+        "owned": true,
+        "removed": true,
+        "stages": [
+          {
+            "stage": "operating_ledger_materialization",
+            "result": "passed",
+            "ledgerCount": 105,
+            "ledgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+            "historicalDdlExecuted": false
+          },
+          {
+            "stage": "forced_constituent_rollback",
+            "result": "passed",
+            "expectedFailure": "OCR106_CONSTITUENT_FORCED_ROLLBACK",
+            "databaseDrift": false
+          },
+          {
+            "stage": "constituent_execution_and_compiler_seal",
+            "result": "passed",
+            "ledgerCount": 106,
+            "ledgerIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+            "runtimeObjectCount": 6,
+            "runtimeReady": true,
+            "terminalReady": true,
+            "capability": "ready",
+            "migrationVectorMatched": true,
+            "catalogSealMatched": true
+          },
+          {
+            "stage": "idempotency",
+            "result": "passed",
+            "expectedFailure": "MIGRATION_ALREADY_APPLIED",
+            "databaseDrift": false
+          },
+          {
+            "stage": "catalog_readiness_fixture",
+            "result": "failed",
+            "fixturePath": "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql",
+            "fixtureSha256": "3fb993b19e4972b4683be0493b21211ce4961583ff298811612af2a2f2972acd",
+            "failure": "RECEIPT_OCR_WRAPPER_ACL_DRIFT_NOT_HELD"
+          },
+          {
+            "stage": "durable_release_fixture",
+            "result": "not_run_due_to_prior_failure"
+          }
+        ]
+      },
+      "aggregateTarget": {
+        "created": false,
+        "reason": "Stopped immediately after the constituent catalog-readiness counterexample failed."
+      },
+      "finding": {
+        "id": "OCR106-ACL-001",
+        "severity": "blocker",
+        "decision": "REJECT",
+        "counterexample": "After terminal readiness, grant EXECUTE on public.release_receipt_ocr_definitive_credential_rejection(uuid,uuid) to supabase_admin inside a savepoint. The public capability remains ready instead of becoming held.",
+        "sourceEvidence": "The frozen capability and terminal assertion check EXECUTE for service_role, anon and authenticated but do not check supabase_admin on the wrapper or companion capability surfaces.",
+        "requiredCondition": "Correct the capability and terminal catalog contract so the admitted unexpected supabase_admin EXECUTE drift is detected, update the readiness fixture/source hashes and obtain a new final admission before re-running both fresh targets."
+      },
+      "preservationReadback": {
+        "retainedFixtureState": "running_healthy",
+        "retainedFixtureLedgerCount": 105,
+        "retainedFixtureDumpSha256": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "sourceCatalogDumpSha256": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "retainedFixtureUnchanged": true,
+        "sourceCatalogUnchanged": true,
+        "allOwnedTargetsRemoved": true,
+        "pg17_11ClusterTouched": false
+      },
+      "boundaries": [
+        "No aggregate target, hosted database write, provider, Storage, deployment, Git or PostgreSQL 17.11 action was performed.",
+        "The passing constituent terminal state does not override the failing mandatory catalog-readiness counterexample.",
+        "Raw private statement text remains runtime-only and was not written to this receipt."
+      ]
+    },
+    {
+      "eventId": "OCR105-PG17-006",
+      "recordedAt": "2026-10-18T16:44:39Z",
+      "previousReceiptSha256": "cf845d7a4ff5f817f72f47bffad82d1f6968380c7d54bef4ccc8c7f6ffe008be",
+      "decision": "CONDITIONAL",
+      "status": "acl_counterexample_root_cause_classified_read_only",
+      "observedCatalogMetadata": {
+        "surfaces": [
+          "retained catalog-105 fixture",
+          "protected source clone"
+        ],
+        "supabaseAdmin": {
+          "superuser": true,
+          "inherit": true,
+          "canLogin": true,
+          "createRole": true,
+          "createDb": true,
+          "bypassRls": true,
+          "membershipInPrivacyWorkflowOwner": false
+        },
+        "privacyWorkflowOwner": {
+          "superuser": false,
+          "inherit": false,
+          "canLogin": false
+        },
+        "functionDefaultAcl": {
+          "privacyWorkflowOwnerEntries": 0,
+          "supabaseAdminPublicSchemaAcl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+          "applicability": "The wrapper is created while privacy_workflow_owner is the active owner, so supabase_admin's own public-schema function default ACL does not govern this wrapper."
+        },
+        "wrapperPresenceAtReadback": false,
+        "wrapperProaclRecoveredFromRemovedTarget": false
+      },
+      "classification": {
+        "baselineSupabaseAdminEffectiveExecute": "true_by_superuser_semantics",
+        "grantEffectivePrivilegeChange": false,
+        "grantExplicitAclChange": true,
+        "inheritedPrivilegeCause": false,
+        "superuserCause": true,
+        "reason": "A PostgreSQL superuser has effective function EXECUTE independently of proacl. Granting EXECUTE to supabase_admin therefore cannot be distinguished with has_function_privilege, although it can add an explicit ACL item."
+      },
+      "impactOnFinding": {
+        "failedFixtureOutcomePreserved": true,
+        "ocr106Acl001Reclassified": "The failure demonstrates an undetected explicit ACL grant, not a newly acquired effective privilege.",
+        "invalidCorrection": "Adding has_function_privilege('supabase_admin', ...) as a forbidden effective privilege check would hold the baseline permanently because supabase_admin is a superuser.",
+        "validResolutionOptions": [
+          "If the contract forbids explicit supabase_admin grants, compare the wrapper and helper proacl entries against an exact allowed ACL set and reject an explicit supabase_admin ACL item.",
+          "If the contract is only about effective privilege, use a dedicated NOSUPERUSER probe role for the readiness counterexample instead of supabase_admin."
+        ]
+      },
+      "preservation": {
+        "newTargetCreated": false,
+        "databaseMutation": false,
+        "retainedFixtureLedgerCount": 105,
+        "allPriorOwnedTargetsRemoved": true
+      }
+    },
+    {
+      "eventId": "OCR105-PG17-007",
+      "recordedAt": "2026-10-18T16:48:38Z",
+      "previousReceiptSha256": "c06446992ae9bcd59ca77fe4487b4d1d02eb0944e5a19a755d721b07a827a5e5",
+      "decision": "CONDITIONAL",
+      "status": "catalog_fixture_grant_executor_gap_identified_read_only",
+      "observedRoleMetadata": {
+        "surfaces": [
+          "retained catalog-105 fixture",
+          "protected source clone"
+        ],
+        "serverVersion": "17.6",
+        "postgres": {
+          "superuser": false,
+          "inherit": true,
+          "createRole": true,
+          "bypassRls": true
+        },
+        "privacyWorkflowOwnerMembership": {
+          "member": "postgres",
+          "grantor": "supabase_admin",
+          "adminOption": true,
+          "inheritOption": false,
+          "setOption": false
+        },
+        "matchedAcrossSurfaces": true
+      },
+      "executionContext": {
+        "wrapperOwner": "privacy_workflow_owner",
+        "migrationTemporaryMembership": "The migration temporarily adds a postgres-granted SET=true membership lease, then restores the original membership before terminal completion.",
+        "fixtureGrantActor": "postgres after RESET ROLE",
+        "fixtureStatement": "GRANT EXECUTE on the public release wrapper to supabase_admin",
+        "actorCanInheritOwnerPrivileges": false,
+        "actorCanSetOwnerRole": false,
+        "adminOptionConfersObjectGrantAuthority": false
+      },
+      "warningEvidence": {
+        "preserved": false,
+        "searched": [
+          "runtime proof path",
+          "temporary task files",
+          "owned-container event metadata"
+        ],
+        "reason": "The failed harness retained only the first ERROR diagnostic, and the disposable target was removed as required.",
+        "inference": "Because psql advanced beyond GRANT without ON_ERROR_STOP termination but the capability stayed ready, PostgreSQL likely emitted a no-privileges-were-granted warning and made no ACL change."
+      },
+      "reclassification": {
+        "priorOcr106Acl001Outcome": "The readiness fixture still failed, but that run does not prove the capability ignored a changed explicit ACL.",
+        "mostLikelyImmediateCause": "The fixture attempted the GRANT with a non-owner actor that could neither inherit nor SET ROLE to privacy_workflow_owner.",
+        "requiredNextCheck": "Run the counterexample under an actor authorized to change the wrapper ACL, preserve the GRANT warning/output, read back proacl before invoking the capability, and only then classify any remaining capability gap.",
+        "sourceChangeDecision": "Do not add a supabase_admin effective-privilege predicate based on this failed run; supabase_admin is a superuser and is always effectively executable."
+      },
+      "preservation": {
+        "newTargetCreated": false,
+        "databaseMutation": false,
+        "retainedFixtureLedgerCount": 105,
+        "allOwnedTargetsRemoved": true
+      }
+    },
+    {
+      "eventId": "OCR105-PG17-008",
+      "recordedAt": "2026-10-18T17:03:45Z",
+      "previousReceiptSha256": "e0aeafb47d8df1dab8aa1929019cbc176b017131b4383f7e65ef625d656588bb",
+      "decision": "DEFER",
+      "status": "corrected_catalog_fixture_passed_durable_cleanup_failed_aggregate_not_started",
+      "readmission": {
+        "path": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-default-acl-fixture-admission-20261019.json",
+        "sha256": "28458429d1dfd341ba0955585553053f054b81f94f4279ffd1de291bdc27c812",
+        "correctedCatalogFixtureSha256": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47",
+        "durableFixtureSha256": "1d0d2e37ce83b3efaae67b7553d6692fb8825ecc95b6969e70d520894db075bc",
+        "sourceIdentityChanged": false
+      },
+      "executionHarness": {
+        "path": "/tmp/execute-ocr105-106-operating-pg17.mjs",
+        "sha256": "ee4c59edc61c0b40ad57649dd83060f0ead2c64ed6be74156f87d4b6c1331426",
+        "rawPrivateSourceLogged": false
+      },
+      "constituentPath": {
+        "operatingPredecessor": {
+          "ledgerCount": 105,
+          "ledgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+          "result": "passed"
+        },
+        "forcedRollback": {
+          "expectedFailure": "OCR106_CONSTITUENT_FORCED_ROLLBACK",
+          "databaseDrift": false,
+          "result": "passed"
+        },
+        "terminal": {
+          "ledgerCount": 106,
+          "ledgerIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+          "runtimeObjectCount": 6,
+          "capability": "ready",
+          "migrationVectorMatched": true,
+          "catalogSealMatched": true,
+          "roleMembershipRestored": true,
+          "result": "passed"
+        },
+        "idempotency": {
+          "expectedFailure": "MIGRATION_ALREADY_APPLIED",
+          "databaseDrift": false,
+          "result": "passed"
+        },
+        "correctedCatalogReadiness": {
+          "warningCount": 0,
+          "expectedMutationReadbackMarkers": 10,
+          "observedMutationReadbackMarkers": 10,
+          "wrapperAclMutationApplied": true,
+          "releaseOwnerMutationApplied": true,
+          "catalogOwnerMutationApplied": true,
+          "terminalRestoredAfterSavepoints": true,
+          "result": "passed"
+        }
+      },
+      "durableFixture": {
+        "sourceUnchanged": true,
+        "dblinkRaceReached": true,
+        "dblinkConnectionsDisconnected": true,
+        "failureStage": "final synthetic auth-user cleanup",
+        "failureStatementClass": "DELETE FROM auth.users for the race fixture user",
+        "failure": "permission denied for table privacy_consent_events",
+        "temporaryPostgresSuperuserForLocalDblink": true,
+        "postgresNosuperuserRestoredBeforeTargetRemoval": true,
+        "result": "failed",
+        "classification": "The exact durable fixture is incompatible with the broader retained catalog's auth-user/privacy-consent cleanup boundary. This does not invalidate the already-verified 106 terminal or corrected catalog-readiness results, but the mandatory durable fixture is incomplete."
+      },
+      "aggregatePath": {
+        "targetCreated": false,
+        "reason": "Stopped after the mandatory durable fixture failed on the constituent target."
+      },
+      "requiredCondition": "Correct or separately admit the durable fixture cleanup so its synthetic auth-user removal is authorized without weakening production ACLs, then re-run both fresh constituent and aggregate targets under a new fixture admission.",
+      "preservationReadback": {
+        "allOwnedTargetsRemoved": true,
+        "retainedFixtureState": "running_healthy",
+        "retainedFixtureLedgerCount": 105,
+        "retainedFixtureDumpSha256": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "sourceCatalogDumpSha256": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "retainedFixtureUnchanged": true,
+        "sourceCatalogUnchanged": true,
+        "privateExactSourcesUnchanged": true,
+        "pg17_11ClusterTouched": false
+      },
+      "boundaries": [
+        "No aggregate target, hosted database write, provider, Storage, deployment, Git or PostgreSQL 17.11 action was performed.",
+        "The temporary superuser lease was confined to the disposable local durable concurrency fixture and is not operating-role evidence.",
+        "The failed synthetic cleanup and its target were discarded; no test rows reached preserved resources."
+      ]
+    },
+    {
+      "eventId": "OCR105-PG17-009",
+      "recordedAt": "2026-10-18T17:16:46.071167Z",
+      "previousReceiptSha256": "d1b90ec2a4620d5a8b554313a2b1930c306c3f66b1ff527c5cc7b0a7104e9ae4",
+      "decision": "ACCEPT",
+      "status": "local_pg17_6_constituent_and_aggregate_operating_identity_integration_passed",
+      "readmission": {
+        "path": "apps/web/performance/cross-audit-20261019/receipt-ocr-post105-disposable-cleanup-readmission-20261019.json",
+        "sha256": "b6f70f301ae34b4d1eb878c41b4142ed623913ec84d2b3c7938c46a78dc7ff87",
+        "durableFixtureSha256": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+        "catalogFixtureSha256": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47",
+        "sourceIdentityChanged": false
+      },
+      "executionHarness": {
+        "path": "/tmp/execute-ocr105-106-operating-pg17.mjs",
+        "sha256": "8f8a91865b33f873d35c41aabbc101cc92b57cf8fa4251286c03b5f6c371fb36",
+        "privateMode": "0700",
+        "rawPrivateSourceLogged": false
+      },
+      "executionProof": {
+        "path": "/tmp/ocr105-106-operating-pg17-proof.json",
+        "sha256": "b16abef2acacc14ddc28ac38703af35353bc7c1f0bc81ae9751cb386e7d46422",
+        "bytes": 13602,
+        "privateMode": "0600",
+        "runStderrBytes": 0,
+        "result": "passed"
+      },
+      "sourceIdentity": {
+        "migrationSha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+        "migrationStatementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+        "manifestSha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+        "compilerSha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+        "aggregateSha256": "f0ccf9c5a27d021b50e7e8512d80de947044150d304d0b9c0ad493f59d333ec1",
+        "aggregateBytes": 221984,
+        "constituentExecutionSha256": "0ed8e8d3cc79f8bf739917ed4efc4d2d17d6783112c33d07881eab9eff1394d3",
+        "constituentExecutionBytes": 41974,
+        "privateBase86ResolutionCounts": {
+          "exactEmpty": 7,
+          "historical": 1,
+          "recovered25": 25,
+          "workingTree": 53
+        },
+        "rawPrivateSourceCopiedToRepository": false
+      },
+      "constituentPath": {
+        "target": {
+          "name": "tzudong-ocr106-constituent-63474-80c2bfde5522",
+          "containerId": "82d565fe7a8ada19d6afcbc34ac3d26ee6695f7c36eaed297457fac989b8d58a",
+          "ownerLabel": "tzudong.ocr106-operating-proof.owner",
+          "ownerToken": "568bf333f929582df5fbd74a8bff9a8f",
+          "sourceContainerId": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+          "retainedFixtureContainerId": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+          "identitySeparatedBeforeMarker": true,
+          "targetNameAbsentBeforeCreate": true
+        },
+        "marker": {
+          "name": "tzudong.receipt_ocr_disposable_fixture",
+          "value": "authorized-v1",
+          "sessionReadbackMatched": true,
+          "absentInFreshSessionAfterFixture": true,
+          "authority": false
+        },
+        "operatingPredecessor": {
+          "ledgerCount": 105,
+          "ledgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+          "result": "passed"
+        },
+        "failureProbe": {
+          "expectedFailure": "OCR106_CONSTITUENT_FORCED_ROLLBACK",
+          "exitCode": 3,
+          "databaseDrift": false,
+          "result": "passed"
+        },
+        "terminal": {
+          "ledgerCount": 106,
+          "ledgerIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+          "runtimeObjectCount": 6,
+          "capability": "ready",
+          "migrationStatementCount": 44,
+          "migrationStatementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+          "catalogSealMatched": true,
+          "roleMembership": {
+            "adminOption": true,
+            "grantor": "supabase_admin",
+            "inheritOption": false,
+            "rowCount": 1,
+            "setOption": false
+          },
+          "result": "passed"
+        },
+        "idempotency": {
+          "expectedFailure": "MIGRATION_ALREADY_APPLIED",
+          "exitCode": 3,
+          "databaseDrift": false,
+          "result": "passed"
+        },
+        "correctedCatalogReadiness": {
+          "sha256": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47",
+          "warningCount": 0,
+          "expectedMutationReadbackMarkers": 10,
+          "observedMutationReadbackMarkers": 10,
+          "wrapperAclMutationApplied": true,
+          "releaseOwnerMutationApplied": true,
+          "catalogOwnerMutationApplied": true,
+          "result": "passed"
+        },
+        "durableFixture": {
+          "sha256": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+          "dblinkRaceReached": true,
+          "dblinkConnectionsDisconnected": true,
+          "boundedResidualVerified": true,
+          "teardownHandoffCount": 1,
+          "temporaryPostgresSuperuserForLocalDblink": true,
+          "postgresNosuperuserRestoredBeforeTargetRemoval": true,
+          "operatingRoleEvidence": false,
+          "result": "passed"
+        },
+        "teardown": {
+          "mountsBeforeTeardown": [],
+          "exactContainerIdRemoved": "82d565fe7a8ada19d6afcbc34ac3d26ee6695f7c36eaed297457fac989b8d58a",
+          "containerInspectFailedAfterTeardown": true,
+          "ownerTokenResidualCount": 0,
+          "disposableMarkerSessionResidualCount": 0,
+          "volumeReadback": [],
+          "emptyMountOrVolumeReadback": true,
+          "result": "passed"
+        }
+      },
+      "aggregatePath": {
+        "target": {
+          "name": "tzudong-ocr106-aggregate-63474-1d673a4bf3ad",
+          "containerId": "9c18efac8db915b10dbc2094abad59c833567c380bbb66ebd72ce4fc6b981490",
+          "ownerLabel": "tzudong.ocr106-operating-proof.owner",
+          "ownerToken": "568bf333f929582df5fbd74a8bff9a8f",
+          "sourceContainerId": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+          "retainedFixtureContainerId": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+          "identitySeparatedBeforeMarker": true,
+          "targetNameAbsentBeforeCreate": true
+        },
+        "marker": {
+          "name": "tzudong.receipt_ocr_disposable_fixture",
+          "value": "authorized-v1",
+          "sessionReadbackMatched": true,
+          "absentInFreshSessionAfterFixture": true,
+          "authority": false
+        },
+        "operatingPredecessor": {
+          "ledgerCount": 105,
+          "ledgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+          "result": "passed"
+        },
+        "failureProbe": {
+          "expectedFailure": "MIGRATION_PRIOR_STATE_MISMATCH",
+          "exitCode": 3,
+          "databaseDrift": false,
+          "result": "passed"
+        },
+        "terminal": {
+          "ledgerCount": 106,
+          "ledgerIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+          "runtimeObjectCount": 6,
+          "capability": "ready",
+          "migrationStatementCount": 44,
+          "migrationStatementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+          "catalogSealMatched": true,
+          "roleMembership": {
+            "adminOption": true,
+            "grantor": "supabase_admin",
+            "inheritOption": false,
+            "rowCount": 1,
+            "setOption": false
+          },
+          "result": "passed"
+        },
+        "idempotency": {
+          "expectedFailure": "MIGRATION_ALREADY_APPLIED",
+          "exitCode": 3,
+          "databaseDrift": false,
+          "result": "passed"
+        },
+        "correctedCatalogReadiness": {
+          "sha256": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47",
+          "warningCount": 0,
+          "expectedMutationReadbackMarkers": 10,
+          "observedMutationReadbackMarkers": 10,
+          "wrapperAclMutationApplied": true,
+          "releaseOwnerMutationApplied": true,
+          "catalogOwnerMutationApplied": true,
+          "result": "passed"
+        },
+        "durableFixture": {
+          "sha256": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+          "dblinkRaceReached": true,
+          "dblinkConnectionsDisconnected": true,
+          "boundedResidualVerified": true,
+          "teardownHandoffCount": 1,
+          "temporaryPostgresSuperuserForLocalDblink": true,
+          "postgresNosuperuserRestoredBeforeTargetRemoval": true,
+          "operatingRoleEvidence": false,
+          "result": "passed"
+        },
+        "teardown": {
+          "mountsBeforeTeardown": [],
+          "exactContainerIdRemoved": "9c18efac8db915b10dbc2094abad59c833567c380bbb66ebd72ce4fc6b981490",
+          "containerInspectFailedAfterTeardown": true,
+          "ownerTokenResidualCount": 0,
+          "disposableMarkerSessionResidualCount": 0,
+          "volumeReadback": [],
+          "emptyMountOrVolumeReadback": true,
+          "result": "passed"
+        }
+      },
+      "preservationReadback": {
+        "allOwnedTargetsRemoved": true,
+        "allDisposableMarkerSessionsClosed": true,
+        "sourceContainerStateBefore": {
+          "health": "healthy",
+          "id": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+          "name": "tzudong-ranking-clone-20261008",
+          "running": true,
+          "status": "running"
+        },
+        "sourceContainerStateAfter": {
+          "health": "healthy",
+          "id": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+          "name": "tzudong-ranking-clone-20261008",
+          "running": true,
+          "status": "running"
+        },
+        "sourceCatalogDumpSha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sourceCatalogDumpSha256After": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "retainedFixtureStateBefore": {
+          "health": "healthy",
+          "id": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+          "name": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+          "running": true,
+          "status": "running"
+        },
+        "retainedFixtureStateAfter": {
+          "health": "healthy",
+          "id": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+          "name": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+          "running": true,
+          "status": "running"
+        },
+        "retainedFixtureDumpSha256Before": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "retainedFixtureDumpSha256After": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "privateExactSourcesUnchanged": true,
+        "pg17_11ClusterTouched": false
+      },
+      "decisionHistory": {
+        "preservedFailedEvents": [
+          "OCR105-PG17-005",
+          "OCR105-PG17-008"
+        ],
+        "supersedesTheirResidualConditionsOnly": true,
+        "priorEventsModified": false
+      },
+      "result": {
+        "localPg17_6OperatingIdentityIntegrationEstablished": true,
+        "hostedReadinessEstablished": false,
+        "deploymentEstablished": false,
+        "externalDeepResearchCompletedByThisEvent": false
+      },
+      "boundaries": [
+        "The disposable marker was applied only after exact target identity, owner token/label and source/retained105 separation were read back; it was not treated as security authority.",
+        "The temporary postgres superuser lease was limited to the disposable local dblink concurrency fixture, was restored to NOSUPERUSER, and is not operating-role evidence.",
+        "The bounded residual handoff was followed by exact container teardown; both target inspect readbacks failed and owner-token residual counts were zero.",
+        "No hosted database, provider, Storage, deployment, Git or PostgreSQL 17.11 resource was changed. Hosted readiness and external Deep Research remain separate."
+      ]
+    },
+    {
+      "eventId": "OCR105-PG17-010",
+      "recordedAt": "2026-10-18T17:23:53.965689Z",
+      "previousReceiptSha256": "71e73f5783a0e6dbd8ce0664e189c80c2353cd7fb3bf60a5dd427e72197119e9",
+      "decision": "ACCEPT",
+      "status": "local_pg17_6_nonrace_durable_prefix_passed_under_postgres_nosuperuser",
+      "executionHarness": {
+        "path": "/tmp/execute-ocr106-nonrace-nosuperuser-pg17.mjs",
+        "sha256": "eedc97dde6ad81b71c718916825e6f32fea3f4dfb9eef437e1e04aeb7bc0c7fe",
+        "privateMode": "0700",
+        "rawPrivateSourceLogged": false
+      },
+      "executionProof": {
+        "path": "/tmp/ocr106-nonrace-nosuperuser-pg17-proof.json",
+        "sha256": "83b82fec335a0af24423fc8a361baaf0667da84c325c70ec7b3e1724081c937a",
+        "bytes": 9945,
+        "privateMode": "0600",
+        "runStderrBytes": 0,
+        "result": "passed"
+      },
+      "target": {
+        "name": "tzudong-ocr106-constituent-80358-2347a434c113",
+        "containerId": "c394e567c96c160d33c113478c137605c6fc0ef347201dee7554536c89c604d1",
+        "ownerLabel": "tzudong.ocr106-operating-proof.owner",
+        "ownerToken": "eb8d7e2e9875c4c93465b276cb03cb32",
+        "sourceContainerId": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+        "retainedFixtureContainerId": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+        "identitySeparatedBeforeMarker": true,
+        "targetNameAbsentBeforeCreate": true,
+        "engine": "17.6"
+      },
+      "transition": {
+        "predecessorLedgerCount": 105,
+        "predecessorLedgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+        "terminalLedgerCount": 106,
+        "terminalLedgerIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+        "capability": "ready",
+        "catalogSealMatched": true,
+        "sourceMigrationStatementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+        "result": "passed"
+      },
+      "durableNonracePrefix": {
+        "sourcePath": "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql",
+        "sourceSha256": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+        "sourceAnchor": "-- The inter-session race uses committed synthetic rows in a disposable DB.",
+        "anchorByteOffset": 15388,
+        "prefixBytes": 15388,
+        "prefixSha256": "ad5d76381894763ef2ba6db292a2c6f55e8ecf73439af0547a22c46c42cf0a30",
+        "endsWithRollback": true,
+        "outputBytes": 0,
+        "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrBytes": 0,
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "allAssertionsPassed": true
+      },
+      "operatingRoleBoundary": {
+        "postgresRolsuperAtImageStart": false,
+        "postgresSuperuserLeaseUsed": false,
+        "before": {
+          "membership": {
+            "adminOption": true,
+            "grantor": "supabase_admin",
+            "inheritOption": false,
+            "rowCount": 1,
+            "setOption": false
+          },
+          "postgresRolinherit": true,
+          "postgresRolsuper": false
+        },
+        "after": {
+          "membership": {
+            "adminOption": true,
+            "grantor": "supabase_admin",
+            "inheritOption": false,
+            "rowCount": 1,
+            "setOption": false
+          },
+          "postgresRolinherit": true,
+          "postgresRolsuper": false
+        },
+        "membershipRestoredExactly": true,
+        "result": "passed"
+      },
+      "rollbackReadback": {
+        "syntheticResidualBefore": {
+          "authUsers": 0,
+          "receiptResults": 0,
+          "releaseRows": 0
+        },
+        "syntheticResidualAfter": {
+          "authUsers": 0,
+          "receiptResults": 0,
+          "releaseRows": 0
+        },
+        "dumpSha256Before": "0a0decb89c467217045edcbda790c49c91c1a2f7caeec19e3fcd025a5c1afbd8",
+        "dumpSha256After": "0a0decb89c467217045edcbda790c49c91c1a2f7caeec19e3fcd025a5c1afbd8",
+        "dataRollbackVerified": true,
+        "result": "passed"
+      },
+      "marker": {
+        "name": "tzudong.receipt_ocr_disposable_fixture",
+        "value": "authorized-v1",
+        "setAfterExactTargetReadback": true,
+        "sessionReadbackMatched": true,
+        "absentInFreshSessionAfterPrefix": true,
+        "authority": false
+      },
+      "teardown": {
+        "mountsBeforeTeardown": [],
+        "exactContainerIdRemoved": "c394e567c96c160d33c113478c137605c6fc0ef347201dee7554536c89c604d1",
+        "containerInspectFailedAfterTeardown": true,
+        "ownerTokenResidualCount": 0,
+        "disposableMarkerSessionResidualCount": 0,
+        "volumeReadback": [],
+        "emptyMountOrVolumeReadback": true,
+        "result": "passed"
+      },
+      "preservationReadback": {
+        "sourceContainerStateBefore": {
+          "health": "healthy",
+          "id": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+          "name": "tzudong-ranking-clone-20261008",
+          "running": true,
+          "status": "running"
+        },
+        "sourceContainerStateAfter": {
+          "health": "healthy",
+          "id": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+          "name": "tzudong-ranking-clone-20261008",
+          "running": true,
+          "status": "running"
+        },
+        "sourceCatalogDumpSha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sourceCatalogDumpSha256After": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sourceCatalogUnchanged": true,
+        "retainedFixtureStateBefore": {
+          "health": "healthy",
+          "id": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+          "name": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+          "running": true,
+          "status": "running"
+        },
+        "retainedFixtureStateAfter": {
+          "health": "healthy",
+          "id": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+          "name": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+          "running": true,
+          "status": "running"
+        },
+        "retainedFixtureDumpSha256Before": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "retainedFixtureDumpSha256After": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "retainedFixtureUnchanged": true,
+        "allOwnedTargetsRemoved": true,
+        "privateExactSourcesUnchanged": true,
+        "pg17_11ClusterTouched": false
+      },
+      "roleQualifiedConclusion": {
+        "nonraceCoreUnderPostgresNosuperuserEstablished": true,
+        "dblinkRaceUnderPostgresNosuperuserEstablished": false,
+        "reason": "This event executes only the exact durable prefix ending at the pre-race ROLLBACK. The prior full dblink race evidence used a temporary postgres SUPERUSER lease and remains non-operating-role evidence.",
+        "hostedReadinessEstablished": false,
+        "deploymentEstablished": false
+      },
+      "decisionHistory": {
+        "priorEventsModified": false,
+        "event009ReceiptSha256": "71e73f5783a0e6dbd8ce0664e189c80c2353cd7fb3bf60a5dd427e72197119e9",
+        "event009FullPathEvidencePreserved": true
+      },
+      "boundaries": [
+        "The exact non-race prefix was derived from the frozen durable source by one unique anchor; no SQL text was copied into repository evidence.",
+        "Postgres remained NOSUPERUSER from image start through target setup, exact 105 to 106 application, every prefix assertion and teardown; no superuser lease was used.",
+        "This event does not reclassify the earlier dblink race as operating-role evidence and does not establish hosted readiness.",
+        "No hosted database, provider, Storage, deployment, Git or PostgreSQL 17.11 resource was changed."
+      ]
+    },
+    {
+      "eventId": "OCR105-PG17-011",
+      "recordedAt": "2026-10-18T17:25:40.739634Z",
+      "previousReceiptSha256": "d724ec13496336ba52d1eb1099802c511ef992e6c0ef666b4e3169a5a05d7277",
+      "decision": "ACCEPT",
+      "status": "canonical_local_pg17_6_nonrace_durable_prefix_passed_under_postgres_nosuperuser",
+      "canonicalPrefix": {
+        "sourcePath": "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql",
+        "sourceSha256": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+        "lineRange": "1-444",
+        "sourceAnchor": "-- The inter-session race uses committed synthetic rows in a disposable DB.",
+        "anchorByteOffset": 15388,
+        "endByteOffset": 15387,
+        "bytes": 15387,
+        "sha256": "7c2c382282682bee0437b9f6352e6e26f0d60525fc406837c920b22479a6965b",
+        "endsWithRollback": true,
+        "allAssertionsPassed": true,
+        "outputBytes": 0,
+        "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrBytes": 0,
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "executionHarness": {
+        "path": "/tmp/execute-ocr106-nonrace-nosuperuser-canonical-pg17.mjs",
+        "sha256": "c9c8fecfdd109719a8a72ea39bff8b67318505db0bff8ce80366d46bbc3e8c83",
+        "privateMode": "0700",
+        "containsPostgresSuperuserEscalation": false,
+        "containsDblinkExecution": false,
+        "rawPrivateSourceLogged": false
+      },
+      "executionProof": {
+        "path": "/tmp/ocr106-nonrace-nosuperuser-canonical-pg17-proof.json",
+        "sha256": "ac3500ba6b6a2c49f49349907ea87970126b7b702d1e7af0dee4a0ae9a0daa88",
+        "bytes": 10005,
+        "privateMode": "0600",
+        "runStderrBytes": 0,
+        "result": "passed"
+      },
+      "target": {
+        "name": "tzudong-ocr106-constituent-82096-6a40a2d9bfa0",
+        "containerId": "370a9a140b538bbcf8d13c7aa364391ec59f12a2473e2ce806013444a53f3ca7",
+        "ownerLabel": "tzudong.ocr106-operating-proof.owner",
+        "ownerToken": "533302f30f062aa2befd99504c42c0cd",
+        "sourceContainerId": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+        "retainedFixtureContainerId": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+        "identitySeparatedBeforeMarker": true,
+        "targetNameAbsentBeforeCreate": true,
+        "engine": "17.6"
+      },
+      "transition": {
+        "predecessorLedgerCount": 105,
+        "predecessorLedgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+        "terminalLedgerCount": 106,
+        "terminalLedgerIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+        "capability": "ready",
+        "catalogSealMatched": true,
+        "migrationStatementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+        "result": "passed"
+      },
+      "operatingRoleBoundary": {
+        "postgresRolsuperAtImageStart": false,
+        "postgresSuperuserLeaseUsed": false,
+        "before": {
+          "membership": {
+            "adminOption": true,
+            "grantor": "supabase_admin",
+            "inheritOption": false,
+            "rowCount": 1,
+            "setOption": false
+          },
+          "postgresRolinherit": true,
+          "postgresRolsuper": false
+        },
+        "after": {
+          "membership": {
+            "adminOption": true,
+            "grantor": "supabase_admin",
+            "inheritOption": false,
+            "rowCount": 1,
+            "setOption": false
+          },
+          "postgresRolinherit": true,
+          "postgresRolsuper": false
+        },
+        "membershipRestoredExactly": true,
+        "result": "passed"
+      },
+      "rollbackReadback": {
+        "syntheticResidualBefore": {
+          "authUsers": 0,
+          "receiptResults": 0,
+          "releaseRows": 0
+        },
+        "syntheticResidualAfter": {
+          "authUsers": 0,
+          "receiptResults": 0,
+          "releaseRows": 0
+        },
+        "dumpSha256Before": "5f6ed6f91b5162384053b333b3ee7265d11968d2f6d94f3da5d0169834014560",
+        "dumpSha256After": "5f6ed6f91b5162384053b333b3ee7265d11968d2f6d94f3da5d0169834014560",
+        "dataRollbackVerified": true,
+        "result": "passed"
+      },
+      "marker": {
+        "name": "tzudong.receipt_ocr_disposable_fixture",
+        "value": "authorized-v1",
+        "setAfterExactTargetReadback": true,
+        "sessionReadbackMatched": true,
+        "absentInFreshSessionAfterPrefix": true,
+        "authority": false
+      },
+      "teardown": {
+        "mountsBeforeTeardown": [],
+        "exactContainerIdRemoved": "370a9a140b538bbcf8d13c7aa364391ec59f12a2473e2ce806013444a53f3ca7",
+        "containerInspectFailedAfterTeardown": true,
+        "ownerTokenResidualCount": 0,
+        "disposableMarkerSessionResidualCount": 0,
+        "volumeReadback": [],
+        "emptyMountOrVolumeReadback": true,
+        "result": "passed"
+      },
+      "preservationReadback": {
+        "sourceContainerStateBefore": {
+          "health": "healthy",
+          "id": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+          "name": "tzudong-ranking-clone-20261008",
+          "running": true,
+          "status": "running"
+        },
+        "sourceContainerStateAfter": {
+          "health": "healthy",
+          "id": "2b07e86d34fe1637414c9647a13c546fe2d74f2dfb4b45805dd68568183f437c",
+          "name": "tzudong-ranking-clone-20261008",
+          "running": true,
+          "status": "running"
+        },
+        "sourceCatalogDumpSha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sourceCatalogDumpSha256After": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "sourceCatalogUnchanged": true,
+        "retainedFixtureStateBefore": {
+          "health": "healthy",
+          "id": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+          "name": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+          "running": true,
+          "status": "running"
+        },
+        "retainedFixtureStateAfter": {
+          "health": "healthy",
+          "id": "a694a955f6c84c8e1ac3e997d1374c86d45687e66c8f2c5d64a2a3bf88ce5554",
+          "name": "tzudong-ocr105-catalog-59030-dd2ea1c5e472",
+          "running": true,
+          "status": "running"
+        },
+        "retainedFixtureDumpSha256Before": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "retainedFixtureDumpSha256After": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "retainedFixtureUnchanged": true,
+        "allOwnedTargetsRemoved": true,
+        "privateExactSourcesUnchanged": true,
+        "pg17_11ClusterTouched": false
+      },
+      "decisionHistory": {
+        "priorEventsModified": false,
+        "event010ReceiptSha256": "d724ec13496336ba52d1eb1099802c511ef992e6c0ef666b4e3169a5a05d7277",
+        "event010Preserved": true,
+        "event010PrefixBytes": 15388,
+        "event010PrefixSha256": "ad5d76381894763ef2ba6db292a2c6f55e8ecf73439af0547a22c46c42cf0a30",
+        "event010Classification": "Noncanonical pre-anchor slice included the blank line 445. It had identical SQL semantics but is not the canonical byte-bound 1-444 evidence.",
+        "canonicalEvidenceSupersedesEvent010SourceBinding": true
+      },
+      "roleQualifiedConclusion": {
+        "canonicalNonraceCoreUnderPostgresNosuperuserEstablished": true,
+        "dblinkRaceUnderPostgresNosuperuserEstablished": false,
+        "reason": "The canonical 1-444 prefix ends before the inter-session dblink race. Earlier full-race evidence used a temporary postgres SUPERUSER lease and remains non-operating-role evidence.",
+        "hostedReadinessEstablished": false,
+        "deploymentEstablished": false
+      },
+      "boundaries": [
+        "This event binds operating-role evidence to the canonical frozen source lines 1-444, 15387 bytes and the recorded prefix SHA.",
+        "Postgres remained NOSUPERUSER from image start through target setup, exact 105 to 106 application, every canonical-prefix assertion and teardown.",
+        "The dblink race was not repeated and is not reclassified as NOSUPERUSER operating-role evidence.",
+        "No hosted database, provider, Storage, deployment, Git or PostgreSQL 17.11 resource was changed."
+      ]
+    }
+  ]
+}

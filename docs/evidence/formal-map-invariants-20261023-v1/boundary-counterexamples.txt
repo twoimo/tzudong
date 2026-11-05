@@ -1,0 +1,68 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/evidence-numeric-bounds.test.ts:
+(pass) finite inputs cannot leak infinity from half-life or visit multiplier arithmetic [0.53ms]
+ 8 |   expect(hyperbolicHalfLifeDays(0.0015)).toBeCloseTo(2000 / 3, 9);
+ 9 |   expect(visitsMultiplier(['abc123DEF45', 'def456GHI78'], 0.25)).toBeCloseTo(1 + 0.25 * Math.log(2), 12);
+10 | });
+11 | 
+12 | test('sampling-window arithmetic cannot produce an unsafe timestamp from a safe input', () => {
+13 |   expect(() => planFrameSamplingWindow('abc123DEF45', Number.MAX_SAFE_INTEGER)).toThrow('invalid_timestamp_ms');
+                                                                                     ^
+error: expect(received).toThrow(expected)
+
+Expected substring: "invalid_timestamp_ms"
+
+Received function did not throw
+Received value: {
+  video_id: "abc123DEF45",
+  target_timestamp_ms: 9007199254740991,
+  window_start_ms: 9007199254735991,
+  window_end_ms: 9007199254745992,
+  sample_fps: 2,
+  keyframe_role: "decode_start_only",
+  loads_full_video_in_node: false,
+}
+
+      at <anonymous> (<repo>/apps/web/tests-unit/evidence-numeric-bounds.test.ts:13:81)
+(fail) sampling-window arithmetic cannot produce an unsafe timestamp from a safe input [0.28ms]
+(pass) an unscored signal vector cannot establish a scalar difference or permit a live write [0.14ms]
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [3.02ms]
+26 | });
+27 | 
+28 | test('malformed count values remain missing instead of coercing into a public flame', async () => {
+29 |   for (const view_count of [true, false, [123], { valueOf: 123 }, null, '', '1.5', -1]) {
+30 |     const result = await build({}, [{ ...metric, view_count }]);
+31 |     expect(result.evidence.groups[0].viewCount).toBeNull();
+                                                     ^
+error: expect(received).toBeNull()
+
+Received: 1
+
+      at <anonymous> (<repo>/apps/web/tests-unit/popularity-input-boundary.test.ts:31:49)
+(fail) malformed count values remain missing instead of coercing into a public flame [2.21ms]
+34 | });
+35 | 
+36 | test('conflicting metrics for the same video fail in either input order', async () => {
+37 |   const other = { ...metric, view_count: 456 };
+38 |   for (const rows of [[metric, other], [other, metric]]) {
+39 |     await expect(build({}, rows)).rejects.toThrow('popularity_metrics_video_conflict');
+                                               ^
+error: expect(received).rejects.toThrow(expected)
+
+Expected promise that rejects
+Received promise that resolved: Promise { <resolved> }
+
+      at <anonymous> (<repo>/apps/web/tests-unit/popularity-input-boundary.test.ts:39:43)
+(fail) conflicting metrics for the same video fail in either input order [0.96ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [7.06ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [0.97ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [2.24ms]
+(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [3.74ms]
+
+ 7 pass
+ 3 fail
+ 33 expect() calls
+Ran 10 tests across 2 files. [162.00ms]

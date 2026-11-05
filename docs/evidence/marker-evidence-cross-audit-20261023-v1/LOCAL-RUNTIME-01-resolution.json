@@ -1,0 +1,43 @@
+{
+  "finding_id": "LOCAL-RUNTIME-01",
+  "decision": "ACCEPT",
+  "observation": {
+    "preview_sha": "94e9cd00e873dae1fe5360bcfe82ca247debcbbe",
+    "deployment": "dpl_4pPj8mmcFNa66LELfqqp8eBGSrxQ",
+    "url": "https://tzudong-nsjtlk5bv-twoimos-projects.vercel.app",
+    "at": "2026-10-22T21:44:27.617Z",
+    "visible_result": "Root error boundary on overseas detail route after Naver SDK auth-denial state",
+    "error_code": "NAVER_LISTENER_CLEANUP_FAILED"
+  },
+  "cause_boundary": "Provider listener registry teardown throws, aborting remaining React effect and marker cleanup. Does not establish why provider authentication was denied.",
+  "fix": "Narrow best-effort SDK listener removal in NaverMapView and MarkerPool; preserve method receiver; other DOM/state cleanup continues. No auth, account, provider registration or active rendering errors suppressed.",
+  "native": {
+    "red": "MarkerPool clear regression failed before the change; bounded committed red summary, private raw stack not republished.",
+    "green": "34 tests / 5 files / 1183 assertions / 0fail / 0skip",
+    "typecheck": "native and compat parity passed / 0 diagnostics",
+    "lint": "scoped ESLint exit0",
+    "followup": "51 tests / 6 files / 1206 assertions / 0fail / 0skip; post-review one-shot/cancel coverage"
+  },
+  "delivery": "Held until corrected develop preview and protected production promotion pass",
+  "limitations": [
+    "Best-effort removal cannot prove provider internal registry disposal after SDK failure",
+    "No authentication or domain configuration change",
+    "Nightly remains separate"
+  ],
+  "followup": {
+    "PR3488-P2": "Locally one-shot and cancelable idle correction prevents retained SDK callbacks from reapplying stale wheel anchors.",
+    "PR3488-P1": "Provider diagnostic and stack replaced by bounded fixed code in committed evidence. Private raw output retained outside Git; prior commits are not rewritten."
+  },
+  "preview_followup": {
+    "deployment": "dpl_4RCLPLhv8KXKEL3v84he6WGJxRq7",
+    "sha": "ad61e2fc0d2895af7182bfd846735cd8fa5f3474",
+    "at": "2026-10-22T22:08:45Z",
+    "codes": [
+      "NAVER_RESIZE_SDK_UNAVAILABLE",
+      "NAVER_MARKER_DETACH_FAILED"
+    ],
+    "state": "Root boundary remained; production promotion kept on hold",
+    "fix": "Read current SDK availability in delayed resize callbacks; isolate marker detach failures and discard corrupted SDK objects instead of pooling them. Device marker teardown shares the same boundary.",
+    "native": "41 tests /5 files /1169 assertions /0fail /0skip; typecheck/lint receipts separate"
+  }
+}

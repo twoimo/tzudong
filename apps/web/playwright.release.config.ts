@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './tests-unit/fixtures/chrome-for-testing';
 import { defineConfig, devices, type PlaywrightTestProject } from '@playwright/test';
 
 const RELEASE_VISUAL_SPEC = /release-visual\.spec\.ts/;
@@ -32,6 +33,7 @@ const projects: PlaywrightTestProject[] = target === 'remote'
         testMatch: RELEASE_VISUAL_SPEC,
         use: {
             ...devices['Desktop Chrome'],
+            launchOptions: { executablePath: chromeForTestingExecutable() },
             baseURL: requireExactOrigin(process.env.RELEASE_PUBLIC_BASE_URL, 'RELEASE_PUBLIC_BASE_URL', false, process.env.RELEASE_PUBLIC_EXPECTED_HOSTNAME),
             trace: 'off',
             video: 'off',
@@ -43,6 +45,7 @@ const projects: PlaywrightTestProject[] = target === 'remote'
         testMatch: RELEASE_VISUAL_SPEC,
         use: {
             ...devices['Desktop Chrome'],
+            launchOptions: { executablePath: chromeForTestingExecutable() },
             baseURL: requireExactOrigin(process.env.RELEASE_SYNTHETIC_BASE_URL, 'RELEASE_SYNTHETIC_BASE_URL', true),
             trace: 'off',
             video: 'off',

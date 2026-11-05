@@ -1,0 +1,172 @@
+{
+  "schema": "tzudong-final-source-verification/v1",
+  "capturedAt": "2026-10-18T12:31:44.611203+00:00",
+  "sourceRevision": "457023a656c7d17671527870679f093ee01e5aeb",
+  "sourceState": "exact hash-bound uncommitted repairs atop sourceRevision",
+  "checks": {
+    "cms": {
+      "tests": {
+        "passed": 131,
+        "failed": 0,
+        "expectCalls": 4033,
+        "files": 7
+      },
+      "eslint": {
+        "status": "passed",
+        "files": 8
+      },
+      "typecheckParity": {
+        "status": "passed",
+        "diagnostics": 0,
+        "logicalInputs": 3350,
+        "logicalInputNamesSha256": "f1e3804a84543c735fd04e68236c8ea2896ba38152cc651bf69d2cd69cf6d6af",
+        "nonLibraryContentSha256": "42ae1ea0b8f88c64c5ae96d8284b3e5d9671dae1be68b24a22076f46cc68f35b"
+      },
+      "diffCheck": "passed"
+    },
+    "provider": {
+      "commands": [
+        "PATH=\"/Users/twoimo/Documents/projects/tzudong/.venv/bin:/opt/homebrew/opt/node@24/bin:$PATH\" PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/opt/node@24/bin/node --test backend/utils/tests/provider-budget-js.test.mjs",
+        "PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.11 -m unittest backend.utils.tests.test_pipeline_performance.ReadBudgetTests",
+        "PYTHONDONTWRITEBYTECODE=1 /Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest backend.utils.tests.test_pipeline_performance.ReadBudgetTests",
+        "PATH=\"/Users/twoimo/Documents/projects/tzudong/.venv/bin:/opt/homebrew/opt/node@24/bin:$PATH\" PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/opt/node@24/bin/node --test --test-name-pattern='release debt recovers' backend/utils/tests/gemini-client.test.mjs",
+        "git diff --check -- backend/utils/provider-budget.mjs backend/utils/provider_budget.py backend/utils/tests/provider-budget-js.test.mjs backend/utils/tests/test_pipeline_performance.py backend/utils/tests/gemini-client.test.mjs",
+        "/opt/homebrew/opt/node@24/bin/node --check backend/utils/provider-budget.mjs"
+      ],
+      "node": "24.22.0",
+      "python": [
+        "3.14.8 (project pinned)",
+        "3.11.17 (preserved compatibility run)"
+      ],
+      "passed": 40,
+      "failed": 0
+    },
+    "lineage": {
+      "preFixTargeted": "2 tests: 1 failure and 1 error; missing receipt requestSha256 and providerGetEligible was 1 for the cross-swapped ID",
+      "postFixTargeted": "2 tests passed",
+      "postFixSegmentSuite": "34 tests passed",
+      "preLineageReceiptBoundary": "success: corrupt hold; uncertainty: readback_required hold; both providerGetEligible=0, attempted=0, readbackCalls=0, byte-identical",
+      "postFixRelatedSuite": "86 tests passed in 1.926s"
+    },
+    "layoutRegressions": {
+      "passed": 42,
+      "failed": 0,
+      "command": "PYTHONDONTWRITEBYTECODE=1 /Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest backend.utils.tests.test_layout_naming_source_recovery backend.bin.tests.test_check_layout_manifest_unittest"
+    },
+    "catalogReplay": {
+      "rawOutputRetained": false,
+      "summaryOnly": true,
+      "unitTestsPassed": 12,
+      "unitTestsFailed": 0,
+      "generatorExitCode": 0,
+      "generatorOutputPath": "/tmp/tzudong-catalog-fixed-repro-20261018",
+      "serverVersion": "15.8",
+      "rowCount": 1960,
+      "migrationChainSha256": "a75f9cbf9597975b5a30f692a487b0517bca70ea73d784d361ff1b8ec473cd4b",
+      "generatorSha256SumsSha256": "910371a0f7a36d568ccd63e833a2bee038c9e46a4cb15a4d1f3654c38a54afef",
+      "allGeneratorSha256SumsPassed": true
+    },
+    "build": {
+      "exitCode": 0,
+      "node": "24.22.0",
+      "npm": "11.6.2",
+      "next": "16.3.8",
+      "staticPages": 54,
+      "compileSeconds": 33.9,
+      "typecheckSeconds": 21.4,
+      "routeCssBytes": {
+        "home": 195887,
+        "generalApp": 329080,
+        "admin": 348876,
+        "deferred": 195887
+      },
+      "performanceComparison": "Not admitted: build/cache and environment conditions were not controlled for before/after timing."
+    },
+    "reconciliationGenerator": {
+      "entries": 207,
+      "check": "current"
+    }
+  },
+  "sourceIntegrity": {
+    "backend/utils/provider-budget.mjs": "8313b93666a36342bd1c53581c9ec2034a07c23225ac5fb9e6988424fe395f27",
+    "backend/utils/provider_budget.py": "edfd9b77125f05a81209fd9799c5e8465f169dbf175d9ca8361adf3cb50b78e7",
+    "backend/utils/tests/provider-budget-js.test.mjs": "43972f416ebaff2b29b9508b60c5569a7a9391b41d188a56a23cd313ebbed61f",
+    "backend/utils/tests/test_pipeline_performance.py": "9903c57f4f618fa2bae71cd32edc835dc6d514a10aa8c5e4723f9d61d908b8c8",
+    "backend/utils/tests/gemini-client.test.mjs": "ff776a35a4c414dff9fbc10cff57a5b4e5c3f1813f55f5a0656d47721b70704f",
+    "apps/web/components/reviews/ReviewModal.tsx": "887f51f55e5c4e0b3b6ac2c13aff38bab4f2daf6f248ee8cfca773483c7b749a",
+    "apps/web/components/admin/SubmissionListView.tsx": "cab43ce4b4ab31dd47c159dc46f3fa059658205a8d581974358ff2040e6eaade",
+    "apps/web/tests-unit/review-save-submit.test.ts": "f3a8a1ab323fdd16e7b216bcb5eb9eb28551e28b17c4b4a2c102df2f57f00089",
+    "apps/web/tests-unit/review-modal-ocr-ux.test.ts": "3b5918261d1aca85ae163dba5ee4ae8f38aad5ebd20c5daa8ddd667f5f0e31ef",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "9cf6eb79698ff79ec00615543bca65352492c51d41fa2c9588c0219cc7c4b8cc",
+    "apps/web/tests-unit/admin-moderation-inline-focus-browser.test.ts": "c24f86520307c6ff02623677a1fc57074c72c11df46dce318082544858cdbbc5",
+    "apps/web/tests-unit/review-close-revision-browser.test.ts": "633e39f4e0b50acb5d49fe9524449ec7e964108fa13cef3147e740ce616e4756",
+    "apps/web/tests-unit/review-draft-revision-browser.test.ts": "1805394e2516de2bbf16077598d4a168e908e535d78c1b99e171737ec2be046f",
+    "backend/knowledge_graph/longform_analysis.py": "9dab858574c0fcf82524f2a8049c1b5b521c75daa160938bd8f40aa51028d4df",
+    "backend/knowledge_graph/tests/test_longform_segments.py": "3b500b284cd8396a5a90c27433753b3e0a3f910d4351f79795f0f88d1500b55f",
+    "backend/supabase/scripts/transform_review_verification_readiness_pg15_replay.py": "e5b3c7ff25775ab058fc4c24fe658274e85737a8113dba3808c2d31ae5d2e73a",
+    "backend/supabase/tests/test_review_verification_readiness_pg15_replay.py": "db1b6d8b5b9ac0899bce8a8ad1fd9f6107dd7e0a1e06ab9805f4756c83ec744a",
+    "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh": "04eb615c872c56820b1f16649608ef855cd61fa4b6935b6febb34a97a3a92fe6",
+    ".github/workflows/g014-catalog-contract-baseline.yml": "c08fd660ef3c8c88a5a146c7b1388125cd615aede74fb11c8dc90b3498313573",
+    "backend/utils/tests/test_layout_naming_source_recovery.py": "b7c3d6f27c9430ce71cfcb3f2b0a89b6af14e75a7e58a5e2c0d5e2df47be981b",
+    "backend/bin/tests/test_check_layout_manifest_unittest.py": "121e6d1fcfaf5ed18a9e0e52f7b5cd7a965dc49d154d9a28bcdf657fb8eb2cbd",
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json": "3208c925b75785f9497513839ff6d13d85232de5755a05502927ecfd7835f852"
+  },
+  "rawArtifacts": [
+    {
+      "path": "apps/web/performance/cross-audit-20261018/provider-node24-results.txt",
+      "sha256": "5a918d6d40291046a7574af2bbe9a2919a42b12b2b488d73cc611a4bd9982dbd",
+      "bytes": 1164
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/provider-python314-results.txt",
+      "sha256": "317f5465e6dceaf4fcda43fa6d515e2608776835d8852442551dd90ebb6b1d4a",
+      "bytes": 310
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/provider-python311-results.txt",
+      "sha256": "4611069d4282918c682e7e67e3385ba33d418c23e90bac0776d2746ba1359b78",
+      "bytes": 281
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/provider-integration-results.txt",
+      "sha256": "e552c9ca50b58fa639a9d7ab3c95f2f9f0c3f304d775800dda41d2321fa1ea9e",
+      "bytes": 480
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/cms-native-results.txt",
+      "sha256": "b0b5204da0b97d4206233b222dac1c3f3a83e18b949ad013951ce086a4826b96",
+      "bytes": 2712
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/tz-th-009-unittest.txt",
+      "sha256": "0e0a803156b209b0e22a6a829d93058c73a60ff27cf939bb83b6f1441c848f59",
+      "bytes": 19028
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/final-verification/web-build.txt",
+      "sha256": "b5427de5b4feec740b5a9eb3632c18d27c2949349f3eddb6517106d0a58ab438",
+      "bytes": 1469
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/final-verification/layout-regressions.txt",
+      "sha256": "d8bd6836766636ca291064f27e42226afb7d4a3682eb1f4e58c95a089431d115",
+      "bytes": 141
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/catalog-ci-followup/receipt.json",
+      "sha256": "50e20b585d8d615f16f490c2934daf2afeebb1ff1b54d0bb56f81da69a6dd6e5",
+      "bytes": 2373
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/catalog-ci-followup/observed-output.txt",
+      "sha256": "5a542cfc90e486b43335082b0fd95d358031a29c7c9fc0a82feea0ffca5a7b66",
+      "bytes": 1475
+    }
+  ],
+  "limitations": [
+    "Source, local test, local synthetic rendering and build evidence only. No operating apply or deployment.",
+    "Python 3.11 compatibility result is separate from pinned Python 3.14 validation.",
+    "Catalog PG15 full replay result is a retained bounded observation with no raw stdout/stderr; not PG17 or hosted evidence.",
+    "No actual provider inference or billing debit proof. Cross audit remains incomplete pending Gemini antithesis and final-source GPT reverse audit."
+  ]
+}

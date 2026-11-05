@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-inventory-pr-review-followthrough",
+  "pullRequest": 3215,
+  "reviewedRevision": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "remoteRead": {
+    "method": "GitHub GraphQL node lookup",
+    "mutations": 0,
+    "threads": [
+      {
+        "id": "PRRT_kwDOQGRyNc6s0cas",
+        "remoteResolved": false,
+        "path": "backend/knowledge_graph/longform_inventory.py",
+        "line": 198,
+        "severity": "P1",
+        "finding": "active_stream_rejected",
+        "validated": true
+      },
+      {
+        "id": "PRRT_kwDOQGRyNc6s0ca2",
+        "remoteResolved": false,
+        "path": "backend/knowledge_graph/longform_inventory.py",
+        "line": 232,
+        "severity": "P1",
+        "finding": "cross_tab_overlap_rejected",
+        "validated": true
+      },
+      {
+        "id": "PRRT_kwDOQGRyNc6s0cbB",
+        "remoteResolved": false,
+        "path": "backend/knowledge_graph/longform_inventory.py",
+        "line": 378,
+        "severity": "P2",
+        "finding": "inventory_size_checked_after_commit",
+        "validated": true
+      }
+    ]
+  },
+  "changes": {
+    "activeStreams": "is_live, is_upcoming and post_live rows retain stream membership and live-status evidence; the analysis loader excludes them before eligibility.",
+    "overlaps": "Memberships are merged by video ID. Shorts evidence is retained and shorts exclusion wins over video or stream membership.",
+    "outputBound": "Canonical inventory bytes above the shared 32 MiB inventory/readback limit fail before lock acquisition, staging or replacement.",
+    "counts": "Receipt counts use the same unique eligible, completed-stream and shorts-excluded sets consumed by load_inventory.",
+    "testRuntimeCompatibility": "The focused test uses os.link for hard-link isolation checks under Python 3.9.6."
+  },
+  "sourceSha256": {
+    "backend/knowledge_graph/longform_inventory.py": "7af0340fa60a349778f4651571f5952ad9bfd1af171c083d483323d908a40e47",
+    "backend/knowledge_graph/tests/test_longform_inventory.py": "de08dbb6ccd3feb8c3f00e5f911d2737f6c7213dea502e277345efed5e93f5f4"
+  },
+  "checks": {
+    "python": "3.9.6",
+    "inventoryTests": {
+      "command": "python3 -m unittest backend.knowledge_graph.tests.test_longform_inventory",
+      "passed": 14,
+      "failed": 0
+    },
+    "analysisConsumerTests": {
+      "command": "python3 -m unittest backend.knowledge_graph.tests.test_longform_analysis",
+      "passed": 34,
+      "failed": 0
+    },
+    "pyCompile": "passed",
+    "diffCheck": "passed"
+  },
+  "boundaries": {
+    "youtubeCollection": 0,
+    "modelInference": 0,
+    "databaseWrites": 0,
+    "externalWrites": 0,
+    "providerCalls": 0,
+    "fullSuite": false,
+    "commits": 0,
+    "pushes": 0,
+    "reviewThreadMutations": 0,
+    "priorFrozenMapsModified": false
+  }
+}

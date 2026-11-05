@@ -1,0 +1,25 @@
+{
+  "criticalPathMean95Ci": [
+    827.0,
+    861.0
+  ],
+  "criticalPathMedian95Ci": [
+    827.0,
+    861.0
+  ],
+  "groupPayloadExact": true,
+  "groupRunCounts": [
+    1,
+    6,
+    2
+  ],
+  "objectlessGitObjectCount": 0,
+  "objectlessResolutionStatuses": [
+    "retained_exact_tree_object_absent"
+  ],
+  "resolutionHeadTreeMappingExact": true,
+  "summaryExact": true,
+  "workspaceResolutionStatuses": [
+    "retained_exact_tree_object_verified"
+  ]
+}

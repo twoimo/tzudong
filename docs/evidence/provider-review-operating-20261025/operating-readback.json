@@ -1,0 +1,142 @@
+{
+  "schema": "tzudong.operating-review-readback.v1",
+  "sourceRevision": "7b287e2d4f74f5ab81ea811e2499aecda146b790",
+  "sourceTree": "81afa98720043e3c45c8da710760d3bd24a03ad4",
+  "currentLedgerAfterSql": 92,
+  "sql": {
+    "providerBudget": {
+      "apply": {
+        "startedAt": "2026-10-24T16:35:17.645990+00:00",
+        "finishedAt": "2026-10-24T16:35:33.347259+00:00",
+        "mode": "apply",
+        "manifestSha256": "fdc67b1d2a8b1a69bae70b75c659eb3726a423c13c00dbbe1f7c1ee50b44dfd9",
+        "receiptSha256": "1283d1827cf009ca937ac5af0c7fc25f1d8b1f875c141f7fd653726ee16e4b83",
+        "result": {
+          "attemptId": "3bfe3ef2-c133-4b7a-b341-8c61f1174642",
+          "code": "PROVIDER_BUDGET_COMMITTED",
+          "replayAllowed": false,
+          "status": "committed"
+        }
+      },
+      "reconcile": {
+        "startedAt": "2026-10-24T16:36:26.150760+00:00",
+        "finishedAt": "2026-10-24T16:36:28.505492+00:00",
+        "mode": "reconcile",
+        "manifestSha256": "fdc67b1d2a8b1a69bae70b75c659eb3726a423c13c00dbbe1f7c1ee50b44dfd9",
+        "receiptSha256": "dff7a86d49b991dc1587735d39552d26df06d72246cc04816a42fa657bfaad61",
+        "result": {
+          "attemptId": "3bfe3ef2-c133-4b7a-b341-8c61f1174642",
+          "disposition": "committed",
+          "replayAllowed": false,
+          "status": "reconciliation"
+        }
+      }
+    },
+    "reviewActivation": {
+      "apply": {
+        "startedAt": "2026-10-24T16:37:33.724107+00:00",
+        "finishedAt": "2026-10-24T16:37:47.600030+00:00",
+        "mode": "apply",
+        "manifestSha256": "02d6af9397da4900ee9cd11047ea2481d64c47ead931597dd8c336b89dc24815",
+        "receiptSha256": "2bc56be5ddb54a5fca116d53e4823888a552c327851379002eeaefed359a21f8",
+        "result": {
+          "attemptId": "10dcd54e-c25b-46e9-8144-d3391f584df8",
+          "code": "REVIEW_ACTIVATION_COMMITTED",
+          "replayAllowed": false,
+          "status": "committed"
+        }
+      },
+      "reconcile": {
+        "startedAt": "2026-10-24T16:38:30.950659+00:00",
+        "finishedAt": "2026-10-24T16:38:33.327909+00:00",
+        "mode": "reconcile",
+        "manifestSha256": "02d6af9397da4900ee9cd11047ea2481d64c47ead931597dd8c336b89dc24815",
+        "receiptSha256": "775eda5d4de8d63a69af507c4e4e2f3fb135e0ad2fa41e1f59390abea11f609f",
+        "result": {
+          "attemptId": "10dcd54e-c25b-46e9-8144-d3391f584df8",
+          "disposition": "committed",
+          "replayAllowed": false,
+          "status": "reconciliation"
+        }
+      }
+    }
+  },
+  "deployment": {
+    "observedAt": "2026-10-24T16:55:57.075825+00:00",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "deployment": {
+      "id": "dpl_GqkcM5Cv9Smf81c1KM2PoQTxARGV",
+      "state": "READY",
+      "url": "tzudong-ga06mowep-twoimos-projects.vercel.app",
+      "sha": "7b287e2d4f74f5ab81ea811e2499aecda146b790",
+      "aliasAssigned": true
+    },
+    "productionAlias": {
+      "id": "dpl_GqkcM5Cv9Smf81c1KM2PoQTxARGV",
+      "state": "READY",
+      "sha": "7b287e2d4f74f5ab81ea811e2499aecda146b790"
+    }
+  },
+  "browser": {
+    "host": "www.tzudong.app",
+    "health": {
+      "ok": true,
+      "service": "tzudong-web",
+      "gitSha": "7b287e2d4f74f5ab81ea811e2499aecda146b790",
+      "deploymentId": "dpl_GqkcM5Cv9Smf81c1KM2PoQTxARGV",
+      "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+      "host": "www.tzudong.app"
+    },
+    "before": {
+      "enabled": false,
+      "version": 1,
+      "batchSize": 50,
+      "dailyLimit": 50,
+      "policyEventCount": 0,
+      "queue": {
+        "failed": 0,
+        "queued": 0,
+        "running": 0
+      }
+    },
+    "freshPreview": {
+      "approve": 0,
+      "recheck": 0,
+      "hold": 0,
+      "protected": 0,
+      "batchSize": 50,
+      "dailyLimit": 50
+    },
+    "activationAttemptAt": "2026-10-24T16:56:53.353Z",
+    "activationAttempts": 1,
+    "independentReadAt": "2026-10-24T16:57:02.361Z",
+    "after": {
+      "enabled": true,
+      "version": 2,
+      "batchSize": 50,
+      "dailyLimit": 50,
+      "policyEventCount": 1,
+      "queue": {
+        "failed": 0,
+        "queued": 0,
+        "running": 0
+      },
+      "runCount": 0,
+      "itemCount": 0,
+      "engine": {
+        "maxCallsPerClaim": 1,
+        "model": "gemini-3.8-flash",
+        "promptVersion": "restaurant-review-v1",
+        "provider": "gemini",
+        "requiredForApproval": true
+      }
+    },
+    "evidenceScope": "Authenticated Chrome navigation, visible preview, one UI start, separate GET readback. No provider judgment or marker-publication outcome claimed."
+  },
+  "limits": [
+    "No provider judgment or marker publication result was observed.",
+    "No worker provisioning or image generation success is claimed.",
+    "Original external cross-audit reservations remain incomplete.",
+    "These deterministic receipts do not estimate a performance change or confidence interval."
+  ]
+}

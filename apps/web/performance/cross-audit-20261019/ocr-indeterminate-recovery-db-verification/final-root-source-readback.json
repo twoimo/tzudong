@@ -1,0 +1,38 @@
+{
+  "schema": "tzudong-recovery108-final-root-readback/v1",
+  "observedAt": "2026-10-18T20:59:25.576327+00:00",
+  "sourceHashesMatchedPublicProof": {
+    "migrationSha256": "backend/supabase/migrations/20261019130000_receipt_ocr_indeterminate_recovery.sql",
+    "compilerSha256": "apps/web/scripts/receipt-ocr-recovery108-sql-successor.mjs",
+    "manifestSha256": ".github/receipt-ocr-recovery108-sql-successor.v1.json",
+    "mainFixtureSha256": "backend/supabase/tests/receipt_ocr_indeterminate_recovery.sql",
+    "aclFixtureSha256": "backend/supabase/tests/receipt_ocr_indeterminate_recovery_acl_admission.sql"
+  },
+  "publicPg17ReceiptSha256": "7d2f94719344d2900ccbb9c6d7113e2b7d355c625d1f7c9dc218c1fd2f89a92b",
+  "mainMarkerCount": 12,
+  "actualMainExitCode": 0,
+  "actualMainStderrBytes": 0,
+  "rolesBeforeInstallAfterAndFinalEqual": true,
+  "postgresRolSuperFalse": true,
+  "privacyWorkflowOwnerRolSuperFalse": true,
+  "postgresOtherBaselineFlagsPreserved": {
+    "rolbypassrls": true,
+    "rolcreatedb": true,
+    "rolcreaterole": true,
+    "rolinherit": true,
+    "rolreplication": true,
+    "rolsuper": false
+  },
+  "priorAppVerificationSha256": "2ea02e4c46cdbe398a9135116e67ec9d5c7a20aadc40b0c4ecc060e61c375c31",
+  "changedAppVerificationInputs": [
+    ".github/receipt-ocr-recovery108-sql-successor.v1.json",
+    "backend/supabase/tests/receipt_ocr_indeterminate_recovery.sql"
+  ],
+  "latestCompilerArtifactMapSha256": "111b1da664908a5a92688de116a4a9b016ba94996e3e790a3ea819f5c75b295b",
+  "limits": [
+    "The final main fixture and compiler binding are separate from the prior app/build snapshot. The 137/1011 unchanged app checks and final 3/59 compiler checks have disjoint scopes.",
+    "Postgres baseline retains BYPASSRLS and CREATEROLE, among other flags; this is not an unprivileged-account test.",
+    "PG15 source-only generator closure is unchanged. It does not prove the changed main fixture behavior.",
+    "Hosted SQL, operating 89-to-108 executor, cross-provider audit and deployed authenticated menus remain unverified."
+  ]
+}

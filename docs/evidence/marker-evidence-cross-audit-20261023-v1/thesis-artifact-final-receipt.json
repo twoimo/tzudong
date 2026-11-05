@@ -1,0 +1,13 @@
+{
+  "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/chatgpt_master_plan.md",
+  "sha256": "f0b823f93ffc1052e041843f3fbdd50c11b4c66a04f7f67ec7b23b60bd48564f",
+  "source_bundle": "6edea509e566107a4a4bbced53055aed79ea3ca3c1094367a468bf7cb0f047e5",
+  "kind": "audit",
+  "actual_model": "GPT-6 / Pro",
+  "actual_research": "off",
+  "original_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "report_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "complete": true,
+  "evidence": "Full unedited3part ordinary thesis44976B, official copy byte hashes independently verified; exact accepted turn IDs and cutoffs/semantic limits in thesis-provenance.json. Final section9 and all material TH IDs/ADR/R/W/native gates present.",
+  "saved_at": "2026-10-22T20:41:03.565721+00:00"
+}

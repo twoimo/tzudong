@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { chromeForTestingExecutable } from '../tests-unit/fixtures/chrome-for-testing.ts';
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -280,7 +281,7 @@ function parseCookieHeader(cookieHeader, baseUrl) {
 }
 
 async function launchAdminContext({ baseUrl, storageStatePath, headless }) {
-    const browser = await chromium.launch({ headless });
+    const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless });
     const hasStorageState = storageStatePath && fs.existsSync(storageStatePath);
     const context = await browser.newContext(
         hasStorageState

@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/receipt-replacement-reconciliation.test.ts:
+(pass) OCR replacement after concurrent writes > discards a losing replacement when a competing request has won or the row was deleted [0.06ms]
+(pass) OCR replacement after concurrent writes > retains the replacement on committed readback, missing CAS acknowledgement, or failed read
+(pass) OCR replacement after concurrent writes > refuses unrelated or malformed readback instead of treating it as absence [0.05ms]
+
+ 3 pass
+ 0 fail
+ 10 expect() calls
+Ran 3 tests across 1 file. [41.00ms]

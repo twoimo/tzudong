@@ -1,0 +1,21 @@
+{
+  "stage": "answering",
+  "progress_key": "8991d6769c60a3d0dc95d3756f698f69aa3101d4fa8625b3c4fac5650a96c05d",
+  "intent_only": false,
+  "evidence": "Actualfullsection1-5finalverdict complete, CopyanddoneUI, nativefullreporthashsaved. NewREV-M01retainedforfix.",
+  "observed_at": "2026-10-22T21:21:39.981673+00:00",
+  "wait_minutes": 20,
+  "idle_minutes": 10,
+  "last_progress_at": "2026-10-22T21:21:39.981673+00:00",
+  "progress_stage": "answering",
+  "progress_digest": "8991d6769c60a3d0dc95d3756f698f69aa3101d4fa8625b3c4fac5650a96c05d",
+  "foreground_wait": {
+    "status": "observe_original",
+    "reasons": [],
+    "foreground_deadline": "2026-10-22T21:38:02.698097+00:00",
+    "idle_deadline": "2026-10-22T21:31:39.981673+00:00",
+    "last_progress_at": "2026-10-22T21:21:39.981673+00:00",
+    "action": "Observe only on a meaningful checkpoint",
+    "remote_terminal": false
+  }
+}

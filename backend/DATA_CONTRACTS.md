@@ -22,12 +22,58 @@ pipeline READMEs; this file is the compact change-review checklist.
 
 ## Stage contracts
 
+Uploads collection validates each page before replacing the URL inventory.
+Valid publication dates rank current entries newest first; equal dates and
+undated entries keep provider order, and undated recency remains unknown.
+Historical URLs stay in a deterministic tail. Playlist absence never creates
+a permanent exclusion or changes an existing exclusion ledger.
+One intake may discover metadata for at most 50 eligible videos to refill
+confirmed Shorts, while evaluating at most the existing `--limit` of 1..3
+non-Short videos. Deferred long videos are not reported as evaluated.
+Visit authenticity is an integer code from 0 through 4 in completion and both
+Python/Rust validators. Valid negative codes can complete; approval still
+requires code 1 and every existing approval predicate. Fractions, booleans and
+nonfinite codes are invalid. Uncertain or incomplete delivery still blocks apply.
+
+Selected evidence-recovery jobs may explicitly supply `--native-visual-packet`
+with the existing `--allow-worker-write`; default reads ignore the packet and
+`--next` rejects it. This private packet is provenance, not new authorization.
+Rejected local inputs and read-only preflight failures do not spend a queued
+job's execution journal. After correction the same untouched job is usable;
+existing claim/provider journals continue to prohibit replay.
+The pure local validator binds exact job/row/input hashes, a clean accepted-source
+checkout recipe, same-host owner custody, publisher/clip/frame/transcript byte
+hashes and an owner-attested native observer record. Local origin/main binding
+does not itself attest fresh hosted branch protection; release holds still apply.
+Only NFC/whitespace is ignored for observed-name/address comparison. A conflict
+blocks unless one of the two fixed target cases supplies explicit correction
+intent plus an independently hashed current public-place receipt joining exact
+name/locality/parcel/listed road. Then only the fresh scratch address may use the
+corroborated road; the source-origin conflict remains explicit and no full
+administrative equivalence is inferred. Unjoined conflicts block. Original rows,
+extraction basis, corpus bytes and recollect references remain immutable.
+At most eight actual review quotes are checked against full hashed transcript
+bytes/indices/times and retained as navigation cues. The full verified transcript
+remains in the judgment context, including unselected or contradictory text.
+Every complete segment is screened in bounded pages under the unchanged central
+privacy limits. An unsafe page rejects the whole source; strings are never split
+or truncated. Unused collector metadata is not forwarded to the judgment.
+Native sign/address observations are labeled `native_observer_report`, with
+approximate cue time, separately from real transcript/review text. Pixels are
+not sent to the model and observations do not create evidence-family labels.
+Private observer identities stay local; the judgment receives minimized method,
+observation time and source-digest provenance.
+The observed address enters scratch crawling only after direct scene binding;
+existing independent location rules and one existing judgment remain unchanged.
+No extraction SDK, new schedule, RPC/result/SQL contract or approval gate changes.
+
 Pipeline step identifiers are part of the executable contract:
 `enrich`, `gemini_crawling`, `target_selection`, `rule_evaluation`,
 `laaj_evaluation`, `transform`, and `supabase_insert`.
 
 | Stage | Producer | Consumer | Stable fields / invariants | Current executable guard |
 | --- | --- | --- | --- | --- |
+| Sponsorship description supplement | `02-collect-meta.py` and web `api/youtube-meta` | metadata/admin consumers | [v1 contract](sponsorship-disclosure.md): `detected` / `confirmed_none` / `unknown`; nullable `is_ads`; original-spelling names; rule version and full-description SHA-256; base metadata completion is independent; UNKNOWN preserves historical resolved values without certifying current attribution | `utils/tests/test_sponsorship_disclosure.py`, collector checkpoint tests, web sponsorship/route/consumer unit tests and `test_migrate_meta_sponsorship.py`; UNKNOWN write projection omits ad fields, new videos insert explicit NULL; additive SQL/index/provenance limits documented in the v1 contract |
 | Transcript collection | `restaurant-crawling/scripts/03-collect-transcript.js` | media/extraction/context stages | latest JSONL row must identify the requested YouTube video; optional legacy `channel_name`/`recollect_id` must match or be a non-negative integer; `transcript[]` is non-empty with finite non-negative `start`, optional nullable `duration` (finite non-negative when supplied), and non-empty `text`; legacy null/absent optional duration is preserved unchanged; invalid cached rows are retried under the existing permanent-skip policy, invalid provider rows are never published; preserve history and use one writer per channel plus atomic locked updates to the shared failure ledger | `scripts/tests/transcript-cache.test.mjs` |
 | Gemini crawling output | `restaurant-crawling/scripts/07-gemini-crawling.sh` and related parsers | target selection, validators | `youtube_link`; `restaurants[]`; each restaurant should include `origin_name`, address context, canonical `category[]` values, review/reasoning text, and Korean-coordinate-compatible `lat`/`lng` when present; the validator retains legacy scalar-category read compatibility | `validate_gemini_output` |
 | Target selection | `restaurant-evaluation/scripts/09-target-selection.py` | rule evaluation, cross-stage validators | `evaluation_target` is a map keyed by restaurant `origin_name`; target keys should match `restaurants[].origin_name` | `validate_selection` |
@@ -62,14 +108,23 @@ Video timestamps and internal reference markers belong in `reasoning_basis`. The
 The `pipeline-control` profile additionally requires `TZUDONG_DATA_ENV` and
 `PIPELINE_CONTROL_DSN` (presence only; never print values). `TZUDONG_DATA_ENV=local_db`
 must reject hosted project ref `aqlcofblfxdrjhhdmarw`.
-The `hosted-pending-apply` job evaluates at most one youtube ID absent from
-hosted, then inserts preview-selected `pending` restaurants. Guard:
-`backend.bin.tests.test_evaluate_new_youtube_videos`.
-The `hosted-pending-apply` profile requires `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, and `TZUDONG_HOSTED_DATA_PLANE_APPROVED` (presence
-only). It inserts only preview-selected `pending` restaurants for youtube IDs
-absent from hosted. It does not set `PIPELINE_HOSTED_APPLY_ENABLED` or overwrite
-approved rows. Guard: `backend.supabase.scripts.test_hosted_data_plane`.
+The `hosted-pending-apply` job admits a configured limit of one to three videos.
+An existing hosted restaurant does not establish that all of its video's current
+siblings were delivered. The custody caller binds the complete current eligible
+set, validated source and input fingerprints to one durable request, then sends
+apply only after winning its fresh claim. The database commits all sibling writes
+and the result together; an uncertain or already claimed request is read only.
+Administrator edits and deleted/ambiguous identities are preserved.
+
+The profile requires `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
+`TZUDONG_HOSTED_DATA_PLANE_APPROVED` (presence only). It does not set
+`PIPELINE_HOSTED_APPLY_ENABLED` or overwrite approved rows. The source candidate
+requires the separately admitted custody migration and compatible Mac/GHA
+activation; this document is not proof of operating installation. Guards:
+`backend.bin.tests.test_evaluate_new_youtube_videos`,
+`backend.supabase.scripts.test_hosted_data_plane`, and the custody/source modules
+in required orchestration readiness. Cutover and evidence scope:
+[`hosted-pending-custody-20261025.md`](../docs/operations/hosted-pending-custody-20261025.md).
 
 ## Admin/ops status contract
 

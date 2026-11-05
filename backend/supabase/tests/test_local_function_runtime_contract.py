@@ -82,7 +82,8 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
 
     def test_admission_accepts_exact_current_source_replay_dispositions(self):
         snapshot, bindings = self._migration_admission_fixture()
-        self.assertEqual(len(snapshot["ledger"]), 140)
+        migrate = self.scanner._load_local_contract_module("local-migrate.py", "scanner_replay_test_authority")
+        self.assertEqual(len(snapshot["ledger"]), migrate.expected_ledger_units())
         self.assertEqual([row["status"] for row in snapshot["ledger"] if row["replayProof"]],
                          ["verified-existing", "verified-existing", "legacy-contract-preserved",
                           "verified-existing"])
@@ -156,6 +157,11 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         self.assertEqual(events[1]["newKey"], ("public", "legacy_renamed", "text"))
 
     def test_candidate_smoke_binds_every_argument_with_explicit_types(self):
+        self.assertEqual(self.scanner._identity_arguments("path text, text uuid"), "text,uuid")
+        self.assertEqual(
+            self.scanner._identity_arguments('"display name" text, double precision, timestamp(3) with time zone, character varying(40)'),
+            "text,double precision,timestamp(3) with time zone,character varying(40)",
+        )
         sql = self.scanner._smoke_candidate_blocks(
             [
                 {
@@ -396,16 +402,87 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             sql.index("ALTER FUNCTION %s SET search_path TO"),
         )
 
-    def test_frozen_source_closure_candidate_receipt_is_exact(self):
-        candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
-        self.assertEqual(len(candidates), 107)
+    def test_candidate_denials_and_platform_holds_are_exact_not_generic(self):
+        sql = self.scanner._smoke_candidate_blocks([
+            {"schema": "public", "proname": "admin_evaluation_page", "identityArgumentsNormalized": "jsonb,integer,uuid,text", "signature": "fixture_guard"},
+            {"schema": "pipeline_control", "proname": "admin_warning_nfkc", "identityArgumentsNormalized": "text", "signature": "fixture_unicode"},
+        ])
+        self.assertIn("SQLSTATE = 'P0001' AND SQLERRM = 'EVALUATION_QUERY_INVALID'", sql)
+        self.assertIn("SQLSTATE = '42883' AND SQLERRM = 'function unicode_assigned(text) does not exist'", sql)
+        self.assertIn("current_setting('server_version_num')::integer / 10000 = 15", sql)
+        self.assertIn("pg_catalog.to_regprocedure('pg_catalog.unicode_assigned(text)') IS NULL", sql)
+        self.assertIn("capability_hold_unicode_assigned_pg15", sql)
+        self.assertNotIn("SQLSTATE IN ('P0001')", sql)
+
+    def test_evidence_recovery_guards_register_exact_denials(self):
+        candidates = [
+            ("pipeline_control", "evidence_recovery_guard", "uuid,uuid,bigint,text,text,uuid"),
+            ("pipeline_control", "evidence_recovery_validate_result", "jsonb,jsonb,text"),
+            ("public", "restaurant_evidence_recovery_context", "uuid,uuid"),
+            ("public", "restaurant_evidence_recovery_admin", "uuid,text,uuid,uuid,uuid,bigint,text,text,text,text"),
+            ("public", "restaurant_evidence_recovery_worker", "text,uuid,uuid,jsonb"),
+            ("public", "restaurant_evidence_recovery_status", "uuid,uuid"),
+        ]
+        sql = self.scanner._smoke_candidate_blocks([
+            {"schema": schema, "proname": proname, "identityArgumentsNormalized": args, "signature": f"{schema}.{proname}({args})"}
+            for schema, proname, args in candidates
+        ])
+        self.assertEqual(sql.count("SQLSTATE = '42501' AND SQLERRM = 'EVIDENCE_RECOVERY_FORBIDDEN'"), 5)
+        self.assertEqual(sql.count("SQLSTATE = 'P0001' AND SQLERRM = 'EVIDENCE_RECOVERY_RESULT_INVALID'"), 1)
+        self.assertEqual(sql.count("expected_guard_sqlstate_"), 6)
+        self.assertNotIn("SQLSTATE IN (", sql)
+        unregistered = self.scanner._smoke_candidate_blocks([
+            {"schema": "public", "proname": "restaurant_evidence_recovery_statusx",
+             "identityArgumentsNormalized": "uuid,uuid", "signature": "public.restaurant_evidence_recovery_statusx(uuid,uuid)"}
+        ])
+        self.assertNotIn("expected_guard_sqlstate_", unregistered)
+        self.assertNotIn("EVIDENCE_RECOVERY_FORBIDDEN", unregistered)
+        overloaded = self.scanner._smoke_candidate_blocks([
+            {"schema": "public", "proname": "restaurant_evidence_recovery_status",
+             "identityArgumentsNormalized": "uuid", "signature": "public.restaurant_evidence_recovery_status(uuid)"}
+        ])
+        self.assertNotIn("EVIDENCE_RECOVERY_FORBIDDEN", overloaded)
+        for schema, proname, args in candidates:
+            needle = f'"{schema}"."{proname}"'
+            start = sql.index(needle)
+            block = sql[start:sql.index("END;", start)]
+            if (schema, proname) == ("pipeline_control", "evidence_recovery_validate_result"):
+                expected = "SQLSTATE = 'P0001' AND SQLERRM = 'EVIDENCE_RECOVERY_RESULT_INVALID'"
+            else:
+                expected = "SQLSTATE = '42501' AND SQLERRM = 'EVIDENCE_RECOVERY_FORBIDDEN'"
+            self.assertIn(f"IF {expected} THEN", block)
+            self.assertIn("ELSE", block)
+            self.assertIn("'closure_candidate', 'failed', 'sqlstate_' || SQLSTATE);", block)
+
+    def test_current_source_closure_candidate_receipt_is_exact(self):
+        functions = self.scanner._source_inventory()
+        candidates = self.scanner._candidate_functions(functions)
+        legacy = self.scanner._candidate_functions([
+            item for item in functions
+            if item["path"] != "backend/supabase/migrations/20261025063810_hosted_pending_atomic_delivery.sql"
+        ])
+        self.assertEqual(len(legacy), 117)
         self.assertEqual(
             hashlib.sha256(
                 json.dumps(
-                    candidates, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                    legacy, ensure_ascii=True, sort_keys=True, separators=(",", ":")
                 ).encode("ascii")
             ).hexdigest(),
-            "d42754ee0c8e79c7f970072c87dbf96831ba505ff22441e298ca56b211c74884",
+            "ef4aa737335f4f16beb66b56e620772737746a37d06d4974826acb09c97ba9f2",
+        )
+        self.assertEqual(len(candidates), 129)
+        self.assertEqual(
+            self.scanner._sha256(self.scanner.canonical_json(candidates)),
+            "7c4ac5ae535f406a743c79e1aa6fbcb38158c105e029c44f00503d114e941a1c",
+        )
+        key = lambda item: (item["schema"], item["proname"], item["identityArgumentsNormalized"])
+        self.assertEqual(
+            {key(item) for item in candidates} - {key(item) for item in legacy},
+            set(self.scanner.EXPECTED_CUSTODY_NULL_GUARDS) | {
+                ("pipeline_control", "pending_current", "jsonb"),
+                ("pipeline_control", "pending_digest", "jsonb"),
+                ("pipeline_control", "pending_request_read", "uuid"),
+            },
         )
         target = [
             item for item in candidates
@@ -414,6 +491,76 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         ]
         self.assertEqual(len(target), 1)
         self.assertEqual(target[0]["reason"], "trusted_extension_omitted")
+
+    def test_custody_null_probes_require_exact_guards_and_body_identity(self):
+        expectations = {
+            ("pipeline_control", "pending_items", "jsonb"): "PENDING_INPUT_INVALID",
+        }
+        for schema in ("pipeline_control", "public"):
+            for name, arguments, message in (
+                ("hosted_pending_prepare", "uuid,text,jsonb,jsonb", "PENDING_FRESHNESS_INVALID"),
+                ("hosted_pending_claim", "uuid,uuid,text", "PENDING_SENDER_INVALID"),
+                ("hosted_pending_apply", "uuid,uuid,text,jsonb", "PENDING_APPLY_FAILED"),
+                ("hosted_pending_read", "uuid,text[]", "PENDING_READ_INVALID"),
+            ):
+                expectations[(schema, name, arguments)] = message
+        candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
+        selected = {
+            (row["schema"], row["proname"], row["identityArgumentsNormalized"]): row
+            for row in candidates
+            if (row["schema"], row["proname"], row["identityArgumentsNormalized"]) in expectations
+        }
+        self.assertEqual(set(selected), set(expectations))
+        for key, message in expectations.items():
+            with self.subTest(signature=key):
+                sql = self.scanner._smoke_candidate_blocks([selected[key]])
+                self.assertIn("SQLSTATE = '22023' AND SQLERRM = '" + message + "'", sql)
+                self.assertIn("pg_catalog.convert_to(p.prosrc, 'UTF8')", sql)
+                self.assertIn("'closure_candidate', 'failed', 'guard_did_not_reject'", sql)
+                self.assertNotIn("SQLSTATE IN ('22023')", sql)
+
+    def test_custody_null_guard_body_pins_match_immutable_sql(self):
+        relative = "backend/supabase/migrations/20261025063810_hosted_pending_atomic_delivery.sql"
+        self.assertEqual(
+            hashlib.sha256((REPOSITORY_ROOT / relative).read_bytes()).hexdigest(),
+            "02bc9c5dab0e16a46a28a7993e9c75524813d0bc713c60782881eb4d5ddd2165",
+        )
+        actual = {}
+        for function in self.scanner._source_inventory():
+            if function["path"] != relative or not (
+                function["proname"].startswith("hosted_pending_")
+                or function["proname"] == "pending_items"
+            ):
+                continue
+            body = re.search(r"\bAS\s+(\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$)(.*?)\1",
+                             function["body"], re.S | re.I)
+            self.assertIsNotNone(body)
+            schema = function["schema"]
+            if schema == "public" and not body[2].strip().startswith("SELECT pipeline_control."):
+                schema = "pipeline_control"  # The immutable migration moves each core.
+            key = (schema, function["proname"],
+                   self.scanner._normalize_identity_arguments(function["identityArguments"]))
+            actual[key] = hashlib.sha256(body[2].encode()).hexdigest()
+        expected = self.scanner.EXPECTED_CUSTODY_NULL_GUARDS
+        self.assertEqual(len(actual), 9)
+        self.assertEqual(set(actual), set(expected))
+        for key, digest in actual.items():
+            self.assertEqual(expected[key][1], digest, key)
+
+    def test_unrelated_or_overloaded_signature_does_not_accept_custody_22023(self):
+        for schema, name, arguments in (
+            ("public", "hosted_pending_read", "uuid,uuid[]"),
+            ("pipeline_control", "unrelated_function", "jsonb"),
+        ):
+            candidate = {"schema": schema, "proname": name,
+                         "identityArgumentsNormalized": arguments,
+                         "signature": f"{schema}.{name}({arguments})"}
+            with self.subTest(signature=candidate["signature"]):
+                sql = self.scanner._smoke_candidate_blocks([candidate])
+                self.assertNotIn("PENDING_", sql)
+                self.assertNotIn("expected_guard_sqlstate_22023", sql)
+                self.assertNotIn("SQLSTATE IN ('22023')", sql)
+                self.assertIn("'failed', 'sqlstate_' || SQLSTATE", sql)
 
     def test_runtime_validation_rejects_candidate_smoke_failures(self):
         scanner = self.scanner

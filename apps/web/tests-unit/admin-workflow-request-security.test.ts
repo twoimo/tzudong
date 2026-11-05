@@ -42,7 +42,7 @@ const workflowRoutes = [
     readerCall: "readBoundedJsonRequest(request, MAX_OCR_RECEIPT_REQUEST_BYTES)",
     maximumBytes: 4 * 1024,
     maximumDeclaration: "const MAX_OCR_RECEIPT_REQUEST_BYTES = 4 * 1024;",
-    sensitiveMarker: "await fetch(",
+    sensitiveMarker: "dispatchReceiptOcrWorkflow({",
     validBody: { guardedMutationConfirmation: "APPLY" },
   },
   {

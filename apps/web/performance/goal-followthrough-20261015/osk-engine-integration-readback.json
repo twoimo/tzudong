@@ -1,0 +1,279 @@
+{
+  "boundaries": {
+    "databaseCalls": 0,
+    "gitActions": 0,
+    "provesSharedGraphSuccess": false,
+    "providerCalls": 0,
+    "semanticAnalysisPilotInvoked": false,
+    "sharedGraphWrites": 0,
+    "sharedMemoryWrites": 0,
+    "sourceEditsByVerification": 0
+  },
+  "engine": {
+    "constraintsSha256": "c25b77ec81ccd3ec07c5427a39cbe79af398d5ea24e1cdb28cf7c23e1c9a9ef8",
+    "fullTree": {
+      "algorithm": "sha256(type+nul+relativePath+nul+bytes+nul)",
+      "bytes": 4537863,
+      "files": 143,
+      "sha256": "674d5c5ce6681f088960eece29fd950640de0e6b173e11a042ee544a7b1dc51f",
+      "symlinks": 0
+    },
+    "privateCloneEqualToInstalledBeforeAndAfter": true,
+    "requirementsSha256": "062511e03858388684210f5d5fd04369e7e5eb062ab20c8385ff63644dd3476e",
+    "runtimePythonFiles": {
+      "files": 54,
+      "sha256": "790bb32659f203c85613146fb06b8bb10c2ef404d8ec88547aded63e125f8358"
+    },
+    "versionEvidence": {
+      "repositoryHead": "627f2bfaa9d7fa774daf152cada1c50d0b4b0ef9",
+      "repositoryHeadSummary": "Update osk release to v4.1.8",
+      "staleReleaseJsonObserved": "v4.1.3"
+    },
+    "versionIdentity": "v4.1.8"
+  },
+  "generatedAt": "2026-10-15T06:14:38.741474Z",
+  "runtime": {
+    "dependencies": [
+      {
+        "artifactSha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+        "name": "annotated-types",
+        "version": "0.8.0"
+      },
+      {
+        "artifactSha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+        "name": "anyio",
+        "version": "4.15.1"
+      },
+      {
+        "artifactSha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+        "name": "attrs",
+        "version": "26.1.0"
+      },
+      {
+        "artifactSha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+        "name": "certifi",
+        "version": "2026.7.22"
+      },
+      {
+        "artifactSha256": "661c298b4821edebead0c91edd2b00374d67ad7c5a1f7a91d4442633b79d6a72",
+        "name": "cffi",
+        "version": "2.1.1"
+      },
+      {
+        "artifactSha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+        "name": "click",
+        "version": "8.5.0"
+      },
+      {
+        "artifactSha256": "b8f852c65863251b9e3a1b8c150ce21e59b522dbb6a7d4bc80e680d38388e986",
+        "name": "cryptography",
+        "version": "50.0.1"
+      },
+      {
+        "artifactSha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+        "name": "h11",
+        "version": "0.16.0"
+      },
+      {
+        "artifactSha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+        "name": "httpcore",
+        "version": "1.0.9"
+      },
+      {
+        "artifactSha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+        "name": "httpx",
+        "version": "0.28.1"
+      },
+      {
+        "artifactSha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+        "name": "httpx-sse",
+        "version": "0.4.3"
+      },
+      {
+        "artifactSha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+        "name": "idna",
+        "version": "3.20"
+      },
+      {
+        "artifactSha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+        "name": "jsonschema",
+        "version": "4.26.0"
+      },
+      {
+        "artifactSha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+        "name": "jsonschema-specifications",
+        "version": "2025.9.1"
+      },
+      {
+        "artifactSha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+        "name": "mcp",
+        "version": "1.30.0"
+      },
+      {
+        "artifactSha256": "adc1ada2662f8a5f960b8a10d9986897e7499ef07e06d4cfe7197f8cce923c07",
+        "name": "numpy",
+        "version": "2.5.3"
+      },
+      {
+        "artifactSha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+        "name": "pycparser",
+        "version": "3.0"
+      },
+      {
+        "artifactSha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+        "name": "pydantic",
+        "version": "2.13.5"
+      },
+      {
+        "artifactSha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+        "name": "pydantic-settings",
+        "version": "2.15.0"
+      },
+      {
+        "artifactSha256": "1a353f84de772f423b5ffb11d7ae352fbbef0f446f3c0b0af0f8236d7233606e",
+        "name": "pydantic_core",
+        "version": "2.46.5"
+      },
+      {
+        "artifactSha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+        "name": "PyJWT",
+        "version": "2.15.0"
+      },
+      {
+        "artifactSha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+        "name": "python-dotenv",
+        "version": "1.2.3"
+      },
+      {
+        "artifactSha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+        "name": "python-multipart",
+        "version": "0.0.32"
+      },
+      {
+        "artifactSha256": "34d5fcd24b8445fadc33f9cf348c1047101756fd760b4dacb5c3e99755703310",
+        "name": "PyYAML",
+        "version": "6.0.3"
+      },
+      {
+        "artifactSha256": "7bd4a95571adadfc271746fa146a4bcfd89c0cf731e49c3d1ad863290adbe8ae",
+        "name": "rank-bm25",
+        "version": "0.2.2"
+      },
+      {
+        "artifactSha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+        "name": "referencing",
+        "version": "0.37.0"
+      },
+      {
+        "artifactSha256": "d7469697dce35be237db177d42e2a2ee26e6dcc5fc052078a6fefabd288c6edd",
+        "name": "rpds-py",
+        "version": "2026.6.3"
+      },
+      {
+        "artifactSha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+        "name": "sse-starlette",
+        "version": "3.4.11"
+      },
+      {
+        "artifactSha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+        "name": "starlette",
+        "version": "1.7.0"
+      },
+      {
+        "artifactSha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+        "name": "typing-inspection",
+        "version": "0.4.4"
+      },
+      {
+        "artifactSha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "name": "typing_extensions",
+        "version": "4.16.0"
+      },
+      {
+        "artifactSha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+        "name": "uvicorn",
+        "version": "0.53.0"
+      }
+    ],
+    "installationPolicy": {
+      "artifactHost": "files.pythonhosted.org",
+      "binaryOnly": true,
+      "indexHost": "pypi.org",
+      "pipConfigDisabled": true
+    },
+    "installedPackageSetMatchesExistingOskPython31316": true,
+    "kind": "runtime-cache private venv",
+    "pipCheck": "pass",
+    "pipVersion": "26.2.1",
+    "pythonExecutableSha256": "a39ba8658c8955a744ba1e87d2912bb019c5f4e93fcfd8e96263f891d15ec1aa",
+    "pythonVersion": "3.14.8"
+  },
+  "schemaVersion": 1,
+  "scope": "isolated OSK public-engine integration tests; no shared graph or service writes",
+  "source": {
+    "headChangedDuringVerification": true,
+    "knowledgeGraphPython": {
+      "algorithm": "sha256(repoRelativePath+nul+bytes+nul)",
+      "files": 24,
+      "sha256": "c69b76ad1edf5f67c092c5d8d61b7198296ddde63a197c0813fa6fa5e5cb837a"
+    },
+    "preexistingKnowledgeGraphWorkingTreeChanges": true,
+    "stableDuringPassingRun": true,
+    "testedModules": [
+      "backend.knowledge_graph.tests.test_osk_publication",
+      "backend.knowledge_graph.tests.test_osk_projection",
+      "backend.knowledge_graph.tests.test_caption_title_enrichment"
+    ],
+    "worktreeHeadAtReceipt": "d5889fa4ef0105ce98efe138796c4f0cdf06b3c0",
+    "worktreeHeadAtTaskStart": "609b228751ddd33fba2590f83bdc6aacb9fecbdb"
+  },
+  "tests": {
+    "command": {
+      "argv": [
+        "-B",
+        "-m",
+        "unittest",
+        "-v",
+        "backend.knowledge_graph.tests.test_osk_publication",
+        "backend.knowledge_graph.tests.test_osk_projection",
+        "backend.knowledge_graph.tests.test_caption_title_enrichment"
+      ],
+      "environment": {
+        "OSK_TEST_ENGINE": "<byte-identical-private-engine-clone>",
+        "OSK_UPDATE_CHECK": "0",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "TMPDIR": "<private-runtime-temp>"
+      },
+      "executable": "<private-python-3.14.8>"
+    },
+    "privateRuntimeFinal": {
+      "durationSeconds": 35.788,
+      "exitCode": 0,
+      "failed": 0,
+      "passed": 46,
+      "privateLogSha256": "4f520bea568aa93a9d33ed0bcfbd9e9ce803e0dbd03b00868ed04cd00aecb546",
+      "skipped": 0,
+      "temporaryVaultEntriesAfterRun": 0,
+      "testsRun": 46
+    },
+    "projectVenvHistory": {
+      "durationSeconds": 17.895,
+      "failed": 17,
+      "failureCode": "PYTHON_DEPENDENCY_MISSING_MCP",
+      "passed": 29,
+      "preserved": true,
+      "privateLogSha256": "731db347f0e4d6ae78f471839f715eb80d35abed1b6d1306052e7efbc21352de",
+      "pythonVersion": "3.14.8",
+      "skipped": 0,
+      "testsRun": 46
+    },
+    "withoutEngine": {
+      "durationSeconds": 0.134,
+      "failed": 0,
+      "passed": 7,
+      "privateLogSha256": "e76d58c2ed3daaaa7066ebced4a75c9f709a0cc35537c7b538b32c7165540326",
+      "skipped": 4,
+      "testsRun": 11
+    }
+  }
+}

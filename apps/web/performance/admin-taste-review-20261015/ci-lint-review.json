@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T15:17:13.328690+00:00",
+  "baseCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "finding": "Ubuntu/Windows npm failed Next no-assign-module-variable on a frozen standalone measurement runner.",
+  "change": "Use the existing exact-file standalone-runner exception for this one rule. The file stays linted and original evidence bytes remain immutable.",
+  "regression": {
+    "file": "tests-unit/eslint-generated-dist-dir.test.ts",
+    "pass": 0,
+    "fail": 1,
+    "reason": "The added assertion assumed no-debugger was enabled, but the installed Next configuration does not enable that rule. The boundary assertion is corrected to the observed enabled no-img-element rule in a later test run."
+  },
+  "fullEslint": {
+    "command": "Node24 scripts/run-web-tool.mjs eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
+    "exitCode": 0,
+    "elapsedSeconds": 45.680018374999996,
+    "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "rawLogsPersisted": false
+  },
+  "sourceSha256": {
+    "apps/web/eslint.config.mjs": "fd251867d5c89bcb3c353284354562985d66931a4e47893071cc208c3a25874f",
+    "apps/web/tests-unit/eslint-generated-dist-dir.test.ts": "7129dfa25bedb1303304f442d2c92156347136a8310772afabfd2f989b40ea44",
+    "apps/web/performance/admin-taste-20261015/browser-audit.mjs": "f000e677604fdbad992ac378264ecea2095aabb05026ad18a597100be997697d"
+  },
+  "sourceDrift": [],
+  "frozenRunnerBytesModified": false,
+  "boundaries": [
+    "No scanner configuration changes.",
+    "No CI rerun, provider call, database write, deployment or Git mutation."
+  ],
+  "metadataCorrection": "The initial root receipt template had a premature pass count; corrected to the observed failed test before artifact sealing. Full ESLint itself passed at the recorded source snapshot."
+}

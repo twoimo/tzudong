@@ -55,6 +55,9 @@ services:
 
   auth:
     container_name: !reset null
+    environment:
+      # Verification links must reach GoTrue through Kong, while redirects use SITE_URL.
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL}
 
   rest:
     container_name: !reset null

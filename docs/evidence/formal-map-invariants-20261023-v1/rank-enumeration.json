@@ -1,0 +1,21 @@
+{
+  "runtime": "1.4.0",
+  "scope": "formula comparison only; not a code-level proof of the builder",
+  "checks": [
+    {
+      "percent": 98,
+      "countsChecked": 5000,
+      "mismatches": []
+    },
+    {
+      "percent": 95,
+      "countsChecked": 5000,
+      "mismatches": []
+    },
+    {
+      "percent": 85,
+      "countsChecked": 5000,
+      "mismatches": []
+    }
+  ]
+}

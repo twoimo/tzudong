@@ -1,0 +1,127 @@
+{
+  "schema": "tzudong.storyboard-runtime-source-binding-review/v1",
+  "append_only": true,
+  "events": [
+    {
+      "event_id": "STORYBOARD-RUNTIME-SOURCE-BINDING-P2-20261019-002",
+      "captured_at": "2026-10-19T00:18:09+0900",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "predecessor_receipt": {
+        "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-binding-p2-20261019.json",
+        "sha256": "81d3cefea418ee8cd6d3be059117f92b538c5a3228d70eb09c0141fd537bf408",
+        "event_id": "STORYBOARD-RUNTIME-SOURCE-BINDING-P2-20261019-001",
+        "source_path_count": 32,
+        "runtime_source_binding_sha256": "aa170d446a9820e1f7bd195ad399a708a7ab036c99eb4c6c9f3618b111f4fde5"
+      },
+      "verdict": "accepted_resolved_local_followup",
+      "finding": {
+        "counterexample": "gemini-client.ts dynamically imports provider-budget.mjs for every storyboard model lookup and generation; provider-budget.mjs starts backend.utils.provider_budget as a Python module to enforce quota and inflight permits. production-store.ts imports the privileged Storage client that selects the Storage target and the admitted dedicated or service-role key. None of those three first-party execution dependencies was present in the 32-path source binding, so its behavior could drift without changing the runtime compatibility digest.",
+        "confirmed_execution_edges": [
+          {
+            "kind": "dynamic_import",
+            "importer": "apps/web/lib/admin/storyboard/gemini-client.ts",
+            "specifier": "../../../../../backend/utils/provider-budget.mjs",
+            "resolved_path": "backend/utils/provider-budget.mjs"
+          },
+          {
+            "kind": "python_module_subprocess",
+            "importer": "backend/utils/provider-budget.mjs",
+            "argv_prefix": [
+              "-m",
+              "backend.utils.provider_budget"
+            ],
+            "resolved_path": "backend/utils/provider_budget.py"
+          },
+          {
+            "kind": "alias_import",
+            "importer": "apps/web/lib/admin/storyboard/production-store.ts",
+            "specifier": "@/lib/supabase/storage-server",
+            "resolved_path": "apps/web/lib/supabase/storage-server.ts"
+          }
+        ]
+      },
+      "resolution": {
+        "source_path_count_before": 32,
+        "source_path_count_after": 35,
+        "added_paths": [
+          "apps/web/lib/supabase/storage-server.ts",
+          "backend/utils/provider-budget.mjs",
+          "backend/utils/provider_budget.py"
+        ],
+        "scope_rule": "Bind the exact first-party dynamic import, Python module subprocess target and privileged Storage client used by the already-declared storyboard execution sources. Do not recursively hash external packages or the repository at large.",
+        "runtime_source_binding_sha256_before": "aa170d446a9820e1f7bd195ad399a708a7ab036c99eb4c6c9f3618b111f4fde5",
+        "runtime_source_binding_sha256_after": "c0da765eafb23620c32ea8de6d4990ebfff4132de337560a8a1993706b3853c9"
+      },
+      "source_binding": {
+        "apps/web/lib/admin/storyboard/runtime-source-binding.ts": {
+          "bytes": 5397,
+          "sha256": "0e3cb7805bd6ee0dc46217baa30de29347491220c7b7ab87b938b0a49b20076b"
+        },
+        "apps/web/tests-unit/storyboard-runtime-source-binding.test.ts": {
+          "bytes": 9894,
+          "sha256": "d7f56e2bf52a94c06a45c56426f8f11c80a9e3b31a3a119106f50a9b4b05fa38"
+        },
+        "apps/web/lib/supabase/storage-server.ts": {
+          "bytes": 2578,
+          "sha256": "7efee141365fb88c8504a16bfe4a5865ff2c875be78c9a17b4fa542fdb6d507e"
+        },
+        "backend/utils/provider-budget.mjs": {
+          "bytes": 8188,
+          "sha256": "8313b93666a36342bd1c53581c9ec2034a07c23225ac5fb9e6988424fe395f27"
+        },
+        "backend/utils/provider_budget.py": {
+          "bytes": 11027,
+          "sha256": "edfd9b77125f05a81209fd9799c5e8465f169dbf175d9ca8361adf3cb50b78e7"
+        }
+      },
+      "verification": [
+        {
+          "command": "/Users/twoimo/.bun/bin/bun test tests-unit/storyboard-runtime-source-binding.test.ts",
+          "cwd": "apps/web",
+          "status": "passed",
+          "tests": 9,
+          "failures": 0,
+          "expectations": 82
+        },
+        {
+          "command": "/Users/twoimo/.bun/bin/bun test tests-unit/storyboard-runtime-source-binding.test.ts tests-unit/admin-storyboard-policy-readback.test.ts tests-unit/public-storyboard-runtime-compatibility.test.ts tests-unit/storyboard-gemini-execution-contract.test.ts tests-unit/storyboard-retired-cli.test.ts tests-unit/storyboard-runtime-compatibility-observer.test.ts",
+          "cwd": "apps/web",
+          "status": "passed",
+          "tests": 38,
+          "failures": 0,
+          "expectations": 264
+        },
+        {
+          "command": "npm run typecheck:parity",
+          "cwd": "apps/web",
+          "status": "passed",
+          "diagnostics": 0,
+          "logical_inputs": 3351,
+          "logical_input_names_sha256": "127c63b72a8b143d30331423de187a55551d734f22babb67ee5a2f910d5ceeb5",
+          "non_library_content_sha256": "542b505e98633fa0b6f6619079441cdea62f1f102407481277a809fb09aa43c0"
+        },
+        {
+          "command": "git diff --check -- apps/web/lib/admin/storyboard/runtime-source-binding.ts apps/web/tests-unit/storyboard-runtime-source-binding.test.ts",
+          "status": "passed"
+        }
+      ],
+      "reconfirmation_conditions": [
+        "The source binding is injected by next.config.mjs at build time; builds made before this follow-up cannot establish the 35-path digest.",
+        "After an authorized build and deployment, both exact production aliases and the authenticated storyboard-policy readback must independently report the canonical policy derived from source binding c0da765eafb23620c32ea8de6d4990ebfff4132de337560a8a1993706b3853c9.",
+        "A later byte change to any of the 35 declared paths, including either provider budget implementation or the Storage client, requires a new build-time digest and fresh readback.",
+        "The predecessor 32-path receipt remains valid historical local evidence only and cannot confirm this follow-up deployment."
+      ],
+      "unchanged_contracts": [
+        "No provider model, quota, inflight ceiling, retry policy, Storage credential selection, runtime policy value or operating setting changed.",
+        "No SQL migration, SQL pin, database, provider, OSK, coordinator, sealed report or prior receipt changed."
+      ],
+      "external_actions": {
+        "provider_calls": 0,
+        "database_calls": 0,
+        "research_dispatches": 0,
+        "coordinator_mutations": 0,
+        "git_mutations": 0
+      }
+    }
+  ]
+}

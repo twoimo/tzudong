@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-20T20:05:13.437857+00:00",
+  "port": 18925,
+  "ownedPid": 87210,
+  "cwdVerified": true,
+  "shutdown": "SIGTERM",
+  "listenerStopped": true,
+  "otherProcessesTargeted": false,
+  "userGpsRead": false,
+  "userBrowserPermissionChanged": false
+}

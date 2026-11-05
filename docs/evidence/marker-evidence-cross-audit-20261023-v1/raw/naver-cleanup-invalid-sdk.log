@@ -1,0 +1,57 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-map-resize-observer-helpers.test.ts:
+(pass) naver map resize observer helpers > triggers immediate resize and debounced post-transition work [0.33ms]
+(pass) naver map resize observer helpers > cancel clears pending debounce [0.10ms]
+(pass) naver map resize observer helpers > cleanup disconnects observer before cancelling debounce [0.05ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > failed provider detachment is discarded and does not strand clear or reuse a corrupt marker [0.48ms]
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.10ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.04ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.06ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.08ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.04ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.14ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.07ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.06ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.01ms]
+(pass) marker pool > keeps the category image when only the review bubble changes [0.22ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.15ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.05ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [1.66ms]
+
+tests-unit/naver-map-event-cleanup.test.ts:
+(pass) listener removal preserves the provider receiver and handle [0.13ms]
+(pass) absent provider or listener is safe during partial initialization [0.03ms]
+(pass) one failed provider removal does not prevent the next teardown [0.04ms]
+(pass) a retained idle handler becomes inert before callback and cannot repeat a stale correction [0.03ms]
+(pass) cleanup cancels a still-pending idle correction even if the provider retains its handler
+
+tests-unit/naver-map-wheel-helpers.test.ts:
+(pass) naver map wheel helpers > returns no-op when delta direction is zero [0.13ms]
+(pass) naver map wheel helpers > uses previous target zoom during fast continuous wheel input [0.01ms]
+(pass) naver map wheel helpers > clamps zoom to min/max bounds
+(pass) naver map wheel helpers > builds viewport-relative mouse offsets and in-bounds flag [0.04ms]
+(pass) naver map wheel helpers > marks viewport plan as outside when wheel event is beyond bounds
+(pass) naver map wheel helpers > rebuilds center-relative mouse offset after zoom [0.01ms]
+(pass) naver map wheel helpers > builds anchor adjustment payload for hover-preserving zoom correction [0.01ms]
+(pass) naver map wheel helpers > builds stable wheel input payload
+(pass) naver map wheel helpers > queues wheel input when anchor adjustment is still running [0.01ms]
+(pass) naver map wheel helpers > flushes queued wheel input only when anchor adjustment is idle [0.02ms]
+(pass) naver map wheel helpers > resolves post-adjust continuation state from current zoom and queue flag
+(pass) naver map wheel helpers > builds projection adapter around map constructors and projection API [0.31ms]
+(pass) naver map wheel helpers > clears a pending anchor-adjust listener through injected remover [0.16ms]
+(pass) naver map wheel helpers > treats an unchanged projection offset as not ready for same-turn correction [0.04ms]
+(pass) naver map wheel helpers > resolves cleanup state by resetting anchor-adjust and queue state [0.01ms]
+
+tests-unit/naver-map-window-resize-helpers.test.ts:
+(pass) naver map window resize helpers > debounces resize and triggers only the latest scheduled resize [0.10ms]
+(pass) naver map window resize helpers > cancel clears pending resize [0.03ms]
+(pass) naver map window resize helpers > cleanup removes listener before cancelling pending resize [0.04ms]
+
+ 41 pass
+ 0 fail
+ 1169 expect() calls
+Ran 41 tests across 5 files. [84.00ms]

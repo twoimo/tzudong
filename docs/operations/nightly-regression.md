@@ -405,7 +405,7 @@ python3 backend/supabase/scripts/local-function-runtime-scan.py smoke \
   --container "${DB_CONTAINER}"
 python3 backend/supabase/scripts/local-migrate.py seed \
   --container "${DB_CONTAINER}" --allow-local "${BIND[@]}"
-docker exec -i "${DB_CONTAINER}" psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+docker exec -i "${DB_CONTAINER}" psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
   < backend/supabase/tests/local_runtime_schema_convergence.sql
 python3 backend/supabase/scripts/local-migrate.py receipt \
   --container "${DB_CONTAINER}" --allow-local "${BIND[@]}" \

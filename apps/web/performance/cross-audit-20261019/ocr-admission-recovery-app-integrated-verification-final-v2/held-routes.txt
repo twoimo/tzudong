@@ -1,0 +1,12 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/receipt-ocr-capability-held-routes.test.ts:
+(pass) receipt OCR credential-release readiness responses > preflights the dedicated capability before claim, quota, or provider work [0.10ms]
+(pass) receipt OCR credential-release readiness responses > maps capability held to fixed no-store HTTP 503 before generic OCR failures [0.15ms]
+(pass) receipt OCR credential-release readiness responses > maps capability held to one terminal SSE 503 without provider diagnostics [0.16ms]
+(pass) receipt OCR credential-release readiness responses > maps admin processing capability held to the same fixed 503 contract [0.06ms]
+
+ 4 pass
+ 0 fail
+ 18 expect() calls
+Ran 4 tests across 1 file. [31.00ms]

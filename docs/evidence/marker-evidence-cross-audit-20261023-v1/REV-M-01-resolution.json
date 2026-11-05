@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-22T21:25:43.989902+00:00",
+  "finding": "REV-M-01",
+  "decision": "ACCEPT codeguardgap, then FIXED/NATIVE_VERIFIED",
+  "reviewed_revision": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+  "actual_reproduction": "Browser fixture calls actual onMapReady external move6invalidrecords: jump count6=>12 beforefix, so branchisrealexposedcallback. Notclaimedproductionuserincident.",
+  "change": "Shared hasRenderableOverseasCoordinates guards BOTH markerfilter and moveToRestaurant beforeNumber; missing/blank/nonfinite/range/sentinelinvalid returnswithoutjump. Validcoordinatesincluding0latitude/numericstringsretained.",
+  "verification": "6affectedtests84assertions0fail0skip; browser390/820/1440 validates all6invalidmovesnojump and validexternalmove currentzoom. Native/compatTSparity0diagnostics; scopedlint_exit0.",
+  "external_review": "OriginalProreportpreservedverbatim. This executes its exactminimumremedy; no duplicatefullaudit or fourthreportclaimed.",
+  "deployment": "Notyetdelivered, protectedPRgatesstillapply",
+  "fix_commit": "71494494caffe2f140e70b1b2fa2c171882262f2",
+  "integration_head": "0d66e15f32edcb239561fcd6daa4f2a5ce8e6f79"
+}

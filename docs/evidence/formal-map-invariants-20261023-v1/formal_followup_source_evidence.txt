@@ -1,0 +1,1821 @@
+Tzudong minimal Pro follow-up. Immutable current source a1dd40016ff7cf23055073c8637d5b3ee00d6781. Prior source e2f60f7ea944776c81d538b5b042ed28ac9b04ae; unchanged source retained in prior formal_reverse_source_bundle.txt (f2e04bd7c76ed8f6aea4493f39bdf10d7f03761b570305b3c21d58865ead8ac2).
+No new whole-app or actual-provider proof.
+
+===== CURRENT FULL SOURCE apps/web/lib/marker-pool.ts bytes=14532 sha256=7541c064ab4190abc0fc7500ee7d5f91ac862ca4e3429b56b8b9b59659c0db4e =====
+/**
+ * 마커 풀링 (Object Pool) 시스템
+ * 
+ * 마커 객체를 재사용하여 생성/삭제 오버헤드를 제거하고
+ * 가비지 컬렉션 부담을 현저히 감소시킵니다.
+ * 
+ * @example
+ * const pool = MarkerPool.getInstance();
+ * const marker = pool.acquire('restaurant-123', position, icon);
+ * // ... 사용 후
+ * pool.release('restaurant-123');
+ */
+
+import { syncRetainedMarkerAccessibility } from './retained-marker-accessibility';
+import { detachNaverMapMarker, removeNaverMapListener } from './naver-map-event-cleanup';
+
+type MarkerClickEvent = unknown;
+
+interface MarkerAnchorLike {
+    x: number;
+    y: number;
+}
+
+interface MarkerIconLike {
+    content?: unknown;
+    anchor?: MarkerAnchorLike | null;
+    [key: string]: unknown;
+}
+
+interface MarkerPositionLike {
+    equals?: (position: unknown) => boolean;
+    lat?: () => number;
+    lng?: () => number;
+}
+
+const MARKER_NODE_SELECTOR = '[data-testid="marker"]';
+const REVIEW_BUBBLE_SELECTOR = '[data-visible-marker-review-bubble="true"]';
+
+function patchStableMarkerReviewBubble(element: HTMLElement, previousContent: unknown, nextContent: unknown): boolean {
+    if (typeof previousContent !== 'string' || typeof nextContent !== 'string' || typeof document === 'undefined') return false;
+    if (!nextContent.includes('data-testid="marker"') && !element.querySelector(MARKER_NODE_SELECTOR)) {
+        return false;
+    }
+
+    const currentMarker = element.querySelector(MARKER_NODE_SELECTOR);
+    if (!currentMarker) return false;
+
+    const template = document.createElement('template');
+    template.innerHTML = nextContent;
+    const nextMarker = template.content.querySelector(MARKER_NODE_SELECTOR);
+    if (!nextMarker) return false;
+    if (currentMarker.getAttribute('style') !== nextMarker.getAttribute('style')) return false;
+    // A pooled SDK object may now represent a different restaurant. Keeping its
+    // image is safe only when the marker identity and fixed badge are unchanged.
+    for (const attribute of ['data-restaurant-id', 'role', 'tabindex', 'aria-label', 'title']) {
+        if (currentMarker.getAttribute(attribute) !== nextMarker.getAttribute(attribute)) return false;
+    }
+    const visitBadgeSelector = '[data-tzuyang-visit-count-badge="true"]';
+    if ((currentMarker.querySelector(visitBadgeSelector)?.outerHTML ?? '')
+        !== (nextMarker.querySelector(visitBadgeSelector)?.outerHTML ?? '')) return false;
+
+
+    const currentImage = currentMarker.querySelector('img');
+    const nextImage = nextMarker.querySelector('img');
+    if ((currentImage?.getAttribute('src') ?? '') !== (nextImage?.getAttribute('src') ?? '')) return false;
+
+    // Only the review bubble may differ. A partial attribute comparison misses
+    // changes outside the image node, including the popularity tier and flame.
+    const previous = document.createElement('template');
+    previous.innerHTML = previousContent;
+    const nextStatic = template.content.cloneNode(true) as DocumentFragment;
+    for (const content of [previous.content, nextStatic]) {
+        content.querySelectorAll(REVIEW_BUBBLE_SELECTOR).forEach(node => node.remove());
+    }
+    if (!previous.content.isEqualNode(nextStatic)) return false;
+
+    // The real Naver wrapper keeps the bubble outside the popularity/category
+    // wrappers. Replace it at its existing anchor, rather than inserting a
+    // second bubble inside the image marker. Structural add/remove uses setIcon.
+    const currentBubbles = element.querySelectorAll(REVIEW_BUBBLE_SELECTOR);
+    const nextBubbles = template.content.querySelectorAll(REVIEW_BUBBLE_SELECTOR);
+    if (currentBubbles.length !== 1 || nextBubbles.length !== 1) return false;
+    // Keep the current viewport clamp until the next layout pass recalculates it.
+    if (currentBubbles[0] instanceof HTMLElement && nextBubbles[0] instanceof HTMLElement) {
+        nextBubbles[0].style.marginLeft = currentBubbles[0].style.marginLeft;
+    }
+    currentBubbles[0].replaceWith(nextBubbles[0]);
+    return true;
+}
+
+interface PooledMarker {
+    __tzudongRetainedMarkerAriaHidden?: boolean;
+    __onClick?: (event: MarkerClickEvent) => void;
+    __disposeClickListener?: () => void;
+    getMap: () => unknown;
+    setMap: (map: unknown | null) => void;
+    getPosition: () => MarkerPositionLike | null;
+    setPosition: (position: unknown) => void;
+    getIcon: () => MarkerIconLike | null;
+    setIcon: (icon: MarkerIconLike) => void;
+    getElement: () => HTMLElement | null;
+    setZIndex: (zIndex: number) => void;
+}
+
+/**
+ * 싱글톤 마커 풀 클래스
+ */
+export class MarkerPool {
+    private static instance: MarkerPool | null = null;
+
+    /** 사용 가능한 마커 풀 */
+    private pool: PooledMarker[] = [];
+
+    /** 현재 활성화된 마커 맵 (ID → Marker) */
+    private active: Map<string, PooledMarker> = new Map();
+
+    // The SDK may return a cloned descriptor. The pool owns the last applied
+    // snapshot; review patches must not depend on mutating getIcon() results.
+    private renderedIcons = new WeakMap<PooledMarker, MarkerIconLike>();
+
+    /** 풀 최대 크기 (메모리 제한) */
+    private readonly MAX_POOL_SIZE = 1000;
+
+    /** 통계 (디버깅용) */
+    private stats = {
+        created: 0,
+        reused: 0,
+        released: 0,
+    };
+
+    private constructor() {
+        // 싱글톤 패턴
+    }
+
+    /**
+     * 싱글톤 인스턴스 가져오기
+     */
+    public static getInstance(): MarkerPool {
+        if (!MarkerPool.instance) {
+            MarkerPool.instance = new MarkerPool();
+        }
+        return MarkerPool.instance;
+    }
+
+    /**
+     * 마커 획득 (풀에서 재사용 or 새로 생성)
+     * 
+     * @param id 마커 고유 ID (레스토랑 ID 등)
+     * @param position 마커 위치
+     * @param icon 마커 아이콘
+     * @param map 지도 인스턴스
+     * @returns 마커 객체
+     */
+    public acquire(
+        id: string,
+        position: unknown,
+        icon: MarkerIconLike,
+        map: unknown,
+        onClick?: () => void
+    ): PooledMarker {
+        let marker: PooledMarker;
+        let isNew = false;
+
+        // 1. 이미 활성화된 마커 재사용
+        if (this.active.has(id)) {
+            marker = this.active.get(id)!;
+        }
+        else if (this.pool.length > 0) {
+            marker = this.pool.pop()!;
+            this.stats.reused++;
+        }
+        // 3. 새 마커 생성
+        else {
+            marker = new window.naver.maps.Marker({
+                position, // 초기값
+                icon,     // 초기값
+                map,      // 초기값
+            }) as PooledMarker;
+            isNew = true;
+            this.stats.created++;
+
+            // [PERFORMANCE] 이벤트 위임: 마커 생성 시 단 1회만 리스너 등록
+            // 이후 핸들러 교체는 __onClick 프로퍼티만 변경하여 zero-overhead 달성
+            const events = window.naver.maps.Event;
+            const listener = events.addListener(marker, 'click', (e: MarkerClickEvent) => {
+                if (marker.__onClick) {
+                    marker.__onClick(e);
+                }
+            });
+            if (listener) marker.__disposeClickListener = () => { removeNaverMapListener(events, listener); };
+        }
+
+        // [PERFORMANCE] 불필요한 DOM 조작/렌더링 방지
+        // 값이 실제로 변경되었을 때만 setter 호출
+
+        // 1. Map 설정 (새로 생성된 경우 이미 설정됨)
+        if (!isNew && marker.getMap() !== map) {
+            marker.setMap(map);
+        }
+
+        // 2. 위치 업데이트 (새로 생성된 경우 이미 설정됨)
+        if (!isNew) {
+            const currentPos = marker.getPosition();
+            // LatLng.equals 메서드 활용 또는 좌표값 비교
+            if (!currentPos?.equals || !currentPos.equals(position)) {
+                marker.setPosition(position);
+            }
+        }
+
+        // 3. Keep all pooled icon writers behind the same rendered snapshot.
+        if (isNew) {
+            this.renderedIcons.set(marker, { ...icon, anchor: icon.anchor ? { ...icon.anchor } : icon.anchor });
+        } else {
+            this.applyIcon(marker, icon);
+        }
+
+        // 4. 이벤트 핸들러 교체 (프로퍼티 할당 O(1))
+        marker.__onClick = onClick;
+
+        this.active.set(id, marker);
+        return marker;
+    }
+
+    private applyIcon(marker: PooledMarker, icon: MarkerIconLike): void {
+        const currentIcon = this.renderedIcons.get(marker) ?? marker.getIcon();
+        const currentAnchor = currentIcon?.anchor;
+        const nextAnchor = icon.anchor;
+        const anchorChanged = (currentAnchor?.x ?? null) !== (nextAnchor?.x ?? null)
+            || (currentAnchor?.y ?? null) !== (nextAnchor?.y ?? null);
+        if (!anchorChanged && currentIcon?.content === icon.content) return;
+
+        const element = marker.getElement();
+        const patched = !anchorChanged && typeof element?.querySelector === 'function'
+            && patchStableMarkerReviewBubble(element, currentIcon?.content, icon.content);
+        if (!patched) {
+            const wasHidden = Boolean(marker.__tzudongRetainedMarkerAriaHidden);
+            const rootReadyTarget = element?.parentElement;
+            // Keep a hidden marker's pending root registry across deferred SDK
+            // insertion; clearing visibility would cancel that observer/target.
+            if (!wasHidden) syncRetainedMarkerAccessibility(marker, true);
+            marker.setIcon(icon);
+            if (wasHidden) syncRetainedMarkerAccessibility(marker, false, rootReadyTarget);
+        }
+        this.renderedIcons.set(marker, { ...icon, anchor: icon.anchor ? { ...icon.anchor } : icon.anchor });
+    }
+
+    /**
+     * 마커 반환 (풀로 돌려보내기)
+     * 
+     * @param id 마커 ID
+     */
+    public release(id: string): void {
+        const marker = this.active.get(id);
+        if (!marker) return;
+
+        this.active.delete(id);
+        // Detached/evicted markers must not retain a render's restaurant/state
+        // closure or dispatch a queued click for a no-longer-active place.
+        marker.__onClick = undefined;
+        syncRetainedMarkerAccessibility(marker, true);
+        const detached = detachNaverMapMarker(marker);
+        if (detached && this.pool.length < this.MAX_POOL_SIZE) {
+            this.pool.push(marker);
+        } else {
+            marker.__disposeClickListener?.();
+            marker.__disposeClickListener = undefined;
+        }
+        this.stats.released++;
+    }
+
+    /**
+     * 여러 마커 한번에 반환
+     * 
+     * @param ids 마커 ID 배열
+     */
+    public releaseMultiple(ids: string[]): void {
+        // The pool is a stack. Reverse a batch's release order so a returning
+        // render in the same ID order reacquires its own icon/position rather
+        // than rebuilding every SDK icon for a different restaurant.
+        for (let index = ids.length - 1; index >= 0; index--) {
+            this.release(ids[index]);
+        }
+    }
+
+    /**
+     * 모든 마커 반환
+     */
+    public releaseAll(): void {
+        const ids = Array.from(this.active.keys());
+        this.releaseMultiple(ids);
+    }
+
+    /**
+     * 특정 ID 목록만 유지하고 나머지 반환
+     * 
+     * @param keepIds 유지할 마커 ID 배열
+     */
+    public releaseExcept(keepIds: Set<string>): void {
+        const toRelease = Array.from(this.active.keys()).filter(
+            (id) => !keepIds.has(id)
+        );
+        this.releaseMultiple(toRelease);
+    }
+
+    /**
+     * 마커 업데이트 (위치나 아이콘 변경)
+     * 
+     * @param id 마커 ID
+     * @param updates 업데이트할 속성
+     */
+    public update(
+        id: string,
+        updates: {
+            position?: unknown;
+            icon?: MarkerIconLike;
+            zIndex?: number;
+        }
+    ): void {
+        const marker = this.active.get(id);
+        if (!marker) return;
+
+        if (updates.position) {
+            marker.setPosition(updates.position);
+        }
+        if (updates.icon) {
+            this.applyIcon(marker, updates.icon);
+        }
+        if (updates.zIndex !== undefined) {
+            marker.setZIndex(updates.zIndex);
+        }
+    }
+
+    /**
+     * 활성 마커 가져오기
+     * 
+     * @param id 마커 ID
+     * @returns 마커 객체 (없으면 undefined)
+     */
+    public get(id: string): PooledMarker | undefined {
+        return this.active.get(id);
+    }
+
+    /**
+     * 마커 존재 여부 확인
+     * 
+     * @param id 마커 ID
+     * @returns 존재하면 true
+     */
+    public has(id: string): boolean {
+        return this.active.has(id);
+    }
+
+    /**
+     * 풀 전체 정리 (컴포넌트 언마운트 시)
+     */
+    public clear(): void {
+        this.active.forEach((marker) => {
+            marker.__onClick = undefined;
+            syncRetainedMarkerAccessibility(marker, true);
+            detachNaverMapMarker(marker);
+            marker.__disposeClickListener?.();
+            marker.__disposeClickListener = undefined;
+        });
+
+        // 풀의 모든 마커도 정리
+        this.pool.forEach((marker) => {
+            marker.__onClick = undefined;
+            detachNaverMapMarker(marker);
+            marker.__disposeClickListener?.();
+            marker.__disposeClickListener = undefined;
+        });
+
+        this.active.clear();
+        this.pool = [];
+        this.renderedIcons = new WeakMap();
+    }
+
+    /**
+     * 통계 정보 가져오기 (디버깅용)
+     */
+    public getStats() {
+        return {
+            ...this.stats,
+            activeCount: this.active.size,
+            poolSize: this.pool.length,
+            hitRate: this.stats.reused / (this.stats.created + this.stats.reused) || 0,
+        };
+    }
+
+    /**
+     * 통계 초기화
+     */
+    public resetStats(): void {
+        this.stats = {
+            created: 0,
+            reused: 0,
+            released: 0,
+        };
+    }
+
+    /**
+     * 콘솔에 통계 출력
+     */
+    public logStats(): void {
+        const stats = this.getStats();
+        console.table({
+            'Active Markers': stats.activeCount,
+            'Pool Size': stats.poolSize,
+            'Total Created': stats.created,
+            'Total Reused': stats.reused,
+            'Total Released': stats.released,
+            'Hit Rate': `${(stats.hitRate * 100).toFixed(1)}%`,
+        });
+    }
+}
+
+/**
+ * 마커 풀 싱글톤 인스턴스 (편의 export)
+ */
+export const markerPool = MarkerPool.getInstance();
+
+
+===== CURRENT FULL SOURCE apps/web/lib/retained-marker-accessibility.ts bytes=3837 sha256=a3833232541307a61e5a914ac0ad96d6c804ded7e086cf084339e68ddab76cc4 =====
+interface RetainedMarkerAccessibility {
+    getElement: () => HTMLElement | null;
+    __tzudongRetainedMarkerAriaHidden?: boolean;
+}
+
+const OWNER_ATTRIBUTE = 'data-tzudong-retained-marker-hidden';
+const MARKER_SELECTOR = '[data-testid="marker"]';
+const OVERLAY_SELECTOR = '[data-visible-marker-review-bubble-anchor="true"]';
+
+interface PendingRootRegistry {
+    target: HTMLElement;
+    markers: Set<RetainedMarkerAccessibility>;
+    observer: MutationObserver;
+}
+
+const rootTargets = new WeakMap<RetainedMarkerAccessibility, HTMLElement>();
+const pendingRoots = new WeakMap<RetainedMarkerAccessibility, PendingRootRegistry>();
+const rootRegistries = new WeakMap<HTMLElement, PendingRootRegistry>();
+
+function cancelPendingRoot(marker: RetainedMarkerAccessibility): void {
+    const registry = pendingRoots.get(marker);
+    if (!registry) return;
+    pendingRoots.delete(marker);
+    registry.markers.delete(marker);
+    if (registry.markers.size === 0) {
+        registry.observer.disconnect();
+        rootRegistries.delete(registry.target);
+    }
+}
+
+function watchPendingRoot(marker: RetainedMarkerAccessibility, target: HTMLElement): void {
+    const previous = pendingRoots.get(marker);
+    if (previous?.target === target) return;
+    cancelPendingRoot(marker);
+    let registry = rootRegistries.get(target);
+    if (!registry) {
+        const markers = new Set<RetainedMarkerAccessibility>();
+        const observer = new MutationObserver(() => {
+            // One observer per map, with no timer/poll loop. SDK insertion runs
+            // this before paint; release/visibility/unmount cancel ownership.
+            for (const pending of markers) syncRetainedMarkerAccessibility(pending, false, target);
+        });
+        registry = { target, markers, observer };
+        rootRegistries.set(target, registry);
+        observer.observe(target, { childList: true, subtree: true });
+    }
+    registry.markers.add(marker);
+    pendingRoots.set(marker, registry);
+}
+
+/** Keep retained SDK objects out of the mobile AX tree beyond the padded view. */
+export function syncRetainedMarkerAccessibility(
+    marker: RetainedMarkerAccessibility,
+    visible: boolean,
+    rootReadyTarget?: HTMLElement | null,
+): void {
+    const hidden = !visible;
+    if (visible) {
+        cancelPendingRoot(marker);
+        rootTargets.delete(marker);
+    } else if (rootReadyTarget) {
+        rootTargets.set(marker, rootReadyTarget);
+    }
+    if (!hidden && !marker.__tzudongRetainedMarkerAriaHidden) return;
+
+    const element = marker.getElement();
+    const markerRoot = element?.matches?.(MARKER_SELECTOR)
+        ? element
+        : element?.querySelector<HTMLElement>(MARKER_SELECTOR);
+    // The review bubble is a sibling of the marker inside this app-owned
+    // anchor, so hide the complete overlay rather than only its image node.
+    const root = markerRoot?.closest<HTMLElement>(OVERLAY_SELECTOR) ?? markerRoot;
+    // Some SDKs keep returning the removed old root until its replacement is
+    // inserted. A disconnected root cannot carry the live marker's mask.
+    if (!root || root.isConnected === false) {
+        marker.__tzudongRetainedMarkerAriaHidden = hidden;
+        const target = rootTargets.get(marker);
+        if (hidden && target) watchPendingRoot(marker, target);
+        return;
+    }
+
+    cancelPendingRoot(marker);
+
+    if (hidden) {
+        // Do not claim or later remove an aria-hidden state owned elsewhere.
+        if (root.getAttribute('aria-hidden') !== 'true') {
+            root.setAttribute(OWNER_ATTRIBUTE, 'true');
+            root.setAttribute('aria-hidden', 'true');
+        }
+    } else if (root.getAttribute(OWNER_ATTRIBUTE) === 'true') {
+        root.removeAttribute(OWNER_ATTRIBUTE);
+        root.removeAttribute('aria-hidden');
+    }
+    marker.__tzudongRetainedMarkerAriaHidden = hidden;
+}
+
+
+===== CURRENT FULL SOURCE apps/web/tests-formal/marker-state-model.test.mjs bytes=14175 sha256=160f8b703aa906a01e03008980429aea859b1b222c17003740d8658322f9cc47 =====
+/* global Bun */
+import { expect, test } from 'bun:test';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { chromium } from '@playwright/test';
+
+const root = join(import.meta.dir, '..');
+const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const executablePath = existsSync(chrome) ? chrome : chromium.executablePath();
+
+// Import the real pool and markup. Only the provider is substituted; HTML is
+// parsed and compared by Chromium, not by a copy of the production patcher.
+const entry = `
+import { markerPool } from './lib/marker-pool';
+import { syncRetainedMarkerAccessibility } from './lib/retained-marker-accessibility';
+import { wrapMarkerWithPopularityTier } from './lib/evidence-engineering/popularity-marker';
+import { wrapNaverMarkerContentWithReviewBubble } from './lib/visible-marker-review-bubbles';
+const map = document.body.appendChild(document.createElement('main'));
+let clicks = [];
+let cloneIcons = false;
+let deferIcons = false;
+class Marker {
+  constructor({position, icon, map: target}) {
+    this.position = position; this.icon = icon; this.map = target;
+    this.element = document.createElement('div'); this.element.innerHTML = icon.content;
+    target.append(this.element); this.iconChanges = 0;
+  }
+  getMap() { return this.map; }
+  setMap(target) { if (this.failDetach && target === null) throw Error('provider unavailable');
+    this.map = target; this.element.remove(); target?.append(this.element); }
+  getPosition() { return this.position; }
+  setPosition(position) { this.position = position; }
+  getIcon() { return cloneIcons ? {...this.icon} : this.icon; }
+  setIcon(icon) {
+    this.icon = icon; this.iconChanges++;
+    if (deferIcons) {
+      this.element.remove();
+      queueMicrotask(() => {
+        this.element = document.createElement('div'); this.element.innerHTML = icon.content;
+        this.map?.append(this.element);
+      });
+    } else this.element.innerHTML = icon.content;
+  }
+  getElement() { return this.element; }
+  setZIndex() {}
+}
+window.naver = { maps: { Marker, Event: {
+  addListener(marker, event, callback) { marker.providerClick = callback; return marker; },
+  removeListener(marker) { marker.providerClick = undefined; },
+} } };
+const position = { equals: other => other === position };
+const tiers = ['standard', 'rainbow', 'ember', 'fire'];
+const variants = tiers.flatMap(tier => [0, 1].flatMap(alt => [1, 2].flatMap(visits => [0, 1, 2].map(bubble => ({tier, alt, visits, bubble})))));
+let reuseBubbleIdentity = false;
+const mutableBubbles = new Map();
+const reviewContent = value => value.bubble === 1 ? '처음 리뷰' : '갱신 리뷰';
+function html(id, value) {
+  const content = wrapMarkerWithPopularityTier('<div data-testid="marker" data-restaurant-id="' + id + '" style="width:32px" role="button" tabindex="0" aria-label="식당">'
+    + '<span data-tzuyang-visit-count-badge="true">' + value.visits + '</span><img src="/same.webp" alt="설명 ' + value.alt + '"></div>', value.tier);
+  let bubble = value.bubble ? {
+    restaurantId: id, reviewId: 'review-' + value.bubble, userName: '검증 사용자', content: reviewContent(value), photoUrl: value.bubble === 2 ? 'https://example.com/p.webp' : null,
+  } : undefined;
+  if (bubble && reuseBubbleIdentity) {
+    const previous = mutableBubbles.get(id);
+    if (previous) { Object.assign(previous, bubble); bubble = previous; }
+    else mutableBubbles.set(id, bubble);
+  }
+  return wrapNaverMarkerContentWithReviewBubble(content, bubble, false);
+}
+function acquire(id, value) {
+  return markerPool.acquire(id, position, {content: html(id, value), anchor: {x: 1, y: 1}}, map, () => clicks.push(id + ':' + value.tier));
+}
+function view(marker, requested) {
+  const element = marker.getElement();
+  return { tier: element.querySelector('[data-popularity-tier]')?.getAttribute('data-popularity-tier'),
+    flames: element.querySelectorAll('svg.tz-popularity-flame').length,
+    alt: element.querySelector('[data-testid="marker"] img')?.getAttribute('alt'),
+    visits: element.querySelector('[data-tzuyang-visit-count-badge]')?.textContent,
+    bubbles: element.querySelectorAll('[data-visible-marker-review-bubble]').length,
+    currentReview: !requested.bubble || Boolean(element.querySelector('[data-visible-marker-review-bubble]')?.textContent.includes(reviewContent(requested))) };
+}
+window.__formal = {
+  visualPairs() {
+    let checked = 0;
+    for (const before of variants) for (const after of variants) for (const released of [false, true]) for (const sameBubbleIdentity of [false, true]) {
+      reuseBubbleIdentity = sameBubbleIdentity; mutableBubbles.clear();
+      markerPool.clear();
+      const marker = acquire('a', before);
+      if (released) markerPool.release('a');
+      const next = acquire('a', after); const actual = view(next, after);
+      const expected = {tier: after.tier, flames: after.tier === 'standard' ? 0 : 1,
+        alt: '설명 ' + after.alt, visits: String(after.visits), bubbles: after.bubble ? 1 : 0, currentReview: true};
+      checked++;
+      if (next !== marker || JSON.stringify(actual) !== JSON.stringify(expected)) return {checked, before, after, released, sameBubbleIdentity, actual, expected};
+    }
+    markerPool.clear(); return {checked};
+  },
+  bubbleIdentity() {
+    markerPool.clear(); const marker = acquire('a', {...variants[0], bubble: 1});
+    const image = marker.getElement().querySelector('[data-testid="marker"] img');
+    const changes = marker.iconChanges;
+    const after = {...variants[0], bubble: 2};
+    acquire('a', after);
+    const retained = image === marker.getElement().querySelector('[data-testid="marker"] img');
+    const result = {retained, iconChanges: marker.iconChanges - changes, ...view(marker, after)};
+    markerPool.clear(); return result;
+  },
+  reviewBoundaries() {
+    markerPool.clear(); reuseBubbleIdentity = false; cloneIcons = true;
+    const first = {...variants[0], bubble: 1};
+    const second = {...variants[0], bubble: 2};
+    const marker = acquire('a', first);
+    syncRetainedMarkerAccessibility(marker, false, map);
+    marker.getElement().querySelector('[data-visible-marker-review-bubble]').style.marginLeft = '23px';
+    acquire('a', second);
+    const root = marker.getElement().querySelector('[data-visible-marker-review-bubble-anchor]');
+    const hiddenAfterPatch = root?.getAttribute('aria-hidden');
+    const clampAfterPatch = marker.getElement().querySelector('[data-visible-marker-review-bubble]').style.marginLeft;
+    const photoAfterPatch = marker.getElement().querySelector('[data-visible-marker-review-bubble] img')?.getAttribute('src');
+    acquire('a', first);
+    const reverted = view(marker, first).currentReview;
+    markerPool.update('a', {icon: {content: html('a', second), anchor: {x: 18, y: 18}}});
+    const hiddenAfterReplacement = marker.getElement().querySelector('[data-visible-marker-review-bubble-anchor]')?.getAttribute('aria-hidden');
+    const anchor = marker.getIcon().anchor;
+    marker.failDetach = true; markerPool.release('a');
+    const evicted = markerPool.getStats().poolSize === 0 && marker.providerClick === undefined;
+    cloneIcons = false; markerPool.clear();
+    return {hiddenAfterPatch, clampAfterPatch, photoAfterPatch, reverted, hiddenAfterReplacement, anchor, evicted};
+  },
+  async delayedRootMask() {
+    markerPool.clear(); cloneIcons = false; reuseBubbleIdentity = false;
+    const marker = acquire('delayed', {...variants[0], bubble: 1});
+    syncRetainedMarkerAccessibility(marker, false, map);
+    deferIcons = true;
+    markerPool.update('delayed', {icon: {content: html('delayed', {...variants[0], bubble: 2, alt: 1}), anchor: {x: 18, y: 18}}});
+    deferIcons = false;
+    await Promise.resolve(); await Promise.resolve();
+    const root = marker.getElement().querySelector('[data-visible-marker-review-bubble-anchor]');
+    const result = {connected: root?.isConnected, hidden: root?.getAttribute('aria-hidden'), owner: root?.getAttribute('data-tzudong-retained-marker-hidden')};
+    markerPool.clear(); return result;
+  },
+  clusterReacquisition() {
+    markerPool.clear();
+    const icon = (frame, count) => ({content: '<div data-testid="marker" data-restaurant-id="cluster" role="button" tabindex="0" aria-label="cluster"><picture><source srcset="/' + frame + '.webp"><img src="/fallback.webp"></picture><b>' + count + '</b></div>', anchor: {x: 14, y: 14}});
+    const marker = markerPool.acquire('cluster', position, icon('a', 2), map);
+    markerPool.update('cluster', {icon: icon('b', 3)});
+    markerPool.acquire('cluster', position, icon('a', 4), map);
+    const result = {srcset: marker.getElement().querySelector('source').getAttribute('srcset'), count: marker.getElement().querySelector('b').textContent};
+    markerPool.clear(); return result;
+  },
+  ownershipTraces() {
+    const actions = ['a:fire', 'a:standard', 'b:ember', 'release:a', 'release:b', 'click:a', 'click:b', 'clear'];
+    let checked = 0;
+    function replay(trace) {
+      markerPool.clear(); clicks = []; const active = new Map(); const handles = new Map();
+      for (const action of trace) {
+        const [id, tier] = action.split(':');
+        if (id === 'release') { markerPool.release(tier); active.delete(tier); }
+        else if (id === 'clear') { markerPool.clear(); active.clear(); }
+        else if (id === 'click') {
+          const before = clicks.length; handles.get(tier)?.providerClick?.();
+          // A recycled provider handle now belongs to its current restaurant.
+          // Clicking that object is not an event for its former restaurant ID.
+          const owner = [...active.keys()].find(id => handles.get(id) === handles.get(tier));
+          const expected = owner && active.get(owner);
+          if (clicks.length !== before + (expected ? 1 : 0) || (expected && clicks.at(-1) !== owner + ':' + expected)) return {trace, action, clicks, expected};
+        } else {
+          const marker = acquire(id, {...variants[0], tier}); handles.set(id, marker); active.set(id, tier);
+        }
+        if (markerPool.getStats().activeCount !== active.size) return {trace, action, activeCount: markerPool.getStats().activeCount, expected: active.size};
+        checked++;
+      }
+      return null;
+    }
+    function visit(trace) {
+      const failure = replay(trace); if (failure) return failure;
+      if (trace.length === 4) return null;
+      for (const action of actions) { const failure = visit([...trace, action]); if (failure) return failure; }
+      return null;
+    }
+    const failure = visit([]); markerPool.clear(); return {checked, failure};
+  },
+};
+`;
+
+let bundle;
+let reportedBrowser = false;
+async function withFixture(run) {
+  if (!existsSync(executablePath)) throw new Error('FORMAL_BROWSER_REQUIRED: install the project Playwright Chromium or Google Chrome');
+  bundle ??= (async () => {
+    const build = await Bun.build({ entrypoints: ['marker-formal-fixture'], target: 'browser', format: 'iife', write: false,
+      plugins: [{ name: 'marker-formal', setup(builder) {
+        builder.onResolve({ filter: /^marker-formal-fixture$/ }, () => ({ path: 'entry', namespace: 'formal' }));
+        builder.onLoad({ filter: /.*/, namespace: 'formal' }, () => ({ contents: entry, loader: 'ts', resolveDir: root }));
+        builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync('./' + args.path.slice(2), root) }));
+      } }],
+    });
+    if (!build.success) throw new Error(build.logs.map(String).join('\n'));
+    return build.outputs[0].text();
+  })();
+  const browser = await chromium.launch({ executablePath, headless: true });
+  if (!reportedBrowser) { console.log('FORMAL_BROWSER', browser.version()); reportedBrowser = true; }
+  try {
+    const page = await browser.newPage();
+    await page.route('**/*', route => route.request().url() === 'https://marker-formal.test/'
+      ? route.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' }) : route.abort());
+    await page.goto('https://marker-formal.test/');
+    await page.addScriptTag({ content: await bundle });
+    await run(page);
+  } finally { await browser.close(); }
+}
+
+test('all 9,216 active/reacquired visual transitions show the current static marker and bubble', async () => {
+  await withFixture(async page => {
+    const result = await page.evaluate(() => window.__formal.visualPairs());
+    expect(result).toEqual({ checked: 9216 });
+    console.log('FORMAL_VISUAL_TRANSITIONS', result.checked);
+  });
+}, 60000);
+
+test('a review-only transition retains the image and avoids an SDK icon replacement', async () => {
+  await withFixture(async page => {
+    expect(await page.evaluate(() => window.__formal.bubbleIdentity()))
+      .toMatchObject({ retained: true, iconChanges: 0, bubbles: 1 });
+  });
+}, 60000);
+
+test('every pool/click action sequence through depth four keeps current callback ownership', async () => {
+  await withFixture(async page => {
+    const result = await page.evaluate(() => window.__formal.ownershipTraces());
+    expect(result.failure).toBeNull();
+    expect(result.checked).toBe(18056);
+    console.log('FORMAL_OWNERSHIP_STEPS', result.checked);
+  });
+}, 60000);
+
+test('review patches preserve retained masking, clamp and clone-descriptor round trips', async () => {
+  await withFixture(async page => {
+    expect(await page.evaluate(() => window.__formal.reviewBoundaries())).toEqual({
+      hiddenAfterPatch: 'true', clampAfterPatch: '23px', photoAfterPatch: 'https://example.com/p.webp',
+      reverted: true, hiddenAfterReplacement: 'true', anchor: {x: 18, y: 18}, evicted: true,
+    });
+  });
+}, 60000);
+
+test('cluster frames updated through the pool restore the requested frame and count', async () => {
+  await withFixture(async page => {
+    expect(await page.evaluate(() => window.__formal.clusterReacquisition())).toEqual({srcset: '/a.webp', count: '4'});
+  });
+}, 60000);
+
+test('a deferred SDK root receives the retained mask after disconnected-root replacement', async () => {
+  await withFixture(async page => {
+    expect(await page.evaluate(() => window.__formal.delayedRootMask())).toEqual({connected: true, hidden: 'true', owner: 'true'});
+  });
+}, 60000);
+
+
+===== CURRENT FULL SOURCE apps/web/tests-unit/retained-marker-accessibility.test.ts bytes=8292 sha256=e0b3266209b2943eccc7672b3597db10df4faf358b304e3f1440235ea74fd1e3 =====
+import { afterAll, beforeEach, expect, test } from 'bun:test';
+import { syncRetainedMarkerAccessibility } from '../lib/retained-marker-accessibility';
+
+class AppMarkerElement {
+    isConnected = true;
+    attributes = new Map<string, string>();
+    matches(selector: string) { return selector === '[data-testid="marker"]'; }
+    querySelector() { return null; }
+    closest() { return null; }
+    getAttribute(name: string) { return this.attributes.get(name) ?? null; }
+    setAttribute(name: string, value: string) { this.attributes.set(name, value); }
+    removeAttribute(name: string) { this.attributes.delete(name); }
+}
+function fixture(root: AppMarkerElement | null) {
+    return { getElement: () => root as unknown as HTMLElement | null, __tzudongRetainedMarkerAriaHidden: undefined as boolean | undefined };
+}
+const savedObserver = globalThis.MutationObserver;
+class FakeObserver {
+    static instances: FakeObserver[] = [];
+    disconnected = false;
+    constructor(private callback: MutationCallback) { FakeObserver.instances.push(this); }
+    observe() {}
+    disconnect() { this.disconnected = true; }
+    fire() { if (!this.disconnected) this.callback([], this as unknown as MutationObserver); }
+}
+beforeEach(() => {
+    FakeObserver.instances = [];
+    globalThis.MutationObserver = FakeObserver as unknown as typeof MutationObserver;
+});
+afterAll(() => { globalThis.MutationObserver = savedObserver; });
+test('outside-padded mask is owned, reversible and has no geometry or focus changes', () => {
+    const root = new AppMarkerElement();root.setAttribute('role','button');root.setAttribute('style','width:28px');
+    const marker = fixture(root);
+    syncRetainedMarkerAccessibility(marker,false);
+    expect(root.getAttribute('aria-hidden')).toBe('true');
+    expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBe('true');
+    expect(root.getAttribute('role')).toBe('button');expect(root.getAttribute('style')).toBe('width:28px');
+    expect(root.getAttribute('tabindex')).toBeNull();
+    syncRetainedMarkerAccessibility(marker,true);
+    expect(root.getAttribute('aria-hidden')).toBeNull();expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBeNull();
+    expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(false);
+});
+test('does not remove a hidden state owned by another source', () => {
+    const root = new AppMarkerElement();root.setAttribute('aria-hidden','true');const marker=fixture(root);
+    syncRetainedMarkerAccessibility(marker,false);syncRetainedMarkerAccessibility(marker,true);
+    expect(root.getAttribute('aria-hidden')).toBe('true');
+    expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBeNull();
+});
+test('release/replacement cleanup allows the newly generated SDK root to be masked', () => {
+    const before=new AppMarkerElement(),after=new AppMarkerElement();let current=before;
+    const marker={getElement:()=>current as unknown as HTMLElement,__tzudongRetainedMarkerAriaHidden:undefined as boolean|undefined};
+    syncRetainedMarkerAccessibility(marker,false);syncRetainedMarkerAccessibility(marker,true);current=after;
+    syncRetainedMarkerAccessibility(marker,false);
+    expect(before.getAttribute('aria-hidden')).toBeNull();expect(after.getAttribute('aria-hidden')).toBe('true');
+});
+test('SDK root not yet present stays retryable; removed root clears release ownership', () => {
+    const root=new AppMarkerElement();let current:AppMarkerElement|null=null;
+    const marker={getElement:()=>current as unknown as HTMLElement|null,__tzudongRetainedMarkerAriaHidden:undefined as boolean|undefined};
+    syncRetainedMarkerAccessibility(marker,false);expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(true);
+    current=root;syncRetainedMarkerAccessibility(marker,false);expect(root.getAttribute('aria-hidden')).toBe('true');
+    current=null;syncRetainedMarkerAccessibility(marker,true);expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(false);
+});
+test('delayed SDK roots share one observer and are masked on insertion without another render', () => {
+    const target={} as HTMLElement;let one:AppMarkerElement|null=null,two:AppMarkerElement|null=null;
+    const a={getElement:()=>one as unknown as HTMLElement|null},b={getElement:()=>two as unknown as HTMLElement|null};
+    syncRetainedMarkerAccessibility(a,false,target);syncRetainedMarkerAccessibility(b,false,target);
+    expect(FakeObserver.instances).toHaveLength(1);const observer=FakeObserver.instances[0];
+    one=new AppMarkerElement();observer.fire();expect(one.getAttribute('aria-hidden')).toBe('true');expect(observer.disconnected).toBe(false);
+    two=new AppMarkerElement();observer.fire();expect(two.getAttribute('aria-hidden')).toBe('true');expect(observer.disconnected).toBe(true);
+    syncRetainedMarkerAccessibility(a,true);syncRetainedMarkerAccessibility(b,true);
+});
+test('visible/released marker cancels a pending root and does not later hide a replacement', () => {
+    const target={} as HTMLElement;let root:AppMarkerElement|null=null;const marker={getElement:()=>root as unknown as HTMLElement|null};
+    syncRetainedMarkerAccessibility(marker,false,target);const observer=FakeObserver.instances[0];
+    syncRetainedMarkerAccessibility(marker,true);expect(observer.disconnected).toBe(true);
+    root=new AppMarkerElement();observer.fire();expect(root.getAttribute('aria-hidden')).toBeNull();
+});
+test('changing map target disconnects the old pending observer', () => {
+    const first={} as HTMLElement,second={} as HTMLElement;let root:AppMarkerElement|null=null;const marker={getElement:()=>root as unknown as HTMLElement|null};
+    syncRetainedMarkerAccessibility(marker,false,first);const old=FakeObserver.instances[0];
+    syncRetainedMarkerAccessibility(marker,false,second);expect(old.disconnected).toBe(true);expect(FakeObserver.instances).toHaveLength(2);
+    root=new AppMarkerElement();old.fire();expect(root.getAttribute('aria-hidden')).toBeNull();FakeObserver.instances[1].fire();expect(root.getAttribute('aria-hidden')).toBe('true');
+    syncRetainedMarkerAccessibility(marker,true);
+});
+test('an SDK root replacement with the same desired state is masked again', () => {
+    const before=new AppMarkerElement(),after=new AppMarkerElement();let current=before;
+    const marker={getElement:()=>current as unknown as HTMLElement,__tzudongRetainedMarkerAriaHidden:undefined as boolean|undefined};
+    syncRetainedMarkerAccessibility(marker,false);current=after;
+    syncRetainedMarkerAccessibility(marker,false);
+    expect(after.getAttribute('aria-hidden')).toBe('true');
+    expect(after.getAttribute('data-tzudong-retained-marker-hidden')).toBe('true');
+});
+test('hides the app overlay anchor containing a sibling review button and restores it', () => {
+    const anchor=new AppMarkerElement(),root=new AppMarkerElement();
+    root.closest=()=>anchor as never;
+    anchor.setAttribute('data-visible-marker-review-bubble-anchor','true');
+    const marker=fixture(root);syncRetainedMarkerAccessibility(marker,false);
+    expect(anchor.getAttribute('aria-hidden')).toBe('true');
+    expect(anchor.getAttribute('data-tzudong-retained-marker-hidden')).toBe('true');
+    expect(root.getAttribute('aria-hidden')).toBeNull();
+    syncRetainedMarkerAccessibility(marker,true);
+    expect(anchor.getAttribute('aria-hidden')).toBeNull();
+    expect(anchor.getAttribute('data-visible-marker-review-bubble-anchor')).toBe('true');
+});
+
+test('a disconnected old root stays pending and release cancels its insertion observer', () => {
+    for (const canceled of [false, true]) {
+        const target = {} as HTMLElement;
+        let root = new AppMarkerElement(); root.isConnected = false;
+        const marker = {getElement: () => root as unknown as HTMLElement};
+        syncRetainedMarkerAccessibility(marker, false, target);
+        const observer = FakeObserver.instances.at(-1)!;
+        expect(observer).toBeDefined();
+        expect(root.getAttribute('aria-hidden')).toBeNull();
+        if (canceled) syncRetainedMarkerAccessibility(marker, true);
+        root = new AppMarkerElement(); observer.fire();
+        expect(root.getAttribute('aria-hidden')).toBe(canceled ? null : 'true');
+        expect(observer.disconnected).toBe(true);
+        syncRetainedMarkerAccessibility(marker, true);
+    }
+});
+
+
+===== CURRENT FULL SOURCE apps/web/scripts/verify-marker-formal.mjs bytes=8356 sha256=53c6676d8f9bbc357a6e1df273892cb7723aba9dcc1a218aeef0807fc8e202a9 =====
+import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, copyFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+
+// Bounded checks against actual TS/DOM behavior. No solver or provider service
+// is installed, and mutations are confined to disposable copies of named files.
+const root = resolve(import.meta.dir, '..');
+const tests = ['tests-formal/marker-state-model.test.mjs', 'tests-unit/evidence-numeric-bounds.test.ts',
+  'tests-unit/popularity-input-boundary.test.ts', 'tests-unit/evidence-cohort-shadow.test.ts',
+  'tests-unit/visible-marker-review-bubbles.test.ts'];
+const copied = [
+  'lib/marker-pool.ts', 'lib/retained-marker-accessibility.ts', 'lib/naver-map-event-cleanup.ts', 'lib/youtube-url.ts',
+  'lib/visible-marker-review-bubbles.ts', 'lib/review-photo-url.ts', 'lib/profile-avatar-url.ts',
+  ...['popularity-marker.ts', 'scoring.ts', 'frames.ts', 'constants.ts', 'guards.ts', 'errors.ts', 'types.ts', 'storage-key.mjs']
+    .map(file => `lib/evidence-engineering/${file}`),
+  ...tests.slice(0, 2),
+];
+function run(cwd, paths) {
+  const result = Bun.spawnSync({ cmd: [process.execPath, 'test', ...paths], cwd, stdout: 'pipe', stderr: 'pipe' });
+  return { exitCode: result.exitCode,
+    output: (new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr))
+      .replaceAll(cwd, '<web>').replaceAll(root, '<web>') };
+}
+function removeFiniteGuard(variable) {
+  return `  if (!Number.isFinite(${variable})) {\n    throw new EvidenceContractError(EvidenceContractCodes.nonFinite);\n  }\n`;
+}
+const mutants = [
+  { id: 'static-content-guard', file: 'lib/marker-pool.ts',
+    before: '    if (!previous.content.isEqualNode(nextStatic)) return false;', after: '    void nextStatic;',
+    test: tests[0], failure: 'all 9,216 active/reacquired visual transitions' },
+  { id: 'review-bubble-anchor', file: 'lib/marker-pool.ts',
+    before: '    currentBubbles[0].replaceWith(nextBubbles[0]);',
+    after: '    currentMarker.insertBefore(nextBubbles[0], currentMarker.firstChild);',
+    test: tests[0], failure: 'all 9,216 active/reacquired visual transitions' },
+  { id: 'in-place-review-cache', file: 'lib/visible-marker-review-bubbles.ts',
+    before: '    if (cached && cached.markerContent === markerContent && cached.renderToken === renderToken) {',
+    after: '    if (cached && cached.markerContent === markerContent) {',
+    test: tests[0], failure: 'all 9,216 active/reacquired visual transitions' },
+  { id: 'released-callback', file: 'lib/marker-pool.ts',
+    before: '        marker.__onClick = undefined;\n        syncRetainedMarkerAccessibility(marker, true);',
+    after: '        syncRetainedMarkerAccessibility(marker, true);',
+    test: tests[0], failure: 'every pool/click action sequence through depth four' },
+  { id: 'retained-review-mask', file: 'lib/marker-pool.ts',
+    before: '        const element = marker.getElement();\n        const patched =',
+    after: '        syncRetainedMarkerAccessibility(marker, true);\n        const element = marker.getElement();\n        const patched =',
+    test: tests[0], failure: 'review patches preserve retained masking, clamp and clone-descriptor round trips' },
+  { id: 'cloned-icon-descriptor', file: 'lib/marker-pool.ts',
+    before: '        const currentIcon = this.renderedIcons.get(marker) ?? marker.getIcon();',
+    after: '        const currentIcon = marker.getIcon();',
+    test: tests[0], failure: 'review patches preserve retained masking, clamp and clone-descriptor round trips' },
+  { id: 'review-viewport-clamp', file: 'lib/marker-pool.ts',
+    before: '        nextBubbles[0].style.marginLeft = currentBubbles[0].style.marginLeft;',
+    after: '        nextBubbles[0].style.marginLeft = "";',
+    test: tests[0], failure: 'review patches preserve retained masking, clamp and clone-descriptor round trips' },
+  { id: 'deferred-sdk-root', file: 'lib/retained-marker-accessibility.ts',
+    before: '    if (!root || root.isConnected === false) {', after: '    if (!root) {',
+    test: tests[0], failure: 'a deferred SDK root receives the retained mask after disconnected-root replacement' },
+  { id: 'half-life-overflow', file: 'lib/evidence-engineering/scoring.ts',
+    before: removeFiniteGuard('halfLife'), after: '', test: tests[1], failure: 'finite inputs cannot leak infinity' },
+  { id: 'visit-multiplier-overflow', file: 'lib/evidence-engineering/scoring.ts',
+    before: removeFiniteGuard('multiplier'), after: '', test: tests[1], failure: 'finite inputs cannot leak infinity' },
+  { id: 'sampling-window-overflow', file: 'lib/evidence-engineering/frames.ts',
+    before: '  const end = requireTimestampMs(target + FRAME_SAMPLING.windowMs);',
+    after: '  const end = target + FRAME_SAMPLING.windowMs;', test: tests[1], failure: 'sampling-window arithmetic cannot produce an unsafe timestamp' },
+  { id: 'unscored-comparison', file: 'lib/evidence-engineering/scoring.ts',
+    before: '      comparison_present: false,\n      differs: null,',
+    after: '      comparison_present: true,\n      differs: null,', test: tests[1], failure: 'an unscored signal vector cannot establish a scalar difference' },
+];
+if (Bun.version !== '1.4.0') throw new Error(`Use verified Bun 1.4.0; observed ${Bun.version}`);
+const startedAt = new Date().toISOString();
+const originalHashes = new Map(await Promise.all(copied.map(async path => [path, Bun.SHA256.hash(await readFile(join(root, path)), 'hex')])));
+const baseline = run(root, tests);
+if (baseline.exitCode !== 0) {
+  process.stderr.write(baseline.output);
+  throw new Error('FORMAL_BASELINE_FAILED');
+}
+console.log('Bounded native baseline passed. Checking twelve isolated broken variants.');
+const mutations = [];
+for (const mutant of mutants) {
+  const scratch = await mkdtemp(join(tmpdir(), 'tzudong-formal-mutation-'));
+  try {
+    await symlink(join(root, 'node_modules'), join(scratch, 'node_modules'), 'dir');
+    for (const path of copied) {
+      await mkdir(dirname(join(scratch, path)), { recursive: true });
+      await copyFile(join(root, path), join(scratch, path));
+    }
+    const path = join(scratch, mutant.file);
+    const source = await readFile(path, 'utf8');
+    if (source.split(mutant.before).length !== 2) throw new Error(`MUTATION_ANCHOR_DRIFT:${mutant.id}`);
+    await writeFile(path, source.replace(mutant.before, mutant.after));
+    const result = run(scratch, [mutant.test]);
+    // A missing browser/import or other harness failure is not mutation detection.
+    const detected = result.exitCode !== 0 && result.output.includes(`(fail) ${mutant.failure}`)
+      && !/FORMAL_BROWSER_REQUIRED|Cannot find module|BuildMessage/.test(result.output);
+    mutations.push({ id: mutant.id, detected, ...result });
+    console.log(`${mutant.id}: ${detected ? 'detected' : 'NOT DETECTED'}`);
+    if (!detected) throw new Error(`MUTATION_NOT_DETECTED:${mutant.id}\n${result.output}`);
+  } finally { await rm(scratch, { recursive: true, force: true }); }
+}
+for (const [path, hash] of originalHashes) {
+  if (Bun.SHA256.hash(await readFile(join(root, path)), 'hex') !== hash) throw new Error(`SOURCE_CHANGED_DURING_CHECK:${path}`);
+}
+const restored = run(root, tests.slice(0, 2));
+if (restored.exitCode !== 0) throw new Error(`RESTORED_CHECK_FAILED\n${restored.output}`);
+const report = { schemaVersion: 1, evidence: 'BOUNDED_NATIVE_AND_SYNTHETIC_PROVIDER_CHECKS',
+  startedAt, completedAt: new Date().toISOString(), bun: Bun.version,
+  bounds: { visualVariants: 48, reviewIdentityModes: 2, visualTransitions: 9216, actionAlphabet: 8, maximumDepth: 4,
+    ownershipTraces: 4681, ownershipSteps: 18056 },
+  sourceHashes: Object.fromEntries(originalHashes), baseline, mutations, restored,
+  exclusions: ['real Naver SDK', 'network', 'provider reentrancy within one synchronous call', 'fairness/liveness',
+    'unbounded executions', 'physical devices', 'deployment', 'Nightly'],
+};
+const outIndex = process.argv.indexOf('--out');
+if (outIndex >= 0) {
+  const path = process.argv[outIndex + 1];
+  if (!path) throw new Error('Missing --out JSON path');
+  await writeFile(resolve(path), JSON.stringify(report, null, 2) + '\n');
+}
+console.log(JSON.stringify({ status: 'pass', bounded: report.bounds, mutationsDetected: mutations.length,
+  originalSourcesUnchanged: true, restoredPass: true }));
+/* global Bun */
+
+
+===== LOCAL RAW EVIDENCE formal-followup-brief.md bytes=2042 sha256=96a37468a65b1626fd90aa7c8b2efaf3c074445409236acd4a3829a80d3defd2 =====
+# REV-F-01 and evidence-boundary follow-up
+
+Source `a1dd40016ff7cf23055073c8637d5b3ee00d6781`, delta from reviewed `e2f60f7ea944776c81d538b5b042ed28ac9b04ae`. The complete first Pro reverse is preserved unchanged. Its REV-F-01 conditional scenario was reproduced in Chromium: a removed old root was returned until next-microtask insertion; the connected replacement had neither aria-hidden nor the app owner attribute. This is a native synthetic-provider counterexample, not an observation of Naver internals.
+
+ACCEPT and implemented: preserve a hidden marker's root target/observer across setIcon, capture the current pane before SDK removal, and consider an explicitly disconnected root not ready. The genuine MutationObserver sees the new connected root; clearing/releasing pending ownership cancels the observer. Targeted native29/3files/1162assertions, then updated observer-cancel boundary24/2files/1163assertions pass; these overlap and must not be summed. Parity0/3382 and lint pass. Full harness baseline/restored checks and12/12 mutants pass with unchanged originals. The raw logs below support local execution only; they are not reviewer-executed tests.
+
+EVIDENCE-01 is the stale detached artifact-map digest, not the mutation oracle. The first Pro report discussed the latter under this ID without the actual map bytes. This bundle supplies the exact corrected immutable06d map, its detached digest and a local all-entry verification receipt. It also supplies raw12-mutant output omitted from the first Pro input. The original9a digest remains invalid historical evidence. The corrected06d snapshot is valid for its own E2f source; it is not a current-source deployment certificate.
+
+The ordinary Gemini and first Pro reports are complete, hash-verified and owner-released. This is one material follow-up on the new root boundary and omitted evidence, not an unchanged full audit. Real SDK timing, photo pixels, cluster flicker/performance, hosted preview, exact-head CI, protected release and historical Nightly remain separate.
+
+
+===== LOCAL RAW EVIDENCE rev-f-01-counterexample.txt bytes=1311 sha256=d8d8549c791151b152414eec5fe9dcc5aec53b95ea87069acb80fb826caaf10c =====
+bun test v1.4.0 (34cbb9a40)
+
+tests-formal/marker-state-model.test.mjs:
+FORMAL_BROWSER 156.0.8078.47
+249 |   });
+250 | }, 60000);
+251 | 
+252 | test('a deferred SDK root receives the retained mask after disconnected-root replacement', async () => {
+253 |   await withFixture(async page => {
+254 |     expect(await page.evaluate(() => window.__formal.delayedRootMask())).toEqual({connected: true, hidden: 'true', owner: 'true'});
+      ^
+error: expect(received).toEqual(expected)
+
+  {
+    "connected": true,
+-   "hidden": "true",
+-   "owner": "true",
++   "hidden": null,
++   "owner": null,
+  }
+
+- Expected  - 2
++ Received  + 2
+
+      at toEqual (unknown:1:1)
+      at /Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:254:74
+      at withFixture (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:209:11)
+      at /Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:253:9
+      at processTicksAndRejections (unknown:7:39)
+(fail) a deferred SDK root receives the retained mask after disconnected-root replacement [2271.02ms]
+
+ 0 pass
+ 5 filtered out
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [2.73s]
+
+
+===== LOCAL RAW EVIDENCE rev-f-01-native.txt bytes=3184 sha256=a93ddc06bae30f0eb7ac87efd9857d95e086ed1c0f80dff3b2622ea0363afe22 =====
+bun test v1.4.0 (34cbb9a40)
+
+tests-formal/marker-state-model.test.mjs:
+FORMAL_BROWSER 156.0.8078.47
+FORMAL_VISUAL_TRANSITIONS 9216
+(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [2546.78ms]
+(pass) a review-only transition retains the image and avoids an SDK icon replacement [793.71ms]
+FORMAL_OWNERSHIP_STEPS 18056
+(pass) every pool/click action sequence through depth four keeps current callback ownership [940.73ms]
+(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [889.97ms]
+(pass) cluster frames updated through the pool restore the requested frame and count [976.35ms]
+(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [898.28ms]
+
+tests-unit/retained-marker-accessibility.test.ts:
+(pass) outside-padded mask is owned, reversible and has no geometry or focus changes [0.15ms]
+(pass) does not remove a hidden state owned by another source [0.02ms]
+(pass) release/replacement cleanup allows the newly generated SDK root to be masked [0.02ms]
+(pass) SDK root not yet present stays retryable; removed root clears release ownership [0.02ms]
+(pass) delayed SDK roots share one observer and are masked on insertion without another render [0.10ms]
+(pass) visible/released marker cancels a pending root and does not later hide a replacement [0.02ms]
+(pass) changing map target disconnects the old pending observer [0.02ms]
+(pass) an SDK root replacement with the same desired state is masked again [0.03ms]
+(pass) hides the app overlay anchor containing a sibling review button and restores it [0.02ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > failed provider detachment is discarded and does not strand clear or reuse a corrupt marker [0.44ms]
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.30ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.05ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.09ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.08ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.09ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.23ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.12ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.03ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.02ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.37ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.07ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [1.55ms]
+
+ 29 pass
+ 0 fail
+ 1162 expect() calls
+Ran 29 tests across 3 files. [7.42s]
+
+
+===== LOCAL RAW EVIDENCE rev-f-01-boundaries.txt bytes=2549 sha256=d154aff65dd923607ed1dfe33a572557b39c22a4ccd787b0c009f0e368acabb7 =====
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/retained-marker-accessibility.test.ts:
+(pass) outside-padded mask is owned, reversible and has no geometry or focus changes [0.28ms]
+(pass) does not remove a hidden state owned by another source [0.12ms]
+(pass) release/replacement cleanup allows the newly generated SDK root to be masked [0.09ms]
+(pass) SDK root not yet present stays retryable; removed root clears release ownership [0.03ms]
+(pass) delayed SDK roots share one observer and are masked on insertion without another render [0.17ms]
+(pass) visible/released marker cancels a pending root and does not later hide a replacement [0.03ms]
+(pass) changing map target disconnects the old pending observer [0.03ms]
+(pass) an SDK root replacement with the same desired state is masked again [0.07ms]
+(pass) hides the app overlay anchor containing a sibling review button and restores it [0.12ms]
+(pass) a disconnected old root stays pending and release cancels its insertion observer [0.18ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > failed provider detachment is discarded and does not strand clear or reuse a corrupt marker [0.52ms]
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.14ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.13ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.19ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.11ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.04ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.17ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.08ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.03ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.02ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.32ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.07ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [1.50ms]
+
+ 24 pass
+ 0 fail
+ 1163 expect() calls
+Ran 24 tests across 2 files. [175.00ms]
+
+
+===== LOCAL RAW EVIDENCE rev-f-01-lint.txt bytes=0 sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 =====
+
+
+===== LOCAL RAW EVIDENCE rev-f-01-parity.txt bytes=510 sha256=056941773c55ff7da7d4a85dccda9228975cd8394a01eb9128fbd8b4f88956e1 =====
+
+> web@1.2.4 typecheck:parity
+> node scripts/run-typecheck.mjs --compiler parity
+
+{"status":"passed","diagnostics":0,"logicalInputs":3382,"logicalInputNamesSha256":"8bca375a887c3e737a5900a345fea55dbd30932285fae82dbb384d492e447925","nonLibraryContentSha256":"716c7c4c2af47a0b66293864ccb36705070e9f56aff6bc7927929a52f66c2af7","standardLibraryContentSha256":{"native":"d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64","compat":"82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"}}
+
+
+===== LOCAL RAW EVIDENCE rev-f-01-native-and-mutation-checks.json bytes=30864 sha256=757fd5ddb969fad6066a681a46a255000b91705b0d88d8355211d5560c4f84a2 =====
+{
+  "schemaVersion": 1,
+  "evidence": "BOUNDED_NATIVE_AND_SYNTHETIC_PROVIDER_CHECKS",
+  "startedAt": "2026-10-23T09:18:57.843Z",
+  "completedAt": "2026-10-23T09:20:12.528Z",
+  "bun": "1.4.0",
+  "bounds": {
+    "visualVariants": 48,
+    "reviewIdentityModes": 2,
+    "visualTransitions": 9216,
+    "actionAlphabet": 8,
+    "maximumDepth": 4,
+    "ownershipTraces": 4681,
+    "ownershipSteps": 18056
+  },
+  "sourceHashes": {
+    "lib/marker-pool.ts": "7541c064ab4190abc0fc7500ee7d5f91ac862ca4e3429b56b8b9b59659c0db4e",
+    "lib/retained-marker-accessibility.ts": "a3833232541307a61e5a914ac0ad96d6c804ded7e086cf084339e68ddab76cc4",
+    "lib/naver-map-event-cleanup.ts": "ee4c8bef6103c98b75238cc45eb2f119b1f5eab01202fb44979b05007c3957d6",
+    "lib/youtube-url.ts": "2dfac7f47bd227540c89250229d1c9fc29eb2cdcdc0aad50e63144b783251faa",
+    "lib/visible-marker-review-bubbles.ts": "96ab311a5582f4498d13da0347973ba94cad2575418394f78036501b99218ddb",
+    "lib/review-photo-url.ts": "811a669cada5b4938afc012a2e0f26ca82e080522306cfd424c2892cb979187e",
+    "lib/profile-avatar-url.ts": "cc3c22cea33d2e2ea89ab52e3264baac3b406956aac2dbc4b671a07fe219a039",
+    "lib/evidence-engineering/popularity-marker.ts": "65fd5cc14b916e92720dfdaf81f20545b8caf3d8b3e56d9c06a4e4a9baea49d6",
+    "lib/evidence-engineering/scoring.ts": "0e3f195bf06636d6a8718378ac7a93eccbd3f439ee5d6ab5eebedbbaa6d02276",
+    "lib/evidence-engineering/frames.ts": "c2b9c3fb2fca0f6fa229aeb0c62a222f22b11441cefc40d35248e0f6ca6f3dc8",
+    "lib/evidence-engineering/constants.ts": "471834208104d092365b8203350e7b9c4aba6a716a602f2a29589361d8fc9a43",
+    "lib/evidence-engineering/guards.ts": "5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4",
+    "lib/evidence-engineering/errors.ts": "02bda67b89fadf3d2f5aa27f6a146c0dc746a7de1f9a6cd91dc82cf177e901c9",
+    "lib/evidence-engineering/types.ts": "9d64ad2c6e57bea45af5066d89a26535b616429c9032d16fccfefcdeb78bad6b",
+    "lib/evidence-engineering/storage-key.mjs": "4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148",
+    "tests-formal/marker-state-model.test.mjs": "160f8b703aa906a01e03008980429aea859b1b222c17003740d8658322f9cc47",
+    "tests-unit/evidence-numeric-bounds.test.ts": "7bccbf8f20109bc5b87f1d77a6687167f12e988d0040523f6fe5a0c152298d02"
+  },
+  "baseline": {
+    "exitCode": 0,
+    "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_VISUAL_TRANSITIONS 9216\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [4252.60ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [1383.27ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [1334.31ms]\n(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [1089.66ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [1526.76ms]\n(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [1499.94ms]\n\ntests-unit/evidence-numeric-bounds.test.ts:\n(pass) finite inputs cannot leak infinity from half-life or visit multiplier arithmetic [0.24ms]\n(pass) sampling-window arithmetic cannot produce an unsafe timestamp from a safe input [0.05ms]\n(pass) an unscored signal vector cannot establish a scalar difference or permit a live write [0.06ms]\n\ntests-unit/evidence-cohort-shadow.test.ts:\n(pass) cohort shadow > missing and complete signal observations both block unestablished scalar comparisons [0.13ms]\n\ntests-unit/visible-marker-review-bubbles.test.ts:\n(pass) visible marker review bubble signatures > in-place review field updates reach the wrapped HTML [0.35ms]\n(pass) visible marker review bubble signatures > reuses the id signature for the same restaurant list [0.03ms]\n(pass) visible marker review bubble signatures > changes when rendered bubble content changes under the same review id [0.04ms]\n(pass) visible marker review bubble signatures > is stable regardless of record insertion order [0.02ms]\n(pass) visible marker review bubble signatures > reuses one bubble render token until its fields change [0.01ms]\n\ntests-unit/popularity-input-boundary.test.ts:\n(pass) rejects unapproved source rows before merge rather than granting a public tier [4.02ms]\n(pass) malformed count values remain missing instead of coercing into a public flame [9.48ms]\n(pass) conflicting metrics for the same video fail in either input order [2.93ms]\n(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [6.17ms]\n(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [1.24ms]\n(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [2.79ms]\n(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [4.06ms]\n(pass) duplicate observations reject timestamp conflicts in either order and normalize video identity [5.85ms]\n\n 23 pass\n 0 fail\n 94 expect() calls\nRan 23 tests across 5 files. [11.53s]\n"
+  },
+  "mutations": [
+    {
+      "id": "static-content-guard",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n211 | }\n212 | \n213 | test('all 9,216 active/reacquired visual transitions show the current static marker and bubble', async () => {\n214 |   await withFixture(async page => {\n215 |     const result = await page.evaluate(() => window.__formal.visualPairs());\n216 |     expect(result).toEqual({ checked: 9216 });\n      ^\nerror: expect(received).toEqual(expected)\n\n  {\n-   \"checked\": 9216,\n+   \"actual\": {\n+     \"alt\": \"설명 0\",\n+     \"bubbles\": 1,\n+     \"currentReview\": true,\n+     \"flames\": 0,\n+     \"tier\": \"standard\",\n+     \"visits\": \"1\",\n+   },\n+   \"after\": {\n+     \"alt\": 1,\n+     \"bubble\": 1,\n+     \"tier\": \"standard\",\n+     \"visits\": 1,\n+   },\n+   \"before\": {\n+     \"alt\": 0,\n+     \"bubble\": 1,\n+     \"tier\": \"standard\",\n+     \"visits\": 1,\n+   },\n+   \"checked\": 221,\n+   \"expected\": {\n+     \"alt\": \"설명 1\",\n+     \"bubbles\": 1,\n+     \"currentReview\": true,\n+     \"flames\": 0,\n+     \"tier\": \"standard\",\n+     \"visits\": \"1\",\n+   },\n+   \"released\": false,\n+   \"sameBubbleIdentity\": false,\n  }\n\n- Expected  - 1\n+ Received  + 31\n\n      at toEqual (unknown:1:1)\n      at /private<web>/tests-formal/marker-state-model.test.mjs:216:20\n      at withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at /private<web>/tests-formal/marker-state-model.test.mjs:214:9\n      at processTicksAndRejections (unknown:7:39)\n(fail) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1251.84ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [1278.83ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [1976.84ms]\n(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [1063.55ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [1011.36ms]\n(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [1321.95ms]\n\n 5 pass\n 1 fail\n 7 expect() calls\nRan 6 tests across 1 file. [8.18s]\n"
+    },
+    {
+      "id": "review-bubble-anchor",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n211 | }\n212 | \n213 | test('all 9,216 active/reacquired visual transitions show the current static marker and bubble', async () => {\n214 |   await withFixture(async page => {\n215 |     const result = await page.evaluate(() => window.__formal.visualPairs());\n216 |     expect(result).toEqual({ checked: 9216 });\n                         ^\nerror: expect(received).toEqual(expected)\n\n  {\n-   \"checked\": 9216,\n+   \"actual\": {\n+     \"alt\": \"\",\n+     \"bubbles\": 2,\n+     \"currentReview\": false,\n+     \"flames\": 0,\n+     \"tier\": \"standard\",\n+     \"visits\": \"1\",\n+   },\n+   \"after\": {\n+     \"alt\": 0,\n+     \"bubble\": 2,\n+     \"tier\": \"standard\",\n+     \"visits\": 1,\n+   },\n+   \"before\": {\n+     \"alt\": 0,\n+     \"bubble\": 1,\n+     \"tier\": \"standard\",\n+     \"visits\": 1,\n+   },\n+   \"checked\": 201,\n+   \"expected\": {\n+     \"alt\": \"설명 0\",\n+     \"bubbles\": 1,\n+     \"currentReview\": true,\n+     \"flames\": 0,\n+     \"tier\": \"standard\",\n+     \"visits\": \"1\",\n+   },\n+   \"released\": false,\n+   \"sameBubbleIdentity\": false,\n  }\n\n- Expected  - 1\n+ Received  + 31\n\n      at <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:216:20)\n      at async withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at async <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:214:9)\n(fail) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1413.39ms]\n219 | }, 60000);\n220 | \n221 | test('a review-only transition retains the image and avoids an SDK icon replacement', async () => {\n222 |   await withFixture(async page => {\n223 |     expect(await page.evaluate(() => window.__formal.bubbleIdentity()))\n224 |       .toMatchObject({ retained: true, iconChanges: 0, bubbles: 1 });\n      ^\nerror: expect(received).toMatchObject(expected)\n\n  {\n-   \"bubbles\": 1,\n+   \"alt\": \"\",\n+   \"bubbles\": 2,\n+   \"currentReview\": false,\n+   \"flames\": 0,\n    \"iconChanges\": 0,\n-   \"retained\": true,\n+   \"retained\": false,\n+   \"tier\": \"standard\",\n+   \"visits\": \"1\",\n  }\n\n- Expected  - 2\n+ Received  + 7\n\n      at toMatchObject (unknown:1:1)\n      at /private<web>/tests-formal/marker-state-model.test.mjs:224:8\n      at withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at /private<web>/tests-formal/marker-state-model.test.mjs:222:9\n      at processTicksAndRejections (unknown:7:39)\n(fail) a review-only transition retains the image and avoids an SDK icon replacement [1401.26ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [972.33ms]\n(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [1040.02ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [1062.09ms]\n(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [996.74ms]\n\n 4 pass\n 2 fail\n 7 expect() calls\nRan 6 tests across 1 file. [7.13s]\n"
+    },
+    {
+      "id": "in-place-review-cache",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n211 | }\n212 | \n213 | test('all 9,216 active/reacquired visual transitions show the current static marker and bubble', async () => {\n214 |   await withFixture(async page => {\n215 |     const result = await page.evaluate(() => window.__formal.visualPairs());\n216 |     expect(result).toEqual({ checked: 9216 });\n      ^\nerror: expect(received).toEqual(expected)\n\n  {\n-   \"checked\": 9216,\n+   \"actual\": {\n+     \"alt\": \"설명 0\",\n+     \"bubbles\": 1,\n+     \"currentReview\": false,\n+     \"flames\": 0,\n+     \"tier\": \"standard\",\n+     \"visits\": \"1\",\n+   },\n+   \"after\": {\n+     \"alt\": 0,\n+     \"bubble\": 2,\n+     \"tier\": \"standard\",\n+     \"visits\": 1,\n+   },\n+   \"before\": {\n+     \"alt\": 0,\n+     \"bubble\": 1,\n+     \"tier\": \"standard\",\n+     \"visits\": 1,\n+   },\n+   \"checked\": 202,\n+   \"expected\": {\n+     \"alt\": \"설명 0\",\n+     \"bubbles\": 1,\n+     \"currentReview\": true,\n+     \"flames\": 0,\n+     \"tier\": \"standard\",\n+     \"visits\": \"1\",\n+   },\n+   \"released\": false,\n+   \"sameBubbleIdentity\": true,\n  }\n\n- Expected  - 1\n+ Received  + 31\n\n      at toEqual (unknown:1:1)\n      at /private<web>/tests-formal/marker-state-model.test.mjs:216:20\n      at withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at /private<web>/tests-formal/marker-state-model.test.mjs:214:9\n      at processTicksAndRejections (unknown:7:39)\n(fail) all 9,216 active/reacquired visual transitions show the current static marker and bubble [974.59ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [895.65ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [1310.30ms]\n(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [1148.27ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [1039.88ms]\n(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [914.36ms]\n\n 5 pass\n 1 fail\n 7 expect() calls\nRan 6 tests across 1 file. [6.56s]\n"
+    },
+    {
+      "id": "released-callback",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_VISUAL_TRANSITIONS 9216\n\ntests-formal/marker-state-model.test.mjs:\n(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1807.36ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [882.61ms]\n226 | }, 60000);\n227 | \n228 | test('every pool/click action sequence through depth four keeps current callback ownership', async () => {\n229 |   await withFixture(async page => {\n230 |     const result = await page.evaluate(() => window.__formal.ownershipTraces());\n231 |     expect(result.failure).toBeNull();\n                                 ^\nerror: expect(received).toBeNull()\n\nReceived: {\n  trace: [ \"a:fire\", \"a:fire\", \"release:a\", \"click:a\" ],\n  action: \"click:a\",\n  clicks: [ \"a:fire\" ],\n  expected: undefined,\n}\n\n      at <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:231:28)\n      at async withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at async <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:229:9)\n(fail) every pool/click action sequence through depth four keeps current callback ownership [905.56ms]\n(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [886.60ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [1013.29ms]\n(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [1073.23ms]\n\n 5 pass\n 1 fail\n 6 expect() calls\nRan 6 tests across 1 file. [6.82s]\n"
+    },
+    {
+      "id": "retained-review-mask",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_VISUAL_TRANSITIONS 9216\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1572.62ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [880.83ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [928.99ms]\n234 |   });\n235 | }, 60000);\n236 | \n237 | test('review patches preserve retained masking, clamp and clone-descriptor round trips', async () => {\n238 |   await withFixture(async page => {\n239 |     expect(await page.evaluate(() => window.__formal.reviewBoundaries())).toEqual({\n                                                                                ^\nerror: expect(received).toEqual(expected)\n\n  {\n    \"anchor\": {\n      \"x\": 18,\n      \"y\": 18,\n    },\n    \"clampAfterPatch\": \"23px\",\n    \"evicted\": true,\n-   \"hiddenAfterPatch\": \"true\",\n-   \"hiddenAfterReplacement\": \"true\",\n+   \"hiddenAfterPatch\": null,\n+   \"hiddenAfterReplacement\": null,\n    \"photoAfterPatch\": \"https://example.com/p.webp\",\n    \"reverted\": true,\n  }\n\n- Expected  - 2\n+ Received  + 2\n\n      at <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:239:75)\n      at async withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at async <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:238:9)\n(fail) review patches preserve retained masking, clamp and clone-descriptor round trips [1047.85ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [1026.03ms]\n249 |   });\n250 | }, 60000);\n251 | \n252 | test('a deferred SDK root receives the retained mask after disconnected-root replacement', async () => {\n253 |   await withFixture(async page => {\n254 |     expect(await page.evaluate(() => window.__formal.delayedRootMask())).toEqual({connected: true, hidden: 'true', owner: 'true'});\n                                                                               ^\nerror: expect(received).toEqual(expected)\n\n  {\n    \"connected\": true,\n-   \"hidden\": \"true\",\n-   \"owner\": \"true\",\n+   \"hidden\": null,\n+   \"owner\": null,\n  }\n\n- Expected  - 2\n+ Received  + 2\n\n      at <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:254:74)\n      at async withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at async <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:253:9)\n(fail) a deferred SDK root receives the retained mask after disconnected-root replacement [863.81ms]\n\n 4 pass\n 2 fail\n 7 expect() calls\nRan 6 tests across 1 file. [6.56s]\n"
+    },
+    {
+      "id": "cloned-icon-descriptor",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_VISUAL_TRANSITIONS 9216\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1504.96ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [916.13ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [995.62ms]\n234 |   });\n235 | }, 60000);\n236 | \n237 | test('review patches preserve retained masking, clamp and clone-descriptor round trips', async () => {\n238 |   await withFixture(async page => {\n239 |     expect(await page.evaluate(() => window.__formal.reviewBoundaries())).toEqual({\n                                                                                ^\nerror: expect(received).toEqual(expected)\n\n  {\n    \"anchor\": {\n      \"x\": 18,\n      \"y\": 18,\n    },\n    \"clampAfterPatch\": \"23px\",\n    \"evicted\": true,\n    \"hiddenAfterPatch\": \"true\",\n    \"hiddenAfterReplacement\": \"true\",\n    \"photoAfterPatch\": \"https://example.com/p.webp\",\n-   \"reverted\": true,\n+   \"reverted\": false,\n  }\n\n- Expected  - 1\n+ Received  + 1\n\n      at <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:239:75)\n      at async withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at async <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:238:9)\n(fail) review patches preserve retained masking, clamp and clone-descriptor round trips [975.76ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [955.50ms]\n(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [956.11ms]\n\n 5 pass\n 1 fail\n 7 expect() calls\nRan 6 tests across 1 file. [6.52s]\n"
+    },
+    {
+      "id": "review-viewport-clamp",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_VISUAL_TRANSITIONS 9216\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1717.25ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [880.03ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [933.50ms]\n234 |   });\n235 | }, 60000);\n236 | \n237 | test('review patches preserve retained masking, clamp and clone-descriptor round trips', async () => {\n238 |   await withFixture(async page => {\n239 |     expect(await page.evaluate(() => window.__formal.reviewBoundaries())).toEqual({\n                                                                                ^\nerror: expect(received).toEqual(expected)\n\n  {\n    \"anchor\": {\n      \"x\": 18,\n      \"y\": 18,\n    },\n-   \"clampAfterPatch\": \"23px\",\n+   \"clampAfterPatch\": \"\",\n    \"evicted\": true,\n    \"hiddenAfterPatch\": \"true\",\n    \"hiddenAfterReplacement\": \"true\",\n    \"photoAfterPatch\": \"https://example.com/p.webp\",\n    \"reverted\": true,\n  }\n\n- Expected  - 1\n+ Received  + 1\n\n      at <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:239:75)\n      at async withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at async <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:238:9)\n(fail) review patches preserve retained masking, clamp and clone-descriptor round trips [1005.35ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [1103.03ms]\n(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [988.80ms]\n\n 5 pass\n 1 fail\n 7 expect() calls\nRan 6 tests across 1 file. [6.83s]\n"
+    },
+    {
+      "id": "deferred-sdk-root",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_VISUAL_TRANSITIONS 9216\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1547.91ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [1024.44ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [1022.96ms]\n(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [1005.40ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [1021.47ms]\n249 |   });\n250 | }, 60000);\n251 | \n252 | test('a deferred SDK root receives the retained mask after disconnected-root replacement', async () => {\n253 |   await withFixture(async page => {\n254 |     expect(await page.evaluate(() => window.__formal.delayedRootMask())).toEqual({connected: true, hidden: 'true', owner: 'true'});\n                                                                               ^\nerror: expect(received).toEqual(expected)\n\n  {\n    \"connected\": true,\n-   \"hidden\": \"true\",\n-   \"owner\": \"true\",\n+   \"hidden\": null,\n+   \"owner\": null,\n  }\n\n- Expected  - 2\n+ Received  + 2\n\n      at <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:254:74)\n      at async withFixture (/private<web>/tests-formal/marker-state-model.test.mjs:209:11)\n      at async <anonymous> (/private<web>/tests-formal/marker-state-model.test.mjs:253:9)\n(fail) a deferred SDK root receives the retained mask after disconnected-root replacement [1124.75ms]\n\n 5 pass\n 1 fail\n 7 expect() calls\nRan 6 tests across 1 file. [6.90s]\n"
+    },
+    {
+      "id": "half-life-overflow",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\n\ntests-unit/evidence-numeric-bounds.test.ts:\n1 | import { expect, test } from 'bun:test';\n2 | import { hyperbolicHalfLifeDays, visitsMultiplier, compareCohortShadow } from '../lib/evidence-engineering/scoring';\n3 | import { planFrameSamplingWindow } from '../lib/evidence-engineering/frames';\n4 | \n5 | test('finite inputs cannot leak infinity from half-life or visit multiplier arithmetic', () => {\n6 |   expect(() => hyperbolicHalfLifeDays(Number.MIN_VALUE)).toThrow('non_finite');\n                                                             ^\nerror: expect(received).toThrow(expected)\n\nExpected substring: \"non_finite\"\n\nReceived function did not throw\nReceived value: Infinity\n\n      at <anonymous> (/private<web>/tests-unit/evidence-numeric-bounds.test.ts:6:58)\n(fail) finite inputs cannot leak infinity from half-life or visit multiplier arithmetic [0.38ms]\n(pass) sampling-window arithmetic cannot produce an unsafe timestamp from a safe input [0.41ms]\n(pass) an unscored signal vector cannot establish a scalar difference or permit a live write [0.11ms]\n\n 2 pass\n 1 fail\n 8 expect() calls\nRan 3 tests across 1 file. [33.00ms]\n"
+    },
+    {
+      "id": "visit-multiplier-overflow",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\n\ntests-unit/evidence-numeric-bounds.test.ts:\n2 | import { hyperbolicHalfLifeDays, visitsMultiplier, compareCohortShadow } from '../lib/evidence-engineering/scoring';\n3 | import { planFrameSamplingWindow } from '../lib/evidence-engineering/frames';\n4 | \n5 | test('finite inputs cannot leak infinity from half-life or visit multiplier arithmetic', () => {\n6 |   expect(() => hyperbolicHalfLifeDays(Number.MIN_VALUE)).toThrow('non_finite');\n7 |   expect(() => visitsMultiplier(['abc123DEF45', 'def456GHI78', 'ghi789JKL01', 'jkl012MNO34'], Number.MAX_VALUE)).toThrow('non_finite');\n                                                                                                                     ^\nerror: expect(received).toThrow(expected)\n\nExpected substring: \"non_finite\"\n\nReceived function did not throw\nReceived value: Infinity\n\n      at <anonymous> (/private<web>/tests-unit/evidence-numeric-bounds.test.ts:7:114)\n(fail) finite inputs cannot leak infinity from half-life or visit multiplier arithmetic [0.56ms]\n(pass) sampling-window arithmetic cannot produce an unsafe timestamp from a safe input [0.13ms]\n(pass) an unscored signal vector cannot establish a scalar difference or permit a live write [0.11ms]\n\n 2 pass\n 1 fail\n 9 expect() calls\nRan 3 tests across 1 file. [31.00ms]\n"
+    },
+    {
+      "id": "sampling-window-overflow",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\n\ntests-unit/evidence-numeric-bounds.test.ts:\n(pass) finite inputs cannot leak infinity from half-life or visit multiplier arithmetic [0.48ms]\n 8 |   expect(hyperbolicHalfLifeDays(0.0015)).toBeCloseTo(2000 / 3, 9);\n 9 |   expect(visitsMultiplier(['abc123DEF45', 'def456GHI78'], 0.25)).toBeCloseTo(1 + 0.25 * Math.log(2), 12);\n10 | });\n11 | \n12 | test('sampling-window arithmetic cannot produce an unsafe timestamp from a safe input', () => {\n13 |   expect(() => planFrameSamplingWindow('abc123DEF45', Number.MAX_SAFE_INTEGER)).toThrow('invalid_timestamp_ms');\n                                                                                     ^\nerror: expect(received).toThrow(expected)\n\nExpected substring: \"invalid_timestamp_ms\"\n\nReceived function did not throw\nReceived value: {\n  video_id: \"abc123DEF45\",\n  target_timestamp_ms: 9007199254740991,\n  window_start_ms: 9007199254735991,\n  window_end_ms: 9007199254745992,\n  sample_fps: 2,\n  keyframe_role: \"decode_start_only\",\n  loads_full_video_in_node: false,\n}\n\n      at <anonymous> (/private<web>/tests-unit/evidence-numeric-bounds.test.ts:13:81)\n(fail) sampling-window arithmetic cannot produce an unsafe timestamp from a safe input [0.29ms]\n(pass) an unscored signal vector cannot establish a scalar difference or permit a live write [0.13ms]\n\n 2 pass\n 1 fail\n 9 expect() calls\nRan 3 tests across 1 file. [38.00ms]\n"
+    },
+    {
+      "id": "unscored-comparison",
+      "detected": true,
+      "exitCode": 1,
+      "output": "bun test v1.4.0 (34cbb9a40)\n\ntests-unit/evidence-numeric-bounds.test.ts:\n(pass) finite inputs cannot leak infinity from half-life or visit multiplier arithmetic [0.37ms]\n(pass) sampling-window arithmetic cannot produce an unsafe timestamp from a safe input [0.05ms]\n17 | });\n18 | \n19 | test('an unscored signal vector cannot establish a scalar difference or permit a live write', () => {\n20 |   const result = compareCohortShadow([{ identity: 'shop:a', operational_score: 1,\n21 |     candidate_signals: { freshness: 1, visit_multiplier: 1 } }]);\n22 |   expect(result.records[0].comparison_present).toBe(false);\n                                                    ^\nerror: expect(received).toBe(expected)\n\nExpected: false\nReceived: true\n\n      at <anonymous> (/private<web>/tests-unit/evidence-numeric-bounds.test.ts:22:48)\n(fail) an unscored signal vector cannot establish a scalar difference or permit a live write [0.30ms]\n\n 2 pass\n 1 fail\n 8 expect() calls\nRan 3 tests across 1 file. [38.00ms]\n"
+    }
+  ],
+  "restored": {
+    "exitCode": 0,
+    "output": "bun test v1.4.0 (34cbb9a40)\nFORMAL_BROWSER 156.0.8078.47\nFORMAL_VISUAL_TRANSITIONS 9216\nFORMAL_OWNERSHIP_STEPS 18056\n\ntests-formal/marker-state-model.test.mjs:\n(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1866.01ms]\n(pass) a review-only transition retains the image and avoids an SDK icon replacement [1107.96ms]\n(pass) every pool/click action sequence through depth four keeps current callback ownership [1044.44ms]\n(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [906.76ms]\n(pass) cluster frames updated through the pool restore the requested frame and count [958.42ms]\n(pass) a deferred SDK root receives the retained mask after disconnected-root replacement [1149.63ms]\n\ntests-unit/evidence-numeric-bounds.test.ts:\n(pass) finite inputs cannot leak infinity from half-life or visit multiplier arithmetic [0.72ms]\n(pass) sampling-window arithmetic cannot produce an unsafe timestamp from a safe input [0.08ms]\n(pass) an unscored signal vector cannot establish a scalar difference or permit a live write [0.08ms]\n\n 9 pass\n 0 fail\n 18 expect() calls\nRan 9 tests across 2 files. [7.31s]\n"
+  },
+  "exclusions": [
+    "real Naver SDK",
+    "network",
+    "provider reentrancy within one synchronous call",
+    "fairness/liveness",
+    "unbounded executions",
+    "physical devices",
+    "deployment",
+    "Nightly"
+  ]
+}
+
+
+===== CORRECTED IMMUTABLE MAP SNAPSHOT 06d5d37e0e792dfd64e96389cd70e3ca8d1323e7 =====
+{
+  "schemaVersion": 2,
+  "sourceRevision": "e2f60f7ea944776c81d538b5b042ed28ac9b04ae",
+  "reviewedSourceRevision": "fe4b73dac510d4670517c7d3eca4f0c2470d4297",
+  "files": [
+    {
+      "path": ".agents/skills/tzudong-formal-map-check/SKILL.md",
+      "bytes": 5613,
+      "sha256": "49799628c2eed16d8e90543de0eb8269eabc2addec77ed58f09fe51bc22b4048"
+    },
+    {
+      "path": ".agents/skills/tzudong-formal-map-check/agents/openai.yaml",
+      "bytes": 319,
+      "sha256": "27964b04ee8de55c52260d394b65bbb105cf2550caedf71d6c4aa20489bfa2cb"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 6636,
+      "sha256": "425b4bc0cd59bb6b92368a8ed4c4d29123b921207c8391dc11e24db661f4bafb"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/AUDIT.md",
+      "bytes": 11914,
+      "sha256": "a99ecdd19415611bd64f2f8fb9318a5f385a3171db1db6d32f732c2435aba383"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/actual-wrapper-counterexample.txt",
+      "bytes": 2717,
+      "sha256": "3ee08112c3eb54480b173f67259ee4516754281a39f19fb3c639d1c990113e8d"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/affected-regressions.txt",
+      "bytes": 10566,
+      "sha256": "2fcc009f3454d2eb0f2fc327467994f4be434ba7fca83409896c3022b8e8f0f3"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/artifact-map.sha256",
+      "bytes": 84,
+      "sha256": "80bc1113ecca8de769e597beb1d4d2f3a0c3fa6205f65877eadb3e3cf12aafc8"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/boundary-counterexamples.txt",
+      "bytes": 3251,
+      "sha256": "34658edffd3b18a8faed0c2605ccf0ff348b113d2cef8079277caf1137d3de46"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/completion-manifest.json",
+      "bytes": 2343,
+      "sha256": "da0ce34bc4029318fea2636ab4fdd9c03f97f48c4ee51f9be5e921fcb36dc401"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/delta-resolution.md",
+      "bytes": 6530,
+      "sha256": "af21a47fb08cdb3235f315b1bcaea35815d61c0f43da4d0a29437668cd50e3c3"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/external-review-checkpoint.json",
+      "bytes": 3366,
+      "sha256": "4620f94bfef5a712d93d1e61bf8e0cfce3f201eb67a886758d03a19ceb0e4e95"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-reverse-question.txt",
+      "bytes": 1728,
+      "sha256": "73c06033d4857651190fa67bdeabf2581cd0150d319c6ebd1c914ca71dbf8b71"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-reverse-source-manifest.json",
+      "bytes": 7103,
+      "sha256": "9897e987b1fc3b0b3cef84ee163b4a8f9dccff0ff809f77e4a6a2d1c2560aa04"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal_reverse_source_bundle.txt",
+      "bytes": 461819,
+      "sha256": "f2e04bd7c76ed8f6aea4493f39bdf10d7f03761b570305b3c21d58865ead8ac2"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-delta-native-and-mutation-checks.json",
+      "bytes": 27154,
+      "sha256": "1e6ac2d876fd25782f73c4a661d17e82f8e71105f303ac1d31a6ebc1cd1be15e"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-finding-counterexamples.txt",
+      "bytes": 3528,
+      "sha256": "50061bd5634cca5635f1ff821c00434b16e7a5090deef42e61ffc837ac2843ed"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-findings-lint.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-findings-native.txt",
+      "bytes": 5260,
+      "sha256": "23d59840ab0431565701d84a92cff7f57da6858da7db8a8ade92b35f81cae09e"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-findings-parity.txt",
+      "bytes": 510,
+      "sha256": "ab4a45436855fdecad07b60bc57aa207f4d4491ba211a7f22709fcdea1de3554"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-formal-delta-artifact-receipt.json",
+      "bytes": 1151,
+      "sha256": "d38fe8525f167c2bb7ac5b1c4899cc40704f84f9da8d7ef26560c2a27f96bd79"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-formal-delta-artifact-verification.json",
+      "bytes": 1177,
+      "sha256": "0ff17431bcbeafee59846401a6349e658e537ad216f4b31a372de8e3452e8370"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-formal-delta-receipt.json",
+      "bytes": 1629,
+      "sha256": "e5ebe15ec197b91af7f907eae53ca73955c9027b3dddbc257f91e15a3ea15c97"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini_4_argon_formal_delta_report.visible.txt",
+      "bytes": 22643,
+      "sha256": "6fa6553f61a67185aecad159dd1eb93f2ced17368c01b1f63468dae0d4902069"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/mutable-cache-counterexample.txt",
+      "bytes": 5287,
+      "sha256": "4f1c2f691b18c46d645827054e8a2dffcc4e3f36121fb90475150a0473df3c14"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/native-and-mutation-checks.json",
+      "bytes": 20130,
+      "sha256": "9d6fc4e45079c6f54e1721b3a70a9ef25503d7e100906c80c26831b21a3b3903"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/pstack-upstream-observation.json",
+      "bytes": 1111,
+      "sha256": "10c73d8b7fb5cf0590daab531d2bed697b0b920a5cb968e80118abb3940584d8"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/rank-enumeration.json",
+      "bytes": 378,
+      "sha256": "7168a1a744dd3e28ecb732de5ba6e1471c60f6366912eb39ddb39adf8428f92b"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/review-input-manifest.json",
+      "bytes": 6302,
+      "sha256": "25afccbe2ba54cb0543570853d5fe4d90197b74abe0a2a47ea9d2e996e4f838c"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/review-question.txt",
+      "bytes": 1310,
+      "sha256": "7549fdaea4bb23290958732ca72a3d8682ce72f871d1bbd02a8d0493fbb99d08"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/source_bundle.txt",
+      "bytes": 374176,
+      "sha256": "c3fb6be051942230565e8e551f6f9988d6c0da2175c2a9df553a5398e6865f23"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/state-transitions.mmd",
+      "bytes": 1321,
+      "sha256": "9da5c7d56271a75dc5679f95173763ae7019ca032199fa653fc8fca2a34b2b55"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/verification.json",
+      "bytes": 1262,
+      "sha256": "2cdf058cf42b4745eaae400b810c5ef99bded33d1e4b4478952eaa644bd00023"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "apps/web/lib/marker-pool.ts",
+      "bytes": 14436,
+      "sha256": "d614170bbb7138121f82fe8511d0e60d8dbe786e5bfc4d1e6dfb95c290b02e6c"
+    },
+    {
+      "path": "apps/web/lib/retained-marker-accessibility.ts",
+      "bytes": 3655,
+      "sha256": "bf15c5fb1681e294c0be5b65a17e007570e2ebfb16af0868b41e96f5a2ed9ae4"
+    },
+    {
+      "path": "apps/web/lib/naver-map-event-cleanup.ts",
+      "bytes": 1747,
+      "sha256": "ee4c8bef6103c98b75238cc45eb2f119b1f5eab01202fb44979b05007c3957d6"
+    },
+    {
+      "path": "apps/web/lib/youtube-url.ts",
+      "bytes": 3682,
+      "sha256": "2dfac7f47bd227540c89250229d1c9fc29eb2cdcdc0aad50e63144b783251faa"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/popularity-marker.ts",
+      "bytes": 2969,
+      "sha256": "65fd5cc14b916e92720dfdaf81f20545b8caf3d8b3e56d9c06a4e4a9baea49d6"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/scoring.ts",
+      "bytes": 7062,
+      "sha256": "0e3f195bf06636d6a8718378ac7a93eccbd3f439ee5d6ab5eebedbbaa6d02276"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/frames.ts",
+      "bytes": 9618,
+      "sha256": "c2b9c3fb2fca0f6fa229aeb0c62a222f22b11441cefc40d35248e0f6ca6f3dc8"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/guards.ts",
+      "bytes": 7046,
+      "sha256": "5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/constants.ts",
+      "bytes": 7408,
+      "sha256": "471834208104d092365b8203350e7b9c4aba6a716a602f2a29589361d8fc9a43"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/errors.ts",
+      "bytes": 2008,
+      "sha256": "02bda67b89fadf3d2f5aa27f6a146c0dc746a7de1f9a6cd91dc82cf177e901c9"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/types.ts",
+      "bytes": 3726,
+      "sha256": "9d64ad2c6e57bea45af5066d89a26535b616429c9032d16fccfefcdeb78bad6b"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/storage-key.mjs",
+      "bytes": 226,
+      "sha256": "4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/published-popularity.ts",
+      "bytes": 5687,
+      "sha256": "84ee9979ace9756456178449f6d831fe796cee0d68d66e155fc127aaef4163f1"
+    },
+    {
+      "path": "apps/web/scripts/build-public-popularity.ts",
+      "bytes": 5900,
+      "sha256": "566113925e5c6a8598b28be3bf84ef53e7e525c4d727977475d8693082bb7eeb"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "bytes": 30154,
+      "sha256": "2313e3e7f76ad9e3137bd75aac525238809c3ffa120c36e55d856dddf396b1a7"
+    },
+    {
+      "path": "apps/web/types/restaurant.ts",
+      "bytes": 3942,
+      "sha256": "ef43ac1b93a751cb03fed1fcabecacf21d245e0b54f47a66dd67639c34ebd94b"
+    },
+    {
+      "path": "apps/web/lib/overseas-region-matching.ts",
+      "bytes": 2650,
+      "sha256": "35333c22a6a6b677a7612ffe461774a54a84f9a8c6fa3e324885104a8d072c4f"
+    },
+    {
+      "path": "apps/web/constants/overseas-regions.ts",
+      "bytes": 3087,
+      "sha256": "4d986e8cb4b9166ec56ed9d12b3d8d32db2ed63b861a772888c7e8b319fde4af"
+    },
+    {
+      "path": "apps/web/tests-formal/marker-state-model.test.mjs",
+      "bytes": 12860,
+      "sha256": "60abd98f0f491fc18d75958faf2f1447a2b16638960e8f8e728c6369b05ef3c2"
+    },
+    {
+      "path": "apps/web/scripts/verify-marker-formal.mjs",
+      "bytes": 8075,
+      "sha256": "8d08230a9249649990d118982022a706c1ea165084d98290c0407ec80560b5a0"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-numeric-bounds.test.ts",
+      "bytes": 1575,
+      "sha256": "7bccbf8f20109bc5b87f1d77a6687167f12e988d0040523f6fe5a0c152298d02"
+    },
+    {
+      "path": "apps/web/tests-unit/popularity-input-boundary.test.ts",
+      "bytes": 5525,
+      "sha256": "9b2b12533448cbb60b92adfaf27d6e559afb78868fc2d860a34a20c536c43d78"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-cohort-shadow.test.ts",
+      "bytes": 1995,
+      "sha256": "abce3ecd887e5fbb89bbac7715a9ce71753935367a502e6ec96f464eee585dac"
+    },
+    {
+      "path": "apps/web/package.json",
+      "bytes": 7264,
+      "sha256": "a434a12086453effcdc577a0c04c5e213037b327ba04b29f48b5d1bc65a0aad5"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "bytes": 1368,
+      "sha256": "cdbd2b57d55c77ea1ef2b81124b7007fec7df15d55cc917c8c9eca5704234c49"
+    },
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "bytes": 172012,
+      "sha256": "95fea0e18e6806bb924e738df255dec596e7641505c4e108ae47cc158d1d2da9"
+    },
+    {
+      "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+      "bytes": 11862,
+      "sha256": "96ab311a5582f4498d13da0347973ba94cad2575418394f78036501b99218ddb"
+    },
+    {
+      "path": "apps/web/lib/review-photo-url.ts",
+      "bytes": 14933,
+      "sha256": "811a669cada5b4938afc012a2e0f26ca82e080522306cfd424c2892cb979187e"
+    },
+    {
+      "path": "apps/web/lib/profile-avatar-url.ts",
+      "bytes": 9151,
+      "sha256": "cc3c22cea33d2e2ea89ab52e3264baac3b406956aac2dbc4b671a07fe219a039"
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "bytes": 9365,
+      "sha256": "6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8"
+    },
+    {
+      "path": "apps/web/tests-unit/visible-marker-review-bubbles.test.ts",
+      "bytes": 3456,
+      "sha256": "de9884b661b31e3b06274eb1c17fa5ea176b73d2f557a529d7e4333178b6391e"
+    },
+    {
+      "path": "apps/web/lib/naver-map-cluster-visuals.ts",
+      "bytes": 5849,
+      "sha256": "e6827ce69615a202ca866aa5ced193b78d8b16c3ab9f44d3abb665e7b94f4d92"
+    },
+    {
+      "path": "apps/web/tests-unit/marker-pool.test.ts",
+      "bytes": 17824,
+      "sha256": "68303094ee4dae127b3a0b9483169dccf02e5b4e17642f967830911c96400fa6"
+    },
+    {
+      "path": "apps/web/tests-unit/retained-marker-accessibility.test.ts",
+      "bytes": 7397,
+      "sha256": "b5dc9e818c7eb7abc6764c2ec31d4f5d9879b832c3d8b1a864ebe0053bfa5f11"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-cluster-visuals.test.ts",
+      "bytes": 5142,
+      "sha256": "dee3a5c6fbeb08d7d527aec187b32ac81a115cf55e692a0fe3808363c27a82e2"
+    }
+  ],
+  "scope": "Updated native fixes and full Gemini delta; Pro reverse, hosted UI, release and Nightly remain separate",
+  "selfReference": "artifact-map.json and its detached digest are intentionally excluded to avoid a circular or stale digest claim"
+}
+
+===== DETACHED DIGEST OF THAT SNAPSHOT MAP =====
+66f6c1c0a17e99922fc489c369073a9d4c9bdc4397bbeb9cf41cbd0605e292ab  artifact-map.json
+
+===== LOCAL ALL-ENTRY SNAPSHOT VERIFICATION RECEIPT =====
+{
+  "snapshot": "06d5d37e0e792dfd64e96389cd70e3ca8d1323e7",
+  "mapSha256": "66f6c1c0a17e99922fc489c369073a9d4c9bdc4397bbeb9cf41cbd0605e292ab",
+  "detachedDigestMatches": true,
+  "filesVerified": 32,
+  "sourceFilesVerified": 35,
+  "selfOrDigestListed": false,
+  "scope": "Verified against immutable snapshot, not newer mutable worktree. Pro receives local raw proof, not a claim of its own execution."
+}
+
+===== ACTUAL SOURCE DIFF e2f..a1dd =====
+diff --git a/apps/web/lib/marker-pool.ts b/apps/web/lib/marker-pool.ts
+index 24b4d76f..896c8e4b 100644
+--- a/apps/web/lib/marker-pool.ts
++++ b/apps/web/lib/marker-pool.ts
+@@ -234,11 +234,12 @@ export class MarkerPool {
+             && patchStableMarkerReviewBubble(element, currentIcon?.content, icon.content);
+         if (!patched) {
+             const wasHidden = Boolean(marker.__tzudongRetainedMarkerAriaHidden);
+-            // Only SDK replacement changes the root. An in-place review patch
+-            // keeps its existing accessibility owner and hidden state intact.
+-            syncRetainedMarkerAccessibility(marker, true);
++            const rootReadyTarget = element?.parentElement;
++            // Keep a hidden marker's pending root registry across deferred SDK
++            // insertion; clearing visibility would cancel that observer/target.
++            if (!wasHidden) syncRetainedMarkerAccessibility(marker, true);
+             marker.setIcon(icon);
+-            if (wasHidden) syncRetainedMarkerAccessibility(marker, false);
++            if (wasHidden) syncRetainedMarkerAccessibility(marker, false, rootReadyTarget);
+         }
+         this.renderedIcons.set(marker, { ...icon, anchor: icon.anchor ? { ...icon.anchor } : icon.anchor });
+     }
+diff --git a/apps/web/lib/retained-marker-accessibility.ts b/apps/web/lib/retained-marker-accessibility.ts
+index 66019cb0..ac15dc86 100644
+--- a/apps/web/lib/retained-marker-accessibility.ts
++++ b/apps/web/lib/retained-marker-accessibility.ts
+@@ -70,7 +70,9 @@ export function syncRetainedMarkerAccessibility(
+     // The review bubble is a sibling of the marker inside this app-owned
+     // anchor, so hide the complete overlay rather than only its image node.
+     const root = markerRoot?.closest<HTMLElement>(OVERLAY_SELECTOR) ?? markerRoot;
+-    if (!root) {
++    // Some SDKs keep returning the removed old root until its replacement is
++    // inserted. A disconnected root cannot carry the live marker's mask.
++    if (!root || root.isConnected === false) {
+         marker.__tzudongRetainedMarkerAriaHidden = hidden;
+         const target = rootTargets.get(marker);
+         if (hidden && target) watchPendingRoot(marker, target);
+diff --git a/apps/web/scripts/verify-marker-formal.mjs b/apps/web/scripts/verify-marker-formal.mjs
+index f73a6de6..164035d4 100644
+--- a/apps/web/scripts/verify-marker-formal.mjs
++++ b/apps/web/scripts/verify-marker-formal.mjs
+@@ -52,6 +52,9 @@ const mutants = [
+     before: '        nextBubbles[0].style.marginLeft = currentBubbles[0].style.marginLeft;',
+     after: '        nextBubbles[0].style.marginLeft = "";',
+     test: tests[0], failure: 'review patches preserve retained masking, clamp and clone-descriptor round trips' },
++  { id: 'deferred-sdk-root', file: 'lib/retained-marker-accessibility.ts',
++    before: '    if (!root || root.isConnected === false) {', after: '    if (!root) {',
++    test: tests[0], failure: 'a deferred SDK root receives the retained mask after disconnected-root replacement' },
+   { id: 'half-life-overflow', file: 'lib/evidence-engineering/scoring.ts',
+     before: removeFiniteGuard('halfLife'), after: '', test: tests[1], failure: 'finite inputs cannot leak infinity' },
+   { id: 'visit-multiplier-overflow', file: 'lib/evidence-engineering/scoring.ts',
+@@ -71,7 +74,7 @@ if (baseline.exitCode !== 0) {
+   process.stderr.write(baseline.output);
+   throw new Error('FORMAL_BASELINE_FAILED');
+ }
+-console.log('Bounded native baseline passed. Checking eleven isolated broken variants.');
++console.log('Bounded native baseline passed. Checking twelve isolated broken variants.');
+ const mutations = [];
+ for (const mutant of mutants) {
+   const scratch = await mkdtemp(join(tmpdir(), 'tzudong-formal-mutation-'));
+diff --git a/apps/web/tests-formal/marker-state-model.test.mjs b/apps/web/tests-formal/marker-state-model.test.mjs
+index c6343852..428b7041 100644
+--- a/apps/web/tests-formal/marker-state-model.test.mjs
++++ b/apps/web/tests-formal/marker-state-model.test.mjs
+@@ -18,6 +18,7 @@ import { wrapNaverMarkerContentWithReviewBubble } from './lib/visible-marker-rev
+ const map = document.body.appendChild(document.createElement('main'));
+ let clicks = [];
+ let cloneIcons = false;
++let deferIcons = false;
+ class Marker {
+   constructor({position, icon, map: target}) {
+     this.position = position; this.icon = icon; this.map = target;
+@@ -30,7 +31,16 @@ class Marker {
+   getPosition() { return this.position; }
+   setPosition(position) { this.position = position; }
+   getIcon() { return cloneIcons ? {...this.icon} : this.icon; }
+-  setIcon(icon) { this.icon = icon; this.element.innerHTML = icon.content; this.iconChanges++; }
++  setIcon(icon) {
++    this.icon = icon; this.iconChanges++;
++    if (deferIcons) {
++      this.element.remove();
++      queueMicrotask(() => {
++        this.element = document.createElement('div'); this.element.innerHTML = icon.content;
++        this.map?.append(this.element);
++      });
++    } else this.element.innerHTML = icon.content;
++  }
+   getElement() { return this.element; }
+   setZIndex() {}
+ }
+@@ -117,6 +127,18 @@ window.__formal = {
+     cloneIcons = false; markerPool.clear();
+     return {hiddenAfterPatch, clampAfterPatch, photoAfterPatch, reverted, hiddenAfterReplacement, anchor, evicted};
+   },
++  async delayedRootMask() {
++    markerPool.clear(); cloneIcons = false; reuseBubbleIdentity = false;
++    const marker = acquire('delayed', {...variants[0], bubble: 1});
++    syncRetainedMarkerAccessibility(marker, false, map);
++    deferIcons = true;
++    markerPool.update('delayed', {icon: {content: html('delayed', {...variants[0], bubble: 2, alt: 1}), anchor: {x: 18, y: 18}}});
++    deferIcons = false;
++    await Promise.resolve(); await Promise.resolve();
++    const root = marker.getElement().querySelector('[data-visible-marker-review-bubble-anchor]');
++    const result = {connected: root?.isConnected, hidden: root?.getAttribute('aria-hidden'), owner: root?.getAttribute('data-tzudong-retained-marker-hidden')};
++    markerPool.clear(); return result;
++  },
+   clusterReacquisition() {
+     markerPool.clear();
+     const icon = (frame, count) => ({content: '<div data-testid="marker" data-restaurant-id="cluster" role="button" tabindex="0" aria-label="cluster"><picture><source srcset="/' + frame + '.webp"><img src="/fallback.webp"></picture><b>' + count + '</b></div>', anchor: {x: 14, y: 14}});
+@@ -226,3 +248,9 @@ test('cluster frames updated through the pool restore the requested frame and co
+     expect(await page.evaluate(() => window.__formal.clusterReacquisition())).toEqual({srcset: '/a.webp', count: '4'});
+   });
+ }, 60000);
++
++test('a deferred SDK root receives the retained mask after disconnected-root replacement', async () => {
++  await withFixture(async page => {
++    expect(await page.evaluate(() => window.__formal.delayedRootMask())).toEqual({connected: true, hidden: 'true', owner: 'true'});
++  });
++}, 60000);
+diff --git a/apps/web/tests-unit/retained-marker-accessibility.test.ts b/apps/web/tests-unit/retained-marker-accessibility.test.ts
+index b73414a2..957abfbb 100644
+--- a/apps/web/tests-unit/retained-marker-accessibility.test.ts
++++ b/apps/web/tests-unit/retained-marker-accessibility.test.ts
+@@ -2,6 +2,7 @@ import { afterAll, beforeEach, expect, test } from 'bun:test';
+ import { syncRetainedMarkerAccessibility } from '../lib/retained-marker-accessibility';
+ 
+ class AppMarkerElement {
++    isConnected = true;
+     attributes = new Map<string, string>();
+     matches(selector: string) { return selector === '[data-testid="marker"]'; }
+     querySelector() { return null; }
+@@ -101,3 +102,20 @@ test('hides the app overlay anchor containing a sibling review button and restor
+     expect(anchor.getAttribute('aria-hidden')).toBeNull();
+     expect(anchor.getAttribute('data-visible-marker-review-bubble-anchor')).toBe('true');
+ });
++
++test('a disconnected old root stays pending and release cancels its insertion observer', () => {
++    for (const canceled of [false, true]) {
++        const target = {} as HTMLElement;
++        let root = new AppMarkerElement(); root.isConnected = false;
++        const marker = {getElement: () => root as unknown as HTMLElement};
++        syncRetainedMarkerAccessibility(marker, false, target);
++        const observer = FakeObserver.instances.at(-1)!;
++        expect(observer).toBeDefined();
++        expect(root.getAttribute('aria-hidden')).toBeNull();
++        if (canceled) syncRetainedMarkerAccessibility(marker, true);
++        root = new AppMarkerElement(); observer.fire();
++        expect(root.getAttribute('aria-hidden')).toBe(canceled ? null : 'true');
++        expect(observer.disconnected).toBe(true);
++        syncRetainedMarkerAccessibility(marker, true);
++    }
++});

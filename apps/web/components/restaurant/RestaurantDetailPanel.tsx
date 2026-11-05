@@ -23,14 +23,9 @@ import {
     Check,
     ChevronUp,
     ChevronRight,
-    Play,
     ChevronLeft
 } from "lucide-react";
 import { OperationalCautionNotice, cautionForDetailPanel } from "@/components/restaurant/OperationalCautionNotice";
-import { PopularityBadge } from "@/components/restaurant/PopularityBadge";
-import { resolvePublishedPopularityTier } from "@/lib/evidence-engineering/published-popularity";
-import { RestaurantEvidenceCarousel } from "@/components/restaurant/RestaurantEvidenceCarousel";
-import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -56,7 +51,7 @@ import {
     buildCanonicalYouTubeWatchUrl,
     extractCanonicalYouTubeVideoId,
 } from "@/lib/youtube-url";
-import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
+import { RestaurantVideoCarousel } from "@/components/restaurant/RestaurantVideoCarousel";
 import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
 import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
 
@@ -81,6 +76,109 @@ interface RestaurantDetailPanelProps {
     onRestaurantClick?: (restaurant: Restaurant) => void;
     onSwipeLeft?: () => void;
     onSwipeRight?: () => void;
+}
+
+// Detail-only chrome: the shared panel header places desktop actions in a second row.
+function RestaurantDetailHeader({
+    name,
+    categories,
+    categoryImagePath,
+    restaurantId,
+    isMobile,
+    isAdmin,
+    isShareCopied,
+    onShare,
+    onRequireAuth,
+    onEditRestaurant,
+    onClose,
+    showDesktopBackButton,
+}: {
+    name: string;
+    categories: string[];
+    categoryImagePath: string;
+    restaurantId: string;
+    isMobile: boolean;
+    isAdmin: boolean;
+    isShareCopied: boolean;
+    onShare: () => void;
+    onRequireAuth: () => void;
+    onEditRestaurant?: () => void;
+    onClose: () => void;
+    showDesktopBackButton: boolean;
+}) {
+    const actionClass = cn(mapPanelIconButtonClass, isMobile && "h-11 w-11");
+    const categoryLabel = categories.join(', ');
+    const showBackButton = isMobile || showDesktopBackButton;
+
+    return (
+        <header className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2 border-b border-border bg-background px-3 py-3">
+            <div className="flex min-w-0 flex-1 items-center gap-1">
+                <span className="relative block h-4 w-4 shrink-0" aria-hidden="true">
+                    <Image src={categoryImagePath} alt="" fill sizes="16px" className="object-contain" />
+                </span>
+                <div className="flex min-w-0 flex-1 items-center gap-1">
+                    <h2 className="min-w-0 truncate text-sm font-semibold leading-5 text-foreground" title={name}>
+                        {name}
+                    </h2>
+                    {categories.length > 0 ? (
+                        <span
+                            className="flex min-w-0 max-w-[50%] shrink-0 items-center gap-0.5"
+                            data-restaurant-detail-categories="true"
+                            title={categoryLabel}
+                        >
+                            <span className="sr-only">카테고리: {categoryLabel}</span>
+                            <Badge className="min-w-0 px-1.5 py-0.5 text-2xs" aria-hidden="true">
+                                <span className="truncate">{categories[0]}</span>
+                            </Badge>
+                            {categories.length > 1 ? (
+                                <span className="shrink-0 text-2xs text-muted-foreground" aria-hidden="true">+{categories.length - 1}</span>
+                            ) : null}
+                        </span>
+                    ) : null}
+                </div>
+            </div>
+            <div className="flex shrink-0 flex-nowrap items-center gap-1.5" role="group" aria-label="패널 동작" data-map-panel-actions="true">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={onShare}
+                    title={isShareCopied ? "복사됨!" : "공유하기"}
+                    aria-label={isShareCopied ? "공유 링크 복사됨" : "맛집 공유 링크 복사"}
+                    className={cn(actionClass, isShareCopied && "bg-green-50 border-green-300 text-green-600")}
+                >
+                    {isShareCopied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                </Button>
+                <BookmarkButton
+                    restaurantId={restaurantId}
+                    className={cn("h-9 w-9 shrink-0 rounded-lg shadow-none", isMobile && "h-11 w-11")}
+                    onRequireAuth={onRequireAuth}
+                />
+                {isAdmin && onEditRestaurant ? (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={onEditRestaurant}
+                        className={cn(actionClass, "text-primary hover:text-primary")}
+                        aria-label="맛집 정보 관리자 편집"
+                    >
+                        <Settings className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                ) : null}
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={onClose}
+                    className={actionClass}
+                    aria-label={isMobile ? '이전 화면으로 돌아가기' : showDesktopBackButton ? '이전 목록으로 돌아가기' : '맛집 상세 닫기'}
+                >
+                    {showBackButton ? <ArrowLeft className="h-4 w-4" aria-hidden="true" /> : <X className="h-4 w-4" aria-hidden="true" />}
+                </Button>
+            </div>
+        </header>
+    );
 }
 
 const RESTAURANT_DETAIL_SWIPE_HINT_KEY = 'restaurant-detail-swipe-hint-seen-v1';
@@ -243,7 +341,6 @@ export function RestaurantDetailPanel({
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
     const [copiedAddress, setCopiedAddress] = useState<RestaurantAddressEntryType | null>(null);
-    const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
@@ -277,16 +374,16 @@ export function RestaurantDetailPanel({
     const mergedMedia = useMemo(() => collectRestaurantMergedMedia(restaurant), [restaurant]);
     const youtubeLinks = mergedMedia.youtubeLinks;
     const youtubeVideos = useMemo(
-        () => youtubeLinks.flatMap((youtubeLink) => {
-            const videoId = extractCanonicalYouTubeVideoId(youtubeLink);
-            const watchUrl = buildCanonicalYouTubeWatchUrl(videoId);
-            if (!videoId || !watchUrl) return [];
-
-            return [{
-                videoId,
-                watchUrl,
-            }];
-        }),
+        () => {
+            const seen = new Set<string>();
+            return youtubeLinks.flatMap((youtubeLink) => {
+                const videoId = extractCanonicalYouTubeVideoId(youtubeLink);
+                const watchUrl = buildCanonicalYouTubeWatchUrl(videoId);
+                if (!videoId || !watchUrl || seen.has(videoId)) return [];
+                seen.add(videoId);
+                return [{ videoId, watchUrl }];
+            });
+        },
         [youtubeLinks],
     );
     const collectedTzuyangReviews = mergedMedia.tzuyangReviews;
@@ -368,10 +465,18 @@ export function RestaurantDetailPanel({
         return entries;
     }, [restaurant, siblingTzuyangReviewQuery.data]);
     const youtubeMetas = mergedMedia.youtubeMetas;
-    const youtubeCopy = useMemo(
-        () => buildRestaurantDetailMediaCopy('youtube', youtubeVideos.length, isYoutubeExpanded),
-        [isYoutubeExpanded, youtubeVideos.length],
-    );
+    const advertisementLabels = useMemo(() => {
+        const labels = youtubeMetas.flatMap((meta) => {
+            if (!meta || typeof meta !== 'object' || !('ads_info' in meta)) return [];
+            const adsInfo = (meta as { ads_info?: unknown }).ads_info;
+            if (!adsInfo || typeof adsInfo !== 'object') return [];
+            const { is_ads, what_ads } = adsInfo as { is_ads?: unknown; what_ads?: unknown };
+            return is_ads === true && Array.isArray(what_ads)
+                ? what_ads.filter((ad): ad is string => typeof ad === 'string')
+                : [];
+        });
+        return Array.from(new Set(labels));
+    }, [youtubeMetas]);
     const reviewCopy = useMemo(
         () => buildRestaurantDetailMediaCopy('review', tzuyangReviewEntries.length, isReviewExpanded),
         [isReviewExpanded, tzuyangReviewEntries.length],
@@ -1049,121 +1154,53 @@ export function RestaurantDetailPanel({
                     </button>
                 )}
 
-                <MapPanelHeader
-                    title={restaurant.name}
-                    titleAs="h2"
-                    count={viewMode === 'reviews' ? totalReviewCount : undefined}
-                    description={viewMode === 'reviews' ? '전체 리뷰' : undefined}
-                    titleIcon={viewMode === 'detail' ? (
-                        <span className="relative block h-4 w-4">
-                            <Image src={getCategoryImagePath(categories[0] || '')} alt="" fill sizes="16px" className="object-contain" />
-                        </span>
-                    ) : undefined}
-                    onClose={viewMode === 'reviews' ? handleBackToDetail : onClose}
-                    closeLabel={viewMode === 'reviews' ? '상세 정보로 돌아가기' : (showDesktopBackButton && !isMobile ? '이전 목록으로 돌아가기' : isMobile ? '이전 화면으로 돌아가기' : '맛집 상세 닫기')}
-                    closeAction={viewMode === 'reviews' || showDesktopBackButton || isMobile ? 'back' : 'close'}
-                    actions={(
-                        <>
-                            {/* 공유하기 버튼 */}
-                            {viewMode === 'detail' && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={handleShareUrl}
-                                    title={isShareCopied ? "복사됨!" : "공유하기"}
-                                    aria-label={isShareCopied ? "공유 링크 복사됨" : "맛집 공유 링크 복사"}
-                                    className={cn(mapPanelIconButtonClass, isShareCopied && "bg-green-50 border-green-300 text-green-600")}
-                                >
-                                    {isShareCopied ? (
-                                        <Check className="h-4 w-4" />
-                                    ) : (
-                                        <Share2 className="h-4 w-4" />
-                                    )}
-                                </Button>
-                            )}
-                            {/* 북마크 버튼 - 모든 사용자에게 표시 */}
-                            {viewMode === 'detail' && (
-                                <BookmarkButton
-                                    restaurantId={restaurant.id}
-                                    className="h-8 w-8 shrink-0 rounded-full shadow-none"
-                                    onRequireAuth={handleBookmarkRequireAuth}
-                                />
-                            )}
-                            {isAdmin && onEditRestaurant && viewMode === 'detail' && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={onEditRestaurant}
-                                    className={cn(mapPanelIconButtonClass, "text-primary hover:text-primary")}
-                                    aria-label="맛집 정보 관리자 편집"
-                                >
-                                    <Settings className="h-4 w-4" aria-hidden="true" />
-                                </Button>
-                            )}
-                        </>
-                    )}
-                />
+                {viewMode === 'detail' ? (
+                    <RestaurantDetailHeader
+                        name={restaurant.name}
+                        categories={categories}
+                        categoryImagePath={getCategoryImagePath(categories[0] || '')}
+                        restaurantId={restaurant.id}
+                        isMobile={isMobile}
+                        isAdmin={isAdmin}
+                        isShareCopied={isShareCopied}
+                        onShare={handleShareUrl}
+                        onRequireAuth={handleBookmarkRequireAuth}
+                        onEditRestaurant={onEditRestaurant}
+                        onClose={onClose}
+                        showDesktopBackButton={showDesktopBackButton}
+                    />
+                ) : (
+                    <MapPanelHeader
+                        title={restaurant.name}
+                        variant={isMobile ? 'sheet' : 'panel'}
+                        wrapTitle
+                        titleAs="h2"
+                        count={totalReviewCount}
+                        description="전체 리뷰"
+                        onClose={handleBackToDetail}
+                        closeLabel="상세 정보로 돌아가기"
+                        closeAction="back"
+                    />
+                )}
                 {viewMode === 'detail' && (
-                    <div className="shrink-0 border-b border-border px-3 py-2">
-                                        <PopularityBadge
-                                            key={`${restaurant.id}:${resolvePublishedPopularityTier(restaurant)}`}
-                                            tier={resolvePublishedPopularityTier(restaurant)}
-                                            experimental3D
-                                        />
+                    <div className="shrink-0 border-b border-border px-3 py-2 empty:hidden">
                                         <OperationalCautionNotice
                                             caution={cautionForDetailPanel(restaurant)}
                                             shopName={restaurant.name}
                                         />
-                                        <RestaurantEvidenceCarousel
-                                            frames={[mergedMedia.evidenceFrames ?? []]}
-                                        />
-                                        <ScrollableTagContainer className="mb-1" maxWidth="100%">
-                                            {categories.map((cat, index) => (
-                                                <Badge
-                                                    key={index}
-                                                    variant={index === 0 ? "default" : "secondary"}
-                                                    className="text-xs whitespace-nowrap"
-                                                >
-                                                    {cat}
-                                                </Badge>
-                                            ))}
-
-                                            {/* 광고 태그 - 모든 병합된 영상에서 수집 */}
-                                            {(() => {
-                                                const allAds: string[] = [];
-                                                const metas: unknown[] = youtubeMetas;
-
-                                                metas.forEach((meta) => {
-                                                    if (!meta || typeof meta !== 'object') return;
-                                                    if (!('ads_info' in meta)) return;
-
-                                                    const adsInfo = (meta as { ads_info?: unknown }).ads_info;
-                                                    if (!adsInfo || typeof adsInfo !== 'object') return;
-
-                                                    const { is_ads, what_ads } = adsInfo as { is_ads?: unknown; what_ads?: unknown };
-                                                    if (is_ads === true && Array.isArray(what_ads)) {
-                                                        const normalizedAds = what_ads.filter((ad): ad is string => typeof ad === 'string');
-                                                        allAds.push(...normalizedAds);
-                                                    }
-                                                });
-
-                                                const uniqueAds = Array.from(new Set(allAds));
-
-                                                return uniqueAds.length > 0 ? (
-                                                    <>
-                                                        {uniqueAds.map((ad: string, index: number) => (
-                                                            <Badge
-                                                                key={index}
-                                                                variant="outline"
-                                                                className="text-xs bg-orange-50 text-orange-700 border-orange-300 whitespace-nowrap"
-                                                            >
-                                                                📢 {ad}
-                                                            </Badge>
-                                                        ))}
-                                                    </>
-                                                ) : null;
-                                            })()}
-                                        </ScrollableTagContainer>
+                                        {advertisementLabels.length > 0 && (
+                                            <ScrollableTagContainer className="mb-1" maxWidth="100%">
+                                                {advertisementLabels.map((ad) => (
+                                                    <Badge
+                                                        key={ad}
+                                                        variant="outline"
+                                                        className="text-xs bg-orange-50 text-orange-700 border-orange-300 whitespace-nowrap"
+                                                    >
+                                                        📢 {ad}
+                                                    </Badge>
+                                                ))}
+                                            </ScrollableTagContainer>
+                                        )}
                     </div>
                 )}
 
@@ -1212,106 +1249,16 @@ export function RestaurantDetailPanel({
                                 </div>
 
                                 {/* 유튜브 링크 */}
-                                {youtubeVideos.length > 0 ? (
+                                {(youtubeVideos.length > 0 || (mergedMedia.evidenceFrames?.length ?? 0) > 0) && (
                                     <>
-                                    <Separator />
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <h3 className="min-w-0 flex-1 font-semibold text-sm flex flex-wrap items-center gap-2">
-                                                <YouTubeIcon className="h-4 w-4 text-red-500" />
-                                                {youtubeCopy.title}
-                                                {youtubeVideos.length > 1 && (
-                                                    <Badge variant="outline" className="ml-1 text-xs">
-                                                        {youtubeCopy.countLabel}
-                                                    </Badge>
-                                                )}
-                                            </h3>
-                                            {youtubeVideos.length > 1 && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setIsYoutubeExpanded(!isYoutubeExpanded)}
-                                                    aria-expanded={isYoutubeExpanded}
-                                                    aria-label={youtubeCopy.toggleAriaLabel}
-                                                    className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                                >
-                                                    {isYoutubeExpanded ? (
-                                                        <>
-                                                            {youtubeCopy.expandedToggleLabel} <ChevronUp className="ml-1 h-3.5 w-3.5" />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {youtubeCopy.collapsedToggleLabel} <ChevronDown className="ml-1 h-3.5 w-3.5" />
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <button
-                                                type="button"
-                                                className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                onClick={() => openExternalUrl(youtubeVideos[0].watchUrl)}
-                                                aria-label={youtubeCopy.openAriaLabel(1)}
-                                            >
-                                                <YoutubeThumbnail
-                                                    videoId={youtubeVideos[0].videoId}
-                                                    alt=""
-                                                    className="object-cover"
-                                                    sizes="(max-width: 400px) 100vw, 400px"
-                                                    priority
-                                                />
-                                                {youtubeVideos.length > 1 && (
-                                                    <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
-                                                        {youtubeCopy.itemBadge(1)}
-                                                    </span>
-                                                )}
-                                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 group-hover:bg-red-600">
-                                                        <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
-                                                    </span>
-                                                </div>
-                                            </button>
-
-                                            {youtubeVideos.length > 1 && !isYoutubeExpanded && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    {youtubeCopy.collapsedHint}
-                                                </p>
-                                            )}
-
-                                            {youtubeVideos.length > 1 && isYoutubeExpanded && (
-                                                <div className="space-y-2">
-                                                    {youtubeVideos.slice(1).map((video, index) => (
-                                                        <button
-                                                            type="button"
-                                                            key={video.watchUrl}
-                                                            className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                            onClick={() => openExternalUrl(video.watchUrl)}
-                                                            aria-label={youtubeCopy.openAriaLabel(index + 2)}
-                                                        >
-                                                            <YoutubeThumbnail
-                                                                videoId={video.videoId}
-                                                                alt=""
-                                                                className="object-cover"
-                                                                sizes="(max-width: 400px) 100vw, 400px"
-                                                            />
-                                                            <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
-                                                                {youtubeCopy.itemBadge(index + 2)}
-                                                            </span>
-                                                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 group-hover:bg-red-600">
-                                                                    <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
-                                                                </span>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                        <Separator />
+                                        <RestaurantVideoCarousel
+                                            key={`${restaurant.id}:${youtubeVideos.map((video) => video.videoId).join(',')}`}
+                                            videos={youtubeVideos}
+                                            frames={[mergedMedia.evidenceFrames ?? []]}
+                                        />
                                     </>
-                                ) : null}
+                                )}
 
                                 {/* 쯔양 리뷰 섹션 */}
                                 {tzuyangReviewEntries.length > 0 ? (
@@ -1600,11 +1547,11 @@ export function RestaurantDetailPanel({
                                         <Button
                                             onClick={handleGetDirections}
                                             className={cn(
-                                                "h-14 min-w-0 flex-col gap-1 bg-primary px-1.5 text-xs font-semibold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90",
+                                                "h-14 min-w-0 flex-col gap-1 bg-primary px-1.5 text-xs font-bold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90",
                                                 isMobile ? "rounded-lg" : "rounded-xl"
                                             )}
                                         >
-                                            <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                            <Navigation className="h-4 w-4 shrink-0 text-brand-tangerine dark:text-brand-ink" aria-hidden="true" />
                                             <span>길찾기</span>
                                         </Button>
                                     ) : null}

@@ -7,6 +7,23 @@ import {
 const productionSite = 'https://www.tzudong.app';
 
 describe('OAuth callback redirect origin', () => {
+  test('accepts a production-mode local TLS port only for the declared local runtime', () => {
+    const configured = 'https://127.0.0.1:9443';
+    expect(getTrustedAuthCallbackOrigin('https://attacker.example', {
+      NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: configured, NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME: '1',
+    })).toBe(configured);
+    expect(getTrustedAuthCallbackOrigin(configured, {
+      NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: configured,
+    })).toBe(productionSite);
+    for (const NEXT_PUBLIC_SITE_URL of [
+      'http://127.0.0.1:9443', 'https://localhost:9443', 'https://0.0.0.0:9443',
+      'https://127.0.0.1:444', 'https://2130706433:9443', 'https://user@127.0.0.1:9443',
+      'https://127.0.0.1:9443/path', 'https://127.0.0.1:9443?next=/admin', 'https://127.0.0.1:9443#code',
+    ]) expect(getTrustedAuthCallbackOrigin(configured, {
+      NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME: '1',
+    })).toBe(productionSite);
+  });
+
   test('preserves the exact server-provided deployment or branch preview alias in use', () => {
     const previewEnv = {
       NODE_ENV: 'production',

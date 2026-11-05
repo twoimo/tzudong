@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "kind": "interaction-screenshot-path-reconciliation",
+  "generatedAt": "2026-10-15T13:54:29+00:00",
+  "historicalReportsModified": false,
+  "issue": "Historical screenshot file values include an extra output-directory prefix. The images are stored directly beside each report.",
+  "reports": [
+    {
+      "report": "interaction-audit-run3-partial/report.json",
+      "reportSha256": "b48c89d6cf799e25809ba400b381785786315eb55beace35918af2a3abb3ea83",
+      "declaredScreenshotCount": 22,
+      "resolvedScreenshotCount": 22,
+      "allResolvedHashesMatch": true,
+      "entries": [
+        {
+          "recordedFile": "interaction-audit/desktop-overview.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-overview.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09",
+          "actualSha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-restaurants.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-restaurants.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "48366828b06396153c7dc952e760ec061797c627603000aa0608803665a02881",
+          "actualSha256": "48366828b06396153c7dc952e760ec061797c627603000aa0608803665a02881",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-submissions.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-submissions.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "a82b736d3faca27553f15e84908f97086a5d10640659f672d7abfd35582539fb",
+          "actualSha256": "a82b736d3faca27553f15e84908f97086a5d10640659f672d7abfd35582539fb",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-reviews.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-reviews.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "c52bcaf8c901c728e39c067bea75ed73f0da45db0935ae699be4069678f72ce2",
+          "actualSha256": "c52bcaf8c901c728e39c067bea75ed73f0da45db0935ae699be4069678f72ce2",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-users.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-users.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "cea0cf8e6e04183deaf234f2ce55bb7a2ae115b1dec06a7769fba2bff9a0eb6e",
+          "actualSha256": "cea0cf8e6e04183deaf234f2ce55bb7a2ae115b1dec06a7769fba2bff9a0eb6e",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-banners.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-banners.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "c5db22186aece0089f9d5f1a3105fea1520c1bb85c99f48176f553fb00227f59",
+          "actualSha256": "c5db22186aece0089f9d5f1a3105fea1520c1bb85c99f48176f553fb00227f59",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-insights.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-insights.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "ebdd73eb9d5cef820c5ba3367889ce622e3b4c32d2476607f99e949c8416a9b2",
+          "actualSha256": "ebdd73eb9d5cef820c5ba3367889ce622e3b4c32d2476607f99e949c8416a9b2",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-pipeline.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-pipeline.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "cbd882c85bcee736e6b772314fa8f26fb58b5330153187f90a94bd592e77d7e2",
+          "actualSha256": "cbd882c85bcee736e6b772314fa8f26fb58b5330153187f90a94bd592e77d7e2",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-knowledge-graph.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-knowledge-graph.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "25fd475ce67d64ff6877ec065c663fa11c04de9c46be9a1889f59e1539ccb9c2",
+          "actualSha256": "25fd475ce67d64ff6877ec065c663fa11c04de9c46be9a1889f59e1539ccb9c2",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-sentry.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-sentry.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "f4de8b33aafaefd4315f5c4b6d79c03edc212dd98003b2de98470f06f69f6008",
+          "actualSha256": "f4de8b33aafaefd4315f5c4b6d79c03edc212dd98003b2de98470f06f69f6008",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-youtube-thumbnail-generator.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-youtube-thumbnail-generator.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "8a4cb435544d65eb9cc26901585405b474009ab9fd00e3476fdb272648b9d866",
+          "actualSha256": "8a4cb435544d65eb9cc26901585405b474009ab9fd00e3476fdb272648b9d866",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-storyboard.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-storyboard.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "82a3a6d21070ee3257b22dea3f2df2d16f0f2e021c853d50787f64f8e47fa681",
+          "actualSha256": "82a3a6d21070ee3257b22dea3f2df2d16f0f2e021c853d50787f64f8e47fa681",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-routes.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-routes.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "5ea07360905829276eef61bd00a7e57d7daf54aa1e82408a0889c33060ccca75",
+          "actualSha256": "5ea07360905829276eef61bd00a7e57d7daf54aa1e82408a0889c33060ccca75",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-llm.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-llm.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "f901f69563dd5e5625dbd8f72093f93516049fb6db1639877302d99082995fd7",
+          "actualSha256": "f901f69563dd5e5625dbd8f72093f93516049fb6db1639877302d99082995fd7",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-audit.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-audit.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "b10f63f19d99cf1c61c7eb698764f649282b99c23fcbc1df576f572da43e0b38",
+          "actualSha256": "b10f63f19d99cf1c61c7eb698764f649282b99c23fcbc1df576f572da43e0b38",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/desktop-collapsed-rail-focus.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/desktop-collapsed-rail-focus.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "69ccf525e13c801e3c3d602b6ceb2dbb002bf17c05a7ec5791361b3bf1684bba",
+          "actualSha256": "69ccf525e13c801e3c3d602b6ceb2dbb002bf17c05a7ec5791361b3bf1684bba",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/pipeline-keyboard-detail.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/pipeline-keyboard-detail.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "dd08a69986abc5476b21f59655d7eccd1451c0f0db99483e8bc5a84f9cfd55f4",
+          "actualSha256": "dd08a69986abc5476b21f59655d7eccd1451c0f0db99483e8bc5a84f9cfd55f4",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/knowledge-filter-detail.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/knowledge-filter-detail.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "34270f15d1488c89875818ba3127fd67fc48f4e8df7dab3de03654e28f6f1b73",
+          "actualSha256": "34270f15d1488c89875818ba3127fd67fc48f4e8df7dab3de03654e28f6f1b73",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/users-filter-inspector.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/users-filter-inspector.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "d16e8c9651bdcf0687a5ff8f91f5f43a773828fd2f9c96e3cfccf6f7ea2bb745",
+          "actualSha256": "d16e8c9651bdcf0687a5ff8f91f5f43a773828fd2f9c96e3cfccf6f7ea2bb745",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/mobile-navigation-reviews.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/mobile-navigation-reviews.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "cf00656a0e71c0fb74ea54ea3f2eb9493f1cc1040562a83080487867ba97dd53",
+          "actualSha256": "cf00656a0e71c0fb74ea54ea3f2eb9493f1cc1040562a83080487867ba97dd53",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/knowledge-explicit-error.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/knowledge-explicit-error.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "ff60180e9ea1838bfb3606602436bb09535f50bac39e17d9eb7e375c10ae8d24",
+          "actualSha256": "ff60180e9ea1838bfb3606602436bb09535f50bac39e17d9eb7e375c10ae8d24",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-audit/pipeline-explicit-error.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-audit-run3-partial/pipeline-explicit-error.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "d35a3f18b58172e93c8f7cef7d4fcfc8c5f3394bed2c2cd603ba9697b26e71ea",
+          "actualSha256": "d35a3f18b58172e93c8f7cef7d4fcfc8c5f3394bed2c2cd603ba9697b26e71ea",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        }
+      ]
+    },
+    {
+      "report": "interaction-gap-audit/report.json",
+      "reportSha256": "3a9136c699c93cb4cbf015b762934b25a0576a59681dd847b1850bade18357f6",
+      "declaredScreenshotCount": 3,
+      "resolvedScreenshotCount": 3,
+      "allResolvedHashesMatch": true,
+      "entries": [
+        {
+          "recordedFile": "interaction-gap-audit/submissions-filter-inspector.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-gap-audit/submissions-filter-inspector.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "fe4b5f6bd2f6b5ed959c4b4c2c9a5f8f60a1c4a41469187a9e328f823a0418c5",
+          "actualSha256": "fe4b5f6bd2f6b5ed959c4b4c2c9a5f8f60a1c4a41469187a9e328f823a0418c5",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-gap-audit/reviews-filter-inspector.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-gap-audit/reviews-filter-inspector.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "584afa135b2bec6fe40ec755087801719af42f6dbc797b0fd29eaa0e32dcfe3b",
+          "actualSha256": "584afa135b2bec6fe40ec755087801719af42f6dbc797b0fd29eaa0e32dcfe3b",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        },
+        {
+          "recordedFile": "interaction-gap-audit/storyboard-explicit-held.png",
+          "recordedPathRelativeToReportExists": false,
+          "resolvedFile": "interaction-gap-audit/storyboard-explicit-held.png",
+          "resolvedFileExists": true,
+          "declaredSha256": "838f420d8518bb8f89a99956d238745a26e132fac7d19062ec64c394842367aa",
+          "actualSha256": "838f420d8518bb8f89a99956d238745a26e132fac7d19062ec64c394842367aa",
+          "hashMatches": true,
+          "resolution": "Removed the stale leading output-directory segment from the recorded file path."
+        }
+      ]
+    }
+  ]
+}

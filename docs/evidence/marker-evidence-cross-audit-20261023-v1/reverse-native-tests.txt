@@ -1,0 +1,1455 @@
+Tzudong reverse source snapshot 8d47c225afcff1aa1cc5d4a2d8578911c945e217
+Complete modules, no generated Supabase types or repeated735entry publication blob.
+
+===== apps/web/tests-unit/clustering-region-district.test.ts | bytes=13771 | sha256=69baa5893e494d7026cb047b4d1b12c2bc4d2e74e7d8a81cbc925dc549db6974 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { describe, expect, test } from 'bun:test';
+
+import {
+    REGIONAL_CENTERS,
+    SEOUL_DISTRICT_CENTERS,
+    getDistance,
+    getRegionalClusters,
+    getSeoulDistrictClusters,
+    restaurantsToGeoJSON,
+} from '../lib/clustering';
+import type { Restaurant } from '../types/restaurant';
+
+const makeRestaurant = (overrides: Partial<Restaurant> = {}): Restaurant => ({
+    id: overrides.id ?? 'restaurant-1',
+    name: overrides.name ?? '테스트 식당',
+    lat: overrides.lat ?? 37.5,
+    lng: overrides.lng ?? 127.0,
+    category: overrides.category ?? '한식',
+    categories: overrides.categories ?? ['한식'],
+    weekly_search_count: overrides.weekly_search_count ?? null,
+    ...overrides,
+} as Restaurant);
+
+const 서울 = REGIONAL_CENTERS['서울특별시'];
+const 부산 = REGIONAL_CENTERS['부산광역시'];
+const 강남 = SEOUL_DISTRICT_CENTERS['강남구'];
+const 마포 = SEOUL_DISTRICT_CENTERS['마포구'];
+const 종로 = SEOUL_DISTRICT_CENTERS['종로구'];
+
+const makeSeoulRow = (id: string, district: string, overrides: Partial<Restaurant> = {}) => {
+    const center = SEOUL_DISTRICT_CENTERS[district];
+    return makeRestaurant({
+        id,
+        road_address: `서울 ${district} 테스트로 1`,
+        lat: center.lat,
+        lng: center.lng,
+        ...overrides,
+    });
+};
+
+test('tier-only mutations invalidate retained Seoul and GeoJSON caches without promoting unknown tiers', () => {
+    const rows = [makeSeoulRow('tier-a', '강남구', { popularity_tier: 'standard' }), makeSeoulRow('tier-b', '강남구')];
+    getRegionalClusters(rows);
+    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('standard');
+    const original = restaurantsToGeoJSON(rows);
+    rows[0].popularity_tier = 'fire';
+    getRegionalClusters(rows);
+    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('fire');
+    const changed = restaurantsToGeoJSON(rows);
+    expect(changed).not.toBe(original);
+    expect(changed[0].properties.popularityTier).toBe('fire');
+    expect(restaurantsToGeoJSON(rows)).toBe(changed);
+    rows[0].popularity_tier = 'unreviewed' as Restaurant['popularity_tier'];
+    getRegionalClusters(rows);
+    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('standard');
+    expect(restaurantsToGeoJSON(rows)[0].properties.popularityTier).toBe('standard');
+});
+
+describe('getRegionalClusters', () => {
+    test('빈 목록은 빈 배열을 돌려준다', () => {
+        expect(getRegionalClusters([])).toEqual([]);
+    });
+
+    test('행정구역 키 순서대로 돌려주고 중심은 고정 중심 좌표를 쓴다', () => {
+        const rows = [
+            makeRestaurant({ id: 'busan-1', road_address: '부산광역시 해운대구 1', lat: 부산.lat, lng: 부산.lng }),
+            makeRestaurant({ id: 'seoul-1', road_address: '서울특별시 강남구 테헤란로 1', lat: 강남.lat, lng: 강남.lng }),
+        ];
+
+        const clusters = getRegionalClusters(rows);
+
+        expect(clusters.map((cluster) => cluster.region)).toEqual(['서울특별시', '부산광역시']);
+        expect(clusters[0].center).toEqual(서울);
+        expect(clusters[0].restaurantIds).toEqual(['seoul-1']);
+        expect(clusters[1].restaurantIds).toEqual(['busan-1']);
+    });
+
+    test('주소에 정식 명칭이 있으면 그 행정구역으로 묶는다', () => {
+        const clusters = getRegionalClusters([
+            makeRestaurant({ id: 'a', road_address: '경기도 성남시 분당구 1', lat: 37.39, lng: 127.11 }),
+        ]);
+
+        expect(clusters.map((cluster) => cluster.region)).toEqual(['경기도']);
+    });
+
+    test('주소가 약어로 시작하면 정식 명칭으로 바꾼다', () => {
+        const clusters = getRegionalClusters([
+            makeRestaurant({ id: 'a', road_address: '경기 성남시 분당구 1', lat: 37.39, lng: 127.11 }),
+        ]);
+
+        expect(clusters.map((cluster) => cluster.region)).toEqual(['경기도']);
+    });
+
+    test('주소에서 행정구역을 못 찾으면 좌표상 가장 가까운 중심으로 묶는다', () => {
+        const clusters = getRegionalClusters([
+            makeRestaurant({ id: 'a', road_address: '알 수 없는 주소 1', lat: 부산.lat, lng: 부산.lng }),
+        ]);
+
+        expect(clusters.map((cluster) => cluster.region)).toEqual(['부산광역시']);
+    });
+
+    test('좌표가 없는 행정구역은 클러스터에서 빠진다', () => {
+        const clusters = getRegionalClusters([
+            makeRestaurant({ id: 'no-coords', road_address: '서울특별시 강남구 1', lat: null as never, lng: null as never }),
+            makeRestaurant({ id: 'zero-lat', road_address: '서울특별시 강남구 1', lat: 0, lng: 127.0 }),
+            makeRestaurant({ id: 'ok', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng }),
+        ]);
+
+        expect(clusters.map((cluster) => cluster.region)).toEqual(['서울특별시']);
+        expect(clusters[0].restaurantIds).toEqual(['ok']);
+    });
+
+    test('restaurantIds 는 입력 순서를 유지한다', () => {
+        const clusters = getRegionalClusters([
+            makeRestaurant({ id: 'third', road_address: '서울특별시 강남구 3', lat: 강남.lat, lng: 강남.lng }),
+            makeRestaurant({ id: 'first', road_address: '서울특별시 마포구 1', lat: 마포.lat, lng: 마포.lng }),
+            makeRestaurant({ id: 'second', road_address: '서울특별시 종로구 2', lat: 종로.lat, lng: 종로.lng }),
+        ]);
+
+        expect(clusters[0].restaurantIds).toEqual(['third', 'first', 'second']);
+    });
+
+    test('카테고리는 빈도 내림차순 상위 3개이고 동률은 먼저 나온 순서를 따른다', () => {
+        const rows = [
+            makeRestaurant({ id: 'a', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng, categories: ['한식'] }),
+            makeRestaurant({ id: 'b', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng, categories: ['분식'] }),
+            makeRestaurant({ id: 'c', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng, categories: ['한식'] }),
+            makeRestaurant({ id: 'd', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng, categories: ['중식'] }),
+            makeRestaurant({ id: 'e', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng, categories: ['일식'] }),
+        ];
+
+        expect(getRegionalClusters(rows)[0].categories).toEqual(['한식', '분식', '중식']);
+    });
+
+    test('행정구역 클러스터는 묶인 맛집 중 가장 높은 불꽃 등급을 남긴다', () => {
+        const clusters = getRegionalClusters([
+            makeRestaurant({ id: 'low', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'rainbow' }),
+            makeRestaurant({ id: 'top', road_address: '서울특별시 강남구 2', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'fire' }),
+            makeRestaurant({ id: 'mid', road_address: '서울특별시 강남구 3', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'ember' }),
+        ]);
+
+        expect(clusters[0].popularityTier).toBe('fire');
+    });
+});
+
+describe('getSeoulDistrictClusters', () => {
+    test('빈 목록은 빈 결과를 돌려준다', () => {
+        expect(getSeoulDistrictClusters([], 1)).toEqual({ clusters: [], individualRestaurantIds: [] });
+    });
+
+    test('자치구 키 순서대로 돌려주고 중심은 소속 맛집들의 평균 좌표다', () => {
+        const rows = [
+            makeSeoulRow('mapo-1', '마포구'),
+            makeSeoulRow('gangnam-1', '강남구'),
+            makeSeoulRow('gangnam-2', '강남구', { lat: 강남.lat + 0.02, lng: 강남.lng + 0.04 }),
+        ];
+
+        const result = getSeoulDistrictClusters(rows, 1);
+
+        expect(result.clusters.map((cluster) => cluster.region)).toEqual(['강남구', '마포구']);
+        expect(result.clusters[0].count).toBe(2);
+        expect(result.clusters[0].center.lat).toBeCloseTo(강남.lat + 0.01, 10);
+        expect(result.clusters[0].center.lng).toBeCloseTo(강남.lng + 0.02, 10);
+        expect(result.clusters[1].center).toEqual({ lat: 마포.lat, lng: 마포.lng });
+        expect(result.individualRestaurantIds).toEqual([]);
+    });
+
+    test('주소에 서울이 없으면 자치구 클러스터에서 빠진다', () => {
+        const result = getSeoulDistrictClusters(
+            [makeRestaurant({ id: 'busan', road_address: '부산광역시 해운대구 1', lat: 부산.lat, lng: 부산.lng })],
+            1,
+        );
+
+        expect(result.clusters).toEqual([]);
+        expect(result.individualRestaurantIds).toEqual([]);
+    });
+
+    test('주소가 비어 있으면 자치구 클러스터에서 빠진다', () => {
+        const result = getSeoulDistrictClusters(
+            [makeRestaurant({ id: 'blank', road_address: null, jibun_address: null, lat: 강남.lat, lng: 강남.lng })],
+            1,
+        );
+
+        expect(result.clusters).toEqual([]);
+        expect(result.individualRestaurantIds).toEqual([]);
+    });
+
+    test('주소에 구 이름이 없으면 좌표상 가장 가까운 구로 묶는다', () => {
+        const result = getSeoulDistrictClusters(
+            [makeRestaurant({ id: 'a', road_address: '서울 어딘가로 1', lat: 강남.lat, lng: 강남.lng })],
+            1,
+        );
+
+        expect(result.clusters.map((cluster) => cluster.region)).toEqual(['강남구']);
+    });
+
+    test('좌표가 없는 맛집은 빠진다', () => {
+        const result = getSeoulDistrictClusters(
+            [
+                makeSeoulRow('no-coords', '강남구', { lat: null as never, lng: null as never }),
+                makeSeoulRow('ok', '강남구'),
+            ],
+            1,
+        );
+
+        expect(result.clusters[0].restaurantIds).toEqual(['ok']);
+    });
+
+    test('minClusterSize=1 은 맛집이 있는 구를 모두 클러스터로 돌려준다', () => {
+        const rows = [makeSeoulRow('a', '강남구'), makeSeoulRow('b', '마포구')];
+
+        const result = getSeoulDistrictClusters(rows, 1);
+
+        expect(result.clusters.map((cluster) => cluster.region)).toEqual(['강남구', '마포구']);
+        expect(result.individualRestaurantIds).toEqual([]);
+    });
+
+    test('minClusterSize=3 은 3개 미만 구를 개별 마커로 내보낸다', () => {
+        const rows = [
+            makeSeoulRow('g1', '강남구'),
+            makeSeoulRow('g2', '강남구'),
+            makeSeoulRow('g3', '강남구'),
+            makeSeoulRow('m1', '마포구'),
+            makeSeoulRow('m2', '마포구'),
+            makeSeoulRow('j1', '종로구'),
+        ];
+
+        const result = getSeoulDistrictClusters(rows, 3);
+
+        expect(result.clusters.map((cluster) => cluster.region)).toEqual(['강남구']);
+        expect(result.clusters[0].count).toBe(3);
+        // 개별 마커는 자치구 키 순서를 따르고, 같은 구 안에서는 입력 순서를 유지한다.
+        expect(result.individualRestaurantIds).toEqual(['m1', 'm2', 'j1']);
+    });
+});
+
+describe('clustering 캐시 동작', () => {
+    test('같은 목록을 다시 넘기면 같은 결과를 돌려준다', () => {
+        const rows = [makeSeoulRow('a', '강남구'), makeSeoulRow('b', '마포구')];
+
+        const first = getSeoulDistrictClusters(rows, 1);
+        getRegionalClusters(rows);
+        const second = getSeoulDistrictClusters(rows, 1);
+
+        expect(second).toEqual(first);
+    });
+
+    test('맛집 필드를 제자리에서 바꾸면 결과가 따라 바뀐다', () => {
+        const rows = [makeSeoulRow('a', '강남구')];
+        const before = getRegionalClusters(rows);
+
+        rows[0].road_address = '부산광역시 해운대구 1';
+        rows[0].lat = 부산.lat;
+        rows[0].lng = 부산.lng;
+
+        const after = getRegionalClusters(rows);
+
+        expect(before.map((cluster) => cluster.region)).toEqual(['서울특별시']);
+        expect(after.map((cluster) => cluster.region)).toEqual(['부산광역시']);
+    });
+
+    test('목록에 항목을 추가하거나 제거하면 결과가 따라 바뀐다', () => {
+        const rows = [makeSeoulRow('a', '강남구')];
+        getRegionalClusters(rows);
+
+        rows.push(makeSeoulRow('b', '강남구'));
+        expect(getRegionalClusters(rows)[0].count).toBe(2);
+
+        rows.splice(0, 2);
+        rows.push(makeSeoulRow('c', '마포구'));
+        expect(getRegionalClusters(rows).map((cluster) => cluster.region)).toEqual(['서울특별시']);
+        expect(getSeoulDistrictClusters(rows, 1).clusters.map((cluster) => cluster.region)).toEqual(['마포구']);
+    });
+
+    test('돌려준 restaurantIds 를 수정해도 다음 호출 결과가 오염되지 않는다', () => {
+        const rows = [makeSeoulRow('a', '강남구')];
+
+        // 캐시가 비어 있는 단발 호출
+        const alone = getSeoulDistrictClusters(rows, 1);
+        alone.clusters[0].restaurantIds.push('오염');
+        expect(getSeoulDistrictClusters(rows, 1).clusters[0].restaurantIds).toEqual(['a']);
+
+        // getRegionalClusters 가 먼저 만든 캐시를 재사용하는 호출
+        getRegionalClusters(rows);
+        const shared = getSeoulDistrictClusters(rows, 1);
+        shared.clusters[0].restaurantIds.push('오염');
+        expect(getSeoulDistrictClusters(rows, 1).clusters[0].restaurantIds).toEqual(['a']);
+    });
+});
+
+describe('getDistance', () => {
+    test('같은 좌표는 0 이고 3-4-5 삼각형을 따른다', () => {
+        expect(getDistance(37.5, 127.0, 37.5, 127.0)).toBe(0);
+        expect(getDistance(0, 0, 3, 4)).toBe(5);
+    });
+});
+
+
+
+===== apps/web/tests-unit/evidence-frame-conflict.test.ts | bytes=1536 | sha256=70c6ab7c5275579d061b63705f9b2efaa7f1f60978b53981a6ec0c3fc81041b5 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { buildEvidenceFrame, unionApprovedEvidenceFrames } from '../lib/evidence-engineering/frames';
+import { publicReviewedVideoFrames } from '../components/restaurant/RestaurantEvidenceCarousel';
+import { collectRestaurantMergedMedia } from '../lib/restaurant-merged-media';
+import type { Restaurant } from '../types/restaurant';
+const reviewed = JSON.parse(readFileSync(resolve(import.meta.dir, '../../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
+const frame = buildEvidenceFrame(reviewed.frames[0].frame);
+
+test('frame conflicts fail closed at both public read boundaries while strict publication validation still rejects', () => {
+  for (const other of [
+    buildEvidenceFrame({ ...frame, detected_shop_name: '충돌 이름' }),
+    buildEvidenceFrame({ ...frame, moderation_status: 'rejected' }),
+    buildEvidenceFrame({ ...frame, frame_id: 'same-key-different-frame' }),
+  ]) {
+    expect(() => unionApprovedEvidenceFrames([[frame], [other]])).toThrow();
+    expect(publicReviewedVideoFrames([[frame], [other]])).toEqual([]);
+    const media = collectRestaurantMergedMedia({ id: 'conflict-owner', name: '충돌 식당', youtube_link: frame.youtube_seek_url,
+      evidence_frames: [frame], mergedEvidenceFrames: [other] } as unknown as Restaurant);
+    expect(media.evidenceFrames).toEqual([]);
+    expect(media.youtubeLinks).toContain(frame.youtube_seek_url);
+  }
+});
+
+
+===== apps/web/tests-unit/evidence-frame-failure-browser.test.ts | bytes=4281 | sha256=2b61e2c6ddb2272adb46c47a24850b0be6eff70fc07414bb0a95b22874bb7207 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { expect, test } from 'bun:test';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { chromium, expect as ui } from '@playwright/test';
+
+const appRoot = join(import.meta.dir, '..');
+const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const reviewed = JSON.parse(readFileSync(resolve(appRoot, '../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
+const frame = reviewed.frames[0].frame;
+
+async function bundle() {
+  const entry = `import React, { useState } from 'react'; import { createRoot } from 'react-dom/client';
+    import { RestaurantEvidenceCarousel } from './components/restaurant/RestaurantEvidenceCarousel';
+    const frame = ${JSON.stringify(frame)};
+    function App() { const [path, setPath] = useState('valid.webp');
+      return <><button onClick={() => setPath('missing.webp')}>실패 재현</button>
+        <button onClick={() => setPath('restored.webp')}>새 이미지</button>
+        <RestaurantEvidenceCarousel frames={[[{ ...frame, image_url: 'https://frame-failure.test/' + path }]]} /></>; }
+    createRoot(document.body.appendChild(document.createElement('div'))).render(<App />);`;
+  const built = await Bun.build({ entrypoints: ['frame-failure-fixture'], target: 'browser', format: 'iife', write: false,
+    define: { 'process.env.NODE_ENV': '"test"' }, plugins: [{ name: 'frame-failure', setup(builder) {
+      builder.onResolve({ filter: /^frame-failure-fixture$/ }, () => ({ path: 'entry', namespace: 'fixture' }));
+      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: entry, loader: 'tsx', resolveDir: appRoot }));
+      builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync('./' + args.path.slice(2), appRoot) }));
+    }}] });
+  expect(built.success).toBe(true); return built.outputs[0].text();
+}
+
+(existsSync(chrome) ? test : test.skip)('context-only frames keep an honest heading and original video link after image failure, and recover for a new source', async () => {
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const script = await bundle();
+    const bytes = readFileSync(resolve(appRoot, 'public/evidence-frames', frame.storage_object_key));
+    for (const width of [390, 820, 1440]) {
+      const page = await browser.newPage({ viewport: { width, height: 950 } });
+      try {
+        const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+        await page.route('**/*', route => {
+          const url = route.request().url();
+          if (url.endsWith('valid.webp') || url.endsWith('restored.webp')) return route.fulfill({ contentType: 'image/webp', body: bytes });
+          if (url.endsWith('missing.webp')) return route.fulfill({ status: 404, body: '' });
+          if (url === 'https://frame-failure.test/') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' });
+          return route.abort();
+        });
+        await page.goto('https://frame-failure.test/'); await page.addScriptTag({ content: script });
+        await ui(page.getByRole('heading', { name: '영상에서 확인한 방문·현장 장면 📸' })).toBeVisible();
+        await ui(page.locator('section img')).toBeVisible();
+        await ui.poll(() => page.locator('section img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(640);
+        await page.getByRole('button', { name: '실패 재현' }).click();
+        await ui(page.getByRole('status')).toContainText('원본 영상에서 확인');
+        await ui(page.locator('section img')).toHaveCount(0);
+        await ui(page.locator('section a')).toHaveAttribute('href', frame.youtube_seek_url);
+        await page.getByRole('button', { name: '새 이미지' }).click();
+        await ui(page.locator('section img')).toHaveAttribute('src', 'https://frame-failure.test/restored.webp');
+        await ui.poll(() => page.locator('section img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(640);
+        await ui(page.getByRole('status')).toHaveCount(0);
+        expect(errors).toEqual([]);
+      } finally { await page.close(); }
+    }
+  } finally { await browser.close(); }
+}, 60000);
+
+
+===== apps/web/tests-unit/overseas-marker-refresh-browser.test.ts | bytes=7165 | sha256=842c2e9076aa17b2a1803bf8d3a2be580f65d0cc43dd20731baadf54b6e39edf | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { expect, test } from 'bun:test';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { chromium, expect as ui } from '@playwright/test';
+
+const appRoot = join(import.meta.dir, '..');
+const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+
+async function fixtureBundle() {
+  const entry = `
+    import React, { useState } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import OverseasMap from './components/map/OverseasMap';
+    const initial = { id: 'refresh-marker', name: '처음 식당', lat: 35, lng: 139, categories: ['한식'], popularity_tier: 'fire' };
+    globalThis.__rows = [initial]; globalThis.__sdk = { creations: 0, jumps: [], clicks: [] };
+    function App() {
+      const [version, update] = useState(0);
+      globalThis.__refresh = patch => { globalThis.__rows = [{ ...globalThis.__rows[0], ...patch }]; update(v => v + 1); };
+      return <OverseasMap filters={{ categories: [], minRating: 0, minReviews: 0, minUserVisits: 0, minJjyangVisits: 0 }} selectedCountry={null} searchedRestaurant={null}
+        selectedRestaurant={globalThis.__rows[0]} refreshTrigger={version} mapFocusZoom={12 + version}
+        onRestaurantSelect={row => globalThis.__sdk.clicks.push({ kind: 'select', name: row.name, version })}
+        onMarkerClick={row => globalThis.__sdk.clicks.push({ kind: 'marker', name: row.name, version })} />;
+    }
+    createRoot(document.body.appendChild(document.createElement('div'))).render(<App />);
+  `;
+  const sdk = `
+    export const setWorkerUrl = () => {};
+    export class AttributionControl {}
+    export class Map {
+      constructor(options) { this.container = options.container; }
+      on(event, callback) { if (event === 'load') setTimeout(callback, 0); return this; }
+      addControl() {} resize() {} remove() {} getZoom() { return 5; }
+      jumpTo(value) { globalThis.__sdk.jumps.push(value); } easeTo() {}
+    }
+    export class Marker {
+      constructor({element}) { this.element = element; globalThis.__sdk.creations++; }
+      getElement() { return this.element; }
+      setLngLat(value) { this.element.dataset.coordinates = JSON.stringify(value); return this; }
+      addTo(map) { map.container.append(this.element); return this; }
+      remove() { this.element.remove(); }
+    }
+  `;
+  const result = await Bun.build({ entrypoints: ['overseas-refresh-fixture'], target: 'browser', format: 'iife', write: false,
+    define: { 'process.env.NODE_ENV': '"test"', 'process.env.NEXT_PUBLIC_MAPLIBRE_WORKER_URL': '""' }, plugins: [{ name: 'overseas-refresh', setup(builder) {
+      builder.onResolve({ filter: /^overseas-refresh-fixture$/ }, () => ({ path: 'entry', namespace: 'fixture' }));
+      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: entry, loader: 'tsx', resolveDir: appRoot }));
+      builder.onResolve({ filter: /^maplibre-gl$/ }, () => ({ path: 'sdk', namespace: 'stub' }));
+      builder.onResolve({ filter: /hooks\/use-restaurants$/ }, () => ({ path: 'rows', namespace: 'stub' }));
+      builder.onResolve({ filter: /\.css$/ }, () => ({ path: 'css', namespace: 'stub' }));
+      builder.onLoad({ filter: /.*/, namespace: 'stub' }, args => ({ loader: 'ts', contents: args.path === 'sdk' ? sdk
+        : args.path === 'rows' ? 'export const useRestaurants = () => ({ data: globalThis.__rows, isLoading: false });' : '' }));
+      builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync('./' + args.path.slice(2), appRoot) }));
+    }}] });
+  expect(result.success).toBe(true);
+  return result.outputs[0].text();
+}
+
+(existsSync(chrome) ? test : test.skip)('retained overseas markers refresh content, location and click data without recreating or losing selection', async () => {
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const script = await fixtureBundle();
+    for (const width of [390, 820, 1440]) {
+      const page = await browser.newPage({ viewport: { width, height: 950 } });
+      try {
+        const errors: string[] = [];
+        page.on('pageerror', error => errors.push(error.message));
+        await page.route('**/*', route => route.request().url().startsWith('https://marker-refresh.test/')
+          ? route.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' }) : route.abort());
+        await page.goto('https://marker-refresh.test/'); await page.addScriptTag({ content: script });
+        const marker = page.locator('#marker-refresh-marker');
+        try { await ui(marker.locator('img')).toHaveAttribute('alt', '처음 식당'); }
+        catch (error) { throw new Error(JSON.stringify({ errors, body: await page.locator('body').innerText() }), { cause: error }); }
+        await marker.evaluate(element => { (window as unknown as { __retained: Element }).__retained = element; });
+        await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({ name: '최신 식당', categories: ['고기'], lat: 36, lng: 140 }));
+        await ui(marker.locator('img')).toHaveAttribute('alt', '최신 식당');
+        await ui(marker.locator('img')).toHaveAttribute('src', /meat_bbq/);
+        await ui(marker).toHaveAttribute('data-coordinates', '[140,36]');
+        await ui(marker).toHaveClass(/selected/);
+        await marker.click();
+        expect(await page.evaluate(() => (window as unknown as { __sdk: unknown }).__sdk)).toMatchObject({
+          creations: 1, clicks: [{ kind: 'select', name: '최신 식당', version: 1 }, { kind: 'marker', name: '최신 식당', version: 1 }],
+        });
+        await marker.locator('img').evaluate(element => { (window as unknown as { __image: Element }).__image = element; });
+        await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({}));
+        await ui(marker).toHaveAttribute('data-coordinates', '[140,36]');
+        expect(await marker.locator('img').evaluate(element => element === (window as unknown as { __image: Element }).__image)).toBe(true);
+        await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({ popularity_tier: 'rainbow' }));
+        await ui(marker.locator('[data-popularity-tier]')).toHaveAttribute('data-popularity-tier', 'rainbow');
+        await ui(marker).toHaveClass(/selected/);
+        expect(await marker.evaluate(element => element === (window as unknown as { __retained: Element }).__retained)).toBe(true);
+        await marker.click();
+        const state = await page.evaluate(() => (window as unknown as { __sdk: { creations: number; clicks: unknown[]; jumps: { center: number[]; zoom: number }[] } }).__sdk);
+        expect(state.creations).toBe(1); expect(state.clicks).toHaveLength(4);
+        expect(state.jumps.at(-1)).toMatchObject({ center: [140, 36], zoom: 15 });
+        await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({ lat: 0, lng: 0 }));
+        await ui(marker).toHaveCount(0);
+        expect(errors).toEqual([]);
+      } finally { await page.close(); }
+    }
+  } finally { await browser.close(); }
+}, 60000);
+
+
+===== apps/web/tests-unit/popularity-input-boundary.test.ts | bytes=3850 | sha256=882b02a0e7f4073b9edaa4769cd921dbdbcd20380a2e88e551be689b20e21813 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { afterEach, expect, test } from 'bun:test';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { buildPublicPopularity } from '../scripts/build-public-popularity';
+
+const dirs: string[] = [];
+afterEach(async () => { for (const dir of dirs.splice(0)) await rm(dir, { recursive: true, force: true }); });
+
+async function build(patch: Record<string, unknown> = {}) {
+  const dir = await mkdtemp(join(tmpdir(), 'tzudong-popularity-boundary-')); dirs.push(dir);
+  const row = { id: 'approved-a', name: '한식당', approved_name: '승인 식당명', status: 'approved', lat: 37.5, lng: 127,
+    road_address: '서울특별시 강남구', categories: ['한식'], youtube_link: 'https://www.youtube.com/watch?v=abc123DEF45', ...patch };
+  await writeFile(join(dir, 'source.json'), JSON.stringify({ rows: [row] }));
+  await writeFile(join(dir, 'metrics.json'), JSON.stringify({ rows: [{ video_id: 'abc123DEF45', view_count: 123,
+    fetched_at: '2026-07-01T00:00:00Z', bucket_started_at: '2026-07-01T00:00:00Z' }] }));
+  return buildPublicPopularity(join(dir, 'source.json'), join(dir, 'metrics.json'), 'a'.repeat(40));
+}
+
+test('rejects unapproved source rows before merge rather than granting a public tier', async () => {
+  for (const status of ['pending', 'deleted', null]) {
+    await expect(build({ status })).rejects.toThrow('popularity_source_not_approved');
+  }
+});
+
+test('rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them', async () => {
+  for (const patch of [{ lat: null }, { lng: null }, { lat: '' }, { lng: ' ' }, { lat: 'NaN' }, { lat: 91 }, { lng: -181 }, { lat: 0, lng: 0 }]) {
+    await expect(build(patch)).rejects.toThrow('popularity_source_coordinates_invalid');
+  }
+});
+
+test('preserves approved names and records the actual P98/P95/P85 policy for valid inputs', async () => {
+  const result = await build();
+  expect(result.evidence.groups[0].name).toBe('승인 식당명');
+  expect(result.evidence.groups[0].cohort).toBe('domestic');
+  expect(result.evidence.policy).toBe('map-cohort-max-linked-video-views-nearest-rank-p98-p95-p85-v2');
+  // One known group reaches all three nearest-rank thresholds; this is not a fixed percentage quota.
+  expect(result.publication.entries[0].tier).toBe('fire');
+});
+
+test('uses the shared-map latitude boundary and rejects unnamed publication inputs', async () => {
+  for (const lat of [32.5, 39.5]) expect((await build({ lat })).evidence.groups[0].cohort).toBe('overseas');
+  await expect(build({ approved_name: '', name: '' })).rejects.toThrow('popularity_source_name_invalid');
+});
+
+test('nearest-rank has no ember at n=19 but separates P95 and P98 at n=20', async () => {
+  for (const size of [19, 20]) {
+    const dir = await mkdtemp(join(tmpdir(), 'tzudong-nearest-rank-')); dirs.push(dir);
+    const rows = Array.from({ length: size }, (_, index) => ({ id: `shop-${index}`, name: `식당 ${index}`, status: 'approved',
+      lat: 37.5, lng: 127, road_address: `서울특별시 강남구 테스트로 ${index}`, youtube_link: `https://www.youtube.com/watch?v=${String(index).padStart(11, '0')}` }));
+    const metrics = rows.map((_, index) => ({ video_id: String(index).padStart(11, '0'), view_count: index + 1, fetched_at: '2026-07-01T00:00:00Z' }));
+    await writeFile(join(dir, 'source.json'), JSON.stringify({ rows }));
+    await writeFile(join(dir, 'metrics.json'), JSON.stringify({ rows: metrics }));
+    const result = await buildPublicPopularity(join(dir, 'source.json'), join(dir, 'metrics.json'), 'a'.repeat(40));
+    expect(result.evidence.thresholds[0]).toMatchObject({ knownGroups: size, fireAt: size, emberAt: 19 });
+    expect(result.publication.entries.filter(entry => entry.tier === 'ember')).toHaveLength(size === 19 ? 0 : 1);
+  }
+});
+
+
+===== apps/web/tests-unit/public-popularity-publication.test.ts | bytes=12531 | sha256=6c552c1224825bb577e2d862acb4be325426064793e616e3981f19157c3933bb | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { GET } from '../app/api/public-popularity/route';
+import { mergeRestaurants } from '../hooks/use-restaurants';
+import { buildRestaurantDetailFromMergeRows } from '../hooks/use-restaurant-detail';
+import {
+    createPublishedPopularityLookup, parsePublicPopularityPublication,
+    projectPublishedPopularityTier, publicPopularityPublication, resolvePublishedPopularityTier,
+} from '../lib/evidence-engineering/published-popularity';
+import { buildRestaurantMarkerKindSignature } from '../lib/restaurant-marker-kind';
+import { buildMarkerRenderSignature, shouldSkipMarkerUpdate } from '../lib/map-render-guard';
+import type { Tables } from '../integrations/supabase/types';
+import type { Restaurant } from '../types/restaurant';
+
+const snapshot = () => ({ schemaVersion: 2, publicationVersion: 'test-cohort-1',
+    sourceRevision: 'a'.repeat(40), entries: [{ restaurantId: 'public-a', memberRestaurantIds: ['public-a'], tier: 'fire' }] });
+const dbRow = (id: string, extra = {}) => ({ id, approved_name: '검증 식당', status: 'approved',
+    road_address: '공개 주소', lat: 37.5, lng: 127, categories: ['한식'],
+    created_at: '2026-10-17T00:00:00Z', ...extra } as unknown as Tables<'restaurants'>);
+
+describe('operator-published public popularity', () => {
+    test('rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts', () => {
+        const valid = snapshot();
+        const invalid = [
+            { ...valid, metrics: { score: 100 } },
+            { ...valid, entries: [{ ...valid.entries[0], raw_score: 100 }] },
+            { ...valid, entries: [...valid.entries, ...valid.entries] },
+            { ...valid, entries: [{ ...valid.entries[0], tier: 'private-shadow' }] },
+            { ...valid, entries: [{ ...valid.entries[0], tier: { toString() { throw new Error('coerced'); } } }] },
+            { ...valid, publicationVersion: 'unpublished' },
+            { ...valid, schemaVersion: 1 },
+            { ...valid, sourceRevision: null },
+        ];
+        for (const value of invalid) expect(() => parsePublicPopularityPublication(value)).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
+    });
+
+    test('bounds entry count and serialized bytes and freezes independent copies', () => {
+        const valid = snapshot();
+        const parsed = parsePublicPopularityPublication(valid);
+        valid.entries[0].tier = 'rainbow';
+        valid.entries[0].memberRestaurantIds.push('public-z');
+        expect(parsed.entries[0].tier).toBe('fire');
+        expect(parsed.entries[0].memberRestaurantIds).toEqual(['public-a']);
+        expect(Object.isFrozen(parsed.entries[0])).toBe(true);
+        expect(Object.isFrozen(parsed.entries)).toBe(true);
+        expect(() => parsePublicPopularityPublication({ ...valid,
+            entries: Array.from({ length: 5001 }, (_, i) => ({ restaurantId: `r-${i}`, tier: 'fire' })),
+        })).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
+        expect(() => parsePublicPopularityPublication({ ...valid,
+            entries: Array.from({ length: 4000 }, (_, i) => { const id = `${i}-`.padEnd(128, 'a');
+                return { restaurantId: id, memberRestaurantIds: [id], tier: 'fire' }; }),
+        })).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
+        expect(Object.isFrozen(parsed.entries[0].memberRestaurantIds)).toBe(true);
+    });
+
+    test('list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it', () => {
+        const lookup = createPublishedPopularityLookup(snapshot());
+        const rows = [dbRow('public-a'), dbRow('private-b', { approved_name: '다른 식당', road_address: '다른 주소', lng: 128, popularity_tier: 'rainbow' })];
+        const before = structuredClone(rows);
+        const list = mergeRestaurants(rows, lookup);
+        expect(list.find((r) => r.id === 'public-a')?.popularity_tier).toBe('fire');
+        expect(list.find((r) => r.id === 'private-b')?.popularity_tier).toBe('standard');
+        for (const item of list) {
+            const stale = { ...item, popularity_tier: 'rainbow' as const };
+            expect(buildRestaurantDetailFromMergeRows(stale, rows.filter((r) => r.id === item.id), lookup)?.popularity_tier)
+                .toBe(item.popularity_tier);
+            expect(buildRestaurantDetailFromMergeRows(stale, [], lookup)?.popularity_tier).toBe(item.popularity_tier);
+        }
+        expect(rows).toEqual(before);
+        expect(projectPublishedPopularityTier(list[0], lookup)).toBe(list[0]);
+    });
+
+    test('merged representatives use their published identity and do not inherit a child grade', () => {
+        const lookup = createPublishedPopularityLookup(snapshot());
+        const rows = [dbRow('public-a', { created_at: '2026-10-16T00:00:00Z' }), dbRow('new-primary')];
+        const [merged] = mergeRestaurants(rows, lookup);
+        expect(merged.mergedRestaurants).toHaveLength(2);
+        expect(merged.popularity_tier).toBe('standard');
+        expect(buildRestaurantDetailFromMergeRows(merged, rows, lookup)?.popularity_tier).toBe('standard');
+    });
+
+    test('explicit canonical membership keeps compact, full, partial, and direct-detail grades identical', () => {
+        const data = snapshot();
+        data.entries[0].memberRestaurantIds.push('public-z');
+        const lookup = createPublishedPopularityLookup(data);
+        const rows = [dbRow('public-a', { youtube_meta: { publishedAt: '2026-01-01' } }),
+            dbRow('public-z', { youtube_meta: { publishedAt: '2026-10-01' } })];
+        const compact = rows.map(({ youtube_meta: _, ...row }) => row) as Tables<'restaurants'>[];
+        const [mapRow] = mergeRestaurants(compact, lookup);
+        const [fullRow] = mergeRestaurants(rows, lookup);
+        expect(mapRow.id).toBe('public-a');
+        expect(fullRow.id).toBe('public-z'); // Preserve the existing representative selection.
+        expect(mapRow.popularity_tier).toBe('fire');
+        expect(fullRow.popularity_tier).toBe('fire');
+        expect(mergeRestaurants([rows[1]], lookup)[0].popularity_tier).toBe('fire');
+        expect(buildRestaurantDetailFromMergeRows(mapRow, rows, lookup)?.popularity_tier).toBe('fire');
+        expect(projectPublishedPopularityTier(rows[1] as unknown as Restaurant, lookup).popularity_tier).toBe('fire');
+        expect(lookup('unpublished-new-member')).toBe('standard');
+    });
+
+    test('new members or conflicting cohorts fail closed for either display representative', () => {
+        const data = snapshot();
+        data.entries.push({ restaurantId: 'public-z', memberRestaurantIds: ['public-z'], tier: 'rainbow' });
+        const lookup = createPublishedPopularityLookup(data);
+        for (const other of ['public-z', 'unpublished-new-member']) {
+            const rows = [dbRow('public-a', { youtube_meta: { publishedAt: '2026-01-01' } }),
+                dbRow(other, { youtube_meta: { publishedAt: '2026-10-01' } })];
+            const compact = rows.map(({ youtube_meta: _, ...row }) => row) as Tables<'restaurants'>[];
+            const [mapRow] = mergeRestaurants(compact, lookup);
+            const [fullRow] = mergeRestaurants(rows, lookup);
+            expect(mapRow.popularity_tier).toBe('standard');
+            expect(fullRow.popularity_tier).toBe('standard');
+            expect(buildRestaurantDetailFromMergeRows(mapRow, rows, lookup)?.popularity_tier).toBe('standard');
+            expect(resolvePublishedPopularityTier(fullRow, lookup)).toBe('standard');
+        }
+    });
+
+    test('rejects ambiguous/incomplete canonical membership and bounds the whole member index', () => {
+        const data = snapshot();
+        for (const members of [[], ['public-z'], ['public-z', 'public-a'], ['public-a', 'public-a']]) {
+            expect(() => parsePublicPopularityPublication({ ...data,
+                entries: [{ ...data.entries[0], memberRestaurantIds: members }] })).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
+        }
+        expect(() => parsePublicPopularityPublication({ ...data, entries: [data.entries[0],
+            { restaurantId: 'a', memberRestaurantIds: ['a', 'public-a'], tier: 'rainbow' }] })).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
+        const first = Array.from({ length: 2501 }, (_, i) => `a-${String(i).padStart(4, '0')}`);
+        const second = first.map((id) => id.replace('a-', 'b-'));
+        const atCapacity = Array.from({ length: 5000 }, (_, i) => `r-${String(i).padStart(4, '0')}`);
+        expect(createPublishedPopularityLookup({ ...data, entries: [
+            { restaurantId: atCapacity[0], memberRestaurantIds: atCapacity, tier: 'fire' },
+        ] })(atCapacity[4999])).toBe('fire');
+        expect(() => parsePublicPopularityPublication({ ...data, entries: [
+            { restaurantId: first[0], memberRestaurantIds: first, tier: 'fire' },
+            { restaurantId: second[0], memberRestaurantIds: second, tier: 'rainbow' },
+        ] })).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
+    });
+
+    test('published membership overrides a stale caller tier and the detail panel does not mention flame counts', () => {
+        const data = snapshot(); data.entries[0].memberRestaurantIds.push('public-z');
+        const lookup = createPublishedPopularityLookup(data);
+        expect(resolvePublishedPopularityTier({ id: 'public-a' }, lookup)).toBe('fire');
+        expect(resolvePublishedPopularityTier({ id: 'public-z' }, lookup)).toBe('fire');
+        expect(resolvePublishedPopularityTier({ id: 'private' }, lookup)).toBe('standard');
+        const panel = readFileSync(resolve(import.meta.dir, '../components/restaurant/RestaurantDetailPanel.tsx'), 'utf8');
+        expect(panel).not.toContain('PopularityMention');
+        expect(panel).not.toContain('불꽃 3개');
+        expect(panel).not.toContain('제일 맛있는 맛집');
+    });
+
+    test('published endpoint returns the reviewed public snapshot and stable ETag without raw scores', async () => {
+        const response = GET();
+        const body = await response.text();
+        expect(response.status).toBe(200);
+        expect(JSON.parse(body)).toEqual(publicPopularityPublication);
+        expect(response.headers.get('etag')).toBe(`"${createHash('sha256').update(body).digest('hex')}"`);
+        expect(response.headers.get('cache-control')).toBe('public, max-age=0, must-revalidate');
+        expect(publicPopularityPublication.entries.length).toBeGreaterThan(0);
+        expect(publicPopularityPublication.publicationVersion).not.toBe('unpublished');
+        for (const entry of publicPopularityPublication.entries) {
+            for (const id of entry.memberRestaurantIds) expect(createPublishedPopularityLookup(publicPopularityPublication)(id)).toBe(entry.tier);
+        }
+        expect(createPublishedPopularityLookup(publicPopularityPublication)('missing')).toBe('standard');
+    });
+});
+
+describe('public tier reaches the outer Naver render guard', () => {
+    const signature = (tier: unknown, retained: { selected?: unknown; searched?: unknown } = {}) => buildMarkerRenderSignature({
+        zoom: 14, bounds: null, displayRestaurantIds: ['public-a'], selectedRestaurantId: 'retained', searchedRestaurantId: null,
+        isClusterMode: false, isRegionalClusterMode: false, isSeoulDistrictMode: false,
+        markerLayerVersion: buildRestaurantMarkerKindSignature([
+            { id: 'public-a', popularity_tier: tier as Restaurant['popularity_tier'] },
+        ], undefined, retained),
+    });
+    test('same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip', () => {
+        expect(shouldSkipMarkerUpdate(signature('fire'), signature('rainbow'))).toBe(false);
+        expect(shouldSkipMarkerUpdate(signature('rainbow'), signature('standard'))).toBe(false);
+        expect(shouldSkipMarkerUpdate(signature(null), signature(undefined))).toBe(true);
+        expect(shouldSkipMarkerUpdate(signature('unknown'), signature('standard'))).toBe(true);
+    });
+    test('retained selection/search grades also invalidate the unchanged-query guard', () => {
+        expect(shouldSkipMarkerUpdate(signature('standard', { selected: 'fire' }), signature('standard', { selected: 'rainbow' }))).toBe(false);
+        expect(shouldSkipMarkerUpdate(signature('standard', { searched: 'fire' }), signature('standard', { searched: 'standard' }))).toBe(false);
+    });
+});
+
+
+===== apps/web/tests-unit/evidence-publication-runtime.test.ts | bytes=6477 | sha256=f6b6692b887d5cffd5b33f128a6fd2218fae4513dd6d9dee12b998a8fc161cd9 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { afterEach, describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { buildEvidenceFrame } from '../lib/evidence-engineering/frames';
+import { previewFramePublication, publishFrameFiles } from '../scripts/publish-evidence-frames';
+import { buildPublicPopularity } from '../scripts/build-public-popularity';
+import publication from '../lib/evidence-engineering/public-popularity-publication.json';
+import { wrapMarkerWithPopularityTier } from '../lib/evidence-engineering/popularity-marker';
+import { buildOverseasMarkerHtml } from '../lib/overseas-map-marker-helpers';
+
+const cleanups: string[] = [];
+afterEach(async () => { for (const dir of cleanups.splice(0)) await rm(dir, { recursive: true, force: true }); });
+const sha = (value: Buffer) => createHash('sha256').update(value).digest('hex');
+
+async function fixture() {
+  const root = await mkdtemp(join(tmpdir(), 'tzudong-publication-test-')); cleanups.push(root);
+  const source = join(root, 'source'); const output = join(root, 'public'); await mkdir(source);
+  const reviewed = JSON.parse(await readFile(resolve(import.meta.dir, '../../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
+  const first = reviewed.frames[0];
+  const bytes = await readFile(resolve(import.meta.dir, '../public/evidence-frames', first.frame.storage_object_key));
+  await writeFile(join(source, 'frame.webp'), bytes);
+  const restaurantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const frame = buildEvidenceFrame({ ...first.frame, frame_id: 'test-frame' });
+  const restaurantBytes = Buffer.from(JSON.stringify({ rows: [{ id: restaurantId, status: 'approved', youtube_link: `https://www.youtube.com/watch?v=${frame.video_id}` }] }));
+  await writeFile(join(root, 'approved-source-rows.json'), restaurantBytes);
+  const manifest = { restaurantSourceSha256: sha(restaurantBytes), frames: [{ restaurant_id: restaurantId, source_file: 'frame.webp', frame: { ...frame } }] };
+  const path = join(root, 'manifest.json'); await writeFile(path, JSON.stringify(manifest));
+  return { root, source, output, bytes, frame, manifest, path };
+}
+
+describe('reviewed evidence publication', () => {
+  test('publishes hash-verified WebP idempotently and refuses a wrong confirmation or immutable collision', async () => {
+    const f = await fixture(); const preview = await previewFramePublication(f.path, f.source);
+    await expect(publishFrameFiles(f.path, f.source, f.output, 'wrong')).rejects.toThrow('publication_confirmation_mismatch');
+    await publishFrameFiles(f.path, f.source, f.output, preview.previewHash);
+    const target = join(f.output, f.frame.storage_object_key);
+    expect(await readFile(target)).toEqual(f.bytes);
+    await publishFrameFiles(f.path, f.source, f.output, preview.previewHash);
+    await writeFile(target, 'collision');
+    await expect(publishFrameFiles(f.path, f.source, f.output, preview.previewHash)).rejects.toThrow('immutable_frame_collision');
+  });
+
+  test('rejects unreviewed frames, altered bytes, source traversal and mismatched restaurant videos', async () => {
+    const f = await fixture();
+    f.manifest.frames[0].frame.moderation_status = 'pending'; await writeFile(f.path, JSON.stringify(f.manifest));
+    await expect(previewFramePublication(f.path, f.source)).rejects.toThrow('frame_not_reviewed');
+    f.manifest.frames[0].frame.moderation_status = 'approved';
+    f.manifest.frames[0].frame.video_id = 'abc123DEF45';
+    f.manifest.frames[0].frame = buildEvidenceFrame(f.manifest.frames[0].frame); await writeFile(f.path, JSON.stringify(f.manifest));
+    await expect(previewFramePublication(f.path, f.source)).rejects.toThrow('frame_restaurant_video_mismatch');
+    f.manifest.frames[0].frame = f.frame; f.manifest.frames[0].source_file = '../outside.webp';
+    await writeFile(join(f.root, 'outside.webp'), f.bytes); await writeFile(f.path, JSON.stringify(f.manifest));
+    await expect(previewFramePublication(f.path, f.source)).rejects.toThrow('source_path_outside_root');
+    f.manifest.frames[0].source_file = 'frame.webp'; await writeFile(f.path, JSON.stringify(f.manifest)); await writeFile(join(f.source, 'frame.webp'), Buffer.concat([f.bytes, Buffer.from([1])]));
+    await expect(previewFramePublication(f.path, f.source)).rejects.toThrow('content_hash_mismatch');
+  });
+
+  test('refuses publication through an output symlink', async () => {
+    const f = await fixture(); const preview = await previewFramePublication(f.path, f.source);
+    const outside = join(f.root, 'outside'); await mkdir(outside); await mkdir(f.output);
+    await symlink(outside, dirname(join(f.output, f.frame.storage_object_key)), 'dir');
+    await expect(publishFrameFiles(f.path, f.source, f.output, preview.previewHash)).rejects.toThrow('output_symlink_outside_root');
+  });
+});
+
+describe('actual public popularity cohort', () => {
+  test('reproduces every published member from the frozen public business rows and observed video metrics', async () => {
+    const evidence = resolve(import.meta.dir, '../../../docs/evidence/marker-evidence-live-20261021-v1');
+    const result = await buildPublicPopularity(join(evidence, 'approved-source-rows.json'), join(evidence, 'video-metrics-source.json'), publication.sourceRevision!);
+    expect(result.publication).toEqual(publication);
+    expect(result.evidence.thresholds.every((c) => c.knownGroups > 0 && c.fireAt! > 0)).toBe(true);
+    const fire = publication.entries.find((e) => e.tier === 'fire')!;
+    const domestic = wrapMarkerWithPopularityTier('<span>pin</span>', fire.tier as 'fire');
+    const overseas = buildOverseasMarkerHtml({ imagePath: '/images/maker-images/webp/asian.webp', name: 'actual cohort marker', popularityTier: fire.tier });
+    for (const html of [domestic, overseas]) {
+      expect(html.match(/class="tz-popularity-flame"/g)).toHaveLength(1);
+      expect(html).toContain('tz-popularity-flame-outer');
+      expect(html).toContain('fill: #e10600');
+      expect(html).not.toContain('tz-popularity-pulse');
+      expect(html).not.toContain('data-flame-count');
+      expect(html).toContain('data-popularity-tier="fire"');
+      expect(html).not.toContain('<canvas');
+    }
+    expect(wrapMarkerWithPopularityTier('<span>pin</span>', 'standard')).not.toContain('<svg');
+  });
+});
+
+
+===== apps/web/lib/restaurant-marker-kind.ts | bytes=2454 | sha256=9b24ad33c226721584205536961a0285177ea9e515a6c9c5e0a06e6abaf9e90d | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import type { Restaurant } from '@/types/restaurant';
+import { publicPopularityTier } from '@/lib/evidence-engineering/popularity-marker';
+
+export const USER_SUBMITTED_RESTAURANT_SOURCE_TYPE = 'user_submission_new';
+export const RESTAURANT_MARKER_ASSET_VERSION = 'restaurant-marker-assets-gpt-image-2-20260707';
+
+export type RestaurantMarkerKind = 'category' | 'user-submitted' | 'trend' | 'seasonal';
+export type RestaurantOverlayMarkerKind = Extract<RestaurantMarkerKind, 'trend' | 'seasonal'>;
+
+type MarkerKindRestaurant = Partial<Pick<Restaurant, 'id' | 'source_type' | 'mergedRestaurants'>>;
+type MarkerKindSignatureRestaurant = MarkerKindRestaurant & { id: string; popularity_tier?: Restaurant['popularity_tier'] };
+
+export function isUserSubmittedRestaurant(restaurant: MarkerKindRestaurant | null | undefined): boolean {
+    if (!restaurant) return false;
+
+    if (restaurant.source_type === USER_SUBMITTED_RESTAURANT_SOURCE_TYPE) return true;
+
+    return restaurant.mergedRestaurants?.some(
+        (mergedRestaurant) => mergedRestaurant.source_type === USER_SUBMITTED_RESTAURANT_SOURCE_TYPE,
+    ) ?? false;
+}
+
+export function resolveRestaurantMarkerKind(
+    restaurant: MarkerKindRestaurant | null | undefined,
+    overlayKinds: readonly RestaurantOverlayMarkerKind[] = [],
+): RestaurantMarkerKind {
+    if (overlayKinds.includes('trend')) return 'trend';
+    if (overlayKinds.includes('seasonal')) return 'seasonal';
+    return isUserSubmittedRestaurant(restaurant) ? 'user-submitted' : 'category';
+}
+
+export function buildRestaurantMarkerKindSignature(
+    restaurants: readonly MarkerKindSignatureRestaurant[],
+    overlayKindByRestaurantId: ReadonlyMap<string, readonly RestaurantOverlayMarkerKind[]> = new Map(),
+    retainedTiers?: { selected?: unknown; searched?: unknown },
+): string {
+    const signature = restaurants
+        .map((restaurant) => [
+            restaurant.id,
+            resolveRestaurantMarkerKind(restaurant, overlayKindByRestaurantId.get(restaurant.id) ?? []),
+            restaurant.source_type ?? 'source:null',
+            publicPopularityTier(restaurant.popularity_tier),
+        ].join(':'))
+        .sort()
+        .join('|');
+    // Selection/search markers can be retained outside the current query result.
+    return retainedTiers
+        ? `${signature}|selected-tier:${publicPopularityTier(retainedTiers.selected)}|searched-tier:${publicPopularityTier(retainedTiers.searched)}`
+        : signature;
+}
+
+
+===== apps/web/lib/naver-map-view-helpers.ts | bytes=2816 | sha256=4da2b00df772267fbfebe32b7dfd13653aa600c8c94224b5d8c7981f038edff0 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import type { Restaurant } from '@/types/restaurant';
+import { SEOUL_DISTRICT_CENTERS, getDistance } from '@/lib/clustering';
+
+export interface ExtendedBounds {
+    south: number;
+    north: number;
+    west: number;
+    east: number;
+}
+
+type NaverLatLngLike = {
+    lat: () => number;
+    lng: () => number;
+};
+
+type NaverBoundsLike = {
+    getSW: () => NaverLatLngLike;
+    getNE: () => NaverLatLngLike;
+};
+
+type NaverMapBoundsLike = {
+    getBounds: () => NaverBoundsLike | null;
+};
+
+const VIEWPORT_PADDING = 0.25;
+
+export const isPointInSeoul = (lat: number, lng: number) => {
+    if (lat < 37.42 || lat > 37.70 || lng < 126.76 || lng > 127.18) {
+        return false;
+    }
+
+    for (const center of Object.values(SEOUL_DISTRICT_CENTERS)) {
+        if (getDistance(lat, lng, center.lat, center.lng) < 0.035) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+export const fillExtendedBounds = (
+    map: NaverMapBoundsLike | null,
+    padding: number,
+    target: ExtendedBounds,
+): boolean => {
+    if (!map) return false;
+
+    let bounds: NaverBoundsLike | null = null;
+    try {
+        bounds = map.getBounds();
+    } catch {
+        return false;
+    }
+
+    if (!bounds || typeof bounds.getSW !== 'function') return false;
+
+    let sw: NaverLatLngLike;
+    let ne: NaverLatLngLike;
+    try {
+        sw = bounds.getSW();
+        ne = bounds.getNE();
+    } catch {
+        return false;
+    }
+    const latDiff = ne.lat() - sw.lat();
+    const lngDiff = ne.lng() - sw.lng();
+
+    target.south = sw.lat() - latDiff * padding;
+    target.north = ne.lat() + latDiff * padding;
+    target.west = sw.lng() - lngDiff * padding;
+    target.east = ne.lng() + lngDiff * padding;
+    return true;
+};
+
+export const getExtendedBounds = (
+    map: NaverMapBoundsLike | null,
+    padding: number = VIEWPORT_PADDING,
+): ExtendedBounds | null => {
+    const target: ExtendedBounds = { south: 0, north: 0, west: 0, east: 0 };
+    return fillExtendedBounds(map, padding, target) ? target : null;
+};
+
+export const isRestaurantInViewport = (
+    restaurant: Pick<Restaurant, 'lat' | 'lng'>,
+    extendedBounds: ExtendedBounds | null,
+): boolean => {
+    if (!extendedBounds || !restaurant.lat || !restaurant.lng) return true;
+
+    const { south, north, west, east } = extendedBounds;
+    return restaurant.lat >= south && restaurant.lat <= north && restaurant.lng >= west && restaurant.lng <= east;
+};
+
+export const getPrimaryCategory = (restaurant: Pick<Restaurant, 'categories' | 'category'>): string => {
+    if (Array.isArray(restaurant.categories) && restaurant.categories.length > 0) {
+        return restaurant.categories[0] ?? '기타';
+    }
+    if (Array.isArray(restaurant.category) && restaurant.category.length > 0) {
+        return restaurant.category[0] ?? '기타';
+    }
+    return '기타';
+};
+
+
+===== apps/web/lib/naver-map-marker-visuals.ts | bytes=9365 | sha256=6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import type { Restaurant } from '@/types/restaurant';
+import { publicPopularityTier, wrapMarkerWithPopularityTier } from '@/lib/evidence-engineering/popularity-marker';
+import { createIndividualMarkerHTML } from '@/lib/cluster-marker';
+import { getPrimaryCategory } from '@/lib/naver-map-view-helpers';
+import { getTzuyangVisitCount } from '@/lib/restaurant-visit-count';
+import {
+    RESTAURANT_MARKER_ASSET_VERSION,
+    resolveRestaurantMarkerKind,
+    type RestaurantMarkerKind,
+    type RestaurantOverlayMarkerKind,
+} from '@/lib/restaurant-marker-kind';
+
+type NaverIndividualMarkerRestaurant = Partial<Pick<
+    Restaurant,
+    | 'id'
+    | 'categories'
+    | 'youtube_link'
+    | 'youtube_links'
+    | 'tzuyang_review'
+    | 'tzuyang_reviews'
+    | 'mergedYoutubeLinks'
+    | 'mergedTzuyangReviews'
+    | 'mergedRestaurants'
+    | 'source_type'
+    | 'popularity_tier'
+>> & {
+    category?: string | string[] | null;
+};
+
+const MARKER_VISUAL_CACHE_LIMIT = 2000;
+const markerVisualCache = new Map<string, {
+    content: string;
+    anchor: { x: number; y: number };
+    zIndex: number;
+}>();
+
+function readMarkerVisualCache(key: string) {
+    const cached = markerVisualCache.get(key);
+    if (!cached) return null;
+    markerVisualCache.delete(key);
+    markerVisualCache.set(key, cached);
+    return cached;
+}
+
+function writeMarkerVisualCache(key: string, visual: {
+    content: string;
+    anchor: { x: number; y: number };
+    zIndex: number;
+}) {
+    if (markerVisualCache.size >= MARKER_VISUAL_CACHE_LIMIT) {
+        const oldest = markerVisualCache.keys().next().value;
+        if (oldest) markerVisualCache.delete(oldest);
+    }
+    markerVisualCache.set(key, visual);
+    return visual;
+}
+
+function getMarkerKindBadgeConfig(markerKind: Exclude<RestaurantMarkerKind, 'category'>) {
+    if (markerKind === 'trend') {
+        return {
+            label: '트렌드',
+            ariaLabel: '관리자 트렌드 맛집',
+            background: 'linear-gradient(135deg, #f97316 0%, #dc2626 100%)',
+        };
+    }
+
+    if (markerKind === 'seasonal') {
+        return {
+            label: '제철',
+            ariaLabel: '관리자 제철 맛집',
+            background: 'linear-gradient(135deg, #16a34a 0%, #0d9488 100%)',
+        };
+    }
+
+    return {
+        label: '제보',
+        ariaLabel: '사용자 제보 맛집',
+        background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+    };
+}
+
+function wrapSpecialMarkerContent(
+    content: string,
+    isSelected: boolean,
+    markerKind: Exclude<RestaurantMarkerKind, 'category'>,
+): string {
+    const badgeSize = isSelected ? 24 : 22;
+    const badgeFontSize = isSelected ? 10 : 9;
+    const badgeOffset = isSelected ? -10 : -9;
+    const badgeConfig = getMarkerKindBadgeConfig(markerKind);
+    const markerProvenance =
+        markerKind === 'user-submitted'
+            ? 'source_type:user_submission_new'
+            : `overlay:${markerKind}`;
+
+    return `
+        <div
+          data-restaurant-marker-kind="${markerKind}"
+          data-restaurant-marker-provenance="${markerProvenance}"
+          data-restaurant-marker-asset-version="${RESTAURANT_MARKER_ASSET_VERSION}"
+          style="
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+          "
+        >
+          ${content}
+          <span
+            aria-label="${badgeConfig.ariaLabel}"
+            style="
+              position: absolute;
+              right: ${badgeOffset}px;
+              bottom: ${badgeOffset}px;
+              min-width: ${badgeSize}px;
+              height: ${badgeSize}px;
+              padding: 0 4px;
+              border-radius: 9999px;
+              background: ${badgeConfig.background};
+              color: #ffffff;
+              border: 2px solid #ffffff;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              font-size: ${badgeFontSize}px;
+              font-weight: 900;
+              line-height: 1;
+              letter-spacing: -0.05em;
+              pointer-events: none;
+              box-sizing: border-box;
+              white-space: nowrap;
+            "
+          >${badgeConfig.label}</span>
+        </div>
+    `;
+}
+
+type IndividualMarkerVisual = {
+    content: string;
+    anchor: { x: number; y: number };
+    zIndex: number;
+};
+
+type IndividualMarkerStamp = {
+    youtube: string;
+    mergedYoutube: number;
+    mergedReviews: number;
+    mergedRestaurants: number;
+    hasReview: number;
+    categories0: string;
+    category0: string;
+    source: string;
+    popularityTier: ReturnType<typeof publicPopularityTier>;
+    visual: IndividualMarkerVisual;
+};
+
+const individualVisualCache = new WeakMap<object, {
+    selected?: IndividualMarkerStamp;
+    plain?: IndividualMarkerStamp;
+}>();
+
+function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant) {
+    return {
+        youtube: restaurant.youtube_link ?? '',
+        mergedYoutube: restaurant.mergedYoutubeLinks?.length ?? 0,
+        mergedReviews: restaurant.mergedTzuyangReviews?.length ?? 0,
+        mergedRestaurants: restaurant.mergedRestaurants?.length ?? 0,
+        hasReview: restaurant.tzuyang_review ? 1 : 0,
+        categories0: Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '',
+        category0: Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '',
+        source: restaurant.source_type ?? '',
+        popularityTier: publicPopularityTier(restaurant.popularity_tier),
+    };
+}
+
+function individualStampMatches(stamp: IndividualMarkerStamp, restaurant: NaverIndividualMarkerRestaurant) {
+    return stamp.youtube === (restaurant.youtube_link ?? '')
+        && stamp.mergedYoutube === (restaurant.mergedYoutubeLinks?.length ?? 0)
+        && stamp.mergedReviews === (restaurant.mergedTzuyangReviews?.length ?? 0)
+        && stamp.mergedRestaurants === (restaurant.mergedRestaurants?.length ?? 0)
+        && stamp.hasReview === (restaurant.tzuyang_review ? 1 : 0)
+        && stamp.categories0 === (Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '')
+        && stamp.category0 === (Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '')
+        && stamp.source === (restaurant.source_type ?? '')
+        && stamp.popularityTier === publicPopularityTier(restaurant.popularity_tier);
+}
+
+export function getNaverIndividualMarkerVisual(
+    restaurant: NaverIndividualMarkerRestaurant,
+    isSelected: boolean,
+    overlayKinds: readonly RestaurantOverlayMarkerKind[] = [],
+) {
+    const slot = isSelected ? 'selected' : 'plain';
+    const popularityTier = publicPopularityTier(restaurant.popularity_tier);
+    const canReuseObject = overlayKinds.length === 0;
+    if (canReuseObject) {
+        const cachedStamp = individualVisualCache.get(restaurant)?.[slot];
+        if (cachedStamp && individualStampMatches(cachedStamp, restaurant)) {
+            return cachedStamp.visual;
+        }
+    }
+
+    const cacheKey = [
+        restaurant.id ?? '',
+        isSelected ? '1' : '0',
+        overlayKinds.join(','),
+        restaurant.youtube_link ?? '',
+        restaurant.mergedYoutubeLinks?.length ?? 0,
+        restaurant.mergedTzuyangReviews?.length ?? 0,
+        restaurant.mergedRestaurants?.length ?? 0,
+        restaurant.tzuyang_review ? 1 : 0,
+        Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '',
+        Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '',
+        restaurant.source_type ?? '',
+        popularityTier,
+    ].join('|');
+    const cached = readMarkerVisualCache(cacheKey);
+    if (cached) return cached;
+
+    const normalizedCategory = Array.isArray(restaurant.category)
+        ? restaurant.category
+        : (restaurant.category ? [restaurant.category] : []);
+    const category = getPrimaryCategory({
+        categories: restaurant.categories ?? [],
+        category: normalizedCategory,
+    });
+    const visitCount = getTzuyangVisitCount(restaurant);
+    const markerKind = resolveRestaurantMarkerKind(restaurant, overlayKinds);
+    const markerCategory =
+        markerKind === 'user-submitted'
+            ? '사용자 제보'
+            : markerKind === 'trend'
+                ? '트렌드'
+                : markerKind === 'seasonal'
+                    ? '제철'
+                    : category;
+    const content = createIndividualMarkerHTML(markerCategory, isSelected, visitCount, restaurant.id);
+    const markerHtml = markerKind !== 'category'
+        ? wrapSpecialMarkerContent(content, isSelected, markerKind)
+        : `<div data-restaurant-marker-kind="category" data-restaurant-marker-asset-version="${RESTAURANT_MARKER_ASSET_VERSION}">${content}</div>`;
+    const visual = writeMarkerVisualCache(cacheKey, {
+        content: wrapMarkerWithPopularityTier(markerHtml, popularityTier),
+        anchor: isSelected ? { x: 18, y: 18 } : { x: 14, y: 14 },
+        zIndex: isSelected ? 100 : 1,
+    });
+    if (canReuseObject) {
+        const entry = individualVisualCache.get(restaurant) ?? {};
+        entry[slot] = { ...individualMarkerStampFields(restaurant), visual };
+        individualVisualCache.set(restaurant, entry);
+    }
+    return visual;
+}
+
+
+===== apps/web/lib/naver-map-cluster-visuals.ts | bytes=5849 | sha256=e6827ce69615a202ca866aa5ced193b78d8b16c3ab9f44d3abb665e7b94f4d92 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import type { ClusterFeature } from 'supercluster';
+import { createClusterMarkerHTML } from '@/lib/cluster-marker';
+import type { ClusterProperties } from '@/lib/clustering';
+import { publicPopularityTier } from '@/lib/evidence-engineering/popularity-marker';
+
+const clusterVisualKeyCache = new Map<string, number>();
+
+export function getClusterVisualKey(uniqueKey: string | number) {
+    if (typeof uniqueKey === 'number') return uniqueKey;
+    const cached = clusterVisualKeyCache.get(uniqueKey);
+    if (cached !== undefined) return cached;
+
+    const hash = Math.abs(uniqueKey.split('').reduce((acc, value) => (acc * 31 + value.charCodeAt(0)) | 0, 0));
+    clusterVisualKeyCache.set(uniqueKey, hash);
+    return hash;
+}
+
+export function buildClusterMarkerFeature({
+    count,
+    lat,
+    lng,
+}: {
+    count: number;
+    lat: number;
+    lng: number;
+}): ClusterFeature<ClusterProperties> {
+    return {
+        properties: { point_count: count },
+        geometry: { coordinates: [lng, lat] },
+    } as unknown as ClusterFeature<ClusterProperties>;
+}
+
+const clusterMarkerHtmlCache = new Map<string, string>();
+const categoryJoinCache = new WeakMap<string[], string>();
+const CLUSTER_MARKER_HTML_CACHE_LIMIT = 256;
+
+function joinedClusterCategories(categories: string[]) {
+    const cached = categoryJoinCache.get(categories);
+    if (cached !== undefined) return cached;
+    const joined = categories.join('\n');
+    categoryJoinCache.set(categories, joined);
+    return joined;
+}
+
+export function buildClusterMarkerContent({
+    categories,
+    count,
+    currentIndex,
+    lat,
+    lng,
+    popularityTier,
+}: {
+    categories: string[];
+    count: number;
+    currentIndex: number;
+    lat: number;
+    lng: number;
+    popularityTier?: ClusterProperties["popularityTier"];
+}) {
+    const cacheKey = `${count}:${currentIndex}:${publicPopularityTier(popularityTier)}:${joinedClusterCategories(categories)}`;
+    const cached = clusterMarkerHtmlCache.get(cacheKey);
+    if (cached) return cached;
+
+    const html = createClusterMarkerHTML(
+        buildClusterMarkerFeature({ count, lat, lng }),
+        categories,
+        currentIndex,
+        popularityTier,
+    );
+    if (clusterMarkerHtmlCache.size >= CLUSTER_MARKER_HTML_CACHE_LIMIT) {
+        const oldest = clusterMarkerHtmlCache.keys().next().value;
+        if (oldest !== undefined) clusterMarkerHtmlCache.delete(oldest);
+    }
+    clusterMarkerHtmlCache.set(cacheKey, html);
+    return html;
+}
+
+const CLUSTER_MARKER_ANCHOR = { x: 24, y: 24 };
+const clusterVisualCache = new WeakMap<string[], Map<number, Map<string, { content: string; anchor: { x: number; y: number } }>>>();
+
+export function getNaverClusterMarkerVisual({
+    categories,
+    count,
+    currentIndex,
+    lat,
+    lng,
+    popularityTier,
+}: {
+    categories: string[];
+    count: number;
+    currentIndex: number;
+    lat: number;
+    lng: number;
+    popularityTier?: ClusterProperties["popularityTier"];
+}) {
+    let byCount = clusterVisualCache.get(categories);
+    if (!byCount) {
+        byCount = new Map();
+        clusterVisualCache.set(categories, byCount);
+    }
+    let byIndex = byCount.get(count);
+    if (!byIndex) {
+        byIndex = new Map();
+        byCount.set(count, byIndex);
+    }
+    const visualKey = `${currentIndex}:${publicPopularityTier(popularityTier)}`;
+    const cached = byIndex.get(visualKey);
+    if (cached) return cached;
+
+    const visual = {
+        content: buildClusterMarkerContent({ categories, count, currentIndex, lat, lng, popularityTier }),
+        anchor: CLUSTER_MARKER_ANCHOR,
+    };
+    byIndex.set(visualKey, visual);
+    return visual;
+}
+
+const clusterPlanCache = new WeakMap<object, {
+    anchor: { x: number; y: number };
+    content: string;
+    position: { lat: number; lng: number };
+}>();
+
+export function buildNaverClusterMarkerRenderPlan({
+    categories,
+    count,
+    currentIndex,
+    popularityTier,
+    position,
+}: {
+    categories: string[];
+    count: number;
+    currentIndex: number;
+    popularityTier?: ClusterProperties["popularityTier"];
+    position: { lat: number; lng: number };
+}) {
+    const visual = getNaverClusterMarkerVisual({
+        categories,
+        count,
+        currentIndex,
+        lat: position.lat,
+        lng: position.lng,
+        popularityTier,
+    });
+    const cachedPlan = clusterPlanCache.get(visual);
+    if (
+        cachedPlan &&
+        cachedPlan.position.lat === position.lat &&
+        cachedPlan.position.lng === position.lng
+    ) {
+        return cachedPlan;
+    }
+
+    const plan = {
+        anchor: visual.anchor,
+        content: visual.content,
+        position,
+    };
+    clusterPlanCache.set(visual, plan);
+    return plan;
+}
+
+export function buildNaverClusterAnimationIconPlan({
+    categories,
+    count,
+    getCurrentIndex,
+    popularityTier,
+    position,
+    uniqueKey,
+}: {
+    categories: string[];
+    count: number;
+    getCurrentIndex: (hash: number, categoryCount: number) => number;
+    popularityTier?: ClusterProperties["popularityTier"];
+    position: { lat: number; lng: number };
+    uniqueKey: string | number;
+}) {
+    const hash = getClusterVisualKey(uniqueKey);
+    const currentIndex = getCurrentIndex(hash, categories.length);
+    const renderPlan = buildNaverClusterMarkerRenderPlan({
+        categories,
+        count,
+        currentIndex,
+        popularityTier,
+        position,
+    });
+
+    return {
+        ...renderPlan,
+        currentIndex,
+        hash,
+    } as const;
+}
+
+export function shouldReplaceNaverMarkerIcon(
+    current: { content?: unknown; anchor?: { x?: number; y?: number } | null } | null | undefined,
+    next: { content: unknown; anchor: { x: number; y: number } },
+): boolean {
+    if (!current || current.content !== next.content) return true;
+    return current.anchor?.x !== next.anchor.x || current.anchor?.y !== next.anchor.y;
+}
+

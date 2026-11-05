@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import {
   addAiFilledField,
   getOcrProgressRank,
+  INTERRUPTED_OCR_READBACK_ATTEMPTS,
+  reconcileInterruptedOcrReadback,
   shouldSuppressOcrAutoNavigation,
   type ReviewOcrFieldKey,
 } from '@/lib/ocr/review-modal-ocr-ux';
@@ -44,6 +46,74 @@ describe('review modal OCR UX helpers', () => {
     expect(getOcrProgressRank('prepare')).toBeLessThan(getOcrProgressRank('model_start'));
     expect(getOcrProgressRank('patching')).toBeLessThan(getOcrProgressRank('done'));
   });
+
+  test('recovers an interrupted stream by bounded status reads without starting another model request', async () => {
+    const controller = new AbortController();
+    const processing = Object.assign(new Error('still processing'), { code: 'OCR_RESULT_PROCESSING' });
+    const expected = { ocr_result_ref: '11111111-1111-4111-8111-111111111111' };
+    let statusReads = 0;
+    let waits = 0;
+    let modelRequests = 0;
+
+    const result = await reconcileInterruptedOcrReadback({
+      signal: controller.signal,
+      readStatus: async () => {
+        statusReads += 1;
+        if (statusReads < 3) throw processing;
+        return expected;
+      },
+      isProcessingError: error => (error as { code?: string }).code === 'OCR_RESULT_PROCESSING',
+      wait: async () => { waits += 1; },
+    });
+
+    expect(result).toBe(expected);
+    expect({ statusReads, waits, modelRequests }).toEqual({ statusReads: 3, waits: 2, modelRequests: 0 });
+  });
+
+  test('keeps indeterminate interrupted streams fail-closed without retrying or resending', async () => {
+    const indeterminate = Object.assign(new Error('dispatch outcome unknown'), { code: 'OCR_RESULT_INDETERMINATE' });
+    let statusReads = 0;
+    let waits = 0;
+
+    await expect(reconcileInterruptedOcrReadback({
+      signal: new AbortController().signal,
+      readStatus: async () => { statusReads += 1; throw indeterminate; },
+      isProcessingError: error => (error as { code?: string }).code === 'OCR_RESULT_PROCESSING',
+      wait: async () => { waits += 1; },
+    })).rejects.toBe(indeterminate);
+    expect({ statusReads, waits }).toEqual({ statusReads: 1, waits: 0 });
+  });
+
+  test('caps interrupted-stream processing reconciliation at four status reads', async () => {
+    const processing = Object.assign(new Error('still processing'), { code: 'OCR_RESULT_PROCESSING' });
+    let statusReads = 0;
+    let waits = 0;
+
+    await expect(reconcileInterruptedOcrReadback({
+      signal: new AbortController().signal,
+      attempts: 99,
+      delayMs: 0,
+      readStatus: async () => { statusReads += 1; throw processing; },
+      isProcessingError: error => (error as { code?: string }).code === 'OCR_RESULT_PROCESSING',
+      wait: async () => { waits += 1; },
+    })).rejects.toBe(processing);
+    expect(statusReads).toBe(INTERRUPTED_OCR_READBACK_ATTEMPTS);
+    expect(waits).toBe(INTERRUPTED_OCR_READBACK_ATTEMPTS - 1);
+  });
+
+  test('stops interrupted-stream reconciliation when the current receipt is cancelled', async () => {
+    const controller = new AbortController();
+    const processing = Object.assign(new Error('still processing'), { code: 'OCR_RESULT_PROCESSING' });
+    let statusReads = 0;
+
+    await expect(reconcileInterruptedOcrReadback({
+      signal: controller.signal,
+      readStatus: async () => { statusReads += 1; throw processing; },
+      isProcessingError: error => (error as { code?: string }).code === 'OCR_RESULT_PROCESSING',
+      wait: async () => { controller.abort(); controller.signal.throwIfAborted(); },
+    })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(statusReads).toBe(1);
+  });
 });
 
 describe('review modal OCR selected restaurant guard', () => {
@@ -77,12 +147,62 @@ describe('review modal OCR terminal recovery contract', () => {
     expect(reviewModalSource).toContain('terminal?: boolean');
     expect(reviewModalSource).toContain('status?: number');
     expect(reviewModalSource).toContain('if (parsed.payload.terminal)');
-    expect(reviewModalSource).toContain('new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422)');
+    expect(reviewModalSource).toContain('new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422, parsed.payload.code)');
+  });
+
+  test('never resends a receipt after a dropped stream or a durable pending result', () => {
+    expect(reviewModalSource).toContain("['FEATURE_DATABASE_HELD', 'OCR_RESULT_PROCESSING', 'OCR_RESULT_INDETERMINATE']");
+    expect(reviewModalSource).toContain("type: 'pending'");
+    expect(reviewModalSource).toContain('분석 연결이 끊겨 저장된 결과를 확인하고 있어요.');
+    expect(reviewModalSource).toContain("fetch('/api/ocr/results/status'");
+    expect(reviewModalSource).toContain('reconcileInterruptedOcrReadback({');
+    expect(reviewModalSource).toContain('void analyzeReceipt(verificationPhoto, undefined, true)');
+    expect(reviewModalSource).toContain('결과 확인');
+    expect(reviewModalSource).toContain('statusOnly\n                    ? await readReceiptOcrStatus');
+    expect(reviewModalSource).not.toContain("fetch('/api/ocr/extract',");
+  });
+
+  test('routes every photo-only choice through the current OCR intent cancellation boundary', () => {
+    expect(reviewModalSource).toContain('const verificationInputModeRef = useRef<VerificationInputMode>("ai")');
+    expect(reviewModalSource).toContain('receiptOcrPreparationRef.current.invalidate()');
+    expect(reviewModalSource).toContain('userStepOverrideDuringOcrRef.current = true');
+    expect(reviewModalSource).toContain('setOcrResultRef(null)');
+    expect(reviewModalSource).toContain('setOcrResultRevision(null)');
+    expect(reviewModalSource).toContain('ocrResultRef: null');
+    expect(reviewModalSource).toContain('ocrResultRevision: null');
+    expect(reviewModalSource).toContain('ocrAbortControllerRef.current?.abort()');
+    expect(reviewModalSource.match(/onClick=\{\(\) => setReceiptVerificationInputMode\("manual"\)\}/g)).toHaveLength(3);
+    expect(reviewModalSource).not.toContain('onClick={() => setVerificationInputMode("manual")}');
+  });
+
+  test('rejects late photo preparation after a newer selection', () => {
+    expect(reviewModalSource).toContain('const selection = verificationSelectionRef.current.begin()');
+    expect(reviewModalSource).toContain('const selectionGeneration = selection.generation');
+    expect(reviewModalSource).toContain('signal: selection.signal');
+    expect(reviewModalSource).toContain('!replaceVerificationPhoto(preparedFile, selectionGeneration)');
+    expect(reviewModalSource).toContain('verificationSelectionRef.current.isCurrent(selectionGeneration)');
+    const directInvalidations = reviewModalSource.match(/verificationSelectionRef\.current\.invalidate\(\)/g)?.length ?? 0;
+    const capturedInvalidations = reviewModalSource.match(/verificationSelection\.invalidate\(\)/g)?.length ?? 0;
+    expect(directInvalidations + capturedInvalidations).toBeGreaterThanOrEqual(4);
   });
 
   test('uses safe user-facing copy for force OCR refresh toggle', () => {
     expect(reviewModalSource).toContain('OCR 다시 분석');
     expect(reviewModalSource).toContain('이번 분석은 캐시 없이 재호출');
     expect(reviewModalSource).not.toContain('dev/admin: OCR 강제 재호출');
+  });
+
+  test('shows the shared content limit and requires a complete AI binding before submit', () => {
+    expect(reviewModalSource).toContain('const REVIEW_CONTENT_MAX_LENGTH = 4_000');
+        expect(reviewModalSource).toContain('const normalizedContentLength = content.trim().length');
+        expect(reviewModalSource).toContain('normalizedContentLength <= REVIEW_CONTENT_MAX_LENGTH');
+        expect(reviewModalSource).toContain('normalizedContent.length > REVIEW_CONTENT_MAX_LENGTH');
+        expect(reviewModalSource).toContain('aria-invalid={normalizedContentLength > REVIEW_CONTENT_MAX_LENGTH}');
+    expect(reviewModalSource).toContain('const isOcrBindingReadyForSubmit = verificationInputMode === "manual"');
+    expect(reviewModalSource).toContain('!isAnalyzing && Boolean(ocrResultRef && ocrResultRevision)');
+        expect(reviewModalSource).toContain('sameReviewSaveInputsSnapshot(');
+        expect(reviewModalSource).toContain('ocrRunGenerationRef.current === submittedInputs.ocrRunGeneration');
+    expect(reviewModalSource).toContain('submissionMode === "manual" ? null : submittedInputs.ocrResultRef');
+    expect(reviewModalSource).toContain('AI 분석이 끝난 뒤 등록하거나 사진만 첨부를 선택해주세요.');
   });
 });

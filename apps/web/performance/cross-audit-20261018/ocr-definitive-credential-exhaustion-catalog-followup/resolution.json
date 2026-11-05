@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "tzudong-source-bound-followup-resolution-v1",
+  "receiptId": "OCR-DURABLE-CREDENTIAL-EXHAUSTION-CATALOG-FOLLOWUP-20261019",
+  "recordedAt": "2026-10-18T16:02:38Z",
+  "baseHead": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "scope": "source-only exact catalog readiness and thrown-capability-RPC follow-up",
+  "historicalEvidence": {
+    "resolutionPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-resolution.json",
+    "resolutionSha256": "e00d7d4803fbdd587aaf38427d192d4a818f549bd207586f383653f346f285d7",
+    "preservedUnmodified": true,
+    "rawDirectoryPreservedUnmodified": true
+  },
+  "sourceHashes": {
+    "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0",
+    "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql": "f6a56dd93c17487d91ea5fd59a7d6d929f9beac58d0564957900ceaae6746e35",
+    "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql": "1d0d2e37ce83b3efaae67b7553d6692fb8825ecc95b6969e70d520894db075bc",
+    "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql": "82a963e6cf164665b98a8de55e846b73fdd858653dbd4752b3e2e4e3b0647078",
+    ".github/receipt-ocr-post105-sql-successor.v1.json": "aaabf30561daf2d40c346d51a2a69c1bfd4fedff7885eefb1b52fe43686d6dec",
+    "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+    "apps/web/tests-unit/receipt-ocr-post105-sql-successor.test.ts": "6134b41c2bf0be61b203598c9bd22e7965b020bdf1a668afb69d492b2527dde0"
+  },
+  "decisions": [
+    {
+      "id": "OCR-DCR-CATALOG-001",
+      "verdict": "ACCEPT_RESOLVED_IN_SOURCE",
+      "evidence": "The OCR-specific capability now remains held unless the sealed private catalog contract, exact 106 ledger row and full ledger identity, all four helper/wrapper definition hashes plus language and volatility, the composite release-ledger primary key, exact RLS policy, owners, ACLs, search paths, and allowlist all match."
+    },
+    {
+      "id": "OCR-DCR-CATALOG-002",
+      "verdict": "ACCEPT_RESOLVED_IN_LOCAL_SQL_FIXTURE",
+      "evidence": "Actual PostgreSQL mutations for release-helper body drift, single-key primary-key drift, disabled RLS, missing policy, missing 106 ledger row, and statement-vector drift each return held. Savepoint rollback restores the ready baseline."
+    },
+    {
+      "id": "OCR-DCR-CATALOG-003",
+      "verdict": "ACCEPT_RESOLVED_IN_SOURCE",
+      "evidence": "A rejected or thrown capability RPC is normalized to DurableReceiptOcrCapabilityHeldError. The direct regression observes only get_receipt_ocr_credential_release_capability and zero claim, quota reservation, or provider work."
+    },
+    {
+      "id": "OCR-DCR-CATALOG-004",
+      "verdict": "ACCEPT_RESOLVED_IN_SOURCE",
+      "evidence": "The post-105 compiler installs the migration, stamps the private sealed contract from the externally computed migration statement identity and 106 ledger identity, registers the 106 ledger row, then requires exact ready readback. No source SHA, statement vector, or migration identity root is embedded in the migration source, avoiding a self-reference."
+    },
+    {
+      "id": "OCR-DCR-CATALOG-005",
+      "verdict": "PRESERVED",
+      "evidence": "The existing daily quota and reservation charging semantics remain unchanged. A repaired-credential retry may consume a new existing reservation; no refund or limit increase was added."
+    }
+  ],
+  "catalogIdentity": {
+    "migrationVersion": "20261018152032",
+    "migrationSha256": "f6a56dd93c17487d91ea5fd59a7d6d929f9beac58d0564957900ceaae6746e35",
+    "statementCount": 44,
+    "statementVectorSha256": "b0ec57adf97b5547c7fcb00cdd5976a453e728ce164720cc327464cae42d745e",
+    "migrationIdentityRoot": "6d0e588fc01750f40467b5ad84e542533be14515af03fadeb8b0d1f61724217b",
+    "operatingTargetIdentityRoot": "dbf556b0f98f80c06ceffe69d2ae24a6090daab19c5dc5868d92bcbd23dbc17b",
+    "rehearsalTargetIdentityRoot": "e4c7dfce93b3ac69eb0660c5048cb6ecc82deb35c44e36fe18bf1fd114be9304",
+    "migrationContainsEmbeddedIdentityValues": false,
+    "successorState": "held_unapplied",
+    "predecessorLedgerCount": 105,
+    "successorLedgerCount": 106
+  },
+  "verification": [
+    {
+      "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/durable-receipt-ocr.test.ts --timeout 30000",
+      "result": "32 pass, 0 fail, 195 assertions",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/durable-bun.txt",
+      "rawSha256": "e5b5034c7ff5b4c655a5556e9e4ddd542a05217daaa274c0564f1d380fa66786"
+    },
+    {
+      "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/g014-feature-rpc-catalog-contract.test.ts tests-unit/zz-ocr-route-contract.test.ts --timeout 30000",
+      "result": "23 pass, 0 fail, 385 assertions",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/ocr-related-bun.txt",
+      "rawSha256": "01d9d3b548b6925de82c73db4205ab76546aa6867abeb1a32cea35e4f5eb667a"
+    },
+    {
+      "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/receipt-ocr-post105-sql-successor.test.ts --timeout 30000",
+      "result": "7 pass, 0 fail, 59 assertions",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/post105-successor-bun.txt",
+      "rawSha256": "f02536efdaeebc5cd975aeabe2a41cef998cb4d576a1cca97993b430ac0fe6cd"
+    },
+    {
+      "command": "bash /tmp/run-tzudong-ocr-catalog-followup.sh",
+      "result": "exit 0; PG17_CATALOG_FOLLOWUP=passed",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/sql-catalog-fixtures-pg17.11.txt",
+      "rawSha256": "40545820640120bebf8b198efb1c8cf7316b38e5a30d1e559aa2cf27445d7181",
+      "note": "The preserved raw file starts with a failed direct invocation (exit 126, temporary script not executable), followed by the successful unchanged bash invocation."
+    },
+    {
+      "command": "node scripts/run-web-tool.mjs eslint lib/ocr/durable-result.ts tests-unit/durable-receipt-ocr.test.ts scripts/receipt-ocr-post105-sql-successor.mjs tests-unit/receipt-ocr-post105-sql-successor.test.ts --max-warnings=0",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/targeted-eslint.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check -- <owned follow-up sources>",
+      "result": "exit 0"
+    }
+  ],
+  "evidenceClass": {
+    "pg1711": "Disposable local PostgreSQL 17.11 synthetic minimal predecessor harness; exercises actual SQL DDL/catalog drift, release semantics, idempotency, stale ACK isolation, and race behavior.",
+    "pg176PredecessorReplay": {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-evidence-prefixed-aggregate-compiled-20261018.json",
+      "sha256": "0efdf7f1c9c60feda3d14d9473c464fa8ce91a23d5f12d9427bfbac2d4ccc0c6",
+      "meaning": "Existing exact-image PostgreSQL 17.6 terminal-105 replay evidence; not rerun or reclassified as a 106 apply."
+    }
+  },
+  "limits": [
+    "The PostgreSQL 17.11 fixture is a synthetic minimal harness, not a full 105-catalog replay, hosted apply, or deployment receipt.",
+    "The 105-to-106 successor remains held and unapplied. Source checks do not prove hosted function installation, ACL state, deployment, or production readiness.",
+    "Global parity and build are intentionally delegated to the root integration pass."
+  ],
+  "externalEffects": {
+    "hostedDatabaseWrites": 0,
+    "providerCalls": 0,
+    "storageCalls": 0,
+    "gitWrites": 0
+  }
+}

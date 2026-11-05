@@ -1,0 +1,1120 @@
+{
+  "schemaVersion": 2,
+  "command": "/opt/homebrew/opt/node@24/bin/node scripts/run-unit-tests.mjs",
+  "path": "/opt/homebrew/opt/node@24/bin:/Users/twoimo/.bun/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+  "workingDirectory": "/Users/twoimo/.codex/worktrees/feature-completion-20261013/tzudong/apps/web",
+  "startedAt": "2026-10-15T14:02:20.855Z",
+  "finishedAt": "2026-10-15T14:05:50.217Z",
+  "elapsedSeconds": 209.383,
+  "exitCode": 0,
+  "runtime": {
+    "node": {
+      "path": "/opt/homebrew/opt/node@24/bin/node",
+      "version": "v24.21.0",
+      "assertedVersion": "v24.21.0",
+      "sha256": "798d7f9c0d38051608d11ba87a12fbb01e92bfa457cd77ec612b5bad2a73a05e"
+    },
+    "bun": {
+      "path": "/Users/twoimo/.bun/bin/bun",
+      "version": "1.4.0",
+      "assertedVersion": "1.4.0",
+      "sha256": "539598c775882420b9d8deb7dc14d845f20f7d26f5600c50ab067dde6ac3f3bf"
+    }
+  },
+  "inventory": {
+    "testFiles": 466,
+    "generalFiles": 445,
+    "isolatedFiles": 21,
+    "expectedProcesses": 22,
+    "observedProcesses": 22,
+    "complete": true,
+    "parser": "anchored rows inside const isolated = new Set array only"
+  },
+  "inventoryReconciliation": {
+    "previousFailedReceipt": {
+      "path": "performance/admin-taste-20261015/canonical-unit-final.json",
+      "sha256": "a0e9fb3e000c9a46ba7087fcf24b395173b722d535c5c742b3e72e492b504f09",
+      "reported": {
+        "testFiles": 466,
+        "generalFiles": 449,
+        "isolatedFiles": 17,
+        "expectedProcesses": 18,
+        "observedProcesses": 1,
+        "complete": false
+      },
+      "generalProcessReportedFiles": 445
+    },
+    "reconciled": {
+      "testFiles": 466,
+      "generalFiles": 445,
+      "isolatedFiles": 21,
+      "expectedProcesses": 22
+    },
+    "reason": "The prior quote-scanning parser was comment-sensitive and undercounted isolated rows. Anchored array-row parsing matches the runner inventory and the failed run general-process report of 445 files."
+  },
+  "counts": {
+    "pass": 3815,
+    "fail": 0,
+    "skip": 11
+  },
+  "failedTests": [],
+  "processes": [
+    {
+      "index": 0,
+      "kind": "general",
+      "expectedFileCount": 445,
+      "expectedFiles": null,
+      "observedTestFiles": null,
+      "counts": {
+        "pass": 3574,
+        "fail": 0,
+        "skip": 3
+      },
+      "reported": {
+        "tests": 3577,
+        "files": 445,
+        "duration": "185.42s"
+      },
+      "failedTests": [],
+      "outputSha256": "00b202464d33e1f6a8ee4cafe1c1f141fe4d12664c22811f75754e800f6b877e"
+    },
+    {
+      "index": 1,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/account-deletion-contract.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/account-deletion-contract.test.ts"
+      ],
+      "counts": {
+        "pass": 17,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 17,
+        "files": 1,
+        "duration": "264.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "2cd63193829778de4e5d85ba54349c1c83eff402e4642f86170e3f9058caf420"
+    },
+    {
+      "index": 2,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/account-deletion-reauth-validation.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/account-deletion-reauth-validation.test.ts"
+      ],
+      "counts": {
+        "pass": 7,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 7,
+        "files": 1,
+        "duration": "51.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "19e471323d80472f63df38369968415d88897665e21f97491770e31ff34b63bf"
+    },
+    {
+      "index": 3,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/admin-evaluation-page-api.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/admin-evaluation-page-api.test.ts"
+      ],
+      "counts": {
+        "pass": 5,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 5,
+        "files": 1,
+        "duration": "83.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "117b8491ff2530ce179643b17488eeec57ace28397e0fd1e5cbbb47494ce8878"
+    },
+    {
+      "index": 4,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/admin-evaluation-page-server.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/admin-evaluation-page-server.test.ts"
+      ],
+      "counts": {
+        "pass": 23,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 23,
+        "files": 1,
+        "duration": "97.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "b0b33ac0e4a70dbfc9ccdc8af32f61a4789e770cedbf836d9790d987849177b7"
+    },
+    {
+      "index": 5,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/admin-evaluation-status-filter-options.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/admin-evaluation-status-filter-options.test.ts"
+      ],
+      "counts": {
+        "pass": 6,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 6,
+        "files": 1,
+        "duration": "42.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "0bebb0a8c9e6147333ea4c0da22d58f03d8aad1fa3c00afdafa58ae0aa7ace80"
+    },
+    {
+      "index": 6,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/admin-sentry-route.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/admin-sentry-route.test.ts"
+      ],
+      "counts": {
+        "pass": 3,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 3,
+        "files": 1,
+        "duration": "52.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "54e9744a19393ab2e01fcb0bb6affe7f9aebfb57caee16da4d5953a61be90906"
+    },
+    {
+      "index": 7,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/admin-storyboard-caption-provenance.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/admin-storyboard-caption-provenance.test.ts"
+      ],
+      "counts": {
+        "pass": 2,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 2,
+        "files": 1,
+        "duration": "146.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "d1eea30863764b0845355a3116f7880a230094dbb9f8163c49a66d07b57bf3cb"
+    },
+    {
+      "index": 8,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/admin-storyboard-generator.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/admin-storyboard-generator.test.ts"
+      ],
+      "counts": {
+        "pass": 63,
+        "fail": 0,
+        "skip": 8
+      },
+      "reported": {
+        "tests": 71,
+        "files": 1,
+        "duration": "1286.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "d5a01d328effdb803ff7c1ad5bfd912e8a3397b838de41e952a32195aa1f4b9c"
+    },
+    {
+      "index": 9,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/admin-storyboard-langgraph.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/admin-storyboard-langgraph.test.ts"
+      ],
+      "counts": {
+        "pass": 13,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 13,
+        "files": 1,
+        "duration": "3.92s"
+      },
+      "failedTests": [],
+      "outputSha256": "9f5ae4cf8764ca3f02708c0b1ef8efa95f57602f1111c7339e6f32eb98056251"
+    },
+    {
+      "index": 10,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/admin-youtube-thumbnail-readiness-gate.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/admin-youtube-thumbnail-readiness-gate.test.ts"
+      ],
+      "counts": {
+        "pass": 4,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 4,
+        "files": 1,
+        "duration": "130.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "599be5dd4c3e64bf44ec49f6fb356cea7129c4bc82604fe856c5e27ddb5a4143"
+    },
+    {
+      "index": 11,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/auth-callback-session.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/auth-callback-session.test.ts"
+      ],
+      "counts": {
+        "pass": 7,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 7,
+        "files": 1,
+        "duration": "40.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "9e37edc80260dfdd50d8fc11ed4e0659210fbc6c2ccb0f6e4cf8d164d342c63f"
+    },
+    {
+      "index": 12,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/db-conflict-checker.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/db-conflict-checker.test.ts"
+      ],
+      "counts": {
+        "pass": 9,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 9,
+        "files": 1,
+        "duration": "39.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "4d53d679c5072b7dc6081ad88d4169c6e98dbc62cc686977f73d95b0c414880c"
+    },
+    {
+      "index": 13,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/local-loopback-mutation-origin.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/local-loopback-mutation-origin.test.ts"
+      ],
+      "counts": {
+        "pass": 3,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 3,
+        "files": 1,
+        "duration": "59.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "8f0d904caf4e646f5a2b2ed8f74886b0579cc3ba46c64765bf5416f365a21a16"
+    },
+    {
+      "index": 14,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/local-supabase-runtime.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/local-supabase-runtime.test.ts"
+      ],
+      "counts": {
+        "pass": 17,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 17,
+        "files": 1,
+        "duration": "8.32s"
+      },
+      "failedTests": [],
+      "outputSha256": "16594e6ebc2796c817cc286fbc1de45841a7fd598647b96fe0bb57955ac41d81"
+    },
+    {
+      "index": 15,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/require-admin-fail-closed.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/require-admin-fail-closed.test.ts"
+      ],
+      "counts": {
+        "pass": 15,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 15,
+        "files": 1,
+        "duration": "63.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "8899f34fdf5a9e4157a1d30ca1ebae8d9e9f2d83ef05ccf57d97eb4bc8c4c470"
+    },
+    {
+      "index": 16,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/review-media-sql-successor-workflow-contract.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/review-media-sql-successor-workflow-contract.test.ts"
+      ],
+      "counts": {
+        "pass": 6,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 6,
+        "files": 1,
+        "duration": "8.30s"
+      },
+      "failedTests": [],
+      "outputSha256": "c2dd222a71394f6abbabe37c7e6d590a13582db141947dad5f8e43ea899c4e60"
+    },
+    {
+      "index": 17,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/sentry-admin.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/sentry-admin.test.ts"
+      ],
+      "counts": {
+        "pass": 8,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 8,
+        "files": 1,
+        "duration": "147.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "ae8cce6d69b9599734906a7ca604b18ad9a3a4a2b92f18aebf814a00b9a7e15b"
+    },
+    {
+      "index": 18,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/sentry-sdk-transport.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/sentry-sdk-transport.test.ts"
+      ],
+      "counts": {
+        "pass": 1,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": null,
+        "files": null,
+        "duration": null
+      },
+      "failedTests": [],
+      "outputSha256": "83bbca13ea24a55d1ee4ed82ee58463d9f7a5f03e59abb359b454087daf980fe"
+    },
+    {
+      "index": 19,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/short-url-page-runtime.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/short-url-page-runtime.test.ts"
+      ],
+      "counts": {
+        "pass": 5,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 5,
+        "files": 1,
+        "duration": "53.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "74a1ed7ca3da8e5f9008488b1d91551d9222c19d7a7d111c852fc2343aa7dcab"
+    },
+    {
+      "index": 20,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/shorten-target-allowlist.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/shorten-target-allowlist.test.ts"
+      ],
+      "counts": {
+        "pass": 16,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 16,
+        "files": 1,
+        "duration": "98.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "0960e66a26b28a33150326ff69f7d6b549e8fd8335309d6f8230c2ab49d8fd34"
+    },
+    {
+      "index": 21,
+      "kind": "isolated",
+      "expectedFileCount": 1,
+      "expectedFiles": [
+        "tests-unit/storyboard-gemini-rag.test.ts"
+      ],
+      "observedTestFiles": [
+        "tests-unit/storyboard-gemini-rag.test.ts"
+      ],
+      "counts": {
+        "pass": 11,
+        "fail": 0,
+        "skip": 0
+      },
+      "reported": {
+        "tests": 11,
+        "files": 1,
+        "duration": "95.00ms"
+      },
+      "failedTests": [],
+      "outputSha256": "8c0664ca449050942fbef4f5d85f2bb136113250827a519d654c7140f1eaa9f3"
+    }
+  ],
+  "hashes": {
+    "rawOutputSha256": "169df988b7e6c79167e7d02635893010fbd9dc5cfc70eb2670468cbb8120f6f3",
+    "runner": {
+      "path": "scripts/run-unit-tests.mjs",
+      "sha256Before": "ffc76d4b2e082d7807f090d1b553822c3f4bc081b988ed6c069952d84252bbf8",
+      "sha256After": "ffc76d4b2e082d7807f090d1b553822c3f4bc081b988ed6c069952d84252bbf8"
+    },
+    "tests": {
+      "filesAggregateSha256Before": "581d558dc261e21e9b4697379caf51aa723d157752faad24bf162ee6bff136cc",
+      "filesAggregateSha256After": "581d558dc261e21e9b4697379caf51aa723d157752faad24bf162ee6bff136cc",
+      "allSourcesAggregateSha256Before": "4929e0a217da00ec7327e4b784bbcc34949f82257e1668cceb36b69012d84891",
+      "allSourcesAggregateSha256After": "4929e0a217da00ec7327e4b784bbcc34949f82257e1668cceb36b69012d84891"
+    },
+    "product": {
+      "fileCountBefore": 860,
+      "fileCountAfter": 860,
+      "aggregateSha256Before": "669e7425a29b9fc212135298b808f782237ab4724a84d332e20c40a74e598535",
+      "aggregateSha256After": "669e7425a29b9fc212135298b808f782237ab4724a84d332e20c40a74e598535"
+    },
+    "frozenSourcesAggregateSha256Before": "158c68074f4ba3bc993f4096e8bded2880256322c5be11a8e886add568c7b8be",
+    "frozenSourcesAggregateSha256After": "158c68074f4ba3bc993f4096e8bded2880256322c5be11a8e886add568c7b8be",
+    "sourceFreezeManifestSha256": "cfbbc960ee377586e6cfe1d0f4f6db8bf2320d2a92338b033f05637eb20decbb",
+    "previousCanonicalUnitSha256": "f0b5f6e20c7cfc81bd22dcc160b69962b063bf4025a1476cc2a6655355498c86",
+    "failedCanonicalUnitFinalSha256": "a0e9fb3e000c9a46ba7087fcf24b395173b722d535c5c742b3e72e492b504f09",
+    "packageJsonSha256": "1f19b1216c4f482f3feaa818866622b0308338bdbba15c952da1f1f36e13b4bb",
+    "packageLockSha256": "3449c447593b6ca87b8c2a86ecb37b2dad46950532513b100c17648377cdf966",
+    "bunLockSha256": "7a5d246b5d7dd25f57ebce510e197e3da3da3790e7c9906b3b1151278633b5f9"
+  },
+  "testFileSha256": {
+    "tests-unit/account-deletion-contract.test.ts": "bfd204b4c964700f8a1d5a18781f517801e27b282347771ff5ed03b48714d42f",
+    "tests-unit/account-deletion-reauth-contract.test.ts": "be5d2b77bc3e8c611d38b7a047acac1fa647d55a18f457a3cc269ed601d40a8a",
+    "tests-unit/account-deletion-reauth-validation.test.ts": "a3fbfe09ba09e663fb64f5ffd44e574624aac76211117a6072e97db52a960f15",
+    "tests-unit/account-deletion-worker.test.ts": "7ad651fc44144f8dc38d7238cd203733ed5f83745cba9c04d2275124a33757d1",
+    "tests-unit/ad-banner-carousel-helpers.test.ts": "6f587b133d29f89a567b35ec8f2b5a4f67879798d91ff16a66792e46bc338ce2",
+    "tests-unit/ad-banner-url-security.test.ts": "c378dd14f338b837d469194b78e0182c5cbf2c3537b175bc935110be9fe4b1c8",
+    "tests-unit/admin-address-consistency.test.ts": "755bbd19f289df2d15f6ce68eb9e9141c7df77eb37ef6eaa50a1f2b381a1b885",
+    "tests-unit/admin-announcements-console-source.test.ts": "24ff3df93a2ca72afbf42d7db9bf66876d0fdd53e81f2efdbdd73b02a87267fe",
+    "tests-unit/admin-anycap-gpt-image-readiness.test.ts": "fb92f57dfc31f9f90d135a82f690ec2d41a4063ce99d9822922007301e5af8c5",
+    "tests-unit/admin-audit-contract.test.ts": "62a536cf7d4e65937df657018a7e4299ca2f18b2c25b3c9b103af4e8f335b426",
+    "tests-unit/admin-auto-delete-missing-evaluation.test.ts": "20e76a0a175552b7ab348088bd9a3e07d9dc9ad2e82753a8b5f029de9f41b467",
+    "tests-unit/admin-console-uiux-source.test.ts": "df5d09c2babed8ec629f1f47560f4310fe5f075e16dfe90800d84e742106fba9",
+    "tests-unit/admin-dashboard-widget-order.test.ts": "aaa252784bcc9bacaf4eaac07b5d7b1fd457b5dc70a7eca0a26e1e5df17976ae",
+    "tests-unit/admin-directions-provider-security.test.ts": "570a9a15be36e7cbf4e0e924d0d155367ffd4807bdd78b9e6616d3342e45dca0",
+    "tests-unit/admin-edit-restaurant-modal-source.test.ts": "793ce1c5947aa7fb407267817b7627f82eefe4811d4b8ebb476d820cbf5d118d",
+    "tests-unit/admin-evaluation-address-filter-source.test.ts": "e8cd63d716962968b232743fed7624244ae757b7ff7470e7e7ed03768229c182",
+    "tests-unit/admin-evaluation-completeness.test.ts": "f1fe38c211414eeed5bc490568ef1344d7f7393960ecf3a30f5cdd1c03416dc5",
+    "tests-unit/admin-evaluation-conflict-normalization.test.ts": "904f46f64792ea60559317019ba0b2f21412f2adc40fc6c92e1a5289ed11c40a",
+    "tests-unit/admin-evaluation-latest-order.test.ts": "c571600f1d66988986c5da5fe2f613fbd22bf269701280b00d126509719cc7a8",
+    "tests-unit/admin-evaluation-missing-metrics-source.test.ts": "4e5f2afb205137cabacfd6fcced95578f58259478ff2b33fd08f464d59b260d4",
+    "tests-unit/admin-evaluation-name.test.ts": "e8929bdb7a9a9b7d8ffab169ec039e8bbe85117430616d799bf68f67753d22e9",
+    "tests-unit/admin-evaluation-page-api.test.ts": "0b5fd29100051a2ddf4c53761d3b1e31ae8059e0e23dcde63fdc3999eec02e90",
+    "tests-unit/admin-evaluation-page-server.test.ts": "52297580735ad0748944061811de2427bc1128360f5d9109e5d883ab171489d0",
+    "tests-unit/admin-evaluation-pagination.test.ts": "ca790cb879a95db6bd55ec57cbf598a621e2d16a47d809f2e19095104a1641e4",
+    "tests-unit/admin-evaluation-raw-warning-groups.test.ts": "1fe992db852186f4f75be2941af04c8363c8d9d463ffb86442d6e273b6cc8006",
+    "tests-unit/admin-evaluation-record-actions.test.ts": "4a1f21e3789dad29edf3eaa8c5fa32b499f37b1b3c647481865a0f0c66d25aad",
+    "tests-unit/admin-evaluation-reload-state.test.ts": "09f4055e8afaa5e2f8842d91c9259f2536a2f4d621ce05cb3baf6f97b1777a22",
+    "tests-unit/admin-evaluation-responsive-css.test.ts": "3260759d920199e9900d95911baae4a87695a375249213e746e11e9522b8acce",
+    "tests-unit/admin-evaluation-revision-read.test.ts": "2d097297b26becaf674a239d304b708d61c9c3f01f0bcf7ab25301ae1cb658e0",
+    "tests-unit/admin-evaluation-status-filter-options.test.ts": "dc155d98cd4fce390acba97a88a34e5edee71adcec01150c401d270f1c499db0",
+    "tests-unit/admin-evaluation-warning-stream.test.ts": "75a546150000ba660f03030981dcb65b97e1daacef963a95553643f56a749bb2",
+    "tests-unit/admin-exact-readback-api.test.ts": "321f8ee3d5d8d0a621bd20b047a21fe81a4a14a94d9a6912857924977858d34e",
+    "tests-unit/admin-family-design-contract.test.ts": "b1109f610d4d0bb84596c1153b1779f12a63b8df6bc401e606c8d85896a60de6",
+    "tests-unit/admin-guarded-mutation-contract.test.ts": "699c439ea66f875bb9016cf13cd5970c55751d7e17a85944c53232a1aa6783cc",
+    "tests-unit/admin-home-review-actions.test.ts": "ab319497051e97188806733ea0381e60a3a53c7445b1760917d1860b11659ffd",
+    "tests-unit/admin-knowledge-graph-api.test.ts": "36317922fb4e8f0ce6b9841f24c6866aefd08c58f279618c7b04aeca00906ef4",
+    "tests-unit/admin-knowledge-graph-evidence.test.ts": "90efd43bf7b5f8d82bc8bf87018d44594e9f96f0290970177b6b1bb60d2d270f",
+    "tests-unit/admin-knowledge-graph-shards.test.ts": "beee9a9248cfb9528d467db65875a2f93f92bad8ee66ba12da56a479e74c37c3",
+    "tests-unit/admin-knowledge-graph-titles.test.ts": "1317726201f95449e08c4fc8ccb023e5cdc1f3c955605456c577a6c8cbe7ed63",
+    "tests-unit/admin-knowledge-graph.test.ts": "80136fd1ab95451f9f8922bbd6809797ad849bfc167b3e4e62fbead0cd58584b",
+    "tests-unit/admin-map-overlays-ia-contract.test.ts": "72710a19b60d590ff31046f42627e6cbcdd631a06beb5bc1beaf0586591e004f",
+    "tests-unit/admin-map-overlays.test.ts": "82cc344598c734925023f96c4f3fa9c30b13bd8c68c17ed732c0a475cad1da19",
+    "tests-unit/admin-module-metadata.test.ts": "8be07cc10bc6057c16215bb15773d7ecaaa59f15a20d5d16bddf400370648010",
+    "tests-unit/admin-mutation-request-security.test.ts": "12ea7096f8e6e1b6de39b675c3775859ebdc864db46d925439fdbdae82f50da6",
+    "tests-unit/admin-naver-coordinate.test.ts": "6edf5d68676de7645923fa94097df0b1e1d4e0ba8ea06b35f9bfe0f21b8a88ce",
+    "tests-unit/admin-operating-readback-route.test.ts": "26cf7f3b6c53cb74ecd957b9a3b5a2b6454a06ca3fccc6cb2c3d4a9cf91fb864",
+    "tests-unit/admin-operations-source.test.ts": "2d127da1219276b58077a0c22ee1d3e271985331039acf1541b810b353a7ee69",
+    "tests-unit/admin-operations-view-model.test.ts": "a357c6259a931faa5b042cd94e60809abef52f12a7f56fab81b4bc3d3bc1edbb",
+    "tests-unit/admin-orchestration-handler-source.test.ts": "72fb337275af7380f659e673716437a542884848e61cff05e42c7026a0a47719",
+    "tests-unit/admin-pending-counts-source.test.ts": "f6bd8e5468deb417be324d175077534cf0a554a2c8dc3167dd77f3d6afe9fcdb",
+    "tests-unit/admin-pending-counts.test.ts": "19623a598b128356555a85cab250e00057bdbb60fb0374ee01d218f4411ba8fa",
+    "tests-unit/admin-pipeline-control.test.ts": "5fa37885217b3c665859b402ddf9aa8719867e7b132fbc711711d1bfe745bc42",
+    "tests-unit/admin-profile-summaries.test.ts": "c16fc6984f7f65320d42a0436cc80bb368149e1b19f779ac9939193034361ad5",
+    "tests-unit/admin-receipt-ocr-workflow.test.ts": "59efd57eb7fff6e5c5d08b24cdb19317b5d8c3e14d6d72cbd769a8ed0bd6eaef",
+    "tests-unit/admin-record-action-client.test.ts": "11b56d4636a6dffa4a75410fbadedb9b59ee688c63f713438ba26a70625a5386",
+    "tests-unit/admin-record-action-follow-up.test.ts": "3e16dbe7473eaad7a610238fb8a33290a4e7a78ed18574e4bf376fa0f8a9d021",
+    "tests-unit/admin-record-actions.test.ts": "0383d3c63881919540559dd091a193f0f5615eb06b0b2816a99de102f02cd12c",
+    "tests-unit/admin-record-metadata-roundtrip.test.ts": "45567b68fdce5667c1dd0410c5c4fe8f0964f451446a79745172f9c992a1ba65",
+    "tests-unit/admin-record-sql-successor-runner-pg17.test.ts": "ca7903afce132586d2f9a266060b9f1d50ceb846499552697f8a95bd86396a2f",
+    "tests-unit/admin-record-sql-successor.test.ts": "bbb0c481cf87ba4f36fad3ca57062d03b63dfa2d812419995aab491bf8c5a61e",
+    "tests-unit/admin-record-view-fence.test.ts": "200b682b70f1db1fd9490bb3ee01f16fcf1a3f6d917775a3ed1dbf4ab2bbed9b",
+    "tests-unit/admin-refresh-apply-route.test.ts": "ea58bd8734572406165888e05e537631d1d52cac4b624ffacf4984b1feecc1bd",
+    "tests-unit/admin-restaurant-create-caller.test.ts": "87528f6424067eb7ad5b44415a26380c6153410ad8720a95bbc490a1be0143b3",
+    "tests-unit/admin-restaurant-destructive-action.test.ts": "d7abb251a20f672fc16a5514583549d091f97a183558f1b1d86af63ee506acc6",
+    "tests-unit/admin-restaurant-guarded-ui.test.ts": "fed0e014e1cc91b5f7328253ac2b58a129304be2679d021e8c20155aa014fcfd",
+    "tests-unit/admin-restaurant-identity-warning.test.ts": "5416fe9949aca61ce8edd7e1be9d75489cfd9162e9621fd0b6c67775dbf62a28",
+    "tests-unit/admin-restaurant-modal-presentation-source.test.ts": "0606f284779744a47c684b4c82fa3821b86331f5a840652947cd2141e40f2ff4",
+    "tests-unit/admin-restaurant-refresh-history-source.test.ts": "70f0dcaa1600e9d217fe61ee2c1297f07da6c49eb4332213835d83b7686de1eb",
+    "tests-unit/admin-restaurant-update-conflict.test.ts": "4a66ce8809d5d23514cc3b70174bb5a05d3ed71b394eafc5ed69d3b7dbbb087f",
+    "tests-unit/admin-retired-moderation-endpoints.test.ts": "4c140527e50551d41977d4df79b3f2e5e2e6e34d256162e100e213515749b4a6",
+    "tests-unit/admin-review-merge.test.ts": "9bd055ab05bed06e3deff8a14a77a3c610aec83a245b75b74dfd827aec55a9f3",
+    "tests-unit/admin-route-auth-contract.test.ts": "b4a4543c183a9789f763ab872b3fb022e87eb974c4d93bdacf43f862993b82e3",
+    "tests-unit/admin-route-candidates-contract.test.ts": "7cd2626e95f46ae7d2dd7162013db803565053384e1532cf4386bde11bc0d473",
+    "tests-unit/admin-route-planner.test.ts": "df7dd91cc4835ae576129eda29958ae7bf31df2a5b7f1e00a7121a96c65a25ab",
+    "tests-unit/admin-same-video-duplicate-warning.test.ts": "2cc2b60f9b1f46aef0afa7487164363286a8504b2326254bb01663a986fa8548",
+    "tests-unit/admin-sentry-route.test.ts": "d36a87873eb8bba3cdfea3829e88246137bab91c99bf31deecce1535ed2d54fd",
+    "tests-unit/admin-sidebar-order.test.ts": "9193b6d466130e69050e2437a706186daf356f019d906d348624df0785b9fafd",
+    "tests-unit/admin-storyboard-agent-graph-fidelity.test.ts": "2516de85a8635d0cf27e11291e9de80d040bece1e1b3482566978a0f9c6d4ca0",
+    "tests-unit/admin-storyboard-async-jobs-contract.test.ts": "6c8df187ac4be482fc7c30d12a8a1f3ca0a9198144bbadf374d69f2542da77c4",
+    "tests-unit/admin-storyboard-canvas-shell.test.ts": "0099d131188aa67c122d021b4e0d3f8c0dfea8a448a5da8d93d296be82e4b9e4",
+    "tests-unit/admin-storyboard-caption-provenance.test.ts": "dab5062d3f398617075f227b99a757c514679ab4a2b214226c06182c010967eb",
+    "tests-unit/admin-storyboard-eight-presets-ultraqa.test.ts": "ca951836e2dbe4014e91158c38a42a91ecc9b1658b9e744533ac593425c20838",
+    "tests-unit/admin-storyboard-generator.test.ts": "703e80dfd318b4de104a04951734d6b27ff3add8b7a1b4c4d6b7b4551c2e8c45",
+    "tests-unit/admin-storyboard-history-client.test.ts": "a03e6f3ee3f9171357394dd08c74520ed54fcf150e33e6ca76ce36b0fe9be2b2",
+    "tests-unit/admin-storyboard-history.test.ts": "f9f4d195ad999f0360fd8c895075450f2a6bc3584019bf49c1e160e5ffb3c41d",
+    "tests-unit/admin-storyboard-image-provider.test.ts": "1ed27d88d7af04a377955c969a880294f627108860a45c711d52127438d10ab8",
+    "tests-unit/admin-storyboard-job-boundary.test.ts": "3cf34b37fa17ad5e2b41b3dce5125f8c441b29d6b52c2d6dee68310478a5dc90",
+    "tests-unit/admin-storyboard-langgraph.test.ts": "ff22ca4f0059053828d4edec0b4f6477f5feeb5449bf3b303e60f1a21bc61c72",
+    "tests-unit/admin-storyboard-policy-readback.test.ts": "6c894813674cfd15ec0f7531f72bd2f046a3d6110429796427902b0028e39aee",
+    "tests-unit/admin-storyboard-rag.test.ts": "ca7f0c6f780c4c77471cf453d770c622bb4afb01172a89c1af41c67631bcb3e2",
+    "tests-unit/admin-storyboard-request-security.test.ts": "6a59c804486e2d7f5a08bbeaa52b37f2bfe11c97cded6d4a3fc256610782aadf",
+    "tests-unit/admin-storyboard-seed.test.ts": "66252c9f7feee462878e9dfd949bb0353cdb72d22a4873c98ec34e14b8a6fa49",
+    "tests-unit/admin-storyboard-thinking-trace-source.test.ts": "4d178c248f2c4a85341f583ca95e3d236abf3bc50bc1213820fc6614165a91a0",
+    "tests-unit/admin-storyboard-visible-scenes.test.ts": "d11789a2c19fa0345991b2108c1e4ecc3b40e9c9e2417f612549ca866937df84",
+    "tests-unit/admin-submission-approval-state.test.ts": "518e25030efe4de555d0c3bc4533cc5e73fe01b4b16c90b848d9ce79f2e32fa3",
+    "tests-unit/admin-submission-queue-safety.test.ts": "41f96a1de268496c68aa2f388da8b6b6cb201670087f7400a1b24d9955a17b26",
+    "tests-unit/admin-system-status.test.ts": "0ed4657ca313ab9da7cbd3883d9932386acb2ca61ecc12c85ab8c31b879908b9",
+    "tests-unit/admin-thumbnail-bootstrap-route.test.ts": "c321dd93df56dc0b7df4b7d99a070dbbedb809826ef55d498eef2fd12c47735f",
+    "tests-unit/admin-user-audit-privacy.test.ts": "0e1c3ab9f08c7efebb451c106143ce3fa9e95bffc86080e36fb37e34a90589cc",
+    "tests-unit/admin-user-management-guards.test.ts": "0fc69bed26861e35f038bedadacc40a16d3b4cafe89939854f9e54a30abca3d5",
+    "tests-unit/admin-user-management-source.test.ts": "ef0b7ac8537ea776541a25fc089c9ed3a5643ac02665fee40b30c6da54ff2d6e",
+    "tests-unit/admin-user-rpc-forward-successor.test.ts": "86c988da6a0e22cf000a6cd7e49e30b99842d9a25ec0f8b626ca0d170700d35f",
+    "tests-unit/admin-users-mutation-scope.test.ts": "1d72375cca38087b20a3d14c5bfdd5287122dbac1d4f0c8401accd9a5584615e",
+    "tests-unit/admin-verification-cleanup.test.ts": "55ada9929f1ff2c305e3567006d0583ce9bd9d806bacc1c194cb1450c4312c16",
+    "tests-unit/admin-workflow-request-security.test.ts": "6b9359d963663030b065d9eecaf6807771e6435fb1a8640f53ce7e159396bd16",
+    "tests-unit/admin-youtube-channel-local-runtime.test.ts": "3610a3537a514f027e0c3db79573ba18c2165b04dc417eaa55354c767bfb28d4",
+    "tests-unit/admin-youtube-thumbnail-generator.test.ts": "efcb3656378064c418e02592670ff63f33860bd280713b5f5f5ceabbda87814a",
+    "tests-unit/admin-youtube-thumbnail-history.test.ts": "b59703438d894994647e01f2503322d55690574a0c86f06565e67edce5e52bbe",
+    "tests-unit/admin-youtube-thumbnail-readiness-gate.test.ts": "c453944a06976b940790788e439106959f15098fad20245386662fcfc7da5ce3",
+    "tests-unit/api-security-source.test.ts": "5dddf93c5ffbdc0bf010134a373eb9a7bc341ea86e69d46c457bdffdd7c08714",
+    "tests-unit/app-back-state-contract.test.ts": "7495e7daa055efb4ebaecc0a2fb7e16cc5d762a9a1ab3729988d92844ae3c00b",
+    "tests-unit/auth-admin-login-redirect.test.ts": "6d23d41d8e84ba4d9677714a5357cd217f323e253b480387dbae953ceb96a3dd",
+    "tests-unit/auth-callback-origin.test.ts": "c443304a8b7cf386656fc277bf72045165cb68d2e415dbf44aa7373c2c648d58",
+    "tests-unit/auth-callback-session.test.ts": "bf5c16f880b3c4effda74b75abe8678a9cb856407f63591a4c672fedf6ed6c0c",
+    "tests-unit/auth-existing-account-recovery.test.ts": "fef9ed9ae7d99502eef2b149c8748c99a2d53f304d9e29792179f060f6b8e720",
+    "tests-unit/auth-release-smoke-source.test.ts": "aa25e7a2060c31bb9836d0714a3ce4f750fa282eadfa5dcff0ab92a91c7a9932",
+    "tests-unit/auth-ui-events.test.ts": "0a0b11da14c189efc1c4edbc6dea53d74309252cc6a463398efed6ac474735cb",
+    "tests-unit/auth-user-continuation.test.ts": "9424254db0cbae28eee4ebe3e8bec6cb27a9f5044a7e62d82011effe90f64cd6",
+    "tests-unit/backend-npm-ci-retry-source.test.ts": "336df6325a0e4de3519b24a4af9886df203f9c745bc4dad87d41b76d605b88b7",
+    "tests-unit/bottom-sheet-focus-trap.test.ts": "2338c69b41805e3bd8a994a3118e4bdf8c24cd195ddbc909a9510da46005e59c",
+    "tests-unit/bounded-json-depth.test.ts": "5771d6c7775c3ee0462fe2ce9b36317f80783a6c0996f85b6e4eb6c4090d0215",
+    "tests-unit/braces-ast-boundary.test.ts": "eb86036e934842af487ef356d7452e90b516b1b6b3ebe05321e93adb332ed5cc",
+    "tests-unit/braces-depth-boundary.test.ts": "dc52a2754e0f618ca430b4ecad9ededc462bf5190fa0001a87fa79af0932a946",
+    "tests-unit/braces-range-boundary.test.ts": "7d7313b77e8c28445c8087ec557321fe1eeb3e82991255eff70adc794f6bee8d",
+    "tests-unit/brand-logo-alpha.test.ts": "9eae30d20ad45cd7e5ed71c229038e96452ece8e328e1b26dfa2636440ba5389",
+    "tests-unit/browser-storage-guard.test.ts": "3c8e3ef0867de60d7b048171f7cd2c2c16d040024cbd5ac01e61cb32a21b14be",
+    "tests-unit/browser-title-source.test.ts": "dbd402e3ed8c47edce6511675f31caecb17fc55354f2b63e32cf61728b958b52",
+    "tests-unit/browser-title.test.ts": "8253642a94ec22cb12a881eaa8726000e2c6df712e975613e4f16611f33cd423",
+    "tests-unit/bun-historical-discovery-contract.test.ts": "e290b22b1e1bdcd856a11110b0dc57b62cfb483fc959abeb4ad28fb55f3b3610",
+    "tests-unit/category-utils.test.ts": "4423863ebb970a9edd9c583d9ebd8b51fef25427df9f76ebc1a6ff119fdb8655",
+    "tests-unit/clustering-region-district.test.ts": "88916fa6acf73f4fb4274640883c0926d2e45db937d2f37660063b890348db93",
+    "tests-unit/compare-dev-route-reports-source.test.ts": "b83307c74b669f6a801379192691d22a86fe077d0a82f651cef49c46347bb103",
+    "tests-unit/cross-platform-web-tooling-source.test.ts": "e35385deb316551f546f16426bb81c0b48dd07b7f36e6663307c21f7641241ea",
+    "tests-unit/dashboard-aggregation.test.ts": "93aef611c21dd40ac1163e8a7ed916bc946aa74d97eb15d7c47d0c8653369192",
+    "tests-unit/dashboard-classifiers.test.ts": "a05807568959638744de8742b25da25d03892bdd15f8714ec90603a5baddce27",
+    "tests-unit/dashboard-public-visibility-source.test.ts": "7e79876aba1c0cec68fefa5d3106600d31771a6cd30614fd1aa9bc07bdfe1992",
+    "tests-unit/dashboard-route-contract.test.ts": "0b69df5cee0d5d3c20d7e8bb10fb887e02e66d0e1e8848be414f359cb46e25b8",
+    "tests-unit/db-conflict-checker.test.ts": "b485ee26c1fa6360e4528894ff4113b05cea659cd5b5fb67f641adcb531d3138",
+    "tests-unit/deferred-marker-renders.test.ts": "446a18217a7306565992b938e5bdae61ba67b13946360c6975a1259ee92134f5",
+    "tests-unit/deferred-marker-retry-limit.test.ts": "358c03cbe37d4010f5484a626c56f5aa56157b03aa45b53452e63e2735a8127f",
+    "tests-unit/dependency-candidate-collection.test.ts": "13b21475ded260290cdfa985c521f5884e6bda0a6c39a5405868c940fa2548aa",
+    "tests-unit/dependency-candidate-split.test.ts": "94d4caeb4a833c54fe5035e9c2f2cb757e66a89702c9e0154fe48bfe14175fce",
+    "tests-unit/dependency-freshness-workflow.test.ts": "d95deafa88c0b654b9a45378e6e351992de540fe1cf4685fb803e6da0226df74",
+    "tests-unit/dependency-install-compatibility.test.ts": "9ef8370cadfdb10739218758bf0044166ba85accb1d598aa3089e0c76929f961",
+    "tests-unit/dependency-modernization-compatibility.test.ts": "b911d6cd22822ea0360462cbfa100711addb02d1f94a00f010b248489a69e4f6",
+    "tests-unit/dependency-modernization-server-compatibility.test.ts": "173d1139df6cb6e7a662ba0aacdf1627bc0d376244c5b743f0386154b9e51b12",
+    "tests-unit/design-contract-source.test.ts": "accb8cbeecfe60e54e2386fc6184c31b5d8fbae5223a54ca295b7292011ef1a1",
+    "tests-unit/desktop-left-panel-entry.test.ts": "f7868a93cbe128bb453366a90b08197cb154e6f95880e833d928fac7185bc1d0",
+    "tests-unit/dev-admin-bypass-cookie.test.ts": "c9b477b5c4a14cccd16893bfe974c6cbed96a1c03a7d3912258c80034e9ac241",
+    "tests-unit/device-location-map.test.ts": "e2ee366e1e21722eafd76ea13a8ac36b53db96d57641eb3f70ee81cac14c606a",
+    "tests-unit/device-location-privacy.test.ts": "b88f753c9128e3a7c0b8b83d74ff0b6addc19089deb4813ab25f048a9e2334e6",
+    "tests-unit/device-performance-cluster-options.test.ts": "b84e1647790714b489039f80fdfbb70ea250a5b9ca1f48aa91a3145ca1e5c764",
+    "tests-unit/dialog-content-inset.test.ts": "9bfa110a852eb81c03d30eaf4afb79390c721d6b641315b291082f54ad0dfbdb",
+    "tests-unit/draft-store-hardening-contract.test.ts": "67e20f2df4a1df65d8b8eb2804be16e647edecb30ee2d6b6e8fb17ec53d6c3f4",
+    "tests-unit/durable-receipt-ocr.test.ts": "350b1ca55f197d922dbee3fa0b8ade7a6686ffb45fc71fbed1d0f45cc5906c03",
+    "tests-unit/edit-restaurant-request-flow.test.ts": "d04535237437f2e22dcd63dc6ba0a05c0e651734d8baab88d13cbbfca82e87d0",
+    "tests-unit/edit-restaurant-request-form.test.ts": "242aefa23fb8d210ef8950aed9bf5e60bf76aa5d6ba94ad088f0d2082abd3d3d",
+    "tests-unit/eslint-generated-dist-dir.test.ts": "eb8aa115895a94b5865d5bbde304c4d3b1b6e850f7616cc63cbddb9e0b7c09e4",
+    "tests-unit/expanded-cluster-flow-invariants.test.ts": "70482abaee2a9ce18947b3a145c09c4922589a9875d1c5aaf00107737eb0fa83",
+    "tests-unit/expanded-cluster-restaurant-snapshot.test.ts": "3119ea406e5eedb04d40306dc6c861508fd50b944c5c9c5a35e7472f1874cb57",
+    "tests-unit/expanded-cluster-viewport.test.ts": "4f00936eb01ee626cc68bb25f0fd9e911fa7d693f0f3be88dc23da278f6ef20b",
+    "tests-unit/feed-infinite-scroll-error-gate.test.ts": "50527d2ec7f372524512f326f2e2dd57918c988ba57de8767f24e27caffebca0",
+    "tests-unit/feed-query-state.test.ts": "d6260bfc7f72593e2777661ca6eefd957e2dfdd3dfbd9e633bc01178d57234e1",
+    "tests-unit/feed-render-data.test.ts": "541cc84be076bc96f8e47262f285fe71ac2622188c20c3c7243dd6688ce85e29",
+    "tests-unit/field-admission.test.ts": "738e62226496600e1b165df3f8bea2730ad96f4d7ce21e91b5f7969f467f32b4",
+    "tests-unit/field-vitals-route.test.ts": "80b53bbd850b9fd29c475766a0b7f4cd83cf75ccb1c38e6e7b18450c42433b02",
+    "tests-unit/field-vitals.test.ts": "f823d5d650bea995a1efec803ed1d753c6ab45d0cfa08a9d9892b3b576c503a8",
+    "tests-unit/frontend-unused-route-compatibility.test.ts": "43f72f3ba1ae01022b788ef44167096b50b72e5468b33a73880bcb65ffb28e73",
+    "tests-unit/g002-popup-insights-source.test.ts": "9b4d9adba59d429e284b453002fe79c7f5386aae45747454cf3e49129fc9c94d",
+    "tests-unit/g014-feature-rpc-catalog-contract.test.ts": "c8d39e2f148f11161e403e8231219f02c5ddfe826b61cb28cecac78c12a5043c",
+    "tests-unit/gemini-live-verification-boundary.test.ts": "49e4d6e487ddb86dd79ee757f6b71b9b6c8232d735f7f8555954466204691361",
+    "tests-unit/gemini-ocr.test.ts": "ca24fcc6c305388bf1b7c779d8d7f0846d87f037f1e9fe926d27eb60d649e86f",
+    "tests-unit/header-actions-loading-source.test.ts": "6fe8881dab27d0e7af887d2c59290a1eafc307370dd9a17c91e4365ca732514d",
+    "tests-unit/header-bookmark-notification-ux-source.test.ts": "7e6e529910cea95780429949d7922c8a83f61754f036adb21b24e5f344a553c4",
+    "tests-unit/home-detail-route-state.test.ts": "db06d2bb3fe211601dedd283c6d0b23b68badf2af918d7247aa41f0642aa7f62",
+    "tests-unit/home-detail-stylesheet-ownership.test.ts": "70d600cc0db688d760145a3ee8a69c7b6e13602d7bb967df59bd0d5d9ccfbf16",
+    "tests-unit/home-map-contextual-restaurants-source.test.ts": "0be52eb262509472347c2f8160d9ee825af216afe42b9598f5665085f4962793",
+    "tests-unit/home-map-keyboard-navigation.test.ts": "0ff9386d265574a5ea1d4181a86d8ae8b430a46e1e7a92020ce234b7d7ec9e98",
+    "tests-unit/home-map-mode-filter.test.ts": "a657653c8c692e9f9c1af6885250c21ca317ded77eb2527ce28f1ad32a26a7c4",
+    "tests-unit/home-map-runtime-activation.test.ts": "589cef92d5f537bb0c4cd5081a8c157ed7e81a5d7293969137950fa143e488f9",
+    "tests-unit/home-map-swipe-restaurants.test.ts": "812b6be5687a0cb430da6caee7d60ed8682d0fdc63ef04c68bdb941edcb29cbb",
+    "tests-unit/home-map-theme-filters.test.ts": "6e8024d189341a81dc81f867bc17cb57774b3d79b401e3165c5a22a508ab96f2",
+    "tests-unit/home-map-user-preferences.test.ts": "ab8f1b1a3cc0dffc378fd5b76af1b43d06ec12785c89d558f4e8cdefe54d0e22",
+    "tests-unit/home-map-youtube-kpi.test.ts": "9629155b31425ed0935cfbdae85a5dcb7a00b8844084112364e0e429367cfdab",
+    "tests-unit/home-root-lazy-boundary.test.ts": "d51af4954b9595e49c0e2cf3055bcdf65a9cbce5f0ec5b80d76fc78ac43e6b53",
+    "tests-unit/hydrated-contact-email.test.tsx": "a0772d3b9e31f695b62e78cca91215901ab8b47fc91ebe7c338a4d0de088c122",
+    "tests-unit/image-tag-fixity.test.ts": "fae1833c4f2820a31555dc3c8ab3ba9ed3a6bc464966d99093388e9ec9c9190f",
+    "tests-unit/latest-owner-cleanup.test.ts": "b7b5bac87d5e31c681f61e2d0d3e9614fda68e2674bcd1116b0061ed29e739f9",
+    "tests-unit/latest-selection.test.ts": "07d250a874a3154eba91e3fbaae7e8032f8ed7013f281d28cab532f89dd25acd",
+    "tests-unit/lazy-map-boundaries.test.ts": "29157280f7af90f2593d30df15215874429e803e07cddac9069dd9607b9e76e6",
+    "tests-unit/lazy-overlay-boundaries.test.ts": "b1f3b1a8b8eab7d4ece93143fdcd55419f4bfd0ffca216e155698431f6e66ac6",
+    "tests-unit/legal-public-pages-source.test.ts": "b59c9a3d0639dd7967de69f96450a587f3adb6af4c0765eb7a9ec3769ce8a4c5",
+    "tests-unit/local-dev-dist-dir.test.ts": "e487cfda9d895a07b541fe855e6c5173b94f1fc21728c88d1e46f9bb3078cfeb",
+    "tests-unit/local-loopback-mutation-origin.test.ts": "a77c4d6f92ef1de20fc81d671ab61cca92c68332bf8b37f500e4e8673f5e122a",
+    "tests-unit/local-naver-map-stub.test.ts": "6d18cf2b44a9f0a1261b1900bc408d9cefe683826dae81e0c5267fb9e6ae5e33",
+    "tests-unit/local-storyboard-departure-browser.test.ts": "7e8bf056e54c663bf785b75ab6449c2e3d7738984081d82d449e7f6092660fc8",
+    "tests-unit/local-supabase-runtime.test.ts": "80f293d17a0b8f8e42854aec50ed990bf8ddc3e2fd7cd837fbc5289dcb7aa6d4",
+    "tests-unit/log-error-code-bounds.test.ts": "9be95f0e7f6197616a16f2ce13d59acbeddafadb8ad7cd32ad1bfc2b0e5f7e0e",
+    "tests-unit/map-hover-anchor.test.ts": "693bf6c77d293b0ad86a6d7b97c86a301bd30b699286f7b41616ddfd9aaccbf0",
+    "tests-unit/map-query-helpers.test.ts": "60e5e56fac3d1e9a2841e7cf19f18a1fb02fcaf3e29388c2d6fe62b05d29075c",
+    "tests-unit/map-restaurant-lookup.test.ts": "278d26429cf6401420a549d2b8d70c62607bb4a42188dda65725662a4793ce75",
+    "tests-unit/map-runtime-helpers.test.ts": "0f1c458be95f86aa63b88669da0fab87804f88ac8e782683eb39b5deed2ecf12",
+    "tests-unit/map-view-google-helpers.test.ts": "dcb4790020e136a6be93e4852bf6ea7276350f83fce989fdc55450c114ba80b4",
+    "tests-unit/map-view-helpers.test.ts": "79310e8d1f7630157647fdf8e208cf7c9a22623e43e9b20933fc7e57f35330a1",
+    "tests-unit/map-view-marker-helpers.test.ts": "7cbaf7c2bd4aafaf073eca733d9513ae505ca3ecddd52206d98e7ca2081ec8f3",
+    "tests-unit/map-view-movement-helpers.test.ts": "fe9e551477d2ba58be322cd99940d17bb2678b5b28837ab2e131a8670b5c7de7",
+    "tests-unit/map-view-panel-helpers.test.ts": "84c02c512d32d131b954d08cc4043204badcbf39f2043f3f3e9e05bd107fd980",
+    "tests-unit/map-view-panel-width-helpers.test.ts": "d7062ec29db09d513ea1e83c6325f489d887c462eb72d5cdd8ba4669c133f2cc",
+    "tests-unit/map-view-sidepanel-helpers.test.ts": "662dc3093889f416e376f8b87c39b377fa13db08c1321384d89b172a5306e6f9",
+    "tests-unit/map-view-state-helpers.test.ts": "5e24b4c2e47b188f5158811c00f0c4b6093ab2a04c3b872f47ef97ce57642404",
+    "tests-unit/marker-assets-provenance.test.ts": "11e8f2322484ad86533737894bc48b1426ef3ebff1c99e069bf79343d8b0732d",
+    "tests-unit/marker-pool.test.ts": "d7938053a0fda87ec2f8c2f76c27d1d4ead90d229fa58d85b8240996ad9b118e",
+    "tests-unit/measure-dev-routes-source.test.ts": "14c9453c494227fd0fbb3fbe061ed2de6e030137fe1e2407d44bc5a1c71651c6",
+    "tests-unit/mobile-desktop-parity-source.test.ts": "294780b91c0cea719035c706bf713f10b5cc093177f0251c02b2b260ea4b2198",
+    "tests-unit/mobile-home-map-regressions.test.ts": "246242d2d49a3cfeba0fc1156a7790e0d21ee5bcf390d261243b08d5dc1c6ba4",
+    "tests-unit/mobile-home-search-selection.test.ts": "af6225b1df9086a9ac486a8855d368a891fa8a41cb52665e77f85cd2b39493d9",
+    "tests-unit/mobile-scroll-nav-visibility.test.ts": "779568806702e1a0ac2966719abce6027eb2e9a94712c3b6d4279e1c0059c69c",
+    "tests-unit/mobile-sheet-frame.test.ts": "001c87f8d5e92f6481b5c520b1d2a0ca542ab8509527ab1bf7bea2b9b8bf59e7",
+    "tests-unit/mobile-sheet-layout.test.ts": "e4c88813ba72ed372cc2fea74e0c823ba0ff5b0510b4becf6586456578d0a6e5",
+    "tests-unit/mypage-crud-contract.test.ts": "b238f95f9503fdf8a5872497a179674b1ce3f451761a6c3e3348aae0c5c2b441",
+    "tests-unit/mypage-mobile-cleanup-contract.test.ts": "893dabd6d7ce0b1eb33ab822633975717db50d1d57ab96b206fb10ea2db0c4a1",
+    "tests-unit/mypage-reviews-read-runtime.test.ts": "e73673eeb6b63a9780a8a55b25d3f020f4190c46dd8d80068ae9d103add2844a",
+    "tests-unit/naver-live-provider-smoke-source.test.ts": "828b3e9c47b6b598159dfd4cec700f11ad8944851a7ca616e6fbaa06be6721c0",
+    "tests-unit/naver-loader-failure-browser.test.ts": "a4e577b5c19d2971bfd86b161834cf45224194daef4865cef88594a7b6886345",
+    "tests-unit/naver-map-center-helpers.test.ts": "cec2851c3d59d032dd2c472da1ebdcb97aae84dc809c6f0f18a445c7bb2f5bef",
+    "tests-unit/naver-map-cluster-helpers.test.ts": "c5b6dd8162f29d8a46391cb1101e18e24a7701cc9bea50a4ee2923ecd402a5a2",
+    "tests-unit/naver-map-cluster-visuals.test.ts": "dee3a5c6fbeb08d7d527aec187b32ac81a115cf55e692a0fe3808363c27a82e2",
+    "tests-unit/naver-map-current-state-helpers.test.ts": "3b12a13e219c040bf9f5b78920e60c59942174c8409205d2c736828388e1e83f",
+    "tests-unit/naver-map-focus-helpers.test.ts": "eaa57e05fd193b7443581869f243a709d4b57ee6218ab44b1822f8bf71ff42e5",
+    "tests-unit/naver-map-init-helpers.test.ts": "95f8abcc05eaf69f6e20e0aab4fbeafc5c95c533abab7f47125923e600480034",
+    "tests-unit/naver-map-interaction-helpers.test.ts": "8ff0a36f5e384f1e89b905d2c78f945db1746448c2531b4d1674ee716c263543",
+    "tests-unit/naver-map-layout-shift-helpers.test.ts": "0b4f1674f61c221b9737ba3a5fa6fd564cc94a96fe990a8452535dbbb5d68eb0",
+    "tests-unit/naver-map-marker-visuals.test.ts": "10451200994cb96636c8bf54e0b53fe00367a0aeeeade7cd4a183df23fc416d6",
+    "tests-unit/naver-map-mobile-offset-helpers.test.ts": "60b8b7c18c1193cf43c18083b52106437edfa8caff401d9709207fac5ea98b52",
+    "tests-unit/naver-map-overlap-helpers.test.ts": "b692356bf019401d1c416d246b4c02bacb87de24e0464dab686ce51941d990a1",
+    "tests-unit/naver-map-overlay-position-helpers.test.ts": "0b15fb9c132e9d9d0db6a2d6ac1717232e460da778ccf9e30d1d62691272d334",
+    "tests-unit/naver-map-overlay-stack.test.tsx": "8fbc4e95b5d6c2e14977ddd15eeddd84e404b5544eede1228cc49f47f762ff77",
+    "tests-unit/naver-map-panel-state-helpers.test.ts": "0929fc578a899bc5ac41671743a2c37d4aa723f79fcee716f6eac3d2c01b40cd",
+    "tests-unit/naver-map-panel-width-helpers.test.ts": "40ff5524d86532b927d98454b7c6ac9e15cd70f1e403144cb5df9d23d164e84e",
+    "tests-unit/naver-map-presence-helpers.test.ts": "0ed75e2085c7a26efc38b48715ea5fe7c369ec8bf8c5cab7527f0251d96f7624",
+    "tests-unit/naver-map-provider-mode.test.ts": "3ea06bcf97f44ac92a92b2d2b46cd393d8e01f53aa846d60c42c4c5d651a30b2",
+    "tests-unit/naver-map-render-guard.test.ts": "a66eb5532545aa6ac0a9f7359c7e392e7e63f4466905073bca4554691c3b7bcb",
+    "tests-unit/naver-map-render-plan.test.ts": "f8e5e05bc59b4e090de4e2e2f8f78ae4893cb3e60f16aebb424c4dd43044230a",
+    "tests-unit/naver-map-resize-center-helpers.test.ts": "a4cd78d101c09d87abae40e7a627a876f3c3fc1edb5e2cbde04604f5af3ba350",
+    "tests-unit/naver-map-resize-guards.test.ts": "e83dfd298efc83123fb385762356584ff53c1248d5996c2db4ba93feebca35fc",
+    "tests-unit/naver-map-resize-observer-helpers.test.ts": "191c389365535446db9572351bbd1e5461bae075c8b3f003e06fb27762c90587",
+    "tests-unit/naver-map-resize-offset-helpers.test.ts": "5c5d49b73bca289c34b8ce211b977f3e867ad505be9065bf91e6450b008de0c4",
+    "tests-unit/naver-map-resize-plan-helpers.test.ts": "1430978eed5cfa957d1e82da974c7220372af16403d2c01aaf88eee27e8309c8",
+    "tests-unit/naver-map-resize-target-helpers.test.ts": "9595a20aeb3851409c564954acb923f7d5bf2a7bb29dabf8568cc081e3bcd36f",
+    "tests-unit/naver-map-selection-helpers.test.ts": "0ac5a2413a98031d3193e0086777b5c22cce5824aad5ec16f542acdcf23314a1",
+    "tests-unit/naver-map-sidepanel-helpers.test.ts": "f2d39dccf1c68116d76b66a4e1a07b31ca5f478ce98fb0c83a5197cf19ba7864",
+    "tests-unit/naver-map-target-helpers.test.ts": "366e26aea61fd22a6f225d69ac0b71d6c5736d850d90969c0145fa341ac701d7",
+    "tests-unit/naver-map-target-offset-helpers.test.ts": "b7f0d3b417feb3bb44f053d52edd17fb60a35e82fa4b3a569a14555836fbbc3e",
+    "tests-unit/naver-map-toast-helpers.test.ts": "c4a3f82fcde3d0dd5ee297ee88f56f2004a41f8f33ba4c0ade8ab51d93f0a03e",
+    "tests-unit/naver-map-ui-helpers.test.ts": "47f1c8d7e93de886136a9d95d2dec3bca697be67aa527eaac17bad0351d18711",
+    "tests-unit/naver-map-user-movement-helpers.test.ts": "279f825eb1f2922fe486860448ec4b9f81f5d46c7af7093e4005fbe7870bf82f",
+    "tests-unit/naver-map-view-helpers.test.ts": "f21eacb5651cb6f1e05edd6e1e0841bd0e9ca9f660415f7fea55d00bf6a8ff41",
+    "tests-unit/naver-map-viewport-helpers.test.ts": "fa4c762d0a13044296c25ed20a37909c3f2ebf65a2f47eddfa5d62cde1259ffc",
+    "tests-unit/naver-map-wheel-helpers.test.ts": "19c82d2fe30ec186520aaf3f87108527373e81e8fa9cb89ac1ee178e8004c181",
+    "tests-unit/naver-map-window-resize-helpers.test.ts": "296aeb68170750be675a66623eb2b211fe3f7b4101bfb59baaa66995854487c1",
+    "tests-unit/naver-query-startup.test.ts": "53d3ebc0b65a9b831c26f5db250497420afe7fcf544b0c8b04959dba097364cb",
+    "tests-unit/next-image-config-security.test.ts": "e2ce01d0acc4dd8c77649458db756d698c7293ecacef3a765b2b5a4ee7f5aac9",
+    "tests-unit/next-tracing-root.test.ts": "137e438861aeba6570034fd675c71a7d388894bce8cc3149e30702a0732bde89",
+    "tests-unit/nightly-playwright-failure-evidence.test.ts": "a09266c0141b04b230a84afa594599275326f3464cc9acc4e955c26784c39b69",
+    "tests-unit/nightly-profile-mutation-rpc-boundary.test.ts": "683f9b331074e3b00f51a602d7874857785635a0ee4f670673b87170db13bdc3",
+    "tests-unit/nightly-profile-read-rpc-boundary.test.ts": "461c10dcecdcccf53b1e66921793c503b2d953226cbc29e45062d613f2791210",
+    "tests-unit/nightly-regression-workflow.test.ts": "cb22a7335cd16e07624caabf16d3c0766d50dbf5bf90c03a828deff7e3bdec10",
+    "tests-unit/nightly-unit-failure-sites.test.ts": "9edffe9d680405d188d8211b9e098032c7eb6461e98ff663e16bd6e7e3572b95",
+    "tests-unit/no-google-geocoding-api-source.test.ts": "f0dd9952d53abd02e77724f8313831d31ec929f5943e203d278a991553fdb227",
+    "tests-unit/notification-admin-send.test.ts": "f308979505e6fd491d2aa27047bc07e826b63843ab3409736548e303ddf851ee",
+    "tests-unit/notification-consent.test.ts": "98dedba08a95e94fc5c05039345696f02239b7c85e5a7e5e09246cefff062846",
+    "tests-unit/notification-review-like.test.ts": "fbedd13c18fe53605249011a8f6fa49cdc765ec2730aa695a0062814e5f8ddbd",
+    "tests-unit/ocr-dataset-allowlist.test.ts": "a02a5b6055422c9ab2086eb587f7d239539707435cb39f2de25cc2a28a7c80fd",
+    "tests-unit/ocr-evaluation.test.ts": "5b25814605c0fceb4fae5da06c05ab7ec8c50583e42a0e4d1baa3c657551cc8a",
+    "tests-unit/ocr-live-verification-cli.test.ts": "a9c6df39e94e5ddb683be272970f7833353e498c9513e5b15e4f3bcb10b4f9c4",
+    "tests-unit/ocr-normalization.test.ts": "8e1db4bfa155050f39368f352580ebcea5e5a5421d9632660282758d331f7c39",
+    "tests-unit/ocr-promotion-gate.test.ts": "aa61fc577691fe9b814c0a9982e5b2acc9c20fa1fdf50205f90cc331eeaadf22",
+    "tests-unit/ocr-prompt-experiments.test.ts": "69cbcac8424592fedd4475353f10d84db9633bf0b873bf4052955ddf7f405936",
+    "tests-unit/ocr-route-helpers.test.ts": "325c2d82752ee0ea52a3c23ab3a1eaf99817260aa1ecd7bd8387ff00d0e13d62",
+    "tests-unit/ocr-runtime-config.test.ts": "52c693c64818d3b6ba8a4c4b24f2fdd1217be67b9b812406e19308a1cc654b8c",
+    "tests-unit/overseas-map-helpers.test.ts": "181b6bc529d9c4aee2a8db13f27699e46ead3e0e643f0c11ab81c3710c36b4a2",
+    "tests-unit/overseas-map-marker-helpers.test.ts": "99ec55d3e30a219806a217db9d2390660d4e685ecf8651b622fcd9c66472f94a",
+    "tests-unit/overseas-map-restaurant-helpers.test.ts": "7eebef9713def705f63e1655b1cabaa8cb25c54bd167dad4246dd5084042a560",
+    "tests-unit/overseas-region-filter.test.ts": "62248370deaaf2eaf827574a64ccd5e79a9c3da5de034e1382d0c8e61e80a2e9",
+    "tests-unit/pencil-storyboard-contract.test.ts": "59e278843e6f9c6562fe7a43c41260b095ae5822f41a159848caf8ac7a405dfe",
+    "tests-unit/pencil-storyboard-manifest.test.ts": "1a6ad43af97c4aabb92ec4c277ee8a1629fecf460a28e2f4221d41063401a0f1",
+    "tests-unit/pencil-storyboard-review-queue.test.ts": "7ff502123e648d283f85f48b4bfb505d8af0aa63ee717bf439d609074594c8e2",
+    "tests-unit/performance-backlog-governance.test.ts": "8b4f2856fafd20a8d8746b2d625f1b90bc720e2495e65378179270cd009fca59",
+    "tests-unit/performance-monitor.test.ts": "010b7d06bccf106e0ad56d9146ae2804d0440dcfb57314147f17b96388eba41f",
+    "tests-unit/pin-contract.test.ts": "6466a56b54863470f737b6f7a31a928b113bc84198e4b087ad7b7f41c4a1bbcc",
+    "tests-unit/pipeline-flow-view-model.test.ts": "5e4a81052121728cd5e6187f36bf8dd2593fe065441e05fc7243a289279bc9b5",
+    "tests-unit/popular-restaurant-score.test.ts": "60e98b067a2c1d930987f68f3b66996a0c8044b684afd92be24a7a789e944094",
+    "tests-unit/popular-restaurants-region-filtering.test.ts": "dc2fe3e93229854623647c2ff1fb0e07e25f32a63af0012967628f08a206eda2",
+    "tests-unit/preference-trend-request-security.test.ts": "b80ec0f26df8b4612bfd3d89ada679beae06fafc452663855ca0b617a0f2c2e3",
+    "tests-unit/preferred-scroll-behavior.test.ts": "d19265f7b570e56570e189a9f6057a6f071acf1cd8101bd66bc463f1314b985c",
+    "tests-unit/privacy-compensation-key-runtime.test.ts": "062b59b54b724d74efa8dd20ed9cb7218450009bd8808ef30c2d2d2ca752e41d",
+    "tests-unit/privacy-consent-lock-privilege.test.ts": "5701eafd24656dd579e0a5ef47aa90e0668426a5fff69eaa13fdfb23d57a11ae",
+    "tests-unit/privacy-consent-settings.test.ts": "15999ed0ea0477aaf4a613fc2fd2578a604cbc6f6155df5b7eab20fb5c944745",
+    "tests-unit/privacy-fixture-runtime.test.ts": "e9316bfe7edbeab11b17076044ed3040182ba52903e0845caaabc57aadafe3fc",
+    "tests-unit/privacy-fixture-scenarios.test.ts": "b659f2a2cf84a2681b0a8b83f7286c3de02b1d9731b2a5c5ba0e54ffec2166ae",
+    "tests-unit/privacy-incident-workflow.test.ts": "c4f699cb85472bc54b7021c08cc4e6b57fd6bc5e5df4e55d0f0347c1f62be71c",
+    "tests-unit/privacy-loopback-start-integrity.test.ts": "d69eb578f9d0a9abb3dd126ed7f3211a6db06af574cc1e2d25f0249682b8fe6c",
+    "tests-unit/privacy-mutation-request-security.test.ts": "01fffa76210bc0bb3824adcdc50fe929f8c24304fa68925ae4e2b809ee017205",
+    "tests-unit/privacy-onboarding-route-runtime.test.ts": "33c7d0ae11760e9e7eb8019f5cbbe1557b63bb799dc3139dd5381fd95624c527",
+    "tests-unit/privacy-onboarding.test.ts": "17a50b9fd3e8035606e27259fdb7a2e41fd0838a83e1449532efa63cd4c98bf9",
+    "tests-unit/privacy-policy-contract.test.tsx": "8f982fe9d20f670d7fa9fbcd5e6fb5cbfaee0c92c6567f268140fe51f30542a9",
+    "tests-unit/privacy-processing-inventory.test.ts": "705469fd9337b9e2fc49cd8f7ba3c35f09d144e106dd1aaa5159a6982d9ed95e",
+    "tests-unit/privacy-retention-schedule.test.ts": "2260d56fcecdb834b639d783fabcf7f863cbdbb1c297b9de31caf2ac2919f7aa",
+    "tests-unit/privacy-retention.test.ts": "7506bcef71a1b258e51bc23b7d16aefee759f3a0552bc90fe386eb9257557440",
+    "tests-unit/privacy-safe-cli-log.test.ts": "718ae9a8ea6811d6193c695dd9d24771a78e00e9949d9df6218702bce0560c6b",
+    "tests-unit/privacy-sanitize.test.ts": "6f78e28f8ad1203322ec52f1587c9854ebbfff0a761a1600f235763988985839",
+    "tests-unit/privacy-schema-types-source.test.ts": "9ca756c1de0c125fe5afab67f7e9d755816a520150564b516b2de91b15a48a6f",
+    "tests-unit/private-review-verification.test.ts": "c99759878126b4842b7d1d960aeb19370a4a787694369b51d11866c9b2c62a5a",
+    "tests-unit/production-workflow-trust.test.ts": "9c8ec1d68e3d4a4c30197edafe0a20dac90db7ebecb41dc1830fea668beb2cf8",
+    "tests-unit/profile-avatar-consumers-source.test.ts": "94d07743bc221989bd91b913a8a9ed73039661b8d9270c368b758c61a64eba25",
+    "tests-unit/profile-avatar-url-security.test.ts": "890d53ff47e845d06335d482de876a91f4d0eb71588790a5934eda9856d99ae2",
+    "tests-unit/profile-mutation-boundary.test.ts": "ea22e99dfe019854dee4797a92296050663cb1e3dc1fef94cf3e1cc8e4b79185",
+    "tests-unit/proxy.test.ts": "17d53b1f201dcea0abfcf861c83344673a97877966da04bb6b3fe23baaadf685",
+    "tests-unit/public-insights-timed-cache.test.ts": "0732fac0702b6d308f6bc77c99542fd9efaffbf98c6c19a4b88c1494d3e76693",
+    "tests-unit/public-insights-treemap.test.ts": "14c39e9cb001fce7d93a7d4ac3c672fb1975169a971a0fb2b21beee4f5d247ba",
+    "tests-unit/public-large-asset-delivery.test.ts": "35b42217644f177ba323c0f64a25c8a3cd62d60be2367be89af4893b30230556",
+    "tests-unit/public-profile-read.test.ts": "6ba0bd20e2096835d180aabd0a762b1b9682668d81428dc2c770ddf23ae6ad85",
+    "tests-unit/public-storyboard-runtime-compatibility.test.ts": "ac6e4097271e358de595aeb0ebd0cc9669cfbc3b57a941e03bfc91f09be104b2",
+    "tests-unit/public-surface-design-contract.test.ts": "4625d681d1451bc3e6c3ab2105a69fa5147466eb3b6d7af6266cd3ceab6d4b15",
+    "tests-unit/publish-jobs-request-contract.test.ts": "e50e2f17b9cd31d1c674e428e2362360e9976f778fcc47f78e585d735338d52d",
+    "tests-unit/r2-public-url.test.ts": "31867a7bd4dc340763557f6495419b731ed7e8d55337ae26b099c038bddd485f",
+    "tests-unit/receipt-replacement-reconciliation.test.ts": "7af58304714a63ac7ab599b2f8a7b46403b8bb555139ca24db0dd1c0440e7183",
+    "tests-unit/related-review-count-chunking-source.test.ts": "1da0c007fe4f1f7ba05d5f07dc0fe29fda064be461b6ff068b6ebc146cdb38ed",
+    "tests-unit/release-mode.test.ts": "3050935c83ff8b570f52228767961e1ec7925c2c3230875b4f4c9a54f5d09cc8",
+    "tests-unit/release-visual-evidence.test.ts": "d063e134983cb1a374a09aa41ba3647188a21598d4f9278e4c7f693f521ca931",
+    "tests-unit/release-visual-privacy-source.test.ts": "a18a21d20d6bf4a9240b5a82be04542af8635b7be705d238ea7eb12e7e9bf5f2",
+    "tests-unit/release-visual-runner-source.test.ts": "b075e698a98406da72b5fb1e8f3076c3d53abf0027a3f5b40e33ca35d81f9f99",
+    "tests-unit/release-workflow-governance-source.test.ts": "67917a01af1ce587c30eb98b1157f30e0c46bc4b428b9bc2ede8d23a64e6223d",
+    "tests-unit/require-admin-fail-closed.test.ts": "e4c36f028077e9d6a339cabd4e43bce551aa99cb977e5f08a94ac3f9ba2592bf",
+    "tests-unit/restaurant-address-presenter.test.ts": "408d6c4a21933b8c1e97c9c70a4b779dda71842267cf8d0fc686eb15cca8a257",
+    "tests-unit/restaurant-detail-media-copy.test.ts": "388bfaa02cb66ba870c8d23fe847e3ad8b2f5f6e50120bad1176f151be917459",
+    "tests-unit/restaurant-discovery-cache-source.test.ts": "b4da9eccecfd87e14ea5a40e8dbf56c44407befb72b20407c023dffb6a52c4ad",
+    "tests-unit/restaurant-display-name.test.ts": "4bbae3a415085925fc8f1995b995846d2dc6a8347c8dc5d15992583e016ad960",
+    "tests-unit/restaurant-management-routing.test.ts": "dfd94d52d8b065756fdcec68af9017746cdf07ef6168306d5faa1453ca18f114",
+    "tests-unit/restaurant-merged-media.test.ts": "036539d2ab7811065b568c7001b4943b73df75eb99811e6b13417602dacd1740",
+    "tests-unit/restaurant-outbound-url-security.test.ts": "5153e9c908ac78638a9787d11e2229e257f5756ae8092f40043ebf0cc7bd35d5",
+    "tests-unit/restaurant-refresh-cron.test.ts": "6bcd409a56a3f43ab2deaa72f3ff28e114b06658ecd34ca55619e6602da265a0",
+    "tests-unit/restaurant-review-automation.test.ts": "49c1119b8ef1422f37968f28b5312606bf14f0993821bbe26da0a95774a28737",
+    "tests-unit/restaurant-review-counts-edges.test.ts": "ffc399f1bbb0c062aaf323a5bc38385b664c387a53be952ca29e476e70606fe5",
+    "tests-unit/restaurant-review-counts-index.test.ts": "e92c6da4f6e2b619eaac207bc86c28c0b5186b35d95072c0db1a2a562ca45a9c",
+    "tests-unit/restaurant-review-counts.test.ts": "3ebf656c1cf29ee7edc176661ee9ed3a2ce53007df64d5888a9ca6bc6d804efb",
+    "tests-unit/restaurant-review-judgment.test.ts": "24ab5146acce5afae86c930ed6f2844e1c4fe75f9daf4c4834cdf2562bb38353",
+    "tests-unit/restaurant-review-lookup-cache.test.ts": "9a88b77b219112c3b7d1fcdd413455192aa97406b7c29ce3377a63724f78b5d9",
+    "tests-unit/restaurant-review-lookup-scan-order.test.ts": "a065cbadb713dae240af31b5d0ac6b5420be863d9bfb8f5a08572db0600040a0",
+    "tests-unit/restaurant-review-lookup.test.ts": "43e92efce34b1e21bbe0db0fe7ad7726274a54ee5465dd75dfb334821cf90bd5",
+    "tests-unit/restaurant-search-global-scope-source.test.ts": "4e52a57806804db3a91b22bc2a1e70cf00635c318e181fc7542d18b925b98729",
+    "tests-unit/restaurant-submission-flow.test.ts": "7e7a5d48054a01097a6e62467c0b65da54356cc468deb0be12a0fba7c723ceed",
+    "tests-unit/restaurant-visit-count-source.test.ts": "dd3a5fabc41f524a9900e2c6fa591fb37e0e2375fcd277691f61557c0e7bda98",
+    "tests-unit/restaurant-visit-count.test.ts": "0207eade422d6bceeff0c50ad337ed1303f5ede6f959f03f43eb3fd6d61b069f",
+    "tests-unit/restaurant-visit-matching-index.test.ts": "f4323d42ad084e9b11000f26bc23998e70f5c6c923e2400fb8cccb4083531a1c",
+    "tests-unit/restaurant-visit-matching-matcher.test.ts": "9d5720bd3b6acef6107b690719452e65302db41d955efd41c6f5963b12943f9a",
+    "tests-unit/restaurant-visit-matching.test.ts": "29d5190ed5fdee3f32a8103d894c862aaf3274db7fa6a3bd67b86559200616aa",
+    "tests-unit/retained-marker-accessibility.test.ts": "b5dc9e818c7eb7abc6764c2ec31d4f5d9879b832c3d8b1a864ebe0053bfa5f11",
+    "tests-unit/review-close-revision-browser.test.ts": "20fe63b5b1d035117fa6a0ce093fb8ba3211deaf38c799b260b69ec6dca9c03a",
+    "tests-unit/review-draft-deletion-browser.test.ts": "dbac8a0833425597654e5e6acbc252f6cbca3c745207b481f7b71e0df8f25b2e",
+    "tests-unit/review-draft-privacy.test.ts": "9f44ed5e45756c6d285caf427eca56ae39bc6e11b0897819208beb6babbc2b6f",
+    "tests-unit/review-draft-revision-browser.test.ts": "0d1ef99d419c63c52dd737fc4f067ac8002e6cb12450c05cf36e8322269cca0c",
+    "tests-unit/review-edit-food-values.test.ts": "fd95ea111ff03e11e1cfcb6bee84d61fdd16178439d6b379dd664e35ade1c9bd",
+    "tests-unit/review-edit-modal-photo-cleanup.test.ts": "094921fc9c33f72d9ea4d3f77a1306cdc21f785db710da03cde387c8c87b894d",
+    "tests-unit/review-media-feature-sql-successor.test.ts": "eb69509b333fe351839ea4e5c963b428e24057a3e956bb39da980df7404da188",
+    "tests-unit/review-media-fixture-ownership-verifier.test.ts": "92651102154fd4d573ca841137bd31c319ef545b2527e7da17398bd2e6b97d47",
+    "tests-unit/review-media-migration-bundle.test.ts": "dc1f2594e629d5af16541db93e2e51f9b98d8282dd7fbeb802dd240fa6f522c0",
+    "tests-unit/review-media-mutation.test.ts": "7b1d4a294e1ea324dfdec033bf5c9f1295ce0d2699751a3ded6c44562a941b35",
+    "tests-unit/review-media-operating-admission.test.ts": "2920f64d69ac30ad0117651ae4be001c8171ca195a8e0a38cae22d46c79b5b6f",
+    "tests-unit/review-media-operating-capture.test.ts": "1fc7b36bbdf0610de052e7ef05b9403c22595a392b80ec3eb7f06ad3510eabf6",
+    "tests-unit/review-media-operating-orchestrator.test.ts": "38d9190ee45abca5f7e3bb7aa1ba4900103575d5ac32a247cfb2ac766f21d5d4",
+    "tests-unit/review-media-sql-rehearsal-verifier.test.ts": "54a9560b77a3afb9eb70631224ba4f481caf82eb8b5d2cdc1a076d8831c1ec7e",
+    "tests-unit/review-media-sql-successor-harness.test.ts": "99c6bc0221188f93317640d4d65affdfeb91fea233bb0f0cc0f409407e419d84",
+    "tests-unit/review-media-sql-successor-workflow-contract.test.ts": "825b8431b83ab81d5ba4c07a927a52bebdb521dee5611b45c1750133a51c6ab3",
+    "tests-unit/review-media-sql-successor.test.ts": "8fc51e801e89052ed64d0b349cfe397a781e333f0bd90b58cb5e64838a5d00b0",
+    "tests-unit/review-modal-map-panel-helpers.test.ts": "5e71ece2e5ae13b5a045e8ced2dc77f3fed87ed3ce5aa68b574f8ddf099b3d74",
+    "tests-unit/review-modal-ocr-ux.test.ts": "16d2a2d749a78ad477d02faf895d322d4305941214563a858c049313087470b5",
+    "tests-unit/review-photo-ownership-source.test.ts": "2f4491c0c7f281f499801cd9aade54c817164531f9484e35da72cc4525832c92",
+    "tests-unit/review-photo-url-security.test.ts": "6ed70a81560662ef20e6b74b5df6d65a4e14650eb34c7a00f2aabbd6862ba8da",
+    "tests-unit/review-save-operation.test.ts": "e7572fff8d81aa91b4db699487687e3b5573f08680566fb55b44b9d215b77c37",
+    "tests-unit/review-save-owner-lifecycle.test.ts": "7dfe46feaccb50e4f93f7cd779b73e7cb7992d605a326e7ee0b594f1c0084d32",
+    "tests-unit/review-save-submit.test.ts": "cfb79a774b3bad40de9943e41674951c30761e5de81b266a076f696ce7b73948",
+    "tests-unit/review-storage-verification.test.ts": "b1437c781e5fbd1081005e8d065ee021bfb679e152a1e6f37d8cec9a38d3b445",
+    "tests-unit/review-upload-intents.test.ts": "eb711fa574e3485ca97fc015a10421c6a2661702552e68e4a97aaa12a9c8a053",
+    "tests-unit/review-upload-uncertainty.test.ts": "dda1b765d59a52c4743f6712cf28bd6bfc93d1a6cc54432df4ca52f01ea9e55b",
+    "tests-unit/review-verification-immutable-storage.test.ts": "bf832cfbfa956a76882cc450352b06cd742dee03c2105e823b60adeb76c31b43",
+    "tests-unit/root-css-layer-guard.test.ts": "58c09b4615d8efd1eedac8d69526e102332293e134feb030dfff91831c453cfe",
+    "tests-unit/root-layout-local-runtime-contract.test.ts": "100ed3df1ee32cabc36ca016d95c2e254f3e9bf21d9b49e8447730943df10bd5",
+    "tests-unit/route-census.test.ts": "1fad1e40325e1917a451afa2a663763a9d74b750e9001623904ea8b12f25fe16",
+    "tests-unit/runtime-feature-readiness.test.ts": "8fd2b93899858ca8e12888ec81ab943a0d7e0987208091e010383edf650c1dff",
+    "tests-unit/same-origin-mutation.test.ts": "d1cbc2027727f8663ae3ca1e122d1824cdcfc30e8276e3243012245f657995f3",
+    "tests-unit/sanitize-leak.test.ts": "ce07df25952eb37766e7ffea1d74c971e90046bc009c782f3cd7d8fe62cf9715",
+    "tests-unit/scroll-effects-browser.test.ts": "df7c49f89c03bedf5f8f5555fc2269068deec407380da078f4cf4cee131a02d5",
+    "tests-unit/search-count-privacy.test.ts": "7d59f66899d2f87690624256fb19899f483b95fb0ee238364858d490e1a2df24",
+    "tests-unit/search-count-refresh.test.ts": "6b3b3dcc875f30200f66364342b47a3762f5460139c93df71f4f4a176ee23de6",
+    "tests-unit/search-history-privacy.test.ts": "162a7e04d047b75ebcec81677d86093156b778f5564c67c6a2411cdac1029491",
+    "tests-unit/security-headers-source.test.ts": "219c80f9b4e0b3683b2cc8cc9c5cccb31385c6e5a3fb1bb8b5e2effa7328d11e",
+    "tests-unit/security-workflow-source.test.ts": "16ab5033fec67353e3b25d0d5e5b16ac392dbccb9cee42b9ae76625ca28d932c",
+    "tests-unit/sentry-admin.test.ts": "81f2d6a7311a6b9be25ecac85756eaf3361a9482adebf8bf3463041019c3573e",
+    "tests-unit/sentry-dsn.test.ts": "45a73d2a750c5be95367b3d5873cec56480c5644bb69a08c86e531557946ec4b",
+    "tests-unit/sentry-privacy.test.ts": "55adf106af54ec03f81c68803749f117b4efe9f26bf9f0f38fd3772e7cbcfb1e",
+    "tests-unit/sentry-release.test.ts": "e577c0d02053e88da54b0c91a780fc56a8c8119b29ba7b560b57c95801f97d3b",
+    "tests-unit/sentry-sdk-transport.test.ts": "64a307d299d14a340b50af3d2b775f95a78dd53af13701f9624e77c372c9b200",
+    "tests-unit/seo-source.test.ts": "8267be45ea3ad95e6d26e6dc998365e44c6bc18cfcbd4e2f3d5c156a2f89d19c",
+    "tests-unit/short-url-page-runtime.test.ts": "94b0545a054fb049c5b464c6b8360bf869f33757182f367a0907e5b85258be4d",
+    "tests-unit/short-url-read.test.ts": "0f1a9f4c547ef4574f42fb167d16ace25ba188a61e94165054afea6a40803e74",
+    "tests-unit/shorten-target-allowlist.test.ts": "0e06c75e838aa0f694cbc1aefc0765cd10c427c65b4f83dda8f2693dc2550c44",
+    "tests-unit/stamp-restaurant-order.test.ts": "7b9891ff35dd899dae0efec131aa87718236c9f74525f446d550bcf0797fe988",
+    "tests-unit/standalone-static-source.test.ts": "55c0bea640a8d58bd6ba122151dcbaf9c50e77af67fc5e896e7997ec02d79f7c",
+    "tests-unit/storage-server-client.test.ts": "ce3aeb28101b9b5079594411c84a4fe600c4f4d023f01b66e347d5bde4753fde",
+    "tests-unit/storyboard-gemini-client.test.ts": "b5708bb1d73bdbdc68895f782f80cccb25edadeb27204b76bb75c0ecb4d3d4e9",
+    "tests-unit/storyboard-gemini-execution-contract.test.ts": "c08a4f451f98dda82c22ca9795b2ebd367e582139991fc40b8d93a452737f864",
+    "tests-unit/storyboard-gemini-rag.test.ts": "b1c4684af8c8c1f9b56a7ce1f0528d62f33dec05e5b6e3ebc879ddac02c7ead1",
+    "tests-unit/storyboard-outbound-worker.test.ts": "7e825d2df896437ec83181ae03ef4c897ff8cbdac114c7dfe26cde5c00d13246",
+    "tests-unit/storyboard-production-api.test.ts": "125a89686e2174b6bbd3eb0874934917534038dea6f8d1ca415c50cf5bed4330",
+    "tests-unit/storyboard-production-catalog.test.ts": "6cc4aeafdce021efefa5da57ca032bee3eaca9a1b9c2d9b53f18dfe829a7a835",
+    "tests-unit/storyboard-project-library-browser.test.ts": "5a91340ed6ead5716da2a01285c18c87adf427461b221863016af5a591722756",
+    "tests-unit/storyboard-prompt-safety.test.ts": "9f1435421ae25b08f191fd0f3667db6265dc66721076a23a7dd7372613055969",
+    "tests-unit/storyboard-provider-allowlist-parity.test.ts": "bf88bc3fce2c4cba41a501878117bf0e464602683576ec1a36f6623d2100bb42",
+    "tests-unit/storyboard-quality-loop-script.test.ts": "354a480e018b2785f5541045af64d55894fc08098e21927ae1dec430c3d56c1f",
+    "tests-unit/storyboard-rag-admission.test.ts": "7fe75d97e3df4391258d5430c801e9b9b061fd0dd83f874e549724c8d843826c",
+    "tests-unit/storyboard-rag-service-role-boundary.test.ts": "5a19f7b9449ddf7acd969572d254bac2899633e4bec0ef419e84b91251788fde",
+    "tests-unit/storyboard-resource-invariants.test.ts": "22adb6c7ddd8f85203a63f2a75a3f80566e1178ccee5b788c9c13d128309b85c",
+    "tests-unit/storyboard-retired-cli.test.ts": "9b5474655324cde569e04e6c5b86dd584bf9fe2565dc58efdb8f6281a2020585",
+    "tests-unit/storyboard-runtime-compatibility-observer.test.ts": "62ea93105c5c25fb4cfac1bbcec89913d13e242e88a54727474c258bfabb4206",
+    "tests-unit/storyboard-runtime-source-binding.test.ts": "d2a78608af9d6553169faf0f1138d09008ed75be1861cc2eeb89c7d2c7b7e71d",
+    "tests-unit/stylegallery-primitive-taxonomy.test.ts": "1bdb3151b221920a8f232bad93243c7b5ddc682f2168cd002174ca424d314612",
+    "tests-unit/submission-user-request-security.test.ts": "d86cb4d6e0c19e399b4c895667b002c3df4094d714a6b379e7f5cfd9ad3a4810",
+    "tests-unit/supabase-entrypoint-source.test.ts": "16efabccab399ab7c751efca10f32188352911633b386db97f49d2e989ae8b7f",
+    "tests-unit/supabase-gen-types-source.test.ts": "dccf9ffd1515d2329ab467d32d1f1090f90bacacf83e85932fbdc652d51923fc",
+    "tests-unit/supabase-migration-apply-source.test.ts": "76f40be7b0383e97844a943fe7a86c91896e2f6aad5c3ad8e09415310b79b1d7",
+    "tests-unit/supabase-migration-bundle-pg17.test.ts": "def6fffff229a7fb4bdbe9abb4922cd3838479a5403d0e1d115e5c41449382bb",
+    "tests-unit/supabase-migration-bundle.test.ts": "e6bebd3dd3d467df71591af6ecaeb981df05897ef5b67cf63471db0f05d3e357",
+    "tests-unit/supabase-migration-transaction.test.ts": "9b5de4c36f3b299a4f5b48bebc163691642a3fb7802ecfca851d4a9faa273ab4",
+    "tests-unit/supabase-rest-client.test.ts": "5c16753b5b267cbb6efb1b5ca0876a3a4e948fdf68880c2247fbb21cb0255fd8",
+    "tests-unit/supercluster-runtime-compatibility.test.ts": "2896a9db69f2ee5ff00cdc8f188289bf198fc6f9f345044e4d53ff948290302c",
+    "tests-unit/swipe-render-cache.test.ts": "891904ca3b0380da3e926db859a81eead1d3db8f4e56df400ece0ee31147d813",
+    "tests-unit/thumbnail-route-request-security.test.ts": "47b88fd9efbba4034e88f383425d22bc481f7460e26a1e426bc8371bbecbdbbe",
+    "tests-unit/toast-retirement.test.ts": "94f675fc534323acedb5be9e917dd2927ccc05f274cc9e71803eff0ba6459f8c",
+    "tests-unit/trend-direction-request-security.test.ts": "bc937108fdecbf1545f2510be52721f915d0df5ef61c129a5451577ac0145683",
+    "tests-unit/trend-job-requests-contract.test.ts": "9a0670dd942e2ccd64c07d2e9e7ed8dd05eafd054ad896952ef1115f684dba71",
+    "tests-unit/trend-proposals-contract.test.ts": "8fccbed7ccf51d838b891193d1ac949f16448714f6ae03fb0636abc4eb54b3d9",
+    "tests-unit/trend-schema-provider-contract.test.ts": "9e4f0373dda85f9daa8bea3203fe9ea01a34fd80fd3d8b92845edf44ea67ff9c",
+    "tests-unit/typecheck-benchmark-fixtures.test.ts": "d88571293e86e185def2e90f3e9644098d4ec11e4524bf24e98f1c270dd23eda",
+    "tests-unit/typecheck-benchmark-source.test.ts": "9108b87dd701e935c34afdeaff4b0726e7034e20ae8a39e5ffcf2c47acab1467",
+    "tests-unit/typecheck-repository-source-contract.test.ts": "748577e5e3d6343dd61dfd78f5f3d40ef92e28fd5b5fc807d3fed2506a312baa",
+    "tests-unit/typescript-toolchain-command.test.ts": "e09e43f810cfd1fd1084b97ae135ff43883dd42d3620b79a5efc2b0a08d3dc56",
+    "tests-unit/typescript-toolchain-source.test.ts": "294b043f83c8aba726b29279002d79c7d1b93a45050aa8c98cc473d3c5c9aa57",
+    "tests-unit/tzuyang-review-display.test.ts": "63899c70af90d07698a3f5bc287a7cce87e124caf8b7fba01a89766702d69f2c",
+    "tests-unit/unvisited-restaurants-derivation.test.ts": "bcbb4985ebd470112a22835b8678c550673024e8fa22ee3fb047642bf365937c",
+    "tests-unit/use-restaurants-merge.test.ts": "1e34d8c9c71d0bb96ca90637054f05d57927bf0aaf7fa43f892a163282e41143",
+    "tests-unit/user-submitted-marker-visibility.test.ts": "bba8fbfc0eaf3ecd25d23462a3dbffc452c279767c898ba0aa86301ba287a2bb",
+    "tests-unit/vercel-ignore-build.test.ts": "377b3eec3e6bc3876b3f3a023c1697733f734f6b40bab1e6ac23ca768d7feee2",
+    "tests-unit/vercel-rollback-readback.test.ts": "2e01e10f22ced71250490dd8c06c66ef82f48de53c332fa1419dcf8e7018f5e5",
+    "tests-unit/verified-review-count-rows.test.ts": "29af76db5046fbdff734f1a0e316286b4002b785df502f21bced65addc5be69e",
+    "tests-unit/verify-pin-contract-source.test.ts": "1df2f609aec805eb20757f97071a2d5879e351cbe3ab3138d97894e7f5683121",
+    "tests-unit/visible-marker-review-bubble-photo.test.ts": "1e3c177b49f0dc9f71eb9487daafb3f76700486a5a84505bcb86275d6fad62aa",
+    "tests-unit/visible-marker-review-bubble-selection.test.ts": "70fad4921b9d19ca3a271678a11b46073f3c767530cae468246ea991ef9272b2",
+    "tests-unit/visible-marker-review-bubbles.test.ts": "11515e2a70623aeae6a1205034f1dbae6c22e7cd69118ddaae0cba0b47d95698",
+    "tests-unit/web-quality-performance-source.test.ts": "6848dadb0b67742c16217f3e57788d5004a65da589715e67f0f138dcccd2974c",
+    "tests-unit/youtube-kpi-snapshot-contract.test.ts": "9737c3a64f0c077281d3ce92c701f07fced3c227c04640022412b1fa9fa2a345",
+    "tests-unit/youtube-link-helpers.test.ts": "f7c129d4067da361fac637f99641507882844a5607ce7c9e1fc03ee1a4a4eab5",
+    "tests-unit/youtube-meta-provider-security.test.ts": "11dc74d433b6b66b891a1098943d9af7624c997ab7cb370a235648eecc9ceef1",
+    "tests-unit/youtube-thumbnail-chat-intent.test.ts": "bc333d61489c88c003bd87bdfe756135ea72df1b1d2ae0236d9be930990838b7",
+    "tests-unit/youtube-url-security.test.ts": "35b89bb9dd2191d98ced1c8093156ea0746c5802315108103042ab737b63f30a",
+    "tests-unit/zz-ocr-route-contract.test.ts": "e656efed2da92e565f1057d4bb52c5800b7645a586eade03f56d7c94a913b3b9"
+  },
+  "drift": {
+    "duringRun": {
+      "testSources": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "productSources": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "frozenSources": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "runnerChanged": false
+    },
+    "againstPreviousCanonicalUnit": {
+      "added": [],
+      "removed": [],
+      "changed": [
+        "tests-unit/admin-home-review-actions.test.ts",
+        "tests-unit/admin-mutation-request-security.test.ts",
+        "tests-unit/admin-receipt-ocr-workflow.test.ts",
+        "tests-unit/admin-restaurant-modal-presentation-source.test.ts",
+        "tests-unit/admin-workflow-request-security.test.ts",
+        "tests-unit/api-security-source.test.ts",
+        "tests-unit/zz-ocr-route-contract.test.ts"
+      ]
+    },
+    "againstSourceFreeze": {
+      "added": [],
+      "removed": [],
+      "changed": [
+        "apps/web/app/api/admin/ocr-receipts/rerun/route.ts",
+        "apps/web/app/api/admin/ocr-receipts/reset-all/route.ts",
+        "apps/web/app/api/admin/ocr-receipts/route.ts",
+        "apps/web/app/insights/insights-client.tsx",
+        "apps/web/components/admin/AdminRestaurantModal.tsx",
+        "apps/web/components/admin/EvaluationDetailView.tsx",
+        "apps/web/components/admin/EvaluationTableNew.tsx",
+        "apps/web/components/admin/SubmissionListView.tsx",
+        "apps/web/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+        "apps/web/lib/ocr/gemini.ts",
+        "apps/web/styles/admin-ui.css",
+        "apps/web/tests-unit/api-security-source.test.ts",
+        "apps/web/tests-unit/zz-ocr-route-contract.test.ts"
+      ]
+    }
+  },
+  "sanitization": {
+    "rawConsolePersisted": false,
+    "credentialsPersisted": false,
+    "perProcessOutputRetained": false,
+    "onlyHashesAndBoundedSummariesRetained": true
+  },
+  "admission": "Canonical final2 local unit receipt. This is local test evidence only; it does not prove hosted behavior or deployment."
+}

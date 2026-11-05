@@ -1,0 +1,33 @@
+{
+  "kind": "root_summary_of_native_independent_review_not_external_audit",
+  "reviewedSourceRevision": "c9f49c225978aa41e56ac8d70a351871e2d24825",
+  "agent": "/root/thumbnail_install_atomicity_review",
+  "requestedModel": "gpt-6-astra",
+  "requestedReasoning": "xhigh",
+  "backendIdentity": "UNVERIFIED",
+  "findings": [
+    {
+      "id": "OWNER_POST_ORDER",
+      "decision": "ACCEPT",
+      "problem": "Candidate comment instructed full G014 post before revoking the SET lease; the real owner contract rejects the remaining lease.",
+      "change": "Comment and operational sequence corrected to revoke self grant, verify membership, then run post. Bootstrap grantor is preserved.",
+      "verification": "Actual current owner contract body executed on owned PG17.11: lease-present post rejected, revoke-before-post passed, bridge removed and membership preserved."
+    },
+    {
+      "id": "QUEUE_NESTED_COMMIT",
+      "decision": "ACCEPT_EXISTING_GUARD",
+      "problem": "Naive queue plus registration concatenation carries the queue COMMIT before registration.",
+      "change": "Retain existing migrationEnvelope for the next single forward source; do not concatenate raw candidates.",
+      "verification": "Actual pure compiler probe removed the exact queue envelope (38 to36 top-level statements) and rejected naive concatenation with MIGRATION_TRANSACTION_CONTROL_DENIED."
+    },
+    {
+      "id": "WHOLE_INSTALLATION_ABSENT",
+      "decision": "DEFER_WITH_RELEASE_HOLD",
+      "problem": "Queue, registration, private bucket and ledger do not yet share an admitted installation transaction.",
+      "nextAction": "Prepare one new forward migration and new specification using the existing single-migration compiler; preserve old fixed manifests. Verify real G014 pre/post without SET lease, atomic rollback and final ledger readback on the exact catalog/runtime before release."
+    }
+  ],
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "externalProGeminiProComplete": false
+}

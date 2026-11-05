@@ -4,15 +4,17 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import * as maplibregl from 'maplibre-gl';
 import '@/styles/maplibre-gl.css';
 import type { Restaurant } from '@/types/restaurant';
+import { syncPopularityMarkerInteraction, syncPopularityMarkerZoom } from '@/lib/evidence-engineering/popularity-marker';
 import type { FilterState } from '@/components/filters/filter-state';
-import { useRestaurants } from '@/hooks/use-restaurants';
+import { useHomeMapResults } from '@/hooks/use-home-map-results';
 import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
+import { Button } from '@/components/ui/button';
+import { OVERSEAS_MAP_STYLE_URL, OVERSEAS_MAP_WORKER_URL } from '@/lib/overseas-map-provider';
 import {
     buildDeviceLocationMarkerHtml,
     shouldFocusDeviceLocation,
     type DeviceMapLocation,
 } from '@/lib/device-location-map';
-import { buildOverseasRestaurantsQueryOptions } from '@/lib/map-query-helpers';
 import {
     DEFAULT_OVERSEAS_PADDING,
     getNextOverseasWheelSlider,
@@ -25,6 +27,7 @@ import {
     applyOverseasMarkerSelectedState,
     buildOverseasMarkerHtml,
     getOverseasMarkerActiveId,
+    hasRenderableOverseasCoordinates,
 } from '@/lib/overseas-map-marker-helpers';
 import {
     mergeOverseasRestaurants,
@@ -50,6 +53,7 @@ interface OverseasMapProps {
     onMapInteraction?: () => void;
     deviceLocation?: DeviceMapLocation | null;
 }
+const EMPTY_RESTAURANTS: Restaurant[] = [];
 const hasValidOverseasDeviceLocation = (
     location: DeviceMapLocation | null,
     zoom: number,
@@ -66,6 +70,8 @@ const hasValidOverseasDeviceLocation = (
 
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
 
+maplibregl.setWorkerUrl(OVERSEAS_MAP_WORKER_URL);
+
 const OverseasMap: React.FC<OverseasMapProps> = ({
     className,
     mapFocusZoom,
@@ -73,7 +79,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     selectedCountry,
     searchedRestaurant,
     selectedRestaurant,
-    refreshTrigger, // Used to trigger data refresh
+    refreshTrigger: _refreshTrigger,
     onRestaurantSelect,
     onMarkerClick,
     onMapReady,
@@ -86,12 +92,16 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maplibregl.Map | null>(null);
     const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+    const markerHtmlRef = useRef(new WeakMap<HTMLElement, string>());
     const deviceLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
     const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
     const mapPaddingRef = useRef(mapPadding);
     const onMapBlankClickRef = useRef(onMapBlankClick);
     const onMapInteractionRef = useRef(onMapInteraction);
+    const countryRef = useRef(selectedCountry);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
+    const [mapIssue, setMapIssue] = useState<'error' | 'slow' | null>(null);
+    const [mapAttempt, setMapAttempt] = useState(0);
 
 
     // Update ref whenever prop changes
@@ -107,18 +117,15 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     }, [onMapInteraction]);
 
 
-    // Filtered restaurants with optimization
-    const restaurantsOptions = useMemo(() => buildOverseasRestaurantsQueryOptions({
-        filters,
-        refreshTrigger,
-        selectedCountry,
-    }), [filters, selectedCountry, refreshTrigger]);
-
-    const { data: restaurants = [], isLoading: isLoadingRestaurants } = useRestaurants(restaurantsOptions);
+    const { data: restaurants = EMPTY_RESTAURANTS, isLoading: isLoadingRestaurants, summary } = useHomeMapResults({
+        mapMode: 'overseas', filters, selectedRegion: null, selectedCountry,
+    });
 
     const restaurantsToShow = useMemo(() => {
-        return mergeOverseasRestaurants(restaurants, searchedRestaurant);
-    }, [restaurants, searchedRestaurant]);
+        if (summary.status !== 'ready') return EMPTY_RESTAURANTS;
+        return (summary.active ? restaurants : mergeOverseasRestaurants(restaurants, searchedRestaurant))
+            .filter(hasRenderableOverseasCoordinates);
+    }, [restaurants, searchedRestaurant, summary.active, summary.status]);
 
     useEffect(() => {
         if (!onVisibleRestaurantsChange) return;
@@ -184,14 +191,21 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     useEffect(() => {
         if (map.current || !mapContainer.current) return;
 
-        const initialConfig = getOverseasInitialConfig(selectedCountry);
-
-
+        const initialConfig = getOverseasInitialConfig(countryRef.current);
+        const markers = markersRef.current;
+        let disposed = false;
+        let loaded = false;
+        let mapInstance: maplibregl.Map | null = null;
+        setIsMapLoaded(false);
+        setMapIssue(null);
+        const startupTimer = window.setTimeout(() => {
+            if (!disposed && !loaded) setMapIssue((current) => current ?? 'slow');
+        }, 12000);
 
         try {
-            const mapInstance = new maplibregl.Map({
+            mapInstance = new maplibregl.Map({
                 container: mapContainer.current,
-                style: 'https://tiles.openfreemap.org/styles/positron',
+                style: OVERSEAS_MAP_STYLE_URL,
                 center: [initialConfig.lng, initialConfig.lat],
                 zoom: initialConfig.zoom,
                 attributionControl: false,
@@ -201,17 +215,32 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             });
 
             // mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right'); // [Modified] 기본 컨트롤 제거 (커스텀 줌 컨트롤 사용)
-            mapInstance.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+            mapInstance.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
 
             mapInstance.on('load', () => {
-                mapInstance.resize();
+                if (disposed) return;
+                loaded = true;
+                window.clearTimeout(startupTimer);
+                mapInstance?.resize();
+                setMapIssue(null);
                 setIsMapLoaded(true);
             });
+            const interactionElement = mapContainer.current;
+            const updatePopularityZoom = () => {
+                if (interactionElement && mapInstance) syncPopularityMarkerZoom(interactionElement, mapInstance.getZoom());
+            };
+            updatePopularityZoom();
+            mapInstance.on('zoom', updatePopularityZoom);
+            mapInstance.on('movestart', () => {
+                if (interactionElement) syncPopularityMarkerInteraction(interactionElement, true);
+            });
+            mapInstance.on('moveend', () => {
+                if (interactionElement) syncPopularityMarkerInteraction(interactionElement, false);
+            });
 
-            mapInstance.on('error', (e: maplibregl.ErrorEvent) => {
-                const msg = e.error?.message || '';
-                if (msg.includes('Expected value') || msg.includes('null')) return;
-                console.error("Map Error");
+            mapInstance.on('error', () => {
+                if (!disposed && !loaded) setMapIssue('error');
+                console.error('OVERSEAS_MAP_RESOURCE_FAILED');
             });
 
             mapInstance.on('click', () => {
@@ -228,8 +257,9 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
 
             map.current = mapInstance;
-        } catch (err) {
-            console.error("Map Init Error:");
+        } catch {
+            setMapIssue('error');
+            console.error('OVERSEAS_MAP_INIT_FAILED');
         }
 
         // [New] 커스텀 스크롤 휠 핸들러 (0.5 단위 줌 -> 1단위 슬라이더 줌)
@@ -269,20 +299,34 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         if (mapContainerEl) {
             mapContainerEl.addEventListener('wheel', handleWheel, { passive: false });
         }
+        const resizeObserver = typeof ResizeObserver === 'undefined'
+            ? null
+            : new ResizeObserver(() => {
+                if (!disposed) mapInstance?.resize();
+            });
+        if (mapContainerEl) resizeObserver?.observe(mapContainerEl);
 
         return () => {
+            disposed = true;
+            window.clearTimeout(startupTimer);
+            resizeObserver?.disconnect();
             if (mapContainerEl) {
                 mapContainerEl.removeEventListener('wheel', handleWheel);
             }
-            if (map.current) {
-                map.current.remove();
+            markers.forEach((marker) => marker.remove());
+            markers.clear();
+            deviceLocationMarkerRef.current?.remove();
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            mapInstance?.remove();
+            if (map.current === mapInstance) {
                 map.current = null;
             }
         };
-    }, [selectedCountry]);
+    }, [mapAttempt]);
 
     const moveToRestaurant = useCallback((restaurant: Restaurant) => {
-        if (!map.current) return;
+        if (!map.current || !hasRenderableOverseasCoordinates(restaurant)) return;
 
         // [New] 강제 줌 레벨이 있으면 사용, 없으면 현재 줌 유지
         const targetZoom = mapFocusZoom ?? map.current.getZoom();
@@ -299,10 +343,11 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     }, [onMapReady, moveToRestaurant]);
 
     useEffect(() => {
+        countryRef.current = selectedCountry;
         if (!map.current || !selectedCountry) return;
         const config = OVERSEAS_REGIONS[selectedCountry]?.center;
         if (config) {
-            map.current.flyTo({ center: [config.lng, config.lat], zoom: config.zoom });
+            map.current.jumpTo({ center: [config.lng, config.lat], zoom: config.zoom, padding: mapPaddingRef.current });
         }
     }, [selectedCountry]);
 
@@ -312,7 +357,8 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     useEffect(() => {
         if (!map.current || !isMapLoaded) return;
 
-        const currentMarkerIds = new Set(restaurantsToShow.map(r => r.id));
+        const renderableRestaurants = restaurantsToShow;
+        const currentMarkerIds = new Set(renderableRestaurants.map(r => r.id));
 
         // 1. Remove markers that are no longer in the list
         markersRef.current.forEach((marker, id) => {
@@ -323,35 +369,37 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         });
 
         // 2. Add or update markers
-        restaurantsToShow.forEach(restaurant => {
-            if (!markersRef.current.has(restaurant.id)) {
-                const imagePath = getRestaurantCategoryIcon(restaurant);
-
+        renderableRestaurants.forEach(restaurant => {
+            let marker = markersRef.current.get(restaurant.id);
+            const isNewMarker = !marker;
+            if (!marker) {
                 const el = document.createElement('div');
                 el.id = `marker-${restaurant.id}`;
                 el.style.width = `32px`;
                 el.style.height = `32px`;
                 el.style.cursor = 'pointer';
-                el.innerHTML = buildOverseasMarkerHtml({
-                    imagePath,
-                    name: restaurant.name,
-                });
-
-                el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    onRestaurantSelect?.(restaurant);
-                    onMarkerClick?.(restaurant);
-                    moveToRestaurant(restaurant);
-                });
-
-                const marker = new maplibregl.Marker({ element: el })
-                    .setLngLat([Number(restaurant.lng), Number(restaurant.lat)])
-                    .addTo(map.current!);
-
+                marker = new maplibregl.Marker({ element: el });
                 markersRef.current.set(restaurant.id, marker);
             }
+            const element = marker.getElement();
+            const html = buildOverseasMarkerHtml({ imagePath: getRestaurantCategoryIcon(restaurant), name: restaurant.name, popularityTier: restaurant.popularity_tier });
+            if (markerHtmlRef.current.get(element) !== html) {
+                element.innerHTML = html;
+                markerHtmlRef.current.set(element, html);
+            }
+            // The retained SDK marker must use the current row and callbacks after a refresh.
+            element.onclick = (event) => {
+                event.stopPropagation();
+                onRestaurantSelect?.(restaurant);
+                onMarkerClick?.(restaurant);
+                moveToRestaurant(restaurant);
+            };
+            marker.setLngLat([Number(restaurant.lng), Number(restaurant.lat)]);
+            if (isNewMarker) marker.addTo(map.current!);
+            const activeId = getOverseasMarkerActiveId({ searchedRestaurantId: searchedRestaurant?.id, selectedRestaurantId: selectedRestaurant?.id });
+            applyOverseasMarkerSelectedState({ container: element.querySelector('.marker-container'), isSelected: restaurant.id === activeId, markerElement: element });
         });
-    }, [restaurantsToShow, isMapLoaded, moveToRestaurant, onRestaurantSelect, onMarkerClick]);
+    }, [restaurantsToShow, isMapLoaded, moveToRestaurant, onRestaurantSelect, onMarkerClick, searchedRestaurant, selectedRestaurant]);
 
     // Handle Selection State (Update existing markers without re-creating)
     useEffect(() => {
@@ -383,21 +431,36 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     }, [mapPadding, selectedRestaurant, isMapLoaded, moveToRestaurant]);
 
     return (
-        <div className={`relative w-full h-full bg-[#E5E5E5] ${className}`}>
+        <div
+            className={`relative w-full h-full bg-[#E5E5E5] ${className}`}
+            data-overseas-map-status={isMapLoaded ? 'ready' : mapIssue ?? 'loading'}
+        >
             <div
                 ref={mapContainer}
                 className="w-full h-full"
                 data-testid="map-container"
             />
 
-            {(!isMapLoaded || isLoadingRestaurants) && (
+            {!isMapLoaded && !mapIssue && (
                 <div className="absolute inset-0 z-10">
-                    <MapSkeleton message={!isMapLoaded ? '해외 지도 화면을 준비하고 있어요' : '맛집 핀을 배치하고 있어요'} />
+                    <MapSkeleton message="해외 지도 화면을 준비하고 있어요" />
                 </div>
             )}
-
-
-
+            {!isMapLoaded && mapIssue && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background/95 px-6 text-center" role="status">
+                    <p className="text-sm text-muted-foreground">
+                        {mapIssue === 'slow' ? '지도를 불러오는 데 시간이 걸리고 있어요.' : '해외 지도를 불러오지 못했어요.'}
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => setMapAttempt((current) => current + 1)}>
+                        다시 불러오기
+                    </Button>
+                </div>
+            )}
+            {isMapLoaded && isLoadingRestaurants && (
+                <div className="pointer-events-none absolute inset-x-3 top-28 z-10 flex justify-center" role="status">
+                    <span className="rounded-full bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm">맛집 핀을 불러오고 있어요</span>
+                </div>
+            )}
         </div>
     );
 };

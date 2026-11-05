@@ -20,12 +20,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { readCurrentBrowserAuthUser } from "@/lib/auth/isolated-browser-account";
 
 import { toast } from "@/lib/no-toast";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { debugLog as logDebug } from "@/lib/debug-log";
 import { restaurantMatchesOverseasCountry } from "@/lib/overseas-region-matching";
 import { GOOGLE_MAPS_LOAD_STATE_EVENT } from "@/hooks/use-google-maps";
@@ -63,14 +64,12 @@ const GLOBAL_COUNTRIES = [
 
 type GlobalCountry = typeof GLOBAL_COUNTRIES[number];
 
-function GlobalMapSearchSkeleton() {
+function GlobalMapSearchLoading() {
     return (
-        <div
-            className="w-full sm:col-span-2 lg:col-span-1"
-            aria-hidden="true"
-            data-global-map-search-skeleton="true"
-        >
-            <Skeleton className="h-10 w-full rounded-md" />
+        <div className="w-full sm:col-span-2 lg:col-span-1" aria-hidden="true" data-global-map-search-skeleton="true">
+            <LoadingSurface label="맛집 검색 준비 중">
+                <div className="flex h-10 items-center rounded-md border px-3 text-sm">맛집 검색하기</div>
+            </LoadingSurface>
         </div>
     );
 }
@@ -471,7 +470,7 @@ export default function GlobalMapPage() {
         if (!restaurantToEdit) return;
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await readCurrentBrowserAuthUser();
             if (!user) {
                 toast.error("로그인이 필요합니다.");
                 return;
@@ -569,7 +568,7 @@ export default function GlobalMapPage() {
                     />
 
                     {/* 맛집 검색 */}
-                    <Suspense fallback={<GlobalMapSearchSkeleton />}>
+                    <Suspense fallback={<GlobalMapSearchLoading />}>
                         <RestaurantSearch
                             onRestaurantSelect={handleRestaurantSelect}
                             onRestaurantSearch={handleRestaurantSearch}

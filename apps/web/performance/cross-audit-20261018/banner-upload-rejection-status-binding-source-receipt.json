@@ -1,0 +1,88 @@
+{
+  "schema_version": "tzudong.banner-upload-rejection-status-binding-source-receipt.v1",
+  "captured_at": "2026-10-19T00:25:51+0900",
+  "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "supplements": {
+    "path": "apps/web/performance/cross-audit-20261018/banner-upload-rejection-cleanup-source-receipt.json",
+    "sha256": "57d8b903793efd6612870d994e825b5fc0698bc9fba61f156162c3013c45136c",
+    "preserved": true
+  },
+  "finding": {
+    "verdict": "ACCEPT",
+    "counterexample": "The mutation client previously trusted a recognized payload code on every non-OK status. A synthetic HTTP 500 carrying banner_mutation_invalid therefore reached the page as a definite rejection and could delete current-operation uploads even though the server outcome was uncertain.",
+    "source_trace_before": [
+      "requestAdminBannerMutation selected any recognized payload code without checking response.status.",
+      "cleanupDefiniteRejectedBannerUploads accepted banner_mutation_invalid by code alone.",
+      "The combined HTTP 500 plus banner_mutation_invalid input reached owned-path deletion."
+    ]
+  },
+  "implemented_contract": {
+    "hook_status_binding": {
+      "400": "banner_mutation_invalid",
+      "403": "banner_mutation_forbidden",
+      "404": "banner_not_found",
+      "409": "banner_revision_conflict",
+      "500": [
+        "banner_readback_failed",
+        "banner_update_failed",
+        "banner_delete_failed"
+      ]
+    },
+    "mismatched_or_unknown_payload": "banner_invalid_response",
+    "error_status": "AdminBannerMutationError retains the observed HTTP status for caller decisions.",
+    "cleanup_gate": "Owned uploads are deleted only for exact 400/invalid, 403/forbidden, 404/not-found, or 409/conflict pairs.",
+    "uncertain_preservation": "HTTP 5xx, transport exceptions, malformed responses, and mismatched status-code pairs preserve uploaded paths."
+  },
+  "counterexample_results": [
+    {
+      "case": "HTTP 500 plus banner_mutation_invalid",
+      "hook_result": "banner_invalid_response",
+      "cleanup_result": "not attempted; owned uploads preserved"
+    },
+    {
+      "case": "HTTP 400 plus banner_mutation_invalid",
+      "hook_result": "banner_mutation_invalid with status 400",
+      "cleanup_result": "current-operation uploads cleaned"
+    },
+    {
+      "case": "HTTP 403/404/409 plus their matching fixed codes",
+      "cleanup_result": "current-operation uploads cleaned"
+    },
+    {
+      "case": "HTTP 500 plus readback/update/delete failure",
+      "cleanup_result": "not attempted; result remains uncertain"
+    },
+    {
+      "case": "transport exception or absent/malformed payload",
+      "cleanup_result": "not attempted; result remains uncertain"
+    }
+  ],
+  "verification": {
+    "primary": {
+      "command": "bun test tests-unit/admin-banners-functional-contract.test.ts tests-unit/ad-banner-url-security.test.ts",
+      "result": "18 pass, 0 fail, 151 expect calls"
+    },
+    "targeted_lint": {
+      "command": "bunx eslint app/admin/banners/page.tsx hooks/use-ad-banners.tsx tests-unit/admin-banners-functional-contract.test.ts",
+      "result": "passed"
+    }
+  },
+  "source_sha256": {
+    "apps/web/app/admin/banners/page.tsx": "9a3cb39905f7585dd147c71301afcaebe07933118e223b9a8c79193805286adc",
+    "apps/web/hooks/use-ad-banners.tsx": "83a6bb68c15797ac724078991bdf3571b2d81e70ed6434c31408b05e054a4f77",
+    "apps/web/app/api/admin/banners/route.ts": "5c2bb24c1f0b4c1e6cbff87bd12fd7e5ebb3716668933ed82990e27cd8bbf54e",
+    "apps/web/tests-unit/admin-banners-functional-contract.test.ts": "5efdfe22355c65479dacac1eab19b71a9bad3add5daa22858451533f5022ddc9",
+    "apps/web/tests-unit/ad-banner-url-security.test.ts": "09a0935b913536aaa17250825413efd231f901e1f6369683d5d92f5daa31bbec"
+  },
+  "boundaries": {
+    "api_or_cas_changes": 0,
+    "hosted_database_reads": 0,
+    "hosted_database_writes": 0,
+    "external_storage_calls": 0,
+    "browser_runs": 0,
+    "deployment_writes": 0,
+    "git_mutations": 0,
+    "sealed_bundle_edits": 0,
+    "user_temp_edits": 0
+  }
+}

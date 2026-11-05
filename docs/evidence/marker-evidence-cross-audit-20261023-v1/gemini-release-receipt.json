@@ -1,0 +1,18 @@
+{
+  "released": "ed871242eed136afa7312b37",
+  "next_owner": "01a14e9a-ebaf-7a11-8049-0a8c4ad6b6fe",
+  "admission": {
+    "provider": "gemini",
+    "mode": "fifo",
+    "local_max_active": 1,
+    "active_count": 0,
+    "free_slots": 1,
+    "dispatch_pending": false,
+    "next_owner": "01a14e9a-ebaf-7a11-8049-0a8c4ad6b6fe",
+    "next_request_id": "ea1760ea38555c87ff385cea",
+    "eligible_accounts": [],
+    "urgent_accounts": [],
+    "five_hour_limited_accounts": [],
+    "vendor_concurrency_limit": null
+  }
+}

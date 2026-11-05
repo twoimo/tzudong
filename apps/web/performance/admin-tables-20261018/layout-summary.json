@@ -1,0 +1,104 @@
+{
+  "schema": "tzudong-cms-layout/v1",
+  "capturedAt": "2026-10-18T11:32:51.648104+00:00",
+  "baseHead": "ea08db3ae0c1a8d2525da15e6026ca4556ec0260",
+  "snapshot": "dirty candidate before develop integration",
+  "environment": "Chrome CUA; Next 16.3.8 development; synthetic loopback only; no hosted providers or DB",
+  "baselineEnvironmentLimit": "Baseline records Next16 but not its full toolchain. Viewport and fixtures agree; this is descriptive geometry, not controlled runtime performance.",
+  "rowGeometry": [
+    {
+      "module": "restaurants",
+      "viewport": [
+        1440,
+        960
+      ],
+      "beforeRowHeightPx": 87.0,
+      "afterRowHeightPx": 56,
+      "absoluteDifferencePx": -31.0,
+      "changePercent": -35.63218390804598,
+      "beforeTableWidthPx": 1485.125,
+      "afterTableWidthPx": 1177,
+      "independentBeforeCaptures": 1,
+      "independentAfterCaptures": 1,
+      "nominal95Interval": null,
+      "uncertainty": "Single synthetic layout capture per module; correlated rows are not independent samples. No latency, task-success or production gain inferred."
+    },
+    {
+      "module": "submissions",
+      "viewport": [
+        1440,
+        960
+      ],
+      "beforeRowHeightPx": 82.328125,
+      "afterRowHeightPx": 61,
+      "absoluteDifferencePx": -21.328125,
+      "changePercent": -25.906244069083318,
+      "beforeTableWidthPx": 1192,
+      "afterTableWidthPx": 1192,
+      "independentBeforeCaptures": 1,
+      "independentAfterCaptures": 1,
+      "nominal95Interval": null,
+      "uncertainty": "Single synthetic layout capture per module; correlated rows are not independent samples. No latency, task-success or production gain inferred."
+    },
+    {
+      "module": "reviews",
+      "viewport": [
+        1440,
+        960
+      ],
+      "beforeRowHeightPx": 60,
+      "afterRowHeightPx": 56.328125,
+      "absoluteDifferencePx": -3.671875,
+      "changePercent": -6.1197916666666625,
+      "beforeTableWidthPx": 1192,
+      "afterTableWidthPx": 1192,
+      "independentBeforeCaptures": 1,
+      "independentAfterCaptures": 1,
+      "nominal95Interval": null,
+      "uncertainty": "Single synthetic layout capture per module; correlated rows are not independent samples. No latency, task-success or production gain inferred."
+    }
+  ],
+  "restaurantFinalHeader": [
+    {
+      "viewport": [
+        834,
+        954
+      ],
+      "controlsWithinViewport": true,
+      "internalHorizontalOverflowCount": 0,
+      "headerHeightPx": 119.328125
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "controlsWithinViewport": true,
+      "internalHorizontalOverflowCount": 0,
+      "headerHeightPx": 183.328125
+    },
+    {
+      "viewport": [
+        1440,
+        960
+      ],
+      "controlsWithinViewport": true,
+      "internalHorizontalOverflowCount": 0,
+      "headerHeightPx": 56
+    }
+  ],
+  "sourceSha256": {
+    "apps/web/components/admin/EvaluationTableNew.tsx": "3205fb20c7c74bf182a5a885618a5cfcfe424e96bebd555f451482309925ae4d",
+    "apps/web/components/admin/SubmissionListView.tsx": "fcfc187f26c9e0a334bb0aba2a183787033d076785e73895f7065469208def89",
+    "apps/web/components/reviews/ReviewModal.tsx": "bf326190c050c282593e332a4e868ad50b3dd026f52add200a12b9805067ea8d",
+    "apps/web/styles/admin-ui.css": "c488571b5bfe2c485f28bb892f2b0e006108e644f3b20a2a596ae91d005c9b5a",
+    "apps/web/app/admin/evaluations/page.tsx": "624edead153d7a7e06975a157f109dae023e6b253624d6b2bb823be80bd8631c"
+  },
+  "limits": [
+    "Synthetic nickname lookup failure is shown; real profile retrieval not proved.",
+    "No real approval/delete/OCR/provider/Storage operation was exercised.",
+    "Only three CMS modules rendered here; all-sidebar live deployment verification remains pending.",
+    "20261016 viewport mismatch and intermediate header clipping images are excluded from final pass.",
+    "The black N indicator is Next dev tooling, not a production account control."
+  ]
+}

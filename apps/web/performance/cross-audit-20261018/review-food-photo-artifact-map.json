@@ -1,0 +1,93 @@
+{
+  "schema": "tzudong-review-food-photo-artifact-map/v1",
+  "files": {
+    "apps/web/performance/cross-audit-20261018/review-food-photo-closed-composer/after-full-tests.txt": {
+      "sha256": "0017eed149fbc9320018fe230cfb85745a742bc7b1a7184fb29d43236b169fd3",
+      "bytes": 24535
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-closed-composer/after.json": {
+      "sha256": "a9cf5c281040e1bc2d60a9ca191e617bd0b3af5eb5d59516df951b1d36e84339",
+      "bytes": 523
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-closed-composer/before.json": {
+      "sha256": "3c9cf6a0385bb33d66122acb4f5a36f471964863846b4835cbafbcdf711488e4",
+      "bytes": 498
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-closed-composer/before.txt": {
+      "sha256": "002511f7e15aa7930967a63acdcfc140ee94ab78db26fe8162d201cc2f00642a",
+      "bytes": 882
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-final-verification/compiler-parity.txt": {
+      "sha256": "190cbda860a4bbe04b37cbae1c24e0ff933973a36a99ab8c177238ca7291d0a8",
+      "bytes": 510
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-final-verification/index.json": {
+      "sha256": "989a97b7fe11b3f0c29261f4f87aba42c224634bba651f21f3be2e9d1b809bda",
+      "bytes": 5332
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-final-verification/production-build.txt": {
+      "sha256": "90b280cecd6a6a0d820fd730195d6c8481bd1b7a8e45689e02ebaf825c2e0b1e",
+      "bytes": 1477
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-final-verification/verification.json": {
+      "sha256": "ab35efa07482cdd5a4f5eb5daf50b74ace53f500dd6aa2f0cf9f2edb61035185",
+      "bytes": 2099
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-final-verification/verification.json.sha256": {
+      "sha256": "de089a1c1ecc7cc0eb3f203861bd79d293d7edec25d057485d5e99af8447ea41",
+      "bytes": 84
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-limit-source-receipt.json": {
+      "sha256": "766dc8864623ac429e01c809610ad04bf1101ff273d7ea22198c69428971762d",
+      "bytes": 4132
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-native-findings.json": {
+      "sha256": "bb9747313d954db868a601feb155a090c6e13b42f675fd61b23d35920ec741b4",
+      "bytes": 5301
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-native-resolution.json": {
+      "sha256": "d53a54f4da95201a7e1ca28a2918583bcfa117e3e34df01c94a05939ec4b2825",
+      "bytes": 5826
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-native-resolution.json.sha256": {
+      "sha256": "ce3eb7178d7245e72b83a995103ac0e820fbba993c1f27519ebc38beb67fdd21",
+      "bytes": 107
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-recovery-source-receipt.json": {
+      "sha256": "7e3aad012accc94fb36e2203e1d27ca2cc2311fb0977e6de515efc67a472a4df",
+      "bytes": 4476
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-recovery-verification/compiler-parity.txt": {
+      "sha256": "ee02738f0a3dea59dae7f98606353063eb926d2a3de8668bfb6d0e3cbd17fcc5",
+      "bytes": 510
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-recovery-verification/production-build.txt": {
+      "sha256": "42edf543c376495b3e8fa4e1275f6b9e518ed506874285dbbeda70e2d1283e91",
+      "bytes": 1477
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-recovery-verification/verification.json": {
+      "sha256": "509a58839bb739853fe679320f1c5111fef81c0d76fb9c1c08e0b1c2f77bfa57",
+      "bytes": 2105
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-recovery-verification/verification.json.sha256": {
+      "sha256": "8822a9445fe923465e7019623bf4dae54a6801f80ea8950c8df1341f1477b559",
+      "bytes": 84
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-verification/compiler-parity.txt": {
+      "sha256": "f1acbd5f9aa6b1f8edc3539033f963f379848c753783d3339d23fd21219483cc",
+      "bytes": 510
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-verification/production-build.txt": {
+      "sha256": "26e8cfeac70278bf08517aabe87d7876e506cf8fd4d30c11b4329418bb8fad37",
+      "bytes": 1477
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-verification/verification.json": {
+      "sha256": "c27ad48759d654d6bffb9b7d4c2672bc464dcc51f1dada6d0a18cf1191962f4a",
+      "bytes": 2087
+    },
+    "apps/web/performance/cross-audit-20261018/review-food-photo-verification/verification.json.sha256": {
+      "sha256": "d7df1a790bc4ce1246d25719b61782bdca7cae789be4268a372019e79c1d9b21",
+      "bytes": 84
+    }
+  }
+}

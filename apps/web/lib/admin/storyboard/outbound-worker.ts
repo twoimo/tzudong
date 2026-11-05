@@ -7,12 +7,12 @@ import { open } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import sharp from 'sharp';
 import { z } from 'zod';
-import type { MlxStoryboardClient } from './mlx-client.ts';
+import { parseFeatureDatabaseReadiness } from '@/lib/runtime-feature-readiness-contract';
 import { GeminiStoryboardClient } from './gemini-client.ts';
 import {
   isAllowedStoryboardGeminiWorkerModel, storyboardGeminiDeclaredModels,
 } from './gemini-models.ts';
-import type { ProductionModel as MlxModel } from './production-worker-auth.ts';
+import type { ProductionModel as WorkerModel } from './production-worker-auth.ts';
 import {
   MAX_STORYBOARD_IMAGE_BYTES, MAX_STORYBOARD_IMAGE_PIXELS, STORYBOARD_PRODUCTION_MESSAGES,
   StoryboardProductionError, assertGeminiStoryboardExecutionPolicy, parseStoryboardDraft,
@@ -31,8 +31,10 @@ const claimSchema = okSchema.extend({ job: claimedStoryboardJobSchema.nullable()
 const PATHS = ['/api/storyboard-worker', '/api/storyboard-worker/images'] as const;
 type WorkerPath = typeof PATHS[number];
 type Lease = { jobId: string; leaseToken: string };
-const STORYBOARD_MLX_INFERENCE_PEAK_BYTES_ENV = 'STORYBOARD_MLX_INFERENCE_PEAK_BYTES';
-export const DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES = 8 * 1024 ** 3;
+export const DEFAULT_STORYBOARD_GEMINI_CLIENT_PEAK_BYTES = 128 * 1024 ** 2;
+export const STORYBOARD_CATALOG_FAILURE_LIMIT = 3;
+export const STORYBOARD_CATALOG_COOLDOWN_MS = 30_000;
+export const STORYBOARD_CATALOG_MAX_COOLDOWN_MS = 120_000;
 const STORYBOARD_IMAGE_UPLOAD_PEAK_BYTES = MAX_STORYBOARD_IMAGE_BYTES * 4;
 
 export class StoryboardWorkerApiError extends Error {
@@ -187,19 +189,22 @@ export interface StoryboardWorkerApi {
   operation(value: Record<string, unknown>, signal?: AbortSignal): Promise<unknown>;
   image(lease: Lease, sceneNo: number, bytes: Buffer, proof: StoryboardProductionProvenance, signal?: AbortSignal): Promise<void>;
 }
-type Models = { models(signal?: AbortSignal): Promise<MlxModel[]>; draft: MlxStoryboardClient['draft']; image: MlxStoryboardClient['image'] };
+type GeminiModels = Pick<GeminiStoryboardClient, 'models' | 'draft' | 'image'>;
 
-function assertClaimedStoryboardModels(job: ClaimedStoryboardJob, models: MlxModel[]): void {
-  if (!models.length || models.some((model) => !isAllowedStoryboardGeminiWorkerModel(model))) {
-    throw new StoryboardProductionError('provider_failed');
-  }
-  const requiredModalities = job.document ? (['image'] as const) : (['text', 'image'] as const);
-  for (const modality of requiredModalities) {
+function assertClaimedStoryboardModels(job: ClaimedStoryboardJob, models: WorkerModel[]): void {
+  assertVerifiedStoryboardModels(models);
+  for (const modality of ['text', 'image'] as const) {
     const selected = job.request.providers[modality].model;
     const capability = modality === 'text' ? 'chat' : 'image';
     if (!models.some((model) => model.id === selected && model.capabilities.includes(capability))) {
       throw new StoryboardProductionError('provider_failed');
     }
+  }
+}
+
+function assertVerifiedStoryboardModels(models: WorkerModel[]): void {
+  if (!models.length || models.some((model) => !isAllowedStoryboardGeminiWorkerModel(model))) {
+    throw new StoryboardProductionError('provider_failed');
   }
 }
 
@@ -210,24 +215,13 @@ export function storyboardWorkerErrorCode(error: unknown): string {
 }
 
 export function admitStoryboardWorkerMemory(
-  models: ReadonlyArray<{ bytes_resident?: number }>,
+  _models: ReadonlyArray<{ bytes_resident?: number }>,
   env: { physicalBytes: number; availableBytes?: number; usedBytes?: number } = {
     physicalBytes: os.totalmem(),
     availableBytes: os.freemem(),
   },
 ): boolean {
-  const resident = models.reduce((sum, model) => sum + (Number(model.bytes_resident) || 0), 0);
-  const configuredInferencePeak = process.env[STORYBOARD_MLX_INFERENCE_PEAK_BYTES_ENV];
-  const inferencePeakBytes = models.length > 0 && models.every((model) => 'owned_by' in model && model.owned_by === 'gemini-api')
-    ? 128 * 1024 ** 2
-    : configuredInferencePeak === undefined
-    ? DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES
-    : Number(configuredInferencePeak);
-  // Default reserves 8 GiB for MLX inference, plus the existing encoded/decoded/upload buffers.
-  // Operators may replace the inference allowance with a measured byte value for their models.
-  if (!Number.isSafeInteger(inferencePeakBytes) || inferencePeakBytes <= 0) {
-    throw new RangeError(`${STORYBOARD_MLX_INFERENCE_PEAK_BYTES_ENV} must be a positive safe integer`);
-  }
+  const inferencePeakBytes = DEFAULT_STORYBOARD_GEMINI_CLIENT_PEAK_BYTES;
   if (!Number.isFinite(env.physicalBytes) || env.physicalBytes < 0) {
     throw new RangeError('physicalBytes must be a finite number >= 0');
   }
@@ -237,17 +231,14 @@ export function admitStoryboardWorkerMemory(
     if (!Number.isFinite(env.availableBytes) || env.availableBytes < 0 || env.availableBytes > env.physicalBytes) {
       throw new RangeError('availableBytes must be a finite number between 0 and physicalBytes');
     }
-    // os.freemem() is host-wide and already includes the resident MLX process.
-    // Adding the model catalog estimate here would double-count that process.
+    // os.freemem() is host-wide and already includes this worker process.
     usedBytes = env.physicalBytes - env.availableBytes;
   } else if (env.usedBytes !== undefined) {
     if (!Number.isFinite(env.usedBytes) || env.usedBytes < 0) {
       throw new RangeError('usedBytes must be a finite number >= 0');
     }
-    // Keep the explicit deterministic fallback for callers that cannot provide
-    // a host-wide availability sample; in that mode model residency is external
-    // to the supplied worker RSS and must be included once.
-    usedBytes = env.usedBytes + resident;
+    // Gemini model residency is remote; the supplied worker RSS is the local baseline.
+    usedBytes = env.usedBytes;
   } else {
     throw new RangeError('availableBytes or usedBytes is required');
   }
@@ -262,28 +253,62 @@ export function admitStoryboardWorkerMemory(
 /** One claimed project and one image at a time. SQL owns durable progress and retry leases. */
 export class OutboundStoryboardWorker {
   private readonly api: StoryboardWorkerApi;
-  private readonly mlx: Models;
+  private readonly gemini: GeminiModels;
   private readonly heartbeatMs: number;
   private readonly onEvent: (event: WorkerEvent) => void;
-  private readonly admitMemory: (models: MlxModel[]) => boolean;
+  private readonly admitMemory: (models: WorkerModel[]) => boolean;
+  private readonly now: () => number;
+  private catalogFailures = 0;
+  private catalogRetryAfter = 0;
   private running = false;
   constructor(options: {
-    api: StoryboardWorkerApi; mlx?: Models; heartbeatMs?: number; onEvent?: (event: WorkerEvent) => void;
-    admitMemory?: (models: MlxModel[]) => boolean;
+    api: StoryboardWorkerApi; gemini?: GeminiModels; heartbeatMs?: number; onEvent?: (event: WorkerEvent) => void;
+    admitMemory?: (models: WorkerModel[]) => boolean; now?: () => number;
   }) {
-    this.api = options.api; this.mlx = options.mlx ?? new GeminiStoryboardClient();
+    this.api = options.api; this.gemini = options.gemini ?? new GeminiStoryboardClient();
     this.heartbeatMs = options.heartbeatMs ?? 15_000;
     if (!Number.isInteger(this.heartbeatMs) || this.heartbeatMs < 1 || this.heartbeatMs > 30_000) {
       throw new StoryboardWorkerApiError('invalid_worker_timeout');
     }
     this.onEvent = options.onEvent ?? (() => undefined);
     this.admitMemory = options.admitMemory ?? ((models) => admitStoryboardWorkerMemory(models));
+    this.now = options.now ?? Date.now;
   }
 
-  private async heartbeat(models: MlxModel[], signal?: AbortSignal, lease?: Lease): Promise<void> {
+  private async heartbeat(models: WorkerModel[], signal?: AbortSignal, lease?: Lease): Promise<void> {
     const result = heartbeatSchema.safeParse(await workerApiCall(() => this.api.operation({ action: 'heartbeat', models, ...lease }, signal)));
     if (!result.success) throw new StoryboardWorkerApiError('invalid_worker_response');
     if (lease && !result.data.leaseValid) throw new StoryboardWorkerApiError('worker_lease_lost');
+  }
+
+  private async verifiedModels(signal?: AbortSignal): Promise<WorkerModel[] | null> {
+    if (this.catalogFailures >= STORYBOARD_CATALOG_FAILURE_LIMIT) {
+      throw new StoryboardProductionError('provider_failed');
+    }
+    if (this.catalogFailures > 0 && this.now() < this.catalogRetryAfter) return null;
+    let models: WorkerModel[];
+    try {
+      models = await this.gemini.models(signal);
+    } catch (error) {
+      const transient = error instanceof StoryboardProductionError && error.code === 'provider_failed';
+      if (signal?.aborted || !transient) throw error;
+      this.catalogFailures += 1;
+      if (this.catalogFailures >= STORYBOARD_CATALOG_FAILURE_LIMIT) {
+        this.onEvent({ event: 'model_catalog_retry_exhausted', code: storyboardWorkerErrorCode(error) });
+        throw error;
+      }
+      const cooldownMs = Math.min(
+        STORYBOARD_CATALOG_COOLDOWN_MS * (2 ** (this.catalogFailures - 1)),
+        STORYBOARD_CATALOG_MAX_COOLDOWN_MS,
+      );
+      this.catalogRetryAfter = this.now() + cooldownMs;
+      this.onEvent({ event: 'model_catalog_deferred', code: storyboardWorkerErrorCode(error) });
+      return null;
+    }
+    assertVerifiedStoryboardModels(models);
+    this.catalogFailures = 0;
+    this.catalogRetryAfter = 0;
+    return models;
   }
 
   /** Only settled job outcomes continue polling; uncertain deliveries leave this loop. */
@@ -295,7 +320,7 @@ export class OutboundStoryboardWorker {
     let result: WorkerResult = 'idle';
     while (!signal?.aborted) {
       result = await this.runOnce(signal);
-      if (once || signal?.aborted) break;
+      if (once || result === 'held' || signal?.aborted) break;
       await delay(pollMs, undefined, { signal });
     }
     return result;
@@ -306,16 +331,30 @@ export class OutboundStoryboardWorker {
     this.running = true;
     try {
       if (signal?.aborted) throw new StoryboardWorkerApiError('worker_stopped');
+      const readiness = parseFeatureDatabaseReadiness(
+        await workerApiCall(() => this.api.operation({ action: 'readiness' }, signal)),
+      );
+      if (readiness.status !== 'ready') {
+        this.onEvent({ event: 'feature_held', code: readiness.code });
+        return 'held';
+      }
       const declaredModels = storyboardGeminiDeclaredModels();
       if (!this.admitMemory(declaredModels)) {
         this.onEvent({ event: 'memory_deferred' });
         return 'idle';
       }
-      await this.heartbeat(declaredModels, signal);
+      // The client refreshes this verified catalog after its bounded five-minute
+      // TTL. Idle polling reuses it so a five-second queue poll does not become
+      // an unbounded provider metadata loop.
+      const availableModels = await this.verifiedModels(signal);
+      // A provider catalog outage cannot authorize a claim. Transient failures
+      // retry only after bounded cooldowns and terminate after the fixed limit.
+      if (!availableModels) return 'idle';
+      await this.heartbeat(availableModels, signal);
       const claim = claimSchema.safeParse(await workerApiCall(() => this.api.operation({ action: 'claim' }, signal)));
       if (!claim.success) throw new StoryboardWorkerApiError('invalid_worker_response');
       if (!claim.data.job) return 'idle';
-      try { return await this.processJob(claim.data.job, declaredModels, signal); }
+      try { return await this.processJob(claim.data.job, availableModels, signal); }
       catch (error) {
         if (!(error instanceof StoryboardWorkerApiError) || error.code !== 'worker_lease_lost') throw error;
         this.onEvent({ event: 'lease_lost', jobId: claim.data.job.id, code: error.code });
@@ -324,7 +363,7 @@ export class OutboundStoryboardWorker {
     } finally { this.running = false; }
   }
 
-  private async processJob(job: ClaimedStoryboardJob, declaredModels: MlxModel[], stop?: AbortSignal): Promise<WorkerResult> {
+  private async processJob(job: ClaimedStoryboardJob, availableModels: WorkerModel[], stop?: AbortSignal): Promise<WorkerResult> {
     const lease = { jobId: job.id, leaseToken: job.leaseToken };
     const scope = new AbortController();
     const abort = () => scope.abort(new StoryboardWorkerApiError('worker_stopped'));
@@ -337,7 +376,7 @@ export class OutboundStoryboardWorker {
       check();
       if (!okSchema.safeParse(result).success) throw new StoryboardWorkerApiError('invalid_worker_response');
     };
-    let heartbeatModels = declaredModels;
+    const heartbeatModels = availableModels;
     const renew = (async () => {
       try {
         while (!scope.signal.aborted) {
@@ -353,62 +392,52 @@ export class OutboundStoryboardWorker {
       await this.heartbeat(heartbeatModels, scope.signal, lease);
       check();
       assertGeminiStoryboardExecutionPolicy(job.request.providers);
+      assertClaimedStoryboardModels(job, availableModels);
       if (job.document && (job.document.projectId !== job.projectId || job.document.revision !== job.revision
         || job.document.scenes.length !== job.request.sceneCount
         || job.document.scenes.some((scene, index) => scene.sceneNo !== index + 1))) {
         throw new StoryboardProductionError('invalid_structured_response');
       }
-      const availableModels = await this.mlx.models(scope.signal);
-      check();
-      assertClaimedStoryboardModels(job, availableModels);
-      heartbeatModels = availableModels;
-      await this.heartbeat(heartbeatModels, scope.signal, lease);
-      check();
       let draft: StoryboardDraft;
       if (!job.document) {
         if (job.kind !== 'generate' || job.request.providers.text.id !== 'gemini-api') {
           throw new StoryboardProductionError('invalid_structured_response');
         }
         this.onEvent({ event: 'text_started', jobId: job.id });
-        const generated = await this.mlx.draft(job.request, scope.signal);
+        const generated = await this.gemini.draft(job.request, scope.signal);
         draft = parseStoryboardDraft(generated.draft, job.request);
         await operation({ action: 'draft', draft, provenance: generated.provenance });
         this.onEvent({ event: 'text_saved', jobId: job.id });
       } else draft = job.document;
       let imageFailure: string | undefined;
-      if (job.request.providers.image.id === 'gemini-api') {
-        const scenes = job.kind === 'scene' ? draft.scenes.filter((scene) => scene.sceneNo === job.sceneNo)
-          : draft.scenes.filter((scene) => {
-            const saved = job.document?.scenes.find((entry) => entry.sceneNo === scene.sceneNo);
-            return !saved?.image || !!saved.imageError;
-          });
-        if (job.kind === 'scene' && scenes.length !== 1) throw new StoryboardProductionError('invalid_structured_response');
-        for (const scene of scenes) {
+      const scenes = job.kind === 'scene' ? draft.scenes.filter((scene) => scene.sceneNo === job.sceneNo)
+        : draft.scenes.filter((scene) => {
+          const saved = job.document?.scenes.find((entry) => entry.sceneNo === scene.sceneNo);
+          return !saved?.image || !!saved.imageError;
+        });
+      if (job.kind === 'scene' && scenes.length !== 1) throw new StoryboardProductionError('invalid_structured_response');
+      for (const scene of scenes) {
+        check();
+        this.onEvent({ event: 'image_started', jobId: job.id, sceneNo: scene.sceneNo });
+        let generated: Awaited<ReturnType<GeminiModels['image']>>;
+        try {
+          generated = await this.gemini.image(job.request, scene.imagePrompt, scope.signal);
           check();
-          this.onEvent({ event: 'image_started', jobId: job.id, sceneNo: scene.sceneNo });
-          // Inference and pixel decoding are local. Upload/checkpoint errors stay outside this boundary.
-          let generated: Awaited<ReturnType<Models['image']>>;
-          try {
-            generated = await this.mlx.image(job.request, scene.imagePrompt, scope.signal);
-            check();
-            await validateWorkerImage(generated.bytes);
-          }
-          catch (error) {
-            check();
-            const code = storyboardWorkerErrorCode(error);
-            imageFailure ??= code;
-            await operation({ action: 'scene-error', sceneNo: scene.sceneNo, errorCode: code });
-            this.onEvent({ event: 'scene_failed', jobId: job.id, sceneNo: scene.sceneNo, code });
-            if (['invalid_image', 'invalid_image_response', 'image_too_large'].includes(code)) continue;
-            throw error;
-          }
-          check();
-          await workerApiCall(() => this.api.image(lease, scene.sceneNo, generated.bytes, generated.provenance, scope.signal));
-          check();
-          this.onEvent({ event: 'image_saved', jobId: job.id, sceneNo: scene.sceneNo });
+          await validateWorkerImage(generated.bytes);
         }
-      } else if (!['manual', 'chatgpt-manual', 'grok-manual'].includes(job.request.providers.image.id)) {
-        throw new StoryboardProductionError('provider_not_configured');
+        catch (error) {
+          check();
+          const code = storyboardWorkerErrorCode(error);
+          imageFailure ??= code;
+          await operation({ action: 'scene-error', sceneNo: scene.sceneNo, errorCode: code });
+          this.onEvent({ event: 'scene_failed', jobId: job.id, sceneNo: scene.sceneNo, code });
+          if (['invalid_image', 'invalid_image_response', 'image_too_large'].includes(code)) continue;
+          throw error;
+        }
+        check();
+        await workerApiCall(() => this.api.image(lease, scene.sceneNo, generated.bytes, generated.provenance, scope.signal));
+        check();
+        this.onEvent({ event: 'image_saved', jobId: job.id, sceneNo: scene.sceneNo });
       }
       await operation({ action: 'finish', ...(imageFailure ? { errorCode: imageFailure } : {}) });
       this.onEvent({ event: imageFailure ? 'failed' : 'finished', jobId: job.id,

@@ -1,0 +1,13 @@
+{
+  "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/chatgpt_reverse_report.md",
+  "sha256": "8991d6769c60a3d0dc95d3756f698f69aa3101d4fa8625b3c4fac5650a96c05d",
+  "source_bundle": "518e75cc2d05ed2dc3dedfdd7e27a3c5d41dd053e460ab3897768f96f7b106b2",
+  "kind": "audit",
+  "actual_model": "GPT-6 / Pro",
+  "actual_research": "off",
+  "original_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "report_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "complete": true,
+  "evidence": "Fullunedited9631BconditionalreversewithactualREV-M01anddeliveryholds; source/model/URLlinked.",
+  "saved_at": "2026-10-22T21:22:35.469742+00:00"
+}

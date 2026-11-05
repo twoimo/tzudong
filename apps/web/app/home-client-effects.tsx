@@ -70,7 +70,11 @@ export default function HomeClientEffects({
         };
 
         window.addEventListener('home:detail-user-opened', handleUserDetailOpened);
-        return () => window.removeEventListener('home:detail-user-opened', handleUserDetailOpened);
+        window.addEventListener('home:detail-user-closed', handleUserDetailOpened);
+        return () => {
+            window.removeEventListener('home:detail-user-opened', handleUserDetailOpened);
+            window.removeEventListener('home:detail-user-closed', handleUserDetailOpened);
+        };
     }, []);
 
     useEffect(() => {

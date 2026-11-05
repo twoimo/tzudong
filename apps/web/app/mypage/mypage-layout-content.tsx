@@ -1,9 +1,12 @@
 "use client";
 
+import { isSupersededLogout } from "@/lib/auth/logout-result";
+
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHydration } from "@/hooks/useHydration";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   Bookmark,
   Edit3,
@@ -17,16 +20,15 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
+import { useMyPageScrollRestoration } from "@/hooks/use-mypage-scroll-restoration";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useHomeReturnHref } from "@/hooks/use-home-return-href";
 import { pageHeaderTitleClass, pageHeaderDescriptionClass } from "@/components/home/map-panel-chrome";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { toast } from "@/lib/no-toast";
 import { buildBrowserTitle } from "@/lib/seo";
 
-const STAT_SKELETON_WIDTHS = ["w-full", "w-11/12", "w-10/12"];
-const ACTION_SKELETON_WIDTHS = ["w-full", "w-[92%]", "w-[84%]", "w-[76%]"];
-const SECTION_SKELETON_WIDTHS = ["w-full", "w-[94%]"];
 
 type MyPageMobileRouteHeader = {
   href: string;
@@ -116,44 +118,97 @@ function MyPageContentLoadingState() {
       aria-live="polite"
       role="status"
     >
-      <div
-        className="space-y-5 md:rounded-3xl md:border md:border-border md:bg-card md:p-5"
-        data-mypage-content-hero-skeleton="borderless-mobile"
-      >
-        <div className="flex gap-4 sm:gap-5">
-          <Skeleton className="h-16 w-16 shrink-0 rounded-2xl bg-muted/50 sm:h-20 sm:w-20" />
-          <div className="min-w-0 flex-1 space-y-3">
-            <Skeleton className="h-4 w-24 rounded-full sm:w-28" />
-            <Skeleton className="h-7 w-3/4 max-w-sm rounded-lg" />
-            <Skeleton className="h-4 w-[58%] max-w-xs rounded-full" />
-          </div>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {STAT_SKELETON_WIDTHS.map((widthClass, index) => (
-            <Skeleton
-              key={index}
-              className={`${widthClass} h-14 rounded-2xl bg-muted/50 md:h-16`}
-            />
-          ))}
-        </div>
+
+      <LoadingSurface label="마이페이지 내용 로딩 중">
+
         <div
-          className="grid gap-2 sm:grid-cols-2"
-          data-mypage-content-actions-skeleton="true"
+          className="space-y-5 md:rounded-3xl md:border md:border-border md:bg-card md:p-5"
+          data-mypage-content-hero-skeleton="borderless-mobile"
         >
-          {ACTION_SKELETON_WIDTHS.map((widthClass, index) => (
-            <Skeleton
-              key={index}
-              className={`${widthClass} h-14 rounded-2xl bg-muted/50`}
-            />
-          ))}
+
+          <div className="flex gap-4 sm:gap-5">
+
+            <svg
+              viewBox="0 0 80 80"
+              role="img"
+              aria-label="프로필"
+              className="h-16 w-16 shrink-0 rounded-2xl border sm:h-20 sm:w-20"
+            >
+
+              <circle cx="40" cy="40" r="32" fill="currentColor" opacity="0.1" />
+
+            </svg>
+
+            <div className="min-w-0 flex-1 space-y-3">
+
+              <p className="text-sm">나의 프로필</p>
+
+              <h2 className="text-2xl font-semibold">맛집을 찾는 여행</h2>
+
+              <p className="text-sm">방문과 활동을 모아 보세요</p>
+
+            </div>
+
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+
+            {
+              ["리뷰", "도장", "북마크"].map(label => (
+                <div key={label} className="flex h-14 items-center justify-between rounded-2xl border px-4 md:h-16">
+
+                  <span className="text-sm">
+
+                    {label}
+
+                  </span>
+
+                  <span className="font-semibold">00</span>
+
+                </div>
+              ))
+            }
+
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2" data-mypage-content-actions-skeleton="true">
+
+            {
+              ["프로필 관리", "나의 리뷰", "저장한 맛집", "제보 내역"].map(label => (
+                <p key={label} className="flex h-14 items-center rounded-2xl border px-4 text-sm">
+
+                  {label}
+
+                </p>
+              ))
+            }
+
+          </div>
+
         </div>
-      </div>
-      {SECTION_SKELETON_WIDTHS.map((widthClass, index) => (
-        <Skeleton
-          key={index}
-          className={`${widthClass} h-24 rounded-2xl bg-muted/50 md:h-28 md:border md:border-border/60 md:bg-card`}
-        />
-      ))}
+
+        <div className="mt-4 space-y-4">
+
+          {
+            ["최근 활동", "맛집 이야기"].map(label => (
+              <article key={label} className="h-24 rounded-2xl border p-4 md:h-28">
+
+                <h3 className="font-semibold">
+
+                  {label}
+
+                </h3>
+
+                <p className="mt-2 text-sm">방문 기록과 새로운 소식</p>
+
+              </article>
+            ))
+          }
+
+        </div>
+
+      </LoadingSurface>
+
     </div>
   );
 }
@@ -169,11 +224,13 @@ export function MyPageLayoutContent({
   // after this subtree commits rather than regenerating its server HTML.
   const isHydrated = useHydration();
   const user = isHydrated ? authUser : null;
+  const homeReturnHref = useHomeReturnHref(user?.id ?? null);
   const userLoading = !isHydrated || authLoading;
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recordScroll = useMyPageScrollRestoration(scrollRef, pathname, !userLoading && Boolean(user));
   const [shouldRenderSidebar, setShouldRenderSidebar] = useState(false);
   const myPageBottomNavAutoHide = useMobileBottomNavAutoHide({
     scrollRef,
@@ -205,6 +262,7 @@ export function MyPageLayoutContent({
       toast.success("로그아웃되었습니다");
       router.push("/");
     } catch (error) {
+      if (isSupersededLogout(error)) return;
       console.error("로그아웃 실패:");
       toast.error("로그아웃에 실패했습니다");
     }
@@ -230,12 +288,16 @@ export function MyPageLayoutContent({
           ))}
 
         {/* 콘텐츠 영역만 스크롤 가능하도록 설정 */}
+        {/* This owner restores saved offsets; native anchoring must not replace them. */}
         <div
           ref={scrollRef}
-          className="flex-1 h-full min-h-0 overflow-y-auto min-w-0 overscroll-contain"
+          className="flex-1 h-full min-h-0 overflow-y-auto min-w-0 overscroll-contain [overflow-anchor:none]"
           data-layout-primitives="scroll-body-shell"
           data-scroll-owner="mypage-content"
-          onScroll={myPageBottomNavAutoHide.onScroll}
+          onScroll={(event) => {
+            recordScroll(event.currentTarget);
+            myPageBottomNavAutoHide.onScroll();
+          }}
           onTouchStart={myPageBottomNavAutoHide.onTouchStart}
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}
         >
@@ -272,6 +334,9 @@ export function MyPageLayoutContent({
                 </Button>
               )}
             </div>
+            <Button asChild variant="outline" className="mt-3 min-h-11 w-full rounded-xl">
+              <Link href={homeReturnHref}>지도로 돌아가기</Link>
+            </Button>
           </div>
           <div
             className="flex min-h-full w-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:h-full md:min-h-0 md:px-4 md:py-3 md:pb-3 lg:px-5 lg:py-3"

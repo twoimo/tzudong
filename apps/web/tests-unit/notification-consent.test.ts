@@ -822,7 +822,6 @@ describe('G010 notification realtime truthfulness contract', () => {
     expect(source).toContain('subscription.stop();');
     expect(notificationPanel).toContain(') : isError ? (');
     expect(notificationPanel).toContain('알림을 불러오지 못했습니다');
-    expect(notificationPanel).toContain('잠시 후 다시 열어 주세요.');
   });
   test('reconciles readback with inserts after query start without duplicates, stale removals, or unread drift', () => {
     const notification = (id: string, createdAt: string, isRead: boolean) => ({

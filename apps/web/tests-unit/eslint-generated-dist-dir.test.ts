@@ -16,6 +16,11 @@ test('excludes generated custom distDir files while enforcing authored runner ru
         expect(await eslint.isPathIgnored(resolve(webRoot, authoredPath))).toBe(false);
         const [result] = await eslint.lintText('const module = {};', { filePath: authoredPath });
         expect(result.messages.some(message => message.ruleId === '@next/next/no-assign-module-variable')).toBe(true);
+        const frozenRunner = 'performance/admin-taste-20261015/browser-audit.mjs';
+        expect(await eslint.isPathIgnored(resolve(webRoot, frozenRunner))).toBe(false);
+        const [frozenResult] = await eslint.lintText('const module = {}; export default function Proof() { return <img src="/fixture.png" alt="fixture" data-proof={module} />; }', { filePath: frozenRunner });
+        expect(frozenResult.messages.some(message => message.ruleId === '@next/next/no-assign-module-variable')).toBe(false);
+        expect(frozenResult.messages.some(message => message.ruleId === '@next/next/no-img-element')).toBe(true);
         const fixtureRoot = 'performance/public-cms-followthrough-20261009/share-http-status-followup/fixture';
         for (const directory of ['.next', '.next-dev', '.next-production']) {
             expect(await eslint.isPathIgnored(resolve(webRoot, fixtureRoot, directory, 'generated.js'))).toBe(true);

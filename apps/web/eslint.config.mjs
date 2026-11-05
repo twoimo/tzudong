@@ -50,6 +50,16 @@ const eslintConfig = [
         },
     },
     {
+        files: [
+            'performance/overseas-map-startup-20261021-v1/fixture-inputs/next.config.mjs',
+            'performance/overseas-map-startup-20261021-v1/fixture-inputs/postcss.config.mjs',
+        ],
+        rules: {
+            // Preserve the hash-bound measurement configuration; keep every other rule.
+            'import/no-anonymous-default-export': 'off',
+        },
+    },
+    {
         files: ['performance/home-provider-transition-20260925/browser-entry.jsx'],
         rules: {
             // Laboratory render counters/controls intentionally observe each render.
@@ -62,9 +72,11 @@ const eslintConfig = [
             'performance/swipe-render-cache-20260925/measure.mjs',
             'performance/swipe-render-cache-20260925/rejected-timer-resolution/measure.mjs',
             'performance/swipe-cache-revalidation-20260930/measure.mjs',
+            'performance/admin-taste-20261015/browser-audit.mjs',
         ],
         rules: {
-            // These frozen Node measurement runners bind a local variable named module.
+            // These artifact-bound standalone Node runners bind a local variable named module.
+            // They are not Next modules; retain every other lint rule and the frozen bytes.
             '@next/next/no-assign-module-variable': 'off',
         },
     },

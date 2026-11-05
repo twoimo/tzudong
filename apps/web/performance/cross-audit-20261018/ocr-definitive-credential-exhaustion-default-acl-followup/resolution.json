@@ -1,0 +1,109 @@
+{
+  "schemaVersion": "tzudong-source-bound-followup-resolution-v1",
+  "receiptId": "OCR-POST105-CATALOG-FIXTURE-OWNER-LEASE-RESOLUTION-20261019",
+  "recordedAt": "2026-10-18T16:52:15Z",
+  "baseHead": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "scope": "classify and correct OCR106-ACL-001 catalog fixture execution authority",
+  "integrationReceiptAnchor": {
+    "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+    "sha256AtReview": "e0aeafb47d8df1dab8aa1929019cbc176b017131b4383f7e65ef625d656588bb",
+    "lastReviewedEvent": "OCR105-PG17-007",
+    "priorReportedHashes": [
+      "cf845d7a4ff5f817f72f47bffad82d1f6968380c7d54bef4ccc8c7f6ffe008be",
+      "c06446992ae9bcd59ca77fe4487b4d1d02eb0944e5a19a755d721b07a827a5e5"
+    ]
+  },
+  "sourceHashes": {
+    "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47",
+    "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql": "1d0d2e37ce83b3efaae67b7553d6692fb8825ecc95b6969e70d520894db075bc",
+    ".github/receipt-ocr-post105-sql-successor.v1.json": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+    "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0"
+  },
+  "decisions": [
+    {
+      "id": "OCR106-ACL-001-ROOT-CAUSE",
+      "verdict": "FIXTURE_NO_OP_CONFIRMED",
+      "evidence": "With postgres changed to NOSUPERUSER and unable to SET privacy_workflow_owner, the original GRANT emits no privileges were granted; wrapper proacl is byte-identical before and after, and the old held assertion fails. The failed PG17.6 run therefore did not prove a source ACL-seal gap."
+    },
+    {
+      "id": "OCR106-ACL-001-DEFAULT-ACL-HYPOTHESIS",
+      "verdict": "REJECTED_FOR_OBSERVED_PG17_6",
+      "evidence": "An artificially injected privacy_workflow_owner default EXECUTE grant can reproduce the symptom locally, but the PG17.6 read-only catalog event reports no such creator default ACL. This experiment is not used as the root-cause conclusion."
+    },
+    {
+      "id": "OCR106-ACL-001-SOURCE-CONTRACT",
+      "verdict": "ACCEPT_UNCHANGED",
+      "evidence": "When the wrapper owner actually grants an explicit supabase_admin ACL item and proacl readback confirms it, the existing exact function_contract comparison returns held. Migration, compiler, manifest, durable source, and application tests remain byte-identical to the prior accepted freeze."
+    },
+    {
+      "id": "OCR106-ACL-001-FIXTURE",
+      "verdict": "RESOLVED",
+      "evidence": "The fixture creates a savepoint-scoped postgres-granted SET=true owner lease, changes role to privacy_workflow_owner, performs the GRANT, asserts the explicit proacl item exists, and only then requires capability held. Each savepoint rollback removes the lease and mutation."
+    },
+    {
+      "id": "OCR106-OWNER-DRIFT-FIXTURE",
+      "verdict": "RESOLVED",
+      "evidence": "Both owner-drift cases now create the same bounded owner lease and assert relowner actually changed. For catalog-table owner drift, the new owner grants postgres SELECT so the SECURITY DEFINER capability can read the contract and directly return held; rollback restores owner, ACL, schema grant, and membership."
+    }
+  ],
+  "verification": [
+    {
+      "command": "PG17.11 synthetic harness with postgres NOSUPERUSER and original non-owner GRANT probe",
+      "result": "expected failure: warning no privileges were granted; baseline and post-GRANT proacl identical; old held assertion fails",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/before-nonsuperuser-grant-probe-pg17.11.txt",
+      "rawSha256": "1ac4f5fa6ec7af006a657677d8835574d9550711e594ca631020a87823bf72d6",
+      "harnessSha256": "22a41e702ceda184c81be690b0952bace4a496040e320c3daaba3e00becf299f",
+      "probeFixtureSha256": "03f55e2ed75cd5e5cf3cfaf54fd3b24c3e9a4ec2abe9004e9af6557156d24b22"
+    },
+    {
+      "command": "PG17.11 synthetic harness with supabase_admin SUPERUSER but an actual explicit owner-authorized GRANT",
+      "result": "explicit supabase_admin proacl item observed; capability held; full fixture passed",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/before-superuser-grant-probe-pg17.11.txt",
+      "rawSha256": "ba9c2fc8c44f0f822e249530787097381b4b2727ec18f3979b59a0a42e29a300",
+      "harnessSha256": "0e317c6860b5b380a30cb5599c817889787b035d40e3994f88223d34bca95936",
+      "probeFixtureSha256": "36b113f4fb1ad4623321f01117e09254065fab16b89276fc0d15d75e1cbf03fc"
+    },
+    {
+      "command": "bash /tmp/run-tzudong-ocr-catalog-followup.sh",
+      "result": "exit 0; catalog fixture and durable release fixture passed",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/final-superuser-pg17.11.txt",
+      "rawSha256": "fc0e73c84a591f0ecb1d52d4429f827aa2e72979a3e4c576715cafc33f730a09",
+      "harnessSha256": "9b1261f7e86015c620b651968cdab9c24cea2179e7f186890c296484fec8c6ac"
+    },
+    {
+      "command": "bash /tmp/run-tzudong-ocr-catalog-nonsuper-fixed.sh",
+      "result": "exit 0; catalog fixture passed with postgres NOSUPERUSER; terminal membership restored to ADMIN=true, INHERIT=false, SET=false, grantor=supabase_admin",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/final-nonsuperuser-pg17.11.txt",
+      "rawSha256": "79f636864c5d48e3f19c568f743dead99b9ee8af34c69b0e0e36a521000fd759",
+      "harnessSha256": "03826100ab699095d1c222d3dc608d6f2a3b7c42542a5208300b1861371295fc"
+    },
+    {
+      "command": "git diff --check -- backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/final-diff-check.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "identity": {
+    "migrationSha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "statementCount": 44,
+    "statementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+    "manifestSha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "changed": false,
+    "rebindRequired": false
+  },
+  "limits": [
+    "The NOSUPERUSER reproduction is a disposable PostgreSQL 17.11 synthetic harness; the corrected fixture still requires a fresh PostgreSQL 17.6 full-catalog rerun by the integration owner.",
+    "The catalog-table owner mutation intentionally preserves the capability definer minimum SELECT access, so it tests a real owner-plus-ACL drift while retaining direct JSON held readback.",
+    "Application TypeScript, migration identity, compiler, manifest, quota semantics, and provider paths were unchanged; app build/parity and the prior 32-pass suite were not repeated."
+  ],
+  "externalEffects": {
+    "hostedDatabaseWrites": 0,
+    "providerCalls": 0,
+    "storageCalls": 0,
+    "gitWrites": 0
+  }
+}

@@ -4,6 +4,9 @@ import path from 'node:path';
 
 const root = path.resolve('tests-unit');
 const isolated = new Set([
+  // This partial React Query mock omits keepPreviousData and must not replace
+  // the real module used by the lazy overlay import boundary test.
+  'ad-banner-stored-read.test.ts',
   'admin-evaluation-page-api.test.ts',
   'admin-evaluation-page-server.test.ts',
   // Its module imports fail only in the combined mock-heavy group; keep the
@@ -15,11 +18,23 @@ const isolated = new Set([
   'admin-storyboard-generator.test.ts',
   'admin-storyboard-langgraph.test.ts',
   'admin-storyboard-caption-provenance.test.ts',
-  'admin-storyboard-local-bridge.test.ts',
   // Its authenticated worker and Supabase transport mocks must stay in one process.
   'storyboard-gemini-rag.test.ts',
   'admin-youtube-thumbnail-readiness-gate.test.ts',
   'auth-callback-session.test.ts',
+  // These contracts exercise the real session-aware server exports. Route
+  // mocks in the general process replace that module with createClient only.
+  'privacy-onboarding.test.ts',
+  'session-cookie-boundary.test.ts',
+  // The release verifier imports the real SSR cookie contract and exercises
+  // native child-process cleanup; shared SDK mocks must not replace its exports.
+  'auth-release-smoke-source.test.ts',
+  // These import real lazy targets, including ephemeral auth client exports.
+  // Whole-module browser client mocks in the general group omit those exports.
+  'lazy-map-boundaries.test.ts',
+  'lazy-overlay-boundaries.test.ts',
+  'notification-consent.test.ts',
+  'review-modal-map-panel-helpers.test.ts',
   'account-deletion-reauth-validation.test.ts',
   // This older contract replaces the whole Supabase SDK too. Linux ESM links
   // later StorageApiError imports against that mock unless its process ends.
@@ -31,6 +46,23 @@ const isolated = new Set([
   // for later image-boundary tests. Keep this route's mocks in their own process.
   'short-url-page-runtime.test.ts',
   'local-loopback-mutation-origin.test.ts',
+  // This capability contract replaces process-global fetch and performance.now.
+  // Keep those readback and monotonic-clock probes out of the shared mock group.
+  'device-location-privacy.test.ts',
+  // These child-process contracts fail in the mock-heavy combined process
+  // and pass unchanged alone. Keep their real runtime checks intact.
+  'local-supabase-runtime.test.ts',
+  'review-media-sql-successor-workflow-contract.test.ts',
+  // This unchanged native Chrome/Bun-build fixture timed out in the combined
+  // group and passed all four contracts alone. Preserve it in a fresh process;
+  // isolation does not establish the cause of the combined-process timeout.
+  'admin-knowledge-graph-retry-page-browser.test.ts',
+  // admin-youtube-thumbnail-generator.test.ts installs a process-global
+  // mock.module for the durable release registry that mock.restore() does not
+  // undo for files loaded afterward, and combined-process execution order is
+  // not the sorted file order, so these recovery contracts can receive the
+  // mock (nightly run 40132575511 failed all six). Keep in a fresh process.
+  'thumbnail-release-publish-recovery.test.ts',
 ]);
 
 const files = readdirSync(root, { recursive: true, withFileTypes: true })
@@ -55,7 +87,11 @@ function run(filesToRun) {
       env: process.env, stdio: ['pipe', 'pipe', 'ignore'],
       maxBuffer: 64 * 1024, shell: false,
     });
-    if (result.stdout?.trim()) console.log(`NIGHTLY_UNIT_DIAGNOSTIC=${result.stdout.trim()}`);
+    if (result.stdout?.trim()) {
+      const line = result.stdout.trim();
+      // A bounded gap record is already prefixed; wrap only full payloads.
+      console.log(line.startsWith('NIGHTLY_UNIT_DIAGNOSTIC_GAP=') ? line : `NIGHTLY_UNIT_DIAGNOSTIC=${line}`);
+    }
     return typeof result.status === 'number' ? result.status : 1;
   }
   const reportArgs = localDiagnostic ? ['--reporter', 'junit', '--reporter-outfile', '/dev/fd/3'] : [];

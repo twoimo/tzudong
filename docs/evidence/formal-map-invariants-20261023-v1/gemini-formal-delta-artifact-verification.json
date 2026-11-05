@@ -1,0 +1,14 @@
+{
+  "path": "/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/docs/evidence/formal-map-invariants-20261023-v1/gemini_4_argon_formal_delta_report.visible.txt",
+  "sha256": "6fa6553f61a67185aecad159dd1eb93f2ced17368c01b1f63468dae0d4902069",
+  "source_bundle": "c3fb6be051942230565e8e551f6f9988d6c0da2175c2a9df553a5398e6865f23",
+  "kind": "audit",
+  "actual_model": "Gemini 4 Argon / 높음 (highest displayed)",
+  "actual_research": "off",
+  "original_url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "report_url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "complete": true,
+  "evidence": "Full original response DOM innerText from model-response-message-contentr_b237ceaa27f11c3b saved verbatim, 22643 bytes SHA256 6fa6553f61a67185aecad159dd1eb93f2ced17368c01b1f63468dae0d4902069. Official Copy CDP command timed out and browser clipboard was empty; no resend. Original rendered innerHTML also retained separately for mathematical/table structure. Local source samples matched. Five proposed findings require adjudication; SOURCE_MISSING boundaries preserved.",
+  "saved_at": "2026-10-23T08:48:06.045350+00:00",
+  "bytes_verified": true
+}

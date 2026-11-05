@@ -1,0 +1,2117 @@
+{
+  "observedAt": "2026-10-20T19:34:31.027Z",
+  "browser": "153.0.8010.12",
+  "sourceHashes": {
+    "components/map/OverseasMap.tsx": "89cc8f971492756881b0e84f34f9dd243b5d2496258ba2a004a6503e03cd0f5a",
+    "lib/overseas-map-loader.ts": "2dcd93386f818ce17dfe14e1b8c7a5551affb9d0831841dc0fe29b81e7151895",
+    "lib/overseas-map-provider.ts": "c480cc57caf50aa33d9b0bfdf3fa4efb8f330b56c03deb776de3c4d0dd619220",
+    "proxy.ts": "de3db6ac15728bc6219b685a98732c6e7d89ae9a0ebe6ceab59e367ff48a69ab",
+    "scripts/prepare-maplibre-worker-assets.mjs": "7735dedfbaede4b99a4e04e579bc9f03071afa331bb4e9ba670bdc838ab241de"
+  },
+  "network": "Real OpenFreeMap requests. New isolated context and disabled browser HTTP cache per case; CDN/OS/GPU-process caches and external network variance are not controlled.",
+  "scope": "Pinned Next production fixture, real OverseasMap/MapLibre/CSP and original versus candidate source; only the restaurant query is a controlled empty pending fixture. Not production deployment, field latency or physical-device evidence.",
+  "budgets": {
+    "absoluteMs": 5000,
+    "absoluteNoiseFloorMs": 250,
+    "relativeBudget": null,
+    "reason": "Baseline failed CSP/worker startup; no numeric speedup ratio can be inferred."
+  },
+  "mobile497": {
+    "samples": 5,
+    "medianMs": 1599,
+    "rangeMs": [
+      1571,
+      2107
+    ],
+    "madMs": 28
+  },
+  "failures": [
+    {
+      "id": "baseline-497",
+      "message": "Baseline did not reproduce the CSP/loading failure"
+    }
+  ],
+  "results": [
+    {
+      "input": {
+        "id": "baseline-497",
+        "width": 497,
+        "mobile": true,
+        "baseline": true
+      },
+      "errors": [
+        "csp_block",
+        "csp_block",
+        "browser_error",
+        "browser_error",
+        "worker_error"
+      ],
+      "blocked": [],
+      "resources": [],
+      "failed": true
+    },
+    {
+      "input": {
+        "id": "mobile-497-1",
+        "width": 497,
+        "mobile": true
+      },
+      "mapReadyMs": 2107,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "mobile-497-2",
+        "width": 497,
+        "mobile": true
+      },
+      "mapReadyMs": 1571,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "mobile-497-3",
+        "width": 497,
+        "mobile": true
+      },
+      "mapReadyMs": 1947,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "mobile-497-4",
+        "width": 497,
+        "mobile": true
+      },
+      "mapReadyMs": 1599,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "mobile-497-5",
+        "width": 497,
+        "mobile": true
+      },
+      "mapReadyMs": 1573,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "mobile-320",
+        "width": 320,
+        "mobile": true
+      },
+      "mapReadyMs": 1550,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "mobile-375",
+        "width": 375,
+        "mobile": true
+      },
+      "mapReadyMs": 1654,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "tablet-768",
+        "width": 768,
+        "height": 1024,
+        "mobile": true
+      },
+      "mapReadyMs": 1613,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/359.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/359.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "tablet-1024",
+        "width": 1024,
+        "height": 768,
+        "mobile": true
+      },
+      "mapReadyMs": 1511,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/567/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/567/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "mapReadyMs": 1618,
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "countryCanvasReused": true,
+      "mapVisibleWhilePinsPending": true,
+      "startupResourceReloadsOnCountrySwitch": 0,
+      "absoluteBudgetMs": 5000,
+      "withinAbsoluteBudget": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/567/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/567/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/564/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/564/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1801/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1801/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1804/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1804/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "style-error-retry",
+        "width": 497,
+        "mobile": true
+      },
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "controlledStyleFailures": 1,
+      "retryAttempts": 1,
+      "oldCanvasRemoved": true,
+      "currentCountryPreserved": "일본(나고야)",
+      "errors": [
+        "browser_error",
+        "OVERSEAS_MAP_RESOURCE_FAILED"
+      ],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 503,
+          "mime": "application/json"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1802/810.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/11/1803/809.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "slow-style-late-success",
+        "width": 768,
+        "height": 1024,
+        "mobile": true
+      },
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "slowNoticeObserved": true,
+      "originalRequestCompletedWithoutRetry": true,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/359.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/359.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    },
+    {
+      "input": {
+        "id": "intent-preload",
+        "width": 1440,
+        "height": 900
+      },
+      "facts": {
+        "state": "ready",
+        "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+        "attributionVisible": true,
+        "loadingCover": false,
+        "canvasCount": 1,
+        "pageOverflow": false
+      },
+      "hiddenMapBeforeActivation": false,
+      "providerResourcesBeforeActivation": 0,
+      "errors": [],
+      "blocked": [],
+      "resources": [
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-shared.mjs",
+          "origin": "http://127.0.0.1:18924",
+          "status": 200,
+          "mime": "application/javascript; charset=UTF-8",
+          "cache": "public, max-age=31536000, immutable"
+        },
+        {
+          "path": "/styles/positron",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=86400, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.png",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "image/png",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=3600, public"
+        },
+        {
+          "path": "/sprites/ofm_f384/ofm.json",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/json",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/567/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/567/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/564/358.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/planet/20261018_080001_pt/10/564/357.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/vnd.mapbox-vector-tile",
+          "cache": "max-age=315360000, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        },
+        {
+          "path": "/fonts/Noto%20Sans%20Italic/256-511.pbf",
+          "origin": "https://tiles.openfreemap.org",
+          "status": 200,
+          "mime": "application/x-protobuf",
+          "cache": "max-age=604800, public"
+        }
+      ]
+    }
+  ]
+}

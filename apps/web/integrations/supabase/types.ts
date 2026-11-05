@@ -1650,6 +1650,63 @@ interface DatabaseSource {
                     reset_at: string
                 }[]
             }
+            get_receipt_ocr_indeterminate_recovery_capability: {
+                Args: Record<string, never>
+                Returns: Json
+            }
+            preview_review_receipt_ocr_indeterminate_recovery: {
+                Args: { p_review_id: string }
+                Returns: Json
+            }
+            recover_review_receipt_ocr_indeterminate: {
+                Args: {
+                    p_actor_user_id: string
+                    p_review_id: string
+                    p_recovery_operation_id: string
+                    p_expected_generation: string
+                    p_input_snapshot_hash: string
+                    p_model_policy: Json
+                    p_thinking_level: string
+                    p_prompt_version: string
+                    p_preprocess_version: string
+                    p_normalization_version: string
+                }
+                Returns: Json
+            }
+            authorize_review_receipt_ocr_execution: {
+                Args: {
+                    p_user_id: string
+                    p_review_id: string
+                    p_generation: string
+                    p_recovery_operation_id: string | null
+                    p_verification_photo_hash: string
+                    p_image_hash: string
+                    p_input_context_hash: string
+                    p_model_policy: Json
+                    p_thinking_level: string
+                    p_prompt_version: string
+                    p_preprocess_version: string
+                    p_normalization_version: string
+                }
+                Returns: Json
+            }
+            claim_receipt_ocr_recovery_result: {
+                Args: {
+                    p_recovery_operation_id: string
+                    p_user_id: string
+                    p_image_hash: string
+                    p_input_context_hash: string
+                    p_provider: string
+                    p_model_policy: Json
+                    p_generation: string
+                    p_prompt_version: string
+                    p_preprocess_version: string
+                    p_normalization_version: string
+                    p_operation_id: string
+                    p_force_refresh?: boolean
+                }
+                Returns: Json
+            }
             reserve_ocr_daily_quota: {
                 Args: { p_operation_id: string }
                 Returns: {

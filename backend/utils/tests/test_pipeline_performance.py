@@ -117,6 +117,69 @@ class ReadBudgetTests(unittest.TestCase):
             with budget.connect() as db:
                 self.assertEqual(0, db.execute('SELECT count(*) FROM leases').fetchone()[0])
 
+    def test_project_budget_accepts_one_valid_parent_selected_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            budget = ProjectBudget(Path(directory) / 'budget.sqlite', 'project', rpm=100000, concurrency=1)
+            identity = 'a' * 32
+            self.assertEqual(identity, budget.acquire(os.getpid(), timeout=.1, identity=identity))
+            with budget.connect() as db:
+                self.assertEqual([(identity,)], db.execute('SELECT id FROM leases').fetchall())
+            budget.release(identity)
+            budget.release(identity)
+            with self.assertRaisesRegex(ValueError, 'lease_invalid'):
+                budget.acquire(os.getpid(), timeout=.1, identity='not-a-lease')
+
+    def test_commit_then_close_error_is_ambiguous_and_keeps_releasable_identity(self):
+        from contextlib import contextmanager
+        from backend.utils import provider_budget as module
+        with tempfile.TemporaryDirectory() as directory:
+            budget = ProjectBudget(Path(directory) / 'budget.sqlite', 'project', rpm=100000, concurrency=1)
+            identity = 'b' * 32
+            original_connect = budget.connect
+
+            @contextmanager
+            def close_error_after_commit():
+                with original_connect() as db:
+                    yield db
+                raise OSError('synthetic_close_failure')
+
+            with patch.object(budget, 'connect', close_error_after_commit):
+                with self.assertRaises(module.AcquireOutcomeUnknown):
+                    budget.acquire(os.getpid(), timeout=.1, identity=identity)
+            with budget.connect() as db:
+                self.assertEqual([(identity,)], db.execute('SELECT id FROM leases').fetchall())
+            budget.release(identity)
+
+    def test_committed_acquire_flush_failure_uses_ambiguous_exit_and_keeps_identity(self):
+        from backend.utils import provider_budget as module
+
+        class FailingStream:
+            def write(self, payload):
+                return len(payload)
+
+            def flush(self):
+                raise OSError('synthetic_flush_failure')
+
+        with tempfile.TemporaryDirectory() as directory:
+            budget_file = Path(directory) / 'budget.sqlite'
+            identity = 'c' * 32
+            env = {
+                'GEMINI_BUDGET_PATH': str(budget_file),
+                'GEMINI_BUDGET_PROJECT': 'project',
+                'GEMINI_REQUESTS_PER_MINUTE': '100000',
+                'GEMINI_MAX_INFLIGHT': '1',
+            }
+            with patch.dict(os.environ, env, clear=False):
+                result = module.main([
+                    'acquire', '--pid', str(os.getpid()), '--timeout', '.1',
+                    '--lease', identity,
+                ], stdout=FailingStream())
+            self.assertEqual(module.ACQUIRE_AMBIGUOUS_EXIT, result)
+            budget = ProjectBudget(budget_file, 'project', rpm=100000, concurrency=1)
+            with budget.connect() as db:
+                self.assertEqual([(identity,)], db.execute('SELECT id FROM leases').fetchall())
+            budget.release(identity)
+
     def test_reused_live_pid_reaps_only_the_old_birth_and_preserves_limit(self):
         from backend.utils import provider_budget as module
         with tempfile.TemporaryDirectory() as directory:

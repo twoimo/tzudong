@@ -1,3 +1,4 @@
+import { getAuthCookieContract } from '../lib/auth/session-cookies.ts';
 import { chmod, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
@@ -12,7 +13,7 @@ const SUPABASE_ORIGIN = 'https://aqlcofblfxdrjhhdmarw.supabase.co/';
 const PROJECT_ID = 'prj_sau35J5uUtShIQ9OKofRtOVVnTSl';
 const ORG_ID = 'team_OUj64KeLxJI3PkEbOaFZnorA';
 const TEAM_SLUG = 'twoimos-projects';
-const AUTH_COOKIE = 'sb-aqlcofblfxdrjhhdmarw-auth-token';
+const { key: AUTH_COOKIE, marker: AUTH_MARKER } = getAuthCookieContract('https://aqlcofblfxdrjhhdmarw.supabase.co');
 const MAX_SESSION_SECONDS = 2 * 60 * 60;
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_AUTH_RESPONSE_BYTES = 64 * 1024;
@@ -142,13 +143,14 @@ export function authCellId(receipt, id, origin) {
 
 export function validateStorageState(encoded, origin) {
     const state = JSON.parse(canonicalBase64(encoded));
-    if (!state || typeof state !== 'object' || Array.isArray(state) || Object.keys(state).sort().join(',') !== 'cookies,origins' || !Array.isArray(state.cookies) || !Array.isArray(state.origins) || state.origins.length !== 0 || state.cookies.length < 1 || state.cookies.length > 8) throw invalid('invalid storage');
+    if (!state || typeof state !== 'object' || Array.isArray(state) || Object.keys(state).sort().join(',') !== 'cookies,origins' || !Array.isArray(state.cookies) || !Array.isArray(state.origins) || state.origins.length !== 0 || state.cookies.length < 2 || state.cookies.length > 9) throw invalid('invalid storage');
     const now = Math.floor(Date.now() / 1000); const names = new Set();
     for (const cookie of state.cookies) {
-        if (!cookie || typeof cookie !== 'object' || Array.isArray(cookie) || Object.keys(cookie).sort().join(',') !== 'domain,expires,httpOnly,name,path,sameSite,secure,value' || typeof cookie.name !== 'string' || !new RegExp(`^${AUTH_COOKIE}(?:\\.\\d+)?$`).test(cookie.name) || names.has(cookie.name) || cookie.domain !== origin.hostname || cookie.path !== '/' || typeof cookie.value !== 'string' || !cookie.value || Buffer.byteLength(cookie.value, 'utf8') > MAX_COOKIE_VALUE_BYTES || !Number.isInteger(cookie.expires) || cookie.expires <= now || cookie.expires > now + MAX_SESSION_SECONDS || typeof cookie.httpOnly !== 'boolean' || cookie.secure !== true || cookie.sameSite !== 'Lax') throw invalid('invalid cookie');
+        if (!cookie || typeof cookie !== 'object' || Array.isArray(cookie) || Object.keys(cookie).sort().join(',') !== 'domain,expires,httpOnly,name,path,sameSite,secure,value' || typeof cookie.name !== 'string' || !(cookie.name === AUTH_MARKER || new RegExp(`^${AUTH_COOKIE}(?:\\.\\d+)?$`).test(cookie.name)) || names.has(cookie.name) || cookie.domain !== origin.hostname || cookie.path !== '/' || typeof cookie.value !== 'string' || !cookie.value || Buffer.byteLength(cookie.value, 'utf8') > MAX_COOKIE_VALUE_BYTES || !Number.isInteger(cookie.expires) || cookie.expires <= now || cookie.expires > now + MAX_SESSION_SECONDS || typeof cookie.httpOnly !== 'boolean' || cookie.secure !== true || cookie.sameSite !== 'Lax') throw invalid('invalid cookie');
         names.add(cookie.name);
     }
-    const chunks = [...names].filter((name) => name !== AUTH_COOKIE).sort((a, b) => Number(a.slice(AUTH_COOKIE.length + 1)) - Number(b.slice(AUTH_COOKIE.length + 1)));
+    if (!state.cookies.some((cookie) => cookie.name === AUTH_MARKER && cookie.value === '1')) throw invalid('incomplete cookie batch');
+    const chunks = [...names].filter((name) => name !== AUTH_COOKIE && name !== AUTH_MARKER).sort((a, b) => Number(a.slice(AUTH_COOKIE.length + 1)) - Number(b.slice(AUTH_COOKIE.length + 1)));
     if ((names.has(AUTH_COOKIE) && chunks.length) || (!names.has(AUTH_COOKIE) && (!chunks.length || !chunks.every((name, index) => name === `${AUTH_COOKIE}.${index}`)))) throw invalid('invalid chunks');
     return state;
 }
@@ -173,7 +175,7 @@ export function collectSecretMarkers(value, markers = new Set(), budget = { node
     return markers;
 }
 
-function fakeCanaryState(origin, markers) { return Buffer.from(JSON.stringify({ cookies: [{ name: AUTH_COOKIE, value: markers.join('.'), domain: origin.hostname, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly: true, secure: true, sameSite: 'Lax' }], origins: [] })).toString('base64'); }
+function fakeCanaryState(origin, markers) { return Buffer.from(JSON.stringify({ cookies: [AUTH_COOKIE, AUTH_MARKER].map(name => ({ name, value: name === AUTH_COOKIE ? markers.join('.') : '1', domain: origin.hostname, path: '/', expires: Math.floor(Date.now() / 1000) + 60, httpOnly: true, secure: true, sameSite: 'Lax' })), origins: [] })).toString('base64'); }
 
 export function validateMetadata(text, expectedCanary = false, markers = [], release) {
     const lines = text.trim().split('\n'); if (lines.length !== 1) throw Object.assign(new Error('multiple metadata'), { code: 'INTERNAL_FAILURE' });
@@ -205,7 +207,7 @@ async function assertRestrictedEmptyDirectory(directory) { if ((await readdir(di
 export function scrubBrowserEnvironment() { return { PATH: process.env.PATH || '', HOME: '', TMP: '', TEMP: '', TMPDIR: '' }; }
 
 export function parseBoundAccessCredential(state) {
-    const value = [...state.cookies].sort((a, b) => a.name.localeCompare(b.name)).map((cookie) => cookie.value).join('');
+    const value = state.cookies.filter((cookie) => cookie.name !== AUTH_MARKER).sort((a, b) => a.name.localeCompare(b.name)).map((cookie) => cookie.value).join('');
     const encoded = value.startsWith('base64-') ? value.slice(7).replace(/-/g, '+').replace(/_/g, '/') : value;
     try {
         const parsed = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
@@ -216,7 +218,7 @@ export function parseBoundAccessCredential(state) {
 }
 
 function authCookiePayload(state) {
-    const value = [...state.cookies].sort((a, b) => a.name.localeCompare(b.name)).map((cookie) => cookie.value).join('');
+    const value = state.cookies.filter((cookie) => cookie.name !== AUTH_MARKER).sort((a, b) => a.name.localeCompare(b.name)).map((cookie) => cookie.value).join('');
     const encoded = value.startsWith('base64-') ? value.slice(7).replace(/-/g, '+').replace(/_/g, '/') : value;
     try {
         const parsed = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
@@ -1073,6 +1075,9 @@ export async function main() {
         directory = await mkdtemp(join(tmpdir(), 'tzudong-auth-smoke-'));
         await chmod(directory, 0o700);
         const baseEnv = { PATH: process.env.PATH || '', TMP: directory, TEMP: directory, TMPDIR: directory };
+        // This non-secret cache root locates the exact product/pin verified by
+        // the child; no parent credential or general environment is forwarded.
+        if (process.env.PLAYWRIGHT_BROWSERS_PATH) baseEnv.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH;
         const canary = await runChild({ ...baseEnv, RELEASE_AUTH_CANARY_MODE: 'intentional_failure', RELEASE_AUTH_STORAGE_STATE_B64: fakeCanaryState(release.origin, canaryMarkers), RELEASE_AUTH_CANARY_FAKE_COOKIE: canaryMarkers[0], RELEASE_AUTH_CANARY_FAKE_TOKEN: canaryMarkers[1], RELEASE_AUTH_CANARY_FAKE_ADMIN_TEXT: canaryMarkers[2] }, [...secretMarkers, ...canaryMarkers], directory, release.origin.toString());
         if (canary.code !== 23 || canary.stderr) throw Object.assign(new Error('canary'), { code: 'INTERNAL_FAILURE' });
         validateMetadata(canary.stdout, true, [...secretMarkers, ...canaryMarkers]);

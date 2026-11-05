@@ -1,0 +1,18 @@
+{
+  "account": "primary",
+  "model": "GPT-6 / Pro",
+  "research": "off",
+  "note": "Actual current sameownedProconversation; UI GPT-6checked, Pro5of5maximum slider unlocked; no researchchip or visiblewarning; generic hiddenaccessibilitylimitlabel notvisible inmodelmenu screenshot. Numericquota/resetnotshown=>unknown. Existinguncertainothersends preserved; localFIFOexceptiondirectlyapproved.",
+  "weekly_exhausted": false,
+  "weekly_used": null,
+  "weekly_reset": null,
+  "weekly_reset_observed_at": null,
+  "window_exhausted": false,
+  "window_used": null,
+  "window_reset": null,
+  "window_reset_observed_at": null,
+  "provider": "chatgpt",
+  "observed_at": "2026-10-22T21:16:32.525867+00:00",
+  "source_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "ready": true
+}

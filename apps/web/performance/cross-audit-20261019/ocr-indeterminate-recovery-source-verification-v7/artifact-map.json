@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "scope": "receipt-ocr-recovery108-v13-role-boundary-fix",
+  "artifacts": [
+    {
+      "path": "compiler-check.json",
+      "sha256": "abe6764bbd9b3ca570c4266080b695c15f0b4c01e6c363619ef0360bbc9508c4",
+      "bytes": 421
+    },
+    {
+      "path": "compiler-unit.txt",
+      "sha256": "17b372821fe4641ba612c33a0a7e5148597f3da1e4ecb339a7d230f75651cd1f",
+      "bytes": 606
+    },
+    {
+      "path": "fixture-role-boundary-audit.txt",
+      "sha256": "1293842d7ec3ded3d0320619c253c05320c2ac52a16c06ba623168331170107b",
+      "bytes": 2895
+    },
+    {
+      "path": "source-hashes.txt",
+      "sha256": "ed137a9cfd0687aa00d1a042545cd9865a10a0541bd8669a2fe843220af0c577",
+      "bytes": 686
+    },
+    {
+      "path": "untracked-whitespace-check.txt",
+      "sha256": "6bdb87985ec7d08b2f4e0aa5ec9126ae4036d9d7f40d5a276b4166968b233332",
+      "bytes": 34
+    }
+  ]
+}

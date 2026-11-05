@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-taste-evidence-audit",
+  "generatedAt": "2026-10-15T13:54:29+00:00",
+  "inputsSha256": {
+    "verification-summary.json": "0a72713f64ae777af3bc3f52074b4780699ff847a309d68b233957d9c5c33d1d",
+    "baseline-admission.json": "c6a4b839f0c0092a132c2fe9308003b07c4bcbf68a474efd8e869ab018354baf",
+    "before/report.json": "4d6c4282b1ed3f0f99617f58be80f30adbd742fb0e60c424cbd590d348dd4832",
+    "after/report.json": "152005001519308553839dbd18d8f5f571c60c7ab423d21d171134d63873c53d",
+    "after-mobile/report.json": "ea04e573734c9cd3c4f9c25e4914f89f197e83c8a2b09f209e3d78e7706f70f2",
+    "view-summary.json": "c7871c10b592c3aa1fb81da3e0895602724e86b5df6da77114889a17d234a507",
+    "after-dark-contrast-before/report.json": "416e93b10485a55a03dd3e4a0291e78904dcab34c3c8e97e9a1954586ed6efa0",
+    "after-dark/report.json": "fac5d13dc78fa1831b5945e831ba27ee9fe946959241a5ee395c4cc39ff4e2ac",
+    "after-success/report.json": "14fb0f4bad0bee7572ad39cf055b0a2ef7d15e9e1531555ac9cd96ed191c9ac4",
+    "interaction-audit-summary.json": "78be79ff629034fdf8746d65874cbfeca484b1e818e602a30726043b94d3bcbd",
+    "interaction-audit-run3-partial/report.json": "b48c89d6cf799e25809ba400b381785786315eb55beace35918af2a3abb3ea83",
+    "interaction-gap-audit/report.json": "3a9136c699c93cb4cbf015b762934b25a0576a59681dd847b1850bade18357f6",
+    "interaction-screenshot-reconciliation.json": "81b21153ab0e9d29e43622e83c2428280e7224fb73a3ad20814f7d56fe581f9a"
+  },
+  "baseline": {
+    "declaredReportSha256": "4d6c4282b1ed3f0f99617f58be80f30adbd742fb0e60c424cbd590d348dd4832",
+    "actualReportSha256": "4d6c4282b1ed3f0f99617f58be80f30adbd742fb0e60c424cbd590d348dd4832",
+    "hashMatches": true,
+    "caseCount": 45,
+    "admittedScope": [
+      "header font size, weight and line height at capture",
+      "header geometry at capture",
+      "document overflow and JavaScript errors at capture"
+    ],
+    "excludedScope": [
+      "settled data content",
+      "row density comparison",
+      "task success rate",
+      "latency or usability gain"
+    ],
+    "contentBoundary": "Header typography/geometry, overflow, and JavaScript-error evidence only; loading skeletons prevent settled-content inference."
+  },
+  "arithmetic": {
+    "light": {
+      "viewCount": 45,
+      "expectedViewCount": 45,
+      "moduleCount": 15,
+      "widths": [
+        1440,
+        834,
+        390
+      ],
+      "exactConcatenationOfAfterAndAfterMobile": true,
+      "singleVisibleHeaderCases": 45,
+      "expectedTitleMatches": 45,
+      "singleMainLandmarkCases": 45,
+      "documentOverflowCases": 0,
+      "pageErrorCases": 0,
+      "lowContrastSamples": 0
+    },
+    "dark": {
+      "beforeViews": 12,
+      "afterViews": 12,
+      "expectedViewCount": 12,
+      "widths": [
+        1440,
+        390
+      ],
+      "beforeLowContrastSamples": 12,
+      "afterLowContrastSamples": 0,
+      "absoluteDelta": -12,
+      "percentChange": -100
+    },
+    "successFixtures": {
+      "viewCount": 9,
+      "expectedViewCount": 9,
+      "modules": [
+        "knowledge-graph",
+        "pipeline",
+        "storyboard"
+      ],
+      "widths": [
+        1440,
+        834,
+        390
+      ],
+      "providerCalls": 0,
+      "mutationsSent": 0,
+      "boundary": "Synthetic GET adapter only; no production data, provider generation, graph analysis, or mutation evidence."
+    },
+    "pageTitle": {
+      "beforeSizesPx": [
+        16.0
+      ],
+      "afterSizesPx": [
+        18.0
+      ],
+      "absoluteDeltaPx": 2,
+      "percentChange": 12.5,
+      "n": 45
+    },
+    "brightGreenTreemapContrast": {
+      "before": 2.1189735054122596,
+      "after": 7.717923428537454,
+      "absoluteDelta": 5.598949923125195,
+      "percentChange": 264.2293501463995,
+      "matchesVerificationSummary": true,
+      "boundary": "Deterministic WCAG luminance calculation, separate from the dark-view sample count."
+    }
+  },
+  "interactions": {
+    "summaryStatus": "passed",
+    "broadRun": {
+      "report": "interaction-audit-run3-partial/report.json",
+      "passedCases": 22,
+      "failedCases": 3,
+      "screenshots": 22,
+      "runtimeTotals": {
+        "contexts": 3,
+        "pageErrors": 0,
+        "consoleErrors": 15,
+        "requestFailures": 37
+      }
+    },
+    "focusedGapCompletion": {
+      "report": "interaction-gap-audit/report.json",
+      "passedCases": 4,
+      "failedCases": 0,
+      "screenshots": 3,
+      "runtimeTotals": {
+        "contexts": 2,
+        "pageErrors": 0,
+        "consoleErrors": 14,
+        "requestFailures": 7
+      }
+    },
+    "combinedRunBoundary": {
+      "separateRuns": true,
+      "focusedCases": [
+        "synthetic-auth-loaded",
+        "submissions-read-only-filter-inspector",
+        "reviews-read-only-filter-inspector",
+        "storyboard-explicit-held-state"
+      ],
+      "allRequestedCoverageClaimIsCombined": true,
+      "singleRunAllPassClaimed": false,
+      "cleanConsoleOrNetworkClaimed": false,
+      "syntheticFixtureOnly": true,
+      "productionEvidence": false,
+      "taskSpeedEvidence": false,
+      "mutationEvidence": false,
+      "sentNonReadRequests": 0,
+      "externalRequests": 0
+    },
+    "screenshotPathReconciliation": {
+      "sidecar": "interaction-screenshot-reconciliation.json",
+      "sidecarSha256": "81b21153ab0e9d29e43622e83c2428280e7224fb73a3ad20814f7d56fe581f9a",
+      "historicalReportsModified": false
+    }
+  },
+  "claimBoundaries": {
+    "globalTasteLintAllPassClaimed": false,
+    "currentTasteLint": "taste-source-lint-current.json",
+    "currentTasteLintSha256": "0664b5f091750d669c0624be65c3bd51d254a06a456fee66b918cca17df4edbc",
+    "currentTasteClassification": "taste-source-lint-classification.json",
+    "currentTasteClassificationSha256": "18830a4df57d3eb6fb3f292b01be24e4c3f0ea0a2d6dfc2ccf0e9624a8b2992d",
+    "finalSourceBoundViewsOrBuildClaimed": false,
+    "note": "This sidecar reconciles saved evidence. Final source-bound views and build are separate checks."
+  }
+}

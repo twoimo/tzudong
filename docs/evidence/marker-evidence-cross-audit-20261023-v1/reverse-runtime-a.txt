@@ -1,0 +1,1811 @@
+Tzudong reverse source snapshot 8d47c225afcff1aa1cc5d4a2d8578911c945e217
+Complete modules, no generated Supabase types or repeated735entry publication blob.
+
+===== apps/web/components/map/OverseasMap.tsx | bytes=18977 | sha256=d72384160575bf47536dc785a7e20a6530add2a98c87ea6c6ef12541867af901 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+'use client';
+
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import * as maplibregl from 'maplibre-gl';
+import '@/styles/maplibre-gl.css';
+import type { Restaurant } from '@/types/restaurant';
+import { syncPopularityMarkerInteraction } from '@/lib/evidence-engineering/popularity-marker';
+import type { FilterState } from '@/components/filters/filter-state';
+import { useRestaurants } from '@/hooks/use-restaurants';
+import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
+import { Button } from '@/components/ui/button';
+import { OVERSEAS_MAP_STYLE_URL, OVERSEAS_MAP_WORKER_URL } from '@/lib/overseas-map-provider';
+import {
+    buildDeviceLocationMarkerHtml,
+    shouldFocusDeviceLocation,
+    type DeviceMapLocation,
+} from '@/lib/device-location-map';
+import { buildOverseasRestaurantsQueryOptions } from '@/lib/map-query-helpers';
+import {
+    DEFAULT_OVERSEAS_PADDING,
+    getNextOverseasWheelSlider,
+    getOverseasInitialConfig,
+    getRestaurantCategoryIcon,
+    mapZoomToSlider,
+    sliderToMapZoom,
+} from '@/lib/overseas-map-helpers';
+import {
+    applyOverseasMarkerSelectedState,
+    buildOverseasMarkerHtml,
+    getOverseasMarkerActiveId,
+} from '@/lib/overseas-map-marker-helpers';
+import {
+    mergeOverseasRestaurants,
+    uniqueRestaurantsById,
+} from '@/lib/overseas-map-restaurant-helpers';
+
+interface OverseasMapProps {
+    className?: string;
+    mapFocusZoom?: number | null; // [New] 강제 줌 레벨
+    filters: FilterState;
+    selectedCountry: string | null;
+    searchedRestaurant: Restaurant | null;
+    selectedRestaurant: Restaurant | null;
+    refreshTrigger: number;
+    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+    onRestaurantSelect?: (restaurant: Restaurant | null) => void;
+    onRequestEditRestaurant?: (restaurant: Restaurant) => void;
+    onMapReady?: (moveFunction: (restaurant: Restaurant) => void) => void;
+    onMarkerClick?: (restaurant: Restaurant) => void;
+    mapPadding?: { top: number; bottom: number; left: number; right: number };
+    onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
+    onMapBlankClick?: () => void;
+    onMapInteraction?: () => void;
+    deviceLocation?: DeviceMapLocation | null;
+}
+const hasValidOverseasDeviceLocation = (
+    location: DeviceMapLocation | null,
+    zoom: number,
+): location is DeviceMapLocation =>
+    location !== null &&
+    Number.isFinite(location.lat) &&
+    Number.isFinite(location.lng) &&
+    location.lat >= -90 &&
+    location.lat <= 90 &&
+    location.lng >= -180 &&
+    location.lng <= 180 &&
+    Number.isFinite(zoom);
+
+
+import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
+
+maplibregl.setWorkerUrl(OVERSEAS_MAP_WORKER_URL);
+
+const OverseasMap: React.FC<OverseasMapProps> = ({
+    className,
+    mapFocusZoom,
+    filters,
+    selectedCountry,
+    searchedRestaurant,
+    selectedRestaurant,
+    refreshTrigger, // Used to trigger data refresh
+    onRestaurantSelect,
+    onMarkerClick,
+    onMapReady,
+    mapPadding = DEFAULT_OVERSEAS_PADDING,
+    onVisibleRestaurantsChange,
+    onMapBlankClick,
+    onMapInteraction,
+    deviceLocation = null,
+}) => {
+    const mapContainer = useRef<HTMLDivElement>(null);
+    const map = useRef<maplibregl.Map | null>(null);
+    const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+    const markerHtmlRef = useRef(new WeakMap<HTMLElement, string>());
+    const deviceLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
+    const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
+    const mapPaddingRef = useRef(mapPadding);
+    const onMapBlankClickRef = useRef(onMapBlankClick);
+    const onMapInteractionRef = useRef(onMapInteraction);
+    const countryRef = useRef(selectedCountry);
+    const [isMapLoaded, setIsMapLoaded] = useState(false);
+    const [mapIssue, setMapIssue] = useState<'error' | 'slow' | null>(null);
+    const [mapAttempt, setMapAttempt] = useState(0);
+
+
+    // Update ref whenever prop changes
+    useEffect(() => {
+        mapPaddingRef.current = mapPadding;
+    }, [mapPadding]);
+
+    useEffect(() => {
+        onMapBlankClickRef.current = onMapBlankClick;
+    }, [onMapBlankClick]);
+    useEffect(() => {
+        onMapInteractionRef.current = onMapInteraction;
+    }, [onMapInteraction]);
+
+
+    // Filtered restaurants with optimization
+    const restaurantsOptions = useMemo(() => buildOverseasRestaurantsQueryOptions({
+        filters,
+        refreshTrigger,
+        selectedCountry,
+    }), [filters, selectedCountry, refreshTrigger]);
+
+    const { data: restaurants = [], isLoading: isLoadingRestaurants } = useRestaurants(restaurantsOptions);
+
+    const restaurantsToShow = useMemo(() => {
+        return mergeOverseasRestaurants(restaurants, searchedRestaurant);
+    }, [restaurants, searchedRestaurant]);
+
+    useEffect(() => {
+        if (!onVisibleRestaurantsChange) return;
+
+        onVisibleRestaurantsChange(uniqueRestaurantsById(restaurantsToShow));
+    }, [restaurantsToShow, onVisibleRestaurantsChange]);
+
+    // Renders authorized device coordinates at the approved map-provider boundary.
+    useEffect(() => {
+        if (!map.current || !isMapLoaded) return;
+
+        if (!deviceLocation) {
+            deviceLocationMarkerRef.current?.remove();
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            return;
+        }
+
+        const currentMap = map.current;
+        const currentZoom = currentMap.getZoom();
+
+        if (!hasValidOverseasDeviceLocation(deviceLocation, currentZoom)) {
+            deviceLocationMarkerRef.current?.remove();
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            return;
+        }
+
+        // Provider boundary: keep device coordinates in React state memory, and only apply validated updates to the map provider.
+        if (!deviceLocationMarkerRef.current) {
+            const markerElement = document.createElement('div');
+            markerElement.style.width = '56px';
+            markerElement.style.height = '56px';
+            markerElement.style.pointerEvents = 'none';
+            markerElement.style.zIndex = '10000';
+            markerElement.innerHTML = buildDeviceLocationMarkerHtml(deviceLocation);
+            deviceLocationMarkerRef.current = new maplibregl.Marker({
+                element: markerElement,
+                anchor: 'center',
+            })
+                .setLngLat([deviceLocation.lng, deviceLocation.lat])
+                .addTo(currentMap);
+        } else {
+            const markerElement = deviceLocationMarkerRef.current.getElement();
+            markerElement.innerHTML = buildDeviceLocationMarkerHtml(deviceLocation);
+            deviceLocationMarkerRef.current.setLngLat([deviceLocation.lng, deviceLocation.lat]).addTo(currentMap);
+        }
+
+        if (shouldFocusDeviceLocation(lastFocusedDeviceLocationRequestRef.current, deviceLocation)) {
+            lastFocusedDeviceLocationRequestRef.current = deviceLocation.focusRequestId;
+            currentMap.jumpTo({
+                center: [deviceLocation.lng, deviceLocation.lat],
+                zoom: Math.max(currentZoom, 14),
+            });
+        }
+    }, [deviceLocation, isMapLoaded]);
+
+    useEffect(() => () => {
+        deviceLocationMarkerRef.current?.remove();
+    }, []);
+
+    // MAP INITIALIZATION
+    useEffect(() => {
+        if (map.current || !mapContainer.current) return;
+
+        const initialConfig = getOverseasInitialConfig(countryRef.current);
+        const markers = markersRef.current;
+        let disposed = false;
+        let loaded = false;
+        let mapInstance: maplibregl.Map | null = null;
+        setIsMapLoaded(false);
+        setMapIssue(null);
+        const startupTimer = window.setTimeout(() => {
+            if (!disposed && !loaded) setMapIssue((current) => current ?? 'slow');
+        }, 12000);
+
+        try {
+            mapInstance = new maplibregl.Map({
+                container: mapContainer.current,
+                style: OVERSEAS_MAP_STYLE_URL,
+                center: [initialConfig.lng, initialConfig.lat],
+                zoom: initialConfig.zoom,
+                attributionControl: false,
+                localIdeographFontFamily: 'sans-serif',
+                renderWorldCopies: true,
+                scrollZoom: false, // [Modified] 커스텀 스크롤 핸들러 사용 (0.5 단위 제어)
+            });
+
+            // mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right'); // [Modified] 기본 컨트롤 제거 (커스텀 줌 컨트롤 사용)
+            mapInstance.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
+
+            mapInstance.on('load', () => {
+                if (disposed) return;
+                loaded = true;
+                window.clearTimeout(startupTimer);
+                mapInstance?.resize();
+                setMapIssue(null);
+                setIsMapLoaded(true);
+            });
+            const interactionElement = mapContainer.current;
+            mapInstance.on('movestart', () => {
+                if (interactionElement) syncPopularityMarkerInteraction(interactionElement, true);
+            });
+            mapInstance.on('moveend', () => {
+                if (interactionElement) syncPopularityMarkerInteraction(interactionElement, false);
+            });
+
+            mapInstance.on('error', () => {
+                if (!disposed && !loaded) setMapIssue('error');
+                console.error('OVERSEAS_MAP_RESOURCE_FAILED');
+            });
+
+            mapInstance.on('click', () => {
+                onMapInteractionRef.current?.();
+                onMapBlankClickRef.current?.();
+            });
+            mapInstance.on('dragstart', () => {
+                onMapInteractionRef.current?.();
+            });
+
+            mapInstance.on('zoomstart', () => {
+                onMapInteractionRef.current?.();
+            });
+
+
+            map.current = mapInstance;
+        } catch {
+            setMapIssue('error');
+            console.error('OVERSEAS_MAP_INIT_FAILED');
+        }
+
+        // [New] 커스텀 스크롤 휠 핸들러 (0.5 단위 줌 -> 1단위 슬라이더 줌)
+        // 연속 스크롤 시 목표 슬라이더 값 추적 변수
+        let targetSlider = mapZoomToSlider(initialConfig.zoom);
+        let lastWheelTime = 0;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (!map.current) return;
+            e.preventDefault();
+            onMapInteractionRef.current?.();
+
+            const now = Date.now();
+            const timeDiff = now - lastWheelTime;
+            lastWheelTime = now;
+
+            const currentMapZoom = map.current.getZoom();
+            const nextSlider = getNextOverseasWheelSlider({
+                currentMapZoom,
+                deltaY: e.deltaY,
+                previousTargetSlider: targetSlider,
+                timeDiffMs: timeDiff,
+            });
+
+            // 3. 적용
+            if (nextSlider !== targetSlider) {
+                targetSlider = nextSlider;
+
+                // [UX] 즉각적인 슬라이더 UI 갱신
+                const nextZoom = sliderToMapZoom(nextSlider);
+                // [UX] 깜빡임 방지를 위해 easeTo 사용 (200ms)
+                map.current.easeTo({ zoom: nextZoom, duration: 200 });
+            }
+        };
+
+        const mapContainerEl = mapContainer.current;
+        if (mapContainerEl) {
+            mapContainerEl.addEventListener('wheel', handleWheel, { passive: false });
+        }
+        const resizeObserver = typeof ResizeObserver === 'undefined'
+            ? null
+            : new ResizeObserver(() => {
+                if (!disposed) mapInstance?.resize();
+            });
+        if (mapContainerEl) resizeObserver?.observe(mapContainerEl);
+
+        return () => {
+            disposed = true;
+            window.clearTimeout(startupTimer);
+            resizeObserver?.disconnect();
+            if (mapContainerEl) {
+                mapContainerEl.removeEventListener('wheel', handleWheel);
+            }
+            markers.forEach((marker) => marker.remove());
+            markers.clear();
+            deviceLocationMarkerRef.current?.remove();
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            mapInstance?.remove();
+            if (map.current === mapInstance) {
+                map.current = null;
+            }
+        };
+    }, [mapAttempt]);
+
+    const moveToRestaurant = useCallback((restaurant: Restaurant) => {
+        if (!map.current) return;
+
+        // [New] 강제 줌 레벨이 있으면 사용, 없으면 현재 줌 유지
+        const targetZoom = mapFocusZoom ?? map.current.getZoom();
+
+        map.current.jumpTo({
+            center: [Number(restaurant.lng), Number(restaurant.lat)],
+            zoom: targetZoom,
+            padding: mapPaddingRef.current
+        });
+    }, [mapFocusZoom]);
+
+    useEffect(() => {
+        if (onMapReady) onMapReady(moveToRestaurant);
+    }, [onMapReady, moveToRestaurant]);
+
+    useEffect(() => {
+        countryRef.current = selectedCountry;
+        if (!map.current || !selectedCountry) return;
+        const config = OVERSEAS_REGIONS[selectedCountry]?.center;
+        if (config) {
+            map.current.jumpTo({ center: [config.lng, config.lat], zoom: config.zoom, padding: mapPaddingRef.current });
+        }
+    }, [selectedCountry]);
+
+    // OPTIMIZED MARKER RENDERING
+    // Only re-create markers if the restaurant list changes.
+    // Update marker styles (selected state) independently.
+    useEffect(() => {
+        if (!map.current || !isMapLoaded) return;
+
+        const renderableRestaurants = restaurantsToShow.filter(({ lat, lng }) =>
+            lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+            && Math.abs(Number(lat)) <= 90 && Math.abs(Number(lng)) <= 180
+            && (Number(lat) !== 0 || Number(lng) !== 0));
+        const currentMarkerIds = new Set(renderableRestaurants.map(r => r.id));
+
+        // 1. Remove markers that are no longer in the list
+        markersRef.current.forEach((marker, id) => {
+            if (!currentMarkerIds.has(id)) {
+                marker.remove();
+                markersRef.current.delete(id);
+            }
+        });
+
+        // 2. Add or update markers
+        renderableRestaurants.forEach(restaurant => {
+            let marker = markersRef.current.get(restaurant.id);
+            if (!marker) {
+                const el = document.createElement('div');
+                el.id = `marker-${restaurant.id}`;
+                el.style.width = `32px`;
+                el.style.height = `32px`;
+                el.style.cursor = 'pointer';
+                marker = new maplibregl.Marker({ element: el });
+                markersRef.current.set(restaurant.id, marker);
+            }
+            const element = marker.getElement();
+            const html = buildOverseasMarkerHtml({ imagePath: getRestaurantCategoryIcon(restaurant), name: restaurant.name, popularityTier: restaurant.popularity_tier });
+            if (markerHtmlRef.current.get(element) !== html) {
+                element.innerHTML = html;
+                markerHtmlRef.current.set(element, html);
+            }
+            // The retained SDK marker must use the current row and callbacks after a refresh.
+            element.onclick = (event) => {
+                event.stopPropagation();
+                onRestaurantSelect?.(restaurant);
+                onMarkerClick?.(restaurant);
+                moveToRestaurant(restaurant);
+            };
+            marker.setLngLat([Number(restaurant.lng), Number(restaurant.lat)]).addTo(map.current!);
+            const activeId = getOverseasMarkerActiveId({ searchedRestaurantId: searchedRestaurant?.id, selectedRestaurantId: selectedRestaurant?.id });
+            applyOverseasMarkerSelectedState({ container: element.querySelector('.marker-container'), isSelected: restaurant.id === activeId, markerElement: element });
+        });
+    }, [restaurantsToShow, isMapLoaded, moveToRestaurant, onRestaurantSelect, onMarkerClick, searchedRestaurant, selectedRestaurant]);
+
+    // Handle Selection State (Update existing markers without re-creating)
+    useEffect(() => {
+        if (!isMapLoaded) return;
+
+        const activeId = getOverseasMarkerActiveId({
+            searchedRestaurantId: searchedRestaurant?.id,
+            selectedRestaurantId: selectedRestaurant?.id,
+        });
+
+        markersRef.current.forEach((marker, id) => {
+            const el = marker.getElement();
+            const container = el.querySelector('.marker-container') as HTMLElement;
+            const isSelected = id === activeId;
+
+            applyOverseasMarkerSelectedState({
+                container,
+                isSelected,
+                markerElement: el,
+            });
+        });
+    }, [selectedRestaurant, searchedRestaurant, isMapLoaded]);
+
+    // Re-center if mapPadding changes (e.g. panel opens) while a restaurant is selected
+    useEffect(() => {
+        if (selectedRestaurant && isMapLoaded) {
+            moveToRestaurant(selectedRestaurant);
+        }
+    }, [mapPadding, selectedRestaurant, isMapLoaded, moveToRestaurant]);
+
+    return (
+        <div
+            className={`relative w-full h-full bg-[#E5E5E5] ${className}`}
+            data-overseas-map-status={isMapLoaded ? 'ready' : mapIssue ?? 'loading'}
+        >
+            <div
+                ref={mapContainer}
+                className="w-full h-full"
+                data-testid="map-container"
+            />
+
+            {!isMapLoaded && !mapIssue && (
+                <div className="absolute inset-0 z-10">
+                    <MapSkeleton message="해외 지도 화면을 준비하고 있어요" />
+                </div>
+            )}
+            {!isMapLoaded && mapIssue && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background/95 px-6 text-center" role="status">
+                    <p className="text-sm text-muted-foreground">
+                        {mapIssue === 'slow' ? '지도를 불러오는 데 시간이 걸리고 있어요.' : '해외 지도를 불러오지 못했어요.'}
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => setMapAttempt((current) => current + 1)}>
+                        다시 불러오기
+                    </Button>
+                </div>
+            )}
+            {isMapLoaded && isLoadingRestaurants && (
+                <div className="pointer-events-none absolute inset-x-3 top-28 z-10 flex justify-center" role="status">
+                    <span className="rounded-full bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm">맛집 핀을 불러오고 있어요</span>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default OverseasMap;
+
+
+===== apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx | bytes=5696 | sha256=b14790b6f9ce8333e39fdb0dd67d2a086c0a008b951b41e00134f1035b5917dc | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+"use client";
+
+import { useState } from "react";
+import { isLevel1SourceObserved, parseEvidenceFrame, approvedEvidenceFramesOrEmpty } from "@/lib/evidence-engineering/frames";
+import type { RestaurantEvidenceFrame } from "@/lib/evidence-engineering/types";
+
+export function evidenceFrameEmbedRow(item: unknown): unknown {
+  if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+  const record = item as Record<string, unknown>;
+  const timestamp = record.timestamp_ms;
+  const timestampMs = typeof timestamp === "string" && /^[0-9]+$/.test(timestamp)
+    ? Number(timestamp)
+    : timestamp;
+  return {
+    frame_id: record.frame_id,
+    content_sha256: record.content_sha256,
+    video_id: record.video_id,
+    timestamp_ms: timestampMs,
+    storage_object_key: record.storage_object_key,
+    youtube_seek_url: record.youtube_seek_url,
+    frame_type: record.frame_type,
+    evidence_level: record.evidence_level,
+    confidence_level: record.confidence_level,
+    moderation_status: record.moderation_status,
+    detected_shop_name: record.detected_shop_name ?? null,
+    detected_branch_name: record.detected_branch_name ?? null,
+    image_url: record.image_url ?? null,
+  };
+}
+
+export function publicEvidenceFrames(groups: readonly unknown[][]): RestaurantEvidenceFrame[] {
+  return publicReviewedVideoFrames(groups).filter(isLevel1SourceObserved);
+}
+
+// Reviewed video context may be shown, but does not become L1 identity proof.
+export function publicReviewedVideoFrames(groups: readonly unknown[][]): RestaurantEvidenceFrame[] {
+  const parsed = groups.map((group) => group.flatMap((item) => {
+    try {
+      return [parseEvidenceFrame(evidenceFrameEmbedRow(item))];
+    } catch {
+      return [];
+    }
+  }));
+  return approvedEvidenceFramesOrEmpty(parsed).filter(
+    (frame) => frame.evidence_level === "SOURCE_OBSERVED",
+  );
+}
+
+export function publicEvidenceImageSource(frame: RestaurantEvidenceFrame): string {
+  const valid = parseEvidenceFrame(frame);
+  return valid.image_url ?? `/evidence-frames/${valid.storage_object_key}`;
+}
+
+function frameLabel(frame: RestaurantEvidenceFrame): string {
+  if (frame.frame_type === "storefront_sign") return "매장 간판";
+  if (frame.frame_type === "publisher_location_caption") return "영상의 매장 안내";
+  return frame.frame_type === "menu_receipt" ? "메뉴·영수증 장면" : "영상 속 현장 장면";
+}
+
+export function publicFramePresentation(frame: RestaurantEvidenceFrame): {
+  href: string;
+  loading: "lazy";
+  bulkHighResolutionFetch: false;
+  enlargement: "separate_request";
+} {
+  return {
+    href: frame.youtube_seek_url,
+    loading: "lazy",
+    bulkHighResolutionFetch: false,
+    enlargement: "separate_request",
+  };
+}
+
+function EvidenceFrameImage({ frame }: { frame: RestaurantEvidenceFrame }) {
+  const [failed, setFailed] = useState(false);
+  const presentation = publicFramePresentation(frame);
+  if (failed) return <span role="status" className="flex aspect-video items-center justify-center rounded-t-xl bg-muted px-3 text-center text-xs text-muted-foreground">장면 이미지를 불러오지 못했어요. 원본 영상에서 확인해 주세요.</span>;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- Immutable reviewed frames use native lazy images.
+    <img src={publicEvidenceImageSource(frame)} alt={frame.detected_shop_name ?? frameLabel(frame)}
+      width={640} height={360} loading={presentation.loading} decoding="async" onError={() => setFailed(true)}
+      className="aspect-video w-full rounded-t-xl object-cover" />
+  );
+}
+
+export function RestaurantEvidenceCarousel({ frames }: { frames: readonly RestaurantEvidenceFrame[][] }) {
+  const visible = publicReviewedVideoFrames(frames);
+  if (visible.length === 0) return null;
+  return (
+    <section className="py-2 pb-[env(safe-area-inset-bottom)]" aria-label="쯔양 영상 근거와 방문 장면">
+      <p className="text-2xs font-bold tracking-wide text-brand-garden-text">쯔양 영상 속 그 장면</p>
+      <h3 className="mb-2 text-sm font-black tracking-tight">{visible.some(isLevel1SourceObserved) ? "영상에서 확인한 간판·방문 장면 📸" : "영상에서 확인한 방문·현장 장면 📸"}</h3>
+      {visible.some((frame) => !isLevel1SourceObserved(frame)) && (
+        <p className="mb-2 text-xs text-muted-foreground">현장 장면은 영상의 맥락을 보여주며, 매장 신원을 확인하는 간판·매장 안내와 구분해요.</p>
+      )}
+      <div className="flex gap-3 overflow-x-auto pb-2" tabIndex={0} aria-label="영상 장면 가로 스크롤">
+        {visible.map((frame) => {
+          const presentation = publicFramePresentation(frame);
+          return (
+          <a
+            key={frame.frame_id}
+            href={presentation.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-[min(68vw,18rem)] shrink-0 rounded-xl border border-border bg-card sm:w-64 lg:w-72"
+            aria-label={`${frameLabel(frame)} ${Math.floor(frame.timestamp_ms / 60000)}분 ${Math.floor(frame.timestamp_ms / 1000) % 60}초 영상 열기`}
+          >
+              <EvidenceFrameImage key={`${frame.storage_object_key}:${publicEvidenceImageSource(frame)}`} frame={frame} />
+              <span className="flex items-center justify-between gap-2 px-2 py-2 text-xs">
+                <span>{frameLabel(frame)}</span>
+                <span className="tabular-nums text-muted-foreground">{Math.floor(frame.timestamp_ms / 60000)}:{String(Math.floor(frame.timestamp_ms / 1000) % 60).padStart(2, "0")}</span>
+              </span>
+          </a>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+
+===== apps/web/lib/evidence-engineering/frames.ts | bytes=9579 | sha256=5527116d2bc4551c135c3061bbe2eedc3ccdd6c882fa3967e8596542df76e40d | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { buildCanonicalYouTubeWatchUrl } from "../youtube-url";
+import {
+  FRAME_SAMPLING,
+  LEVEL1_FRAME_TYPES,
+} from "./constants";
+import { formatStorageObjectKey } from "./storage-key.mjs";
+import { EvidenceContractCodes, EvidenceContractError } from "./errors";
+import {
+  assertNoForbiddenPayloadKeys,
+  isConfidenceLevel,
+  isEvidenceFrameType,
+  isEvidenceLevel,
+  isModerationStatus,
+  parseMember,
+  requireContentSha256,
+  requireDetectedName,
+  requireFrameId,
+  requireImageUrl,
+  requireTimestampMs,
+  requireYouTubeVideoId,
+} from "./guards";
+import type {
+  EvidenceFrameDraft,
+  FrameSamplingPlan,
+  RestaurantEvidenceFrame,
+} from "./types";
+
+const FRAME_PAYLOAD_KEYS = [
+  "frame_id",
+  "content_sha256",
+  "video_id",
+  "timestamp_ms",
+  "storage_object_key",
+  "youtube_seek_url",
+  "frame_type",
+  "evidence_level",
+  "confidence_level",
+  "moderation_status",
+  "detected_shop_name",
+  "detected_branch_name",
+  "image_url",
+] as const;
+
+export function buildEvidenceSeekUrl(videoId: string, timestampMs: number): string {
+  const id = requireYouTubeVideoId(videoId);
+  const timestamp = requireTimestampMs(timestampMs);
+  const watchUrl = buildCanonicalYouTubeWatchUrl(id);
+  if (!watchUrl) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidVideoId);
+  }
+  return `${watchUrl}&t=${Math.floor(timestamp / 1000)}`;
+}
+
+export function buildStorageObjectKey(videoId: string, timestampMs: number, contentSha256: string): string {
+  const id = requireYouTubeVideoId(videoId);
+  const timestamp = requireTimestampMs(timestampMs);
+  const hash = requireContentSha256(contentSha256);
+  return formatStorageObjectKey(id, timestamp, hash);
+}
+
+export function planFrameSamplingWindow(videoId: string, targetTimestampMs: number): FrameSamplingPlan {
+  const id = requireYouTubeVideoId(videoId);
+  const target = requireTimestampMs(targetTimestampMs);
+  return {
+    video_id: id,
+    target_timestamp_ms: target,
+    window_start_ms: Math.max(0, target - FRAME_SAMPLING.windowMs),
+    window_end_ms: target + FRAME_SAMPLING.windowMs,
+    sample_fps: FRAME_SAMPLING.sampleFpsAfterDecode,
+    keyframe_role: FRAME_SAMPLING.keyframeRole,
+    loads_full_video_in_node: false,
+  };
+}
+
+export function isLevel1SourceObserved(
+  frame: Pick<RestaurantEvidenceFrame, "evidence_level" | "frame_type" | "moderation_status">,
+): boolean {
+  return (
+    frame.moderation_status === "approved" &&
+    frame.evidence_level === "SOURCE_OBSERVED" &&
+    (LEVEL1_FRAME_TYPES as readonly string[]).includes(frame.frame_type)
+  );
+}
+
+export function buildEvidenceFrame(draft: EvidenceFrameDraft): RestaurantEvidenceFrame {
+  const videoId = requireYouTubeVideoId(draft.video_id);
+  const timestampMs = requireTimestampMs(draft.timestamp_ms);
+  const contentSha256 = requireContentSha256(draft.content_sha256);
+  const frame: RestaurantEvidenceFrame = {
+    frame_id: requireFrameId(draft.frame_id),
+    content_sha256: contentSha256,
+    video_id: videoId,
+    timestamp_ms: timestampMs,
+    storage_object_key: buildStorageObjectKey(videoId, timestampMs, contentSha256),
+    youtube_seek_url: buildEvidenceSeekUrl(videoId, timestampMs),
+    frame_type: parseMember(draft.frame_type, isEvidenceFrameType, EvidenceContractCodes.invalidFrameType),
+    evidence_level: parseMember(draft.evidence_level, isEvidenceLevel, EvidenceContractCodes.invalidEvidenceLevel),
+    confidence_level: parseMember(draft.confidence_level, isConfidenceLevel, EvidenceContractCodes.invalidConfidence),
+    moderation_status: parseMember(draft.moderation_status, isModerationStatus, EvidenceContractCodes.invalidModeration),
+    detected_shop_name: requireDetectedName(draft.detected_shop_name),
+    detected_branch_name: requireDetectedName(draft.detected_branch_name),
+    image_url: requireImageUrl(draft.image_url),
+  };
+  return frame;
+}
+
+export function parseEvidenceFrame(input: unknown): RestaurantEvidenceFrame {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidFrame);
+  }
+  assertNoForbiddenPayloadKeys(input);
+  const record = input as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (!(FRAME_PAYLOAD_KEYS as readonly string[]).includes(key)) {
+      throw new EvidenceContractError(EvidenceContractCodes.invalidFrame);
+    }
+  }
+  const frame = buildEvidenceFrame({
+    frame_id: readString(record.frame_id, EvidenceContractCodes.invalidFrameId),
+    content_sha256: readString(record.content_sha256, EvidenceContractCodes.invalidContentSha256),
+    video_id: readString(record.video_id, EvidenceContractCodes.invalidVideoId),
+    timestamp_ms: readTimestamp(record.timestamp_ms),
+    frame_type: record.frame_type as EvidenceFrameDraft["frame_type"],
+    evidence_level: record.evidence_level as EvidenceFrameDraft["evidence_level"],
+    confidence_level: record.confidence_level as EvidenceFrameDraft["confidence_level"],
+    moderation_status: record.moderation_status as EvidenceFrameDraft["moderation_status"],
+    detected_shop_name: readNullableString(record.detected_shop_name, EvidenceContractCodes.invalidDetectedName),
+    detected_branch_name: readNullableString(record.detected_branch_name, EvidenceContractCodes.invalidDetectedName),
+    image_url: readNullableString(record.image_url, EvidenceContractCodes.invalidImageUrl),
+  });
+  if (typeof record.storage_object_key === "string" && record.storage_object_key !== frame.storage_object_key) {
+    throw new EvidenceContractError(EvidenceContractCodes.storageKeyMismatch);
+  }
+  if (typeof record.youtube_seek_url === "string" && record.youtube_seek_url !== frame.youtube_seek_url) {
+    throw new EvidenceContractError(EvidenceContractCodes.seekIntegrityMismatch);
+  }
+  if ("storage_object_key" in record && typeof record.storage_object_key !== "string") {
+    throw new EvidenceContractError(EvidenceContractCodes.storageKeyMismatch);
+  }
+  if ("youtube_seek_url" in record && typeof record.youtube_seek_url !== "string") {
+    throw new EvidenceContractError(EvidenceContractCodes.seekIntegrityMismatch);
+  }
+  return frame;
+}
+
+function readString(value: unknown, code: EvidenceContractError["code"]): string {
+  if (typeof value !== "string") throw new EvidenceContractError(code);
+  return value;
+}
+
+function readNullableString(value: unknown, code: EvidenceContractError["code"]): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string") throw new EvidenceContractError(code);
+  return value;
+}
+
+function readTimestamp(value: unknown): number {
+  if (typeof value !== "number") {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidTimestampMs);
+  }
+  return value;
+}
+
+function sameIdentity(left: RestaurantEvidenceFrame, right: RestaurantEvidenceFrame): boolean {
+  return (
+    left.content_sha256 === right.content_sha256 &&
+    left.video_id === right.video_id &&
+    left.timestamp_ms === right.timestamp_ms &&
+    left.storage_object_key === right.storage_object_key &&
+    left.youtube_seek_url === right.youtube_seek_url &&
+    left.frame_type === right.frame_type &&
+    left.evidence_level === right.evidence_level &&
+    left.confidence_level === right.confidence_level &&
+    left.detected_shop_name === right.detected_shop_name &&
+    left.detected_branch_name === right.detected_branch_name
+  );
+}
+
+// Public detail rendering must fail closed without taking down the restaurant panel.
+export function approvedEvidenceFramesOrEmpty(groups: readonly RestaurantEvidenceFrame[][]): RestaurantEvidenceFrame[] {
+  try {
+    return unionApprovedEvidenceFrames(groups);
+  } catch (error) {
+    if (error instanceof EvidenceContractError) return [];
+    throw error;
+  }
+}
+
+export function unionApprovedEvidenceFrames(groups: readonly RestaurantEvidenceFrame[][]): RestaurantEvidenceFrame[] {
+  const grouped = new Map<string, RestaurantEvidenceFrame[]>();
+  for (const group of groups) {
+    for (const frame of group) {
+      const validated = parseEvidenceFrame(frame);
+      const existing = grouped.get(validated.frame_id);
+      if (existing) existing.push(validated);
+      else grouped.set(validated.frame_id, [validated]);
+    }
+  }
+
+  const approved: RestaurantEvidenceFrame[] = [];
+  for (const copies of grouped.values()) {
+    const anchor = copies[0];
+    if (copies.some((copy) => !sameIdentity(anchor, copy))) {
+      throw new EvidenceContractError(EvidenceContractCodes.duplicateFrameConflict);
+    }
+    const hasApproved = copies.some((copy) => copy.moderation_status === "approved");
+    const hasRejected = copies.some((copy) => copy.moderation_status === "rejected");
+    if (hasApproved && hasRejected) {
+      throw new EvidenceContractError(EvidenceContractCodes.moderationConflict);
+    }
+    if (!hasApproved) continue;
+    const approvedCopies = copies.filter((copy) => copy.moderation_status === "approved");
+    const imageUrls = new Set(approvedCopies.map((copy) => copy.image_url));
+    const imageUrl = imageUrls.size === 1 ? approvedCopies[0].image_url : null;
+    approved.push(buildEvidenceFrame({ ...approvedCopies[0], image_url: imageUrl, moderation_status: "approved" }));
+  }
+
+  approved.sort((left, right) => (
+    left.timestamp_ms - right.timestamp_ms || left.frame_id.localeCompare(right.frame_id)
+  ));
+  const storageKeys = new Set<string>();
+  for (const frame of approved) {
+    if (storageKeys.has(frame.storage_object_key)) {
+      throw new EvidenceContractError(EvidenceContractCodes.duplicateFrameConflict);
+    }
+    storageKeys.add(frame.storage_object_key);
+  }
+  return approved;
+}
+
+
+===== apps/web/lib/evidence-engineering/guards.ts | bytes=7046 | sha256=5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { extractCanonicalYouTubeVideoId } from "../youtube-url";
+import {
+  CALENDAR_DATE_PATTERN,
+  CANONICAL_KEY_PATTERN,
+  CONFIDENCE_LEVELS,
+  CONTENT_SHA256_PATTERN,
+  DETECTED_NAME_MAX_LENGTH,
+  EVIDENCE_FRAME_TYPES,
+  EVIDENCE_LEVELS,
+  FORBIDDEN_PAYLOAD_KEYS,
+  FRAME_ID_PATTERN,
+  ISO_TIMESTAMP_PATTERN,
+  MODERATION_STATUSES,
+  POPULARITY_TIERS,
+  VERSION_TOKEN_PATTERN,
+} from "./constants";
+import { EvidenceContractCodes, EvidenceContractError } from "./errors";
+import type {
+  ConfidenceLevel,
+  EvidenceFrameType,
+  EvidenceLevel,
+  ModerationStatus,
+  PopularityTier,
+} from "./types";
+
+const PHONE_LIKE_PATTERN = /\d{2,4}-\d{3,4}-\d{4}/;
+
+export function requireYouTubeVideoId(value: string): string {
+  const videoId = extractCanonicalYouTubeVideoId(value);
+  if (!videoId || videoId !== value) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidVideoId);
+  }
+  return videoId;
+}
+
+export function requireTimestampMs(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidTimestampMs);
+  }
+  return value;
+}
+
+export function requireContentSha256(value: string): string {
+  if (!CONTENT_SHA256_PATTERN.test(value)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidContentSha256);
+  }
+  return value;
+}
+
+export function requireFrameId(value: string): string {
+  if (!FRAME_ID_PATTERN.test(value)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidFrameId);
+  }
+  return value;
+}
+
+export function requireVersionToken(value: string, code: "invalid_scoring_version" | "invalid_cohort_version"): string {
+  if (!VERSION_TOKEN_PATTERN.test(value)) {
+    throw new EvidenceContractError(code);
+  }
+  return value;
+}
+
+export function requireIsoTimestamp(value: string): string {
+  if (!ISO_TIMESTAMP_PATTERN.test(value) || !Number.isFinite(Date.parse(value))) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidComputedAt);
+  }
+  return value;
+}
+
+export function requireCalendarDate(value: string): string {
+  if (!CALENDAR_DATE_PATTERN.test(value)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidCalendarDate);
+  }
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utc.getUTCFullYear() !== year ||
+    utc.getUTCMonth() !== month - 1 ||
+    utc.getUTCDate() !== day
+  ) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidCalendarDate);
+  }
+  return value;
+}
+
+export function requireCanonicalKey(value: string): string {
+  if (!CANONICAL_KEY_PATTERN.test(value)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidCanonicalKey);
+  }
+  return value;
+}
+
+export function requireBoundedText(value: string, maxLength: number, code: "invalid_detected_name" | "invalid_closure_record"): string {
+  const trimmed = value.trim();
+  if (
+    trimmed.length === 0 ||
+    trimmed.length > maxLength ||
+    /[\u0000-\u001F\u007F]/.test(trimmed) ||
+    trimmed.includes("@") ||
+    PHONE_LIKE_PATTERN.test(trimmed)
+  ) {
+    throw new EvidenceContractError(code);
+  }
+  return trimmed;
+}
+
+export function requireDetectedName(value: string | null): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidDetectedName);
+  }
+  if (value.trim() === "") return null;
+  return requireBoundedText(value, DETECTED_NAME_MAX_LENGTH, EvidenceContractCodes.invalidDetectedName);
+}
+
+export function requireImageUrl(value: string | null): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.length === 0 || value.length > 2048) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidImageUrl);
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidImageUrl);
+  }
+  if (url.protocol !== "https:" || url.username || url.password) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidImageUrl);
+  }
+  return value;
+}
+
+export function assertNoForbiddenPayloadKeys(value: object): void {
+  for (const key of Object.keys(value)) {
+    if ((FORBIDDEN_PAYLOAD_KEYS as readonly string[]).includes(key)) {
+      throw new EvidenceContractError(EvidenceContractCodes.personalDataForbidden);
+    }
+  }
+}
+
+export function isEvidenceLevel(value: unknown): value is EvidenceLevel {
+  return typeof value === "string" && (EVIDENCE_LEVELS as readonly string[]).includes(value);
+}
+
+export function isEvidenceFrameType(value: unknown): value is EvidenceFrameType {
+  return typeof value === "string" && (EVIDENCE_FRAME_TYPES as readonly string[]).includes(value);
+}
+
+export function isConfidenceLevel(value: unknown): value is ConfidenceLevel {
+  return typeof value === "string" && (CONFIDENCE_LEVELS as readonly string[]).includes(value);
+}
+
+export function isModerationStatus(value: unknown): value is ModerationStatus {
+  return typeof value === "string" && (MODERATION_STATUSES as readonly string[]).includes(value);
+}
+
+export function isPopularityTier(value: unknown): value is PopularityTier {
+  return typeof value === "string" && (POPULARITY_TIERS as readonly string[]).includes(value);
+}
+
+export function parseMember<T extends string>(
+  value: unknown,
+  guard: (value: unknown) => value is T,
+  code: EvidenceContractError["code"],
+): T {
+  if (!guard(value)) throw new EvidenceContractError(code);
+  return value;
+}
+
+/**
+ * Parses a count the way the synthesis `safe_count` does.
+ * Null means missing. Zero means a real zero. Booleans are missing.
+ * Integral JavaScript numbers are accepted. Decimal strings are missing.
+ * Underscores follow Python `int` digit rules. Values above the maximum clamp.
+ */
+export function safeCount(value: unknown, maximum: number): number | null {
+  if (!Number.isSafeInteger(maximum) || maximum < 0) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidMaximum);
+  }
+  if (value === null || value === undefined) return null;
+  if (typeof value === "boolean") return null;
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value) || value < 0) return null;
+    return Math.min(value, maximum);
+  }
+  if (typeof value !== "string") return null;
+  const parsed = parsePythonInteger(value);
+  if (parsed === null || parsed < 0) return null;
+  return Math.min(parsed, maximum);
+}
+
+function parsePythonInteger(value: string): number | null {
+  const stripped = value.replaceAll(",", "").trim();
+  if (!/^[+-]?\d(?:_?\d)*$/.test(stripped)) return null;
+  const digits = stripped.replaceAll("_", "");
+  const negative = digits.startsWith("-");
+  const magnitude = negative ? digits.slice(1) : digits.replace(/^\+/, "");
+  if (!/^\d+$/.test(magnitude)) return null;
+  const numeric = Number(magnitude);
+  if (!Number.isSafeInteger(numeric)) return null;
+  return negative ? -numeric : numeric;
+}
+
+
+===== apps/web/lib/evidence-engineering/types.ts | bytes=3726 | sha256=9d64ad2c6e57bea45af5066d89a26535b616429c9032d16fccfefcdeb78bad6b | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import type {
+  ADJUDICATION_RECORDS,
+  ADJUDICATION_VERDICTS,
+  CONFIDENCE_LEVELS,
+  EVIDENCE_FAMILIES,
+  EVIDENCE_FRAME_TYPES,
+  EVIDENCE_LEVELS,
+  FETCH_DECISIONS,
+  IDENTITY_PIPELINE_STAGES,
+  IDENTITY_TERMINAL_STATES,
+  MODERATION_STATUSES,
+  POPULARITY_TIERS,
+  REVIEWED_OPERATIONAL_STATUSES,
+} from "./constants";
+
+export type EvidenceLevel = (typeof EVIDENCE_LEVELS)[number];
+export type EvidenceFrameType = (typeof EVIDENCE_FRAME_TYPES)[number];
+export type ConfidenceLevel = (typeof CONFIDENCE_LEVELS)[number];
+export type ModerationStatus = (typeof MODERATION_STATUSES)[number];
+export type PopularityTier = (typeof POPULARITY_TIERS)[number];
+export type IdentityPipelineStage = (typeof IDENTITY_PIPELINE_STAGES)[number];
+export type IdentityTerminalState = (typeof IDENTITY_TERMINAL_STATES)[number];
+export type ReviewedOperationalStatus = (typeof REVIEWED_OPERATIONAL_STATUSES)[number];
+export type FetchDecision = (typeof FETCH_DECISIONS)[number];
+export type EvidenceFamily = (typeof EVIDENCE_FAMILIES)[number];
+export type AdjudicationVerdict = (typeof ADJUDICATION_VERDICTS)[number];
+export type AdjudicationRecord = (typeof ADJUDICATION_RECORDS)[number];
+
+export interface RestaurantEvidenceFrame {
+  frame_id: string;
+  content_sha256: string;
+  video_id: string;
+  timestamp_ms: number;
+  storage_object_key: string;
+  youtube_seek_url: string;
+  frame_type: EvidenceFrameType;
+  evidence_level: EvidenceLevel;
+  confidence_level: ConfidenceLevel;
+  moderation_status: ModerationStatus;
+  detected_shop_name: string | null;
+  detected_branch_name: string | null;
+  image_url: string | null;
+}
+
+export interface EvidenceFrameDraft {
+  frame_id: string;
+  content_sha256: string;
+  video_id: string;
+  timestamp_ms: number;
+  frame_type: EvidenceFrameType;
+  evidence_level: EvidenceLevel;
+  confidence_level: ConfidenceLevel;
+  moderation_status: ModerationStatus;
+  detected_shop_name: string | null;
+  detected_branch_name: string | null;
+  image_url: string | null;
+}
+
+export interface FrameSamplingPlan {
+  video_id: string;
+  target_timestamp_ms: number;
+  window_start_ms: number;
+  window_end_ms: number;
+  sample_fps: 2;
+  keyframe_role: "decode_start_only";
+  loads_full_video_in_node: false;
+}
+
+export interface PopularitySignals {
+  video_engagement: number;
+  freshness: number;
+  visit_multiplier: number;
+  platform_review_signal: number | null;
+}
+
+export interface UniqueCountAggregate {
+  videoCount: number;
+  knownSum: number;
+  missingVideoIds: readonly string[];
+}
+
+export interface PopularityTierAssignment {
+  scoring_version: string;
+  cohort_version: string;
+  computed_at: string;
+  popularity_tier: PopularityTier;
+  popularity_score: number;
+}
+
+export interface PopularityMetricRecord {
+  canonical_key: string;
+  source_revision: number;
+  scoring_version: string;
+  cohort_version: string;
+  popularity_score: number;
+  popularity_tier: PopularityTier;
+  computed_at: string;
+}
+
+export interface ClosureIdentityRecord {
+  ledgerId: string;
+  businessAddress: string;
+  effectiveOn: string;
+  branchDistinction: string;
+  sourceUpdatedOn: string;
+}
+
+export interface IdentityDecisionInput {
+  queryStage: number | null;
+  searchMiss: boolean;
+  evidenceFamilies: readonly string[];
+  evidenceConflicts: boolean;
+  closureRecord: ClosureIdentityRecord | null;
+}
+
+export interface IdentityMatchDecision {
+  state: IdentityTerminalState;
+  autoClosedStore: false;
+  autoRelocated: false;
+}
+
+export interface FetchRetryBudget {
+  retryAfterSeconds: number | null;
+  attemptsUsed: number;
+  maxAttempts: number;
+  circuitOpen: boolean;
+  dailyRemaining: number;
+}
+
+export interface ScoringCohortIdentity {
+  scoring_version: string;
+  cohort_version: string;
+  computed_at: string;
+}
+
+
+===== apps/web/lib/evidence-engineering/constants.ts | bytes=7408 | sha256=471834208104d092365b8203350e7b9c4aba6a716a602f2a29589361d8fc9a43 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+export const EVIDENCE_ENGINEERING_CONTRACT_VERSION = "2026-10-17.task1";
+
+export const EVIDENCE_LEVELS = [
+  "SOURCE_OBSERVED",
+  "BOUNDARY_INTEGRATION_TESTED",
+  "SYNTHETIC_MOCK_TESTED",
+  "HOST_TESTED",
+  "PROPOSED",
+  "UNVERIFIED",
+  "CONTRADICTED",
+] as const;
+
+/** Labels from the thesis. They are names, not a quality ordering. */
+export const EVIDENCE_LEVEL_LABELS = {
+  SOURCE_OBSERVED: "L1",
+  BOUNDARY_INTEGRATION_TESTED: "L2",
+  SYNTHETIC_MOCK_TESTED: "L3",
+  HOST_TESTED: "L4",
+  PROPOSED: "L5",
+  UNVERIFIED: "L6",
+  CONTRADICTED: "L7",
+} as const;
+
+export const EVIDENCE_FRAME_TYPES = [
+  "storefront_sign",
+  "publisher_location_caption",
+  "on_site_scene",
+  "menu_receipt",
+] as const;
+
+export const LEVEL1_FRAME_TYPES = ["storefront_sign", "publisher_location_caption"] as const;
+
+export const CONFIDENCE_LEVELS = ["certain", "probable", "uncertain"] as const;
+
+export const MODERATION_STATUSES = ["pending", "approved", "rejected"] as const;
+
+export const POPULARITY_TIERS = ["fire", "ember", "rainbow", "standard"] as const;
+
+export const IDENTITY_PIPELINE_STAGES = ["candidate_discovered", "identity_evidence_checked"] as const;
+
+export const IDENTITY_TERMINAL_STATES = [
+  "supported",
+  "conflict",
+  "needs_review",
+  "closure_candidate",
+] as const;
+
+export const REVIEWED_OPERATIONAL_STATUSES = [
+  "supported",
+  "conflict",
+  "closed_store",
+  "relocated",
+] as const;
+
+export const FETCH_DECISIONS = ["accept", "retry_later", "stop_source"] as const;
+
+export const EVIDENCE_FAMILIES = [
+  "lexical_name_match",
+  "exact_parcel_coordinate_match",
+  "bounded_spatial_proximity",
+  "telecom_identifier_match",
+  "mois_public_license_closed",
+] as const;
+
+export const ADJUDICATION_VERDICTS = ["ACCEPT", "CONDITIONAL", "REJECT", "DEFER"] as const;
+
+export const NAVER_QUERY_STAGES = [
+  { stage: 1, kind: "exact", template: "origin_name_plus_road_address" },
+  { stage: 2, kind: "exact", template: "origin_name_plus_jibun_address" },
+  { stage: 3, kind: "exact", template: "sigungu_plus_origin_name" },
+  { stage: 4, kind: "broad", template: "sigungu_plus_keyword_plus_category" },
+  { stage: 5, kind: "broad", template: "historical_name_plus_admin_dong" },
+] as const;
+
+export const DECLARED_NAVER_QUERY_STAGE_COUNT = 10;
+export const SPECIFIED_NAVER_QUERY_STAGE_COUNT = NAVER_QUERY_STAGES.length;
+
+export const THESIS_HYPERBOLIC_LAMBDA = 0.0015;
+export const THESIS_CLAIMED_HALF_LIFE_DAYS = 460;
+
+/** Thesis weights and linear visit boost. Not the production score. */
+export const THESIS_SCORE_WEIGHTS = {
+  adopted: false,
+  view: 1,
+  comment: 2.5,
+  like: 1.5,
+  review: 3,
+  visitLinearCoefficient: 0.2,
+} as const;
+
+/**
+ * Shape adopted from the synthesis, coefficients explicitly unlocked.
+ * visitGamma is Gemini's proposed coefficient, not a function default.
+ */
+export const PROPOSED_DECAY_DEFAULTS = {
+  locked: false,
+  classicFloor: 0.5,
+  decayableHalfLifeDays: 460,
+  visitGamma: 0.25,
+} as const;
+
+export const SCORING_GATES = {
+  shadowCompareBeforePromotion: true,
+  unreproducedCorrelationIsDeploymentGate: false,
+  viewCountSplitAdopted: false,
+  multipliedScoreAdopted: false,
+} as const;
+
+export const REVIEW_SIGNAL = {
+  name: "parsed_review_count",
+  bayesianPosterior: false,
+} as const;
+
+export const THESIS_PROXIMITY_RADIUS_METERS = 150;
+
+export const FRAME_SAMPLING = {
+  keyframeRole: "decode_start_only",
+  sampleFpsAfterDecode: 2,
+  windowMs: 5_000,
+  thesisSceneChangeThreshold: 0.35,
+  iFrameOnlyFpsGuaranteed: false,
+  loadsFullVideoInNode: false,
+} as const;
+
+export const MARKER_EFFECT_CONTRACT = {
+  renderer: "css_transform_opacity",
+  webglContextsPerMarker: 0,
+  animatedDropShadow: false,
+  unconditionalWillChange: false,
+  pauseWhileMapInteracting: true,
+  prefersReducedMotion: true,
+  threeJsOnMarkers: false,
+} as const;
+
+export const DETAIL_BADGE_CONTRACT = {
+  defaultRenderer: "static_webp",
+  experimental3d: "opt_in_dynamic_import",
+  threeJsOnInitialRender: false,
+  markerWebglContexts: 0,
+} as const;
+
+export const POPULARITY_PERSISTENCE = {
+  table: "restaurant_popularity_metrics",
+  mutatesRestaurantUpdatedAt: false,
+  publicSelect: false,
+} as const;
+
+export const EVIDENCE_FRAME_PERSISTENCE = {
+  table: "restaurant_evidence_frames",
+  canonicalLocator: "storage_object_key",
+  embedsInEvaluationResults: false,
+  deleteCascadeDecided: false,
+} as const;
+
+export const ARCHITECTURE_INVARIANTS = {
+  I01: "node_must_not_load_full_video",
+  I02: "naver_markers_must_not_create_multiple_webgl_contexts",
+  I03: "threejs_only_on_demand_inside_restaurant_detail_panel",
+  I04: "popularity_score_runs_as_daily_batch",
+  I05: "youtube_seek_timestamp_integrity",
+} as const;
+
+export const FORBIDDEN_PAYLOAD_KEYS = [
+  "raw_ocr",
+  "rawOcr",
+  "ocr_text",
+  "ocrText",
+  "phone",
+  "phone_number",
+  "phoneNumber",
+  "email",
+  "face",
+  "person_face",
+  "license_plate",
+  "licensePlate",
+  "device_lat",
+  "device_lng",
+  "deviceLat",
+  "deviceLng",
+  "precise_location",
+  "preciseLocation",
+  "request_body",
+  "requestBody",
+  "provider_diagnostic",
+  "providerDiagnostic",
+  "cookie",
+  "authorization",
+  "session_token",
+  "sessionToken",
+] as const;
+
+export const CONTENT_SHA256_PATTERN = /^[a-f0-9]{64}$/;
+export const FRAME_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+export const VERSION_TOKEN_PATTERN = /^[A-Za-z0-9._-]{1,64}$/;
+export const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+export const CALENDAR_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+export const CANONICAL_KEY_PATTERN = /^[A-Za-z0-9._:-]{1,200}$/;
+
+export const DETECTED_NAME_MAX_LENGTH = 80;
+export const NAME_COMPARE_MAX_CODE_POINTS = 200;
+export const STORAGE_HASH_PREFIX_LENGTH = 12;
+
+export const ADJUDICATION_RECORDS = [
+  { id: "A01", verdict: "ACCEPT", subject: "hyperbolic_half_life_460_day_claim" },
+  { id: "A02", verdict: "CONDITIONAL", subject: "age_decay_dominates_engagement" },
+  { id: "A03", verdict: "CONDITIONAL", subject: "floor_decay_form_coefficients_unlocked" },
+  { id: "A04", verdict: "REJECT", subject: "review_count_named_bayesian_posterior" },
+  { id: "A05", verdict: "ACCEPT", subject: "separate_entity_and_video_aggregation" },
+  { id: "A06", verdict: "ACCEPT", subject: "no_threejs_canvas_per_marker" },
+  { id: "A07", verdict: "CONDITIONAL", subject: "detail_panel_threejs_opt_in_only" },
+  { id: "A08", verdict: "REJECT", subject: "css_guarantees_60fps_and_zero_paint" },
+  { id: "A09", verdict: "REJECT", subject: "iframe_only_2fps_guarantee" },
+  { id: "A10", verdict: "CONDITIONAL", subject: "extend_existing_frame_pipeline" },
+  { id: "A11", verdict: "REJECT", subject: "cookie_or_token_bypass_as_recovery" },
+  { id: "A12", verdict: "REJECT", subject: "broad_query_auto_identity" },
+  { id: "A13", verdict: "CONDITIONAL", subject: "license_closure_needs_identity_and_time" },
+  { id: "A14", verdict: "DEFER", subject: "batch_upsert_200_row_cas_until_sql_verified" },
+  { id: "A15", verdict: "ACCEPT", subject: "keep_manual_review_out_of_evaluation_results" },
+  { id: "A16", verdict: "ACCEPT", subject: "popularity_must_not_touch_restaurant_updated_at" },
+  { id: "A17", verdict: "REJECT", subject: "apply_gemini_sql_patch_verbatim" },
+  { id: "A18", verdict: "ACCEPT", subject: "union_approved_frames_by_id" },
+  { id: "A19", verdict: "REJECT", subject: "pick_highest_tier_across_cohorts" },
+  { id: "A20", verdict: "ACCEPT", subject: "immutable_millisecond_hash_object_key" },
+] as const;
+
+
+===== apps/web/lib/evidence-engineering/errors.ts | bytes=2008 | sha256=02bda67b89fadf3d2f5aa27f6a146c0dc746a7de1f9a6cd91dc82cf177e901c9 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+export const EvidenceContractCodes = {
+  nonFinite: "non_finite",
+  invalidDecayParameters: "invalid_decay_parameters",
+  invalidGamma: "invalid_gamma",
+  invalidMaximum: "invalid_maximum",
+  invalidVideoId: "invalid_video_id",
+  invalidTimestampMs: "invalid_timestamp_ms",
+  invalidContentSha256: "invalid_content_sha256",
+  invalidFrame: "invalid_frame",
+  invalidFrameId: "invalid_frame_id",
+  invalidDetectedName: "invalid_detected_name",
+  invalidImageUrl: "invalid_image_url",
+  invalidEvidenceLevel: "invalid_evidence_level",
+  invalidFrameType: "invalid_frame_type",
+  invalidConfidence: "invalid_confidence",
+  invalidModeration: "invalid_moderation",
+  personalDataForbidden: "personal_data_forbidden",
+  seekIntegrityMismatch: "seek_integrity_mismatch",
+  storageKeyMismatch: "storage_key_mismatch",
+  duplicateVideoConflict: "duplicate_video_conflict",
+  duplicateFrameConflict: "duplicate_frame_conflict",
+  moderationConflict: "moderation_conflict",
+  invalidQueryStage: "invalid_query_stage",
+  invalidDistance: "invalid_distance",
+  invalidNameLength: "invalid_name_length",
+  unknownEvidenceFamily: "unknown_evidence_family",
+  invalidClosureRecord: "invalid_closure_record",
+  mixedScoringCohort: "mixed_scoring_cohort",
+  emptyCohort: "empty_cohort",
+  invalidScoringVersion: "invalid_scoring_version",
+  invalidCohortVersion: "invalid_cohort_version",
+  invalidComputedAt: "invalid_computed_at",
+  invalidPopularityTier: "invalid_popularity_tier",
+  invalidPopularityScore: "invalid_popularity_score",
+  invalidSourceRevision: "invalid_source_revision",
+  invalidCanonicalKey: "invalid_canonical_key",
+  invalidCalendarDate: "invalid_calendar_date",
+} as const;
+
+export type EvidenceContractCode = (typeof EvidenceContractCodes)[keyof typeof EvidenceContractCodes];
+
+export class EvidenceContractError extends Error {
+  readonly code: EvidenceContractCode;
+
+  constructor(code: EvidenceContractCode) {
+    super(code);
+    this.name = "EvidenceContractError";
+    this.code = code;
+  }
+}
+
+
+===== apps/web/lib/evidence-engineering/storage-key.mjs | bytes=226 | sha256=4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+export const STORAGE_HASH_PREFIX_LENGTH = 12;
+
+export function formatStorageObjectKey(videoId, timestampMs, contentSha256) {
+    return `${videoId}/${timestampMs}_${contentSha256.slice(0, STORAGE_HASH_PREFIX_LENGTH)}.webp`;
+}
+
+
+===== apps/web/lib/overseas-map-marker-helpers.ts | bytes=1989 | sha256=0d6235f99fa1f23c8e4b7df435628e321698b0a646214984c655c26a184c2605 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import { escapeHtmlAttribute, sanitizeMarkerImageUrl } from './html-escape';
+import { publicPopularityTier, wrapMarkerWithPopularityTier } from './evidence-engineering/popularity-marker';
+
+const OVERSEAS_MARKER_BASE_SIZE_CLASSES = ['!h-8', '!w-8'] as const;
+const OVERSEAS_MARKER_SELECTED_SIZE_CLASSES = ['!h-[42px]', '!w-[42px]'] as const;
+
+export function buildOverseasMarkerHtml({
+    imagePath,
+    name,
+    popularityTier,
+}: {
+    imagePath: string;
+    name: string;
+    popularityTier?: unknown;
+}) {
+    const safeImagePath = escapeHtmlAttribute(sanitizeMarkerImageUrl(imagePath));
+    const safeName = escapeHtmlAttribute(name);
+
+    return wrapMarkerWithPopularityTier(`
+        <div class="marker-container relative h-full w-full cursor-pointer hover:scale-110">
+            <img src="${safeImagePath}" class="h-full w-full object-contain" alt="${safeName}" draggable="false" />
+        </div>
+    `, publicPopularityTier(popularityTier));
+}
+
+export function getOverseasMarkerActiveId({
+    searchedRestaurantId,
+    selectedRestaurantId,
+}: {
+    searchedRestaurantId?: string | null;
+    selectedRestaurantId?: string | null;
+}) {
+    return selectedRestaurantId || searchedRestaurantId || null;
+}
+
+export function applyOverseasMarkerSelectedState({
+    container,
+    isSelected,
+    markerElement,
+}: {
+    container: HTMLElement | null;
+    isSelected: boolean;
+    markerElement: HTMLElement;
+}) {
+    if (!container) return;
+
+    markerElement.classList.remove(
+        ...OVERSEAS_MARKER_BASE_SIZE_CLASSES,
+        ...OVERSEAS_MARKER_SELECTED_SIZE_CLASSES,
+        'selected',
+    );
+    markerElement.classList.add(
+        ...(isSelected ? OVERSEAS_MARKER_SELECTED_SIZE_CLASSES : OVERSEAS_MARKER_BASE_SIZE_CLASSES),
+    );
+    container.classList.remove('scale-100', 'scale-110');
+
+    if (isSelected) {
+        markerElement.classList.add('selected');
+        container.classList.add('scale-110');
+        return;
+    }
+
+    container.classList.add('scale-100');
+}
+
+
+===== apps/web/lib/overseas-map-helpers.ts | bytes=3355 | sha256=087b639dadb31c999af39f546d1ae7779836d956efe022f48cbab152da5f1097 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+import type { Restaurant } from '@/types/restaurant';
+
+export const CATEGORY_ICON_MAP: Record<string, string> = {
+    '고기': '/images/maker-images/webp/meat_bbq.webp',
+    '치킨': '/images/maker-images/webp/chicken.webp',
+    '한식': '/images/maker-images/webp/korean.webp',
+    '중식': '/images/maker-images/webp/chinese.webp',
+    '일식': '/images/maker-images/webp/cutlet_sashimi.webp',
+    '양식': '/images/maker-images/webp/western.webp',
+    '분식': '/images/maker-images/webp/snack_bar.webp',
+    '카페·디저트': '/images/maker-images/webp/cafe_dessert.webp',
+    '아시안': '/images/maker-images/webp/asian.webp',
+    '패스트푸드': '/images/maker-images/webp/fastfood.webp',
+    '족발·보쌈': '/images/maker-images/webp/pork_feet.webp',
+    '돈까스·회': '/images/maker-images/webp/cutlet_sashimi.webp',
+    '피자': '/images/maker-images/webp/pizza.webp',
+    '찜·탕': '/images/maker-images/webp/stew.webp',
+    '야식': '/images/maker-images/webp/late_night.webp',
+    '도시락': '/images/maker-images/webp/lunch_box.webp',
+};
+
+export const DEFAULT_OVERSEAS_ICON = '/images/maker-images/webp/asian.webp';
+export const DEFAULT_OVERSEAS_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
+export const MIN_OVERSEAS_ZOOM = 2;
+export const MAX_OVERSEAS_ZOOM = 22;
+
+export const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
+    미국: { lat: 39.8283, lng: -98.5795, zoom: 5 },
+    일본: { lat: 35.1815, lng: 136.9066, zoom: 10 },
+    대만: { lat: 25.0330, lng: 121.5654, zoom: 10 },
+    태국: { lat: 13.7563, lng: 100.5018, zoom: 11 },
+    인도네시아: { lat: -6.9667, lng: 110.4167, zoom: 7 },
+    튀르키예: { lat: 41.0082, lng: 28.9784, zoom: 11 },
+    헝가리: { lat: 47.4979, lng: 19.0402, zoom: 11 },
+    오스트레일리아: { lat: -33.8688, lng: 151.2093, zoom: 10 },
+};
+
+export const DEFAULT_OVERSEAS_CENTER = { lat: 20, lng: 0, zoom: 2 };
+
+export const mapZoomToSlider = (zoom: number) =>
+    Math.round(((zoom - MIN_OVERSEAS_ZOOM) / (MAX_OVERSEAS_ZOOM - MIN_OVERSEAS_ZOOM)) * 100);
+
+export const sliderToMapZoom = (value: number) =>
+    MIN_OVERSEAS_ZOOM + (value / 100) * (MAX_OVERSEAS_ZOOM - MIN_OVERSEAS_ZOOM);
+
+export function getOverseasInitialConfig(selectedCountry: string | null | undefined) {
+    return selectedCountry
+        ? OVERSEAS_REGIONS[selectedCountry]?.center ?? DEFAULT_OVERSEAS_CENTER
+        : DEFAULT_OVERSEAS_CENTER;
+}
+
+export function getNextOverseasWheelSlider({
+    currentMapZoom,
+    deltaY,
+    previousTargetSlider,
+    timeDiffMs,
+}: {
+    currentMapZoom: number;
+    deltaY: number;
+    previousTargetSlider: number;
+    timeDiffMs: number;
+}) {
+    const currentSlider = mapZoomToSlider(currentMapZoom);
+    const baseSlider = timeDiffMs < 400 && Math.abs(previousTargetSlider - currentSlider) < 5
+        ? previousTargetSlider
+        : currentSlider;
+
+    return deltaY > 0
+        ? Math.max(baseSlider - 1, 0)
+        : Math.min(baseSlider + 1, 100);
+}
+
+export function getRestaurantCategoryIcon(restaurant: Pick<Restaurant, 'categories'>) {
+    const categories = restaurant.categories;
+    const category = Array.isArray(categories) ? categories[0] : categories;
+    return CATEGORY_ICON_MAP[category ?? ''] || DEFAULT_OVERSEAS_ICON;
+}
+import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
+
+
+===== apps/web/lib/html-escape.ts | bytes=3845 | sha256=80483bd4443ee0d48e9162919cc050434f8e8251c19e7c68326fac07540b1d8e | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+export const MARKER_IMAGE_FALLBACK = '/images/maker-images/webp/chicken.webp';
+
+const MAX_MARKER_IMAGE_URL_LENGTH = 2048;
+const MAX_PERCENT_DECODE_PASSES = 4;
+const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F-\u009F]/;
+const ROOT_URL = 'https://marker.invalid';
+
+function decodeForMarkerImageSafety(value: string): string | null {
+    let decodedValue = value;
+
+    for (let pass = 0; pass < MAX_PERCENT_DECODE_PASSES; pass += 1) {
+        if (CONTROL_CHARACTER_PATTERN.test(decodedValue) || decodedValue.includes('\\')) {
+            return null;
+        }
+
+        if (!decodedValue.includes('%')) {
+            return decodedValue;
+        }
+
+        try {
+            const nextValue = decodeURIComponent(decodedValue);
+            if (nextValue === decodedValue) {
+                return decodedValue;
+            }
+            decodedValue = nextValue;
+        } catch {
+            return null;
+        }
+    }
+
+    return null;
+}
+function hasUnsafeDecodedMarkerPath(value: string): boolean {
+    const decodedPath = decodeForMarkerImageSafety(value);
+
+    return (
+        decodedPath === null ||
+        decodedPath.includes('//') ||
+        decodedPath.split('/').some((segment) => segment === '.' || segment === '..')
+    );
+}
+
+
+function isCanonicalRootRelativeMarkerPath(value: string): boolean {
+    if (
+        !value.startsWith('/') ||
+        value.startsWith('//') ||
+        value.includes('?') ||
+        value.includes('#')
+    ) {
+        return false;
+    }
+
+    if (hasUnsafeDecodedMarkerPath(value)) {
+        return false;
+    }
+
+
+    try {
+        const url = new URL(value, ROOT_URL);
+        return (
+            url.origin === ROOT_URL &&
+            url.pathname === value &&
+            url.search === '' &&
+            url.hash === ''
+        );
+    } catch {
+        return false;
+    }
+}
+
+function isCanonicalHttpsMarkerUrl(value: string): boolean {
+    if (decodeForMarkerImageSafety(value) === null) {
+        return false;
+    }
+
+
+    try {
+        const url = new URL(value);
+
+        return (
+            url.protocol === 'https:' &&
+            url.username === '' &&
+            url.password === '' &&
+            url.hostname !== '' &&
+            url.href === value &&
+            !hasUnsafeDecodedMarkerPath(url.pathname)
+        );
+    } catch {
+        return false;
+    }
+}
+
+export function sanitizeMarkerImageUrl(value: unknown): string {
+    if (
+        typeof value !== 'string' ||
+        value.length === 0 ||
+        value.length > MAX_MARKER_IMAGE_URL_LENGTH ||
+        CONTROL_CHARACTER_PATTERN.test(value) ||
+        value.includes('\\')
+    ) {
+        return MARKER_IMAGE_FALLBACK;
+    }
+
+    if (isCanonicalRootRelativeMarkerPath(value) || isCanonicalHttpsMarkerUrl(value)) {
+        return value;
+    }
+
+    return MARKER_IMAGE_FALLBACK;
+}
+
+export function escapeHtmlAttribute(value: string): string {
+    return value.replace(/[&<>"']/g, (char) => {
+        switch (char) {
+            case "&":
+                return "&amp;";
+            case "<":
+                return "&lt;";
+            case ">":
+                return "&gt;";
+            case '"':
+                return "&quot;";
+            case "'":
+                return "&#39;";
+            default:
+                return char;
+        }
+    });
+}
+export function stripUnsafeMarkup(value: string): string {
+    return String(value ?? "")
+        .split(/<\/?script\b/i)[0]
+        .split(/<\/?style\b/i)[0]
+        .replace(/<[^>]*>/g, " ")
+        .replace(/[<>]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+export function decodeBasicHtmlEntities(value: string): string {
+    return String(value ?? "")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, "")
+        .replace(/&gt;/g, "")
+        .replace(/&amp;/g, "&");
+}
+
+
+===== apps/web/lib/evidence-engineering/popularity-marker.ts | bytes=2969 | sha256=65fd5cc14b916e92720dfdaf81f20545b8caf3d8b3e56d9c06a4e4a9baea49d6 | commit=8d47c225afcff1aa1cc5d4a2d8578911c945e217 | committed=true =====
+export const POPULARITY_MARKER_CSS = `
+.tz-popularity-marker { position: relative; width: 100%; height: 100%; isolation: isolate; }
+.tz-popularity-flame { position: absolute; width: 24px; height: 32px; left: 50%; bottom: calc(100% - 2px); z-index: 300; pointer-events: none; transform: translateX(-50%); animation: tz-popularity-flame 1.4s ease-in-out infinite; }
+[data-popularity-tier="fire"] .tz-popularity-flame-outer { fill: #e10600; }
+[data-popularity-tier="fire"] .tz-popularity-flame-core { fill: #ffe14a; }
+[data-popularity-tier="ember"] .tz-popularity-flame-outer { fill: #ff7b43; }
+[data-popularity-tier="ember"] .tz-popularity-flame-core { fill: #fff1c2; }
+[data-popularity-tier="rainbow"] .tz-popularity-flame-outer { fill: #2f6bff; }
+[data-popularity-tier="rainbow"] .tz-popularity-flame-core { fill: #e8f0ff; }
+@keyframes tz-popularity-flame {
+  50% { transform: translateX(-50%) translateY(-2px) scale(1.06); opacity: 0.85; }
+}
+[data-map-interacting="true"] .tz-popularity-flame { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .tz-popularity-flame { animation: none; }
+}
+`;
+
+const FLAME_SVG = '<svg class="tz-popularity-flame" viewBox="0 0 32 42" aria-hidden="true" focusable="false"><path class="tz-popularity-flame-outer" stroke="#fff7ed" stroke-width="1.4" d="M17 1c3 12-7 14-6 22 3-2 5-5 5-8 12 9 17 26 0 26C-3 41-3 24 6 15c0 6 1 8 3 9C6 15 19 12 17 1Z"/><path class="tz-popularity-flame-core" d="M17 24c1 6-5 7-4 11 5 4 12-2 4-11Z"/></svg>';
+
+const POPULARITY_TIER_RANK = { standard: 0, rainbow: 1, ember: 2, fire: 3 } as const;
+
+export function publicPopularityTier(value: unknown): "fire" | "ember" | "rainbow" | "standard" {
+  return value === "fire" || value === "ember" || value === "rainbow" ? value : "standard";
+}
+
+export function bestPopularityTier(current: unknown, next: unknown): "fire" | "ember" | "rainbow" | "standard" {
+  const left = publicPopularityTier(current);
+  const right = publicPopularityTier(next);
+  return POPULARITY_TIER_RANK[right] > POPULARITY_TIER_RANK[left] ? right : left;
+}
+
+export function popularityFlameMarkup(tier: unknown): string {
+  const safeTier = publicPopularityTier(tier);
+  if (safeTier === "standard") return "";
+  return `<style>${POPULARITY_MARKER_CSS}</style>${FLAME_SVG}`;
+}
+
+export function wrapMarkerWithPopularityTier(innerHtml: string, tier: "fire" | "ember" | "rainbow" | "standard" | null | undefined): string {
+  const safeTier = publicPopularityTier(tier);
+  return `<style>${POPULARITY_MARKER_CSS}</style><div class="tz-popularity-marker" data-popularity-tier="${safeTier}">${innerHtml}${safeTier === "standard" ? "" : FLAME_SVG}</div>`;
+}
+
+export function syncPopularityMarkerInteraction(
+  element: { setAttribute(name: string, value: string): void; removeAttribute(name: string): void },
+  interacting: boolean,
+): void {
+  if (interacting) element.setAttribute("data-map-interacting", "true");
+  else element.removeAttribute("data-map-interacting");
+}
+

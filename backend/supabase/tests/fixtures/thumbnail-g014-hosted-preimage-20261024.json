@@ -1,0 +1,1051 @@
+{
+  "provenance": {
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "serverVersion": "17.6",
+    "snapshotSha256": "855c587ea33c76d52e2c704b248838a9db260093f54b3987f7d7d1d077dcc83f",
+    "observedAt": "2026-10-23 15:15:41 UTC",
+    "bodyDigestsRevalidated": "2026-10-24 read-only catalog; no assertion invocation",
+    "metadataReadOnly": true
+  },
+  "registry": [
+    {
+      "grantee": "service_role",
+      "function_name": "activate_account_deletion_policy",
+      "function_schema": "public",
+      "source_signature": "public.activate_account_deletion_policy(text,text)",
+      "identity_arguments": "25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "admin_evaluation_catalog_snapshot",
+      "function_schema": "public",
+      "source_signature": "public.admin_evaluation_catalog_snapshot()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "admin_evaluation_page",
+      "function_schema": "public",
+      "source_signature": "public.admin_evaluation_page(jsonb,integer,uuid,text)",
+      "identity_arguments": "3802 23 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "admin_evaluation_raw_warning_groups",
+      "function_schema": "public",
+      "source_signature": "public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)",
+      "identity_arguments": "2951 25 3802 23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "admin_evaluation_revision",
+      "function_schema": "public",
+      "source_signature": "public.admin_evaluation_revision()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "admin_record_action",
+      "function_schema": "public",
+      "source_signature": "public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)",
+      "identity_arguments": "2950 25 2950 25 2951 3802 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "allocate_short_url",
+      "function_schema": "public",
+      "source_signature": "public.allocate_short_url(text,uuid,uuid,text,text[])",
+      "identity_arguments": "25 2950 2950 25 1009"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "append_admin_user_audit_event",
+      "function_schema": "public",
+      "source_signature": "public.append_admin_user_audit_event(uuid,uuid,text,text,text,uuid,jsonb,jsonb,timestamp with time zone,text,uuid,text,text)",
+      "identity_arguments": "2950 2950 25 25 25 2950 3802 3802 1184 25 2950 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "append_privacy_audit_event",
+      "function_schema": "public",
+      "source_signature": "public.append_privacy_audit_event(text,uuid,uuid,uuid,uuid,text,text,jsonb,jsonb)",
+      "identity_arguments": "25 2950 2950 2950 2950 25 25 3802 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "apply_account_deletion_database_cleanup",
+      "function_schema": "public",
+      "source_signature": "public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)",
+      "identity_arguments": "2950 2950 2950 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "apply_admin_restaurant_map_overlay_action",
+      "function_schema": "public",
+      "source_signature": "public.apply_admin_restaurant_map_overlay_action(uuid,text,uuid,text,text,text,timestamptz,timestamptz,jsonb,text,text,text,uuid,text,jsonb)",
+      "identity_arguments": "2950 25 2950 25 25 25 1184 1184 3802 25 25 25 2950 25 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "apply_admin_user_db_mutation",
+      "function_schema": "public",
+      "source_signature": "public.apply_admin_user_db_mutation(uuid,uuid,text,text,jsonb,jsonb,uuid,jsonb,text,text,text,text,text)",
+      "identity_arguments": "2950 2950 25 25 3802 3802 2950 3802 25 25 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "apply_privacy_incident_transition",
+      "function_schema": "public",
+      "source_signature": "public.apply_privacy_incident_transition(uuid,uuid,uuid,public.privacy_incident_status,timestamptz,text,text,text,jsonb,uuid,text)",
+      "identity_arguments": "2950 2950 2950 1788370 1184 25 25 25 3802 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "apply_privacy_retention_run",
+      "function_schema": "public",
+      "source_signature": "public.apply_privacy_retention_run(uuid,text,text,integer)",
+      "identity_arguments": "2950 25 25 23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "apply_restaurant_admin_destructive_action",
+      "function_schema": "public",
+      "source_signature": "public.apply_restaurant_admin_destructive_action(uuid,text,text,uuid[],uuid,jsonb)",
+      "identity_arguments": "2950 25 25 2951 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "approve_admin_restaurant_map_overlay_proposal",
+      "function_schema": "public",
+      "source_signature": "public.approve_admin_restaurant_map_overlay_proposal(uuid,uuid,text,text,text,text,jsonb,text,text,uuid,text,jsonb)",
+      "identity_arguments": "2950 2950 25 25 25 25 3802 25 25 2950 25 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "approve_edit_restaurant_submission",
+      "function_schema": "public",
+      "source_signature": "public.approve_edit_restaurant_submission(uuid,uuid,uuid[])",
+      "identity_arguments": "2950 2950 2951"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "approve_edit_submission_item",
+      "function_schema": "public",
+      "source_signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+      "identity_arguments": "2950 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "approve_edit_submission_item",
+      "function_schema": "public",
+      "source_signature": "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+      "identity_arguments": "2950 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "approve_new_restaurant_submission",
+      "function_schema": "public",
+      "source_signature": "public.approve_new_restaurant_submission(uuid,uuid,jsonb)",
+      "identity_arguments": "2950 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "approve_restaurant",
+      "function_schema": "public",
+      "source_signature": "public.approve_restaurant(uuid,uuid)",
+      "identity_arguments": "2950 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "approve_restaurant_submission",
+      "function_schema": "public",
+      "source_signature": "public.approve_restaurant_submission(uuid,uuid)",
+      "identity_arguments": "2950 2950"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "approve_submission_item",
+      "function_schema": "public",
+      "source_signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+      "identity_arguments": "2950 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "approve_submission_item",
+      "function_schema": "public",
+      "source_signature": "public.approve_submission_item(uuid,uuid,jsonb)",
+      "identity_arguments": "2950 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "batch_insert_restaurants_from_jsonl",
+      "function_schema": "public",
+      "source_signature": "public.batch_insert_restaurants_from_jsonl(jsonb[])",
+      "identity_arguments": "3807"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "begin_account_deletion_apply",
+      "function_schema": "public",
+      "source_signature": "public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)",
+      "identity_arguments": "2950 2950 2950 25 25 25 1184 25"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "begin_account_deletion_apply_with_reauth",
+      "function_schema": "public",
+      "source_signature": "public.begin_account_deletion_apply_with_reauth(uuid,uuid,uuid,uuid,text,text,text,text)",
+      "identity_arguments": "2950 2950 2950 2950 25 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "claim_account_deletion_external_job",
+      "function_schema": "public",
+      "source_signature": "public.claim_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)",
+      "identity_arguments": "2950 2950 2950 25 25 25 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "claim_admin_trend_job_request",
+      "function_schema": "public",
+      "source_signature": "public.claim_admin_trend_job_request(text,interval)",
+      "identity_arguments": "25 1186"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "claim_marketing_campaign_dispatch",
+      "function_schema": "public",
+      "source_signature": "public.claim_marketing_campaign_dispatch(uuid,uuid,uuid,text,text,text)",
+      "identity_arguments": "2950 2950 2950 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "claim_next_account_deletion_external_job",
+      "function_schema": "public",
+      "source_signature": "public.claim_next_account_deletion_external_job()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "claim_privacy_retention_storage_items",
+      "function_schema": "public",
+      "source_signature": "public.claim_privacy_retention_storage_items(uuid,text,text,integer)",
+      "identity_arguments": "2950 25 25 23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "cleanup_old_notifications",
+      "function_schema": "public",
+      "source_signature": "public.cleanup_old_notifications(integer)",
+      "identity_arguments": "23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "complete_admin_trend_job_request",
+      "function_schema": "public",
+      "source_signature": "public.complete_admin_trend_job_request(uuid,text,uuid,jsonb)",
+      "identity_arguments": "2950 25 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "confirm_privacy_onboarding",
+      "function_schema": "public",
+      "source_signature": "public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)",
+      "identity_arguments": "2950 25 2950 25 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "confirm_privacy_retention_run",
+      "function_schema": "public",
+      "source_signature": "public.confirm_privacy_retention_run(uuid,text,text,text)",
+      "identity_arguments": "2950 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "consume_tzuyang_address_evidence_admin_approval",
+      "function_schema": "public",
+      "source_signature": "public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamptz,timestamptz)",
+      "identity_arguments": "2950 25 25 2950 25 25 25 1184 1184"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "create_admin_transactional_notification",
+      "function_schema": "public",
+      "source_signature": "public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)",
+      "identity_arguments": "2950 2950 25 25 25 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "create_privacy_onboarding_challenge",
+      "function_schema": "public",
+      "source_signature": "public.create_privacy_onboarding_challenge(text,uuid,text,jsonb,text,timestamptz)",
+      "identity_arguments": "25 2950 25 3802 25 1184"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "create_review_like_notification",
+      "function_schema": "public",
+      "source_signature": "public.create_review_like_notification(uuid,uuid,uuid)",
+      "identity_arguments": "2950 2950 2950"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "create_user_notification",
+      "function_schema": "public",
+      "source_signature": "public.create_user_notification(uuid,text,text,text,jsonb)",
+      "identity_arguments": "2950 25 25 25 3802"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "delete_notification",
+      "function_schema": "public",
+      "source_signature": "public.delete_notification(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "delete_pending_restaurant_submission",
+      "function_schema": "public",
+      "source_signature": "public.delete_pending_restaurant_submission(uuid,uuid,text)",
+      "identity_arguments": "2950 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "evaluate_notification_marketing_permission",
+      "function_schema": "public",
+      "source_signature": "public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)",
+      "identity_arguments": "2950 25 1184 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "extract_youtube_video_id",
+      "function_schema": "public",
+      "source_signature": "public.extract_youtube_video_id(text)",
+      "identity_arguments": "25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "fail_account_deletion",
+      "function_schema": "public",
+      "source_signature": "public.fail_account_deletion(uuid,uuid,uuid,text,text,text,text)",
+      "identity_arguments": "2950 2950 2950 25 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "fail_admin_trend_job_request",
+      "function_schema": "public",
+      "source_signature": "public.fail_admin_trend_job_request(uuid,text,text,jsonb)",
+      "identity_arguments": "2950 25 25 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "fail_marketing_campaign_batch",
+      "function_schema": "public",
+      "source_signature": "public.fail_marketing_campaign_batch(uuid,uuid,uuid,text,text)",
+      "identity_arguments": "2950 2950 2950 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "fail_marketing_campaign_provider_attempt",
+      "function_schema": "public",
+      "source_signature": "public.fail_marketing_campaign_provider_attempt(uuid,uuid,uuid,text,uuid,uuid,text,text,text,text)",
+      "identity_arguments": "2950 2950 2950 25 2950 2950 25 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "fail_privacy_retention_storage_claims",
+      "function_schema": "public",
+      "source_signature": "public.fail_privacy_retention_storage_claims(uuid,text,text,uuid[],text)",
+      "identity_arguments": "2950 25 25 2951 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "finalize_marketing_campaign_batch",
+      "function_schema": "public",
+      "source_signature": "public.finalize_marketing_campaign_batch(uuid,uuid,uuid,text,uuid,uuid,text,text,text,uuid[],text)",
+      "identity_arguments": "2950 2950 2950 25 2950 2950 25 25 25 2951 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "finalize_privacy_retention_run",
+      "function_schema": "public",
+      "source_signature": "public.finalize_privacy_retention_run(uuid,text,text)",
+      "identity_arguments": "2950 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "get_account_deletion_storage_work",
+      "function_schema": "public",
+      "source_signature": "public.get_account_deletion_storage_work(uuid,uuid,uuid,text,text,text,uuid)",
+      "identity_arguments": "2950 2950 2950 25 25 25 2950"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "get_current_auth_session_id",
+      "function_schema": "public",
+      "source_signature": "public.get_current_auth_session_id()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "get_current_privacy_eligibility",
+      "function_schema": "public",
+      "source_signature": "public.get_current_privacy_eligibility()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "get_current_privacy_policy_version",
+      "function_schema": "public",
+      "source_signature": "public.get_current_privacy_policy_version()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "get_current_privacy_policy_version",
+      "function_schema": "public",
+      "source_signature": "public.get_current_privacy_policy_version()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "get_ocr_daily_quota_status",
+      "function_schema": "public",
+      "source_signature": "public.get_ocr_daily_quota_status()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "get_privacy_eligibility_for_user",
+      "function_schema": "public",
+      "source_signature": "public.get_privacy_eligibility_for_user(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "get_privacy_retention_provider_reconciliation_work",
+      "function_schema": "public",
+      "source_signature": "public.get_privacy_retention_provider_reconciliation_work(uuid,text,text,text,integer)",
+      "identity_arguments": "2950 25 25 25 23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "hold_privacy_onboarding_compensation",
+      "function_schema": "public",
+      "source_signature": "public.hold_privacy_onboarding_compensation(uuid,uuid,text,text)",
+      "identity_arguments": "2950 2950 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "insert_restaurant_from_jsonl",
+      "function_schema": "public",
+      "source_signature": "public.insert_restaurant_from_jsonl(jsonb)",
+      "identity_arguments": "3802"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "is_current_auth_session_active",
+      "function_schema": "public",
+      "source_signature": "public.is_current_auth_session_active()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "issue_account_deletion_reauth_proof",
+      "function_schema": "public",
+      "source_signature": "public.issue_account_deletion_reauth_proof(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "make_user_admin",
+      "function_schema": "public",
+      "source_signature": "public.make_user_admin(text)",
+      "identity_arguments": "25"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "mark_all_notifications_read",
+      "function_schema": "public",
+      "source_signature": "public.mark_all_notifications_read()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "mark_notification_read",
+      "function_schema": "public",
+      "source_signature": "public.mark_notification_read(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "marketing_campaign_receipt",
+      "function_schema": "public",
+      "source_signature": "public.marketing_campaign_receipt(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "match_storyboard_documents_hybrid",
+      "function_schema": "public",
+      "source_signature": "public.match_storyboard_documents_hybrid(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)",
+      "identity_arguments": "2950 125289 3802 701 23 23 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "match_storyboard_documents_hybrid",
+      "function_schema": "public",
+      "source_signature": "public.match_storyboard_documents_hybrid(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)",
+      "identity_arguments": "2950 125289 3802 701 23 23 3802"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "match_storyboard_documents_hybrid_v2",
+      "function_schema": "public",
+      "source_signature": "public.match_storyboard_documents_hybrid_v2(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)",
+      "identity_arguments": "2950 125289 3802 701 23 23 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "match_storyboard_documents_hybrid_v2",
+      "function_schema": "public",
+      "source_signature": "public.match_storyboard_documents_hybrid_v2(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)",
+      "identity_arguments": "2950 125289 3802 701 23 23 3802"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "merge_restaurant_records_for_admin_review",
+      "function_schema": "public",
+      "source_signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+      "identity_arguments": "2950 2950 2950 1184 25 3802 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "merge_restaurant_records_for_admin_review",
+      "function_schema": "public",
+      "source_signature": "public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)",
+      "identity_arguments": "2950 2950 2950 1184 25 3802 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "normalize_restaurant_identity_name",
+      "function_schema": "public",
+      "source_signature": "public.normalize_restaurant_identity_name(text)",
+      "identity_arguments": "25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "ocr_log_metadata_is_safe",
+      "function_schema": "public",
+      "source_signature": "public.ocr_log_metadata_is_safe(jsonb)",
+      "identity_arguments": "3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "preflight_release_auth_session_family",
+      "function_schema": "public",
+      "source_signature": "public.preflight_release_auth_session_family(uuid,uuid,uuid,text,bigint)",
+      "identity_arguments": "2950 2950 2950 25 20"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "prepare_account_deletion_external_egress",
+      "function_schema": "public",
+      "source_signature": "public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid)",
+      "identity_arguments": "2950 2950 2950 25 25 25 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "prepare_marketing_campaign_batch",
+      "function_schema": "public",
+      "source_signature": "public.prepare_marketing_campaign_batch(uuid,uuid,text,text,integer,text)",
+      "identity_arguments": "2950 2950 25 25 23 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "preview_account_deletion",
+      "function_schema": "public",
+      "source_signature": "public.preview_account_deletion(uuid,uuid,timestamptz)",
+      "identity_arguments": "2950 2950 1184"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "preview_marketing_campaign",
+      "function_schema": "public",
+      "source_signature": "public.preview_marketing_campaign(uuid,text,uuid[],text,text,jsonb,text,timestamptz)",
+      "identity_arguments": "2950 25 2951 25 25 3802 25 1184"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "preview_privacy_incident_transition",
+      "function_schema": "public",
+      "source_signature": "public.preview_privacy_incident_transition(uuid,uuid,public.privacy_incident_status,timestamptz,text,jsonb,uuid)",
+      "identity_arguments": "2950 2950 1788370 1184 25 3802 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "preview_privacy_retention_run",
+      "function_schema": "public",
+      "source_signature": "public.preview_privacy_retention_run(text,timestamptz,integer,integer)",
+      "identity_arguments": "25 1184 23 23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "publish_account_deletion_policy",
+      "function_schema": "public",
+      "source_signature": "public.publish_account_deletion_policy(text,interval,interval,text,jsonb,text,text)",
+      "identity_arguments": "25 1186 1186 25 3802 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "publish_privacy_policy_version",
+      "function_schema": "public",
+      "source_signature": "public.publish_privacy_policy_version(text,text,text,timestamptz,uuid,text,text)",
+      "identity_arguments": "25 25 25 1184 2950 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "read_account_deletion_external_job",
+      "function_schema": "public",
+      "source_signature": "public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)",
+      "identity_arguments": "2950 2950 2950 25 25 25 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "read_admin_user_audit_events",
+      "function_schema": "public",
+      "source_signature": "public.read_admin_user_audit_events(integer)",
+      "identity_arguments": "23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "read_admin_user_management_metadata",
+      "function_schema": "public",
+      "source_signature": "public.read_admin_user_management_metadata(uuid[])",
+      "identity_arguments": "2951"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "read_current_account_deletion_status",
+      "function_schema": "public",
+      "source_signature": "public.read_current_account_deletion_status(uuid,text,text)",
+      "identity_arguments": "2950 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "read_privacy_guardian_status",
+      "function_schema": "public",
+      "source_signature": "public.read_privacy_guardian_status(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "anon",
+      "function_name": "read_public_profile_leaderboard_page",
+      "function_schema": "public",
+      "source_signature": "public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)",
+      "identity_arguments": "25 23 1700 2950"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "read_public_profile_leaderboard_page",
+      "function_schema": "public",
+      "source_signature": "public.read_public_profile_leaderboard_page(text,integer,numeric,uuid)",
+      "identity_arguments": "25 23 1700 2950"
+    },
+    {
+      "grantee": "anon",
+      "function_name": "read_public_profile_summaries",
+      "function_schema": "public",
+      "source_signature": "public.read_public_profile_summaries(uuid[])",
+      "identity_arguments": "2951"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "read_public_profile_summaries",
+      "function_schema": "public",
+      "source_signature": "public.read_public_profile_summaries(uuid[])",
+      "identity_arguments": "2951"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "read_release_auth_revocation",
+      "function_schema": "public",
+      "source_signature": "public.read_release_auth_revocation(uuid,uuid,uuid)",
+      "identity_arguments": "2950 2950 2950"
+    },
+    {
+      "grantee": "anon",
+      "function_name": "read_release_auth_revocation_by_operation",
+      "function_schema": "public",
+      "source_signature": "public.read_release_auth_revocation_by_operation(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "read_release_auth_revocation_by_operation",
+      "function_schema": "public",
+      "source_signature": "public.read_release_auth_revocation_by_operation(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "reconcile_account_deletion_auth_job",
+      "function_schema": "public",
+      "source_signature": "public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid)",
+      "identity_arguments": "2950 2950 2950 25 25 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "reconcile_account_deletion_storage_job",
+      "function_schema": "public",
+      "source_signature": "public.reconcile_account_deletion_storage_job(uuid,uuid,uuid,text,text,text,uuid)",
+      "identity_arguments": "2950 2950 2950 25 25 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "record_account_deletion_external_provider_proof",
+      "function_schema": "public",
+      "source_signature": "public.record_account_deletion_external_provider_proof(uuid,uuid,uuid,text,text,text,text,uuid,text,text,text,text)",
+      "identity_arguments": "2950 2950 2950 25 25 25 25 2950 25 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "record_app_web_vitals",
+      "function_schema": "public",
+      "source_signature": "public.record_app_web_vitals(text,text,text,text,smallint)",
+      "identity_arguments": "25 25 25 25 21"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "record_app_web_vitals_bounded",
+      "function_schema": "public",
+      "source_signature": "public.record_app_web_vitals_bounded(text,text,text,text,smallint)",
+      "identity_arguments": "25 25 25 25 21"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "record_privacy_guardian_verification",
+      "function_schema": "public",
+      "source_signature": "public.record_privacy_guardian_verification(uuid,uuid,text,text,text,timestamptz,timestamptz)",
+      "identity_arguments": "2950 2950 25 25 25 1184 1184"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "record_privacy_incident_detection",
+      "function_schema": "public",
+      "source_signature": "public.record_privacy_incident_detection(uuid,uuid,text,timestamptz,text,uuid)",
+      "identity_arguments": "2950 2950 25 1184 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "record_privacy_retention_storage_provider_receipts",
+      "function_schema": "public",
+      "source_signature": "public.record_privacy_retention_storage_provider_receipts(uuid,text,text,jsonb)",
+      "identity_arguments": "2950 25 25 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "refresh_materialized_views",
+      "function_schema": "public",
+      "source_signature": "public.refresh_materialized_views()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "reject_restaurant",
+      "function_schema": "public",
+      "source_signature": "public.reject_restaurant(uuid,uuid,text)",
+      "identity_arguments": "2950 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "reject_restaurant_submission",
+      "function_schema": "public",
+      "source_signature": "public.reject_restaurant_submission(uuid,uuid,text)",
+      "identity_arguments": "2950 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "reject_submission",
+      "function_schema": "public",
+      "source_signature": "public.reject_submission(uuid,uuid,text)",
+      "identity_arguments": "2950 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "reject_submission_item",
+      "function_schema": "public",
+      "source_signature": "public.reject_submission_item(uuid,uuid,text)",
+      "identity_arguments": "2950 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "reserve_admin_provider_budget",
+      "function_schema": "public",
+      "source_signature": "public.reserve_admin_provider_budget(uuid,text,uuid)",
+      "identity_arguments": "2950 25 2950"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "reserve_ocr_daily_quota",
+      "function_schema": "public",
+      "source_signature": "public.reserve_ocr_daily_quota(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "resolve_privacy_retention_provider_effect",
+      "function_schema": "public",
+      "source_signature": "public.resolve_privacy_retention_provider_effect(uuid,text,text,uuid,uuid,text,text,text,text,text,text)",
+      "identity_arguments": "2950 25 25 2950 2950 25 25 25 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "resolve_restaurant_identity_name",
+      "function_schema": "public",
+      "source_signature": "public.resolve_restaurant_identity_name(text,text,text,text)",
+      "identity_arguments": "25 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "restaurant_review_automation_configure",
+      "function_schema": "public",
+      "source_signature": "public.restaurant_review_automation_configure(uuid,text,text,text,integer,integer)",
+      "identity_arguments": "2950 25 25 25 23 23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "restaurant_review_automation_manual",
+      "function_schema": "public",
+      "source_signature": "public.restaurant_review_automation_manual(uuid,text,text,text,uuid)",
+      "identity_arguments": "2950 25 25 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "restaurant_review_automation_preview",
+      "function_schema": "public",
+      "source_signature": "public.restaurant_review_automation_preview(uuid,integer,integer)",
+      "identity_arguments": "2950 23 23"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "restaurant_review_automation_status",
+      "function_schema": "public",
+      "source_signature": "public.restaurant_review_automation_status()",
+      "identity_arguments": ""
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "restaurant_review_automation_tick",
+      "function_schema": "public",
+      "source_signature": "public.restaurant_review_automation_tick(uuid)",
+      "identity_arguments": "2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "restaurant_review_automation_worker",
+      "function_schema": "public",
+      "source_signature": "public.restaurant_review_automation_worker(text,uuid,uuid,jsonb)",
+      "identity_arguments": "25 2950 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "review_admin_restaurant_map_overlay_proposal",
+      "function_schema": "public",
+      "source_signature": "public.review_admin_restaurant_map_overlay_proposal(uuid,uuid,text,text,text,uuid,text,text,jsonb)",
+      "identity_arguments": "2950 2950 25 25 25 2950 25 25 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "review_restaurant_request",
+      "function_schema": "public",
+      "source_signature": "public.review_restaurant_request(uuid,uuid,text,text,text)",
+      "identity_arguments": "2950 2950 25 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "revoke_release_auth_session_family",
+      "function_schema": "public",
+      "source_signature": "public.revoke_release_auth_session_family(uuid,uuid,uuid,text)",
+      "identity_arguments": "2950 2950 2950 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "run_account_deletion_session_family_cleanup",
+      "function_schema": "public",
+      "source_signature": "public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)",
+      "identity_arguments": "2950 2950 2950 25 25 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_admin",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_admin(uuid,text,uuid,integer,jsonb)",
+      "identity_arguments": "2950 25 2950 23 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_auth_worker",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_auth_worker(text)",
+      "identity_arguments": "25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_error_allowed",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_error_allowed(text)",
+      "identity_arguments": "25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_final_status",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_final_status(jsonb,jsonb)",
+      "identity_arguments": "3802 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_job_json",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_job_json(public.admin_storyboard_production_jobs)",
+      "identity_arguments": "1804445"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_model_available",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_model_available(jsonb,text,text)",
+      "identity_arguments": "3802 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_project_json",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_project_json(public.admin_storyboard_production_projects)",
+      "identity_arguments": "1804397"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_snapshot",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_snapshot(uuid,uuid)",
+      "identity_arguments": "2950 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "storyboard_production_worker",
+      "function_schema": "public",
+      "source_signature": "public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)",
+      "identity_arguments": "2950 25 2950 2950 3802"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "submit_guardian_privacy_consent",
+      "function_schema": "public",
+      "source_signature": "public.submit_guardian_privacy_consent(text,text,text,uuid,text,uuid,text,uuid)",
+      "identity_arguments": "25 25 25 2950 25 2950 25 2950"
+    },
+    {
+      "grantee": "authenticated",
+      "function_name": "submit_privacy_consent",
+      "function_schema": "public",
+      "source_signature": "public.submit_privacy_consent(text,text,text,uuid,text,text,uuid,text,uuid)",
+      "identity_arguments": "25 25 25 2950 25 25 2950 25 2950"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "submit_restaurant_submission",
+      "function_schema": "public",
+      "source_signature": "public.submit_restaurant_submission(uuid,text,text,text,text,text,text[],text,text)",
+      "identity_arguments": "2950 25 25 25 25 25 1009 25 25"
+    },
+    {
+      "grantee": "service_role",
+      "function_name": "transition_privacy_onboarding_challenge",
+      "function_schema": "public",
+      "source_signature": "public.transition_privacy_onboarding_challenge(uuid,text,text,uuid,text)",
+      "identity_arguments": "2950 25 25 2950 25"
+    }
+  ],
+  "registryDigest": "e18337a71017c051d5e8dd1624806010a07d756aa11b2ffb1338005421ee2c16",
+  "metadata": {
+    "role": {
+      "login": false,
+      "super": false,
+      "inherit": false,
+      "createDb": false,
+      "bypassRls": false,
+      "createRole": false,
+      "replication": false
+    },
+    "schema": {
+      "acl": "{privacy_workflow_owner=UC/privacy_workflow_owner,privacy_retention_operator_approver=U/privacy_workflow_owner,privacy_retention_legal_approver=U/privacy_workflow_owner,privacy_retention_activation_operator=U/privacy_workflow_owner}",
+      "owner": "privacy_workflow_owner"
+    },
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "true",
+        "roles": [
+          "privacy_workflow_owner"
+        ],
+        "tablename": "g014_public_rpc_allowlist",
+        "permissive": "PERMISSIVE",
+        "policyname": "g014_privacy_workflow_owner_access",
+        "schemaname": "privacy_retention",
+        "with_check": "true"
+      }
+    ],
+    "relation": {
+      "acl": "{privacy_workflow_owner=arwdDxtm/privacy_workflow_owner}",
+      "rls": true,
+      "force": true,
+      "owner": "privacy_workflow_owner"
+    },
+    "constraints": [
+      {
+        "name": "g014_public_rpc_allowlist_grantee_check",
+        "definition": "CHECK ((grantee = ANY (ARRAY['anon'::name, 'authenticated'::name, 'service_role'::name])))"
+      },
+      {
+        "name": "g014_public_rpc_allowlist_pkey",
+        "definition": "PRIMARY KEY (function_schema, function_name, identity_arguments, grantee)"
+      },
+      {
+        "name": "g014_public_rpc_allowlist_source_signature_grantee_key",
+        "definition": "UNIQUE (source_signature, grantee)"
+      }
+    ],
+    "nonInternalTriggers": []
+  },
+  "assertions": [
+    {
+      "signature": "privacy_retention.assert_g014_definer_contract()",
+      "definition": "CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_definer_contract()\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nDECLARE\n  v_signature text;\n  v_oid oid;\n  v_owner text;\n  v_search_path text;\n  v_is_definer boolean;\nBEGIN\n  FOR v_signature IN\n    SELECT source_signature FROM privacy_retention.g014_public_rpc_allowlist\n    UNION ALL VALUES\n      ('privacy_retention.g014_retention_storage_receipt_set_hash(uuid)'),\n      ('privacy_retention.g014_retention_source_absent(text,text,text,text)'),\n      ('privacy_retention.g014_retention_no_active_hold_mutated(uuid)'),\n      ('privacy_retention.g014_retention_catalog_fingerprint(text,text)'),\n      ('privacy_retention.g014_retention_require_activation_operator()'),\n      ('privacy_retention.g014_retention_active_adapter_version(text)'),\n      ('privacy_retention.g014_retention_active_source_mapping_version(text)'),\n      ('privacy_retention.g014_retention_assert_class_bindings(text)'),\n      ('privacy_retention.g014_retention_assert_run_bindings(text,text,text)'),\n      ('privacy_retention.g014_retention_append_audit(privacy_retention.privacy_retention_runs,text,text)')\n  LOOP\n    v_oid := pg_catalog.to_regprocedure(v_signature);\n    IF v_oid IS NULL THEN\n      RAISE EXCEPTION 'G014 required RPC identity is missing: %', v_signature;\n    END IF;\n    SELECT procedure.prosecdef\n    INTO v_is_definer\n    FROM pg_catalog.pg_proc AS procedure\n    WHERE procedure.oid = v_oid;\n    IF v_signature IN (\n      'public.extract_youtube_video_id(text)',\n      'public.normalize_restaurant_identity_name(text)',\n      'public.admin_evaluation_revision()',\n      'public.admin_evaluation_catalog_snapshot()',\n      'public.storyboard_production_error_allowed(text)',\n      'public.storyboard_production_final_status(jsonb,jsonb)',\n      'public.storyboard_production_project_json(public.admin_storyboard_production_projects)',\n      'public.storyboard_production_job_json(public.admin_storyboard_production_jobs)',\n      'public.storyboard_production_snapshot(uuid,uuid)',\n      'public.storyboard_production_auth_worker(text)',\n      'public.storyboard_production_model_available(jsonb,text,text)',\n      'public.storyboard_production_admin(uuid,text,uuid,integer,jsonb)',\n      'public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)',\n      'public.record_app_web_vitals(text,text,text,text,smallint)',\n      'public.record_app_web_vitals_bounded(text,text,text,text,smallint)',\n      'public.restaurant_review_automation_manual(uuid,text,text,text,uuid)',\n      'public.admin_evaluation_page(jsonb,integer,uuid,text)',\n      'public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)',\n      'public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)',\n      'public.restaurant_review_automation_status()',\n      'public.restaurant_review_automation_preview(uuid,integer,integer)',\n      'public.restaurant_review_automation_configure(uuid,text,text,text,integer,integer)',\n      'public.restaurant_review_automation_tick(uuid)',\n      'public.restaurant_review_automation_worker(text,uuid,uuid,jsonb)',\n      'public.resolve_restaurant_identity_name(text,text,text,text)'\n    ) THEN\n      IF v_is_definer OR NOT EXISTS (\n        SELECT 1 FROM pg_catalog.pg_proc AS p\n        WHERE p.oid = v_oid\n          AND pg_catalog.pg_get_userbyid(p.proowner) = 'postgres'\n          AND p.proconfig IS NOT DISTINCT FROM CASE\n            WHEN v_signature IN (\n              'public.extract_youtube_video_id(text)',\n              'public.normalize_restaurant_identity_name(text)',\n              'public.resolve_restaurant_identity_name(text,text,text,text)'\n            ) THEN ARRAY['search_path=pg_catalog, public, extensions']::text[]\n            WHEN v_signature IN (\n              'public.restaurant_review_automation_manual(uuid,text,text,text,uuid)',\n              'public.restaurant_review_automation_tick(uuid)',\n              'public.restaurant_review_automation_worker(text,uuid,uuid,jsonb)'\n            ) THEN ARRAY['search_path=\"\"','lock_timeout=2s']::text[]\n            ELSE ARRAY['search_path=\"\"']::text[]\n          END\n          AND pg_catalog.has_function_privilege('service_role', p.oid, 'EXECUTE')\n          AND NOT pg_catalog.has_function_privilege('anon', p.oid, 'EXECUTE')\n          AND NOT pg_catalog.has_function_privilege('authenticated', p.oid, 'EXECUTE')\n          AND NOT EXISTS (\n            SELECT 1 FROM pg_catalog.aclexplode(\n              COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))\n            ) AS acl\n            WHERE acl.grantee NOT IN (p.proowner, 'service_role'::pg_catalog.regrole)\n              OR acl.is_grantable\n          )\n      ) OR NOT EXISTS (\n        SELECT 1 FROM privacy_retention.g014_public_rpc_allowlist AS allowed\n        WHERE allowed.source_signature = v_signature AND allowed.grantee = 'service_role'\n      ) OR EXISTS (\n        SELECT 1 FROM privacy_retention.g014_public_rpc_allowlist AS allowed\n        WHERE allowed.source_signature = v_signature AND allowed.grantee <> 'service_role'\n      ) THEN\n        RAISE EXCEPTION 'G014 service-only SECURITY INVOKER contract mismatch: %', v_signature;\n      END IF;\n      CONTINUE;\n    END IF;\n    IF v_signature IN (\n      'public.match_storyboard_documents_hybrid(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',\n      'public.match_storyboard_documents_hybrid_v2(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',\n      'public.ocr_log_metadata_is_safe(jsonb)'\n    ) THEN\n      IF v_is_definer THEN\n        RAISE EXCEPTION 'G014 declared SECURITY INVOKER RPC became SECURITY DEFINER: %', v_signature;\n      END IF;\n      CONTINUE;\n    END IF;\n    IF NOT v_is_definer THEN\n      RAISE EXCEPTION 'G014 required SECURITY DEFINER identity is SECURITY INVOKER: %', v_signature;\n    END IF;\n\n    SELECT pg_catalog.pg_get_userbyid(procedure.proowner), setting.value\n    INTO v_owner, v_search_path\n    FROM pg_catalog.pg_proc AS procedure\n    LEFT JOIN LATERAL pg_catalog.unnest(procedure.proconfig) AS setting(value)\n      ON setting.value LIKE 'search_path=%'\n    WHERE procedure.oid = v_oid;\n\n    IF v_owner IS DISTINCT FROM (CASE\n      WHEN v_signature = ANY (ARRAY[\n        'public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)',\n        'public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)',\n        'public.create_review_like_notification(uuid,uuid,uuid)',\n        'public.finalize_account_deletion_auth(uuid,uuid,uuid,text,text,text,uuid,text)',\n        'public.hold_privacy_onboarding_compensation(uuid,uuid,text,text)',\n        'public.make_user_admin(text)',\n        'public.preflight_release_auth_session_family(uuid,uuid,uuid,text,bigint)',\n        'public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid)',\n        'public.preview_account_deletion(uuid,uuid,timestamptz)',\n        'privacy_retention.g014_account_deletion_reconcile_expired_attempt(uuid,text,uuid)',\n        'privacy_retention.g014_retention_append_audit(privacy_retention.privacy_retention_runs,text,text)',\n        'public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)',\n        'public.read_release_auth_revocation(uuid,uuid,uuid)',\n        'public.read_release_auth_revocation_by_operation(uuid)',\n        'public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid)',\n        'public.revoke_release_auth_session_family(uuid,uuid,uuid,text)',\n        'public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)',\n        'privacy_retention.g014_account_deletion_apply_adapter(text,uuid,uuid)',\n        'public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)',\n        'public.activate_account_deletion_policy(text,text)',\n        'public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)'\n      ]) THEN 'privacy_auth_bridge'\n      ELSE 'privacy_workflow_owner'\n    END) THEN\n      RAISE EXCEPTION 'G014 SECURITY DEFINER owner mismatch: %', v_signature;\n    END IF;\n    IF v_search_path IS DISTINCT FROM 'search_path='\n       AND v_search_path IS DISTINCT FROM 'search_path=\"\"' THEN\n      RAISE EXCEPTION 'G014 SECURITY DEFINER search_path is not empty: %', v_signature;\n    END IF;\n  END LOOP;\nEND;\n$function$\n",
+      "bodySha256": "b9e2f7d812783deee6c91d27d22d6c2019be9aa04e4f1221cc7482567775354a",
+      "owner": "privacy_workflow_owner",
+      "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true
+    },
+    {
+      "signature": "privacy_retention.assert_g014_catalog_contract()",
+      "definition": "CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_catalog_contract()\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nDECLARE\n  v_expected record;\n  v_procedure oid;\n  v_search_path text;\n  v_is_definer boolean;\n  v_auth_users_oid oid;\n  v_auth_users_count integer;\n  v_auth_dependency_missing text;\n  v_auth_dependency_unexpected text;\nBEGIN\n  PERFORM privacy_retention.assert_g014_workflow_owner_contract();\n  PERFORM privacy_retention.assert_g014_public_rpc_allowlist();\n  PERFORM privacy_retention.assert_g014_definer_contract();\n\n  IF pg_catalog.has_schema_privilege('anon', 'public', 'CREATE')\n     OR pg_catalog.has_schema_privilege('authenticated', 'public', 'CREATE') THEN\n    RAISE EXCEPTION 'G014 browser/public CREATE privilege remains';\n  END IF;\n\n  IF EXISTS (\n    SELECT 1\n    FROM (VALUES ('anon'::name), ('authenticated'::name), ('service_role'::name))\n      AS role_matrix(grantee)\n    WHERE pg_catalog.has_schema_privilege(role_matrix.grantee, 'privacy_retention', 'USAGE')\n       OR pg_catalog.has_schema_privilege(role_matrix.grantee, 'privacy_retention', 'CREATE')\n  ) THEN\n    RAISE EXCEPTION 'G014 private schema privilege remains';\n  END IF;\n\n  PERFORM privacy_retention.assert_g014_catalog_manifest();\n  PERFORM privacy_retention.assert_g014_catalog_security_baseline();\n\n  IF EXISTS (\n    SELECT 1\n    FROM public.account_deletion_requests AS request_row\n    WHERE request_row.status = 'applied'\n      AND (\n        request_row.db_readback_passed IS DISTINCT FROM true\n        OR request_row.session_readback_passed IS DISTINCT FROM true\n        OR request_row.storage_readback_passed IS DISTINCT FROM true\n        OR request_row.auth_readback_passed IS DISTINCT FROM true\n        OR request_row.auth_receipt_ref IS NULL\n        OR request_row.auth_receipt_ref !~ '^auth:[0-9a-f]{64}$'\n        OR request_row.applied_at IS NULL\n      )\n  ) THEN\n    RAISE EXCEPTION 'G014 applied account deletion receipt/readback invariant drifted';\n  END IF;\n  -- Freeze the final G014-facing RPC matrix explicitly. The persisted allowlist\n  -- still covers pre-G014 application RPCs; this subset prevents a later\n  -- migration from retaining an obsolete privacy, notification, deletion, or\n  -- retention overload under the same public name.\n  IF EXISTS (\n    WITH expected(source_signature, grantee) AS (\n      VALUES\n        ('public.get_current_privacy_policy_version()', 'authenticated'::name),\n        ('public.get_current_privacy_policy_version()', 'service_role'::name),\n        ('public.create_privacy_onboarding_challenge(text,uuid,text,jsonb,text,timestamptz)', 'service_role'::name),\n        ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)', 'service_role'::name),\n        ('public.submit_privacy_consent(text,text,text,uuid,text,text,uuid,text,uuid)', 'authenticated'::name),\n        ('public.record_privacy_guardian_verification(uuid,uuid,text,text,text,timestamptz,timestamptz)', 'service_role'::name),\n        ('public.read_privacy_guardian_status(uuid)', 'service_role'::name),\n        ('public.append_privacy_audit_event(text,uuid,uuid,uuid,uuid,text,text,jsonb,jsonb)', 'service_role'::name),\n        ('public.publish_privacy_policy_version(text,text,text,timestamptz,uuid,text,text)', 'service_role'::name),\n        ('public.transition_privacy_onboarding_challenge(uuid,text,text,uuid,text)', 'service_role'::name),\n        ('public.submit_guardian_privacy_consent(text,text,text,uuid,text,uuid,text,uuid)', 'service_role'::name),\n        ('public.hold_privacy_onboarding_compensation(uuid,uuid,text,text)', 'service_role'::name),\n        ('public.get_current_privacy_eligibility()', 'authenticated'::name),\n        ('public.get_privacy_eligibility_for_user(uuid)', 'service_role'::name),\n        ('public.create_user_notification(uuid,text,text,text,jsonb)', 'authenticated'::name),\n        ('public.mark_notification_read(uuid)', 'authenticated'::name),\n        ('public.mark_all_notifications_read()', 'authenticated'::name),\n        ('public.delete_notification(uuid)', 'authenticated'::name),\n        ('public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)', 'service_role'::name),\n        ('public.create_review_like_notification(uuid,uuid,uuid)', 'service_role'::name),\n        ('public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)', 'service_role'::name),\n        ('public.marketing_campaign_receipt(uuid)', 'service_role'::name),\n        ('public.preview_marketing_campaign(uuid,text,uuid[],text,text,jsonb,text,timestamptz)', 'service_role'::name),\n        ('public.prepare_marketing_campaign_batch(uuid,uuid,text,text,integer,text)', 'service_role'::name),\n        ('public.claim_marketing_campaign_dispatch(uuid,uuid,uuid,text,text,text)', 'service_role'::name),\n        ('public.fail_marketing_campaign_batch(uuid,uuid,uuid,text,text)', 'service_role'::name),\n        ('public.fail_marketing_campaign_provider_attempt(uuid,uuid,uuid,text,uuid,uuid,text,text,text,text)', 'service_role'::name),\n        ('public.finalize_marketing_campaign_batch(uuid,uuid,uuid,text,uuid,uuid,text,text,text,uuid[],text)', 'service_role'::name),\n        ('public.preview_account_deletion(uuid,uuid,timestamptz)', 'service_role'::name),\n        ('public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)', 'service_role'::name),\n        ('public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)', 'service_role'::name),\n        ('public.claim_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)', 'service_role'::name),\n        ('public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid)', 'service_role'::name),\n        ('public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)', 'service_role'::name),\n        ('public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)', 'service_role'::name),\n        ('public.get_account_deletion_storage_work(uuid,uuid,uuid,text,text,text,uuid)', 'service_role'::name),\n        ('public.record_account_deletion_external_provider_proof(uuid,uuid,uuid,text,text,text,text,uuid,text,text,text,text)', 'service_role'::name),\n        ('public.reconcile_account_deletion_storage_job(uuid,uuid,uuid,text,text,text,uuid)', 'service_role'::name),\n        ('public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid)', 'service_role'::name),\n        ('public.claim_next_account_deletion_external_job()', 'service_role'::name),\n        ('public.read_current_account_deletion_status(uuid,text,text)', 'authenticated'::name),\n        ('public.fail_account_deletion(uuid,uuid,uuid,text,text,text,text)', 'service_role'::name),\n        ('public.preview_privacy_retention_run(text,timestamptz,integer,integer)', 'service_role'::name),\n        ('public.confirm_privacy_retention_run(uuid,text,text,text)', 'service_role'::name),\n        ('public.apply_privacy_retention_run(uuid,text,text,integer)', 'service_role'::name),\n        ('public.claim_privacy_retention_storage_items(uuid,text,text,integer)', 'service_role'::name),\n        ('public.resolve_privacy_retention_provider_effect(uuid,text,text,uuid,uuid,text,text,text,text,text,text)', 'service_role'::name),\n        ('public.get_privacy_retention_provider_reconciliation_work(uuid,text,text,text,integer)', 'service_role'::name),\n        ('public.record_privacy_retention_storage_provider_receipts(uuid,text,text,jsonb)', 'service_role'::name),\n        ('public.fail_privacy_retention_storage_claims(uuid,text,text,uuid[],text)', 'service_role'::name),\n        ('public.finalize_privacy_retention_run(uuid,text,text)', 'service_role'::name)\n    )\n    SELECT 1\n    FROM expected\n    LEFT JOIN privacy_retention.g014_public_rpc_allowlist AS allowed\n      ON allowed.source_signature = expected.source_signature\n     AND allowed.grantee = expected.grantee\n    WHERE allowed.source_signature IS NULL\n  ) THEN\n    RAISE EXCEPTION 'G014 final public RPC allowlist is missing an exact required identity';\n  END IF;\n  -- Every G014 implementation/helper has the same trusted owner and an empty\n  -- lookup path. SECURITY INVOKER trigger helpers are intentionally permitted,\n  -- but may not regain an ambient search_path.\n  FOR v_expected IN\n    SELECT procedure.oid, namespace.nspname, procedure.proname\n    FROM pg_catalog.pg_proc AS procedure\n    JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace\n    WHERE namespace.nspname IN ('public', 'privacy_retention')\n      AND procedure.proname LIKE 'g014\\_%' ESCAPE '\\'\n  LOOP\n    SELECT setting.value INTO v_search_path\n    FROM pg_catalog.unnest((\n      SELECT procedure.proconfig FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_expected.oid\n    )) AS setting(value)\n    WHERE setting.value LIKE 'search_path=%';\n    IF pg_catalog.pg_get_userbyid((\n         SELECT procedure.proowner FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_expected.oid\n       )) IS DISTINCT FROM (CASE\n         WHEN v_expected.oid = ANY (ARRAY[\n           pg_catalog.to_regprocedure('privacy_retention.g014_account_deletion_reconcile_expired_attempt(uuid,text,uuid)'),\n           pg_catalog.to_regprocedure('privacy_retention.g014_retention_append_audit(privacy_retention.privacy_retention_runs,text,text)'),\n           pg_catalog.to_regprocedure('privacy_retention.g014_account_deletion_apply_adapter(text,uuid,uuid)')\n         ]) THEN 'privacy_auth_bridge'\n         ELSE 'privacy_workflow_owner'\n       END)\n       OR (v_search_path IS DISTINCT FROM 'search_path=' AND v_search_path IS DISTINCT FROM 'search_path=\"\"') THEN\n      RAISE EXCEPTION 'G014 helper owner/search_path mismatch: %.%',\n        v_expected.nspname, v_expected.proname;\n    END IF;\n  END LOOP;\n\n  -- All exposed public overloads are exact allowlist identities. This catches an\n  -- added overload even when its ACL is otherwise empty; callers must never gain\n  -- a silent alias due to PostgREST overload resolution.\n  IF EXISTS (\n    SELECT 1\n    FROM pg_catalog.pg_proc AS procedure\n    JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace\n    WHERE namespace.nspname = 'public'\n      AND EXISTS (\n        SELECT 1\n        FROM privacy_retention.g014_public_rpc_allowlist AS allowed\n        WHERE allowed.function_schema = namespace.nspname\n          AND allowed.function_name = procedure.proname\n      )\n      AND NOT EXISTS (\n        SELECT 1\n        FROM privacy_retention.g014_public_rpc_allowlist AS allowed\n        WHERE allowed.function_schema = namespace.nspname\n          AND allowed.function_name = procedure.proname\n          AND allowed.identity_arguments = procedure.proargtypes::text\n      )\n  ) THEN\n    RAISE EXCEPTION 'G014 public RPC has an unexpected overload';\n  END IF;\n\n  FOR v_expected IN\n    SELECT allowed.source_signature, allowed.grantee\n    FROM privacy_retention.g014_public_rpc_allowlist AS allowed\n    ORDER BY allowed.source_signature, allowed.grantee\n  LOOP\n    v_procedure := pg_catalog.to_regprocedure(v_expected.source_signature);\n    IF v_procedure IS NULL THEN\n      RAISE EXCEPTION 'G014 allowlisted public RPC identity is missing: %', v_expected.source_signature;\n    END IF;\n    SELECT procedure.prosecdef\n    INTO v_is_definer\n    FROM pg_catalog.pg_proc AS procedure\n    WHERE procedure.oid = v_procedure;\n    IF v_expected.source_signature IN (\n      'public.extract_youtube_video_id(text)',\n      'public.normalize_restaurant_identity_name(text)',\n      'public.admin_evaluation_revision()',\n      'public.admin_evaluation_catalog_snapshot()',\n      'public.storyboard_production_error_allowed(text)',\n      'public.storyboard_production_final_status(jsonb,jsonb)',\n      'public.storyboard_production_project_json(public.admin_storyboard_production_projects)',\n      'public.storyboard_production_job_json(public.admin_storyboard_production_jobs)',\n      'public.storyboard_production_snapshot(uuid,uuid)',\n      'public.storyboard_production_auth_worker(text)',\n      'public.storyboard_production_model_available(jsonb,text,text)',\n      'public.storyboard_production_admin(uuid,text,uuid,integer,jsonb)',\n      'public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)',\n      'public.record_app_web_vitals(text,text,text,text,smallint)',\n      'public.record_app_web_vitals_bounded(text,text,text,text,smallint)',\n      'public.restaurant_review_automation_manual(uuid,text,text,text,uuid)',\n      'public.admin_evaluation_page(jsonb,integer,uuid,text)',\n      'public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)',\n      'public.admin_evaluation_raw_warning_groups(uuid[],text,jsonb,integer)',\n      'public.restaurant_review_automation_status()',\n      'public.restaurant_review_automation_preview(uuid,integer,integer)',\n      'public.restaurant_review_automation_configure(uuid,text,text,text,integer,integer)',\n      'public.restaurant_review_automation_tick(uuid)',\n      'public.restaurant_review_automation_worker(text,uuid,uuid,jsonb)',\n      'public.resolve_restaurant_identity_name(text,text,text,text)'\n    ) THEN\n      IF v_is_definer OR NOT EXISTS (\n        SELECT 1 FROM pg_catalog.pg_proc AS p\n        WHERE p.oid = v_procedure\n          AND pg_catalog.pg_get_userbyid(p.proowner) = 'postgres'\n          AND p.proconfig IS NOT DISTINCT FROM CASE\n            WHEN v_expected.source_signature IN (\n              'public.extract_youtube_video_id(text)',\n              'public.normalize_restaurant_identity_name(text)',\n              'public.resolve_restaurant_identity_name(text,text,text,text)'\n            ) THEN ARRAY['search_path=pg_catalog, public, extensions']::text[]\n            WHEN v_expected.source_signature IN (\n              'public.restaurant_review_automation_manual(uuid,text,text,text,uuid)',\n              'public.restaurant_review_automation_tick(uuid)',\n              'public.restaurant_review_automation_worker(text,uuid,uuid,jsonb)'\n            ) THEN ARRAY['search_path=\"\"','lock_timeout=2s']::text[]\n            ELSE ARRAY['search_path=\"\"']::text[]\n          END\n          AND pg_catalog.has_function_privilege('service_role', p.oid, 'EXECUTE')\n          AND NOT pg_catalog.has_function_privilege('anon', p.oid, 'EXECUTE')\n          AND NOT pg_catalog.has_function_privilege('authenticated', p.oid, 'EXECUTE')\n          AND NOT EXISTS (\n            SELECT 1 FROM pg_catalog.aclexplode(\n              COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))\n            ) AS acl\n            WHERE acl.grantee NOT IN (p.proowner, 'service_role'::pg_catalog.regrole)\n              OR acl.is_grantable\n          )\n      ) OR NOT EXISTS (\n        SELECT 1 FROM privacy_retention.g014_public_rpc_allowlist AS allowed\n        WHERE allowed.source_signature = v_expected.source_signature AND allowed.grantee = 'service_role'\n      ) OR EXISTS (\n        SELECT 1 FROM privacy_retention.g014_public_rpc_allowlist AS allowed\n        WHERE allowed.source_signature = v_expected.source_signature AND allowed.grantee <> 'service_role'\n      ) THEN\n        RAISE EXCEPTION 'G014 service-only SECURITY INVOKER contract mismatch: %', v_expected.source_signature;\n      END IF;\n      CONTINUE;\n    END IF;\n    IF v_expected.source_signature IN (\n      'public.match_storyboard_documents_hybrid(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)',\n      'public.match_storyboard_documents_hybrid(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',\n      'public.match_storyboard_documents_hybrid_v2(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)',\n      'public.match_storyboard_documents_hybrid_v2(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',\n      'public.ocr_log_metadata_is_safe(jsonb)'\n    ) THEN\n      IF v_is_definer THEN\n        RAISE EXCEPTION 'G014 declared SECURITY INVOKER public RPC became SECURITY DEFINER: %',\n          v_expected.source_signature;\n      END IF;\n    ELSIF NOT v_is_definer THEN\n      RAISE EXCEPTION 'G014 undeclared SECURITY INVOKER allowlisted public RPC: %',\n        v_expected.source_signature;\n    ELSE\n      SELECT setting.value INTO v_search_path\n      FROM pg_catalog.unnest((SELECT procedure.proconfig FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_procedure))\n        AS setting(value)\n      WHERE setting.value LIKE 'search_path=%';\n      IF pg_catalog.pg_get_userbyid((SELECT procedure.proowner FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_procedure))\n            IS DISTINCT FROM (CASE\n              WHEN v_expected.source_signature = ANY (ARRAY[\n                'public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)',\n                'public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)',\n                'public.create_review_like_notification(uuid,uuid,uuid)',\n                'public.finalize_account_deletion_auth(uuid,uuid,uuid,text,text,text,uuid,text)',\n                'public.hold_privacy_onboarding_compensation(uuid,uuid,text,text)',\n                'public.make_user_admin(text)',\n                'public.preflight_release_auth_session_family(uuid,uuid,uuid,text,bigint)',\n                'public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid)',\n                'public.preview_account_deletion(uuid,uuid,timestamptz)',\n                'public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)',\n                'public.read_release_auth_revocation(uuid,uuid,uuid)',\n                'public.read_release_auth_revocation_by_operation(uuid)',\n                'public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid)',\n                'public.revoke_release_auth_session_family(uuid,uuid,uuid,text)',\n                'public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)',\n                'public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)',\n                'public.activate_account_deletion_policy(text,text)',\n                'public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)'\n              ]) THEN 'privacy_auth_bridge'\n              ELSE 'privacy_workflow_owner'\n            END)\n         OR (v_search_path IS DISTINCT FROM 'search_path=' AND v_search_path IS DISTINCT FROM 'search_path=\"\"') THEN\n        RAISE EXCEPTION 'G014 allowlisted public RPC owner/definer/path mismatch: %', v_expected.source_signature;\n      END IF;\n    END IF;\n    IF NOT pg_catalog.has_function_privilege(v_expected.grantee, v_procedure, 'EXECUTE') THEN\n      RAISE EXCEPTION 'G014 allowlisted public RPC grant missing: %', v_expected.source_signature;\n    END IF;\n  END LOOP;\n\n  -- No PUBLIC, anon, or authenticated effective EXECUTE survives outside its\n  -- checked-in matrix. Service-role access is equally exact for every G014 RPC.\n  FOR v_expected IN\n    SELECT procedure.oid, namespace.nspname, procedure.proname,\n           procedure.proargtypes::text AS identity_arguments\n    FROM pg_catalog.pg_proc AS procedure\n    JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace\n    WHERE namespace.nspname = 'public'\n      AND NOT EXISTS (\n        SELECT 1\n        FROM pg_catalog.pg_depend AS dependency\n        JOIN pg_catalog.pg_extension AS extension\n          ON extension.oid = dependency.refobjid\n        WHERE dependency.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass\n          AND dependency.objid = procedure.oid\n          AND dependency.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass\n          AND dependency.deptype = 'e'\n      )\n  LOOP\n    IF EXISTS (\n      SELECT 1\n      FROM (VALUES ('anon'::name), ('authenticated'::name), ('service_role'::name)) AS role_matrix(grantee)\n      WHERE pg_catalog.has_function_privilege(role_matrix.grantee, v_expected.oid, 'EXECUTE')\n        IS DISTINCT FROM EXISTS (\n          SELECT 1\n          FROM privacy_retention.g014_public_rpc_allowlist AS allowed\n          WHERE allowed.function_schema = v_expected.nspname\n            AND allowed.function_name = v_expected.proname\n            AND allowed.identity_arguments = v_expected.identity_arguments\n            AND allowed.grantee = role_matrix.grantee\n        )\n    ) OR EXISTS (\n      SELECT 1\n      FROM pg_catalog.aclexplode(COALESCE(\n        (SELECT procedure.proacl FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_expected.oid),\n        pg_catalog.acldefault('f', (SELECT procedure.proowner FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_expected.oid))\n      )) AS acl\n      WHERE acl.grantee = 0 AND acl.privilege_type = 'EXECUTE'\n    ) THEN\n      RAISE EXCEPTION 'G014 effective public RPC privilege drifted: %.%(%)',\n        v_expected.nspname, v_expected.proname, v_expected.identity_arguments;\n    END IF;\n  END LOOP;\n  -- Resolve the Auth relation solely through pg_catalog. A SECURITY DEFINER\n  -- assertion must not require USAGE on the platform-owned auth schema.\n  SELECT relation_row.oid\n    INTO v_auth_users_oid\n    FROM pg_catalog.pg_class AS relation_row\n    JOIN pg_catalog.pg_namespace AS namespace\n      ON namespace.oid = relation_row.relnamespace\n   WHERE namespace.nspname = 'auth'\n     AND relation_row.relname = 'users'\n     AND relation_row.relkind = 'r';\n  GET DIAGNOSTICS v_auth_users_count = ROW_COUNT;\n  IF v_auth_users_count <> 1 THEN\n    RAISE EXCEPTION 'G014 auth.users catalog identity is missing or ambiguous';\n  END IF;\n\n  -- The moved G010 identities retain exactly four live Auth FKs. The retained\n  -- privacy audit actor UUID is deliberately detached from auth.users so\n  -- historical append-only audit identity does not couple to active Auth\n  -- deletion. Any additional private Auth dependency would make\n  -- retention/deletion coupling implicit and therefore blocks promotion.\n  -- Diagnostics contain catalog identities only, never table data, and are\n  -- ordered for stable replay output.\n  WITH expected(schema_name, relation_name, column_name, constraint_name, delete_action) AS (\n    VALUES\n      ('privacy_retention'::name, 'privacy_onboarding_challenges'::name, 'consumed_by_user_id'::name, 'privacy_onboarding_challenges_consumed_by_user_id_fkey'::name, 'RESTRICT'::text),\n      ('privacy_retention'::name, 'privacy_guardian_verifications'::name, 'child_user_id'::name, 'privacy_guardian_verifications_child_user_id_fkey'::name, 'RESTRICT'::text),\n      ('privacy_retention'::name, 'privacy_age_profiles'::name, 'user_id'::name, 'privacy_age_profiles_user_id_fkey'::name, 'RESTRICT'::text),\n      ('privacy_retention'::name, 'privacy_consent_events'::name, 'user_id'::name, 'privacy_consent_events_user_id_fkey'::name, 'RESTRICT'::text)\n  ),\n  actual AS (\n    SELECT\n      namespace.nspname::name AS schema_name,\n      relation_row.relname::name AS relation_name,\n      attribute.attname::name AS column_name,\n      constraint_row.conname AS constraint_name,\n      CASE constraint_row.confdeltype\n        WHEN 'a' THEN 'NO ACTION'\n        WHEN 'r' THEN 'RESTRICT'\n        WHEN 'c' THEN 'CASCADE'\n        WHEN 'n' THEN 'SET NULL'\n        WHEN 'd' THEN 'SET DEFAULT'\n      END AS delete_action\n    FROM pg_catalog.pg_constraint AS constraint_row\n    JOIN pg_catalog.pg_class AS relation_row ON relation_row.oid = constraint_row.conrelid\n    JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation_row.relnamespace\n    JOIN LATERAL pg_catalog.unnest(constraint_row.conkey) AS key_column(attnum) ON true\n    JOIN pg_catalog.pg_attribute AS attribute\n      ON attribute.attrelid = relation_row.oid AND attribute.attnum = key_column.attnum\n    WHERE constraint_row.contype = 'f'\n      AND constraint_row.confrelid = v_auth_users_oid\n      AND namespace.nspname = 'privacy_retention'\n  ),\n  missing AS (\n    SELECT * FROM expected\n    EXCEPT\n    SELECT * FROM actual\n  ),\n  unexpected AS (\n    SELECT * FROM actual\n    EXCEPT\n    SELECT * FROM expected\n  )\n  SELECT\n    COALESCE((\n      SELECT pg_catalog.string_agg(\n        pg_catalog.format(\n          '%I.%I.%I constraint=%I on_delete=%s',\n          schema_name, relation_name, column_name, constraint_name, delete_action\n        ),\n        '; ' ORDER BY schema_name, relation_name, column_name, constraint_name, delete_action\n      )\n      FROM missing\n    ), ''),\n    COALESCE((\n      SELECT pg_catalog.string_agg(\n        pg_catalog.format(\n          '%I.%I.%I constraint=%I on_delete=%s',\n          schema_name, relation_name, column_name, constraint_name, delete_action\n        ),\n        '; ' ORDER BY schema_name, relation_name, column_name, constraint_name, delete_action\n      )\n      FROM unexpected\n    ), '')\n  INTO v_auth_dependency_missing, v_auth_dependency_unexpected;\n\n  IF v_auth_dependency_missing <> '' OR v_auth_dependency_unexpected <> '' THEN\n    RAISE EXCEPTION\n      'G014 private auth.users dependency contract drifted; missing=[%]; unexpected=[%]',\n      v_auth_dependency_missing,\n      v_auth_dependency_unexpected;\n  END IF;\nEND;\n$function$\n",
+      "bodySha256": "50948ddce54dbba9497978964bebc535c27ebe98fb0f46bf05e2ec17ab0b9e01",
+      "owner": "privacy_workflow_owner",
+      "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}",
+      "config": [
+        "search_path=\"\""
+      ],
+      "definer": true
+    }
+  ],
+  "ownerAssertion": {
+    "provenance": "Current read-only catalog source at 2026-10-24 07:07:10.024066+00; not a hosted execution receipt.",
+    "definition": "CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_workflow_owner_contract()\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nDECLARE\n  v_owner pg_catalog.pg_roles%ROWTYPE;\n  v_bridge pg_catalog.pg_roles%ROWTYPE;\nBEGIN\n  SELECT * INTO v_owner\n  FROM pg_catalog.pg_roles\n  WHERE rolname = 'privacy_workflow_owner';\n  SELECT * INTO v_bridge\n  FROM pg_catalog.pg_roles\n  WHERE rolname = 'privacy_auth_bridge';\n\n  IF v_owner.oid IS NULL OR v_bridge.oid IS NULL THEN\n    RAISE EXCEPTION 'privacy workflow bridge roles are missing';\n  END IF;\n  IF v_owner.rolsuper OR v_owner.rolinherit OR v_owner.rolcreaterole\n     OR v_owner.rolcreatedb OR v_owner.rolreplication\n     OR v_owner.rolbypassrls OR v_owner.rolcanlogin\n     OR v_bridge.rolsuper OR NOT v_bridge.rolinherit OR v_bridge.rolcreaterole\n     OR v_bridge.rolcreatedb OR v_bridge.rolreplication\n     OR v_bridge.rolbypassrls OR v_bridge.rolcanlogin THEN\n    RAISE EXCEPTION 'privacy workflow bridge role attributes are incompatible';\n  END IF;\n  IF pg_catalog.current_setting('server_version_num')::integer / 10000 = 15 THEN\n  IF (SELECT count(*)\n      FROM pg_catalog.pg_auth_members AS membership\n      WHERE membership.member = v_owner.oid OR membership.roleid = v_owner.oid) <> 1\n     OR NOT EXISTS (\n       SELECT 1\n       FROM pg_catalog.pg_auth_members AS membership\n       WHERE membership.roleid = v_owner.oid\n         AND membership.member = v_bridge.oid\n         AND NOT membership.admin_option\n     )\n     OR NOT pg_catalog.pg_has_role(v_bridge.oid, v_owner.oid, 'USAGE') THEN\n    RAISE EXCEPTION 'privacy_workflow_owner has unexpected role membership or effective access';\n  END IF;\n  ELSIF pg_catalog.current_setting('server_version_num')::integer / 10000 = 17 THEN\n    -- PG17 automatically grants role creators ADMIN without INHERIT or SET.\n    -- The bootstrap grant cannot be revoked by the nonsuperuser creator. It\n    -- retains the already trusted DBA's management authority; it is not a\n    -- data-access grant. Reject every self-granted/effective-access lease.\n    IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles\n                   WHERE oid=10 AND rolname='supabase_admin' AND rolsuper)\n       OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles\n                      WHERE rolname='postgres' AND NOT rolsuper AND rolcreaterole)\n       OR (SELECT count(*) FROM pg_catalog.pg_auth_members\n           WHERE member=v_owner.oid OR roleid=v_owner.oid) <> 2\n       OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members\n           WHERE roleid=v_owner.oid AND member=v_bridge.oid\n             AND grantor='postgres'::regrole AND NOT admin_option\n             AND inherit_option AND set_option)\n       OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members\n           WHERE roleid=v_owner.oid AND member='postgres'::regrole\n             AND grantor=10 AND admin_option AND NOT inherit_option AND NOT set_option)\n       OR (SELECT count(*) FROM pg_catalog.pg_auth_members\n           WHERE member=v_bridge.oid OR roleid=v_bridge.oid) <> 2\n       OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members\n           WHERE roleid=v_bridge.oid AND member='postgres'::regrole\n             AND grantor=10 AND admin_option AND NOT inherit_option AND NOT set_option)\n       OR NOT pg_catalog.pg_has_role(v_bridge.oid,v_owner.oid,'USAGE')\n       OR pg_catalog.pg_has_role('postgres',v_owner.oid,'USAGE')\n       OR pg_catalog.pg_has_role('postgres',v_owner.oid,'SET')\n       OR pg_catalog.pg_has_role('postgres',v_bridge.oid,'USAGE')\n       OR pg_catalog.pg_has_role('postgres',v_bridge.oid,'SET') THEN\n      RAISE EXCEPTION 'g014_pg17_workflow_owner_membership_denied';\n    END IF;\n  ELSE\n    RAISE EXCEPTION 'g014_workflow_owner_server_version_denied';\n  END IF;\nEND;\n$function$\n",
+    "bodySha256": "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d"
+  }
+}

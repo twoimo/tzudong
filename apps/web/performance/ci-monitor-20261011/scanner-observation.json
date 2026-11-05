@@ -1,0 +1,14 @@
+{
+  "schema": "tzudong-ci-monitor-scanner-observation/v1",
+  "sourceCommit": "7d03175cd36ba46ec696af94ba49656f15aee67f",
+  "checkId": 114422878394,
+  "conclusion": "failure",
+  "detector": "Generic Password",
+  "file": ".github/scripts/test_monitor_ci_performance.py",
+  "fixtureIsSynthetic": true,
+  "actualCredentialEstablished": false,
+  "replacement": "noncredential diagnostic sentinel",
+  "regressionTestsPassed": 33,
+  "historicalIncidentResolutionVerified": false,
+  "scannerRulesChanged": false
+}

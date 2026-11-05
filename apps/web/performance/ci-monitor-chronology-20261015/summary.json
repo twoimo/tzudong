@@ -1,0 +1,77 @@
+{
+  "schema": "tzudong-ci-chronology-replay/v1",
+  "fixSourceBase": "96807f6e77632f29e69d4eab6ffdcab5d219ad4c",
+  "mergedDevelop": "ab9196b30f469ce34e9bda6e36db90098059a822",
+  "input": {
+    "baselineSha256": "d8e08c6371f3dab93fdb3495d5b14266d457e6e0490876f1e2546177a0b89070",
+    "currentSha256": "5b6e23a8e16ee7c262f0b2158044e187d4ffa8c8cb5d6840ea9a28efa23907d2",
+    "exportSha256": "4c8eb21f11a7d43caa2042f52425d73f774ef3266a66dde980a5f93bb637560c"
+  },
+  "attempt": {
+    "runId": 38617798185,
+    "attempt": 2,
+    "sourceTree": "65109682247eb40d0f54f8122e6fa1f94e4e3acd",
+    "conclusion": "success",
+    "jobCount": 6,
+    "collectorCacheTerminal": false,
+    "negativeStartedMinusCreatedSeconds": [-994, -994, -993, -1001, -1002],
+    "chronologyIssueCodes": [
+      "JOB_COMPLETION_PRECEDES_JOB_CREATION",
+      "JOB_START_PRECEDES_JOB_CREATION"
+    ]
+  },
+  "before": {
+    "status": "failed",
+    "code": "JOB_START_PRECEDES_JOB_CREATION",
+    "checkpointCreated": false,
+    "receiptCreated": false
+  },
+  "after": {
+    "firstReplay": {
+      "status": "observed",
+      "admittedAttemptCount": 69,
+      "chronologyInvalidAttemptCount": 1,
+      "timingUsable": false,
+      "terminalEvidenceComplete": false,
+      "timingMetricsRetained": false,
+      "referenceStatus": "collecting_reference",
+      "referenceSuccessCount": 11,
+      "referenceDistinctSourceTreeCount": 7,
+      "referenceBlockingPendingCount": 1,
+      "referencePendingReason": "chronology_invalid_attempt"
+    },
+    "secondReplay": {
+      "admittedAttemptCount": 0,
+      "duplicateAttemptCount": 69,
+      "newAlertCount": 0,
+      "shouldNotify": false
+    }
+  },
+  "validation": {
+    "directTestCount": 60,
+    "directTestFailures": 0,
+    "fullCiPythonTestCount": 82,
+    "fullCiPythonTestFailures": 0,
+    "sourceClassifierTestCount": 6,
+    "sourceClassifierTestFailures": 0,
+    "reconciliationTestCount": 7,
+    "reconciliationTestFailures": 0,
+    "targetedActionlintPassed": true,
+    "targetedActionlintWorkflows": [
+      ".github/workflows/g014-catalog-contract-baseline.yml",
+      ".github/workflows/security-audit.yml",
+      ".github/workflows/web-admin-ci.yml"
+    ],
+    "fullRepositoryActionlintPassed": false,
+    "fullRepositoryActionlintPreExistingErrorCount": 4,
+    "remoteMutations": 0,
+    "productionStateMutated": false,
+    "preservedV4CheckpointSha256": "b2ad1d79f608a4719ff51e3fbd2470b2d52e23ebc6a9dafcb4cf32eb177c0c96",
+    "providerRootCauseConfirmed": false
+  },
+  "merge": {
+    "conflictCount": 1,
+    "conflictPath": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
+    "recomputedCandidateContentSha256": "8c7196c31600e64ad678b920f76e608443aa272efe15c6c5eacec009449d9be4"
+  }
+}

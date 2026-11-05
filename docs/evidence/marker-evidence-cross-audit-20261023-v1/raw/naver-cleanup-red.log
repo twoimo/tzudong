@@ -1,0 +1,7 @@
+code=NAVER_LISTENER_CLEANUP_FAILED
+regression=marker_pool_cleanup_continuation
+result=failed_before_fix
+pass=13
+fail=1
+assertions=1113
+raw_provider_diagnostic=not_republished

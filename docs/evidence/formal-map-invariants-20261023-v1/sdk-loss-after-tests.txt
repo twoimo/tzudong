@@ -1,0 +1,29 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-map-sdk-loss.test.ts:
+(pass) selection effect leaves a revoked/incomplete SDK untouched: null [33.38ms]
+(pass) selection effect leaves a revoked/incomplete SDK untouched: undefined [3.74ms]
+(pass) selection effect leaves a revoked/incomplete SDK untouched: [object Object] [2.99ms]
+(pass) available SDK still resizes and centers the selected restaurant [2.98ms]
+
+tests-unit/naver-map-center-helpers.test.ts:
+(pass) naver map center helpers > applies horizontal offset scaled by zoom delta [0.12ms]
+(pass) naver map center helpers > applies vertical offset and preserves target center when no zoom delta [0.06ms]
+
+tests-unit/naver-map-event-cleanup.test.ts:
+(pass) listener removal preserves the provider receiver and handle [0.04ms]
+(pass) absent provider or listener is safe during partial initialization [0.02ms]
+(pass) one failed provider removal does not prevent the next teardown [0.06ms]
+(pass) a retained idle handler becomes inert before callback and cannot repeat a stale correction [0.04ms]
+(pass) cleanup cancels a still-pending idle correction even if the provider retains its handler [0.01ms]
+(pass) canceled provider callbacks cannot dispatch stale props after failed listener removal [0.03ms]
+(pass) clearing location removes its visual and retains a failed SDK handle until retry succeeds [0.04ms]
+
+tests-unit/naver-map-event-wiring.test.ts:
+(pass) actual Naver blank-click registration dispatches the current handlers and cancels retained callbacks [2.96ms]
+(pass) actual drag/pinch registration releases search ownership and becomes inert after cleanup [2.71ms]
+
+ 15 pass
+ 0 fail
+ 45 expect() calls
+Ran 15 tests across 4 files. [220.00ms]

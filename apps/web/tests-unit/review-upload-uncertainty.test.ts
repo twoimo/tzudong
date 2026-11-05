@@ -1,5 +1,6 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import {
+    REVIEW_FOOD_PHOTO_MAX_COUNT,
     ReviewSaveOperation,
     type ReviewSaveDependencies,
     type ReviewSaveDraft,
@@ -642,14 +643,14 @@ describe('independent late Storage upload uncertainty (offline)', () => {
         });
     });
 
-    test('forty-eight food uploads start in parallel after receipt and complete without application timers', async () => {
-        const f = fixture(48);
+    test('the maximum 20 food uploads start in parallel after receipt and complete without application timers', async () => {
+        const f = fixture(REVIEW_FOOD_PHOTO_MAX_COUNT);
         const allEntered = deferred<void>();
         const release = deferred<void>();
         let enteredCount = 0;
-        for (let index = 1; index <= 48; index++) f.behaviors.set(index, async upload => {
+        for (let index = 1; index <= REVIEW_FOOD_PHOTO_MAX_COUNT; index++) f.behaviors.set(index, async upload => {
             enteredCount++;
-            if (enteredCount === 48) allEntered.resolve();
+            if (enteredCount === REVIEW_FOOD_PHOTO_MAX_COUNT) allEntered.resolve();
             await release.promise;
             f.commit(upload);
             return { error: null };
@@ -660,7 +661,7 @@ describe('independent late Storage upload uncertainty (offline)', () => {
                 await allEntered.promise;
                 expect(f.objects.has(f.preparations[0][0].path)).toBe(true);
                 expect(f.insertions).toHaveLength(0);
-                expect(f.uploads).toHaveLength(49);
+                expect(f.uploads).toHaveLength(REVIEW_FOOD_PHOTO_MAX_COUNT + 1);
                 release.resolve();
                 expect(await submit).toBe('saved');
                 expectRetained(f);

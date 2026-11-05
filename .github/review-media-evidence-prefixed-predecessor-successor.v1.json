@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "id": "review_media_evidence_prefixed_predecessor_successor_v1",
+  "phase": "predecessor",
+  "purpose": "review-media-evidence-prefixed-eleven-stage",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "serverMajor": 17,
+  "databaseName": "postgres",
+  "executorRole": "postgres",
+  "advisoryLockKey": 7311754282260311,
+  "launchPolicy": {
+    "state": "held",
+    "code": "EVIDENCE_PREFIXED_PREDECESSOR_LAUNCH_HELD",
+    "reason": "fresh-evidence-first-rehearsal-and-protected-admission-required"
+  },
+  "protectedSource": {
+    "remote": "origin",
+    "ref": "refs/heads/main",
+    "repositoryUrl": "https://github.com/twoimo/tzudong.git"
+  },
+  "stateRootAlgorithm": "review-media-ledger-identity/v1",
+  "operatingTransition": {
+    "before": 89,
+    "after": 100
+  },
+  "baseMapping": {
+    "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+    "sha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a",
+    "rowCount": 86,
+    "baseIdentityRoot": "394d3517244d79a673b0595dec0fefa40e6d8257b3762c27dd56a01cc198115d"
+  },
+  "historicalAppliedVariant": {
+    "version": "20261008124858",
+    "name": "public_profile_leaderboard_read_boundary",
+    "statementCount": 1,
+    "statementVectorSha256": "8bab7119608afa8cf4fec529fb5cab6546fbd0c9326e08b56c9a053daa21b360"
+  },
+  "evidenceMigrations": [
+    {
+      "version": "20261017043000",
+      "name": "evidence_frames_and_popularity",
+      "path": "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql",
+      "sha256": "d254fe76eb8c74587183bc89372891cd08a6a1cf92a99b8aa041497fa6ca7733",
+      "statementCount": 8,
+      "statementVectorSha256": "e8c4dbbe5fad3c9af301d5dfd0843417c3de148bbbddbde677c8b755ed6e45e4"
+    },
+    {
+      "version": "20261017140000",
+      "name": "restaurant_popularity_shadow",
+      "path": "backend/supabase/migrations/20261017140000_restaurant_popularity_shadow.sql",
+      "sha256": "fe0621f3a6f663beec2c14a60729ddbb17ba715205a114f24879af9b4dba11c6",
+      "statementCount": 3,
+      "statementVectorSha256": "6b1de5b932c1cf769436d5048fdde157127c7e5cb294c2b284ca63940995d16a"
+    },
+    {
+      "version": "20261017160000",
+      "name": "restaurant_popularity_shadow_tier",
+      "path": "backend/supabase/migrations/20261017160000_restaurant_popularity_shadow_tier.sql",
+      "sha256": "4ba19ee5b7ae3fbbfc4ffa00a93ed30e1197cd2ad1763e063a75f75158a48426",
+      "statementCount": 1,
+      "statementVectorSha256": "ed0eacead47eab1f9ceffacd0ab49abb035c40a7a7ecb1bacb19e34070088359"
+    }
+  ],
+  "targetManifest": {
+    "id": "review_media_sql_successor_v1",
+    "manifestPath": ".github/review-media-sql-successor.v1.json",
+    "manifestSha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6",
+    "sourceRoot": "61f9d7637c0714a7b0d9108c6f7959ea820175a7870dba681498b570296a1544",
+    "targetCount": 11
+  },
+  "operatingIdentity": {
+    "evidenceIdentityRoot": "37d598ad72fd4c0a057a34579e5c2053fc9a7a92645d8d045530890ad1034802",
+    "prefixIdentityRoot": "2a92473931847b85f90224bbc645a14425c96fc3d92019b6eeca8e6f43a504ea",
+    "targetStageRoots": [
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "9bbc6efe38d16acc237f28369c492110b594d6a7ba3fc44cbf0380bc77dace22",
+      "a8ae77a6afeba7078ac94982623ef0e75a54b261238f8fabc2cd29f14ada244c",
+      "aa6ce2a2df98576c5ce069adf5a5c78e82fc92b2c63e8157f975b0def0cc93f4",
+      "edd12e029e6e967e2f37820dcebad7a4884fa655f40c961d21ac085e09d411aa",
+      "c9e40f8a7db153c1054c8514747b1588a972ac0985f571c62f1370d012f4c8e5",
+      "6b68e996a4116b87a4518134768b8c51a6e4d3f49b3c158dbc0ce1bc15d2d55f",
+      "e8af028d8c10f44287dcec975e6a21bcb9f41c4491e20eb5c42de5fe8e14cb90",
+      "e0d992a1d21435b1d7423e21f5a13ec24d195a9e26aad36596890d54197ed7e1",
+      "0a58b1942e77ce3e6b4b384c028cd5ce6166bd63aa7a0ad5abfe29e54150b2fb",
+      "b1e33fbbcc87e5c220faeea86da2e6c28b5eda43bc3fa7000ba71510526c228f",
+      "7e8273296aa9073d8201ef2696f974ea99c4106d70d1f2d20d67f103aa4fa025"
+    ],
+    "ledgerStageRoots": [
+      "2a92473931847b85f90224bbc645a14425c96fc3d92019b6eeca8e6f43a504ea",
+      "0099d364184b725bd747d472a32c5e7f74664f7f732858c71f6667fa51e049bf",
+      "c38f13cc1a2744ed9a08bd53feb28a127745ada4728f65df3b1ec20a68c8c938",
+      "c1ba46b464ecd469b6c7e3b9b4b879eef55a4401fc5fae075c9385a69c45c2b4",
+      "7bf946871314bae9f52e6413aceabf6e7cbb6a818c35174aea79a9122015c93f",
+      "3d640bf7c4d9ff118e3a32cc11cbd05532132c6f357c8638f5871ab4f2fce4fc",
+      "f7ef0e87a86da269de5776777a511928eb93a6b28c46e0063672c2dd8e601990",
+      "7b6e8c84b09c0f8001c70e9700dee3165bf9950770d44f1109af77a2ac801736",
+      "4b7982cdaef63b297b703587d3d315eeda7ee477cf297b6b7b7a0443549003c1",
+      "feaf1cce7edb1b38c8b73a138b63145a211c9534f9aea07bbf10872f298346ec",
+      "cf52257f0f17f4e52d594b9d4d009a78cade28acc553485e26b24dffecda853b",
+      "3bddf89c99ba6f4e635ed25c66451a92c23eaf95c2b387434978c04baad900d1"
+    ],
+    "terminalIdentityRoot": "3bddf89c99ba6f4e635ed25c66451a92c23eaf95c2b387434978c04baad900d1"
+  },
+  "requiredWriterFences": {
+    "adminRecordMutationsHold": "active",
+    "g037WriteFreeze": "active",
+    "automaticReviewer": "stopped",
+    "browserRpc": "stopped",
+    "directSql": "stopped",
+    "dashboard": "stopped",
+    "providerIngress": "stopped"
+  },
+  "toolchain": [
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+      "sha256": "d76e45f0d3284d47a32231495409843b640f8107969ebf23814498f277827d3d"
+    },
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-predecessor-sql-successor.mjs",
+      "sha256": "54d5a66695938c66b75c2c89b456dbfae9e876592fcbe3d5f9310ffc7cf2a07f"
+    }
+  ]
+}

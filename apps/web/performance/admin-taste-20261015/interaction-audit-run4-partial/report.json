@@ -1,0 +1,739 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-taste-read-only-interaction-audit",
+  "scope": {
+    "origin": "http://127.0.0.1:18822",
+    "syntheticFixture": true,
+    "productionEvidence": false,
+    "taskSpeedEvidence": false,
+    "moduleCount": 15,
+    "permittedMethods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  "environment": {
+    "node": "v26.3.0",
+    "playwright": "1.63",
+    "browser": "155.0.8059.40",
+    "browserContexts": [
+      "desktop-1440",
+      "mobile-390"
+    ]
+  },
+  "sourceSha256": {
+    "components/admin/AdminConsoleOverview.tsx": "35bfe60a0284d51ad78bb0c1ad8b1c86c86dbe13e0b1be51ff102d244965bc9c",
+    "components/admin/AdminUsersPanel.tsx": "776f4c78f5bca322c52735fc5c09dd6a842f200e786101312f8e29624ce5bc66",
+    "components/admin/SubmissionListView.tsx": "7d99c9d164579a5a9de4f92f376c04296c6e117d9361615ea1c866a108e7135c",
+    "components/admin/pipeline/AdminPipelineDashboard.tsx": "98c76b13f011af921ecb9ef341156fc9ab68a191ab7cf3aaa4c9e170c4a916fa",
+    "components/admin/AdminKnowledgeGraphPanel.tsx": "a6679a8ada20ca49482710824fdcaab4051905fa39f910e8ba89c92cfe00167a",
+    "components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx": "3d98dbfadd5dd6ba6726eb01bee625b5fed4da11e10ae044ddf2fdbaad2e40a2",
+    "styles/admin-ui.css": "0dbb37978d377f2b2e5b4c2c395940575d1ab9bea9fbe9cb6b7a6a6aeb8fd904",
+    "performance/admin-taste-20261015/taste-fixture.mjs": "369a6c60a8a11dd4ffe064a984a33aef67aade970b0fded75cb8dd4d3ea6ab35",
+    "performance/admin-taste-20261015/interaction-audit.mjs": "9063056ff70abbd53a434bb43a75fe13096901b90120a05af36b9d201dffcab8"
+  },
+  "cases": [
+    {
+      "id": "desktop-sidebar-destination:overview",
+      "passed": true,
+      "metrics": {
+        "moduleId": "overview",
+        "image": "desktop-overview.png",
+        "menu": {
+          "x": 10,
+          "y": 98,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 57
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:restaurants",
+      "passed": true,
+      "metrics": {
+        "moduleId": "restaurants",
+        "image": "desktop-restaurants.png",
+        "menu": {
+          "x": 10,
+          "y": 172,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:submissions",
+      "passed": true,
+      "metrics": {
+        "moduleId": "submissions",
+        "image": "desktop-submissions.png",
+        "menu": {
+          "x": 10,
+          "y": 212,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:reviews",
+      "passed": true,
+      "metrics": {
+        "moduleId": "reviews",
+        "image": "desktop-reviews.png",
+        "menu": {
+          "x": 10,
+          "y": 252,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:users",
+      "passed": true,
+      "metrics": {
+        "moduleId": "users",
+        "image": "desktop-users.png",
+        "menu": {
+          "x": 10,
+          "y": 326,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:banners",
+      "passed": true,
+      "metrics": {
+        "moduleId": "banners",
+        "image": "desktop-banners.png",
+        "menu": {
+          "x": 10,
+          "y": 366,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:insights",
+      "passed": true,
+      "metrics": {
+        "moduleId": "insights",
+        "image": "desktop-insights.png",
+        "menu": {
+          "x": 10,
+          "y": 406,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:pipeline",
+      "passed": true,
+      "metrics": {
+        "moduleId": "pipeline",
+        "image": "desktop-pipeline.png",
+        "menu": {
+          "x": 10,
+          "y": 446,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:knowledge-graph",
+      "passed": true,
+      "metrics": {
+        "moduleId": "knowledge-graph",
+        "image": "desktop-knowledge-graph.png",
+        "menu": {
+          "x": 10,
+          "y": 486,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:sentry",
+      "passed": false,
+      "errorCode": "PLAYWRIGHT_ACTION_FAILED"
+    },
+    {
+      "id": "desktop-sidebar-destination:youtube-thumbnail-generator",
+      "passed": false,
+      "errorCode": "DESTINATION_GEOMETRY_MISSING"
+    },
+    {
+      "id": "desktop-sidebar-destination:storyboard",
+      "passed": true,
+      "metrics": {
+        "moduleId": "storyboard",
+        "image": "desktop-storyboard.png",
+        "menu": {
+          "x": 10,
+          "y": 640,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:routes",
+      "passed": true,
+      "metrics": {
+        "moduleId": "routes",
+        "image": "desktop-routes.png",
+        "menu": {
+          "x": 10,
+          "y": 680,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:llm",
+      "passed": true,
+      "metrics": {
+        "moduleId": "llm",
+        "image": "desktop-llm.png",
+        "menu": {
+          "x": 10,
+          "y": 720,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-sidebar-destination:audit",
+      "passed": true,
+      "metrics": {
+        "moduleId": "audit",
+        "image": "desktop-audit.png",
+        "menu": {
+          "x": 10,
+          "y": 760,
+          "width": 188,
+          "height": 36
+        },
+        "header": {
+          "x": 220,
+          "y": 12,
+          "width": 1208,
+          "height": 56
+        },
+        "canvas": {
+          "x": 208,
+          "y": 0,
+          "width": 1232,
+          "height": 960
+        },
+        "activeMenuItems": 1,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "desktop-collapsed-rail-labels-focus",
+      "passed": true,
+      "metrics": {
+        "image": "desktop-collapsed-rail-focus.png",
+        "toggle": {
+          "x": 162,
+          "y": 17,
+          "width": 32,
+          "height": 32
+        },
+        "items": [
+          {
+            "moduleId": "overview",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "restaurants",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "submissions",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "reviews",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "users",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "banners",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "insights",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "pipeline",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "knowledge-graph",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "sentry",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "youtube-thumbnail-generator",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "storyboard",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "routes",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "llm",
+            "width": 36,
+            "height": 36
+          },
+          {
+            "moduleId": "audit",
+            "width": 36,
+            "height": 36
+          }
+        ]
+      }
+    },
+    {
+      "id": "pipeline-keyboard-detail",
+      "passed": true,
+      "metrics": {
+        "image": "pipeline-keyboard-detail.png",
+        "node": {
+          "x": 241.85,
+          "y": 476.85,
+          "width": 150.87,
+          "height": 66.3
+        },
+        "detail": {
+          "x": 928,
+          "y": 0,
+          "width": 512,
+          "height": 960
+        }
+      }
+    },
+    {
+      "id": "knowledge-graph-filter-keyboard-detail",
+      "passed": true,
+      "metrics": {
+        "image": "knowledge-filter-detail.png",
+        "filteredKind": "restaurant",
+        "visibleNodes": 1,
+        "node": {
+          "x": 757,
+          "y": 481,
+          "width": 134,
+          "height": 46
+        },
+        "detail": {
+          "x": 928,
+          "y": 0,
+          "width": 512,
+          "height": 960
+        }
+      }
+    },
+    {
+      "id": "users-read-only-filter-inspector",
+      "passed": true,
+      "metrics": {
+        "image": "users-filter-inspector.png",
+        "filteredState": "admin",
+        "visibleDetailButtons": 1,
+        "inspector": {
+          "x": 1068,
+          "y": 68,
+          "width": 352,
+          "height": 876
+        }
+      }
+    },
+    {
+      "id": "submissions-read-only-filter-inspector",
+      "passed": false,
+      "errorCode": "SUBMISSIONS_LIST_EMPTY"
+    },
+    {
+      "id": "reviews-read-only-filter-inspector",
+      "passed": false,
+      "errorCode": "REVIEWS_LIST_EMPTY"
+    },
+    {
+      "id": "mobile-navigation-open-select",
+      "passed": true,
+      "metrics": {
+        "image": "mobile-navigation-reviews.png",
+        "trigger": {
+          "x": 334,
+          "y": 6,
+          "width": 44,
+          "height": 44
+        },
+        "selectedTarget": {
+          "x": 23,
+          "y": 343,
+          "width": 342,
+          "height": 44
+        },
+        "menuItemCount": 15,
+        "documentOverflowPx": 0
+      }
+    },
+    {
+      "id": "knowledge-graph-explicit-error-state",
+      "passed": true,
+      "metrics": {
+        "image": "knowledge-explicit-error.png",
+        "visibleAlerts": 1,
+        "canvas": {
+          "x": 220,
+          "y": 170,
+          "width": 602,
+          "height": 721
+        }
+      }
+    },
+    {
+      "id": "pipeline-explicit-error-state",
+      "passed": true,
+      "metrics": {
+        "image": "pipeline-explicit-error.png",
+        "runErrorLabels": 1,
+        "manifestErrorLabels": 1,
+        "canvas": {
+          "x": 220,
+          "y": 76,
+          "width": 602,
+          "height": 868
+        }
+      }
+    },
+    {
+      "id": "storyboard-explicit-held-state",
+      "passed": false,
+      "errorCode": "STORYBOARD_HELD_STATE_MISSING"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "interaction-audit/desktop-overview.png",
+      "sha256": "188cf9415e77cd72aa0f5fc063aeb243ead89b7111b6cafe09f8aa33f96bec09"
+    },
+    {
+      "file": "interaction-audit/desktop-restaurants.png",
+      "sha256": "dc6b70c3394f198f5ddf4ba515ff066a1e8451cb79628fe556fadd555ab3e034"
+    },
+    {
+      "file": "interaction-audit/desktop-submissions.png",
+      "sha256": "af9c55cafbb47ae3dd6a59acd25ba3cd095a2c07e0663bfeab449cfb0d4c5356"
+    },
+    {
+      "file": "interaction-audit/desktop-reviews.png",
+      "sha256": "0f47dbc757454f21d89e05a2828a31627703bf2b40fbdbc347068d1d9bcc5e48"
+    },
+    {
+      "file": "interaction-audit/desktop-users.png",
+      "sha256": "cea0cf8e6e04183deaf234f2ce55bb7a2ae115b1dec06a7769fba2bff9a0eb6e"
+    },
+    {
+      "file": "interaction-audit/desktop-banners.png",
+      "sha256": "c5db22186aece0089f9d5f1a3105fea1520c1bb85c99f48176f553fb00227f59"
+    },
+    {
+      "file": "interaction-audit/desktop-insights.png",
+      "sha256": "ebdd73eb9d5cef820c5ba3367889ce622e3b4c32d2476607f99e949c8416a9b2"
+    },
+    {
+      "file": "interaction-audit/desktop-pipeline.png",
+      "sha256": "cbd882c85bcee736e6b772314fa8f26fb58b5330153187f90a94bd592e77d7e2"
+    },
+    {
+      "file": "interaction-audit/desktop-knowledge-graph.png",
+      "sha256": "c8d996ca0492d7edf4fd0821ccd373957bff0cc37f7e979c164e6f2c8cc1e687"
+    },
+    {
+      "file": "interaction-audit/desktop-storyboard.png",
+      "sha256": "76fe89bb6cae7b84417c45914f7f4cf7197a78117cf8ff3b1abeecb4569a9927"
+    },
+    {
+      "file": "interaction-audit/desktop-routes.png",
+      "sha256": "ca430bd4fc7612b756f55f54d935dc997a2024f2e9986e87189f9f48246e4700"
+    },
+    {
+      "file": "interaction-audit/desktop-llm.png",
+      "sha256": "2644aa3be34f2054f99bbb4170ffafde50fb9217bd7e7ae09c3ac5c8735c094e"
+    },
+    {
+      "file": "interaction-audit/desktop-audit.png",
+      "sha256": "0b3b23f3e33a6e81044103af6f1cca1e59cddb627036f14dc5e90f7292038d43"
+    },
+    {
+      "file": "interaction-audit/desktop-collapsed-rail-focus.png",
+      "sha256": "4864811cc0e390dc5a7c1d901240dcecc9ec860f16d66fd642d0a337ea358484"
+    },
+    {
+      "file": "interaction-audit/pipeline-keyboard-detail.png",
+      "sha256": "1ac454b0ea318629e3ed29381b7ae03873de24b9ef968fed4a0cf9b35efa1a4e"
+    },
+    {
+      "file": "interaction-audit/knowledge-filter-detail.png",
+      "sha256": "e219573c4a576090432a273504b418852c79f4238a544cc6df9255cd3b4721a5"
+    },
+    {
+      "file": "interaction-audit/users-filter-inspector.png",
+      "sha256": "783809ec930bb7ceae8559a892de8e6c3642af2ddc671c3b468f19df42f21abd"
+    },
+    {
+      "file": "interaction-audit/mobile-navigation-reviews.png",
+      "sha256": "cf00656a0e71c0fb74ea54ea3f2eb9493f1cc1040562a83080487867ba97dd53"
+    },
+    {
+      "file": "interaction-audit/knowledge-explicit-error.png",
+      "sha256": "c73ae959f2952be70f0f113566e8406f37a1be787a099f1c40e19688bdbf8957"
+    },
+    {
+      "file": "interaction-audit/pipeline-explicit-error.png",
+      "sha256": "d35a3f18b58172e93c8f7cef7d4fcfc8c5f3394bed2c2cd603ba9697b26e71ea"
+    }
+  ],
+  "network": {
+    "permittedRequests": 248,
+    "blockedExternalRequests": 0,
+    "blockedExternalWebSockets": 0,
+    "blockedNonReadMethodRequests": 9,
+    "sentNonReadMethodRequests": 0,
+    "syntheticPreflightResponses": 0,
+    "loopbackWebSocketsObserved": 3
+  },
+  "runtime": [
+    {
+      "contextId": "desktop-1440",
+      "pageErrors": 0,
+      "consoleErrors": 7,
+      "requestFailures": 29
+    },
+    {
+      "contextId": "mobile-390",
+      "pageErrors": 0,
+      "consoleErrors": 5,
+      "requestFailures": 7
+    },
+    {
+      "contextId": "error-held-834",
+      "pageErrors": 0,
+      "consoleErrors": 6,
+      "requestFailures": 7
+    }
+  ],
+  "summary": {
+    "passedCases": 20,
+    "failedCases": 5,
+    "screenshots": 20,
+    "runtimePageErrors": 0,
+    "passed": false
+  }
+}

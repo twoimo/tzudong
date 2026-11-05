@@ -9,9 +9,16 @@ import {
 
 export const GEMINI_OCR_FALLBACK_MODEL = 'gemini-3.6-flash';
 export const GEMINI_OCR_DEFAULT_THINKING_LEVEL = 'MEDIUM';
+export const GEMINI_OCR_INFERENCE_CONFIG_VERSION = 'gemini-receipt-ocr-inference-v1';
 export type GeminiOcrThinkingLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+export type GeminiOcrInferenceConfigSnapshot = Readonly<{
+  version: typeof GEMINI_OCR_INFERENCE_CONFIG_VERSION;
+  thinkingLevel: GeminiOcrThinkingLevel;
+  responseMimeType: 'application/json';
+  samplingPolicy: 'omit-modern-zero-legacy-v1';
+}>;
 
-function normalizeGeminiOcrModel(model: string): string {
+export function normalizeGeminiOcrModel(model: string): string {
   return model === 'gemini-3.7-flash' || model === 'models/gemini-3.7-flash'
     ? 'gemini-3.8-flash'
     : model;
@@ -19,12 +26,53 @@ function normalizeGeminiOcrModel(model: string): string {
 
 export class GeminiOcrError extends Error {
   attempts: ReceiptOcrAttempt[];
+  definitiveCredentialRejection: boolean;
 
-  constructor(attempts: ReceiptOcrAttempt[]) {
+  constructor(attempts: ReceiptOcrAttempt[], definitiveCredentialRejection = false) {
     super('Gemini OCR 호출 실패');
     this.name = 'GeminiOcrError';
     this.attempts = attempts;
+    this.definitiveCredentialRejection = definitiveCredentialRejection;
   }
+}
+
+function parseGeminiProviderError(error: unknown): Record<string, unknown> | null {
+  if (!error || typeof error !== 'object' || !('message' in error) || typeof error.message !== 'string') return null;
+  try {
+    const parsed = JSON.parse(error.message);
+    return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isDefinitiveGeminiCredentialRejection(error: unknown): boolean {
+  const rawStatus = error && typeof error === 'object' && 'status' in error ? error.status : null;
+  const httpStatus = typeof rawStatus === 'number' && Number.isInteger(rawStatus) ? rawStatus : null;
+  if (httpStatus !== 400 && httpStatus !== 401 && httpStatus !== 403) return false;
+
+  const parsed = parseGeminiProviderError(error);
+  const body = parsed?.error && typeof parsed.error === 'object'
+    ? parsed.error as Record<string, unknown>
+    : parsed;
+  if (!body) return false;
+
+  const providerCode = typeof body.status === 'string'
+    ? body.status
+    : typeof body.code === 'string'
+      ? body.code
+      : '';
+  if (httpStatus === 401) {
+    return providerCode === 'UNAUTHENTICATED' || providerCode === 'authentication';
+  }
+  if (httpStatus === 403) {
+    return providerCode === 'PERMISSION_DENIED' || providerCode === 'permission_denied';
+  }
+  if (providerCode !== 'INVALID_ARGUMENT' && providerCode !== 'invalid_request') return false;
+
+  const details = Array.isArray(body.details) ? body.details : [];
+  return details.some((detail) => detail && typeof detail === 'object'
+    && 'reason' in detail && detail.reason === 'API_KEY_INVALID');
 }
 
 function sanitizeCsv(value: string | undefined): string[] {
@@ -50,6 +98,18 @@ export function getGeminiOcrThinkingLevel(env: NodeJS.ProcessEnv = process.env):
     ? configured
     : GEMINI_OCR_DEFAULT_THINKING_LEVEL;
 }
+
+export function getGeminiOcrInferenceConfigSnapshot(
+  env: NodeJS.ProcessEnv = process.env,
+): GeminiOcrInferenceConfigSnapshot {
+  return Object.freeze({
+    version: GEMINI_OCR_INFERENCE_CONFIG_VERSION,
+    thinkingLevel: getGeminiOcrThinkingLevel(env),
+    responseMimeType: 'application/json',
+    samplingPolicy: 'omit-modern-zero-legacy-v1',
+  });
+}
+
 export function toGeminiThinkingLevel(thinkingLevel: GeminiOcrThinkingLevel): ThinkingLevel {
   return thinkingLevel as ThinkingLevel;
 }
@@ -68,6 +128,7 @@ export function buildGeminiReceiptOcrParts(input: {
 type GeminiGenerateContentImpl = (input: {
   model: string;
   thinkingLevel: GeminiOcrThinkingLevel;
+  inferenceConfig: GeminiOcrInferenceConfigSnapshot;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
 }) => Promise<string>;
@@ -80,11 +141,16 @@ function parseTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
 
 export function buildGeminiReceiptOcrRequest(input: {
   model: string;
-  thinkingLevel: GeminiOcrThinkingLevel;
+  thinkingLevel?: GeminiOcrThinkingLevel;
+  inferenceConfig?: GeminiOcrInferenceConfigSnapshot;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
   timeoutMs?: number;
 }) {
+  const inferenceConfig: GeminiOcrInferenceConfigSnapshot = input.inferenceConfig ?? Object.freeze({
+    ...getGeminiOcrInferenceConfigSnapshot({} as NodeJS.ProcessEnv),
+    ...(input.thinkingLevel ? { thinkingLevel: input.thinkingLevel } : {}),
+  });
   // Google removed sampling controls starting with 3.6 Flash and 3.5
   // Flash-Lite, including later releases. Preserve older explicit models.
   const requestModel = normalizeGeminiOcrModel(input.model);
@@ -98,8 +164,8 @@ export function buildGeminiReceiptOcrRequest(input: {
     contents: [{ role: 'user' as const, parts: input.parts }],
     config: {
       ...(modern ? {} : { temperature: 0 }),
-      responseMimeType: 'application/json',
-      thinkingConfig: { thinkingLevel: toGeminiThinkingLevel(input.thinkingLevel) },
+      responseMimeType: inferenceConfig.responseMimeType,
+      thinkingConfig: { thinkingLevel: toGeminiThinkingLevel(inferenceConfig.thinkingLevel) },
       abortSignal: input.signal,
       httpOptions: { timeout: input.timeoutMs ?? 12_000, retryOptions: { attempts: 1 } },
     },
@@ -109,7 +175,7 @@ export function buildGeminiReceiptOcrRequest(input: {
 async function generateWithSdk(input: {
   apiKey: string;
   model: string;
-  thinkingLevel: GeminiOcrThinkingLevel;
+  inferenceConfig: GeminiOcrInferenceConfigSnapshot;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
   timeoutMs?: number;
@@ -128,6 +194,7 @@ export async function callGeminiReceiptOcr(input: {
   mimeType: string;
   prompt: string;
   env?: NodeJS.ProcessEnv;
+  inferenceConfig?: GeminiOcrInferenceConfigSnapshot;
   signal?: AbortSignal;
   generateContentImpl?: GeminiGenerateContentImpl;
 }): Promise<ReceiptOcrResult> {
@@ -136,9 +203,10 @@ export async function callGeminiReceiptOcr(input: {
 
   const env = input.env ?? process.env;
   const timeoutMs = parseTimeoutMs(env);
-  const thinkingLevel = getGeminiOcrThinkingLevel(env);
+  const inferenceConfig = input.inferenceConfig ?? getGeminiOcrInferenceConfigSnapshot(env);
   const attempts: ReceiptOcrAttempt[] = [];
   const deadline = Date.now() + timeoutMs;
+  let nonCredentialOutcomeObserved = false;
 
   for (const model of getGeminiOcrModels(env)) {
     if (input.signal?.aborted || Date.now() >= deadline) break;
@@ -148,6 +216,7 @@ export async function callGeminiReceiptOcr(input: {
     const timeout = setTimeout(() => controller.abort(), remainingMs);
     const abortFromCaller = () => controller.abort();
     input.signal?.addEventListener('abort', abortFromCaller, { once: true });
+    let providerResponseReceived = false;
 
     try {
       if (input.signal?.aborted) controller.abort();
@@ -157,13 +226,24 @@ export async function callGeminiReceiptOcr(input: {
         mimeType: input.mimeType,
       });
       const text = await (input.generateContentImpl
-        ? input.generateContentImpl({ model, thinkingLevel, parts, signal: controller.signal })
-        : generateWithSdk({ apiKey, model, thinkingLevel, parts, signal: controller.signal, timeoutMs: remainingMs }));
+        ? input.generateContentImpl({
+            model,
+            thinkingLevel: inferenceConfig.thinkingLevel,
+            inferenceConfig,
+            parts,
+            signal: controller.signal,
+          })
+        : generateWithSdk({ apiKey, model, inferenceConfig, parts, signal: controller.signal, timeoutMs: remainingMs }));
+      providerResponseReceived = true;
       controller.signal.throwIfAborted();
       const data: ReceiptOcrData = normalizeReceiptOcrData(extractJsonObject(text));
       attempts.push({ model, ok: true, elapsedMs: Date.now() - startedAt });
       return { data, model, attempts };
     } catch (error) {
+      const rawProviderStatus = error && typeof error === 'object' && 'status' in error ? error.status : null;
+      const providerStatus = typeof rawProviderStatus === 'number' && Number.isInteger(rawProviderStatus)
+        ? rawProviderStatus
+        : null;
       attempts.push({
         model,
         ok: false,
@@ -172,6 +252,21 @@ export async function callGeminiReceiptOcr(input: {
           : error instanceof Error && error.name === 'AbortError' ? `timeout ${timeoutMs}ms`
           : 'provider_request_failed',
       });
+      // A returned but invalid response, or a definitive unsupported-model
+      // response, may try the next declared model. Timeouts, cancellation and
+      // transport/server failures have an uncertain provider outcome and must
+      // not dispatch another model automatically.
+      const currentCredentialRejection = !providerResponseReceived
+        && isDefinitiveGeminiCredentialRejection(error);
+      if (currentCredentialRejection) {
+        if (!nonCredentialOutcomeObserved) {
+          throw new GeminiOcrError(attempts, true);
+        }
+        break;
+      }
+      nonCredentialOutcomeObserved = true;
+      const fallbackSafe = providerResponseReceived || providerStatus === 400 || providerStatus === 404;
+      if (!fallbackSafe) break;
     } finally {
       clearTimeout(timeout);
       input.signal?.removeEventListener('abort', abortFromCaller);
@@ -179,4 +274,48 @@ export async function callGeminiReceiptOcr(input: {
   }
 
   throw new GeminiOcrError(attempts);
+}
+
+export async function callGeminiReceiptOcrWithCredentialFallback(input: {
+  credentials: ReadonlyArray<{ apiKey: string }>;
+  imageBase64: string;
+  mimeType: string;
+  prompt: string;
+  env?: NodeJS.ProcessEnv;
+  inferenceConfig?: GeminiOcrInferenceConfigSnapshot;
+  signal?: AbortSignal;
+}): Promise<ReceiptOcrResult> {
+  if (!input.credentials[0]) throw new Error('Gemini OCR API 키가 설정되지 않았습니다.');
+  const priorAttempts: ReceiptOcrAttempt[] = [];
+
+  for (let index = 0; index < input.credentials.length; index++) {
+    const credential = input.credentials[index];
+    if (!credential) continue;
+    try {
+      const result = await callGeminiReceiptOcr({
+        apiKey: credential.apiKey,
+        imageBase64: input.imageBase64,
+        mimeType: input.mimeType,
+        prompt: input.prompt,
+        env: input.env,
+        inferenceConfig: input.inferenceConfig,
+        signal: input.signal,
+      });
+      return priorAttempts.length
+        ? { ...result, attempts: [...priorAttempts, ...result.attempts] }
+        : result;
+    } catch (error) {
+      if (!(error instanceof GeminiOcrError)) {
+        throw error;
+      }
+      if (!error.definitiveCredentialRejection || index === input.credentials.length - 1) {
+        throw priorAttempts.length
+          ? new GeminiOcrError([...priorAttempts, ...error.attempts], error.definitiveCredentialRejection)
+          : error;
+      }
+      priorAttempts.push(...error.attempts);
+    }
+  }
+
+  throw new Error('Gemini OCR API 키가 설정되지 않았습니다.');
 }

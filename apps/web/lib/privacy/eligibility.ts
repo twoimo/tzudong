@@ -1,3 +1,5 @@
+import { captureBrowserLogout } from '@/lib/auth/browser-logout';
+import { dispatchHomeAuthSessionUpdated } from '@/lib/home-auth-events';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 import {
@@ -190,22 +192,47 @@ export async function getPrivacyEligibilityForUser(
   }
 }
 
-export async function signOutRejectedPrivacySession(client: SupabaseClient<Database>) {
-  try {
-    await client.auth.signOut({ scope: 'global' });
-  } catch {
-    // A local sign-out below still clears this browser when global revocation is unavailable.
-  }
+type RejectedSessionOwner = {
+  userId?: string;
+  isCurrent?: () => boolean;
+  browserLogout?: ReturnType<typeof captureBrowserLogout>;
+  scope?: 'local';
+};
 
+export async function signOutRejectedPrivacySession(
+  client: SupabaseClient<Database>, owner: RejectedSessionOwner = {},
+) {
+  const isCurrent = owner.isCurrent ?? (() => true);
+  if (!isCurrent()) return false;
   try {
-    await client.auth.signOut({ scope: 'local' });
-  } catch {
-    // The readback below remains fail closed even when local cookie cleanup fails.
-  }
-
-  try {
-    const { data: { user }, error } = await client.auth.getUser();
-    return user === null && (error === null || isExplicitAuthSessionMissingError(error));
+    const browserLogout = owner.browserLogout
+      ?? (typeof document === 'undefined' ? null : captureBrowserLogout());
+    const owns = () => isCurrent() && (!browserLogout || browserLogout.isCurrent());
+    if (!owns()) return false;
+    const { data: { session }, error } = await client.auth.getSession();
+    if (!owns() || (owner.userId && session && session.user.id !== owner.userId)) return false;
+    if (error) return false;
+    let revoked = session === null;
+    if (session?.access_token) {
+      // This public SDK API revokes the captured JWT without removing whichever
+      // browser session occupies the mutable client's storage after its await.
+      // Automatic rejection owns this captured session only. An HTTP request
+      // cannot fence a newer login for the same account across browser tabs.
+      try {
+        const result = await client.auth.admin.signOut(session.access_token, 'local');
+        revoked = !result.error;
+      } catch { /* The response and browser cleanup still fail closed. */ }
+    }
+    if (!owns()) return false;
+    if (browserLogout) {
+      if (!await browserLogout.clearIfCurrent(isCurrent)) return false;
+      // The auth provider re-reads storage before publishing the cleared state.
+      // No private SDK notification or synthetic focus event is needed.
+      dispatchHomeAuthSessionUpdated({ hasSession: false, source: 'auth-privacy-session-cleared' });
+      // Local removal is complete even when the remote revocation was unavailable.
+      return true;
+    }
+    return revoked;
   } catch {
     return false;
   }

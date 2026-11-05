@@ -1,0 +1,31 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/device-location-privacy.test.ts:
+(pass) readback acquisition is the only mint boundary and validates the exact response schema [0.69ms]
+(pass) readiness literals, spreads, clones, and JSON cannot mint a capability without the removed factory API [0.26ms]
+(pass) device coordinates use only approved memory and the exact Naver network sink [0.42ms]
+(pass) business source relabels do not bypass the device coordinate gate [0.11ms]
+(pass) capabilities are opaque, revocable, and reject clone or relabel attempts [0.14ms]
+(pass) monotonic expiry cannot be revived by replaying an earlier clock value [0.42ms]
+(pass) fractional monotonic timestamps retain authorization until exact expiry and never revive it [1.23ms]
+(pass) tracking lifecycle revokes the genuine capability exactly once on every stop path [0.22ms]
+(pass) home client revokes retained capabilities on readiness failure, lifecycle cleanup, and errors [0.07ms]
+(pass) home client keeps the capability boundary before permission and confines rendering to Naver [0.16ms]
+
+tests-unit/device-location-map.test.ts:
+(pass) device location map helpers > normalizes compass headings into clockwise degrees [0.10ms]
+(pass) device location map helpers > prefers iOS compass heading and converts absolute alpha fallback [0.03ms]
+(pass) device location map helpers > normalizes moving geolocation heading only when available
+(pass) device location map helpers > labels the floating button by tap progression [0.02ms]
+(pass) device location map helpers > focuses only when a locate request changes [0.01ms]
+(pass) device location map helpers > clamps accuracy radius for map overlays [0.04ms]
+(pass) device location map helpers > keeps device-location focus zoom at least the map minimum [0.01ms]
+(pass) device location map helpers > builds a pure device-location render plan for marker effects [0.04ms]
+(pass) device location map helpers > skips insignificant device-location jitter before it reaches React state [0.10ms]
+(pass) device location map helpers > renders a direction marker only after heading mode has a heading [0.04ms]
+(pass) device location map helpers > uses the bounded map radius for position-marker accuracy labels [0.09ms]
+
+ 21 pass
+ 0 fail
+ 191 expect() calls
+Ran 21 tests across 2 files. [119.00ms]

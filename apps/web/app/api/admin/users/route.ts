@@ -9,6 +9,9 @@ export const runtime = 'nodejs';
 
 const DEFAULT_PER_PAGE = 80;
 const MAX_PER_PAGE = 200;
+const MAX_FILTER_SCAN_PAGES = 5;
+type AdminUserFilter = 'all' | 'admin' | 'disabled' | 'unconfirmed';
+type AdminUserSort = 'newest' | 'lastSignIn' | 'name';
 const ADMIN_USER_CREATION_ONBOARDING_REQUIRED = {
   code: 'ADMIN_USER_CREATION_ONBOARDING_REQUIRED',
   error: '새 계정은 개인정보 온보딩 가입 절차를 통해서만 만들 수 있습니다.',
@@ -16,6 +19,26 @@ const ADMIN_USER_CREATION_ONBOARDING_REQUIRED = {
 
 function normalizeSearch(value: string | null) {
   return (value ?? '').trim().toLowerCase();
+}
+
+function normalizePage(value: string | null) {
+  const parsed = Number(value ?? '1');
+  return Number.isFinite(parsed) ? Math.max(Math.floor(parsed), 1) : 1;
+}
+
+function normalizePerPage(value: string | null) {
+  const parsed = Number(value ?? String(DEFAULT_PER_PAGE));
+  return Number.isFinite(parsed)
+    ? Math.min(Math.max(Math.floor(parsed), 1), MAX_PER_PAGE)
+    : DEFAULT_PER_PAGE;
+}
+
+function normalizeFilter(value: string | null): AdminUserFilter {
+  return value === 'admin' || value === 'disabled' || value === 'unconfirmed' ? value : 'all';
+}
+
+function normalizeSort(value: string | null): AdminUserSort {
+  return value === 'lastSignIn' || value === 'name' ? value : 'newest';
 }
 
 function isDisabledUser(user: Pick<User, 'banned_until'>) {
@@ -98,6 +121,21 @@ function buildManagedUser(user: User, metadata: AdminUserManagementMetadataRow |
   };
 }
 
+type ManagedUser = ReturnType<typeof buildManagedUser>;
+
+function matchesAdminUserFilter(user: ManagedUser, filter: AdminUserFilter) {
+  if (filter === 'admin') return user.isAdmin;
+  if (filter === 'disabled') return user.isDisabled;
+  if (filter === 'unconfirmed') return !user.emailConfirmedAt;
+  return true;
+}
+
+function compareManagedUsers(a: ManagedUser, b: ManagedUser, sort: AdminUserSort) {
+  if (sort === 'name') return a.nickname.localeCompare(b.nickname, 'ko');
+  const field = sort === 'lastSignIn' ? 'lastSignInAt' : 'createdAt';
+  return (Date.parse(b[field] ?? '') || 0) - (Date.parse(a[field] ?? '') || 0);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin();
@@ -110,12 +148,15 @@ export async function GET(request: NextRequest) {
     }
     const supabase = createSupabaseServiceRoleClient();
     const search = normalizeSearch(searchParams.get('search'));
-    const page = Math.max(Number(searchParams.get('page') ?? '1') || 1, 1);
-    const requestedPerPage = Number(searchParams.get('perPage') ?? String(DEFAULT_PER_PAGE)) || DEFAULT_PER_PAGE;
-    const perPage = Math.min(Math.max(requestedPerPage, 1), MAX_PER_PAGE);
+    const page = normalizePage(searchParams.get('page'));
+    const perPage = normalizePerPage(searchParams.get('perPage'));
+    const filter = normalizeFilter(searchParams.get('filter'));
+    const sort = normalizeSort(searchParams.get('sort'));
 
     const userPages = [];
     let listedTotal = 0;
+    let isPartial = false;
+    const needsBoundedFilterScan = exactUserId === null && Boolean(search || filter !== 'all' || sort !== 'newest');
 
     if (exactUserId !== null) {
       const { data, error } = await supabase.auth.admin.getUserById(exactUserId);
@@ -125,14 +166,15 @@ export async function GET(request: NextRequest) {
       }
       if (data.user.id.toLowerCase() !== exactUserId.toLowerCase()) throw new Error('ADMIN_USER_READBACK_INVALID');
       userPages.push(data.user); listedTotal = 1;
-    } else if (search) {
-      for (let searchPage = 1; searchPage <= 5; searchPage += 1) {
+    } else if (needsBoundedFilterScan) {
+      for (let searchPage = 1; searchPage <= MAX_FILTER_SCAN_PAGES; searchPage += 1) {
         const { data, error } = await supabase.auth.admin.listUsers({ page: searchPage, perPage: MAX_PER_PAGE });
         if (error) throw error;
         userPages.push(...(data.users ?? []));
         listedTotal = data.total ?? listedTotal;
-        if (!data.users || data.users.length < MAX_PER_PAGE) break;
+        if (!data.users || data.users.length < MAX_PER_PAGE || (listedTotal > 0 && userPages.length >= listedTotal)) break;
       }
+      isPartial = listedTotal > userPages.length;
     } else {
       const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
       if (error) throw error;
@@ -144,7 +186,7 @@ export async function GET(request: NextRequest) {
     const userIds = authUsers.map((user) => user.id);
     const metadataMap = await fetchUserManagementMetadata(supabase, userIds);
 
-    const users = authUsers
+    const managedUsers = authUsers
       .map((user) => buildManagedUser(user, metadataMap.get(user.id)))
       .filter((user) => {
         if (exactUserId !== null || !search) return true;
@@ -152,14 +194,25 @@ export async function GET(request: NextRequest) {
           .join(' ')
           .toLowerCase()
           .includes(search);
-      });
+      })
+      .filter((user) => exactUserId !== null || matchesAdminUserFilter(user, filter))
+      .sort((a, b) => compareManagedUsers(a, b, sort));
+    const filteredTotal = managedUsers.length;
+    const users = needsBoundedFilterScan
+      ? managedUsers.slice((page - 1) * perPage, page * perPage)
+      : managedUsers;
+    const total = exactUserId !== null ? users.length : needsBoundedFilterScan ? filteredTotal : listedTotal;
 
     return NextResponse.json(
       {
         users,
         page,
         perPage,
-        total: exactUserId !== null || search ? users.length : listedTotal,
+        total,
+        sourceTotal: exactUserId !== null ? users.length : listedTotal,
+        isPartial,
+        hasPreviousPage: page > 1,
+        hasNextPage: page * perPage < total,
         summary: {
           loadedUsers: users.length,
           adminUsers: users.filter((user) => user.isAdmin).length,
@@ -176,7 +229,7 @@ export async function GET(request: NextRequest) {
       step: 'list',
       errorName: getAdminSafeErrorName(error),
     });
-    return NextResponse.json({ error: '사용자 목록을 불러오지 못했습니다.' }, { status: 500 });
+    return NextResponse.json({ error: '사용자 목록을 불러오지 못했습니다.' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }
 }
 

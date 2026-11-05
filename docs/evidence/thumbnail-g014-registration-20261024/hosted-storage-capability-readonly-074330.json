@@ -1,0 +1,29 @@
+{
+  "scope": "Read-only observed capability, not a lock execution or hosted admission.",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "rows": [
+    {
+      "observed_at": "2026-10-24 07:43:30.351877+00",
+      "caller": "postgres",
+      "server_version": "17.6",
+      "bucket_lock_capability": true,
+      "object_lock_capability": true,
+      "browser_role_boundary": [
+        {
+          "role": "anon",
+          "super": false,
+          "bypass_rls": false,
+          "storage_owner_set": false,
+          "storage_owner_usage": false
+        },
+        {
+          "role": "authenticated",
+          "super": false,
+          "bypass_rls": false,
+          "storage_owner_set": false,
+          "storage_owner_usage": false
+        }
+      ]
+    }
+  ]
+}

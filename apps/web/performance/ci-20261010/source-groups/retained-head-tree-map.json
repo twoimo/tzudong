@@ -1,0 +1,35 @@
+{
+  "mappings": [
+    {
+      "headSha": "7343d92c77a0d4114db16871363c31b54b66ef82",
+      "treeSha": "10396fb37745bfaff9fb3bff864f254afefaa745"
+    },
+    {
+      "headSha": "9986afefd546d20f4f2593b4ac41143f58f3f45f",
+      "treeSha": "182af5df94bd32e545d134370fac94583bb343c8"
+    },
+    {
+      "headSha": "a6eae5b4ac5225309e3cad0b3e8dc3b2f5dde525",
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "headSha": "a9ce6ba2be377594e30dc865c621f2854006aa79",
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "headSha": "d9144efed7212a3bdd2849231b7b851602811543",
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "headSha": "efef17c4087808ea50cd9cb6bd8f38265f4cc2ae",
+      "treeSha": "11355dd1edd3845ef52d60b9926f5d901e0dc640"
+    },
+    {
+      "headSha": "f55117f878596447f286aece13acf903205af71c",
+      "treeSha": "182af5df94bd32e545d134370fac94583bb343c8"
+    }
+  ],
+  "provenanceSourceGroupsSha256": "ed9833d1d9a438e2b9d78ccaadc54bfad51675f80d4d13dfe8867adf7ea5542f",
+  "schema": "tzudong-ci-performance/v1/source-group-sensitivity/retained-head-tree-map",
+  "successfulRunsSha256": "245f7afc2345556e619fd7be23613b89ffa5561689bfc954b5ec3f43af9eb6b1"
+}

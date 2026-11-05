@@ -61,7 +61,7 @@ function splitSchemas(value) {
 }
 
 function normalizeGeneratedTypes(value) {
-  return `${value.replace(/\s+$/u, '')}\n`;
+  return `${value.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').replace(/\s+$/u, '')}\n`;
 }
 
 const schemas = splitSchemas(process.env.SUPABASE_SCHEMAS || 'public,auth,storage');
@@ -201,6 +201,10 @@ function classifyGenTypesFailure(error) {
   if (text.includes('pg_meta_timeout')) return 'pg_meta_timeout';
   if (text.includes('pg_meta_shape')) return 'pg_meta_shape';
   if (text.includes('pg_meta_status_') || text.includes('pg_meta_http')) return 'pg_meta_http';
+  if (text.includes('server does not support ssl') || text.includes('ssl is not enabled')
+    || text.includes('ssl support is not enabled') || text.includes('ssl connections are not enabled')) {
+    return 'database_ssl_unsupported';
+  }
   if (text.includes('password authentication failed') || text.includes('does not exist')) {
     return 'database_auth';
   }

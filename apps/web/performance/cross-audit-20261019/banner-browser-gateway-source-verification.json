@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-18T16:54:34.126Z",
+  "node": "v24.22.0",
+  "evidenceClass": "source-and-pure-transport-boundary-only",
+  "checks": {
+    "fixedDestination": true,
+    "hostAndOriginBoundary": true,
+    "getAndHeadForwardingOnly": true,
+    "incomingCredentialHeadersDroppedExceptExactSyntheticSession": true,
+    "syntheticSessionCookieReconstructed": true,
+    "fixtureCspMockOriginOnly": true,
+    "websocketPathAndHeadersBounded": true,
+    "e2eConstantsReadFromApplicationSource": true,
+    "developmentAndProductionLaunchArgumentsBounded": true,
+    "productionEnvironmentSecretFreeAndLoopbackOnly": true,
+    "verificationNetworkCalls": 0,
+    "verificationServersStarted": 0
+  },
+  "packageSha256": {
+    "README.md": "6744175285a45d5938ed1d5cbb66fe24138437d1fe4d99caeb026a759954c7cc",
+    "fixture-data.mjs": "a68b66b253732283abdac28bd97a5a436e8ab008fdb64d0dca0f9928c75f541f",
+    "fixture-gateway.mjs": "8cc6359b51f0ad41919fe894e3ad439a8b846c0d0e82640ce028060f65f0c86d",
+    "launch.mjs": "b6889b8a9f8a186a96ddee7b0859b76a303e482ccf02fc0e1518c8efb04d081e",
+    "loopback-transport.mjs": "0aac0bcccb3669c3ece6be877859bdb032a899fdf131c69e3444627b5636aeb3",
+    "source-contract.mjs": "2d045096091a6d4be50512eb1b8984aca8fa822c473c9588d830257789f709ab",
+    "verify-package.mjs": "7665e764a11dcefee945003745516adc7f687e27cfa0b3e7e6b0901f77942fa4"
+  },
+  "inputSha256": {
+    "preview-design-fixtures.mjs": "a4b2eac5cde5b5b48edb4e3a4d5e7adbf232defaa3b2317edd48ff251d672906",
+    "verify-admin-sidebar-pages-browser.ts": "8d81317901080253fc3335f71f04faf58e1b3bd2b5428df6dfe3025e750257f6",
+    "admin-ui.css": "54ba62adad95ebb3aac23e472786e818e607d8ada6bbd610efbc31f7ddc0755a",
+    "loopback-transport.mjs": "2a6409c33cb7e3708451ca2d8ec5075cbe03a1107afd4c56a3ce9d5585b29382",
+    "e2e-admin-route-bypass.ts": "e2db49d70820a59cfda8c9e8fc711c3a5654ec1572216ea95338a1fdc3f408dc"
+  },
+  "renderMatrix": {
+    "menus": 15,
+    "widths": 3,
+    "total": 45,
+    "completed": 0,
+    "status": "incomplete-root-cua-required"
+  }
+}

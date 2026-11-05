@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-10-20T19:45:22.792212+00:00",
+  "exitCode": 75,
+  "provider": "chatgpt",
+  "job": "tzudong-overseas-de62e9426ffd-delta-20261021",
+  "sourceBundleSha256": "d0a61826ae75cccb95c76a362f20a6aeba8ad41fb99f050d080eca2bc0f85a28",
+  "result": {
+    "status": "queued",
+    "request_id": "e3da7e53b57a5203b7a0f1bc",
+    "admission": {
+      "provider": "chatgpt",
+      "mode": "fifo",
+      "local_max_active": 1,
+      "active_count": 2,
+      "free_slots": 0,
+      "dispatch_pending": false,
+      "next_owner": "ETrJ35NDvs3zArCH",
+      "next_request_id": "199ec064b4c926625b36491a",
+      "eligible_accounts": [],
+      "urgent_accounts": [],
+      "five_hour_limited_accounts": [],
+      "vendor_concurrency_limit": null
+    }
+  },
+  "externalSendPerformed": false,
+  "localPolicyOverride": false
+}

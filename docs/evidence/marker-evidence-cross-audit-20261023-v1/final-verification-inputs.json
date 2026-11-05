@@ -1,0 +1,52 @@
+{
+  "runtime_fix_revision": "0aa001d7e5f31c898c3cc34864c0f1fcf9b8b946",
+  "corrected_full_ci_revision": "2e0f8dd97e24164425653b4f3ed3153016c0878a",
+  "additional_test_snapshot": "Bound by these file hashes and enclosing evidence commit; runtime source unchanged.",
+  "files": [
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "bytes": 174205,
+      "sha256": "09d0b7caded83cd3e33c4a4265c7ca9492bfc1ddcd48d700ccd6a4a47bb2aa86"
+    },
+    {
+      "path": "apps/web/components/map/OverseasMap.tsx",
+      "bytes": 18923,
+      "sha256": "856dff8ff73750163a94c9cbed4f3fb2115ed71b7ad4ff2575156af3cb194dcb"
+    },
+    {
+      "path": "apps/web/lib/device-location-map.ts",
+      "bytes": 9422,
+      "sha256": "0dfbdd8f989e7f45daa286543979670b968d3e982a7bdc95c4d9d733cb9b6753"
+    },
+    {
+      "path": "apps/web/lib/naver-map-event-cleanup.ts",
+      "bytes": 1747,
+      "sha256": "ee4c8bef6103c98b75238cc45eb2f119b1f5eab01202fb44979b05007c3957d6"
+    },
+    {
+      "path": "apps/web/lib/marker-pool.ts",
+      "bytes": 13062,
+      "sha256": "aec13f07ba988634184913ae6b607acba473fe509884e9a6573d6d4ddefe5014"
+    },
+    {
+      "path": "apps/web/tests-unit/mobile-home-map-regressions.test.ts",
+      "bytes": 16990,
+      "sha256": "84770e4ae605eb299c5f5cf1edd19fd20b957c9147c2c5ea6c8c9ac37abdc875"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-event-wiring.test.ts",
+      "bytes": 5072,
+      "sha256": "620c9e48062074a00fc4c54047e539a64e0c03df1fa262d73f82913ccbdf21a9"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-event-cleanup.test.ts",
+      "bytes": 3392,
+      "sha256": "a24bc8a29905ae817894da6f9f9b10f28fc21de7d7e6eb7ca0eaa1111aed3ac5"
+    },
+    {
+      "path": "apps/web/tests-unit/overseas-marker-refresh-browser.test.ts",
+      "bytes": 8569,
+      "sha256": "a7284218585b99034e7597379ccfe5f2a3f0c619cf7a237cc3ec002314e1d145"
+    }
+  ]
+}

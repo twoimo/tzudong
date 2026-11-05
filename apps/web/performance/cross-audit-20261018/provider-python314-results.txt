@@ -1,0 +1,8 @@
+command=PYTHONDONTWRITEBYTECODE=1 /Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest backend.utils.tests.test_pipeline_performance.ReadBudgetTests
+runtime=Python 3.14.8
+exit=0
+...............
+----------------------------------------------------------------------
+Ran 15 tests in 0.113s
+
+OK

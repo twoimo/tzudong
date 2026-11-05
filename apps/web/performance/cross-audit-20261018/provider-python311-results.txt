@@ -1,0 +1,8 @@
+command=PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.11 -m unittest backend.utils.tests.test_pipeline_performance.ReadBudgetTests
+runtime=Python 3.11.17
+exit=0
+...............
+----------------------------------------------------------------------
+Ran 15 tests in 0.090s
+
+OK

@@ -1,0 +1,13 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-receipt-processor-terminal-failure.test.ts:
+(pass) administrator receipt OCR terminal row failures > uses exact pending-state CAS and independently reads back the terminal failure [5.69ms]
+(pass) administrator receipt OCR terminal row failures > fails closed when an administrator changes the verification object during the CAS [0.41ms]
+(pass) administrator receipt OCR terminal row failures > recovers an uncertain mutation response only from exact terminal readback [0.21ms]
+(pass) administrator receipt OCR terminal row failures > preserves a concurrent terminal winner after the row-failure CAS loses [0.24ms]
+(pass) administrator receipt OCR terminal row failures > classifies an exact missing object but not storage auth or transport failures as row defects [0.05ms]
+
+ 5 pass
+ 0 fail
+ 19 expect() calls
+Ran 5 tests across 1 file. [61.00ms]

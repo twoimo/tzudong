@@ -1,0 +1,972 @@
+{
+  "observations": [
+    {
+      "censored": true,
+      "reasonCodes": [
+        "run_conclusion_cancelled"
+      ],
+      "run": {
+        "attempt": 1,
+        "conclusion": "cancelled",
+        "createdAt": "2026-10-10T08:44:34Z",
+        "event": "pull_request",
+        "headSha": "33041dd9140fb493eacda5c3b7aca4ba2b76e307",
+        "id": 38038933700,
+        "jobs": [
+          {
+            "completedAt": "2026-10-10T08:46:16Z",
+            "conclusion": "success",
+            "createdAt": "2026-10-10T08:44:35Z",
+            "id": 114175132736,
+            "name": "Admin",
+            "runnerLabels": [
+              "ubuntu-latest"
+            ],
+            "startedAt": "2026-10-10T08:44:38Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-10T08:44:41Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-10T08:44:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:15Z",
+                "conclusion": "success",
+                "name": "Initialize containers",
+                "number": 2,
+                "startedAt": "2026-10-10T08:44:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:21Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 3,
+                "startedAt": "2026-10-10T08:45:15Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:27Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 4,
+                "startedAt": "2026-10-10T08:45:21Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:29Z",
+                "conclusion": "success",
+                "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 5,
+                "startedAt": "2026-10-10T08:45:27Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:31Z",
+                "conclusion": "success",
+                "name": "Pin npm authority",
+                "number": 6,
+                "startedAt": "2026-10-10T08:45:29Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:47Z",
+                "conclusion": "success",
+                "name": "Run npm ci",
+                "number": 7,
+                "startedAt": "2026-10-10T08:45:31Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:55Z",
+                "conclusion": "success",
+                "name": "Install backend dependencies with bounded network retry",
+                "number": 8,
+                "startedAt": "2026-10-10T08:45:47Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:00Z",
+                "conclusion": "success",
+                "name": "Run npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0",
+                "number": 9,
+                "startedAt": "2026-10-10T08:45:55Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:04Z",
+                "conclusion": "success",
+                "name": "Run npx tsc --noEmit --pretty false",
+                "number": 10,
+                "startedAt": "2026-10-10T08:46:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:07Z",
+                "conclusion": "success",
+                "name": "Run cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs",
+                "number": 11,
+                "startedAt": "2026-10-10T08:46:04Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:07Z",
+                "conclusion": "success",
+                "name": "Run cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=[REDACTED] SUPABASE_DB_PASSWORD=[REDACTED] SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs",
+                "number": 12,
+                "startedAt": "2026-10-10T08:46:07Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:11Z",
+                "conclusion": "success",
+                "name": "Run bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts",
+                "number": 13,
+                "startedAt": "2026-10-10T08:46:07Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:11Z",
+                "conclusion": "success",
+                "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 23,
+                "startedAt": "2026-10-10T08:46:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:12Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 24,
+                "startedAt": "2026-10-10T08:46:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:12Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 25,
+                "startedAt": "2026-10-10T08:46:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:14Z",
+                "conclusion": "success",
+                "name": "Stop containers",
+                "number": 26,
+                "startedAt": "2026-10-10T08:46:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:14Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 27,
+                "startedAt": "2026-10-10T08:46:14Z",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "completedAt": "2026-10-10T08:51:17Z",
+            "conclusion": "success",
+            "createdAt": "2026-10-10T08:44:35Z",
+            "id": 114175132766,
+            "name": "Install",
+            "runnerLabels": [
+              "ubuntu-latest"
+            ],
+            "startedAt": "2026-10-10T08:44:38Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-10T08:44:40Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-10T08:44:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:45Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 2,
+                "startedAt": "2026-10-10T08:44:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:46Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 3,
+                "startedAt": "2026-10-10T08:44:45Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:47Z",
+                "conclusion": "success",
+                "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 4,
+                "startedAt": "2026-10-10T08:44:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:48Z",
+                "conclusion": "success",
+                "name": "Create independent clean workspaces",
+                "number": 5,
+                "startedAt": "2026-10-10T08:44:47Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:54Z",
+                "conclusion": "success",
+                "name": "Pin authoritative Node and npm",
+                "number": 6,
+                "startedAt": "2026-10-10T08:44:48Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:38Z",
+                "conclusion": "success",
+                "name": "Authoritative npm clean install, Node production probes, and browser behavior",
+                "number": 7,
+                "startedAt": "2026-10-10T08:44:54Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:59Z",
+                "conclusion": "success",
+                "name": "Supplemental Bun clean install and Node production probes",
+                "number": 8,
+                "startedAt": "2026-10-10T08:50:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:11Z",
+                "conclusion": "success",
+                "name": "Upload clean-install lock evidence",
+                "number": 9,
+                "startedAt": "2026-10-10T08:50:59Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:11Z",
+                "conclusion": "success",
+                "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 16,
+                "startedAt": "2026-10-10T08:51:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:12Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 17,
+                "startedAt": "2026-10-10T08:51:11Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:12Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 18,
+                "startedAt": "2026-10-10T08:51:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:12Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 19,
+                "startedAt": "2026-10-10T08:51:12Z",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "completedAt": "2026-10-10T08:51:43Z",
+            "conclusion": "success",
+            "createdAt": "2026-10-10T08:44:35Z",
+            "id": 114175132780,
+            "name": "Ubuntu Bun",
+            "runnerLabels": [
+              "ubuntu-latest"
+            ],
+            "startedAt": "2026-10-10T08:44:38Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-10T08:44:39Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-10T08:44:38Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:45Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 2,
+                "startedAt": "2026-10-10T08:44:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:46Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 3,
+                "startedAt": "2026-10-10T08:44:45Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:46Z",
+                "conclusion": "success",
+                "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 4,
+                "startedAt": "2026-10-10T08:44:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:49Z",
+                "conclusion": "success",
+                "name": "Run bun install --frozen-lockfile",
+                "number": 5,
+                "startedAt": "2026-10-10T08:44:46Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:49Z",
+                "conclusion": "success",
+                "name": "Run bun run typecheck:verify",
+                "number": 6,
+                "startedAt": "2026-10-10T08:44:49Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:54Z",
+                "conclusion": "success",
+                "name": "Run bun run typecheck:native",
+                "number": 7,
+                "startedAt": "2026-10-10T08:44:49Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:16Z",
+                "conclusion": "success",
+                "name": "Run bun run typecheck:compat",
+                "number": 8,
+                "startedAt": "2026-10-10T08:44:54Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:45Z",
+                "conclusion": "success",
+                "name": "Run bun run typecheck:parity",
+                "number": 9,
+                "startedAt": "2026-10-10T08:45:16Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:47Z",
+                "conclusion": "success",
+                "name": "Run tree=\"$(git -C \"$GITHUB_WORKSPACE/web-bun\" rev-parse HEAD^{tree})\"",
+                "number": 10,
+                "startedAt": "2026-10-10T08:45:45Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:47Z",
+                "conclusion": "success",
+                "name": "Run tree=\"$(git -C \"$GITHUB_WORKSPACE/web-bun\" rev-parse HEAD^{tree})\"",
+                "number": 11,
+                "startedAt": "2026-10-10T08:50:47Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:48Z",
+                "conclusion": "success",
+                "name": "Upload Bun benchmark evidence",
+                "number": 12,
+                "startedAt": "2026-10-10T08:50:47Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:48Z",
+                "conclusion": "success",
+                "name": "Fail closed on benchmark evidence",
+                "number": 13,
+                "startedAt": "2026-10-10T08:50:48Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:41Z",
+                "conclusion": "success",
+                "name": "Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts",
+                "number": 14,
+                "startedAt": "2026-10-10T08:50:48Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:41Z",
+                "conclusion": "success",
+                "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 26,
+                "startedAt": "2026-10-10T08:51:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:41Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 27,
+                "startedAt": "2026-10-10T08:51:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:41Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 28,
+                "startedAt": "2026-10-10T08:51:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:41Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 29,
+                "startedAt": "2026-10-10T08:51:41Z",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "completedAt": "2026-10-10T08:54:02Z",
+            "conclusion": "cancelled",
+            "createdAt": "2026-10-10T08:44:35Z",
+            "id": 114175132691,
+            "name": "Ubuntu npm",
+            "runnerLabels": [
+              "ubuntu-latest"
+            ],
+            "startedAt": "2026-10-10T08:44:38Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-10T08:44:40Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-10T08:44:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:47Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 2,
+                "startedAt": "2026-10-10T08:44:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:52Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 3,
+                "startedAt": "2026-10-10T08:44:47Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:53Z",
+                "conclusion": "success",
+                "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 4,
+                "startedAt": "2026-10-10T08:44:52Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:55Z",
+                "conclusion": "success",
+                "name": "Pin npm authority",
+                "number": 5,
+                "startedAt": "2026-10-10T08:44:53Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:12Z",
+                "conclusion": "success",
+                "name": "Run npm ci",
+                "number": 6,
+                "startedAt": "2026-10-10T08:44:55Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:12Z",
+                "conclusion": "success",
+                "name": "Run npm run typecheck:verify",
+                "number": 7,
+                "startedAt": "2026-10-10T08:45:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:17Z",
+                "conclusion": "success",
+                "name": "Run npm run typecheck:native",
+                "number": 8,
+                "startedAt": "2026-10-10T08:45:12Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:44Z",
+                "conclusion": "success",
+                "name": "Run npm run typecheck:compat",
+                "number": 9,
+                "startedAt": "2026-10-10T08:45:17Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:18Z",
+                "conclusion": "success",
+                "name": "Run npm run typecheck:parity",
+                "number": 10,
+                "startedAt": "2026-10-10T08:45:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:07Z",
+                "conclusion": "success",
+                "name": "Run tree=\"$(git -C \"$GITHUB_WORKSPACE\" rev-parse HEAD^{tree})\"",
+                "number": 11,
+                "startedAt": "2026-10-10T08:46:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:08Z",
+                "conclusion": "success",
+                "name": "Run tree=\"$(git -C \"$GITHUB_WORKSPACE\" rev-parse HEAD^{tree})\"",
+                "number": 12,
+                "startedAt": "2026-10-10T08:51:07Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:09Z",
+                "conclusion": "success",
+                "name": "Upload npm benchmark evidence",
+                "number": 13,
+                "startedAt": "2026-10-10T08:51:08Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:51:09Z",
+                "conclusion": "success",
+                "name": "Fail closed on benchmark evidence",
+                "number": 14,
+                "startedAt": "2026-10-10T08:51:09Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:52:09Z",
+                "conclusion": "success",
+                "name": "Run npm run lint",
+                "number": 15,
+                "startedAt": "2026-10-10T08:51:09Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:54:00Z",
+                "conclusion": "cancelled",
+                "name": "Run npm run test:unit",
+                "number": 16,
+                "startedAt": "2026-10-10T08:52:09Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:54:00Z",
+                "conclusion": "skipped",
+                "name": "Run npm run build",
+                "number": 17,
+                "startedAt": "2026-10-10T08:54:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:54:00Z",
+                "conclusion": "skipped",
+                "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 32,
+                "startedAt": "2026-10-10T08:54:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:54:00Z",
+                "conclusion": "skipped",
+                "name": "Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 33,
+                "startedAt": "2026-10-10T08:54:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:54:00Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 34,
+                "startedAt": "2026-10-10T08:54:00Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:54:00Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 35,
+                "startedAt": "2026-10-10T08:54:00Z",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "completedAt": "2026-10-10T08:52:21Z",
+            "conclusion": "success",
+            "createdAt": "2026-10-10T08:44:35Z",
+            "id": 114175132630,
+            "name": "Windows Bun",
+            "runnerLabels": [
+              "windows-latest"
+            ],
+            "startedAt": "2026-10-10T08:44:38Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-10T08:44:40Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-10T08:44:39Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:53Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 2,
+                "startedAt": "2026-10-10T08:44:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:44:58Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 3,
+                "startedAt": "2026-10-10T08:44:53Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:02Z",
+                "conclusion": "success",
+                "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 4,
+                "startedAt": "2026-10-10T08:44:58Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:51Z",
+                "conclusion": "success",
+                "name": "Run bun install --frozen-lockfile",
+                "number": 5,
+                "startedAt": "2026-10-10T08:45:02Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:52Z",
+                "conclusion": "success",
+                "name": "Run bun run typecheck:verify",
+                "number": 6,
+                "startedAt": "2026-10-10T08:45:51Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:56Z",
+                "conclusion": "success",
+                "name": "Run bun run typecheck:native",
+                "number": 7,
+                "startedAt": "2026-10-10T08:45:52Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:16Z",
+                "conclusion": "success",
+                "name": "Run bun run typecheck:compat",
+                "number": 8,
+                "startedAt": "2026-10-10T08:45:56Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:44Z",
+                "conclusion": "success",
+                "name": "Run bun run typecheck:parity",
+                "number": 9,
+                "startedAt": "2026-10-10T08:46:16Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:41Z",
+                "conclusion": "success",
+                "name": "Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'",
+                "number": 10,
+                "startedAt": "2026-10-10T08:46:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:42Z",
+                "conclusion": "success",
+                "name": "Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'",
+                "number": 11,
+                "startedAt": "2026-10-10T08:50:41Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:43Z",
+                "conclusion": "success",
+                "name": "Upload Bun benchmark evidence",
+                "number": 12,
+                "startedAt": "2026-10-10T08:50:42Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:50:44Z",
+                "conclusion": "success",
+                "name": "Fail closed on benchmark evidence",
+                "number": 13,
+                "startedAt": "2026-10-10T08:50:43Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:52:18Z",
+                "conclusion": "success",
+                "name": "Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts",
+                "number": 14,
+                "startedAt": "2026-10-10T08:50:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:52:18Z",
+                "conclusion": "success",
+                "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 26,
+                "startedAt": "2026-10-10T08:52:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:52:18Z",
+                "conclusion": "success",
+                "name": "Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 27,
+                "startedAt": "2026-10-10T08:52:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:52:20Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 28,
+                "startedAt": "2026-10-10T08:52:18Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:52:20Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 29,
+                "startedAt": "2026-10-10T08:52:20Z",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "completedAt": "2026-10-10T08:53:54Z",
+            "conclusion": "cancelled",
+            "createdAt": "2026-10-10T08:44:35Z",
+            "id": 114175132743,
+            "name": "Windows npm",
+            "runnerLabels": [
+              "windows-latest"
+            ],
+            "startedAt": "2026-10-10T08:44:39Z",
+            "status": "completed",
+            "steps": [
+              {
+                "completedAt": "2026-10-10T08:44:42Z",
+                "conclusion": "success",
+                "name": "Set up job",
+                "number": 1,
+                "startedAt": "2026-10-10T08:44:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:03Z",
+                "conclusion": "success",
+                "name": "Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 2,
+                "startedAt": "2026-10-10T08:44:42Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:17Z",
+                "conclusion": "success",
+                "name": "Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 3,
+                "startedAt": "2026-10-10T08:45:03Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:20Z",
+                "conclusion": "success",
+                "name": "Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 4,
+                "startedAt": "2026-10-10T08:45:17Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:45:40Z",
+                "conclusion": "success",
+                "name": "Pin npm authority",
+                "number": 5,
+                "startedAt": "2026-10-10T08:45:20Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:46:21Z",
+                "conclusion": "success",
+                "name": "Run npm ci",
+                "number": 6,
+                "startedAt": "2026-10-10T08:45:40Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:47:35Z",
+                "conclusion": "success",
+                "name": "Run npm run lint",
+                "number": 7,
+                "startedAt": "2026-10-10T08:46:21Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:47:37Z",
+                "conclusion": "success",
+                "name": "Run npm run typecheck:verify",
+                "number": 8,
+                "startedAt": "2026-10-10T08:47:35Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:47:44Z",
+                "conclusion": "success",
+                "name": "Run npm run typecheck:native",
+                "number": 9,
+                "startedAt": "2026-10-10T08:47:37Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:48:13Z",
+                "conclusion": "success",
+                "name": "Run npm run typecheck:compat",
+                "number": 10,
+                "startedAt": "2026-10-10T08:47:44Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:48:57Z",
+                "conclusion": "success",
+                "name": "Run npm run typecheck:parity",
+                "number": 11,
+                "startedAt": "2026-10-10T08:48:13Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:48Z",
+                "conclusion": "cancelled",
+                "name": "Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'",
+                "number": 12,
+                "startedAt": "2026-10-10T08:48:57Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:48Z",
+                "conclusion": "skipped",
+                "name": "Run $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'",
+                "number": 13,
+                "startedAt": "2026-10-10T08:53:48Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:49Z",
+                "conclusion": "failure",
+                "name": "Upload npm benchmark evidence",
+                "number": 14,
+                "startedAt": "2026-10-10T08:53:48Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:50Z",
+                "conclusion": "failure",
+                "name": "Fail closed on benchmark evidence",
+                "number": 15,
+                "startedAt": "2026-10-10T08:53:49Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:50Z",
+                "conclusion": "skipped",
+                "name": "Run bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts",
+                "number": 16,
+                "startedAt": "2026-10-10T08:53:50Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:50Z",
+                "conclusion": "skipped",
+                "name": "Post Run oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+                "number": 30,
+                "startedAt": "2026-10-10T08:53:50Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:50Z",
+                "conclusion": "skipped",
+                "name": "Post Run actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+                "number": 31,
+                "startedAt": "2026-10-10T08:53:50Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:52Z",
+                "conclusion": "success",
+                "name": "Post Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+                "number": 32,
+                "startedAt": "2026-10-10T08:53:50Z",
+                "status": "completed"
+              },
+              {
+                "completedAt": "2026-10-10T08:53:52Z",
+                "conclusion": "success",
+                "name": "Complete job",
+                "number": 33,
+                "startedAt": "2026-10-10T08:53:52Z",
+                "status": "completed"
+              }
+            ]
+          }
+        ],
+        "startedAt": "2026-10-10T08:44:34Z",
+        "status": "completed",
+        "updatedAt": "2026-10-10T08:54:03Z"
+      }
+    }
+  ],
+  "schema": "tzudong-ci-performance/v1/excluded-observations"
+}

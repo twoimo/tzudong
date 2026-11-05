@@ -7,14 +7,26 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { logCliError } from './privacy-safe-cli-log.mjs';
+import {
+  applicationInputName,
+  captureRepositorySourceContract,
+  trustedPackageInput,
+} from './typecheck-source-contract.mjs';
 
 const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = path.resolve(APP_ROOT, '../..');
 const PROJECT = path.join(APP_ROOT, 'tsconfig.json');
 const NATIVE_ENTRYPOINT = path.join(APP_ROOT, 'node_modules', '@typescript', 'native', 'bin', 'tsc');
 const COMPAT_ENTRYPOINT = path.join(APP_ROOT, 'node_modules', 'typescript', 'bin', 'tsc6');
 const BRIDGE_REQUIRE = createRequire(path.join(APP_ROOT, 'node_modules', 'typescript', 'package.json'));
 const COMPAT_API_ROOT = path.dirname(BRIDGE_REQUIRE.resolve('@typescript/old/package.json'));
 const COMMON_ARGS = ['--project', PROJECT, '--noEmit', '--pretty', 'false', '--incremental', 'false'];
+const REPOSITORY_SOURCE_CONTRACT = Object.freeze([
+  Object.freeze({
+    relativePath: 'backend/utils/provider-budget.mjs',
+    logicalName: 'repo:backend/utils/provider-budget.mjs',
+  }),
+]);
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const codePointCompare = (left, right) => left < right ? -1 : left > right ? 1 : 0;
@@ -73,23 +85,24 @@ function runCompiler(kind, extra = [], inherit = false) {
   });
 }
 
-async function packageMetadata(packageRoot) {
-  const manifest = JSON.parse(await readFile(path.join(packageRoot, 'package.json'), 'utf8'));
-  if (typeof manifest.name !== 'string' || typeof manifest.version !== 'string') {
-    throw new Error(`Invalid package metadata: ${packageRoot}`);
-  }
-  return manifest;
-}
-
-async function logicalInput(rawPath, kind) {
+async function logicalInput(rawPath, kind, repositorySources) {
+  const requestedPath = path.resolve(rawPath.trim());
   const absolute = await realpath(path.resolve(rawPath.trim()));
   const normalized = normalizeSlashes(absolute);
   const root = normalizeSlashes(await realpath(APP_ROOT));
-  const nativeLib = normalizeSlashes(await realpath(path.join(APP_ROOT, 'node_modules', '@typescript', `typescript-${process.platform}-${process.arch}`, 'lib')));
-  const compatLib = normalizeSlashes(await realpath(path.join(COMPAT_API_ROOT, 'lib')));
-  const contentHash = sha256(await readFile(absolute));
+  const nodeModulesRoot = path.join(APP_ROOT, 'node_modules');
+  const requestedNativeLib = path.join(nodeModulesRoot, '@typescript', `typescript-${process.platform}-${process.arch}`, 'lib');
+  const requestedCompatLib = path.join(COMPAT_API_ROOT, 'lib');
+  const nativeLib = normalizeSlashes(await realpath(requestedNativeLib));
+  const compatLib = normalizeSlashes(await realpath(requestedCompatLib));
   const isNativeLib = containedPath(nativeLib, normalized);
   const isCompatLib = containedPath(compatLib, normalized);
+  const nativeLibPathTrusted = containedPath(normalizeSlashes(requestedNativeLib), normalizeSlashes(requestedPath));
+  const compatLibPathTrusted = containedPath(normalizeSlashes(requestedCompatLib), normalizeSlashes(requestedPath));
+
+  if ((isNativeLib && !nativeLibPathTrusted) || (isCompatLib && !compatLibPathTrusted)) {
+    throw new Error(`${kind} compiler listed a standard-library file through an untrusted path alias: ${requestedPath}`);
+  }
 
   if (isNativeLib || isCompatLib) {
     if ((kind === 'native' && !isNativeLib) || (kind === 'compat' && !isCompatLib)) {
@@ -98,27 +111,26 @@ async function logicalInput(rawPath, kind) {
     return {
       name: `lib:${path.posix.basename(normalized)}`,
       compiler: kind === 'native' ? 'typescript@7.0.2' : 'typescript@6.0.2',
-      contentHash,
+      contentHash: sha256(await readFile(absolute)),
     };
   }
 
-  const marker = '/node_modules/';
-  const markerIndex = canonicalPath(normalized).lastIndexOf(marker);
-  if (markerIndex >= 0) {
-    const remainder = normalized.slice(markerIndex + marker.length).split('/');
-    const packageParts = remainder[0].startsWith('@') ? remainder.slice(0, 2) : remainder.slice(0, 1);
-    if (!packageParts.length || packageParts.some((part) => !part)) throw new Error(`Malformed node_modules input: ${normalized}`);
-    const packageRoot = `${normalized.slice(0, markerIndex + marker.length)}${packageParts.join('/')}`;
-    const metadata = await packageMetadata(packageRoot);
-    const subpath = remainder.slice(packageParts.length).join('/');
-    return { name: `${metadata.name}@${metadata.version}${subpath ? `/${subpath}` : ''}`, contentHash };
+  const packageInput = await trustedPackageInput({ requestedPath, resolvedPath: absolute, nodeModulesRoot });
+  if (packageInput) {
+    const { metadata, subpath, contentHash: packageContentHash } = packageInput;
+    return { name: `${metadata.name}@${metadata.version}${subpath ? `/${subpath}` : ''}`, contentHash: packageContentHash };
   }
 
-  if (!containedPath(root, normalized)) throw new Error(`Compiler input escaped app root: ${normalized}`);
-  return { name: path.posix.relative(root, normalized), contentHash };
+  const repositoryInput = repositorySources.resolve(requestedPath, absolute, kind);
+  if (repositoryInput) return repositoryInput;
+
+  return {
+    name: applicationInputName({ resolvedPath: normalized, appRoot: root }),
+    contentHash: sha256(await readFile(absolute)),
+  };
 }
 
-async function collectLogicalInputs(kind) {
+async function collectLogicalInputs(kind, repositorySources) {
   const result = await runCompiler(kind, ['--listFilesOnly']);
   const diagnostic = normalizeDiagnostics(`${result.stdout}\n${result.stderr}`);
   const stderr = normalizeDiagnostics(result.stderr);
@@ -128,7 +140,7 @@ async function collectLogicalInputs(kind) {
   if (stderr) throw new Error(`${kind} --listFilesOnly wrote to stderr: ${stderr}`);
   const files = result.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (!files.length) throw new Error(`${kind} --listFilesOnly produced no input files`);
-  const inputs = await Promise.all(files.map((file) => logicalInput(file, kind)));
+  const inputs = await Promise.all(files.map((file) => logicalInput(file, kind, repositorySources)));
   if (!inputs.length) throw new Error(`${kind} --listFilesOnly produced no logical inputs`);
   const unique = new Map();
   for (const input of inputs) {
@@ -142,6 +154,10 @@ async function collectLogicalInputs(kind) {
 }
 
 async function parity() {
+  const repositorySources = await captureRepositorySourceContract({
+    repoRoot: REPO_ROOT,
+    entries: REPOSITORY_SOURCE_CONTRACT,
+  });
   const [nativeCheck, compatCheck] = await Promise.all([runCompiler('native'), runCompiler('compat')]);
   const nativeDiagnostics = normalizeDiagnostics(`${nativeCheck.stdout}\n${nativeCheck.stderr}`);
   const compatDiagnostics = normalizeDiagnostics(`${compatCheck.stdout}\n${compatCheck.stderr}`);
@@ -152,7 +168,12 @@ async function parity() {
     throw new Error(`Both diagnostic streams must be empty\n--- native (${nativeCheck.code}) ---\n${nativeDiagnostics}\n--- compat (${compatCheck.code}) ---\n${compatDiagnostics}`);
   }
 
-  const [nativeInputs, compatInputs] = await Promise.all([collectLogicalInputs('native'), collectLogicalInputs('compat')]);
+  const [nativeInputs, compatInputs] = await Promise.all([
+    collectLogicalInputs('native', repositorySources),
+    collectLogicalInputs('compat', repositorySources),
+  ]);
+  repositorySources.assertUsedBy(['native', 'compat']);
+  await repositorySources.verifyUnchanged();
   const nativeNames = nativeInputs.map(({ name }) => name);
   const compatNames = compatInputs.map(({ name }) => name);
   if (JSON.stringify(nativeNames) !== JSON.stringify(compatNames)) {

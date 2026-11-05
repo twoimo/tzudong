@@ -1,0 +1,482 @@
+{
+  "thread_id": "01a14e99-c202-7fa1-90c1-2e9cb7da815f",
+  "source_revision": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "source_bundle_sha256": null,
+  "source_scope": "Committed 86328a4c source plus the exact 24-file followup snapshot in followup-verification/index.json; the original thesis and queued Gemini bundle remain separately immutable.",
+  "reports": [
+    {
+      "stage": "thesis",
+      "provider": "chatgpt",
+      "model_label": "GPT-6",
+      "reasoning_label": "Pro",
+      "research_mode": "심층 리서치",
+      "conversation_url": "https://chatgpt.com/c/6ad4b1ad-fc10-83ec-bbd0-abd1dec881c4",
+      "report_path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+      "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82",
+      "bytes": 43130,
+      "completed_at": "2026-10-18T11:59:14.430564+00:00",
+      "source_revision": "b5d62c34f4a2e854ab10fd9f6741597b6081c43b",
+      "source_bundle_sha256": "bd8f5668b7a00d48a623471183863cda1ae9eb48c14a0d1dc569508e0f2058c3",
+      "completion_evidence": "UI: research complete9m,5sources,99searches; full Markdown exported by UI.",
+      "backend_identity": "UNVERIFIED",
+      "interpretation": "Report original preserved verbatim; claims require local adjudication and Gemini antithesis."
+    },
+    {
+      "stage": "supplemental-ocr-claim-acl-14a8f5da",
+      "provider": "chatgpt",
+      "model_label": "GPT-6",
+      "reasoning_label": "Pro",
+      "research_mode": "심층 리서치",
+      "conversation_url": "https://chatgpt.com/c/6ad50f71-6e94-83ee-bdf1-851a80101df8",
+      "report_path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/chatgpt-full-report.md",
+      "sha256": "117b7a0f220af81c5283b385a1b5f46b440c628521fc5ca3522f3a5e7517a215",
+      "bytes": 38673,
+      "source_revision": "14a8f5da4268df890c7adf10bf89e99ce071f6f5",
+      "source_bundle_sha256": "90c4e3f0540c90d4be1f9ea1439538e73feddaf79790e0cdb90ebcd179921866",
+      "source_bundle_path": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/gpt-ocr-admission-delta-14a8f5da/source_bundle.txt",
+      "master_plan_path": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/gpt-ocr-admission-delta-14a8f5da/plan.md",
+      "master_plan_sha256": "b46b396329f7958305cb121e9c6db7772b49204a4085093a6af6f5709a85ac2b",
+      "preparation_manifest_path": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/gpt-ocr-admission-delta-14a8f5da/manifest.json",
+      "preparation_manifest_sha256": "a8077faec1fe76990be4316def0fb232c5899b99b8af2456a1bf4351ec9e8947",
+      "submission_checkpoint_path": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/gpt-ocr-admission-delta-14a8f5da/submission-checkpoint.json",
+      "submission_checkpoint_sha256_at_report_save": "e4b9958042b17286b68b6c1540cb8b60f2476aa765def7e1ddd8fba763241f2e",
+      "original_optimistic_url": "https://chatgpt.com/c/local-chatgpt%3Ab31e6da9-f503-4407-b3a4-972015131453",
+      "url_mapping": "Same submitted user prompt and both attachments reconciled to permanent conversation; no resend. Coordinator retains original immutable optimistic identity.",
+      "completion_evidence": "Actual completed card6m/5sources/53searches and native complete Markdown download; original Downloads byte copy verified locally. UI-reported counters are not independent provider statistics.",
+      "backend_identity": "UNVERIFIED",
+      "substitution_for_gemini_or_reverse": false,
+      "source_decisions": [
+        {
+          "decision": "mixed-history release authorization",
+          "report_verdict": "REJECT",
+          "local_resolution": "Monotone history + immediate stop; helper26/116, composition2/12, durable34/207; overlapping groups not summed.",
+          "implementation_state": "committed65c98679; no hosted proof",
+          "verification_path": "apps/web/performance/cross-audit-20261019/ocr-mixed-model-integrated-verification/final-source-readback.json"
+        },
+        {
+          "decision": "independent initial canonical ACL admission",
+          "report_verdict": "REJECT",
+          "local_resolution": "Accepted and reproduced in PG17.6 across4functions/2tables. Forward107 in preparation; unresolved.",
+          "implementation_state": "not complete",
+          "verification_path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/initial-default-acl-all-six-counterexample.json"
+        }
+      ],
+      "decision_matrix_path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix.json",
+      "decision_matrix_followup_path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix-followup.json",
+      "interpretation": "Frozen supplemental review and local adjudication only. Existing required antithesis/reverse stages remain incomplete."
+    }
+  ],
+  "findings": [
+    {
+      "id": "LOCAL001",
+      "origin": "local independent source review, not external research",
+      "decision": "ACCEPT",
+      "evidence": "Only canonical exit1/no-stdout/fixed-stderr means definite quota rejection; partial stdout may follow commit.",
+      "change": "backend/utils/provider-budget.mjs; backend/utils/tests/provider-budget-js.test.mjs",
+      "verification": "Retained provider-budget.log:6tests pass after develop integration.",
+      "remaining_conditions": [
+        "No live quota or paid provider inference claimed."
+      ],
+      "superseded_by": "TZ-TH-001",
+      "interpretation": "Historical pre-thesis local evidence; current protocol uses canonical exit20 and ambiguous exit21 as documented in TZ-TH-001."
+    },
+    {
+      "id": "LOCAL002",
+      "origin": "local browser/source review, not external research",
+      "decision": "ACCEPT",
+      "evidence": "Sheet close must restore row focus only when current focus remains inside closing inspector or body.",
+      "change": "apps/web/components/admin/SubmissionListView.tsx",
+      "verification": "interaction-cua.json: detail open/Escape return and preserved external search focus true; latest integration unit run188pass0fail.",
+      "remaining_conditions": [
+        "Synthetic loopback rendering only."
+      ]
+    },
+    {
+      "id": "LOCAL003",
+      "origin": "local PG17 source/catalog review, not external research",
+      "decision": "ACCEPT",
+      "evidence": "Runtime readiness checks exact enabled trigger definitions, function identity/body/ACL and canonical ledger.",
+      "change": "backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql; apps/web/scripts/review-media-feature-sql-successor.mjs",
+      "verification": "PG17.6 local replay retained with ledger102 and findings[]; operating apply is unverified.",
+      "remaining_conditions": [
+        "New develop evidence migrations and operating source require separate admission review."
+      ]
+    },
+    {
+      "id": "TZ-TH-001",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "ACCEPT",
+      "evidence": [
+        "The canonical Python helper committed SQLite state before emitting the lease identity, while its former broad OSError boundary collapsed output failure into the same sentinel as pre-commit rejection.",
+        "A custom runner could commit the parent-selected lease, emit no stdout, imitate the rejection result, and suppress cleanup.",
+        "The fixed protocol reserves exit 20 for canonical pre-commit rejection and exit 21 for commit/output ambiguity; custom RUN_DAILY_PYTHON runners cannot assert the definite protocol.",
+        "Captured stdout is bounded to 128 characters even when the first child chunk is larger than the remaining buffer.",
+        "Synthetic subprocess tests confirm that false custom rejection is released and canonical pre-commit path failure creates no debt.",
+        "A Python test commits a real SQLite lease, fails stdout flush, returns the ambiguous exit, and confirms the same identity remains available for parent cleanup."
+      ],
+      "change": [
+        "backend/utils/provider-budget.mjs",
+        "backend/utils/provider_budget.py",
+        "backend/utils/tests/provider-budget-js.test.mjs",
+        "backend/utils/tests/test_pipeline_performance.py"
+      ],
+      "verification": [
+        "apps/web/performance/cross-audit-20261018/provider-node24-results.txt",
+        "apps/web/performance/cross-audit-20261018/provider-python314-results.txt",
+        "apps/web/performance/cross-audit-20261018/provider-python311-results.txt"
+      ],
+      "remaining_conditions": [
+        "The default python3 executable, PATH, and repository module resolution are trusted host configuration controlled by the operator, not remote caller input; explicit RUN_DAILY_PYTHON runners are always treated conservatively.",
+        "These are local process and SQLite boundary tests, not provider quota, billing, or Gemini request evidence."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/provider-findings.json",
+      "decision_artifact_sha256": "84eb9edc444bad055c1775e6fe8b9f34756c89fabda5219d734faba807750630",
+      "implementation_gate": "completed_source_and_required_local_verification"
+    },
+    {
+      "id": "TZ-TH-002",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "ACCEPT",
+      "evidence": [
+        "Debt now freezes only the lease and original budget target environment.",
+        "Drain retries use the current healthy runner with the old project/path identity, preventing release against a different budget.",
+        "The recovery fixture removes runner A after acquire, loses runner B's first release response after deleting the old lease, then verifies an idempotent second release before B acquires in its own scope.",
+        "The existing Gemini client same-process debt test still blocks while the runner remains broken and recovers after it becomes healthy."
+      ],
+      "change": [
+        "backend/utils/provider-budget.mjs",
+        "backend/utils/tests/provider-budget-js.test.mjs",
+        "backend/utils/tests/gemini-client.test.mjs"
+      ],
+      "verification": [
+        "apps/web/performance/cross-audit-20261018/provider-node24-results.txt",
+        "apps/web/performance/cross-audit-20261018/provider-integration-results.txt"
+      ],
+      "remaining_conditions": [
+        "Recovery remains fail-closed if the original budget storage target itself is unavailable.",
+        "A healthy runner must implement the canonical idempotent release action for the frozen target identity."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/provider-findings.json",
+      "decision_artifact_sha256": "84eb9edc444bad055c1775e6fe8b9f34756c89fabda5219d734faba807750630",
+      "implementation_gate": "completed_source_and_required_local_verification"
+    },
+    {
+      "id": "TZ-TH-003",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "ACCEPT",
+      "evidence": [
+        "BudgetCommandFailure now carries childStarted and acquireRejected as internal command state while the original AbortError is rethrown to the caller.",
+        "Cleanup occurs only when the child actually emitted spawn or when a successful command response made commit possible.",
+        "The immediate abort plus missing executable fixture preserves the exact abort reason and allows the next healthy acquire without a debt drain failure.",
+        "The existing commit-before-close abort fixture still terminates the child and releases the exact selected lease once."
+      ],
+      "change": [
+        "backend/utils/provider-budget.mjs",
+        "backend/utils/tests/provider-budget-js.test.mjs"
+      ],
+      "verification": [
+        "apps/web/performance/cross-audit-20261018/provider-node24-results.txt"
+      ],
+      "remaining_conditions": [
+        "The race coverage is synthetic process-boundary evidence and does not claim every operating-system scheduler interleaving.",
+        "No actual provider request was started."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/provider-findings.json",
+      "decision_artifact_sha256": "84eb9edc444bad055c1775e6fe8b9f34756c89fabda5219d734faba807750630",
+      "implementation_gate": "completed_source_and_required_local_verification"
+    },
+    {
+      "id": "TZ-TH-004",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "ACCEPT",
+      "evidence": "The old source rechecked only OCR identity after readiness and built other draft fields from click-time closures. The submit path now owns one revisioned snapshot containing owner, restaurant id and name, visit date and time, categories, content, receipt and food files, verification mode, analysis state, OCR generation, and OCR result identity. It compares both revision and field equality after readiness and again after any queued autosave, before ReviewSaveOperation.submit can upload or insert. A change after dispatch retains the existing committed-previous-input recovery behavior.",
+      "change": [
+        "apps/web/components/reviews/ReviewModal.tsx",
+        "apps/web/tests-unit/review-save-submit.test.ts",
+        "apps/web/tests-unit/review-modal-ocr-ux.test.ts",
+        "apps/web/tests-unit/review-close-revision-browser.test.ts",
+        "apps/web/tests-unit/review-draft-revision-browser.test.ts"
+      ],
+      "verification": [
+        "apps/web/performance/cross-audit-20261018/cms-native-results.txt"
+      ],
+      "remaining_conditions": [
+        "The tests use local adapters and synthetic files; they do not claim a provider, hosted Storage, or hosted database write.",
+        "Once ReviewSaveOperation.submit starts, edit preservation rather than rollback is the intended behavior because an upload or insert may already have committed."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/cms-findings.json",
+      "decision_artifact_sha256": "bb585594e43e7c8c3d50d8f572dfbe381ef2d3dde040c3491411113f129041be",
+      "implementation_gate": "completed_source_and_required_local_verification"
+    },
+    {
+      "id": "TZ-TH-005",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "ACCEPT",
+      "evidence": "The mismatch was present. Submit validation, persisted content, form validity, step validity, validation copy, aria-invalid, and the visible counter now all use content.trim().length. A value with 4,000 normalized characters and surrounding spaces is accepted and stored as exactly 4,000 characters; 19 normalized characters with surrounding spaces is rejected before upload. Existing 4,001-character cases remain rejected.",
+      "change": [
+        "apps/web/components/reviews/ReviewModal.tsx",
+        "apps/web/tests-unit/review-save-submit.test.ts",
+        "apps/web/tests-unit/review-modal-ocr-ux.test.ts"
+      ],
+      "verification": [
+        "apps/web/performance/cross-audit-20261018/cms-native-results.txt"
+      ],
+      "remaining_conditions": [
+        "Whitespace normalization is limited to JavaScript trim semantics; no broader Unicode normalization was introduced or claimed."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/cms-findings.json",
+      "decision_artifact_sha256": "bb585594e43e7c8c3d50d8f572dfbe381ef2d3dde040c3491411113f129041be",
+      "implementation_gate": "completed_source_and_required_local_verification"
+    },
+    {
+      "id": "TZ-TH-006",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "ACCEPT",
+      "evidence": "Full source inspection found more than a missing proof: inline submission and review close controls bypassed the common focus restoration path, and the focus ownership helper recognized the Sheet drawer but not the inline inspector. Both inline close paths and review action teardown now use shared close helpers. Restoration runs on the next animation frame only for inline mode, only while focus is unowned or still belongs to a moderation inspector, and only when the row trigger remains connected and enabled. Sheet onCloseAutoFocus continues to use the same ownership predicate.",
+      "change": [
+        "apps/web/components/admin/SubmissionListView.tsx",
+        "apps/web/tests-unit/admin-moderation-inline-focus-browser.test.ts",
+        "apps/web/tests-unit/admin-console-uiux-source.test.ts"
+      ],
+      "verification": [
+        "apps/web/performance/cross-audit-20261018/cms-native-results.txt"
+      ],
+      "remaining_conditions": [
+        "The new inline result is a local synthetic React and headless Chrome boundary test, not a capture from the stopped root-owned application server.",
+        "No claim is made about deployment or production browser state."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/cms-findings.json",
+      "decision_artifact_sha256": "bb585594e43e7c8c3d50d8f572dfbe381ef2d3dde040c3491411113f129041be",
+      "implementation_gate": "completed_source_required_local_verification_and_independent_application_focus_readback",
+      "application_verification": {
+        "path": "apps/web/performance/cross-audit-20261018/inline-focus-application-readback-20261018.json",
+        "sha256": "24cb258c14964ecc4d9b748454707a9b3a593f1b4a03ef3b75949db99d431931",
+        "directCasesPassed": 2,
+        "operatingValidation": false
+      }
+    },
+    {
+      "id": "TZ-TH-007",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "CONDITIONAL",
+      "evidence": "The report's superuser premise is valid in PostgreSQL generally, but it is now refuted for the observed hosted project. The fixed read-only catalog result for project_ref aqlcofblfxdrjhhdmarw records PostgreSQL 17.6 and postgres.superuser=false. The retained local replay independently uses postgres NOSUPERUSER and reaches runtimePredicateReady=true and featureRuntimeReady=true. However, the hosted ledger has 89 rows, feature_count=0, and the target helper functions and triggers are absent. That preinstall state cannot expose the post-install proacl or per-role has_function_privilege matrix and cannot demonstrate future runtime readiness. The balanced verdict therefore remains CONDITIONAL: no current hosted superuser collision or implementation defect was found, while hosted post-install ACL/readiness is still unverified.",
+      "change": null,
+      "verification": "Exact source-bound local PG17 receipt plus hosted-catalog-metadata-20261018.json: postgres.superuser=false; feature five not installed, so terminal effective ACL remains unverified.",
+      "remaining_conditions": [
+        "The observed hosted postgres role is not a superuser, so the report's specific superuser collision does not apply to the current hosted metadata snapshot.",
+        "The hosted feature_count is zero and the target helpers and triggers are absent. Their future proacl, expanded ACL, role inheritance, has_function_privilege matrix, and runtime capability cannot be read before installation.",
+        "A future authorized installation requires post-apply readback before claiming hosted readiness. If the role attributes or effective ACL matrix drift during installation, readiness may still be held for a different concrete reason."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/db-evidence-findings.json",
+      "decision_artifact_sha256": "070c7e9c2c042a822cdc48c23d6dc923e12a3c70e082016eaddc388d8a586a84",
+      "condition_status": {
+        "observedHostedSuperuserConflict": "REJECTED",
+        "futurePostInstallEffectiveAcl": "UNVERIFIED",
+        "futurePostInstallRuntimeReadiness": "UNVERIFIED"
+      },
+      "implementation_gate": "conditional_hosted_post_install_effective_acl_and_runtime_unverified"
+    },
+    {
+      "id": "TZ-TH-008",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "ACCEPT",
+      "evidence": "This evidence-packaging finding is correct. The repository does contain a strong executable receipt: the canonical master plan identifies it by SHA-256, and the retained bytes record an exact PG17.6 local clone replay, 97 prior ledger rows, 5 feature migrations, 102 terminal rows, passed status, empty findings, rollback-exact results for all five feature migrations, readiness idempotency, a substring-preserving capability-body drift rejection, and thirteen catalog drift held-to-ready restorations. Its migration, manifest, and harness hashes match the current tracked files. However, that raw receipt was not included in the reviewer's initial ten-source bundle, so the reviewer correctly declined to promote the plan's summary into an independently reauthenticated result. This is not an implementation defect or proof that executable PG evidence is absent from the repository. The root remediation is to include the existing exact-hash receipt bytes in gemini-antithesis-source_bundle.txt and bind them in its source manifest.",
+      "change": "Canonical PG17 receipt included verbatim in gemini-antithesis-source_bundle.txt and bound in gemini-antithesis-source-manifest.json.",
+      "verification": "Frozen antithesis bundle SHA10fc28e7d72ed4fbb6e7b6206acbd31143528d0831d9f836ff41c47ace018bc7 verified; independent Gemini review remains pending.",
+      "remaining_conditions": [
+        "The report's statement that the replay artifact was absent from its ten-source bundle remains factually true. Independent reauthentication within the next audit package requires the existing exact-hash receipt to be included verbatim and listed in that package's manifest.",
+        "The root agent is adding the existing receipt to apps/web/performance/cross-audit-20261018/gemini-antithesis-source_bundle.txt; that separate bundle mutation and its final hash/readback are outside this adjudication file.",
+        "The retained drift matrix covers columns, indexes, trigger enabled state, trigger definitions, and function bodies. It does not preserve separate negative mutations for owner, search_path, or prohibited EXECUTE grants as named receipt cases, even though baseline readiness evaluates those predicates.",
+        "The receipt is local exact-version evidence only. It does not prove hosted database state, provider or Storage bytes, production deployment, or launch readiness."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/db-evidence-findings.json",
+      "decision_artifact_sha256": "070c7e9c2c042a822cdc48c23d6dc923e12a3c70e082016eaddc388d8a586a84",
+      "implementation_gate": "exact_receipt_packaged_next_external_reauthentication_pending"
+    },
+    {
+      "id": "TZ-TH-009",
+      "origin": "chatgpt-thesis-full-report.md",
+      "decision": "ACCEPT",
+      "evidence": [
+        {
+          "path": "backend/knowledge_graph/longform_analysis.py",
+          "symbols": [
+            "_known_segment_disposition",
+            "execute",
+            "readback"
+          ],
+          "finding": "Before the fix, the durable segment receipt retained only observationSha256. Eligibility required a non-null responseId and generate/readback operation but did not retain and compare the pre-response request digest or the first provider response ID. Rehashing an observation containing request A's digest and request B's response ID therefore made B GET-eligible."
+        },
+        {
+          "path": "backend/knowledge_graph/claude_video_adapter.py",
+          "symbols": [
+            "observe_response",
+            "invoke"
+          ],
+          "finding": "The actual longform provider path computes requestSha256 from the exact active payload and validates a GET result against the supplied response ID. That blocks a whole-observation A/B swap when B retains B's request digest, but it cannot prove that a supplied opaque B response ID originated from request A when the persisted observation pairs B with A's digest."
+        },
+        {
+          "path": "backend/knowledge_graph/caption_osk_adapter.py",
+          "finding": "This module has no responseId/requestSha256 provider-readback contract and is not imported by longform_analysis.py. The applicable adapter is claude_video_adapter.py; caption_osk_adapter.py was inspected and left unchanged."
+        },
+        {
+          "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+          "symbol": "test_cross_swapped_response_id_is_not_get_eligible_or_sent",
+          "finding": "The synthetic regression rewrites the observation to request B's response ID while preserving request A's digest and recomputes observationSha256. Before the fix the targeted test reported providerGetEligible=1; after the fix planning reports a binding mismatch and provider readback performs zero calls."
+        },
+        {
+          "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+          "symbol": "test_pre_lineage_success_and_uncertainty_remain_byte_identical_provider_holds",
+          "finding": "Segment receipts created without requestSha256/responseId were exercised through planning, execute, and explicit provider readback. A prior success remains a corrupt hold and prior uncertainty remains readback_required; both retain every video JSON byte, attempt zero generation calls, and perform zero provider GET calls."
+        }
+      ],
+      "change": [
+        "Persist requestSha256 from the first pre-generation count observation and the first non-null responseId in the segment receipt.",
+        "Require receipt identity plus retained requestSha256 plus retained responseId plus observationSha256 before declaring provider GET eligibility, accepting completed segment evidence, or issuing active-schema readback.",
+        "Use the receipt-retained request digest for adapter readback and fail closed before incrementing the readback call count when lineage differs.",
+        "Keep the existing exact wire-schema predecessor recovery path separate; no provider, OSK, deployment, global model, or caption adapter write was performed."
+      ],
+      "verification": {
+        "preFixTargeted": "2 tests: 1 failure and 1 error; missing receipt requestSha256 and providerGetEligible was 1 for the cross-swapped ID",
+        "postFixTargeted": "2 tests passed",
+        "postFixSegmentSuite": "34 tests passed",
+        "preLineageReceiptBoundary": "success: corrupt hold; uncertainty: readback_required hold; both providerGetEligible=0, attempted=0, readbackCalls=0, byte-identical",
+        "postFixRelatedSuite": "86 tests passed in 1.926s"
+      },
+      "remaining_conditions": [
+        "Verification is local and synthetic. No paid provider GET, OSK write, hosted deployment, or billing observation was performed.",
+        "Pre-fix active-schema receipts do not contain the new retained request/response lineage. Completed receipts fail closed as corrupt and unresolved receipts remain readback_required; neither is deleted, re-generated, or GET-eligible. The reviewed wire-schema predecessor path remains governed by its separately reconstructed exact request contract.",
+        "The receipt files are local unsigned evidence. Coordinated malicious rewriting of the receipt identity, retained IDs, observation, and all hashes is outside this local integrity contract and would require a signed or append-only external ledger."
+      ],
+      "decision_artifact": "apps/web/performance/cross-audit-20261018/lineage-findings.json",
+      "decision_artifact_sha256": "386c652b4b50f202e6abc4898cb9baae9fd3016e6bdefb81d2045c27e3fbdc8e",
+      "implementation_gate": "completed_source_and_required_local_verification"
+    }
+  ],
+  "verification_artifacts": [
+    {
+      "path": "apps/web/performance/admin-tables-20261018/artifact-map.json",
+      "sha256": "39e31352fa240e01d1f8d890a0af6c3a0a1c43355b06c0f08bb3615db86e1131"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json",
+      "sha256": "9ce142b2de2a9e3980afbe85981a2a6cc29d9705a63fb1cb8d1ced46141af29d"
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/integration-20261018/verification.json",
+      "sha256": "dc334c1e99d8f8d92e21ffe8ff865cfb49cda04f63224aa7d6de49fefde66202"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/db-evidence-findings.json",
+      "sha256": "070c7e9c2c042a822cdc48c23d6dc923e12a3c70e082016eaddc388d8a586a84"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/provider-findings.json",
+      "sha256": "84eb9edc444bad055c1775e6fe8b9f34756c89fabda5219d734faba807750630"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/cms-findings.json",
+      "sha256": "bb585594e43e7c8c3d50d8f572dfbe381ef2d3dde040c3491411113f129041be"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/lineage-findings.json",
+      "sha256": "386c652b4b50f202e6abc4898cb9baae9fd3016e6bdefb81d2045c27e3fbdc8e"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/hosted-catalog-metadata-20261018.json",
+      "sha256": "40aae58d1e548e6129b64e0bdbc73729cacc8dbded75b20125444c6f9244cbee"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-identity-20261018.json",
+      "sha256": "a07d92440bbf0eb7d9395de98b2e4a6d9d7f26ffd544cf6fd995eee644ad2ea8"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/final-verification/verification.json",
+      "sha256": "830376946afd30a5b1e885d4e498322223631871d409a6aa6f44b928ded6a9ea"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/followup-verification/index.json",
+      "sha256": "eec2ed1c714b5ee80d7f49692d544e4d343b321ae94677f505da87773ad4d1f3"
+    },
+    {
+      "path": "apps/web/performance/admin-cms-followup-20261018/artifact-map.json",
+      "sha256": "7c5b421ada356a24d21fefa0751bb941943658e8f24682a4b44a28d7faf4c5eb"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/inline-focus-application-readback-20261018.json",
+      "sha256": "24cb258c14964ecc4d9b748454707a9b3a593f1b4a03ef3b75949db99d431931"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/admin-users-banners-final-resolution.json",
+      "sha256": "9635c789bce58d6ed95ed94075f0cfb65ea860092e381b179796ffd9b1a5504a"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/admin-users-banners-native-resolution-review.json",
+      "sha256": "58f032e81e3c33efb68c938dc2ce0c72d931511ee7d45a85c8fb8e986e491815"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-aggregate-execution-20261018.json",
+      "sha256": "dedd656403e1f2577c75eab435ea27acf7adcdb57cd3b34b244f0849f5e5ca2b"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-native-review-addendum.json",
+      "sha256": "772899842329bd679efeb7fba6249a7bdc693577fb3d1e8db3dfdfa751550619"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/longform-inventory-refresh-20261018.json",
+      "sha256": "e8a1765232011eee540bf6e86820c14dc5890e9bf72b84c4559fdde10df1ecf1"
+    }
+  ],
+  "remaining_blockers": [
+    "Gemini adversarial Deep Research and final-source GPT-6 Pro reverse Deep Research remain pending. One actual thesis and seven report-based local repair gates are completed.",
+    "New followup commit requires current-head CI and review readback before protected promotion.",
+    "TZ-TH-007 hosted post-install ACL/runtime and TZ-TH-008 next-stage external reauthentication remain incomplete.",
+    "Evidence-prefixed SQL successors remain compile-only and held. Fresh protected-source admission, writer fences, operating apply and post-install readback remain unverified.",
+    "Operating banner revision-trigger behavior, protected develop/data/main promotion, operating deployment and full live administrator workflows remain unverified."
+  ],
+  "status": "incomplete_thesis_adjudicated_antithesis_pending",
+  "local_state": "Latest followups: CMS41 pass/468 assertions; OCR74 pass/614 assertions; SQL39 pass/245 assertions; independent CMS4 counterexamples pass (overlap, not added as unique tests); parity3350 inputs/diagnostics0; build54 pages and CSS boundaries pass; six 390/834/1440 captures overflow-free. Earlier provider/lineage source is unchanged and retains its separate verification.",
+  "execution_state": "One actual thesis completed and saved verbatim; its reservation was released. Gemini antithesis is queued with its original job and hash; no antithesis or reverse report has completed.",
+  "installation_state": "Node24.22.0/npm11.6.2 npm ci758packages completed in isolated candidate.",
+  "deployment_state": "No deployment or operating DB write in this resumed task.",
+  "updated_at": "2026-10-18T18:52:27.739503+00:00",
+  "original_bundle_source_revision": "eba019509a1f7fd04d833f90afea25b9875598bb",
+  "final_source_verification": "apps/web/performance/cross-audit-20261018/followup-verification/index.json",
+  "remaining_report_stages": [
+    "gemini_antithesis",
+    "chatgpt_final_source_reverse_audit"
+  ],
+  "original_thesis_source_revision": "b5d62c34f4a2e854ab10fd9f6741597b6081c43b",
+  "original_thesis_bundle_sha256": "bd8f5668b7a00d48a623471183863cda1ae9eb48c14a0d1dc569508e0f2058c3",
+  "thesis_followthrough_counts": {
+    "total": 9,
+    "source_and_required_local_verification_completed": 7,
+    "separate_focus_evidence_pending": 0,
+    "evidence_packaging_complete_external_reauthentication_pending": 1,
+    "conditional_hosted_evidence_pending": 1
+  },
+  "working_tree_followups": {
+    "state": "local_verified_pending_commit_and_remote_ci",
+    "areas": [
+      "OCR integer-status credential fallback",
+      "Users pagination and guarded query intents",
+      "Banner observed-revision CAS, authoritative media cleanup and explicit readback recovery",
+      "Shared compact CMS headers, semantic status colors and mobile primary controls",
+      "Evidence-prefixed compile-only SQL successors with constituent and aggregate PG17 rehearsal"
+    ],
+    "deployment": "not_deployed"
+  },
+  "source_state": "hash-bound locally verified followups based on source_revision, pending commit",
+  "last_completed_committed_ci": {
+    "revision": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+    "all_checks_completed": 33,
+    "failed": 0,
+    "swift": "SUCCESS",
+    "catalog_generate": "SUCCESS",
+    "orchestration_readiness": "SUCCESS",
+    "conditional_skips_are_passes": false,
+    "receipt": "apps/web/performance/cross-audit-20261018/pr-ci-readback-86328a4c.json",
+    "interpretation": "Does not validate uncommitted followups or prove deployment."
+  },
+  "prepared_current_source_package": "apps/web/performance/cross-audit-20261018/final-source-antithesis-post-cms/final-source-antithesis-source-manifest.json"
+}

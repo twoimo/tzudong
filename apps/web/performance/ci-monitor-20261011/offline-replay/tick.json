@@ -1,0 +1,52 @@
+{
+  "activeAlertKeys": [],
+  "admittedAttemptCount": 0,
+  "analysisSha256": "3904f053afaf91678f0443dddff156f7b1431b73b8251e404887e98fb0f20dad",
+  "causalClaimAllowed": false,
+  "cohortCount": 3,
+  "collection": {
+    "apiRequests": 3,
+    "asymptoticApiReads": "O(P + A + S), bounded by configured pages, active attempts, and uncached sources",
+    "elapsedSeconds": 3.46107,
+    "llmCalls": 0,
+    "maximumIncrementalListedRuns": 100,
+    "maximumListPages": 5,
+    "maximumListedRunsPerPage": 20,
+    "refreshedJobSets": 0,
+    "remoteMutations": 0,
+    "reusedJobSets": 60,
+    "sqliteLookupCost": "O(log H) per keyed run or source lookup"
+  },
+  "conclusions": {
+    "cancelled": 2,
+    "failure": 1,
+    "success": 17
+  },
+  "configSha256": "3a391ef69c7146a799a34be123d159bfcbd4cf8d9ce8e9817972ccd03e130fed",
+  "coverage": {
+    "alerts": [],
+    "bootstrapOnly": false,
+    "completeHistoryClaimed": false,
+    "incrementalWindowComplete": true,
+    "listPages": 3,
+    "overlapHours": 48,
+    "reportedWindowRunCount": 60,
+    "scope": "bounded_recent_window_plus_known_active_runs",
+    "uniqueListedRunCount": 60,
+    "watermarkAdvanced": false,
+    "watermarkAfter": "2026-10-11T07:28:33Z",
+    "watermarkBefore": "2026-10-11T07:28:33Z"
+  },
+  "duplicateAttemptCount": 20,
+  "excludedHistoricalAttempts": 40,
+  "exportSha256": "477f09dda1c9ecb3e2722ef16fdd7ed384be1d9fd57f6f0fa54c9a84048dbe5e",
+  "modelsInvokedByProgram": 0,
+  "newAlertKeys": [],
+  "observedAtUtc": "2026-10-11T07:56:29.015353Z",
+  "receiptPath": "state://ticks/20261011T075942.144628Z/analysis.json",
+  "remoteMutations": 0,
+  "schema": "tzudong-ci-monitor-tick/v1",
+  "shouldNotify": false,
+  "status": "observed",
+  "tickId": "20261011T075942.144628Z"
+}

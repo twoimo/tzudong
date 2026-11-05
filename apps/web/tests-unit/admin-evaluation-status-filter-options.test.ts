@@ -167,7 +167,25 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
 
     expect(tableSource).toContain('canApproveAddressConsistencyRecord');
     expect(slideSource).toContain('canApproveAddressConsistencyRecord');
-    expect(tableSource).not.toContain('const canApprove =');
+    const desktopRowStart = tableSource.indexOf('const EvaluationTableRow =');
+    const mobileCardsStart = tableSource.indexOf('const mobileCards = (');
+    expect(desktopRowStart).toBeGreaterThanOrEqual(0);
+    expect(mobileCardsStart).toBeGreaterThan(desktopRowStart);
+
+    for (const tablePathSource of [
+      tableSource.slice(desktopRowStart, mobileCardsStart),
+      tableSource.slice(mobileCardsStart),
+    ]) {
+      const approvalGates = [...tablePathSource.matchAll(/const\s+canApprove\s*=\s*([^;]+);/g)];
+      expect(approvalGates).toHaveLength(1);
+      const conditions = approvalGates[0]![1]!.split(/\s*&&\s*/).map((condition) => condition.trim());
+      expect(conditions).toHaveLength(3);
+      expect(conditions).toEqual(expect.arrayContaining([
+        "eligibility?.state === 'local_checks_passed'",
+        '!needsEvaluationRerun(record)',
+        'canApproveAddressConsistencyRecord(record)',
+      ]));
+    }
     expect(tableSource).not.toMatch(/disabled=\{loading \|\| !record\.geocoding_success\}/);
     expect(slideSource).not.toMatch(/disabled=\{loading \|\| !currentRecord\.geocoding_success\}/);
   });
@@ -192,23 +210,23 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(tableSource).not.toContain('style={shouldRenderMobile ? { touchAction: \'pan-y\' } : undefined}');
     expect(tableSource).not.toContain('onPointerDown={handleMobileFilterPointerStart}');
     expect(tableSource).not.toContain('onTouchStart={handleMobileFilterTouchStart}');
-    expect(tableSource).toContain('sticky top-0 z-30 -mx-2 bg-background/95 px-2 pb-2 pt-1 backdrop-blur lg:hidden');
+    expect(tableSource).toContain('sticky top-0 z-30 bg-background pb-2 pt-1 lg:hidden');
+    expect(tableSource).not.toContain('sticky top-0 z-30 -mx-2');
     expect(tableSource).toContain('grid grid-cols-3 gap-1.5');
     expect(tableSource).toContain('<div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">');
     expect(tableSource).toContain('<span>검수 항목</span>');
     expect(tableSource).toContain('loading && records.length === 0');
-    expect(tableSource).toContain('<strong className="ml-1 text-sm font-bold text-foreground">{records.length}개</strong>');
+    // Displayed/total counts and loading/error states are exercised in admin-evaluation-list-progress-browser.test.ts.
     expect(tableSource).toContain('필터 {activeFilterCount}개');
     expect(tableSource).toContain('data-admin-evaluation-mobile-filter-actions="true"');
     expect(tableSource).toContain('data-layout-primitives="cluster"');
     expect(tableSource).toContain('aria-label="필터 초기화"');
     expect(tableSource).toContain('{hasActiveFilters && (');
     expect(tableSource).toContain('variant="ghost"');
-    expect(tableSource).toContain('h-8 min-w-0 rounded-full px-2 text-xs font-medium');
+    expect(tableSource).toContain('h-11 min-w-0 rounded-md px-2 text-xs font-medium');
     expect(tableSource).toContain('data-admin-evaluation-mobile-card="true"');
     expect(tableSource).toContain('data-layout-primitives="stack frame"');
     expect(tableSource).toContain('<article');
-    expect(tableSource).toContain('flex min-w-max flex-nowrap gap-1.5');
     expect(tableSource).toContain('rounded-xl bg-muted/35 p-2.5 text-2xs');
     expect(pageSource).toContain('data-admin-evaluation-view-actions="top-right"');
     expect(pageSource).toContain('data-admin-evaluation-title-icon="true"');

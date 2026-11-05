@@ -3,7 +3,7 @@ import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
 from pathlib import Path
 
 
@@ -15,6 +15,58 @@ SPEC.loader.exec_module(mod)
 
 
 class MergeChunkVisualTests(unittest.TestCase):
+    def merge_responses(self, records, *, expected=None):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for index, record in enumerate(records):
+                (root / f"chunk_response_{index}.json").write_text(
+                    record if isinstance(record, str) else json.dumps(record), encoding="utf-8"
+                )
+            args = ["--dir", str(root)]
+            if expected is not None:
+                args += ["--expected-chunks", str(expected)]
+            stdout = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(io.StringIO()):
+                mod.main(args)
+            return json.loads(stdout.getvalue())
+
+    def test_absence_requires_explicit_reason_from_every_chunk(self):
+        with self.assertRaises(SystemExit):
+            self.merge_responses([
+                {"restaurants": [], "no_restaurant_reason": "home meal"},
+                {"restaurants": []},
+            ])
+
+    def test_malformed_chunk_cannot_be_hidden_by_valid_restaurant(self):
+        with self.assertRaises(SystemExit):
+            self.merge_responses([
+                {"restaurants": [{"origin_name": "Test restaurant"}]},
+                "invalid JSON",
+            ])
+
+    def test_complete_explicit_absence_preserves_each_reason(self):
+        payload = self.merge_responses([
+            {"restaurants": [], "no_restaurant_reason": "home meal"},
+            {"restaurants": [], "no_restaurant_reason": "studio conversation"},
+        ], expected=2)
+        self.assertEqual(payload["restaurants"], [])
+        self.assertIn("home meal", payload["no_restaurant_reason"])
+        self.assertIn("studio conversation", payload["no_restaurant_reason"])
+
+    def test_missing_expected_chunk_rejects_partial_result(self):
+        with self.assertRaises(SystemExit):
+            self.merge_responses([
+                {"restaurants": [{"origin_name": "Test restaurant"}]},
+            ], expected=2)
+
+    def test_unknown_name_is_preserved_as_candidate_instead_of_absence(self):
+        payload = self.merge_responses([
+            {"restaurants": [{"origin_name": None, "address": None, "category": []}]},
+            {"restaurants": [], "no_restaurant_reason": "studio conversation"},
+        ], expected=2)
+        self.assertEqual(payload["restaurants"], [{"origin_name": None, "address": None, "category": []}])
+        self.assertNotIn("no_restaurant_reason", payload)
+
     def test_visual_name_is_attached_when_caption_chunks_are_empty(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

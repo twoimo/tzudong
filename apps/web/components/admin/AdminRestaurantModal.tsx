@@ -1,3 +1,4 @@
+import { youtubeMetadataChanges, sponsorshipState, sponsorshipLabel, manualSponsorshipChanges } from '@/lib/sponsorship-state';
 import {
     useState,
     useEffect,
@@ -35,11 +36,12 @@ import { toast } from "@/lib/no-toast";
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { isEvaluationRecordStatus } from '@/lib/admin/normalize-evaluation-record';
 import { useRecordAction } from '@/lib/admin/use-record-action';
-import { isRecordActionCancelled, recordActionErrorMessage, type RecordActionInput } from '@/lib/admin/record-action-client';
+import { shouldNotifyRecordActionError, recordActionErrorMessage, type RecordActionInput } from '@/lib/admin/record-action-client';
 import type { RecordActionReceipt, RestaurantRecordChanges } from '@/lib/admin/record-action-contract';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
+import { adminGeocodeErrorMessage, fetchAdminGeocode } from '@/lib/admin/admin-geocode-client';
 import { RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS } from "@/lib/admin/restaurant-destructive-action-contract";
-import { Loader2, ChevronDown, X } from "lucide-react";
+import { Check, Loader2, ChevronDown, X } from "lucide-react";
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { cn } from "@/lib/utils";
@@ -290,20 +292,6 @@ interface GeocodingResultItem {
     y: string;
 }
 
-interface NaverGeocodeAddressItem {
-    roadAddress: string;
-    jibunAddress: string;
-    englishAddress: string;
-    addressElements: AddressElementsValue;
-    x: string;
-    y: string;
-}
-
-interface NaverGeocodeResponse {
-    error?: string;
-    addresses?: NaverGeocodeAddressItem[];
-}
-
 export function AdminRestaurantModal(props: AdminRestaurantModalProps) {
     return props.isOpen ? <AdminRestaurantEditor {...props} /> : null;
 }
@@ -368,6 +356,7 @@ function AdminRestaurantEditor({
     const [deletedReviewIds, setDeletedReviewIds] = useState<string[]>([]); // X 버튼으로 삭제된 기존 레코드 ID 추적
     const [customCategory, setCustomCategory] = useState(""); // 커스텀 카테고리 입력용
     const [isGeocodingNaver, setIsGeocodingNaver] = useState(false);
+    const [geocodingError, setGeocodingError] = useState<string | null>(null);
     const [isGeocoded, setIsGeocoded] = useState(false); // 재지오코딩 완료 여부
     const [geocodingResults, setGeocodingResults] = useState<GeocodingResultItem[]>([]);
     const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
@@ -384,7 +373,8 @@ function AdminRestaurantEditor({
         address_elements: null as AddressElementsValue,
         phone: "",
         categories: [] as string[],
-        youtube_reviews: [] as { id: string; youtube_link: string; tzuyang_review: string }[],
+        youtube_reviews: [] as { id: string; youtube_link: string; tzuyang_review: string;
+            sponsorshipDecision?: 'detected' | 'confirmed_none'; sponsorCompanies?: string }[],
         lat: "",
         lng: "",
     });
@@ -409,6 +399,7 @@ function AdminRestaurantEditor({
             lng: "",
         });
         setIsGeocoded(false);
+        setGeocodingError(null);
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
     }, []);
@@ -668,29 +659,16 @@ function AdminRestaurantEditor({
     };
 
     // 지오코딩 함수 (여러 개 결과 반환)
-    const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3) => {
-        try {
-            const { data, error } = await supabase.functions.invoke('naver-geocode', {
-                body: { query: address, count: limit }
-            });
-            const geocodeData = data as NaverGeocodeResponse | null;
-
-            if (error) throw new Error('NAVER_GEOCODE_REQUEST_FAILED');
-            if (!geocodeData || geocodeData.error) throw new Error('NAVER_GEOCODE_PROVIDER_FAILED');
-            if (!geocodeData.addresses || geocodeData.addresses.length === 0) return [];
-
-            return geocodeData.addresses.slice(0, limit).map((addr) => ({
-                road_address: addr.roadAddress,
-                jibun_address: addr.jibunAddress,
-                english_address: addr.englishAddress,
-                address_elements: addr.addressElements,
-                x: addr.x,
-                y: addr.y,
-            }));
-        } catch (error) {
-
-            throw error;
-        }
+    const geocodeAddressMultiple = async (address: string) => {
+        const addresses = await fetchAdminGeocode(address);
+        return addresses.map((addr) => ({
+            road_address: addr.roadAddress,
+            jibun_address: addr.jibunAddress,
+            english_address: addr.englishAddress,
+            address_elements: addr.addressElements as AddressElementsValue,
+            x: addr.x,
+            y: addr.y,
+        }));
     };
 
     // 재지오코딩 버튼 핸들러 - 네이버
@@ -699,30 +677,28 @@ function AdminRestaurantEditor({
         const trimmedName = formData.name.trim();
 
         if (!trimmedAddress) {
-            toast.error('주소를 입력해주세요');
+            setGeocodingError('주소를 입력해주세요');
             return;
         }
 
         if (!trimmedName) {
-            toast.error('음식점명을 입력해주세요');
+            setGeocodingError('음식점명을 입력해주세요');
             return;
         }
 
         setIsGeocodingNaver(true);
+        setGeocodingError(null);
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
         setIsGeocoded(false);
 
         try {
-            toast.info('네이버 Geocoding API로 검색 중...');
+            // 전체 주소와 기존 시/군/구 fallback을 같은 관리자 API로 조회한다.
+            const fullAddressResults = await geocodeAddressMultiple(trimmedAddress);
 
-            // 1. name + 전체 주소로 지오코딩 (최대 3개)
-            const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
-
-            // 2. name + 시/군/구까지만 (최대 3개)
             const shortAddress = extractCityDistrictGu(trimmedAddress);
-            const shortAddressResults = shortAddress
-                ? await geocodeAddressMultiple(trimmedName, shortAddress, 3)
+            const shortAddressResults = shortAddress && shortAddress !== trimmedAddress
+                ? await geocodeAddressMultiple(shortAddress)
                 : [];
 
             // 3. 합치고 중복 제거
@@ -731,13 +707,12 @@ function AdminRestaurantEditor({
 
             if (uniqueResults.length > 0) {
                 setGeocodingResults(uniqueResults);
-                toast.success(`${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`);
             } else {
-                toast.error('주소를 찾을 수 없습니다');
+                setGeocodingError('주소 후보를 찾지 못했습니다. 건물 주소와 지점을 확인한 뒤 다시 조회해주세요.');
             }
         } catch (error) {
-
-            toast.error('네이버 지오코딩에 실패했습니다');
+            const message = adminGeocodeErrorMessage(error);
+            setGeocodingError(message);
         } finally {
             setIsGeocodingNaver(false);
         }
@@ -775,6 +750,11 @@ function AdminRestaurantEditor({
             toast.error('새 영상 링크와 쯔양 리뷰를 입력해주세요'); return;
         }
         const originalRows = new Map([...(restaurant ? [restaurant, ...(restaurant.mergedRestaurants ?? [])] : [])].map(row => [row.id, row]));
+        for (const review of formData.youtube_reviews) {
+            if (review.sponsorshipDecision && !manualSponsorshipChanges(review.sponsorshipDecision, review.sponsorCompanies)) {
+                toast.error('광고를 확정하려면 회사명을 한 줄에 하나씩 입력해주세요.'); return;
+            }
+        }
         const perTargetChanges: Array<{ id: string; changes: RestaurantRecordChanges }> = [];
         for (const review of formData.youtube_reviews.filter(row => !row.id.startsWith('new-') && !!restaurant)) {
             const original = originalRows.get(review.id);
@@ -785,6 +765,7 @@ function AdminRestaurantEditor({
                 changes.youtube_link = canonical;
             }
             if (review.tzuyang_review.trim() !== (original?.tzuyang_review ?? '').trim()) changes.tzuyang_review = review.tzuyang_review.trim() || null;
+            if (review.sponsorshipDecision) changes.youtube_meta = manualSponsorshipChanges(review.sponsorshipDecision, review.sponsorCompanies)!;
             if (Object.keys(changes).length > 0) perTargetChanges.push({ id: review.id, changes });
         }
         setIsSubmitting(true);
@@ -810,17 +791,12 @@ function AdminRestaurantEditor({
             for (const review of newReviews) {
                 const video = toVideoChanges(review);
                 const meta = await fetchYouTubeMeta(video.youtube_link!);
-                const ads = meta?.ads_info && typeof meta.ads_info === 'object' ? meta.ads_info : meta;
-                const whatAds = ads?.what_ads;
-                // Keep only the public DTO fields; provider diagnostics never enter a request or log.
-                const youtube_meta: RestaurantRecordChanges['youtube_meta'] = meta && typeof meta === 'object' ? {
-                    ...(typeof meta.title === 'string' ? { title: meta.title } : {}),
-                    ...(typeof (meta.published_at ?? meta.publishedAt) === 'string' ? { published_at: meta.published_at ?? meta.publishedAt } : {}),
-                    ...(typeof meta.duration === 'number' ? { duration: meta.duration } : {}),
-                    ...(typeof meta.is_shorts === 'boolean' ? { is_shorts: meta.is_shorts } : {}),
-                    ...(typeof ads?.is_ads === 'boolean' ? { is_ads: ads.is_ads } : {}),
-                    ...(typeof whatAds === 'string' ? { what_ads: [whatAds] } : whatAds === null ? { what_ads: null } : Array.isArray(whatAds) && whatAds.every((item: unknown) => typeof item === 'string') ? { what_ads: whatAds } : {}),
-                } : undefined;
+                const youtube_meta = review.sponsorshipDecision
+                    ? { ...youtubeMetadataChanges(meta), ...manualSponsorshipChanges(review.sponsorshipDecision, review.sponsorCompanies) }
+                    : youtubeMetadataChanges(meta);
+                if (!review.sponsorshipDecision && meta && sponsorshipState(meta.ads_info ?? meta) === 'unknown') {
+                    toast.warning('기본 메타데이터는 가져왔습니다. 광고 판정은 미확인이며 기존 광고 정보는 변경하지 않습니다.');
+                }
                 if (!youtube_meta) toast.warning('영상 메타데이터를 가져오지 못했습니다. 입력한 영상과 리뷰를 확인해주세요.');
                 additions.push({ ...completeChanges, ...video, ...(youtube_meta ? { youtube_meta } : {}) });
             }
@@ -838,7 +814,7 @@ function AdminRestaurantEditor({
             }
             await refreshAfterAction(await recordActions.run(input));
         } catch (error) {
-            if (!isRecordActionCancelled(error)) toast.error(recordActionErrorMessage(error));
+            if (shouldNotifyRecordActionError(error)) toast.error(recordActionErrorMessage(error));
         } finally { setIsSubmitting(false); }
     };
 
@@ -849,7 +825,7 @@ function AdminRestaurantEditor({
         try {
             await refreshAfterAction(await recordActions.run({ action: 'restaurant.delete', targetIds: [restaurant.id], payload: { reason: deleteReason.trim() } }));
         } catch (error) {
-            if (!isRecordActionCancelled(error)) toast.error(recordActionErrorMessage(error));
+            if (shouldNotifyRecordActionError(error)) toast.error(recordActionErrorMessage(error));
         } finally { setIsSubmitting(false); }
     };
 
@@ -906,7 +882,7 @@ function AdminRestaurantEditor({
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <p className="text-xs font-medium text-red-700 dark:text-red-300">관리자 편집</p>
-                    <h2 id={adminRestaurantTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                    <h2 id={adminRestaurantTitleId} className="truncate text-lg font-semibold tracking-tight text-foreground">
                         {adminRestaurantTitle}
                     </h2>
                     <p id={adminRestaurantDescriptionId} className="mt-1 text-sm text-muted-foreground">
@@ -948,7 +924,7 @@ function AdminRestaurantEditor({
         badge?: string;
         children: ReactNode;
     }) => (
-        <section className="rounded-2xl border border-border bg-card/95 p-4 shadow-sm" aria-label={title}>
+        <section className="admin-detail-section bg-card" aria-label={title}>
             <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-foreground">{title}</h3>
@@ -971,10 +947,11 @@ function AdminRestaurantEditor({
             className={adminRestaurantFormClass}
         >
             {shouldRenderSheetFrame && adminRestaurantSheetHeader}
-            <fieldset disabled={isSubmitting || isGeocodingNaver} className={adminRestaurantBodyClass}>
+            <div className={adminRestaurantBodyClass}>
+            <fieldset disabled={isSubmitting || isGeocodingNaver} className="m-0 min-w-0 border-0 p-0">
                 <div className="space-y-4">
-                    <div className="rounded-2xl border border-red-200/70 bg-red-50/70 p-3 text-sm leading-6 text-red-950 shadow-sm dark:border-red-950/70 dark:bg-red-950/25 dark:text-red-100">
-                        지도에 바로 반영되는 관리자 편집 화면입니다. 제보하기와 같은 흐름으로 기본 정보, 주소/좌표, 영상 리뷰를 순서대로 확인하세요.
+                    <div className="rounded-md bg-primary/5 px-3 py-2 text-sm text-foreground">
+                        저장하면 지도에 반영됩니다.
                     </div>
 
                     {renderAdminRestaurantSection({
@@ -1158,7 +1135,13 @@ function AdminRestaurantEditor({
                                         <Input
                                             id="searchAddress"
                                             value={formData.searchAddress}
-                                            onChange={(e) => setFormData({ ...formData, searchAddress: e.target.value })}
+                                            onChange={(e) => {
+                                                setFormData({ ...formData, searchAddress: e.target.value });
+                                                setIsGeocoded(false);
+                                                setGeocodingResults([]);
+                                                setSelectedGeocodingIndex(null);
+                                                setGeocodingError(null);
+                                            }}
                                             placeholder="서울시 강남구... or Las Vegas..."
                                             className="flex-1"
                                             autoComplete="street-address"
@@ -1181,8 +1164,9 @@ function AdminRestaurantEditor({
                                             )}
                                         </Button>
                                     </div>
+                                    {geocodingError && <p role="alert" className="text-sm text-destructive">{geocodingError}</p>}
                                     {isGeocoded && selectedGeocodingIndex !== null && (
-                                        <p className="text-xs font-medium text-green-600">✓ 주소와 좌표를 선택했습니다</p>
+                                        <p className="flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-300"><Check className="h-4 w-4" aria-hidden="true" />주소와 좌표를 선택했습니다</p>
                                     )}
                                 </div>
 
@@ -1194,9 +1178,9 @@ function AdminRestaurantEditor({
                                                 <Card
                                                     key={index}
                                                     className={cn(
-                                                        "cursor-pointer space-y-1 rounded-xl p-3 text-sm transition-all",
+                                                        "cursor-pointer space-y-1 rounded-md p-3 text-sm transition-colors",
                                                         selectedGeocodingIndex === index
-                                                            ? 'border-primary bg-primary/5 shadow-sm'
+                                                            ? 'border-primary bg-primary/5'
                                                             : 'hover:border-primary/50',
                                                     )}
                                                     role="button"
@@ -1228,7 +1212,7 @@ function AdminRestaurantEditor({
 
                                 {isGeocoded && selectedGeocodingIndex !== null && (
                                     <div className="space-y-2 rounded-xl border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950/20">
-                                        <p className="font-semibold text-green-700 dark:text-green-300">✓ 선택된 주소</p>
+                                        <p className="flex items-center gap-1.5 font-semibold text-green-700 dark:text-green-300"><Check className="h-4 w-4" aria-hidden="true" />선택된 주소</p>
                                         <div className="space-y-2">
                                             <div>
                                                 <Label className="text-xs text-muted-foreground">도로명 주소</Label>
@@ -1343,6 +1327,31 @@ function AdminRestaurantEditor({
                                                         rows={3}
                                                     />
                                                 </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`sponsorship_${index}`} className="text-xs">광고 판정</Label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {sponsorshipLabel(((restaurant ? [restaurant, ...(restaurant.mergedRestaurants ?? [])] : [])
+                                                            .find(row => row.id === review.id)?.youtube_meta as { ads_info?: unknown } | null)?.ads_info)}
+                                                    </p>
+                                                    <select id={`sponsorship_${index}`} className="w-full rounded-md border bg-background p-2 text-sm"
+                                                        value={review.sponsorshipDecision ?? 'keep'}
+                                                        onChange={event => {
+                                                            const decision = event.target.value;
+                                                            setFormData(previous => ({ ...previous, youtube_reviews: previous.youtube_reviews.map((row, i) => i === index
+                                                                ? { ...row, sponsorshipDecision: decision === 'detected' || decision === 'confirmed_none' ? decision : undefined }
+                                                                : row) }));
+                                                        }}>
+                                                        <option value="keep">기존 판정 유지 (새 영상은 자동 판정)</option>
+                                                        <option value="detected">광고 있음으로 직접 확정</option>
+                                                        <option value="confirmed_none">광고 아님으로 직접 확정</option>
+                                                    </select>
+                                                    {review.sponsorshipDecision === 'detected' && <>
+                                                        <Label htmlFor={`sponsor_companies_${index}`} className="text-xs">광고 회사명 (한 줄에 하나)</Label>
+                                                        <Textarea id={`sponsor_companies_${index}`} value={review.sponsorCompanies ?? ''} rows={2}
+                                                            onChange={event => setFormData(previous => ({ ...previous,
+                                                                youtube_reviews: previous.youtube_reviews.map((row, i) => i === index ? { ...row, sponsorCompanies: event.target.value } : row) }))} />
+                                                    </>}
+                                                </div>
                                             </Card>
                                         ))}
                                     </div>
@@ -1352,6 +1361,7 @@ function AdminRestaurantEditor({
                     })}
                 </div>
             </fieldset>
+            </div>
             {confirmedReceipt && <Button type="button" variant="outline" onClick={() => void refreshAfterAction(confirmedReceipt)}>현재 정보 다시 불러오기</Button>}
 
             <DialogFooter className={adminRestaurantFooterClass}>
@@ -1377,7 +1387,7 @@ function AdminRestaurantEditor({
                         </Button>
                         <Button
                             type="submit"
-                            className={`${ADMIN_MODAL_ACTION} bg-gradient-primary hover:opacity-90`}
+                            className={`${ADMIN_MODAL_ACTION} bg-primary text-primary-foreground hover:bg-primary/90`}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (

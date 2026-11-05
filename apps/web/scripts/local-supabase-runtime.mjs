@@ -269,12 +269,18 @@ function safeProcessEnvironment(inherited = process.env) {
 
 export function buildLocalTypeGenerationEnvironment(local, inherited = process.env) {
   const databaseUrl = new URL(local.values.SUPABASE_DB_URL);
+  if (!['postgres:', 'postgresql:'].includes(databaseUrl.protocol)
+    || databaseUrl.hostname !== '127.0.0.1') {
+    fail('database_url');
+  }
   databaseUrl.username = `${databaseUrl.username}.${local.values.POOLER_TENANT_ID}`;
+  // The generated loopback Supavisor session listener does not provide TLS.
+  // CLI 2.121 otherwise attempts SSL before it can inspect the local catalog.
+  databaseUrl.searchParams.set('sslmode', 'disable');
   const webRoot = path.join(local.repositoryRoot, 'apps', 'web');
 
-  // `supabase gen types --db-url` starts pg-meta in a one-shot container using
-  // the default local Docker context. It does not consume our GitHub socket
-  // admission identity, so cloud credentials and Docker overrides stay absent.
+  // Keep cloud credentials and Docker overrides absent. The CLI does not
+  // consume our GitHub socket admission identity.
   return {
     ...safeProcessEnvironment(inherited),
     SUPABASE_DB_URL: databaseUrl.toString(),

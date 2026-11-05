@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-15T16:34:26Z",
+  "kind": "pre-release-readback",
+  "productionEvidence": true,
+  "candidateSha": "c8b617539dbc0a95935531fc5c218c48c2adf4ff",
+  "pullRequest": 3215,
+  "swift": { "runId": 38762155293, "jobId": 116515956919, "conclusion": "SUCCESS" },
+  "merge": { "state": "BLOCKED", "reason": "four-new-unresolved-review-conversations", "performed": false },
+  "rollback": {
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "projectName": "tzudong",
+    "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+    "repository": "twoimo/tzudong",
+    "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+    "commitSha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+    "branch": "main",
+    "target": "production",
+    "state": "READY",
+    "liveUrl": "https://www.tzudong.app",
+    "aliases": ["tzudong.app", "www.tzudong.app"]
+  },
+  "credentialMetadataOnly": {
+    "supabaseDbUrlPresent": true,
+    "vercelTokenPresent": true,
+    "vercelTokenUpdatedAt": "2026-10-15T08:08:33Z",
+    "workflowAccessVerified": false
+  },
+  "limitations": [
+    "Candidate source has not been merged or deployed.",
+    "Current production identity is a rollback reference, not candidate deployment evidence.",
+    "No credential values, cookies, raw admin records, provider diagnostics, or raw OCR are retained."
+  ]
+}

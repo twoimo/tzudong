@@ -27,8 +27,9 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
+from utils.pipeline_cache_contracts import stage_inputs
 from utils.jsonl_utils import load_last_jsonl_record
-from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock
+from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock, cache_batch_hits, read_cache_batch
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -146,17 +147,45 @@ def create_evaluation_targets(video_id: str, data_path: Path, channel: str) -> d
     return result
 
 
+def selection_inputs(crawling, evaluation, video, channel):
+    return stage_inputs('selection', BACKEND_ROOT, crawling, evaluation, video, channel)
+
+
 def main():
     parser = argparse.ArgumentParser(description="평가 대상 선정")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
     parser.add_argument("--crawling-path", required=True, help="크롤링 데이터 경로")
     parser.add_argument("--evaluation-path", required=True, help="평가 결과 저장 경로")
     parser.add_argument("--video-id", default="", help="이 영상만 선정. 기존 selection이 있어도 다시 씀")
+    parser.add_argument("--cache-check", action="store_true")
+    parser.add_argument("--cache-check-many", action="store_true")
     args = parser.parse_args()
 
     channel = args.channel
     crawling_path = Path(args.crawling_path)
     evaluation_path = Path(args.evaluation_path)
+
+    if args.cache_check_many:
+        def recipe(video):
+            outputs = [evaluation_path / 'evaluation' / kind / (video + '.jsonl')
+                       for kind in ('selection', 'notSelection')]
+            receipt = evaluation_path / 'evaluation/selection/.receipts' / (video + '.json')
+            return receipt, [p for p in outputs if p.is_file()], selection_inputs(crawling_path, evaluation_path, video, channel)
+        try:
+            print(json.dumps({'cacheHits': cache_batch_hits(read_cache_batch(), recipe)}))
+            return 0
+        except (OSError, ValueError, TypeError):
+            return 1
+
+    if args.cache_check:
+        outputs = [evaluation_path / 'evaluation' / kind / (args.video_id + '.jsonl')
+                   for kind in ('selection', 'notSelection')]
+        receipt = evaluation_path / 'evaluation/selection/.receipts' / (args.video_id + '.json')
+        try:
+            key = fingerprint(**selection_inputs(crawling_path, evaluation_path, args.video_id, channel))
+            return 0 if reusable(receipt, key, [p for p in outputs if p.is_file()]) else 1
+        except (OSError, ValueError, TypeError):
+            return 1
 
     print(
         f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] 평가 대상 선정 시작: {channel}"
@@ -203,10 +232,8 @@ def main():
         selection_file = selection_dir / f"{video_id}.jsonl"
         not_selection_file = not_selection_dir / f"{video_id}.jsonl"
 
-        inputs = [p for p in [crawling_dir / f"{video_id}.jsonl",
-                               visual_dir / f"{video_id}.jsonl"] if p.is_file()]
         receipt = selection_dir / ".receipts" / f"{video_id}.json"
-        input_hash = fingerprint(inputs, assets=[Path(__file__)], settings=channel)
+        input_hash = fingerprint(**selection_inputs(crawling_path, evaluation_path, video_id, channel))
         with stage_lock(receipt):
             existing_outputs = [p for p in [selection_file, not_selection_file] if p.is_file()]
             if not requested and reusable(receipt, input_hash, existing_outputs):
@@ -241,7 +268,7 @@ def main():
                         archive = old.parent / ".superseded" / (old.name + "." + input_hash)
                         archive.parent.mkdir(parents=True, exist_ok=True)
                         old.replace(archive)
-                if input_hash != fingerprint(inputs, assets=[Path(__file__)], settings=channel):
+                if input_hash != fingerprint(**selection_inputs(crawling_path, evaluation_path, video_id, channel)):
                     raise RuntimeError("stage_input_changed")
                 complete(receipt, input_hash, outputs)
 
@@ -261,4 +288,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

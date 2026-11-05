@@ -1,0 +1,9 @@
+{
+  "firstError": "definitive_credential_rejection",
+  "stateAfterFirst": "uncertain",
+  "retryError": "indeterminate",
+  "providerCalls": 1,
+  "indeterminateCalls": 1,
+  "releaseCalls": 1,
+  "existingReleaseAfterDispatch": "rejected"
+}

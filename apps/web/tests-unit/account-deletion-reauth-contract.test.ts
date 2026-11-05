@@ -13,7 +13,7 @@ describe("G028 account deletion reauthentication UI contract", () => {
     const page = profilePage();
     const signIn = page.indexOf("createAccountDeletionReauthenticationSession");
     const preview = page.indexOf('method: "POST"');
-    const issueProof = page.indexOf("issueAccountDeletionReauthenticationProof(user.id)");
+    const issueProof = page.indexOf("issueAccountDeletionReauthenticationProof(user.id, freshSession)");
     const apply = page.indexOf('method: "DELETE"');
 
     expect(signIn).toBeGreaterThan(-1);
@@ -32,7 +32,7 @@ describe("G028 account deletion reauthentication UI contract", () => {
   test("waits for durable GET readback before signout and browser cleanup", () => {
     const page = profilePage();
     const poll = page.indexOf("pollAccountDeletionReadback(deletionSession.preview, pollController.signal)");
-    const signOut = page.indexOf("supabase.auth.signOut({ scope: \"local\" })");
+    const signOut = page.indexOf("deletionSession.reauthentication.clearBrowserSession()");
     const cleanup = page.indexOf("clearAccountDeletionBrowserStores(user.id, receipt)");
 
     expect(page).toContain("response.status !== 202");

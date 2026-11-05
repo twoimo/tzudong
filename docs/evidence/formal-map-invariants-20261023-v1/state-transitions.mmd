@@ -1,0 +1,30 @@
+stateDiagram-v2
+    direction LR
+    state "마커 객체 없음" as Empty
+    state "현재 식당 표시·접근성 노출" as Visible
+    state "현재 식당 유지·접근성 숨김" as Hidden
+    state "새 SDK 루트 대기·관측 대상 유지" as PendingRoot
+    state "지도 제외·클릭 해제" as Pooled
+    state "객체 폐기·재사용 금지" as Discarded
+    [*] --> Empty
+    Empty --> Visible: 표시 요청 / 새 객체·렌더 스냅샷
+    Visible --> Visible: 리뷰 변경 / 제자리 교체·클램프·스냅샷 유지
+    Hidden --> Hidden: 리뷰 변경 / 숨김·클램프 유지·스냅샷 갱신
+    Visible --> Visible: 불 등급·앵커·클러스터 프레임 / pool.update
+    Hidden --> Hidden: 동기 아이콘 교체 / 기존 숨김 복원
+    Hidden --> PendingRoot: SDK 루트 지연 교체 / 부모·숨김 소유권 보존
+    PendingRoot --> Hidden: 연결 루트 삽입 / observer로 앱 소유 숨김 적용
+    PendingRoot --> Visible: 다시 노출 / 대기 observer 취소
+    PendingRoot --> Pooled: 반환 성공 / 대기·클릭 해제
+    PendingRoot --> Discarded: 전체 정리 또는 해제 실패 / 대기 취소
+    Visible --> Hidden: 화면 밖 유지 / 앱 소유 루트 숨김
+    Hidden --> Visible: 화면 안 복귀 / 앱 소유 숨김 해제
+    Visible --> Pooled: 제외 / SDK 해제 성공·풀 여유
+    Hidden --> Pooled: 제외 / SDK 해제 성공·풀 여유
+    Visible --> Discarded: SDK 해제 실패 또는 풀 가득 참
+    Hidden --> Discarded: SDK 해제 실패 또는 풀 가득 참
+    Pooled --> Visible: 재획득 / 최신 식당·아이콘·클릭 연결
+    Visible --> Discarded: 전체 정리
+    Hidden --> Discarded: 전체 정리
+    Pooled --> Discarded: 전체 정리
+    Discarded --> [*]

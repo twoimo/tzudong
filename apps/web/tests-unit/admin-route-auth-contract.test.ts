@@ -22,14 +22,69 @@ const delegatedProductionApiRoutes: ReadonlyArray<readonly [string, readonly str
   ['app/api/admin/storyboard/production/route.ts', ['GET', 'POST']],
   ['app/api/admin/storyboard/production/[id]/route.ts', ['GET', 'POST']],
   ['app/api/admin/storyboard/production/[id]/export/route.ts', ['GET']],
-  ['app/api/admin/storyboard/production/[id]/images/route.ts', ['POST']],
   ['app/api/admin/storyboard/production/[id]/assets/[assetId]/route.ts', ['GET']],
 ];
+
+const thumbnailQueueDelegations: Record<string, Record<string, string>> = {
+  'chat/route.ts': { POST: 'chatLegacyPOST' },
+  'chat/jobs/route.ts': { GET: 'chatListGET', POST: 'chatListPOST' },
+  'chat/jobs/[jobId]/route.ts': { GET: 'chatJobGET', POST: 'chatJobPOST' },
+  'jobs/route.ts': { GET: 'listGET', POST: 'listPOST' },
+  'jobs/[jobId]/route.ts': { GET: 'jobGET', POST: 'jobPOST' },
+  'reference-candidates/route.ts': { POST: 'referenceCandidatesPOST' },
+  'worker/route.ts': { POST: 'workerPOST' },
+  'worker/references/route.ts': { GET: 'workerReferenceGET' },
+  'worker/images/route.ts': { POST: 'workerImagePOST' },
+  'worker/chat/route.ts': { GET: 'workerChatGET', POST: 'workerChatPOST' },
+};
+
+function assertThumbnailDelegation(file: string, source: string) {
+  const prefix = 'app/api/admin/youtube-thumbnail-generator/';
+  if (!file.startsWith(prefix)) return false;
+  const path = file.slice(prefix.length);
+  if (path === 'route.ts') {
+    expect(exportedHandlerBodies(source)).toHaveLength(0);
+    expect(source.match(/export const (?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s*=/g)).toHaveLength(2);
+    expect(source).toContain("from '@/lib/admin/youtube-thumbnail-generator/retired-api'");
+    for (const method of ['GET', 'POST']) expect(source).toContain(`export const ${method} = retiredThumbnailGenerationApi.${method};`);
+    const retired = appSource('lib/admin/youtube-thumbnail-generator/retired-api.ts');
+    expect(retired).toContain('authorize: typeof requireAdmin = requireAdmin');
+    expect(retired.match(/const auth = await authorize\(\); if \(!auth.ok\) return auth.response;/g)).toHaveLength(2);
+    expect(retired).toContain('status: 410');
+    expect(retired).not.toMatch(/createSupabaseServiceRoleClient|fetch\s*\(|request\.json\s*\(/);
+    return true;
+  }
+  const handlers = thumbnailQueueDelegations[path];
+  if (!handlers) return false;
+  expect(exportedHandlerBodies(source)).toHaveLength(0);
+  expect(source.match(/export const (?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s*=/g)).toHaveLength(Object.keys(handlers).length);
+  expect(source).toContain("from '@/lib/admin/youtube-thumbnail-generator/queue-api'");
+  const exports = [...source.matchAll(/export const (GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) = thumbnailQueueApi\.([A-Za-z]+);/g)];
+  expect(Object.fromEntries(exports.map((match) => [match[1], match[2]]))).toEqual(handlers);
+  const api = appSource('lib/admin/youtube-thumbnail-generator/queue-api.ts');
+  expect(api).toContain('const authorize = options.authorize ?? requireAdmin;');
+  expect(api).toMatch(/const auth = await authorize\(\);\s*if \(!auth.ok\) return new Response\(auth.response.body/);
+  expect(api.indexOf('const auth = await authorize()')).toBeLessThan(api.indexOf('return await work(owner)'));
+  expect(api).toContain("work(await store.authenticate(request.headers.get('authorization')))");
+  for (const member of Object.values(handlers)) {
+    const declaration = new RegExp(`^\\s+${member}: \\(request: Request(?:, context: JobContext)?\\) => (admin|worker)\\(request,`, 'm').exec(api);
+    expect(declaration, `${file} must delegate ${member} behind its authentication gate`).not.toBeNull();
+    // Outbound workers have a scoped token, owner, model and fence contract.
+    // Browser APIs continue to use the default requireAdmin-bound gate.
+    expect(declaration![1]).toBe(path.startsWith('worker/') ? 'worker' : 'admin');
+  }
+  expect(source).not.toMatch(/createSupabaseServiceRoleClient|fetch\s*\(|request\.(?:json|formData)\s*\(/);
+  return true;
+}
 
 const delegatedOperatingReadbackRoute =
   'app/api/admin/operating-readback/record-mutations-hold/route.ts';
 const delegatedOperatingReadbackModule =
   'app/api/admin/operating-readback/record-mutations-hold/readback-response.ts';
+const delegatedStoryboardPolicyReadbackRoute =
+  'app/api/admin/operating-readback/storyboard-policy/route.ts';
+const delegatedStoryboardPolicyReadbackModule =
+  'app/api/admin/operating-readback/storyboard-policy/readback-response.ts';
 
 const publicHomeMapSources = [
   'app/home-client.tsx',
@@ -225,6 +280,8 @@ describe('admin route auth source contract', () => {
       const source = routeSource(file);
       const isStoryboardRagRoute = storyboardRagRoutePaths.has(file);
 
+      if (assertThumbnailDelegation(file, source)) continue;
+
       if (file === delegatedOperatingReadbackRoute) {
         const moduleSource = appSource(delegatedOperatingReadbackModule);
         const moduleAuthIndex = firstCallIndex(moduleSource, 'requireAdminImpl');
@@ -245,6 +302,35 @@ describe('admin route auth source contract', () => {
         );
         expect(moduleSource.slice(moduleAuthIndex)).toMatch(
           /await\s+requireAdminImpl\s*\(\s*\)\s*;[\s\S]*catch\s*\{\s*return\s+fixedResponse\s*\(\s*'OPERATING_READBACK_AUTH_UNAVAILABLE'\s*,\s*503\s*\)\s*;\s*\}[\s\S]*return\s+responseAfterAuthentication\s*\(\s*auth\s*,\s*environment\s*\)\s*;/,
+        );
+        expect(moduleSource).toMatch(
+          /if\s*\(\s*!auth\.ok\s*\)\s*return\s+fixedAuthFailure\s*\(\s*auth\.response\s*\)\s*;/,
+        );
+        expect(moduleSource).not.toContain('Bearer');
+        expect(moduleSource).not.toContain('supabase.auth.getUser');
+        continue;
+      }
+
+      if (file === delegatedStoryboardPolicyReadbackRoute) {
+        const moduleSource = appSource(delegatedStoryboardPolicyReadbackModule);
+        const moduleAuthIndex = firstCallIndex(moduleSource, 'requireAdminImpl');
+        const preAuthSource = stripCommentsAndStringLiterals(moduleSource).slice(0, moduleAuthIndex);
+
+        expect(source).toContain("import { createStoryboardPolicyReadbackResponse } from './readback-response';");
+        expect(source).toMatch(
+          /export\s+async\s+function\s+GET\s*\(\s*\)\s*\{\s*return\s+createStoryboardPolicyReadbackResponse\s*\(\s*\)\s*;\s*\}/,
+        );
+        expect(moduleSource).toContain("import 'server-only';");
+        expect(moduleSource).toMatch(/requireAdminImpl\s*=\s*requireAdmin/);
+        expect(moduleAuthIndex, `${delegatedStoryboardPolicyReadbackModule} must call its requireAdmin-bound gate`).toBeGreaterThanOrEqual(0);
+        expect(preAuthSource, `${delegatedStoryboardPolicyReadbackModule} must not await work before admin auth`).not.toMatch(
+          /await\s+(?!requireAdmin)/,
+        );
+        expect(preAuthSource, `${delegatedStoryboardPolicyReadbackModule} must not start privileged work before admin auth`).not.toMatch(
+          /createSupabaseServiceRoleClient\s*\(|fetch\s*\(|\.from\s*\(|\.rpc\s*\(|request\.json\s*\(/,
+        );
+        expect(moduleSource.slice(moduleAuthIndex)).toMatch(
+          /await\s+requireAdminImpl\s*\(\s*\)\s*;[\s\S]*catch\s*\{\s*return\s+fixedResponse\s*\(\s*'STORYBOARD_POLICY_READBACK_AUTH_UNAVAILABLE'\s*,\s*503\s*\)\s*;\s*\}[\s\S]*return\s+responseAfterAuthentication\s*\(\s*auth\s*,\s*environment\s*,\s*evaluatePolicy\s*,\s*sourceBindingSha256\s*\)\s*;/,
         );
         expect(moduleSource).toMatch(
           /if\s*\(\s*!auth\.ok\s*\)\s*return\s+fixedAuthFailure\s*\(\s*auth\.response\s*\)\s*;/,
@@ -305,6 +391,7 @@ describe('admin route auth source contract', () => {
 
     for (const file of listAdminRouteFiles()) {
       const source = routeSource(file);
+      if (assertThumbnailDelegation(file, source)) continue;
       if (/export const (?:GET|POST) = retiredStoryboardApi;/.test(source)) {
         expect(source).toContain("@/lib/admin/storyboard/retired-api");
         const retired = appSource('lib/admin/storyboard/retired-api.ts');

@@ -1,0 +1,97 @@
+{
+  "schema": "tzudong-cms-artifact-map/v1",
+  "files": {
+    "README.md": {
+      "sha256": "d2fbe78852ad1121f1c3796250db6c7d0c95dacafdcbefec994053b44ecba518",
+      "bytes": 2393
+    },
+    "after-cua.json": {
+      "sha256": "b265a254dbf5c14dd17f0b802d00890354fe26aac835ac4bac2f9fce27571d99",
+      "bytes": 12073
+    },
+    "interaction-cua.json": {
+      "sha256": "c65d4644123ac1af89ed12114fbb6bdaa843e9c73d0b69430c7254ad7cf65ae1",
+      "bytes": 410
+    },
+    "layout-summary.json": {
+      "sha256": "d93a3daeba6f989865767e52bd2a8c9dcdfae913af085fa15e126c3e3fcd1c6f",
+      "bytes": 3951
+    },
+    "responsive-final-cua.json": {
+      "sha256": "6a13f3ab998d6caed4b9df48c532d2534660d3ca8753d047d38ce50785321792",
+      "bytes": 9263
+    },
+    "restaurant-header-final-cua.json": {
+      "sha256": "84780a0dc8c605f3ae0595e458ebe21295bcfb71b7c7036a108280d0e1c8ec5f",
+      "bytes": 12464
+    },
+    "restaurants-1440-header-final.png": {
+      "sha256": "e2d7ba9ce71e98a7f7cb468b1bb5d76876f586b8e5f85b85b6c6884faf27e7bd",
+      "bytes": 112715
+    },
+    "restaurants-1440.png": {
+      "sha256": "6d3eb66c7bf094e328bb4d716b950143f878a6995b3725b09a39cf92dd987445",
+      "bytes": 103658
+    },
+    "restaurants-1440x960-final.png": {
+      "sha256": "1675ea76be609f03ebbd260702bcc2f1cfd9495655056905e8b1a3eb5a0c0250",
+      "bytes": 104288
+    },
+    "restaurants-390-fixed.png": {
+      "sha256": "09a784017838683a48383db3139235d7cb52b52bf6d95a8560cc92f7c6e67448",
+      "bytes": 35364
+    },
+    "restaurants-390-header-final.png": {
+      "sha256": "b091e8299b7fd2512abb89ddb815202ebff718d9c8080c2ee8a9b572c28960d6",
+      "bytes": 35403
+    },
+    "restaurants-390.png": {
+      "sha256": "da66eec0a5918631550b04cb07f55eddfc6486f15d6d471f651f2deeacd2ece5",
+      "bytes": 30763
+    },
+    "restaurants-834-fixed.png": {
+      "sha256": "e161a3b8f7b69923f387f573eeb6f2c51e7fae42a28e1a626e5c8d0126541bbf",
+      "bytes": 83986
+    },
+    "restaurants-834-header-final.png": {
+      "sha256": "07d4868a339dd24bb59ac522c68104c2db602044383301a40cc0396f90bf5878",
+      "bytes": 81432
+    },
+    "restaurants-834.png": {
+      "sha256": "364b67ac8be30de3992af178f40cecd3ca0f3636ef29256fa656b028b0bd3589",
+      "bytes": 79327
+    },
+    "reviews-1440.png": {
+      "sha256": "08a3092685401ce553200fd3d2cafdd16a2b021ea30b75c1fc9f0ab0aedbb674",
+      "bytes": 61727
+    },
+    "reviews-1440x960-final.png": {
+      "sha256": "873d28782ca7c52eb7bef277b39ffa9faa06eb736f7523d93c10f0c454258103",
+      "bytes": 63825
+    },
+    "reviews-390.png": {
+      "sha256": "3e6b605caed7f5d1a47233259cb769a663b30f1f3a9dc5c306893e9a43a22bf2",
+      "bytes": 30362
+    },
+    "reviews-834.png": {
+      "sha256": "9126f103486227df4d62d2b130bdd8a5506ec4ec3e5fd41fdf21b6079063eaed",
+      "bytes": 52460
+    },
+    "submissions-1440.png": {
+      "sha256": "a0a85d08dc4f446c44213fcb6d4135c28f43bc635f96e6981cf7f1341eec742d",
+      "bytes": 53231
+    },
+    "submissions-1440x960-final.png": {
+      "sha256": "9e4ef3974f6321fe59e97fc3a0b767b549252e5b629f6fe219515e61399e1693",
+      "bytes": 52342
+    },
+    "submissions-390.png": {
+      "sha256": "fc405aba09c5c34fd1a1c3f0677ca5fb39f114aa1796182813cda213117670b1",
+      "bytes": 23825
+    },
+    "submissions-834.png": {
+      "sha256": "e683144049d3b25cf06515e421767e7118c27f4802081ecddb8f3965413ad3f6",
+      "bytes": 44410
+    }
+  }
+}

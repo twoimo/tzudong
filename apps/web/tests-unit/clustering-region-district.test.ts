@@ -6,6 +6,7 @@ import {
     getDistance,
     getRegionalClusters,
     getSeoulDistrictClusters,
+    restaurantsToGeoJSON,
 } from '../lib/clustering';
 import type { Restaurant } from '../types/restaurant';
 
@@ -36,6 +37,24 @@ const makeSeoulRow = (id: string, district: string, overrides: Partial<Restauran
         ...overrides,
     });
 };
+
+test('tier-only mutations invalidate retained Seoul and GeoJSON caches without promoting unknown tiers', () => {
+    const rows = [makeSeoulRow('tier-a', '강남구', { popularity_tier: 'standard' }), makeSeoulRow('tier-b', '강남구')];
+    getRegionalClusters(rows);
+    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('standard');
+    const original = restaurantsToGeoJSON(rows);
+    rows[0].popularity_tier = 'fire';
+    getRegionalClusters(rows);
+    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('fire');
+    const changed = restaurantsToGeoJSON(rows);
+    expect(changed).not.toBe(original);
+    expect(changed[0].properties.popularityTier).toBe('fire');
+    expect(restaurantsToGeoJSON(rows)).toBe(changed);
+    rows[0].popularity_tier = 'unreviewed' as Restaurant['popularity_tier'];
+    getRegionalClusters(rows);
+    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('standard');
+    expect(restaurantsToGeoJSON(rows)[0].properties.popularityTier).toBe('standard');
+});
 
 describe('getRegionalClusters', () => {
     test('빈 목록은 빈 배열을 돌려준다', () => {
@@ -111,6 +130,16 @@ describe('getRegionalClusters', () => {
         ];
 
         expect(getRegionalClusters(rows)[0].categories).toEqual(['한식', '분식', '중식']);
+    });
+
+    test('행정구역 클러스터는 묶인 맛집 중 가장 높은 불꽃 등급을 남긴다', () => {
+        const clusters = getRegionalClusters([
+            makeRestaurant({ id: 'low', road_address: '서울특별시 강남구 1', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'rainbow' }),
+            makeRestaurant({ id: 'top', road_address: '서울특별시 강남구 2', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'fire' }),
+            makeRestaurant({ id: 'mid', road_address: '서울특별시 강남구 3', lat: 강남.lat, lng: 강남.lng, popularity_tier: 'ember' }),
+        ]);
+
+        expect(clusters[0].popularityTier).toBe('fire');
     });
 });
 

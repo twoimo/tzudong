@@ -1,0 +1,98 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/zod-collection-size-boundary.test.ts:
+19 |       const item = z.number().superRefine(() => { visited += 1; });
+20 |       const result = schema(item).safeParse(input(101));
+21 | 
+22 |       expect(result.success).toBe(false);
+23 |       expect(result.error?.issues[0]?.code).toBe('too_big');
+24 |       expect(visited).toBe(0);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 101
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/zod-collection-size-boundary.test.ts:24:23)
+(fail) collection size admission before element validation > array.max rejects oversize without visiting elements [1.55ms]
+(pass) collection size admission before element validation > array.max still parses a collection within its limit [0.11ms]
+19 |       const item = z.number().superRefine(() => { visited += 1; });
+20 |       const result = schema(item).safeParse(input(101));
+21 | 
+22 |       expect(result.success).toBe(false);
+23 |       expect(result.error?.issues[0]?.code).toBe('too_big');
+24 |       expect(visited).toBe(0);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 101
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/zod-collection-size-boundary.test.ts:24:23)
+(fail) collection size admission before element validation > array.length rejects oversize without visiting elements [0.24ms]
+(pass) collection size admission before element validation > array.length still parses a collection within its limit [0.09ms]
+19 |       const item = z.number().superRefine(() => { visited += 1; });
+20 |       const result = schema(item).safeParse(input(101));
+21 | 
+22 |       expect(result.success).toBe(false);
+23 |       expect(result.error?.issues[0]?.code).toBe('too_big');
+24 |       expect(visited).toBe(0);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 101
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/zod-collection-size-boundary.test.ts:24:23)
+(fail) collection size admission before element validation > set.max rejects oversize without visiting elements [0.43ms]
+(pass) collection size admission before element validation > set.max still parses a collection within its limit [0.10ms]
+19 |       const item = z.number().superRefine(() => { visited += 1; });
+20 |       const result = schema(item).safeParse(input(101));
+21 | 
+22 |       expect(result.success).toBe(false);
+23 |       expect(result.error?.issues[0]?.code).toBe('too_big');
+24 |       expect(visited).toBe(0);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 101
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/zod-collection-size-boundary.test.ts:24:23)
+(fail) collection size admission before element validation > set.size rejects oversize without visiting elements [0.29ms]
+(pass) collection size admission before element validation > set.size still parses a collection within its limit [0.04ms]
+19 |       const item = z.number().superRefine(() => { visited += 1; });
+20 |       const result = schema(item).safeParse(input(101));
+21 | 
+22 |       expect(result.success).toBe(false);
+23 |       expect(result.error?.issues[0]?.code).toBe('too_big');
+24 |       expect(visited).toBe(0);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 101
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/zod-collection-size-boundary.test.ts:24:23)
+(fail) collection size admission before element validation > map.max rejects oversize without visiting elements [0.61ms]
+(pass) collection size admission before element validation > map.max still parses a collection within its limit [0.10ms]
+19 |       const item = z.number().superRefine(() => { visited += 1; });
+20 |       const result = schema(item).safeParse(input(101));
+21 | 
+22 |       expect(result.success).toBe(false);
+23 |       expect(result.error?.issues[0]?.code).toBe('too_big');
+24 |       expect(visited).toBe(0);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 101
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/zod-collection-size-boundary.test.ts:24:23)
+(fail) collection size admission before element validation > map.size rejects oversize without visiting elements [0.26ms]
+(pass) collection size admission before element validation > map.size still parses a collection within its limit [0.03ms]
+
+ 6 pass
+ 6 fail
+ 30 expect() calls
+Ran 12 tests across 1 file. [64.00ms]

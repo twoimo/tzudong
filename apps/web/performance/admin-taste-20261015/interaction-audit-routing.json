@@ -1,0 +1,12 @@
+{
+  "action": "read",
+  "item_count": 15,
+  "scope_verified": true,
+  "artifact_verified": false,
+  "source_changed": false,
+  "cli_available": false,
+  "api_available": false,
+  "export_available": false,
+  "bulk_write_available": false,
+  "authorized_write": false
+}

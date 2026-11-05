@@ -1,0 +1,18 @@
+{
+  "released": "cc3ddf342d3299e63deafde2",
+  "next_owner": "ETrJ35NDvs3zArCH",
+  "admission": {
+    "provider": "chatgpt",
+    "mode": "fifo",
+    "local_max_active": 1,
+    "active_count": 2,
+    "free_slots": 0,
+    "dispatch_pending": false,
+    "next_owner": "ETrJ35NDvs3zArCH",
+    "next_request_id": "199ec064b4c926625b36491a",
+    "eligible_accounts": [],
+    "urgent_accounts": [],
+    "five_hour_limited_accounts": [],
+    "vendor_concurrency_limit": null
+  }
+}

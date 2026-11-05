@@ -34,7 +34,7 @@ export const CONFIDENCE_LEVELS = ["certain", "probable", "uncertain"] as const;
 
 export const MODERATION_STATUSES = ["pending", "approved", "rejected"] as const;
 
-export const POPULARITY_TIERS = ["fire", "rainbow", "standard"] as const;
+export const POPULARITY_TIERS = ["fire", "ember", "rainbow", "standard"] as const;
 
 export const IDENTITY_PIPELINE_STAGES = ["candidate_discovered", "identity_evidence_checked"] as const;
 

@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-bound-synthetic-browser-receipt",
+  "capturedAt": "2026-10-19T02:02:00+09:00",
+  "baseHead": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "status": "title_101_verified_status_cleanup_browser_blocked_by_fixture_url_contract",
+  "sourceReceipt": {
+    "path": "apps/web/performance/cross-audit-20261018/banner-upload-rejection-status-binding-source-receipt.json",
+    "sha256": "5818107ed82bda444b0538bf6ab9b4e90f2de28e5c22493534977c8153388797"
+  },
+  "environment": {
+    "component": "apps/web/app/admin/banners/page.tsx",
+    "runtime": "Next.js development source through the existing admin-header-consistency loopback gateway",
+    "node": "v24.22.0",
+    "browser": "Google Chrome 155.0.8059.82 via Playwright 1.63, task-owned headless contexts",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "gatewayOrigin": "http://127.0.0.1:18822",
+    "syntheticSupabaseOrigin": "http://127.0.0.1:18821",
+    "session": "gateway-issued synthetic session; no user or hosted credentials",
+    "mediaInput": "public/logo.webp supplied as a local synthetic image"
+  },
+  "observations": {
+    "title101WithSelectedMedia": {
+      "titleLengthAfterSave": 101,
+      "selectedFileCountAfterSave": 1,
+      "saveEnabledAfterSave": true,
+      "errorVisible": "제목은 100자 이하로 입력해주세요",
+      "uploadRequests": 0,
+      "bannerPatchRequests": 0,
+      "cleanupRequests": 0,
+      "draftPreserved": true,
+      "verdict": "verified_in_actual_component"
+    },
+    "title100WithSelectedMedia": {
+      "titleLengthEntered": 100,
+      "componentAdvancedPastTitleValidation": true,
+      "visibleFailure": "배너를 저장하지 못했습니다. 입력 내용은 유지됩니다. 목록에서 적용 여부를 확인한 후 다시 시도해 주세요.",
+      "visibleDraftSignalsAfterFailure": [
+        "저장하지 않은 변경",
+        "미디어 제거",
+        "수정 저장 enabled"
+      ],
+      "uploadRequests": 0,
+      "bannerPatchRequests": 0,
+      "cleanupRequests": 0,
+      "verdict": "title_boundary_reached_but_upload_not_verified"
+    },
+    "normalStatusCodeRejectionCleanup": {
+      "verdict": "not_browser_verified",
+      "reason": "The fixture could not produce a validator-approved public media URL, so no upload or PATCH request was reached."
+    },
+    "uncertain5xxCleanupPreservation": {
+      "verdict": "not_browser_verified",
+      "reason": "The same pre-upload fixture boundary prevented the intercepted HTTP 500 response from being exercised in the component."
+    },
+    "requestTotalsAtBoundary": {
+      "upload": 0,
+      "patch": 0,
+      "cleanup": 0,
+      "externalRequestsAllowed": 0,
+      "externalRequestsBlocked": 1,
+      "blockedRequest": "browser-image-compression worker CDN URL",
+      "hostedRequests": 0
+    }
+  },
+  "fixtureLimits": [
+    "resolveAdBannerMediaUrl requires the configured media origin to be HTTPS with no explicit port.",
+    "The existing synthetic Supabase origin is fixed to HTTP loopback port 18821, so its getPublicUrl output is rejected before supabase.storage.upload.",
+    "The loopback gateway supports read fixtures but does not implement banner Storage mutations; task-owned Playwright interception was prepared but was not reached.",
+    "browser-image-compression attempted one external worker-script request. It was blocked; the component still presented a selected-media preview, but no external response was consumed.",
+    "A separate HTTPS auth, Supabase and Storage simulator would be a new large harness and was intentionally not created."
+  ],
+  "sourceSha256": {
+    "apps/web/app/admin/banners/page.tsx": "9a3cb39905f7585dd147c71301afcaebe07933118e223b9a8c79193805286adc",
+    "apps/web/hooks/use-ad-banners.tsx": "83a6bb68c15797ac724078991bdf3571b2d81e70ed6434c31408b05e054a4f77",
+    "apps/web/lib/ad-banner-url.ts": "5a9b05dd456119e19e7e4769d00944a9a53db52db70c7021858efe8e1d33e77d",
+    "apps/web/performance/admin-header-consistency-20261011/fixture-data.mjs": "a68b66b253732283abdac28bd97a5a436e8ab008fdb64d0dca0f9928c75f541f",
+    "apps/web/performance/admin-header-consistency-20261011/fixture-gateway.mjs": "8cc6359b51f0ad41919fe894e3ad439a8b846c0d0e82640ce028060f65f0c86d",
+    "apps/web/performance/admin-header-consistency-20261011/launch.mjs": "b6889b8a9f8a186a96ddee7b0859b76a303e482ccf02fc0e1518c8efb04d081e",
+    "apps/web/performance/admin-header-consistency-20261011/loopback-transport.mjs": "0aac0bcccb3669c3ece6be877859bdb032a899fdf131c69e3444627b5636aeb3",
+    "apps/web/tsconfig.json": "42fa4271abb1177f6c171d2740f71012247c8f75dd05fd58ffa288231d9f2bc6"
+  },
+  "teardown": {
+    "taskOwnedBrowserContextsClosed": true,
+    "taskOwnedServerStopped": true,
+    "portsClosed": [
+      18820,
+      18821,
+      18822
+    ],
+    "tsconfigRestoredToOriginalSha256": "42fa4271abb1177f6c171d2740f71012247c8f75dd05fd58ffa288231d9f2bc6",
+    "userOwnedTabsTouched": 0
+  },
+  "boundaries": {
+    "productSourceEdits": 0,
+    "hostedDatabaseReads": 0,
+    "hostedDatabaseWrites": 0,
+    "hostedStorageCalls": 0,
+    "providerCalls": 0,
+    "deploymentWrites": 0,
+    "gitMutations": 0,
+    "buildRuns": 0,
+    "parityRuns": 0
+  }
+}

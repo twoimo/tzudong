@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-local-state-readback",
+  "observedAt": "2026-10-18T12:44:58Z",
+  "executionBoundary": {
+    "mode": "read-only offline plan and local byte aggregation",
+    "providerCalls": 0,
+    "youtubeCalls": 0,
+    "oskCalls": 0,
+    "databaseWrites": 0,
+    "deployments": 0,
+    "canonicalStateWrites": 0,
+    "activeLongformOrClaudeVideoProcesses": 0,
+    "sharedOskProcessesObserved": true,
+    "sharedOskAction": "not contacted because existing MCP server processes may be session-owned"
+  },
+  "source": {
+    "repositoryHead": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+    "longformPolicySha256": "9dab858574c0fcf82524f2a8049c1b5b521c75daa160938bd8f40aa51028d4df",
+    "adapterSha256": "9969cc50edb6fc552b8e3f2010315983b5ca4a75e2ecd3f995a81225eccff3af",
+    "activeConfigSha256": "53b693e08aa65338e73021ab14a53a861fb4e6bc538d82a0cf72f4dcf4c75cc2",
+    "model": "gemini-3.8-flash",
+    "modelEvidenceIdentitySha256": "f5001bba8f40b35d52259a8cefeda797ac61a1ca0756d64409e4b240370ce24a",
+    "claudeVideo": {
+      "checkout": "/Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42",
+      "commit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+      "watchVersion": "0.3.2",
+      "watchWorkingTreeClean": true
+    }
+  },
+  "inventory": {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-current-1071-h1051_q9/inventory-current-1071.json",
+    "sha256": "c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73",
+    "bytes": 356918,
+    "sourceObservedAtLatest": "2026-10-09T00:34:34.628933Z",
+    "inventoryRows": 1152,
+    "eligibleLongform": 1071,
+    "videosMembership": 1053,
+    "completedStreamsMembership": 18,
+    "shortsExcluded": 81,
+    "totalDurationSeconds": 1216100,
+    "freshExternalRefreshPerformed": false
+  },
+  "canonicalState": {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-current-1071-h1051_q9",
+    "files": 42,
+    "bytes": 416362,
+    "relativeManifestSha256": "790937939241a2a54723def1e6cc651f14361330059fe5435c8a18313521e9d6",
+    "readOnlyPlanTreeHashBefore": "5f4de860195ce0046f95c7186fbb9135d9ba771082ef4de4f3987ba26437b068",
+    "readOnlyPlanTreeHashAfter": "5f4de860195ce0046f95c7186fbb9135d9ba771082ef4de4f3987ba26437b068",
+    "batchFiles": 3,
+    "rootReceipts": {
+      "succeeded": 3,
+      "segmented": 2,
+      "succeededVideoIds": [
+        "-1OU4tkFJns",
+        "-D43ezc57z8",
+        "-H-mhUeu_qk"
+      ],
+      "heldVideoIds": [
+        "-C4280KT3S4",
+        "iRcaePXQRto"
+      ]
+    },
+    "segmentReceipts": {
+      "succeeded": 4,
+      "rejected": 2,
+      "codes": {
+        "COMPLETED": 4,
+        "ANALYSIS_PARTIAL": 1,
+        "ANALYSIS_SCHEMA_INVALID": 1
+      },
+      "observations": 6,
+      "generateObservations": 5,
+      "readbackObservations": 1,
+      "observationsWithResponseId": 6,
+      "receiptsWithCurrentRequestAndResponseBindingFields": 0
+    }
+  },
+  "offlinePlan": {
+    "command": "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m backend.knowledge_graph.longform_analysis --inventory /Users/twoimo/.codex/runtime-cache/tzudong-longform-current-1071-h1051_q9/inventory-current-1071.json --inventory-sha256 c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73 --expected-longform-count 1071 --expected-inventory-rows 1152 --state-dir /Users/twoimo/.codex/runtime-cache/tzudong-longform-current-1071-h1051_q9 --model gemini-3.8-flash --model-evidence apps/web/performance/knowledge-graph-20261004/model-evidence.json --watch-checkout /Users/twoimo/.codex/runtime-cache/tzudong-claude-video-03ceb42 --plan",
+    "exitCode": 0,
+    "rawOutputSha256": "b81f73175596be4aba53c42e4caf8d583763d144ad79b919ba12f492ad6e457e",
+    "result": {
+      "reusable": 0,
+      "new": 1066,
+      "terminalRejected": 0,
+      "readbackRequired": 5,
+      "corrupt": 0,
+      "providerGetEligible": 0,
+      "automaticProviderCalls": 0,
+      "uncertaintyReasons": {
+        "UNCLASSIFIED_READBACK_REQUIRED": 3,
+        "REQUEST_OBSERVATION_BINDING_MISMATCH": 2
+      },
+      "remainingSegmentsForNewRows": 2004,
+      "newRowCallsUpper": 4008,
+      "costVerified": false,
+      "providerObservationsIndependentlyVerified": false
+    }
+  },
+  "completionAccounting": {
+    "providerSchemaCompletedFromDurableRootReceipts": 3,
+    "providerSchemaIncompleteOrHeld": 1068,
+    "currentSourceReusable": 0,
+    "currentSourceHeldForReadback": 5,
+    "rowsWithoutCanonicalReceipt": 1066,
+    "independentlyVerifiedComplete": 0,
+    "wholeInventoryAnalysisComplete": false,
+    "interpretation": [
+      "Three historical root receipts contain completed provider/schema results, but the current policy does not admit them as reusable because their segment receipts predate the retained request/response lineage fields.",
+      "Two attempted videos remain explicit holds; one has ANALYSIS_PARTIAL and one has ANALYSIS_SCHEMA_INVALID. Neither is provider GET eligible under the current source.",
+      "The 1066 new rows plus five held rows are distinct from the historical fact that three provider/schema outputs exist. Tests and source validation do not add completed videos."
+    ]
+  },
+  "oskDelivery": {
+    "basis": "preserved local readback receipts only; shared OSK was not queried in this audit",
+    "publishedCompletedVideoIds": [
+      "-1OU4tkFJns",
+      "-D43ezc57z8",
+      "-H-mhUeu_qk"
+    ],
+    "publicationReceiptEvidence": [
+      {
+        "path": "apps/web/performance/goal-followthrough-20261015/longform-osk-publication-readback.json",
+        "sha256": "1b8b8a8fb4d9e09e68ceb3e773e058941a37b944ed3e2a86184396c54a7429bd",
+        "videoId": "-D43ezc57z8",
+        "publicationComplete": true,
+        "createdNodes": 13
+      },
+      {
+        "path": "apps/web/performance/goal-followthrough-20261015/longform-next3-execution-readback.json",
+        "sha256": "d1ba48d41ccaa0da245f95c6c98f881d065606a39cb3e23126c95a9f743cdac0",
+        "videoIds": [
+          "-1OU4tkFJns",
+          "-H-mhUeu_qk"
+        ],
+        "createdNodes": 28,
+        "createdEdges": 84
+      }
+    ],
+    "trackedProjection": {
+      "manifestPath": "apps/web/data/knowledge-graph/tzudong.json",
+      "manifestSha256": "10627313ca4520e13d6d5aca9e7d15328cf691d81a92f7ce20f6cbdd0362e1a3",
+      "revision": "203251f83daa7f20420468af601052cf7a51d8618d81d22f291e80456f15b94c",
+      "nodes": 71,
+      "edges": 217,
+      "projectedEvidenceItems": 87,
+      "projectedEvidenceStatus": "unverified",
+      "coverageAnalyzedCount": 0,
+      "coveragePendingCount": 1071,
+      "deployed": false,
+      "operatingDatabaseChanged": false
+    }
+  },
+  "limits": [
+    "The canonical inventory is a frozen local snapshot whose newest membership observation is 2026-10-09; it is not a fresh YouTube count on 2026-10-18.",
+    "The current offline plan uses repository head 86328a4c and therefore classifies all five prior attempted videos against the new lineage contract. It does not erase the three historical completed outputs and does not authorize regeneration.",
+    "No actual provider, YouTube, shared OSK, database, deployment, billing, quota, queue, receipt, source inventory, or canonical state mutation was performed.",
+    "The OSK publication counts are last-known local receipt evidence from 2026-10-15. Active OSK MCP server processes were observed, so no claim is made that the shared graph is unchanged since those receipts.",
+    "The tracked projection intentionally reports analyzedCount 0 because provider extraction and schema completion are not independent factual verification."
+  ]
+}

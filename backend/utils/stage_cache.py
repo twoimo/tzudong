@@ -140,6 +140,48 @@ def stage_lock(receipt: Path) -> Iterator[int]:
 STAGE_REUSED_EXIT = 10
 
 
+def read_cache_batch() -> list[str]:
+    import re
+    raw = sys.stdin.read(256_001)
+    if len(raw) > 256_000:
+        raise ValueError('cache_batch_invalid')
+    videos = json.loads(raw)
+    if (not isinstance(videos, list) or len(videos) > 10_000
+            or any(not isinstance(v, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,64}', v) for v in videos)
+            or len(set(videos)) != len(videos)):
+        raise ValueError('cache_batch_invalid')
+    return videos
+
+
+def cache_batch_hits(videos, recipe):
+    """Invocation-local content-hash memo; all observed paths rechecked at exit."""
+    observed, assets, hits = {}, {}, []
+    def signature(path):
+        try:
+            stat = path.stat()
+            return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+        except FileNotFoundError:
+            return None
+    def watch(path):
+        observed.setdefault(path, signature(path))
+    def asset_digest(path):
+        watch(path)
+        if path not in assets:
+            assets[path] = input_digest(path)
+        return assets[path]
+    for video in videos:
+        try:
+            receipt, outputs, plan = recipe(video)
+            for path in [receipt, *outputs, *plan['inputs'], *plan['metadata'], *plan['assets']]:
+                watch(path)
+            expected = fingerprint(**plan, asset_digests=[asset_digest(p) for p in plan['assets']])
+            if reusable(receipt, expected, outputs):
+                hits.append(video)
+        except (OSError, ValueError, TypeError):
+            continue
+    return hits if all(signature(path) == before for path, before in observed.items()) else []
+
+
 def run_stage(receipt: Path, inputs: list[Path], outputs: list[Path], command: list[str], *,
               metadata: list[Path] = (), assets: list[Path] = (), settings: object = None,
               force: bool = False) -> int:
@@ -163,7 +205,7 @@ def run_stage(receipt: Path, inputs: list[Path], outputs: list[Path], command: l
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("check", "certified", "complete", "fingerprint", "prepare", "scan", "run"))
+    parser.add_argument("action", choices=("check", "check-many", "certified", "complete", "fingerprint", "prepare", "scan", "run"))
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--input", type=Path, action="append", default=[])
     parser.add_argument("--metadata", type=Path, action="append", default=[])
@@ -174,10 +216,34 @@ def main() -> int:
     parser.add_argument("--scan-dir", type=Path)
     parser.add_argument("--scan-additional-dir", type=Path, action="append", default=[])
     parser.add_argument("--force", action='store_true')
+    parser.add_argument("--pipeline-stage", choices=("crawl", "laaj"))
+    parser.add_argument("--crawling-path", type=Path)
+    parser.add_argument("--evaluation-path", type=Path)
+    parser.add_argument("--video-id")
+    parser.add_argument("--channel-config", default="channels.yaml")
     argv=sys.argv[1:]
     separator=argv.index('--') if '--' in argv else len(argv)
     args = parser.parse_args(argv[:separator])
     try:
+        if args.action == 'check-many':
+            if not args.pipeline_stage or args.video_id != '{id}':
+                return 1
+            from .pipeline_cache_contracts import stage_inputs
+            def recipe(video):
+                replace = lambda path: Path(str(path).replace('{id}', video))
+                plan = stage_inputs(args.pipeline_stage, Path(__file__).resolve().parents[1],
+                                    args.crawling_path, args.evaluation_path, video, args.setting,
+                                    channel_config=args.channel_config)
+                return replace(args.receipt), [replace(p) for p in args.output], plan
+            print(json.dumps({'cacheHits': cache_batch_hits(read_cache_batch(), recipe)}))
+            return 0
+        if args.pipeline_stage:
+            from .pipeline_cache_contracts import stage_inputs
+            plan = stage_inputs(args.pipeline_stage, Path(__file__).resolve().parents[1],
+                                args.crawling_path, args.evaluation_path, args.video_id, args.setting,
+                                channel_config=args.channel_config)
+            args.input, args.asset = plan['inputs'], plan['assets']
+            args.metadata, args.setting = plan['metadata'], plan['settings']
         if args.action == 'certified':
             return 0 if certified(args.receipt, args.output) else 1
         if args.action == 'run':

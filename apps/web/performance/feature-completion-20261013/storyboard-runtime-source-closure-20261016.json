@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "storyboard-runtime-source-closure-verification",
+  "measuredAt": "2026-10-15T17:06:23Z",
+  "repository": {
+    "head": "ea08db3ae0c1a8d2525da15e6026ca4556ec0260",
+    "worktree": "feature-completion-20261013",
+    "sourceState": "candidate-with-scoped-uncommitted-change"
+  },
+  "preservedHistoricalReceipt": {
+    "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-alias-binding-20261015.json",
+    "sha256": "a57919e55aa18f6de89a88583835287d0bf6fb9827118b9d15752450b58dcffe",
+    "modified": false
+  },
+  "sourceClosure": {
+    "before": {
+      "declaredSourceCount": 23,
+      "discoveredDelegationBoundariesCovered": 1,
+      "discoveredDelegationBoundaryCount": 8,
+      "coveragePercent": 12.5
+    },
+    "after": {
+      "declaredSourceCount": 30,
+      "discoveredDelegationBoundariesCovered": 8,
+      "discoveredDelegationBoundaryCount": 8,
+      "coveragePercent": 100
+    },
+    "absoluteDeclaredSourceIncrease": 7,
+    "declaredSourceIncreasePercent": 30.434782608695652,
+    "coveragePercentagePointIncrease": 87.5,
+    "workerEntrypoints": [
+      "apps/web/app/api/storyboard-worker/route.ts",
+      "apps/web/app/api/storyboard-worker/images/route.ts"
+    ],
+    "retiredHelper": "apps/web/lib/admin/storyboard/retired-api.ts",
+    "retiredRouteEntrypoints": [
+      "apps/web/app/api/admin/storyboard/route.ts",
+      "apps/web/app/api/admin/storyboard/chat/route.ts",
+      "apps/web/app/api/admin/storyboard/images/route.ts",
+      "apps/web/app/api/admin/storyboard/jobs/route.ts",
+      "apps/web/app/api/admin/storyboard/production/[id]/images/route.ts"
+    ]
+  },
+  "runtimeDigests": {
+    "sourceBindingSchemaVersion": 1,
+    "sourceBindingSha256": "b6c89c6f006ea8a09df50e8666a36a12983cd4bbd48af1d7674997681abb556b",
+    "canonicalPolicySha256": "14b3901c2b1fcdcd32e5e3a30334a747dd425e1618812ee20883ac92161e2815"
+  },
+  "changedSourceIntegrity": {
+    "apps/web/lib/admin/storyboard/runtime-source-binding.ts": "b14a2ff8c3ca951212d713c3d16aad9369f568bdfafb2090c6fa55551ef7f3a8",
+    "apps/web/tests-unit/storyboard-runtime-source-binding.test.ts": "d03ba32f97d7ca4009edab14d32d63106c3a402182ffc63e9a9d5dd642710abd"
+  },
+  "verification": {
+    "command": "/Users/twoimo/.bun/bin/bun test tests-unit/storyboard-runtime-source-binding.test.ts tests-unit/admin-storyboard-policy-readback.test.ts tests-unit/public-storyboard-runtime-compatibility.test.ts tests-unit/storyboard-gemini-execution-contract.test.ts tests-unit/storyboard-retired-cli.test.ts tests-unit/storyboard-runtime-compatibility-observer.test.ts",
+    "runtime": {
+      "bun": "1.4.0",
+      "node": "24.21.0"
+    },
+    "files": 6,
+    "passed": 34,
+    "failed": 0,
+    "assertions": 239,
+    "counterexamples": [
+      "editing either worker route changes the source binding and canonical policy digest",
+      "editing the retired helper changes the source binding and canonical policy digest",
+      "editing representative retired route delegates changes the source binding and canonical policy digest",
+      "a missing declared source fails closed"
+    ]
+  },
+  "limits": [
+    "This is local source and contract-test evidence; it does not prove deployment or live runtime identity.",
+    "The digests bind the candidate bytes present at measurement time and must be recalculated after any bound source change.",
+    "No provider, database, storage, workflow, deployment, or Git remote mutation was performed."
+  ]
+}

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { Tables } from "@/integrations/supabase/types";
 import type { Restaurant } from "@/types/restaurant";
-import { publicEvidenceFrames } from "@/components/restaurant/RestaurantEvidenceCarousel";
+import { publicReviewedVideoFrames } from "@/components/restaurant/RestaurantEvidenceCarousel";
 import { hydrateRestaurantDetailWithMergeContext } from "@/lib/restaurant-merged-media";
 import { postgrestIn } from "@/lib/supabase-rest-client";
 import { fetchRestaurantsRecoveringMissingEmbed, mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
@@ -26,7 +26,7 @@ function hydrateDbRestaurant(dbData: DBRestaurant, publishedTier: PublishedPopul
     return {
         ...dbData,
         popularity_tier: publishedTier(dbData.id),
-        evidence_frames: publicEvidenceFrames([Array.isArray(embedded) ? embedded : []]),
+        evidence_frames: publicReviewedVideoFrames([Array.isArray(embedded) ? embedded : []]),
         address: dbData.road_address || dbData.jibun_address || '',
         category: dbData.categories,
     } as Restaurant;

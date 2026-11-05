@@ -1,0 +1,79 @@
+{
+  "schema": "tzudong-final-app-verification-artifact-map/v1",
+  "baseHead": "cfba8fbbf532c0337c8443c719e5b0d7bf9baf48",
+  "verification": {
+    "path": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v2/verification.json",
+    "sha256": "48022cd71a7785e35f78a1f012feabc70bee168dc267556d0ab4bc781af2dafa"
+  },
+  "allChecksExitZero": true,
+  "testGroups": {
+    "helper-durable": {
+      "tests": 61,
+      "assertions": 328
+    },
+    "admin-recovery": {
+      "tests": 8,
+      "assertions": 35
+    },
+    "admin-workflow": {
+      "tests": 18,
+      "assertions": 121
+    },
+    "admin-processor": {
+      "tests": 5,
+      "assertions": 19
+    },
+    "held-routes": {
+      "tests": 4,
+      "assertions": 18
+    },
+    "held-107-108-compilers": {
+      "tests": 11,
+      "assertions": 88
+    },
+    "route-contract": {
+      "tests": 18,
+      "assertions": 346
+    },
+    "worker-cli": {
+      "tests": 12,
+      "assertions": 82
+    },
+    "receipt-replacement": {
+      "tests": 3,
+      "assertions": 10
+    }
+  },
+  "tests": 140,
+  "assertions": 1047,
+  "compilerParity": {
+    "logicalInputs": 3356,
+    "diagnostics": 0
+  },
+  "productionBuildPages": 54,
+  "sourceIntegrityUnchangedAtEnd": true,
+  "sourceIntegrityMatchedAtCuration": true,
+  "taskTsconfigIncludesRestored": true,
+  "artifacts": {
+    "admin-processor.txt": "da48e88abe504018873c8f1331020639bb86f91142b031a2698b0d1a3685c32c",
+    "admin-recovery.txt": "f9d6bf9199ab336b7a98835f6bf34ca497af573fe57da61f4f8a47dffe28f980",
+    "admin-workflow.txt": "368e3fd194175c19ee35f5ad16b448f10f0bfd793a5a4b7901f349175e6c7a0c",
+    "compiler-parity.txt": "c1c5321c5e69ceb98f7ab9a25dd073769a146f578f34badafe1d705b5ad070d0",
+    "held-107-108-compilers.txt": "4de674ae104150f677a81969387449ec1115303330f319ceba8dcfd2e6536af1",
+    "held-routes.txt": "b7a3aa3f89311217076fa8b650b27c5d48f323f87ed648f3b99bc6d4b2866576",
+    "helper-durable.txt": "e44bcb48a93227ee67340c5746f82d598cbefdb735aebea516a9bc7414ec6713",
+    "production-build.txt": "e70c41619ad4a7402e9482948f1a4219c003d32b49192c258c80ea90aaf933ae",
+    "receipt-replacement.txt": "72fe876f63c5d4b51315be8650737cde5957185509c449101d2349da2fb4074d",
+    "route-contract.txt": "5a9455ed5ab245e7735944db9e7dd2a121126e55fbb4d52c5c7d08032c7a519c",
+    "scoped-eslint.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verification.json": "48022cd71a7785e35f78a1f012feabc70bee168dc267556d0ab4bc781af2dafa",
+    "verification.json.sha256": "50cab3ac4341ebf634d8a0333098393ac5051d2ec86e873326ed4d17d52359b8",
+    "worker-cli.txt": "081becdfcd7cf7740fdf1ded4d7aa0bcc8bbfac2e81611b482e0832c7f7a61b1"
+  },
+  "boundaries": [
+    "The groups in this execution are counted once; historical overlapping runs are excluded.",
+    "No operating performance, latency or cost improvement was measured; a 95% interval is not applicable to these deterministic assertions.",
+    "Actual SQL, browser, provider, hosted, CI and deployment evidence are separate.",
+    "Outbound network was not instrumented in this app/build harness; no credentials were supplied."
+  ]
+}

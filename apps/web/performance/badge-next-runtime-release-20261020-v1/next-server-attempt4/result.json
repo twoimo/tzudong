@@ -1,0 +1,78 @@
+{
+  "observedAt": "2026-10-20T09:39:53.852Z",
+  "node": "v24.22.0",
+  "next": "16.3.8",
+  "react": "19.3.0",
+  "sourceSha256": "35eed050e8c73b5b1c58301ac63fa19681cb33a733eec63002c5e206dc82596b",
+  "scope": "Production Next webpack build/start, actual App Router SSR/hydration and lazy chunk failure. Isolated route with real product component/dependencies; synthetic navigator/software GL; no whole-site, physical or field claim.",
+  "cases": [
+    {
+      "name": "SSR and hydration default-off",
+      "passed": true,
+      "pageErrors": [],
+      "hydrationErrors": [],
+      "viewerRequests": 0
+    },
+    {
+      "name": "Hydrated delayed chunk close",
+      "passed": true,
+      "pageErrors": [],
+      "hydrationErrors": [],
+      "viewerRequests": 3,
+      "noLateMount": true
+    },
+    {
+      "name": "Hydrated delayed chunk escape",
+      "passed": true,
+      "pageErrors": [],
+      "hydrationErrors": [],
+      "viewerRequests": 3,
+      "noLateMount": true
+    },
+    {
+      "name": "Hydrated delayed chunk unmount",
+      "passed": true,
+      "pageErrors": [],
+      "hydrationErrors": [],
+      "viewerRequests": 3,
+      "noLateMount": true
+    },
+    {
+      "name": "Hydrated actual chunk503 local containment",
+      "passed": true,
+      "pageErrors": [],
+      "hydrationErrors": [],
+      "viewerRequests": 3,
+      "failureResponses": 3,
+      "routeBoundaryUnused": true,
+      "closeReopenEscape": true
+    },
+    {
+      "name": "Hydrated unknown-mobile static request0",
+      "passed": true,
+      "pageErrors": [],
+      "hydrationErrors": [],
+      "viewerRequests": 0
+    }
+  ],
+  "viewerChunks": [
+    {
+      "path": "static/chunks/8dbd174e.8b594e698bf3834d.js",
+      "bytes": 322225,
+      "sha256": "5661ee2eee0bb0dd4289e9937ebb5ce5807303c3811958e4310830ace2afe979"
+    },
+    {
+      "path": "static/chunks/49daacbf.65fdd389e9344a19.js",
+      "bytes": 179273,
+      "sha256": "881efbd2c8da968390bbf6dd4b8636b0de6e43fe2cc423a68e30910e419485a7"
+    },
+    {
+      "path": "static/chunks/953.97d58af90ba59c29.js",
+      "bytes": 2489,
+      "sha256": "69b12474232bb7491f25df3937670ae8f2bb19398ebbccc757064d4f16fdffb4"
+    }
+  ],
+  "buildId": "3-v4wtv8RUH534nO3dSW0",
+  "browser": "151.0.7922.34",
+  "passed": true
+}

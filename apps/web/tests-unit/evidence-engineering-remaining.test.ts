@@ -4,9 +4,10 @@ import { resolve } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import { badgeViewerPhase } from "../components/restaurant/PopularityBadge";
-import { publicEvidenceFrames, publicFramePresentation } from "../components/restaurant/RestaurantEvidenceCarousel";
+import { publicEvidenceFrames, publicReviewedVideoFrames, publicEvidenceImageSource, publicFramePresentation } from "../components/restaurant/RestaurantEvidenceCarousel";
 import { BADGE_BYTE_COUNT_IS_PASS_THRESHOLD, POPULARITY_BADGE_KINDS } from "../components/restaurant/PopularityBadge";
 import { buildRestaurantSelectFields, fetchRestaurantsRecoveringMissingEmbed, RESTAURANT_EVIDENCE_FRAME_EMBED, RESTAURANT_MERGE_SELECT } from "../hooks/use-restaurants";
+import { SupabaseRestRowsError } from "../lib/supabase-rest-client";
 import { naverPlaceSearchUrl, operationalCaution } from "../components/restaurant/OperationalCautionNotice";
 import {
   applyEvidenceModeration,
@@ -183,8 +184,11 @@ describe("evidence engineering remaining tasks", () => {
     const carousel = readFileSync(resolve(import.meta.dir, "../components/restaurant/RestaurantEvidenceCarousel.tsx"), "utf8");
     expect(carousel).toContain('loading={presentation.loading}');
     expect(carousel).toContain('loading: "lazy"');
-    expect(carousel).toContain("safe-area-inset-bottom");
-    expect(carousel).toContain("이 맛집이 등록된 이유 (영상 속 실제 간판·장면)");
+    const context = frame({ frame_id: 'context-real', frame_type: 'on_site_scene', timestamp_ms: 126500, content_sha256: 'c'.repeat(64) });
+    expect(publicEvidenceFrames([[context]])).toEqual([]);
+    expect(publicReviewedVideoFrames([[context, pending, synthetic]]).map((f) => f.frame_id)).toEqual(['context-real']);
+    expect(publicEvidenceImageSource(context)).toBe(`/evidence-frames/${context.storage_object_key}`);
+    expect(() => publicEvidenceImageSource({ ...context, storage_object_key: '../secret' })).toThrow();
     const badge = readFileSync(resolve(import.meta.dir, "../components/restaurant/PopularityBadge.tsx"), "utf8");
     expect(badge).toContain("next/dynamic");
     expect(badge).not.toContain("from \"three\"");
@@ -220,8 +224,16 @@ describe("evidence engineering remaining tasks", () => {
     expect(publicPopularityTier(null)).toBe("standard");
     expect(publicPopularityTier("shadow")).toBe("standard");
     const panel = readFileSync(resolve(import.meta.dir, "../components/restaurant/RestaurantDetailPanel.tsx"), "utf8");
-    expect(panel).toContain("resolvePublishedPopularityTier(restaurant)");
+    expect(panel).not.toContain("resolvePublishedPopularityTier(restaurant)");
+    expect(panel).not.toContain("PopularityMention");
+    expect(panel).not.toContain("제일 맛있는 맛집");
     expect(panel).not.toContain('<PopularityBadge tier="standard" />');
+    const rainbow = wrapMarkerWithPopularityTier("<span>pin</span>", "rainbow");
+    expect(rainbow.match(/class="tz-popularity-flame"/g)).toHaveLength(1);
+    expect(rainbow).toContain("fill: #2f6bff");
+    const ember = wrapMarkerWithPopularityTier("<span>pin</span>", "ember");
+    expect(ember.match(/class="tz-popularity-flame"/g)).toHaveLength(1);
+    expect(ember).toContain("fill: #ff7b43");
     const attributes = new Map<string, string>();
     const element = {
       setAttribute: (name: string, value: string) => attributes.set(name, value),
@@ -270,7 +282,7 @@ describe("evidence engineering remaining tasks", () => {
       const chosen = String(query.find(([key]) => key === "select")?.[1]);
       calls.push(chosen);
       if (chosen.includes("restaurant_evidence_frames(")) {
-        throw new Error("Supabase REST restaurants failed: 400 PGRST200 relation missing");
+        throw new SupabaseRestRowsError(400, "PGRST200");
       }
       return [{ id: "kept" }];
     });

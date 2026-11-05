@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import ts from 'typescript';
+import { HomeMapThemeFilters } from '../components/home/HomeMapThemeFilters';
 
 const appRoot = resolve(import.meta.dir, '..');
 const appDir = join(appRoot, 'app');
@@ -19,6 +23,7 @@ const SKIP_DIRS = new Set([
 ]);
 
 const PAGE_MATRIX = [
+  'app/auth/complete/page.tsx',
   'app/page.tsx',
   'app/home-frame/page.tsx',
   'app/feed/page.tsx',
@@ -154,6 +159,7 @@ const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
     '@source "../components/reviews";',
     '@source "../components/auth";',
     '@source "../components/ui";',
+    '@source "../components/home/map-panel-chrome.tsx";',
     '@source not "../**/*.test.*";',
     '@source not "../tests-unit";',
   ],
@@ -167,17 +173,36 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
   'admin-dashboard-kpi-title-actions',
   'stamp-restaurant-list-table',
   'admin-evaluation-table',
-  'storyboard-canvas-toolbar',
-  'storyboard-chat-examples',
-  'storyboard-chat-attachments',
   'knowledge-graph-canvas',
   'insights-controls',
 ] as const;
 
+// The former mobile reel remains approved for compatibility; current home chips wrap.
+const CURRENT_HORIZONTAL_SCROLL_OWNERS = APPROVED_HORIZONTAL_SCROLL_OWNERS.filter(
+  (owner) => owner !== 'mobile-theme-filter-reel',
+);
+
+const COMPATIBLE_TABLE_HORIZONTAL_SCROLL_OWNERS = [
+  'mobile-theme-filter-reel',
+  'admin-dashboard-action-bar',
+  'admin-dashboard-series-toggle',
+  'admin-dashboard-card-title-actions',
+  'admin-dashboard-kpi-title-actions',
+  'stamp-restaurant-list-table',
+  'admin-evaluation-table',
+  'storyboard-canvas-toolbar',
+  'storyboard-chat-examples',
+  'storyboard-chat-attachments',
+] as const;
+
 const LIGHT_TOKEN_LITERALS = [
-  '--background: 220 27% 98%',
-  '--primary: 352 74% 42%',
-  '--radius: 0.625rem',
+  '--background: 36 33% 97%',
+  '--primary: 0 0% 11%',
+  '--radius: 0.75rem',
+  '--brand-tangerine: 18 100% 63%',
+  '--brand-garden: 146 58% 30%',
+  '--brand-garden-text: 146 58% 30%',
+  '--brand-cream: 35 41% 94%',
   '--app-header-height: 56px',
   '--mobile-bottom-nav-height: 60px',
 ] as const;
@@ -277,11 +302,11 @@ function walkCssUnder(root: string): string[] {
 }
 
 describe('public surface design contract', () => {
-  test('page and share transport inventory preserves all 27 surfaces', () => {
+  test('page and share transport inventory preserves all 28 surfaces', () => {
     const actual = walkFiles(appDir, (name) => name === 'page.tsx');
     expect(actual).toEqual([...PAGE_MATRIX].sort());
     const transport = 'app/s/[code]/route.ts';
-    expect([...actual, transport]).toHaveLength(27);
+    expect([...actual, transport]).toHaveLength(28);
     expect(existsSync(join(appRoot, transport))).toBe(true);
     expect(readApp(transport)).toContain('export async function GET(');
     expect(existsSync(join(appRoot, 'app/s/[code]/page.tsx'))).toBe(false);
@@ -418,7 +443,7 @@ describe('public surface design contract', () => {
       expect(partial).toContain(literal);
     }
     expect(partial).not.toMatch(/^\.dark\s*\{/m);
-    expect(partial).not.toContain('--primary: 352 78% 62%');
+    expect(partial).not.toContain('--primary: 18 100% 63%');
     expect(partial).not.toContain('@import "tailwindcss"');
     expect(partial).not.toContain('@source');
 
@@ -444,19 +469,60 @@ describe('public surface design contract', () => {
       );
     }
 
-    expect(readApp('app/app-globals.css')).toContain('--primary: 352 78% 62%');
+    expect(readApp('app/app-globals.css')).toContain('--primary: 18 100% 63%');
+    expect(readApp('app/app-globals.css')).toContain('--brand-garden-text: 146 42% 68%');
+    expect(readApp('app/app-globals.css')).toContain('--brand-cream: 32 14% 18%');
+    expect(readApp('app/globals.css')).toContain('--brand-garden-text: 146 42% 68%');
     expect(readApp('app/app-globals.css')).toContain('--admin-sidebar-expanded-width: calc(8.75rem * var(--phi))');
   });
 
-  test('horizontal allowlist enumerates data-horizontal-scroll-owner values only', () => {
+  test('current horizontal owners exclude the retired reel and reject unapproved owners', () => {
     const owners = collectOwnerAttributeValues(appRoot);
-    expect(owners).toEqual([...APPROVED_HORIZONTAL_SCROLL_OWNERS].sort());
+    expect(owners).toEqual([...CURRENT_HORIZONTAL_SCROLL_OWNERS].sort());
+    expect(owners.filter((owner) => !(APPROVED_HORIZONTAL_SCROLL_OWNERS as readonly string[]).includes(owner))).toEqual([]);
+    expect(owners).not.toContain('mobile-theme-filter-reel');
     expect(owners).not.toContain('naver-cluster');
     expect(owners).not.toContain('naver-map-cluster');
     const designSource = readFileSync(resolve(appRoot, '..', '..', 'docs/product/DESIGN.md'), 'utf8');
     expect(designSource).toContain(
       'Naver map cluster marker overflow remains a provider-specific exception outside this policy',
     );
+  });
+
+  test('the exported Table compatibility allowlist retains its approved tokens without admitting unknowns', () => {
+    const table = ts.createSourceFile('table.tsx', readApp('components/ui/table.tsx'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const ownerType = table.statements.find((node): node is ts.TypeAliasDeclaration =>
+      ts.isTypeAliasDeclaration(node) && node.name.text === 'HorizontalScrollOwner');
+    expect(ownerType).toBeDefined();
+    expect(ownerType?.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)).toBe(true);
+    if (!ownerType || !ts.isUnionTypeNode(ownerType.type)) throw new Error('Missing owner compatibility union');
+    const tokens = ownerType.type.types.map((type) => {
+      if (!ts.isLiteralTypeNode(type) || !ts.isStringLiteral(type.literal)) {
+        throw new Error('Horizontal owner must be an explicit approved literal');
+      }
+      return type.literal.text;
+    });
+    expect(tokens.sort()).toEqual([...COMPATIBLE_TABLE_HORIZONTAL_SCROLL_OWNERS].sort());
+    expect(tokens).toContain('mobile-theme-filter-reel');
+  });
+
+  test('mobile and desktop use the shared wrapping theme filters instead of a horizontal home reel', () => {
+    for (const path of ['components/home/MobileControlOverlay.tsx', 'components/home/home-desktop-control-panel.tsx']) {
+      const source = readApp(path);
+      expect(source).toContain('<HomeMapThemeFilters activeThemeId={selectedTheme} onThemeChange={onThemeChange} />');
+      expect(source).not.toContain('data-horizontal-scroll-owner="mobile-theme-filter-reel"');
+    }
+    for (const activeThemeId of [null, 'hot-view'] as const) {
+      const html = renderToStaticMarkup(createElement(HomeMapThemeFilters, { activeThemeId, onThemeChange: () => {} }));
+      expect(html).toContain('aria-label="쯔양 영상 테마 필터"');
+      expect(html).toContain('flex-wrap');
+      expect(html).toContain('min-h-8');
+      expect(html).toContain('whitespace-normal');
+      expect(html.match(/<button\b/g)).toHaveLength(5);
+      expect(html.match(/aria-pressed="true"/g) ?? []).toHaveLength(activeThemeId ? 1 : 0);
+      expect(html).not.toContain('overflow-x-auto');
+      expect(html).not.toContain('data-horizontal-scroll-owner');
+    }
   });
 
   test('family chrome stays Korean-first and legal pages stay chrome-less', () => {
@@ -476,9 +542,6 @@ describe('public surface design contract', () => {
     expect(readApp('app/auth/reset-password/page.tsx')).not.toContain('🔥');
     expect(readApp('components/home/home-map-container.tsx')).toContain(
       'data-layout-primitives="viewport-shell overlay-stack cluster"',
-    );
-    expect(readApp('components/home/MobileControlOverlay.tsx')).toContain(
-      'data-horizontal-scroll-owner="mobile-theme-filter-reel"',
     );
     expect(readApp('app/mypage/layout.tsx')).toContain('MyPageLayoutContent');
     expect(readApp('components/admin/AdminOverviewDashboard.tsx')).toContain(

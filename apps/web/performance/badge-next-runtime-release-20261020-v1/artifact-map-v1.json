@@ -1,0 +1,125 @@
+{
+  "scope": "Pre-commit native runtime evidence; later release receipts will be separate.",
+  "items": [
+    {
+      "path": "README.md",
+      "bytes": 3149,
+      "sha256": "1ee0e4e274ae1dc4f4023241f69043f5f58589357853d575d4aa560a175e55e0"
+    },
+    {
+      "path": "eslint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "next-server-attempt1/build.log",
+      "bytes": 366,
+      "sha256": "9a2e8446c4cffa3ae90119b474e658b1ad4a53181a9f2c9b29611abfe45e70a5"
+    },
+    {
+      "path": "next-server-attempt1/result.json",
+      "bytes": 510,
+      "sha256": "43db746eb38fb5890eb843ede8836a70e32d2e83f2f0c7e395401b4b6ab734a8"
+    },
+    {
+      "path": "next-server-attempt1/server.log",
+      "bytes": 366,
+      "sha256": "9a2e8446c4cffa3ae90119b474e658b1ad4a53181a9f2c9b29611abfe45e70a5"
+    },
+    {
+      "path": "next-server-attempt2/build.log",
+      "bytes": 982,
+      "sha256": "1537ee6c4a3d42fbd3594a15e67d52f9bcd240187614125e6fffc02438372887"
+    },
+    {
+      "path": "next-server-attempt2/result.json",
+      "bytes": 510,
+      "sha256": "0cba5ba51d9c62e29f345ba1b9e8de52e450e7a438a7a2a1be59a8d236b14654"
+    },
+    {
+      "path": "next-server-attempt2/server.log",
+      "bytes": 982,
+      "sha256": "1537ee6c4a3d42fbd3594a15e67d52f9bcd240187614125e6fffc02438372887"
+    },
+    {
+      "path": "next-server-attempt3/build.log",
+      "bytes": 992,
+      "sha256": "91e8ec7354247f51d2cc1b1f6d9f4b2859b121bacda356c5db2fd342ced16ea1"
+    },
+    {
+      "path": "next-server-attempt3/result.json",
+      "bytes": 510,
+      "sha256": "7a40296f0b0057e2e0dc49f89e9e4816231d3dd2dff7a588c0eb456a32f1a14a"
+    },
+    {
+      "path": "next-server-attempt3/server.log",
+      "bytes": 992,
+      "sha256": "91e8ec7354247f51d2cc1b1f6d9f4b2859b121bacda356c5db2fd342ced16ea1"
+    },
+    {
+      "path": "next-server-attempt4/build.log",
+      "bytes": 967,
+      "sha256": "f35117e97cba6a0fea3f05bd972ac2c30bba661ad5ccfbad10d9548a8597ab54"
+    },
+    {
+      "path": "next-server-attempt4/chunk-503-local-fallback.png",
+      "bytes": 19179,
+      "sha256": "4402bdb3dfc37ec3c3be3f2d881f2c7525887ba278efa40fd013e2846b4444a1"
+    },
+    {
+      "path": "next-server-attempt4/result.json",
+      "bytes": 2257,
+      "sha256": "9bd8ea4767787d428742bb3725267cc64103357de075f4e112dd9d99bf9f44eb"
+    },
+    {
+      "path": "next-server-attempt4/server.log",
+      "bytes": 1121,
+      "sha256": "f7bbe1fbfb05ad4ccf889c0c29c605102e0fd9faab598989fb4aa67769098e33"
+    },
+    {
+      "path": "next-server-attempt4/ssr-off.html",
+      "bytes": 5726,
+      "sha256": "f46b9693ebd948c70050b334c139ce6f165c25b64b682ee6a84cb864d7372954"
+    },
+    {
+      "path": "next-server-attempt4/ssr-on.html",
+      "bytes": 5808,
+      "sha256": "4091cad5d5d1648ba7dc547d3e2112ad594c86d8758d5f4c62f0a7115a0b32e0"
+    },
+    {
+      "path": "nightly-separate-v1.json",
+      "bytes": 797,
+      "sha256": "b4274b4b37b99d46c14221f7f43f20a846a0051ab6fa3ce1501568bcb2909ac2"
+    },
+    {
+      "path": "npm-ci.log",
+      "bytes": 238,
+      "sha256": "6c334df6de3996af46814f8df89b3b96745093989fccc92b85318c45a800c7db"
+    },
+    {
+      "path": "production-before-v1.json",
+      "bytes": 717,
+      "sha256": "208eec8fdfee2543b99a2573dce69ce83865092ce3df31d6631effe45da07e5f"
+    },
+    {
+      "path": "source-binding-v1.json",
+      "bytes": 1614,
+      "sha256": "0c410da379fb0e250b2ee845ec563d79490c3871e754c911620fab6ca83e339c"
+    },
+    {
+      "path": "typecheck-parity-attempt2.log",
+      "bytes": 510,
+      "sha256": "768208143cb3baf6e9b7f714c3e3e80a71ec3a499652fac06e6163688f37b09b"
+    },
+    {
+      "path": "typecheck-parity.log",
+      "bytes": 105,
+      "sha256": "6e99e474c505df2b8693e2793a26deccc07b6b620151265af156050ab8b6daa0"
+    },
+    {
+      "path": "unit-tests.log",
+      "bytes": 1448,
+      "sha256": "992c094afccbb89eee1f3b5fdd33425aaa21b17a7b844b42db7bfdf7969ff4f1"
+    }
+  ]
+}

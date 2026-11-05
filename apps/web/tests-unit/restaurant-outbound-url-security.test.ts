@@ -102,7 +102,11 @@ describe('restaurant outbound URL security', () => {
     );
 
     expect(panelSource).toContain('extractCanonicalYouTubeVideoId(youtubeLink)');
-    expect(panelSource).toContain('{youtubeVideos.length > 0 ? (');
+    expect(panelSource).toContain('<RestaurantVideoCarousel');
+    expect(panelSource).toContain('videos={youtubeVideos}');
+    const carouselSource = readFileSync(join(import.meta.dir, '..', 'components/restaurant/RestaurantVideoCarousel.tsx'), 'utf8');
+    expect(carouselSource).toContain('publicReviewedVideoFrames');
+    expect(carouselSource).toContain('if (!slides.length) return null');
     expect(panelSource).not.toContain('openExternalUrl(youtubeLinks[0])');
     expect(panelSource).not.toContain('openExternalUrl(link)');
     expect(panelSource).toContain('buildRestaurantMapDestinationUrls');

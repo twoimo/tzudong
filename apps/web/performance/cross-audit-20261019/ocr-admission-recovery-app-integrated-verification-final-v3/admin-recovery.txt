@@ -1,0 +1,16 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-receipt-recovery.test.ts:
+(pass) explicit receipt OCR indeterminate recovery > fails closed before preview/apply when 108 capability is absent [0.24ms]
+(pass) explicit receipt OCR indeterminate recovery > requires an exact source-bound preview snapshot [0.09ms]
+(pass) explicit receipt OCR indeterminate recovery > accepts the same persisted operation readback without inventing another generation [0.30ms]
+(pass) explicit receipt OCR indeterminate recovery > rejects a first rotation whose persisted execution policy differs from the request [0.06ms]
+(pass) explicit receipt OCR indeterminate recovery > keeps processing and stale conflicts non-rotating at the route boundary [0.06ms]
+(pass) explicit receipt OCR indeterminate recovery > requires confirmation again after a cancelled first recovery click [0.03ms]
+(pass) explicit receipt OCR indeterminate recovery > authorizes the exact recovery generation and immutable execution binding [0.13ms]
+(pass) explicit receipt OCR indeterminate recovery > binds the route and UI to preview, preflight, persisted operation reuse, and fixed conflicts [0.46ms]
+
+ 8 pass
+ 0 fail
+ 35 expect() calls
+Ran 8 tests across 1 file. [85.00ms]

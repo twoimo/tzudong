@@ -1,0 +1,166 @@
+{
+  "schema": "tzudong-integration-verification/v1",
+  "sourceRevision": "b5d62c34f4a2e854ab10fd9f6741597b6081c43b",
+  "mergedDevelop": "716e36fc9ec1f476cb3bcd0843ab0fa9cd324794",
+  "capturedAt": "2026-10-18T11:42:47.964431+00:00",
+  "environment": {
+    "node": "24.22.0",
+    "npm": "11.6.2",
+    "python": "3.14.8",
+    "bun": "1.4.0",
+    "next": "16.3.8",
+    "mode": "local isolated candidate"
+  },
+  "checks": {
+    "webUnit": {
+      "pass": 188,
+      "fail": 0,
+      "assertions": 4934,
+      "files": 13
+    },
+    "ledger105Followup": {
+      "pass": 11,
+      "fail": 0,
+      "meaning": "Existing102 admissible; unrelated105 rejected; includes existing controller tests"
+    },
+    "targetedEslint": {
+      "exitCode": 0
+    },
+    "typecheckParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3350,
+      "logicalInputNamesSha256": "e94a1b97bc68dbab10fb0acb523e012791e2967aa0818beb0d4bb7103dcd7167",
+      "nonLibraryContentSha256": "5491eaf8cf2cf9c1a1fdb81f64d3f2ba4e18ef942ce043136fc19a8d80651950"
+    },
+    "build": {
+      "exitCode": 0,
+      "staticPages": 54,
+      "compileSeconds": 46,
+      "typecheckSeconds": 24.7,
+      "routeCssBytes": {
+        "home": 195887,
+        "generalApp": 329080,
+        "admin": 348876,
+        "deferred": 195887
+      }
+    },
+    "captionAdapter": {
+      "pass": 20,
+      "fail": 0
+    },
+    "longformEligibility": {
+      "pass": 1,
+      "fail": 0
+    },
+    "providerBudget": {
+      "pass": 6,
+      "fail": 0
+    },
+    "evidenceFrameSampling": {
+      "pass": 9,
+      "fail": 0
+    },
+    "fixtureTransportVerifier": {
+      "passed": true,
+      "networkCalls": 0,
+      "renderMatrixComplete": false
+    },
+    "reconciliationGenerator": {
+      "entries": 207,
+      "check": "current"
+    }
+  },
+  "rawArtifacts": [
+    {
+      "path": "apps/web/performance/feature-completion-20261013/integration-20261018/caption-adapter.log",
+      "command": [
+        "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3",
+        "-m",
+        "unittest",
+        "backend.knowledge_graph.tests.test_caption_osk_adapter"
+      ],
+      "exitCode": 0,
+      "bytes": 119,
+      "sha256": "9d282f622cc8eb3a20714b5214bd0327d3ae95c91d1b90a99aa544674a7242a6"
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/integration-20261018/longform-eligibility.log",
+      "command": [
+        "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3",
+        "-m",
+        "unittest",
+        "backend.knowledge_graph.tests.test_longform_segments.SegmentExecutionTests.test_hash_bound_uncertain_response_id_is_get_eligible_only_for_provider_operations"
+      ],
+      "exitCode": 0,
+      "bytes": 98,
+      "sha256": "ca9d3c68d7a820715f7bd093db72ce4122dd5639fa0179c11cba16e4dc60c779"
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/integration-20261018/provider-budget.log",
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "--test",
+        "backend/utils/tests/provider-budget-js.test.mjs"
+      ],
+      "exitCode": 0,
+      "bytes": 685,
+      "sha256": "4149aabc8dee3c91c415888d6c35c422aea7420fc42468150c43be7024016353"
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/integration-20261018/evidence-frame.log",
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "--test",
+        "backend/restaurant-crawling/scripts/tests/test_evidence_frame_sampling.mjs"
+      ],
+      "exitCode": 0,
+      "bytes": 2169,
+      "sha256": "e782a91f896fe19ac696f94d1d26924e6b0d7ad6270b91c46cc93cce8d619a6d"
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/integration-20261018/web-unit.log",
+      "sha256": "bca7aabf9fb6e0c599589eecb2ab5980a05bd9da2c3bc3145b3435842bc253b5",
+      "bytes": 25076,
+      "exitCode": 0
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/integration-20261018/web-build.log",
+      "sha256": "3f9e73212b408b198c02e5f7a665c7075ad2e70546019760b356f6112e029e37",
+      "bytes": 1480,
+      "exitCode": 0
+    }
+  ],
+  "sourceSha256": {
+    "apps/web/package.json": "7b2d5f52d2c5fb32aa2d17db674ccd3f3823be18ca2d70c47d996d78b9d64c69",
+    "apps/web/package-lock.json": "b4ba1fbdc9aada044c495e6a1591700758ee74edc62c3311991f8d0d49cd86eb",
+    "apps/web/components/admin/EvaluationTableNew.tsx": "3205fb20c7c74bf182a5a885618a5cfcfe424e96bebd555f451482309925ae4d",
+    "apps/web/components/admin/SubmissionListView.tsx": "fcfc187f26c9e0a334bb0aba2a183787033d076785e73895f7065469208def89",
+    "apps/web/components/reviews/ReviewModal.tsx": "bf326190c050c282593e332a4e868ad50b3dd026f52add200a12b9805067ea8d",
+    "apps/web/styles/admin-ui.css": "c488571b5bfe2c485f28bb892f2b0e006108e644f3b20a2a596ae91d005c9b5a",
+    "backend/utils/provider-budget.mjs": "156ea50a8ef4ead49f545c2be513df1389ce31144f4e3d05a632d5a610cab968",
+    "backend/knowledge_graph/caption_osk_adapter.py": "2263613f9c4e9a493fd47cd3865c331b2edcbe0d49811b6ffdd02e62d0864ddf",
+    "backend/knowledge_graph/longform_analysis.py": "2e38a3e59c8a154c2b8495fccd82fb26fa0f3df4f4040b49e69058601522af5d",
+    "apps/web/scripts/review-media-feature-sql-successor.mjs": "8b34863fd9f9355c0534796162320fcd4ab1921b7c038dc0596de146b49be192",
+    "backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql": "469dbea773cc838feecb4519ca1b5c03e9ea2fab32462007f7769c5ed1b7fed9"
+  },
+  "preservedFailures": [
+    {
+      "kind": "environment",
+      "scope": "Earlier broad backend test discovery",
+      "details": "2 errors in149 tests: macOS cannot execute Windows backend/bin/jq.exe. Unrelated scope not rerun or declared passed."
+    },
+    {
+      "kind": "environment_resolved",
+      "scope": "evidence-frame sampling",
+      "details": "4 initial import failures from missing backend ffmpeg-static; lock-based local npm ci installed dependencies and all9 tests subsequently passed."
+    }
+  ],
+  "limits": [
+    "No hosted DB apply, paid inference, Storage request or deployment.",
+    "Build/parity and synthetic rendering do not prove live admin behavior.",
+    "102 PG receipt does not cover new105 ledger.",
+    "No external research report received.",
+    "No latency, production, quota or financial improvement inferred."
+  ]
+}

@@ -1,5 +1,5 @@
 import { evidenceFrameEmbedRow } from '@/components/restaurant/RestaurantEvidenceCarousel';
-import { parseEvidenceFrame, unionApprovedEvidenceFrames } from '@/lib/evidence-engineering/frames';
+import { parseEvidenceFrame, approvedEvidenceFramesOrEmpty } from '@/lib/evidence-engineering/frames';
 import { mergePopularityTierRecords } from '@/lib/evidence-engineering/records';
 import type { PopularityTier, PopularityTierAssignment, RestaurantEvidenceFrame, ScoringCohortIdentity } from '@/lib/evidence-engineering/types';
 import type { Restaurant, YoutubeMeta } from '@/types/restaurant';
@@ -186,7 +186,7 @@ export const collectRestaurantMergedMedia = (restaurant: Restaurant | null | und
         youtubeLinks,
         tzuyangReviews,
         youtubeMetas,
-        evidenceFrames: evidenceGroups.length > 0 ? unionApprovedEvidenceFrames(evidenceGroups) : [],
+        evidenceFrames: approvedEvidenceFramesOrEmpty(evidenceGroups),
         popularityCohort: popularity.cohort,
         popularityTiers: popularity.tiers,
         picksHighestTier: popularity.picksHighestTier,

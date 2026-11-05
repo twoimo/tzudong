@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "evidence_class": "hosted_read_only_ledger_identity",
+  "project_ref": "aqlcofblfxdrjhhdmarw",
+  "receipt_captured_at_utc": "2026-10-18T12:29:09Z",
+  "query_observed_at": null,
+  "time_limit": "Receipt capture time was read from the host clock after the query; the query result does not include a database timestamp.",
+  "query": "SELECT pg_catalog.jsonb_build_object(\n'expected_versions', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('version',version,'name',name,'statement_count',pg_catalog.cardinality(statements),'statement_vector_sha256',pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.array_to_json(statements)::text,'UTF8')),'hex')) ORDER BY version) FROM supabase_migrations.schema_migrations WHERE version=ANY(ARRAY['20261008192455','20261008200719','20261008201635','20261011072824','20261011085342','20261011094346','20261011100730','20261011103501','20261011105114','20261011110108','20261011175912','20261013093518','20261013190000','20261013190100','20261013190200','20261016090000','20261017043000','20261017140000','20261017160000']::text[])),\n'base_without_evidence',(SELECT pg_catalog.jsonb_build_object('count',pg_catalog.count(*),'root',pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(COALESCE(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('version',version,'name',name,'statements',statements) ORDER BY version),'[]'::jsonb)::text,'UTF8')),'hex')) FROM supabase_migrations.schema_migrations WHERE version<>ALL(ARRAY['20261017043000','20261017140000','20261017160000']::text[]))\n) AS metadata;",
+  "result": {
+    "expected_versions": [
+      {
+        "name": "evidence_frames_and_popularity",
+        "version": "20261017043000",
+        "statement_count": 8,
+        "statement_vector_sha256": "e8c4dbbe5fad3c9af301d5dfd0843417c3de148bbbddbde677c8b755ed6e45e4"
+      },
+      {
+        "name": "restaurant_popularity_shadow",
+        "version": "20261017140000",
+        "statement_count": 3,
+        "statement_vector_sha256": "6b1de5b932c1cf769436d5048fdde157127c7e5cb294c2b284ca63940995d16a"
+      },
+      {
+        "name": "restaurant_popularity_shadow_tier",
+        "version": "20261017160000",
+        "statement_count": 1,
+        "statement_vector_sha256": "ed0eacead47eab1f9ceffacd0ab49abb035c40a7a7ecb1bacb19e34070088359"
+      }
+    ],
+    "base_without_evidence": {
+      "root": "f2791773560e1404f5e88a51d314d925c38814066f517f72a6195853a900a5bf",
+      "count": 86
+    }
+  },
+  "limitations": [
+    "Only fixed version/name/count/hashes returned; no statement bodies or user data.",
+    "No DDL or admission change.",
+    "SQL jsonb serialization hash must not be equated to the application's canonical root until the exact algorithm is checked."
+  ]
+}

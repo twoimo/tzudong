@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "tzudong-source-bound-followup-resolution-v1",
+  "receiptId": "OCR-POST105-DURABLE-DISPOSABLE-CLEANUP-RESOLUTION-20261019",
+  "recordedAt": "2026-10-18T17:07:49Z",
+  "baseHead": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "scope": "separate durable recovery assertions from committed synthetic race-row cleanup",
+  "integrationReceiptAnchor": {
+    "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+    "sha256": "d1b90ec2a4620d5a8b554313a2b1930c306c3f66b1ff527c5cc7b0a7104e9ae4",
+    "eventId": "OCR105-PG17-008"
+  },
+  "sourceHashes": {
+    "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+    "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47",
+    "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    ".github/receipt-ocr-post105-sql-successor.v1.json": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+    "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0"
+  },
+  "classification": {
+    "functionalAssertions": "passed_in_pg17_6_event008",
+    "raceAssertions": "passed_in_pg17_6_event008",
+    "dblinkDisconnects": "passed_in_pg17_6_event008",
+    "failureStage": "post-assertion synthetic auth-user cleanup",
+    "failureMeaning": "cleanup-boundary incompatibility only; it does not invalidate terminal 106, catalog readiness, release semantics, or race assertions",
+    "operatingAclChangeRequired": false
+  },
+  "implementation": [
+    {
+      "id": "OCR106-DURABLE-CLEANUP-001",
+      "status": "resolved_in_fixture",
+      "behavior": "The durable fixture requires an external session GUC tzudong.receipt_ocr_disposable_fixture=authorized-v1 before any synthetic insert. Missing authorization fails with RECEIPT_OCR_DISPOSABLE_TARGET_REQUIRED."
+    },
+    {
+      "id": "OCR106-DURABLE-CLEANUP-002",
+      "status": "resolved_in_fixture",
+      "behavior": "The inter-session race, result-state assertion, rejection-receipt absence assertion, and both dblink disconnects are unchanged. The fixture no longer attempts DELETE FROM auth.users across the protected privacy-consent boundary."
+    },
+    {
+      "id": "OCR106-DURABLE-CLEANUP-003",
+      "status": "resolved_in_fixture_and_harness_contract",
+      "behavior": "After the race, the fixture verifies the exact synthetic auth user remains, the exact result is indeterminate/uncertain with no claim token, and no release receipt exists. It emits RECEIPT_OCR_DISPOSABLE_TEARDOWN_HANDOFF=verified; the authorized harness must then destroy that exact task-owned database and record teardown."
+    },
+    {
+      "id": "OCR106-DURABLE-CLEANUP-004",
+      "status": "preserved",
+      "behavior": "No grants, role changes, production cleanup helper, migration, manifest, compiler, app TypeScript, quota behavior, or provider behavior changed. Core durable assertion and race coverage was not reduced."
+    }
+  ],
+  "verification": [
+    {
+      "command": "bash /tmp/run-tzudong-ocr-catalog-followup.sh without disposable fixture GUC",
+      "result": "expected exit 3 before synthetic durable inserts: RECEIPT_OCR_DISPOSABLE_TARGET_REQUIRED",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/durable-cleanup-guard-without-authorization-pg17.11.txt",
+      "rawSha256": "aa3382ade1f415f1c57ad7ce764b47c7e35a313f091120d38d06f66fa1d2a71f"
+    },
+    {
+      "command": "bash /tmp/run-tzudong-ocr-durable-handoff.sh",
+      "result": "exit 0; catalog fixture, durable functional assertions, dblink race, both disconnects, residual-state handoff, and exact target teardown passed",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/durable-cleanup-handoff-authorized-pg17.11.txt",
+      "rawSha256": "c1b4bdc945b8500c7a680373f6735c0cb8511a1d122fccc8a93598be165a27ee",
+      "harnessSha256": "d1c4114ac6e81058c3abe15229fd7be037a76bcf9f19770deea563d6c6d28858"
+    },
+    {
+      "command": "git diff --check -- backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/durable-cleanup-diff-check.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "identity": {
+    "migrationSha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "manifestSha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "changed": false,
+    "rebindRequired": false
+  },
+  "remainingGate": [
+    "The PG17.6 integration harness must set the disposable GUC only for a fresh task-owned target, run the fixture, record the verified handoff marker, and prove exact target removal.",
+    "The aggregate target remains uncreated until the integration owner repeats constituent and aggregate execution with the corrected fixture contract."
+  ],
+  "limits": [
+    "The local verification used a disposable PostgreSQL 17.11 synthetic harness. PG17.6 full-catalog completion remains an integration-owner gate.",
+    "Committed synthetic race rows intentionally remain until exact target teardown; this fixture must not run against retained, hosted, shared, or non-disposable databases.",
+    "Application build/parity and prior direct OCR tests were not repeated because application and migration source bytes are unchanged."
+  ],
+  "externalEffects": {
+    "hostedDatabaseWrites": 0,
+    "providerCalls": 0,
+    "storageCalls": 0,
+    "gitWrites": 0
+  }
+}

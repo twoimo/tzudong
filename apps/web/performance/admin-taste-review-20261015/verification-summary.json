@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T14:55:17.605891+00:00",
+  "baseCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "scope": "Receipt selection, interrupted OCR readback, and storyboard polling review follow-up. Design source and screenshots remain the immutable a616 delivery snapshot. Longform inventory follow-up has a separate receipt.",
+  "sourceFreeze": {
+    "receipt": "source-freeze.json",
+    "productTestFiles": 12,
+    "currentMismatches": 0
+  },
+  "checks": {
+    "affectedTests": {
+      "receipt": "affected-tests-integrated.json",
+      "files": 11,
+      "pass": 189,
+      "fail": 0,
+      "skip": 0,
+      "drift": 0,
+      "rawLogsPersisted": false
+    },
+    "productionBuild": {
+      "receipt": "build-report-review1.json",
+      "node": "v24.21.0",
+      "exitCode": 0,
+      "manifestInputs": 1593,
+      "executionDrift": 0,
+      "currentMismatches": 0,
+      "cleanupFailures": 0,
+      "cssBoundary": "passed"
+    },
+    "typecheckParity": {
+      "receipt": "ocr-stream-recovery-evidence.json",
+      "logicalInputs": 3324,
+      "diagnostics": 0
+    },
+    "historicalCanonicalUnit": {
+      "commit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+      "pass": 3815,
+      "fail": 0,
+      "skip": 11,
+      "files": 466,
+      "addToAffectedTests": false
+    }
+  },
+  "reviewThreadLocalDisposition": {
+    "PRRT_kwDOQGRyNc6sq8at": "Existing full modelPolicy fallback preserved; regression bound.",
+    "PRRT_kwDOQGRyNc6sq8a2": "Existing reset-generation rotation preserved; regression bound.",
+    "PRRT_kwDOQGRyNc6sq8bA": "Transient model catalog failures defer without claim; hard failures remain terminal.",
+    "PRRT_kwDOQGRyNc6sq8bK": "Abortable selection generation fences stale preparation across replacement and lifecycle.",
+    "PRRT_kwDOQGRyNc6sq8bR": "Interrupted streams recover existing status only; no automatic provider replay.",
+    "PRRT_kwDOQGRyNc6sq8bW": "Synthetic fixture already marks imported observations as unverified without provider response identity."
+  },
+  "securityReview": {
+    "receipt": "gitguardian-hash-false-positives.json",
+    "incidentIds": [
+      38246983,
+      38246985,
+      38246984
+    ],
+    "disposition": "Awaiting case-specific false-positive approval; no incident mutation performed.",
+    "originalEvidenceModified": false,
+    "scannerConfigurationModified": false
+  },
+  "limits": [
+    "Local source/test/build evidence only; no live provider, database, Storage, workflow-delivery, or deployment proof.",
+    "The four-request readback cap is a client status-request cap, not a DB-request or wall-clock cap.",
+    "The 120-poll/six-catalog-read test protects existing caching and is not a new patch performance or cost claim.",
+    "Prior failed tests, console/network errors, skill lint findings, and original artifact bytes remain retained."
+  ]
+}

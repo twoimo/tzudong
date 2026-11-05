@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "ocr-mixed-history-final-source-and-review-readback",
+  "recordedAt": "2026-10-18T18:48:08.919423+00:00",
+  "baseHead": "7d04fca8469c9d282f8885714435bd5124f3e826",
+  "sourceHashes": {
+    "apps/web/lib/ocr/gemini.ts": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef",
+    "apps/web/tests-unit/gemini-ocr.test.ts": "e5d8bf3b91b6adbef392d80e728f272a6bc8bf2841714b1bd3874dd49e3e883b",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "17d21c2ff3e9f43cdcb9247a2be4f80e8b582eaff14ded428935d674614b8e76"
+  },
+  "artifacts": {
+    "apps/web/performance/cross-audit-20261019/ocr-mixed-model-integrated-verification/verification.json": "1dbf14a94e1a0167dd42de8ad13846a063b35757c86c63e0bc38476e7fe71b67",
+    "apps/web/performance/cross-audit-20261019/ocr-durable-composition-followup/resolution.json": "87f0c20c273911e2a6d9b61ff509c6feb1e6ed03318e93e604e839a4b40b2ad5",
+    "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/resolution-followup.json": "615b644827300b39773bc2718c6b43391b497f910d7de75ca3cfc579284d70bf",
+    "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/chatgpt-full-report.md": "117b7a0f220af81c5283b385a1b5f46b440c628521fc5ca3522f3a5e7517a215",
+    "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix.json": "7a1a8fd3c086e72f648eaefa703844b140648a65d9648e2701d3007a3405815b",
+    "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix-followup.json": "6f7a2e636d7109b60bcb35f03a6e1c00b6264040b422e1ebcc120676097b6b8c"
+  },
+  "behavior": {
+    "releaseAdmission": "C_current AND no previous non-credential outcome across the model operation",
+    "historyIsMonotone": true,
+    "mixedCredentialFailureStopsFurtherModelsAndCredentials": true,
+    "pureCredentialOnlyFallbackPreserved": true
+  },
+  "checks": {
+    "helperSuite": {
+      "pass": 26,
+      "fail": 0,
+      "assertions": 116
+    },
+    "integratedBeforeCompositionTestAddition": {
+      "pass": 79,
+      "fail": 0,
+      "assertions": 447,
+      "files": 4
+    },
+    "compositionDirect": {
+      "pass": 2,
+      "fail": 0,
+      "assertions": 12
+    },
+    "durableAfterComposition": {
+      "pass": 34,
+      "fail": 0,
+      "assertions": 207
+    },
+    "compilerParity": {
+      "logicalInputs": 3351,
+      "diagnostics": 0
+    },
+    "productionBuild": {
+      "pages": 54,
+      "passed": true
+    }
+  },
+  "counting": "Suites overlap and are not summed. Test-only composition followed the app parity/build; no runtime source changed for those tests.",
+  "research": {
+    "supplementalReportSavedVerbatim": true,
+    "permanentUrl": "https://chatgpt.com/c/6ad50f71-6e94-83ee-bdf1-851a80101df8",
+    "scopeRevision": "14a8f5da4268df890c7adf10bf89e99ce071f6f5",
+    "scopeBundleSha256": "90c4e3f0540c90d4be1f9ea1439538e73feddaf79790e0cdb90ebcd179921866",
+    "slotReleasedAfterSave": true,
+    "sourceAdjudicationRecorded": true,
+    "requiredThesisGeminiReverseComplete": false
+  },
+  "openConditions": [
+    "Initial canonical ACL admission is not yet implemented; separate forward107 is in preparation.",
+    "Admin stale-pending recovery requires a distinct operation identity and atomic generation contract; review P1 remains open.",
+    "Hosted SQL, protected promotion, deployment and all15 authenticated menu flows remain unverified."
+  ],
+  "limits": [
+    "No operating latency, provider token/billing/quota savings or statistical confidence interval is inferred.",
+    "Composition tests use the established fakeStore application boundary; SQL row state, ACL and races require separate PostgreSQL evidence."
+  ]
+}

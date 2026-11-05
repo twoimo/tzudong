@@ -1,13 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-10-11T16:08:10.087Z",
-  "node": "v24.21.0",
+  "verifiedAt": "2026-10-18T11:36:23.509Z",
+  "node": "v24.22.0",
   "evidenceClass": "source-and-pure-transport-boundary-only",
   "checks": {
     "fixedDestination": true,
     "hostAndOriginBoundary": true,
     "getAndHeadForwardingOnly": true,
-    "incomingCredentialHeadersDropped": true,
+    "incomingCredentialHeadersDroppedExceptExactSyntheticSession": true,
+    "syntheticSessionCookieReconstructed": true,
+    "fixtureCspMockOriginOnly": true,
     "websocketPathAndHeadersBounded": true,
     "e2eConstantsReadFromApplicationSource": true,
     "developmentAndProductionLaunchArgumentsBounded": true,
@@ -16,18 +18,18 @@
     "verificationServersStarted": 0
   },
   "packageSha256": {
-    "README.md": "e7cd8c69f6609cc8e272186fa36dd39240809897e6e0cf9161601d48177f1656",
+    "README.md": "6744175285a45d5938ed1d5cbb66fe24138437d1fe4d99caeb026a759954c7cc",
     "fixture-data.mjs": "a68b66b253732283abdac28bd97a5a436e8ab008fdb64d0dca0f9928c75f541f",
-    "fixture-gateway.mjs": "4c1de21b915fec206c8fbc76e82d41c5e1c8a388627c41c25b08aec6dd1d382f",
+    "fixture-gateway.mjs": "8cc6359b51f0ad41919fe894e3ad439a8b846c0d0e82640ce028060f65f0c86d",
     "launch.mjs": "b6889b8a9f8a186a96ddee7b0859b76a303e482ccf02fc0e1518c8efb04d081e",
-    "loopback-transport.mjs": "95f1adac46f098f0e05c1ff05271f7d13e90e5a17984b4f1b2c46f9f2bed6ff0",
+    "loopback-transport.mjs": "0aac0bcccb3669c3ece6be877859bdb032a899fdf131c69e3444627b5636aeb3",
     "source-contract.mjs": "2d045096091a6d4be50512eb1b8984aca8fa822c473c9588d830257789f709ab",
-    "verify-package.mjs": "917247132562dc689ae1fa6194240b0908640db68fb7fef0a316019e34eeea78"
+    "verify-package.mjs": "7665e764a11dcefee945003745516adc7f687e27cfa0b3e7e6b0901f77942fa4"
   },
   "inputSha256": {
-    "preview-design-fixtures.mjs": "4913229a1f5c5eeda196c0a321f14df8839e9366ff4b3a0659ba8cc2c7b30d58",
-    "verify-admin-sidebar-pages-browser.ts": "7500adb0f2ae2878fb0c87f9c2a50e2603635843e6795c748d8faae8057dfafe",
-    "admin-ui.css": "4c2132956c05cd5388bf90ebec37c84bd73a8c7adc87d535763302e8aa57d092",
+    "preview-design-fixtures.mjs": "a4b2eac5cde5b5b48edb4e3a4d5e7adbf232defaa3b2317edd48ff251d672906",
+    "verify-admin-sidebar-pages-browser.ts": "8d81317901080253fc3335f71f04faf58e1b3bd2b5428df6dfe3025e750257f6",
+    "admin-ui.css": "c488571b5bfe2c485f28bb892f2b0e006108e644f3b20a2a596ae91d005c9b5a",
     "loopback-transport.mjs": "2a6409c33cb7e3708451ca2d8ec5075cbe03a1107afd4c56a3ce9d5585b29382",
     "e2e-admin-route-bypass.ts": "e2db49d70820a59cfda8c9e8fc711c3a5654ec1572216ea95338a1fdc3f408dc"
   },

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "evidence_class": "hosted_read_only_catalog_metadata",
+  "project_ref": "aqlcofblfxdrjhhdmarw",
+  "query": "SELECT pg_catalog.jsonb_build_object(\n  'observed_at', pg_catalog.now(),\n  'server_version_num', pg_catalog.current_setting('server_version_num'),\n  'roles', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('name', rolname, 'superuser', rolsuper, 'bypass_rls', rolbypassrls) ORDER BY rolname) FROM pg_catalog.pg_roles WHERE rolname IN ('postgres','service_role','privacy_workflow_owner','anon','authenticated','supabase_storage_admin')),\n  'ledger', (SELECT pg_catalog.jsonb_build_object('count', count(*), 'feature_count', count(*) FILTER (WHERE version IN ('20261013093518','20261013190000','20261013190100','20261013190200','20261016090000')), 'upstream_evidence_count', count(*) FILTER (WHERE version IN ('20261017043000','20261017140000','20261017160000'))) FROM supabase_migrations.schema_migrations),\n  'helpers', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('schema', n.nspname, 'name', p.proname, 'owner', pg_catalog.pg_get_userbyid(p.proowner), 'security_definer', p.prosecdef, 'config', p.proconfig, 'acl', p.proacl::text, 'source_sha256', pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex'), 'execute', (SELECT pg_catalog.jsonb_object_agg(r.rolname, pg_catalog.has_function_privilege(r.oid,p.oid,'EXECUTE')) FROM pg_catalog.pg_roles r WHERE r.rolname IN ('postgres','service_role','anon','authenticated','supabase_storage_admin'))) ORDER BY p.proname) FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='review_media_private' AND p.proname IN ('reject_verification_object_update','guard_verification_object_delete') AND p.pronargs=0),\n  'triggers', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('name', t.tgname, 'enabled', t.tgenabled, 'definition', pg_catalog.pg_get_triggerdef(t.oid,false)) ORDER BY t.tgname) FROM pg_catalog.pg_trigger t WHERE t.tgrelid=pg_catalog.to_regclass('storage.objects') AND t.tgname IN ('a01_review_verification_immutable_update','a01_review_verification_guard_delete'))\n) AS metadata;",
+  "result": {
+    "roles": [
+      {
+        "name": "anon",
+        "superuser": false,
+        "bypass_rls": false
+      },
+      {
+        "name": "authenticated",
+        "superuser": false,
+        "bypass_rls": false
+      },
+      {
+        "name": "postgres",
+        "superuser": false,
+        "bypass_rls": true
+      },
+      {
+        "name": "privacy_workflow_owner",
+        "superuser": false,
+        "bypass_rls": false
+      },
+      {
+        "name": "service_role",
+        "superuser": false,
+        "bypass_rls": true
+      },
+      {
+        "name": "supabase_storage_admin",
+        "superuser": false,
+        "bypass_rls": false
+      }
+    ],
+    "ledger": {
+      "count": 89,
+      "feature_count": 0,
+      "upstream_evidence_count": 3
+    },
+    "helpers": null,
+    "triggers": null,
+    "observed_at": "2026-10-18T12:22:45.566417+00:00",
+    "server_version_num": "170006"
+  },
+  "limitations": [
+    "Read-only fixed catalog and ledger counts; no user rows or credentials read.",
+    "No DDL, operating apply, writer-fence change or runtime/provider readiness claim.",
+    "Feature five migration count is zero and expected helper/trigger objects are absent; effective helper EXECUTE matrix is unavailable."
+  ]
+}

@@ -69,12 +69,48 @@ describe('admin user-management source contract', () => {
     expect(panelSource).toContain('return current.targetUserId === selectedUser?.id ? current : null;');
     expect(panelSource).toContain('if (isProfileDirty) setPendingIntent(intent);');
     expect(panelSource).toContain('else applyIntent(intent);');
-    expect(panelSource).toContain('onClick={() => setPendingIntent(null)}');
+    expect(panelSource).toContain('onClick={cancelPendingIntent}');
     expect(panelSource).toContain('detailRef.current?.focus()');
     expect(panelSource).toContain('Boolean(pendingReadback) || isProfileDirty');
     expect(panelSource).toContain('accountConfirmation === "비활성화"');
     expect(panelSource).toContain('accountConfirmation === "재활성화"');
     expect(panelSource).toContain('confirmation: action === "accountStatus" ? accountConfirmation : riskConfirmation');
+  });
+
+  test('connects the bounded server page contract to dense user controls', () => {
+    const panelSource = source('components/admin/AdminUsersPanel.tsx');
+    const routeSource = source('app/api/admin/users/route.ts');
+    const adminUiSource = source('styles/admin-ui.css');
+
+    expect(panelSource).toContain('const ADMIN_USERS_PER_PAGE = 120;');
+    expect(panelSource).toContain('page: String(page)');
+    expect(panelSource).toContain('filter: userFilter');
+    expect(panelSource).toContain('sort: sortOrder');
+    expect(panelSource).toContain('setPagination({');
+    expect(panelSource).toContain('aria-label="이전 사용자 페이지"');
+    expect(panelSource).toContain('aria-label="다음 사용자 페이지"');
+    expect(panelSource).toContain('전체 {pagination.sourceTotal.toLocaleString()}명');
+    expect(panelSource).toContain('pagination.isPartial');
+    expect(panelSource).toContain('isExactAdminUserId(normalizedSearch) ? "user_id" : "search"');
+    expect(panelSource).toContain('requestIntent({ type: "filter", filter: event.target.value as AdminUsersFilter })');
+    expect(panelSource).toContain('requestIntent({ type: "sort", sort: event.target.value as AdminUsersSort })');
+    expect(panelSource).toContain('requestIntent({ type: "reset" })');
+    expect(panelSource).toContain('if (isMutating || (pendingReadback && intent.type !== "refresh")) return;');
+    expect(panelSource).toContain('className="admin-cms-page-header"');
+    expect(panelSource).toContain('className="h-11 shrink-0 rounded-md md:h-8"');
+    expect(panelSource).toContain('className="h-11 px-2 md:h-8" aria-label="이전 사용자 페이지"');
+    expect(panelSource).toContain('className="h-11 px-2 md:h-8" aria-label="다음 사용자 페이지"');
+    expect(panelSource).toContain('onClick={acceptLatestUserReadback}>최신 상태 수용</Button>');
+    expect(adminUiSource).toContain('.admin-cms-page-header > .admin-page-header-identity { display: contents; }');
+    expect(adminUiSource).toContain('.admin-cms-page-header .admin-page-header-summary { grid-column: 1 / -1; grid-row: 2; width: 100%; }');
+
+    expect(routeSource).toContain('const MAX_FILTER_SCAN_PAGES = 5;');
+    expect(routeSource).toContain("const filter = normalizeFilter(searchParams.get('filter'));");
+    expect(routeSource).toContain("const sort = normalizeSort(searchParams.get('sort'));");
+    expect(routeSource).toContain('managedUsers.slice((page - 1) * perPage, page * perPage)');
+    expect(routeSource).toContain('sourceTotal: exactUserId !== null ? users.length : listedTotal');
+    expect(routeSource).toContain('hasNextPage: page * perPage < total');
+    expect(routeSource).toContain("{ status: 500, headers: { 'Cache-Control': 'no-store' } }");
   });
 
   test('keeps admin user APIs server-only and service-role contained', () => {

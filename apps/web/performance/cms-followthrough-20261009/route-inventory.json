@@ -1,5 +1,25 @@
 {
+  "inventory_scope": {
+    "logical_surfaces": 28,
+    "physical_page_sources": 27,
+    "public_or_account_page_sources": 22,
+    "public_share_handlers": 1,
+    "admin_page_sources": 5,
+    "limitation": "Source inventory only; no current browser, authentication, database, mutation, or production evidence."
+  },
   "public_or_account_pages": [
+    {
+      "route": "/",
+      "source": "app/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/auth/complete",
+      "source": "app/auth/complete/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
     {
       "route": "/auth/required",
       "source": "app/auth/required/page.tsx",
@@ -49,14 +69,14 @@
       "current_browser_evidence": false
     },
     {
-      "route": "/mypage/bookmarks",
-      "source": "app/mypage/bookmarks/page.tsx",
+      "route": "/mypage",
+      "source": "app/mypage/page.tsx",
       "evidence": "source-present",
       "current_browser_evidence": false
     },
     {
-      "route": "/mypage",
-      "source": "app/mypage/page.tsx",
+      "route": "/mypage/bookmarks",
+      "source": "app/mypage/bookmarks/page.tsx",
       "evidence": "source-present",
       "current_browser_evidence": false
     },
@@ -91,8 +111,8 @@
       "current_browser_evidence": false
     },
     {
-      "route": "/",
-      "source": "app/page.tsx",
+      "route": "/privacy",
+      "source": "app/privacy/page.tsx",
       "evidence": "source-present",
       "current_browser_evidence": false
     },
@@ -103,14 +123,9 @@
       "current_browser_evidence": false
     },
     {
-      "route": "/privacy",
-      "source": "app/privacy/page.tsx",
-      "evidence": "source-present",
-      "current_browser_evidence": false
-    },
-    {
       "route": "/s/[code]",
-      "source": "app/s/[code]/page.tsx",
+      "source": "app/s/[code]/route.ts",
+      "surface_kind": "http-route-handler",
       "evidence": "source-present",
       "current_browser_evidence": false
     },

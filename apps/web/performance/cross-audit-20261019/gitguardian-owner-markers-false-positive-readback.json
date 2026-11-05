@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "scoped-gitguardian-false-positive-readback",
+  "recordedAt": "2026-10-18T17:42:42.665971+00:00",
+  "sourceRevision": "dfa77ca0b509c508ac29ec5f93fe7eb3f45cc16f",
+  "pullRequest": 3215,
+  "approval": {
+    "answer": "이 세 건만 오탐 처리 허용",
+    "incidentIds": [
+      38364337,
+      38364338,
+      38364339
+    ]
+  },
+  "classification": "Disposable local container ownership labels, independent of DB credentials; not used for authentication.",
+  "originalReadbackSha256": "2f4841fdbf037197d72764520230795f6a43e5a5368ba1f4e9c42210c38dcf2e",
+  "sourceReceipt": {
+    "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+    "sha256": "9a0639afa3b1da37ed118c85a0f132d667cf96fec6a085ef526b1cd5bb6b009d"
+  },
+  "incidents": [
+    {
+      "id": 38364337,
+      "sourceLines": [
+        847,
+        931
+      ],
+      "action": "Ignore > This is not a secret (false positive)",
+      "readback": "Ignored Not a secret (false positive)"
+    },
+    {
+      "id": 38364338,
+      "sourceLines": [
+        1093
+      ],
+      "action": "Ignore > This is not a secret (false positive)",
+      "readback": "Ignored Not a secret (false positive)"
+    },
+    {
+      "id": 38364339,
+      "sourceLines": [
+        1286
+      ],
+      "action": "Ignore > This is not a secret (false positive)",
+      "readback": "Ignored Not a secret (false positive)"
+    }
+  ],
+  "scannerConfigurationChanged": false,
+  "credentialsChanged": false,
+  "otherIncidentsChanged": false,
+  "workflowRerunRequested": false,
+  "limitation": "Incident UI readback is separate from the next GitGuardian CI check result."
+}

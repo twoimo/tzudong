@@ -1,6 +1,9 @@
 import type { ThumbnailGeneratorPayload } from './types';
 import { ThumbnailGenerationError } from './types';
 
+type ThumbnailSafetyPayload = Pick<ThumbnailGeneratorPayload,
+  'topic' | 'headline' | 'subHeadline' | 'textLayers' | 'acknowledgedSafety'>;
+
 const COPIED_REFERENCE_PHRASES = [
   '동남아 야시장 또는 푸드코트 분위기의 길거리 음식 탐방 썸네일',
   '홍콩 야시장 분위기의 붐비는 밤거리에서',
@@ -18,7 +21,7 @@ const BRAND_PATTERN = /(로고|브랜드|상표|맥도날드|스타벅스|코카
 const CROWD_PATTERN = /(식별 가능|얼굴이 선명|군중 얼굴|배경 인물.*선명|특정 인물처럼)/;
 const PROMPT_INJECTION_PATTERN = /(ignore\s+(all\s+)?(previous|prior|above)\s+instructions|system\s+prompt|developer\s+message|process\.env|api[_-]?key|secret|token|비밀|시스템\s*프롬프트|이전\s*지시.*무시|지시.*무시|환경\s*변수|키를?\s*출력|토큰을?\s*출력)/i;
 
-function payloadText(payload: ThumbnailGeneratorPayload) {
+function payloadText(payload: ThumbnailSafetyPayload) {
   return [
     payload.topic,
     payload.headline,
@@ -29,7 +32,7 @@ function payloadText(payload: ThumbnailGeneratorPayload) {
     .join('\n');
 }
 
-function renderableText(payload: ThumbnailGeneratorPayload) {
+function renderableText(payload: ThumbnailSafetyPayload) {
   return [
     payload.headline,
     payload.subHeadline,
@@ -39,7 +42,7 @@ function renderableText(payload: ThumbnailGeneratorPayload) {
     .join('\n');
 }
 
-export function validateThumbnailSafety(payload: ThumbnailGeneratorPayload) {
+export function validateThumbnailSafety(payload: ThumbnailSafetyPayload) {
   if (payload.acknowledgedSafety !== true) {
     throw new ThumbnailGenerationError('required_ack', '이미지 권리와 안전 사용 확인이 필요합니다.', 400);
   }

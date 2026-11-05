@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "fe4b73dac510d4670517c7d3eca4f0c2470d4297",
+  "baseRevision": "56427320a44fdd65a86dc49e7e63d80dd9935c2e",
+  "bundleSha256": "c3fb6be051942230565e8e551f6f9988d6c0da2175c2a9df553a5398e6865f23",
+  "bundleBytes": 374176,
+  "coveredFiles": [
+    {
+      "path": "apps/web/lib/marker-pool.ts",
+      "bytes": 13814,
+      "sha256": "9741e8d286c0023b5204886b30dd789630f62eaad88eaed61d4e718162519a5b"
+    },
+    {
+      "path": "apps/web/lib/retained-marker-accessibility.ts",
+      "bytes": 3655,
+      "sha256": "bf15c5fb1681e294c0be5b65a17e007570e2ebfb16af0868b41e96f5a2ed9ae4"
+    },
+    {
+      "path": "apps/web/lib/naver-map-event-cleanup.ts",
+      "bytes": 1747,
+      "sha256": "ee4c8bef6103c98b75238cc45eb2f119b1f5eab01202fb44979b05007c3957d6"
+    },
+    {
+      "path": "apps/web/lib/youtube-url.ts",
+      "bytes": 3682,
+      "sha256": "2dfac7f47bd227540c89250229d1c9fc29eb2cdcdc0aad50e63144b783251faa"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/popularity-marker.ts",
+      "bytes": 2969,
+      "sha256": "65fd5cc14b916e92720dfdaf81f20545b8caf3d8b3e56d9c06a4e4a9baea49d6"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/scoring.ts",
+      "bytes": 7062,
+      "sha256": "0e3f195bf06636d6a8718378ac7a93eccbd3f439ee5d6ab5eebedbbaa6d02276"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/frames.ts",
+      "bytes": 9618,
+      "sha256": "c2b9c3fb2fca0f6fa229aeb0c62a222f22b11441cefc40d35248e0f6ca6f3dc8"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/guards.ts",
+      "bytes": 7046,
+      "sha256": "5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/constants.ts",
+      "bytes": 7408,
+      "sha256": "471834208104d092365b8203350e7b9c4aba6a716a602f2a29589361d8fc9a43"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/errors.ts",
+      "bytes": 2008,
+      "sha256": "02bda67b89fadf3d2f5aa27f6a146c0dc746a7de1f9a6cd91dc82cf177e901c9"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/types.ts",
+      "bytes": 3726,
+      "sha256": "9d64ad2c6e57bea45af5066d89a26535b616429c9032d16fccfefcdeb78bad6b"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/storage-key.mjs",
+      "bytes": 226,
+      "sha256": "4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/published-popularity.ts",
+      "bytes": 5687,
+      "sha256": "84ee9979ace9756456178449f6d831fe796cee0d68d66e155fc127aaef4163f1"
+    },
+    {
+      "path": "apps/web/scripts/build-public-popularity.ts",
+      "bytes": 5638,
+      "sha256": "b230bdd310c2e2dbe87eb8aa4529f698824a44060092c933ccd055c3ec9a0b68"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "bytes": 30154,
+      "sha256": "2313e3e7f76ad9e3137bd75aac525238809c3ffa120c36e55d856dddf396b1a7"
+    },
+    {
+      "path": "apps/web/types/restaurant.ts",
+      "bytes": 3942,
+      "sha256": "ef43ac1b93a751cb03fed1fcabecacf21d245e0b54f47a66dd67639c34ebd94b"
+    },
+    {
+      "path": "apps/web/lib/overseas-region-matching.ts",
+      "bytes": 2650,
+      "sha256": "35333c22a6a6b677a7612ffe461774a54a84f9a8c6fa3e324885104a8d072c4f"
+    },
+    {
+      "path": "apps/web/constants/overseas-regions.ts",
+      "bytes": 3087,
+      "sha256": "4d986e8cb4b9166ec56ed9d12b3d8d32db2ed63b861a772888c7e8b319fde4af"
+    },
+    {
+      "path": "apps/web/tests-formal/marker-state-model.test.mjs",
+      "bytes": 9640,
+      "sha256": "7eafb3874e25d4019792cecabbf052374d8f66e4bf23b83a1d9c2526a4b0463c"
+    },
+    {
+      "path": "apps/web/scripts/verify-marker-formal.mjs",
+      "bytes": 7013,
+      "sha256": "96364454f528669f191fba2fdc156008a3ad2b6799e11eba3fd880bf72934119"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-numeric-bounds.test.ts",
+      "bytes": 1575,
+      "sha256": "7bccbf8f20109bc5b87f1d77a6687167f12e988d0040523f6fe5a0c152298d02"
+    },
+    {
+      "path": "apps/web/tests-unit/popularity-input-boundary.test.ts",
+      "bytes": 4682,
+      "sha256": "75cde1889c6126a2b9432587f42483d08c6084f38e3151ccda2b111baaa079d7"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-cohort-shadow.test.ts",
+      "bytes": 1995,
+      "sha256": "abce3ecd887e5fbb89bbac7715a9ce71753935367a502e6ec96f464eee585dac"
+    },
+    {
+      "path": "apps/web/package.json",
+      "bytes": 7264,
+      "sha256": "a434a12086453effcdc577a0c04c5e213037b327ba04b29f48b5d1bc65a0aad5"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "bytes": 1368,
+      "sha256": "cdbd2b57d55c77ea1ef2b81124b7007fec7df15d55cc917c8c9eca5704234c49"
+    },
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "bytes": 173146,
+      "sha256": "9187304578114c49af379a18882e653efc636ac9dadd98cdab4ec13d330dacf0"
+    },
+    {
+      "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+      "bytes": 11862,
+      "sha256": "96ab311a5582f4498d13da0347973ba94cad2575418394f78036501b99218ddb"
+    },
+    {
+      "path": "apps/web/lib/review-photo-url.ts",
+      "bytes": 14933,
+      "sha256": "811a669cada5b4938afc012a2e0f26ca82e080522306cfd424c2892cb979187e"
+    },
+    {
+      "path": "apps/web/lib/profile-avatar-url.ts",
+      "bytes": 9151,
+      "sha256": "cc3c22cea33d2e2ea89ab52e3264baac3b406956aac2dbc4b671a07fe219a039"
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "bytes": 9365,
+      "sha256": "6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8"
+    },
+    {
+      "path": "apps/web/tests-unit/visible-marker-review-bubbles.test.ts",
+      "bytes": 3456,
+      "sha256": "de9884b661b31e3b06274eb1c17fa5ea176b73d2f557a529d7e4333178b6391e"
+    }
+  ],
+  "questionSha256": "7549fdaea4bb23290958732ca72a3d8682ce72f871d1bbd02a8d0493fbb99d08",
+  "state": "LOCAL_PREPARED_NOT_UPLOADED",
+  "actualResearch": null,
+  "requiredStages": [
+    "Gemini 4 Argon maximum-thinking delta",
+    "GPT-6 Pro reverse verification"
+  ],
+  "priorThreeReports": "../marker-evidence-cross-audit-20261023-v1/completion-manifest.json",
+  "externalStatus": "QUEUED_NOT_DISPATCHED",
+  "hostUi": "UNVERIFIED",
+  "deployment": "NOT_PERFORMED",
+  "Nightly": "SEPARATE_HISTORICAL_FAILURE_39457197351",
+  "requestedResearch": "off"
+}

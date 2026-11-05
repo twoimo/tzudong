@@ -1,0 +1,30 @@
+{
+  "placeholder": "<shared-node-modules-root>",
+  "privateHashes": {
+    "configuration.json": "91f3c6f455593b51b4f8ed93993d228392b559511fabc7efa35427e79907808b",
+    "input-manifest.json": "d7a84a2bedf93979a1bbcae6e8d2006aef4147b781d97dbd15d9eba242fe74d1",
+    "raw.json": "ff7aa62d2dae05772460aa64cd23879018a9649e4762502cc2a3a923bc1a4244",
+    "report.md": "c5d0c1895f94bad2a961ddceb402988953eb25929449c2fc031bf1ac8e700ddb",
+    "summary.json": "4a31914ed4337688b528a000feba8e80a4ec209372449ef727882b45c7425f5a"
+  },
+  "privateOriginalsRetained": true,
+  "privatePathsRemainingInPublicEvidence": 0,
+  "publicHashes": {
+    "compiler-provenance-inventory.json": "2f1a8c6363e9f46bbaf2a5346f6d147f149b5f9087cc7b519ed01d0f947104e8",
+    "configuration.json": "d3bf6a2d3bb9d4c61bdd34aaf2931f8ff6a468ab47c8fd14882f31dc0f3f8dd3",
+    "input-manifest.json": "d7a84a2bedf93979a1bbcae6e8d2006aef4147b781d97dbd15d9eba242fe74d1",
+    "raw.json": "440c27c9ec97b9cdb44222a67f37cf396c52b6f603f63f4b6297c9b0a9ba4eb3",
+    "report.md": "c5d0c1895f94bad2a961ddceb402988953eb25929449c2fc031bf1ac8e700ddb",
+    "summary.json": "4a31914ed4337688b528a000feba8e80a4ec209372449ef727882b45c7425f5a"
+  },
+  "redactedJsonPointers": {
+    "configuration.json": [
+      "/expectedNodeModulesTarget"
+    ],
+    "raw.json": [
+      "/metadata/experimentConfig/expectedNodeModulesTarget",
+      "/metadata/nodeModulesTarget"
+    ]
+  },
+  "schema": "tzudong-ci-performance/v1/path-sanitization-receipt"
+}

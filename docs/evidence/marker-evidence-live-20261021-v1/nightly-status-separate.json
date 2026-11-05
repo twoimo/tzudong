@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-21T06:35:00Z",
+  "note": "Read-only gh run list. Not part of the marker, frame or brand release result. No Nightly run has executed on the released main commit 888e26aa yet.",
+  "nightly-regression.yml": [
+    {"conclusion": "failure", "createdAt": "2026-10-20T16:24:45Z", "databaseId": 39457197351, "headSha": "184b92b1d373154101248ee2b81e31d2cb7db393", "url": "https://github.com/twoimo/tzudong/actions/runs/39457197351"}
+  ],
+  "nightly-local-regression.yml": [
+    {"conclusion": "success", "createdAt": "2026-10-20T21:47:37Z", "databaseId": 39503206641, "headSha": "f3dc0fba7e758b9fb69f5934611c96c6bed5f078", "url": "https://github.com/twoimo/tzudong/actions/runs/39503206641"},
+    {"conclusion": "success", "createdAt": "2026-10-20T18:20:08Z", "databaseId": 39473819911, "headSha": "de62e9426ffd761c4be974a4ca670c034d98489e", "url": "https://github.com/twoimo/tzudong/actions/runs/39473819911"}
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "blockingCoverageAlerts": [],
+  "blockingPendingCount": 0,
+  "candidateAttemptCount": 5,
+  "candidateIsImprovementClaim": false,
+  "candidateWithinBound": true,
+  "cohortId": "d61427039388bafe",
+  "collectionComplete": true,
+  "distinctSourceTreeCount": 4,
+  "maximumCandidateAttempts": 100,
+  "minimumDistinctSourceTreeCount": 7,
+  "minimumSuccessCount": 7,
+  "pendingAssessments": [],
+  "pendingReasonCounts": {},
+  "pendingSameCohortCount": 0,
+  "potentialSameCohortPendingCount": 0,
+  "readinessReceiptPath": "state://reference-readiness/20261011T101839.893277Z.json",
+  "schema": "tzudong-ci-reference/v1/readiness",
+  "status": "collecting_reference",
+  "successCount": 4,
+  "terminalFailureCounts": {
+    "failure": 1
+  },
+  "transitionPolicy": {
+    "automaticPhaseMoveAllowed": false,
+    "continuedSourceWindowMonitoringGuaranteedByHelper": false,
+    "preserveSourceWindowForUnresolvedAttempts": false,
+    "trackingBoundary": "original_source_window",
+    "unresolvedAttemptCount": 0
+  },
+  "verifiedDifferentPendingCount": 0
+}

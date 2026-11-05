@@ -1,3 +1,4 @@
+import { beginBrowserDraftCleanup, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from './browser-draft-lifecycle';
 import { deleteAllDraftsByUser as deleteAllEditRequestDraftsByUser } from '@/lib/editRequestDraftDB';
 import { deleteAllDraftsByUser as deleteAllReviewDraftsByUser } from '@/lib/reviewDraftDB';
 import { deleteAllDraftsByUser as deleteAllSubmissionDraftsByUser } from '@/lib/submissionDraftDB';
@@ -16,13 +17,15 @@ const failedReadback = (): BrowserDraftCleanupReadback => ({
   editRequestDrafts: false,
 });
 
-export async function clearBrowserDraftsForUser(userId: string): Promise<BrowserDraftCleanupReadback> {
+export async function clearBrowserDraftsForUser(userId: string, cleanupEpoch?: BrowserDraftEpoch): Promise<BrowserDraftCleanupReadback> {
   if (typeof window === 'undefined' || !UUID_PATTERN.test(userId)) return failedReadback();
+  const epoch = cleanupEpoch ?? beginBrowserDraftCleanup(userId);
+  if (!isBrowserDraftEpochCurrent(userId, epoch)) return failedReadback();
   try {
     const [submissionDrafts, reviewDrafts, editRequestDrafts] = await Promise.all([
-      deleteAllSubmissionDraftsByUser(userId),
-      deleteAllReviewDraftsByUser(userId),
-      deleteAllEditRequestDraftsByUser(userId),
+      deleteAllSubmissionDraftsByUser(userId, epoch),
+      deleteAllReviewDraftsByUser(userId, epoch),
+      deleteAllEditRequestDraftsByUser(userId, epoch),
     ]);
     return { submissionDrafts, reviewDrafts, editRequestDrafts };
   } catch {

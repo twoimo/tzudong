@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "environment": {
+    "engine": "17.6",
+    "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "emptyRowChecks": [
+      "public.profiles",
+      "public.reviews"
+    ]
+  },
+  "manifestSha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6",
+  "manifestToolchainRoot": "3f72efa4dea12288164614a70d838ed16a8d00d69a667df5c5f2e8f4701b6686",
+  "rehearsalHarnessSha256": "f7321f607a5bf3a24ba099d51abc67254db52fcc385945692426d1b2dfa6e431",
+  "sourceRoot": "61f9d7637c0714a7b0d9108c6f7959ea820175a7870dba681498b570296a1544",
+  "fixtureDumpSha256": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+  "predecessorSources": [
+    {
+      "path": "backend/supabase/migrations/20261004190259_admin_record_guarded_actions.sql",
+      "sha256": "b373b7ea472c0352a33a4d4043cf8d6aa8474c04cc1ca5778805edfa77ac9c95"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004192657_admin_evaluation_raw_warning_groups.sql",
+      "sha256": "66eace1d6fb0dd55c1d780776bab855cc37690335ad40b0fdc1294c610e07d3a"
+    },
+    {
+      "path": "backend/supabase/migrations/20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "sha256": "e1c105df82c4f814d3e6adad807ff9d072b8cd42ae770b4b78f75b89a9387020"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009022915_restaurant_review_manual_preview_eligibility.sql",
+      "sha256": "8acf6d1428764260ed57dac5fe09711868a82896f0a6d631d502128004c168a3"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009091342_admin_record_private_verification_cleanup.sql",
+      "sha256": "b596b200e52c6813a4cfa1b0a2818625f067864549e8854f3497afdcdab706da"
+    },
+    {
+      "path": "backend/supabase/migrations/20261009101645_admin_user_management_rpc_forward.sql",
+      "sha256": "2067538f89c9f90d28e784672c7a1288306ba22d5ae92b087c8692503da9b1ae"
+    }
+  ],
+  "migrationCount": 11,
+  "statementCount": 112,
+  "baselineStateSha256": "3802888324e1651ad7b2f71e7cf15fac78ab77aa57637d0c60431f8da67e6298",
+  "stageStatesSha256": "bd25ecbd82759ca75e994ca0f1da38b49acc848d5dd556e702e4e43024edaa65",
+  "terminalStateSha256": "9cf59a5d983e78f6f7d9a594267c6feda3276611bf3539289b8a3de3295f700a",
+  "compiledSqlBytes": 2510560,
+  "compiledSqlSha256": "285d0c859117006646389dbd2a22de9aef1c0b97bc796a9e4d4448a8a232b093",
+  "applyCompiledSqlSha256": "91e378c58d58d7d7f818464c9c92aff02c7b01ca528e9db858e2b1d2d00bd92f",
+  "applyExpiryFaultedSqlSha256": "727ff0f6be2dbf8ee06551d4efd6ebe665f7187189f7a0a1159d5281ae90635b",
+  "results": {
+    "rollbackStageCount": 12,
+    "rollbackExact": true,
+    "forcedErrorRejected": true,
+    "forcedErrorRollbackExact": true,
+    "lostResponseMutationAttempts": 1,
+    "lostResponseRestorationExact": true,
+    "contendedExpiryRejected": true,
+    "contendedExpiryRollbackExact": true,
+    "applyFinalGuardDeadlineFaultInjected": true,
+    "applyTerminalReadbackObserved": true,
+    "applyExpiryRejectedBeforeCommit": true,
+    "applyExpiryMutationAttempts": 1,
+    "applyExpiryRollbackExact": true
+  },
+  "hostedWrites": false,
+  "operatingRowsRead": false,
+  "rawSqlInProof": false,
+  "sourceMutation": false,
+  "temporaryContainerRemoved": true
+}

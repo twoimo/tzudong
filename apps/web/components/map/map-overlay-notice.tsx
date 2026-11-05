@@ -8,7 +8,7 @@ export const MAP_OVERLAY_NOTICE_CLASS_NAME =
     `z-10 inline-flex min-h-8 w-fit max-w-[min(26rem,calc(100vw-2rem))] items-center justify-center ${MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} !text-sm !font-semibold !leading-4 shadow-sm sm:!rounded-full`;
 export const MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME = 'map-overlay-notice-single-line';
 export const MAP_OVERLAY_TOAST_CLASS_NAME = MAP_OVERLAY_NOTICE_CLASS_NAME;
-export const MAP_OVERLAY_STATUS_DOT_CLASS_NAME = 'h-2 w-2 rounded-full bg-primary/80';
+export const MAP_OVERLAY_STATUS_DOT_CLASS_NAME = 'h-2 w-2 rounded-full bg-brand-tangerine';
 
 const noticeContentClass = 'grid max-w-full min-w-0 grid-cols-[1rem_minmax(0,max-content)] items-center gap-1.5';
 const noticeIconClass = 'flex h-4 w-4 shrink-0 items-center justify-center';

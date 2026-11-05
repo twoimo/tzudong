@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-public-membership-refresh-readback",
+  "channelUrl": "https://www.youtube.com/@tzuyang6145",
+  "runDirectory": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261018T130451Z",
+  "collectionReceipt": {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261018T130451Z/collection-receipt.json",
+    "sha256": "6cfe404ecb47c6c8f840a18a8b19ae1e5c9fdfb1e7f94ac2514ba4ab18e34ac1"
+  },
+  "collector": {
+    "type": "yt-dlp public flat-playlist metadata",
+    "installedVersion": "2026.08.19",
+    "ignoreGlobalConfig": true,
+    "cookies": false,
+    "apiKey": false,
+    "tabCalls": 3,
+    "tabExitCodes": {
+      "videos": 0,
+      "shorts": 0,
+      "streams": 0
+    },
+    "videoAudioCaptionDownloads": 0,
+    "geminiCalls": 0,
+    "oskDbStorageWrites": 0
+  },
+  "rawSnapshots": {
+    "videos": {
+      "observedAtUtc": "2026-10-18T13:05:20.710390+00:00",
+      "entries": 1058,
+      "bytes": 800553,
+      "sha256": "c7b1e6e740e26012bd9851c047a096f53a1e0b5d4589e5c890f58e953a4b803f"
+    },
+    "shorts": {
+      "observedAtUtc": "2026-10-18T13:05:22.244138+00:00",
+      "entries": 83,
+      "bytes": 56512,
+      "sha256": "815ac0f2c6e5c67fee39d8940ea857c6ed2c91eda5ad79b56378a5128f46dd27"
+    },
+    "streams": {
+      "observedAtUtc": "2026-10-18T13:05:23.157314+00:00",
+      "entries": 18,
+      "bytes": 16510,
+      "sha256": "e24b6886958773e46e13e42a6a8918af24a19cc51892bea8f618d7eb5fcbbe72",
+      "liveStatuses": {
+        "was_live": 18,
+        "is_live": 0,
+        "is_upcoming": 0,
+        "post_live": 0
+      }
+    }
+  },
+  "materializedInventory": {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261018T130451Z/inventory.json",
+    "bytes": 358900,
+    "sha256": "b08533a63092f9e112c9a1a0980a6a2f9ed5ec388cf74f62187f352fdd486fba",
+    "receiptSha256": "728c421cb7036af8ca2b0269ce7056f66994986fb2472325a6d2d7480d3232d3",
+    "readbackSha256": "aa89107aaea47aefb310051f196d6cc09487e7c7e562ebb24786e7c18c2f68ed",
+    "inventoryRows": 1159,
+    "eligibleLongform": 1076,
+    "videos": 1058,
+    "completedStreams": 18,
+    "shortsExcluded": 83,
+    "activeOrUpcomingStreamsExcluded": 0,
+    "duplicates": 0,
+    "eligibleDurationMissing": 0,
+    "pairwiseTabOverlaps": 0
+  },
+  "comparison": {
+    "baselineObservedAtLatest": "2026-10-09T00:34:34.628933Z",
+    "eligibleLongformBefore": 1071,
+    "eligibleLongformAfter": 1076,
+    "eligibleAdded": [
+      "HXJ510U46AY",
+      "IUfQCYRP6b0",
+      "PdPIk3B93H0",
+      "lYMgU_nJYQE",
+      "vNNa3zLy01Q"
+    ],
+    "eligibleRemoved": [],
+    "existingEligibleDurationChanges": 0,
+    "shortsAdded": [
+      "LQF--vFvBd8",
+      "yACnmIU7UXA"
+    ],
+    "shortsRemoved": [],
+    "streamsAdded": [],
+    "streamsRemoved": []
+  },
+  "offlineConsumerPlan": {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-longform-inventory-20261018T130451Z/offline-analysis-plan.json",
+    "sha256": "e2afeddac80ec69a0d5959f418462a63d178d471a3b00da440c30a0ffd87341d",
+    "new": 1071,
+    "readbackRequired": 5,
+    "reusable": 0,
+    "providerGetEligible": 0,
+    "remainingSegmentsForNewRows": 2014,
+    "analysisStateChanged": false
+  },
+  "preservation": {
+    "priorCanonicalInventorySha256BeforeAndAfter": "c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73",
+    "priorCanonicalReceiptSha256BeforeAndAfter": "0523dc36238f0c00b2854f89531de5cfb04c7b8c79e94ecd76e6dc5efc69d541",
+    "priorQueueReceiptOrInventoryWrites": 0,
+    "canonicalAnalysisStateTreeSha256BeforeAndAfter": "5f4de860195ce0046f95c7186fbb9135d9ba771082ef4de4f3987ba26437b068"
+  },
+  "classification": {
+    "eligible": "(videos union streams with was_live) minus shorts minus is_live/is_upcoming/post_live streams",
+    "shorts": "explicit /shorts membership, not duration",
+    "completedStreams": "explicit /streams was_live with positive duration"
+  },
+  "limits": [
+    "This is a public flat-playlist snapshot, not a YouTube Data API channel videoCount or a proof that every YouTube item was exposed.",
+    "Per-entry upload timestamps were absent, so additions are only relative to the 2026-10-09 snapshot.",
+    "Live status can change after collection; all 18 stream rows were was_live at the recorded observation.",
+    "Raw metadata is private to the mode-0700 run directory. The normalized inventory omits titles, descriptions, thumbnails, contacts, cookies, and credentials.",
+    "No visual/audio analysis, independent factual verification, paid generation, OSK publication, deployment, or operating data mutation is established."
+  ]
+}

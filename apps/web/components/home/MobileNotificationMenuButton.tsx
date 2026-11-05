@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSurface } from "@/components/ui/loading-surface";
 import { useNotifications } from "@/contexts/NotificationContextBase";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types/notification";
@@ -104,7 +104,7 @@ export default function MobileNotificationMenuButton({
             <Badge
               variant="destructive"
               aria-hidden="true"
-              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white"
+              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-tangerine px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-brand-ink"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>
@@ -140,18 +140,17 @@ export default function MobileNotificationMenuButton({
         <DropdownMenuSeparator className="my-2 bg-border" />
         <ScrollArea className="h-72 max-h-[min(70vh,28rem)] pr-1">
           {isNotificationsLoading ? (
-            <div
-              role="status"
-              aria-label="알림 목록 로딩 중"
-              className="space-y-3 rounded-xl bg-background/70 p-3"
-            >
-              {[0, 1, 2].map((item) => (
-                <div key={item} className="space-y-2">
-                  <Skeleton className="h-4 w-3/4 rounded" />
-                  <Skeleton className="h-3 w-full rounded" />
-                </div>
-              ))}
-            </div>
+            <LoadingSurface label="알림 목록 로딩 중" className="space-y-3 rounded-xl bg-background/70 p-3">
+              <div className="space-y-3">
+                {Array.from({ length: 3 }, (_, index) => (
+                  <article key={index} className="space-y-2">
+                    <h3 className="text-sm font-medium leading-4">새로운 알림</h3>
+                    <p className="text-xs leading-3 text-muted-foreground">맛집과 방문 이야기를 확인해 보세요</p>
+
+                  </article>
+                ))}
+              </div>
+            </LoadingSurface>
           ) : isNotificationsError ? (
             <div
               role="status"
@@ -204,7 +203,7 @@ export default function MobileNotificationMenuButton({
                       </p>
                       {!notification.isRead && (
                         <span
-                          className="h-2 w-2 rounded-full bg-red-700 shrink-0"
+                          className="h-2 w-2 rounded-full bg-brand-tangerine shrink-0"
                           aria-hidden
                         />
                       )}

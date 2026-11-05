@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-10-20T19:58:29.970Z",
+  "finishedAt": "2026-10-20T19:59:20.680Z",
+  "phase": "build",
+  "exitCode": 0,
+  "distDir": ".next-device-location-20261021",
+  "localDatabaseStarted": false,
+  "deployed": false
+}

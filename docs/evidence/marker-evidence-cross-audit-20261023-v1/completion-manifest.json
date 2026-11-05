@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "status": "ORDINARY_AUDIT_AND_NATIVE_FIXES_COMPLETE_DEPLOYMENT_QUOTA_BLOCKED",
+  "updated_at": "2026-10-22T23:02:30.249990+00:00",
+  "scope": "Real published map flames and approved video context frames; retained marker refresh and robust public detail boundaries",
+  "reports": [
+    {
+      "path": "chatgpt_master_plan.md",
+      "bytes": 44976,
+      "sha256": "f0b823f93ffc1052e041843f3fbdd50c11b4c66a04f7f67ec7b23b60bd48564f"
+    },
+    {
+      "path": "gemini_4_argon_deescalated_report.md",
+      "bytes": 36989,
+      "sha256": "ee80bb70bc97d76dfde57566f59e91c5deb81e1e920f9823fe90c20426e08409"
+    },
+    {
+      "path": "chatgpt_reverse_report.md",
+      "bytes": 9631,
+      "sha256": "8991d6769c60a3d0dc95d3756f698f69aa3101d4fa8625b3c4fac5650a96c05d"
+    }
+  ],
+  "thesis_source_revision": "ac80e35da566db242420a62bbf3e3320b5c00e76",
+  "reverse_reviewed_revision": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+  "reverse_new_finding_remedy_commit": "71494494caffe2f140e70b1b2fa2c171882262f2",
+  "candidate_integration_head": "c8b282bfd21f74a44676c7ff6daf4fe6bb0a47a2",
+  "valid_findings": "All applicable demonstrated TH/GEM/REV code findings corrected and native verified; rejected proposals/counterproof and residual conditions in adjudication andREV-M-01-resolution",
+  "verification": {
+    "affected_batch": "83pass/12files/1252assertions/0fail/0skip at8d47",
+    "reverse_remedy": "6pass/2files/84assertions/0fail/0skip afteractual6invalidjumps redreproducer",
+    "typecheck_parity": "native+compat0diagnostics bothcandidate andremedy",
+    "lint": "scopedexit0",
+    "build": "Next16.3.8compileTS56routesCSSpass at8d47 beforeguardremedy andupstreamintegration; CInewhead required",
+    "public_assets": "All12liveWebPfullhashesmatch,4approvedownervideomappings;735JSONunchanged",
+    "local_runtime": "SSR/clienthydration shell observed; actualhosteddata path locally401, NOT full localHOST_TESTED",
+    "final_source_ci": "Corrected full CI39867375237 all6jobs SUCCESS at2e0f8dd97e24164425653b4f3ed3153016c0878a; no later runtime source changes.",
+    "post_review_native": "59pass/8files/1332assertions/0fail/0skip; typecheck parity0diagnostics and scoped lint passed.",
+    "additional_wiring_native": "23pass/3files/120assertions/0fail/0skip; actual source effects with synthetic provider/DOM, scoped lint passed.",
+    "final_source_hosted_ui": "UNVERIFIED: Vercel rejected final-source preview at build-rate-limit. Prior c737 preview is historical and not substituted."
+  },
+  "delivery": {
+    "state": "BLOCKED_VERCEL_BUILD_RATE_LIMIT",
+    "main_pr": "https://github.com/twoimo/tzudong/pull/3490",
+    "main_pr_state": "DRAFT",
+    "runtime_fix_data_pr": "https://github.com/twoimo/tzudong/pull/3497",
+    "test_followup_data_pr": "https://github.com/twoimo/tzudong/pull/3499",
+    "current_production_sha": "6e6cad4e3891b3ed64a79c9a04ec38e41e53c4fb",
+    "current_production_deployment": "dpl_4L4dvG1gSiTuVFU1t54LDH2wEyZh",
+    "current_production_observed_at": "2026-10-22T22:43:49.040069+00:00",
+    "approval_marker_changed": false,
+    "final_source_preview": false,
+    "new_production_deployment": false,
+    "next": "Read current Git/PR/checkpoint and actual quota after provider retry guidance; verify final-source desktop/mobile/tablet domestic/overseas UI, then normal protected main promotion with fresh rollback and exact-SHA authorization/READY/alias/health/assets readback."
+  },
+  "nightly": {
+    "run": "39457197351",
+    "state": "HISTORICAL_FAILURE_NOT_RERUN",
+    "separate_from_delivery": true,
+    "rootcause": "Not reasserted from Gemini OCR description"
+  },
+  "limits": [
+    "Context scenes4restaurants/12frames, notL1/allrestaurant coverage",
+    "HistoricalJune-Julyvideo reach, notfoodquality/livefreshness",
+    "No physical-device/field/performance proof",
+    "Trusted owner-controlled frame staging, no concurrent untrusted writer; no batch atomicity claim",
+    "Final-source provider UI and new production release remain unverified because of actual Vercel rate limit.",
+    "Invalid SDK memory disposal and physical/field/flicker/performance/strict-marker/CSP claims remain outside this proof."
+  ],
+  "runtime_followup": "LOCAL-RUNTIME-01-resolution.json",
+  "overall_complete": false,
+  "post_reverse_runtime_fix_revision": "0aa001d7e5f31c898c3cc34864c0f1fcf9b8b946",
+  "other_owner_state": "Preserved. All3 own ordinary stages saved/verified/released; final canonical active_operations contains no operation owned by this chat. Other-owner requests remain in private reconciliation state.",
+  "automation": {
+    "id": "tzudong",
+    "last_observed_status": "PAUSED",
+    "new_automation_created": false,
+    "activation_changed": false
+  }
+}

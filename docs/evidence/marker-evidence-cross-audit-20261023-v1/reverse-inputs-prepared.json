@@ -1,0 +1,189 @@
+{
+  "source_kind": "attached_source",
+  "repository": "https://github.com/twoimo/tzudong",
+  "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+  "bundle_sha256": "518e75cc2d05ed2dc3dedfdd7e27a3c5d41dd053e460ab3897768f96f7b106b2",
+  "prompt_path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/reverse-prompt.txt",
+  "prompt_sha256": "99afb65aa06b77bcf3d4abbe5bfe16106c88fa76e7de55f9988458b9c398ca09",
+  "required_paths": [
+    "apps/web/components/map/OverseasMap.tsx",
+    "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+    "apps/web/lib/evidence-engineering/frames.ts",
+    "apps/web/lib/evidence-engineering/guards.ts",
+    "apps/web/lib/evidence-engineering/types.ts",
+    "apps/web/lib/evidence-engineering/constants.ts",
+    "apps/web/lib/evidence-engineering/errors.ts",
+    "apps/web/lib/evidence-engineering/storage-key.mjs",
+    "apps/web/lib/overseas-map-marker-helpers.ts",
+    "apps/web/lib/overseas-map-helpers.ts",
+    "apps/web/lib/html-escape.ts",
+    "apps/web/lib/evidence-engineering/popularity-marker.ts",
+    "apps/web/lib/clustering.ts",
+    "apps/web/lib/restaurant-merged-media.ts",
+    "apps/web/scripts/build-public-popularity.ts",
+    "apps/web/lib/evidence-engineering/published-popularity.ts",
+    "apps/web/scripts/publish-evidence-frames.ts",
+    "apps/web/lib/evidence-engineering/upload-evidence-frame.ts",
+    "apps/web/hooks/use-restaurant-detail.tsx",
+    "apps/web/lib/overseas-region-matching.ts",
+    "apps/web/components/map/naver-map-sidepanels.tsx",
+    "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql",
+    "apps/web/tests-unit/clustering-region-district.test.ts",
+    "apps/web/tests-unit/evidence-frame-conflict.test.ts",
+    "apps/web/tests-unit/evidence-frame-failure-browser.test.ts",
+    "apps/web/tests-unit/overseas-marker-refresh-browser.test.ts",
+    "apps/web/tests-unit/popularity-input-boundary.test.ts",
+    "apps/web/tests-unit/public-popularity-publication.test.ts",
+    "apps/web/tests-unit/evidence-publication-runtime.test.ts",
+    "apps/web/lib/restaurant-marker-kind.ts",
+    "apps/web/lib/naver-map-view-helpers.ts",
+    "apps/web/lib/naver-map-marker-visuals.ts",
+    "apps/web/lib/naver-map-cluster-visuals.ts",
+    "apps/web/hooks/use-restaurants.tsx",
+    "apps/web/types/restaurant.ts",
+    "apps/web/components/map/NaverMapView.tsx"
+  ],
+  "provided_paths": [
+    "apps/web/components/map/OverseasMap.tsx",
+    "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+    "apps/web/lib/evidence-engineering/frames.ts",
+    "apps/web/lib/evidence-engineering/guards.ts",
+    "apps/web/lib/evidence-engineering/types.ts",
+    "apps/web/lib/evidence-engineering/constants.ts",
+    "apps/web/lib/evidence-engineering/errors.ts",
+    "apps/web/lib/evidence-engineering/storage-key.mjs",
+    "apps/web/lib/overseas-map-marker-helpers.ts",
+    "apps/web/lib/overseas-map-helpers.ts",
+    "apps/web/lib/html-escape.ts",
+    "apps/web/lib/evidence-engineering/popularity-marker.ts",
+    "apps/web/lib/clustering.ts",
+    "apps/web/lib/restaurant-merged-media.ts",
+    "apps/web/scripts/build-public-popularity.ts",
+    "apps/web/lib/evidence-engineering/published-popularity.ts",
+    "apps/web/scripts/publish-evidence-frames.ts",
+    "apps/web/lib/evidence-engineering/upload-evidence-frame.ts",
+    "apps/web/hooks/use-restaurant-detail.tsx",
+    "apps/web/lib/overseas-region-matching.ts",
+    "apps/web/components/map/naver-map-sidepanels.tsx",
+    "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql",
+    "apps/web/tests-unit/clustering-region-district.test.ts",
+    "apps/web/tests-unit/evidence-frame-conflict.test.ts",
+    "apps/web/tests-unit/evidence-frame-failure-browser.test.ts",
+    "apps/web/tests-unit/overseas-marker-refresh-browser.test.ts",
+    "apps/web/tests-unit/popularity-input-boundary.test.ts",
+    "apps/web/tests-unit/public-popularity-publication.test.ts",
+    "apps/web/tests-unit/evidence-publication-runtime.test.ts",
+    "apps/web/lib/restaurant-marker-kind.ts",
+    "apps/web/lib/naver-map-view-helpers.ts",
+    "apps/web/lib/naver-map-marker-visuals.ts",
+    "apps/web/lib/naver-map-cluster-visuals.ts",
+    "apps/web/hooks/use-restaurants.tsx",
+    "apps/web/types/restaurant.ts",
+    "apps/web/components/map/NaverMapView.tsx"
+  ],
+  "source_selector_evidence": "Exact committed current source and necessary unchangedmodules delivered as4nonoverlapping attachments; no assumedGitHub access",
+  "attachments": [
+    {
+      "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/gemini_4_argon_deescalated_report.md",
+      "basename": "gemini_4_argon_deescalated_report.md",
+      "bytes": 36989,
+      "sha256": "ee80bb70bc97d76dfde57566f59e91c5deb81e1e920f9823fe90c20426e08409",
+      "reason": "Necessary current full source modules/test/native evidence or actual prior audit/brief; no duplicatewhole tree/generatedblob",
+      "provider_name": "gemini_4_argon_deescalated_report(1).md"
+    },
+    {
+      "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/reverse-brief.md",
+      "basename": "reverse-brief.md",
+      "bytes": 7864,
+      "sha256": "c52cb39111f9e31d62aca887cdf8cfcfb3c7a0d7c784335265e5a6ef70c280ba",
+      "reason": "Necessary current full source modules/test/native evidence or actual prior audit/brief; no duplicatewhole tree/generatedblob",
+      "provider_name": "reverse-brief.md"
+    },
+    {
+      "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/reverse-runtime-a.txt",
+      "basename": "reverse-runtime-a.txt",
+      "bytes": 69535,
+      "sha256": "6b1a9a5208d04b2016364be50e5a8f9d511e2d04489b48e88ce92376ab58187f",
+      "reason": "Necessary current full source modules/test/native evidence or actual prior audit/brief; no duplicatewhole tree/generatedblob",
+      "provider_name": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/reverse-runtime-b.txt",
+      "basename": "reverse-runtime-b.txt",
+      "bytes": 80450,
+      "sha256": "5b119a1f48c3b9856873ddefcee40844f5f9f65b04cf5c0ab0eaf6147811654c",
+      "reason": "Necessary current full source modules/test/native evidence or actual prior audit/brief; no duplicatewhole tree/generatedblob",
+      "provider_name": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/reverse-native-tests.txt",
+      "basename": "reverse-native-tests.txt",
+      "bytes": 72658,
+      "sha256": "c94ce1448123ecb8a2dd3b73320afaac57c8388c65f1643baf80a9f939a50e53",
+      "reason": "Necessary current full source modules/test/native evidence or actual prior audit/brief; no duplicatewhole tree/generatedblob",
+      "provider_name": "reverse-native-tests.txt"
+    },
+    {
+      "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/reverse-domestic-integration.txt",
+      "basename": "reverse-domestic-integration.txt",
+      "bytes": 207642,
+      "sha256": "29f9d2a738ba531b8f11ceddd0f7782bc7f4b483433f1de8551a14ea09e862d3",
+      "reason": "Necessary current full source modules/test/native evidence or actual prior audit/brief; no duplicatewhole tree/generatedblob",
+      "provider_name": "reverse-domestic-integration.txt"
+    },
+    {
+      "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/reverse-verification.txt",
+      "basename": "reverse-verification.txt",
+      "bytes": 27997,
+      "sha256": "135d54c22ca3e4f89a2d7513f81326057a42ee44c04a13d7cdf09e9731f55be3",
+      "reason": "Necessary current full source modules/test/native evidence or actual prior audit/brief; no duplicatewhole tree/generatedblob",
+      "provider_name": "reverse-verification.txt"
+    }
+  ],
+  "account": "primary",
+  "target_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "readback": [
+    {
+      "attachment": "gemini_4_argon_deescalated_report.md",
+      "anchor": "Literal code/data fragment matched to finalresponse section1/3 substantive decision analysis. Partial sampling only, not universal path coverage or independent host execution.",
+      "expected": "15/21/71/628",
+      "observed": "15/21/71/628"
+    },
+    {
+      "attachment": "reverse-brief.md",
+      "anchor": "Literal code/data fragment matched to finalresponse section1/3 substantive decision analysis. Partial sampling only, not universal path coverage or independent host execution.",
+      "expected": "EvidenceContractError",
+      "observed": "EvidenceContractError"
+    },
+    {
+      "attachment": "reverse-runtime-a.txt",
+      "anchor": "Literal code/data fragment matched to finalresponse section1/3 substantive decision analysis. Partial sampling only, not universal path coverage or independent host execution.",
+      "expected": "element.onclick",
+      "observed": "element.onclick"
+    },
+    {
+      "attachment": "reverse-runtime-b.txt",
+      "anchor": "Literal code/data fragment matched to finalresponse section1/3 substantive decision analysis. Partial sampling only, not universal path coverage or independent host execution.",
+      "expected": "Number.isFinite",
+      "observed": "Number.isFinite"
+    },
+    {
+      "attachment": "reverse-native-tests.txt",
+      "anchor": "Literal code/data fragment matched to finalresponse section1/3 substantive decision analysis. Partial sampling only, not universal path coverage or independent host execution.",
+      "expected": "n=19",
+      "observed": "n=19"
+    },
+    {
+      "attachment": "reverse-domestic-integration.txt",
+      "anchor": "Literal code/data fragment matched to finalresponse section1/3 substantive decision analysis. Partial sampling only, not universal path coverage or independent host execution.",
+      "expected": "restaurant.lat",
+      "observed": "restaurant.lat"
+    },
+    {
+      "attachment": "reverse-verification.txt",
+      "anchor": "Literal code/data fragment matched to finalresponse section1/3 substantive decision analysis. Partial sampling only, not universal path coverage or independent host execution.",
+      "expected": "83 pass",
+      "observed": "83 pass"
+    }
+  ]
+}

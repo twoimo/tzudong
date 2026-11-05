@@ -3,6 +3,7 @@
 import { memo, useEffect, useState, type ComponentType } from 'react';
 import type { Region, Restaurant } from '@/types/restaurant';
 import type { Announcement } from '@/types/announcement';
+import type { HomeMapResultSummary } from '@/lib/home-map-result-summary';
 import type { FilterState } from '@/components/filters/filter-state';
 import type { HomeViewportMode } from '@/hooks/useHomeViewportMode';
 import type { User } from '@supabase/supabase-js';
@@ -11,7 +12,8 @@ import type { HomeMapPanelSide } from '@/lib/home-map-user-preferences';
 import type { HomeMapContextualRestaurantsPayload } from '@/lib/home-map-contextual-restaurants';
 import type { HomeMapThemeFilterId } from '@/lib/home-map-theme-filters';
 
-import { useDeferredComponent } from '@/hooks/use-deferred-component';
+import { DeferredPanelFallback } from '@/components/home/DeferredPanelFallback';
+import { useDeferredComponentWithRetry } from '@/hooks/use-deferred-component';
 
 
 type MobileControlOverlayIntent = 'search' | 'bookmark' | 'notification' | 'user';
@@ -23,6 +25,7 @@ type HomeDesktopControlPanelProps = {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
+    resultSummary: HomeMapResultSummary;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -37,7 +40,7 @@ type HomeDesktopControlPanelProps = {
     contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
     isMapFullscreen?: boolean;
     onPanelClose?: () => void;
-    onDetailPanelBack?: () => void;
+    onDetailPanelBack?: () => boolean | void;
     onReviewModalOpen?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     onRequestEditRestaurant?: (restaurant: Restaurant) => void;
@@ -47,6 +50,7 @@ type HomeDesktopControlPanelProps = {
     onSetPanelCollapsed?: (collapsed: boolean) => void;
     desktopPanelSide?: HomeMapPanelSide;
     user?: User | null;
+    isAuthLoading?: boolean;
     isAdmin?: boolean;
     activeRightPanel?: HomeOverlayPanelType;
     selectedAnnouncement?: Announcement | null;
@@ -71,6 +75,7 @@ export interface HomeControlPanelProps {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
+    resultSummary: HomeMapResultSummary;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -86,7 +91,7 @@ export interface HomeControlPanelProps {
     isMapFullscreen?: boolean;
     mapInteractionEpoch?: number;
     onPanelClose?: () => void;
-    onDetailPanelBack?: () => void;
+    onDetailPanelBack?: () => boolean | void;
     onReviewModalOpen?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     onRequestEditRestaurant?: (restaurant: Restaurant) => void;
@@ -97,6 +102,7 @@ export interface HomeControlPanelProps {
     onSetPanelCollapsed?: (collapsed: boolean) => void;
     desktopPanelSide?: HomeMapPanelSide;
     user?: User | null;
+    isAuthLoading?: boolean;
     onSubmissionClick?: () => void;
     onTopShellUserIconClick?: () => void;
     onDeviceLocationClick?: () => void;
@@ -117,6 +123,7 @@ function HomeControlPanelComponent({
     selectedCountry,
     selectedCategories,
     filters,
+    resultSummary,
     onRegionChange,
     onCountryChange,
     onCategoryChange,
@@ -138,6 +145,7 @@ function HomeControlPanelComponent({
     isAdmin = false,
     onModeChange,
     user,
+    isAuthLoading = false,
     onSubmissionClick,
     onTopShellUserIconClick,
     onDeviceLocationClick,
@@ -164,7 +172,7 @@ function HomeControlPanelComponent({
     const shouldLoadMobileOverlay = shouldRenderMobile;
     const [pendingMobileOverlayIntent, setPendingMobileOverlayIntent] = useState<MobileControlOverlayIntent | null>(initialIntent);
     const shouldLoadDesktopPanel = viewportMode === 'desktop';
-    const DeferredMobileControlOverlay = useDeferredComponent<MobileControlOverlayProps>(
+    const mobileOverlayLoad = useDeferredComponentWithRetry<MobileControlOverlayProps>(
         shouldRenderMobile && shouldLoadMobileOverlay,
         loadMobileControlOverlay
     );
@@ -174,14 +182,22 @@ function HomeControlPanelComponent({
 
         setPendingMobileOverlayIntent(initialIntent);
     }, [initialIntent]);
-    const DeferredHomeDesktopControlPanel = useDeferredComponent<HomeDesktopControlPanelProps>(
+    const desktopPanelLoad = useDeferredComponentWithRetry<HomeDesktopControlPanelProps>(
         shouldLoadDesktopPanel,
         loadHomeDesktopControlPanel
     );
 
+    const DeferredMobileControlOverlay = mobileOverlayLoad.Component;
+    const DeferredHomeDesktopControlPanel = desktopPanelLoad.Component;
+    const shellFallback = (load: { failed: boolean; retry: () => void }) => <aside
+        className={shouldRenderMobile
+            ? 'fixed left-4 right-4 top-4 z-40 max-h-[calc(100dvh-2rem)] overflow-auto rounded-2xl border border-border bg-background shadow-lg'
+            : `fixed bottom-4 top-4 z-40 w-[min(392px,calc(100vw-2rem))] overflow-auto rounded-2xl border border-border bg-background shadow-lg ${desktopPanelSide === 'right' ? 'right-4' : 'left-4'}`}>
+        <DeferredPanelFallback title="지도 메뉴" failed={load.failed} onRetry={load.retry} />
+    </aside>;
     if (shouldRenderMobile) {
         if (!DeferredMobileControlOverlay) {
-            return null;
+            return shellFallback(mobileOverlayLoad);
         }
 
         return (
@@ -191,6 +207,7 @@ function HomeControlPanelComponent({
                 selectedCountry={selectedCountry}
                 selectedCategories={selectedCategories}
                 filters={filters}
+                resultSummary={resultSummary}
                 onRegionChange={onRegionChange}
                 onCountryChange={onCountryChange}
                 onCategoryChange={onCategoryChange}
@@ -220,7 +237,7 @@ function HomeControlPanelComponent({
     }
 
     if (!DeferredHomeDesktopControlPanel) {
-        return null;
+        return shellFallback(desktopPanelLoad);
     }
 
     return (
@@ -230,6 +247,7 @@ function HomeControlPanelComponent({
             selectedCountry={selectedCountry}
             selectedCategories={selectedCategories}
             filters={filters}
+            resultSummary={resultSummary}
             onRegionChange={onRegionChange}
             onCountryChange={onCountryChange}
             onCategoryChange={onCategoryChange}
@@ -254,6 +272,7 @@ function HomeControlPanelComponent({
             onSetPanelCollapsed={onSetPanelCollapsed}
             desktopPanelSide={desktopPanelSide}
             user={user}
+            isAuthLoading={isAuthLoading}
             isAdmin={isAdmin}
             activeRightPanel={activeRightPanel}
             selectedAnnouncement={selectedAnnouncement}

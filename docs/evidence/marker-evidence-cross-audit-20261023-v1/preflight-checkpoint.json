@@ -1,0 +1,18 @@
+{
+  "recorded_at": "2026-10-22T18:25:12.325823+00:00",
+  "target_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "account": "primary; profile matched original signed-in Pro account",
+  "model_ui": "GPT-6 checked",
+  "reasoning_ui": "Pro, fifth of five",
+  "research_tool": "No Deep Research chip/mention in composer; new prompt explicitly requires ordinary reasoning. Historical research cards unchanged.",
+  "visible_warning": "No warning banner in actual model-menu screenshot; hidden generic accessibility limit phrase is not independent exhaustion evidence.",
+  "numeric_usage_reset": "UNVERIFIED; not zero",
+  "upload_state": "not selected/not uploaded",
+  "send_state": "not sent",
+  "shared_status": "No free slots. Gemini owner has accepted research plan with Start research, not observed researching. ChatGPT two other owners have completed original reports, requiring owner settlement.",
+  "pending_direct_approval": [
+    "Owner request to withdraw Telegram unstarted plan and normal settlement",
+    "Exact Tzudong local FIFO/slot exception and owner request for completed Pstack settlement"
+  ],
+  "current_skill_sha256": "d6b0c5e92bcfa83d3c8de9163c72a2013d4516c750b9e5fb13f29eb6c1c3ca44"
+}

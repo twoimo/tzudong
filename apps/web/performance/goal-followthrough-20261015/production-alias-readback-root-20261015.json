@@ -1,0 +1,40 @@
+{
+  "aliases": [
+    {
+      "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+      "host": "tzudong.app",
+      "redirect": "www.tzudong.app"
+    },
+    {
+      "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+      "host": "www.tzudong.app",
+      "redirect": null
+    }
+  ],
+  "deployment": {
+    "githubCommitRef": "main",
+    "githubCommitSha": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+    "id": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+    "source": "redeploy",
+    "state": "READY",
+    "target": "production",
+    "url": "tzudong-dbx25vroz-twoimos-projects.vercel.app"
+  },
+  "effects": {
+    "aliasChanges": 0,
+    "databaseWrites": 0,
+    "deployments": 0,
+    "settingsChanges": 0
+  },
+  "eligibleForOperatingAdmission": false,
+  "kind": "sanitized-current-production-alias-readback",
+  "limit": "Progress evidence only; exact vendor observation time was not retained. Requery vendor within the admission window before consequential use. Runtime hold, Gemini policy and DB cutover need separate readback.",
+  "observationTimeExact": null,
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "provesNewFeatureDeployment": false,
+  "provesRollbackPolicyCompatibility": false,
+  "recordedAt": "2026-10-15T06:44:26.162501+00:00",
+  "schemaVersion": 1,
+  "source": "fresh Vercel vendor get_alias for both hosts and get_deployment metadata",
+  "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA"
+}

@@ -1,0 +1,102 @@
+{
+  "schema": "tzudong-ocr-admission-recovery-app-integrated-verification/v1",
+  "startedAt": "2026-10-18T19:39:21.089850+00:00",
+  "baseHead": "cfba8fbbf532c0337c8443c719e5b0d7bf9baf48",
+  "sourceIntegrity": {
+    "apps/web/app/api/admin/ocr-receipts/rerun/route.ts": "4426abc96721bb401f1debc71559e3368d97d85dee95ccf5ea78211cfe656f62",
+    "apps/web/components/admin/SubmissionListView.tsx": "ed727f0701963ee40ac96caa2530ec1326f731f3c59d85b54a3a5a3835290619",
+    "apps/web/integrations/supabase/types.ts": "484fec0a6c979280cfad372c7edb2f6c9586d8bb9d39be14e01c7c721a0c4bd2",
+    "apps/web/lib/admin/ocr-recovery-confirmation.ts": "4c37ff1aa59ac23bc7df4022a3c907784fb6cbe971ac44c0d15778aeaa643b18",
+    "apps/web/lib/ocr/admin-receipt-batch.ts": "ae96e7c6dc6b886a109256f3f85d2343bc330fa0c9e5a6c7df7e186d5d7712a1",
+    "apps/web/lib/ocr/admin-receipt-processor.ts": "5ce863fe85f5edb279c66605f99d68d15d4c63dd15229fa3fb8166c80ddbb6f1",
+    "apps/web/lib/ocr/admin-receipt-recovery.ts": "8f4d8eb1cc47c40df4be41c3772681f16d2e690aeccff825bb4a34744bd0ac07",
+    "apps/web/lib/ocr/durable-result.ts": "2551b9147fc0ee6a639823f745bd8530866a444d4812e60768e134fce589bc3f",
+    "apps/web/lib/ocr/workflow-dispatch.ts": "dcc5c502246e6521e2d19ed40b02b3b2a228077f734e15831d16c407b300e58f",
+    "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts": "4b6f89370b59d0bcc525af8118637e5bce8b1eca2c023d6cad5185b8317463a1",
+    "apps/web/tests-unit/admin-receipt-recovery.test.ts": "68b10d900b35f7cf2925ed2be0820248d817c0af31c333cf5c7e31f6ef2a7e8d",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "5652f73bb63d5839ae9f1fb4c283b5f02f724daee7c61fede6a4acc2645ee156",
+    "apps/web/tests-unit/receipt-ocr-post106-acl-admission-sql-successor.test.ts": "66bb1d2db1597b99979e5170e1279827d4eca67196703325933d9b84b534d4d7",
+    "apps/web/tests-unit/receipt-ocr-recovery108-sql-successor.test.ts": "059a3606678d7e689572b102a5a53497a595fe9bed566a5e91538685eb20bfc4",
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": "043a681848e61296e4fc81ea8fa273fdcb7588eccedcc4db594a78a1a640f1cb",
+    "apps/web/scripts/run-admin-receipt-ocr-workflow.ts": "d8753a793bd682f5a1d9f6045c58ea73c7e96433d81d1862ec2b3dc64e0563f2",
+    ".github/workflows/ocr-review-receipts.yml": "9974c65adac49994b8ce95829ef50f9fbf1bf563cc144c20a0eef21fa7bccbbe",
+    "apps/web/lib/ocr/gemini.ts": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef",
+    "apps/web/package.json": "7b2d5f52d2c5fb32aa2d17db674ccd3f3823be18ca2d70c47d996d78b9d64c69",
+    "apps/web/package-lock.json": "b4ba1fbdc9aada044c495e6a1591700758ee74edc62c3311991f8d0d49cd86eb",
+    "apps/web/tsconfig.json": "42fa4271abb1177f6c171d2740f71012247c8f75dd05fd58ffa288231d9f2bc6",
+    "apps/web/next.config.mjs": "71327b5cc6278b06eeb3af07c09c7ee020350602c9310df53c8db5614d7af76c"
+  },
+  "scope": "App runtime and TypeScript only; changing held SQL/compiler/manifests excluded and await independent proof.",
+  "environment": {
+    "node": "v24.22.0",
+    "bun": "1.4.0",
+    "npmReleaseAuthority": "11.6.2",
+    "dotenvAutoLoad": false,
+    "credentialInputs": "none supplied",
+    "outboundNetwork": "not instrumented"
+  },
+  "checks": {
+    "helper-durable": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.156,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/helper-durable.txt",
+      "sha256": "5faee4d3355befc30b442a02590f0bd4f4287347eb4abf6cdeacbe57c0b91528"
+    },
+    "admin-recovery": {
+      "exitCode": 1,
+      "elapsedSeconds": 0.103,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/admin-recovery.txt",
+      "sha256": "ad556d198b9af8d339a6b53d7bb84945fc866ba1aa427f0e386b9e9664b08beb"
+    },
+    "admin-workflow": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.36,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/admin-workflow.txt",
+      "sha256": "f74b84253d4d6301b9fd5ce16b0b7992d4088fb2b3f04a385b7e255babea5c1a"
+    },
+    "admin-processor": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.096,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/admin-processor.txt",
+      "sha256": "7bdd3e61f2ad9880aa4d1506d7bff9c1c0dd1d5f8dd7e889405da9a906ae9dc8"
+    },
+    "held-routes": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.068,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/held-routes.txt",
+      "sha256": "1d7e17d1d6a5548f3a04d61a894729d93ff849a859b2245be4248ec93ff5896e"
+    },
+    "route-contract": {
+      "exitCode": 1,
+      "elapsedSeconds": 0.234,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/route-contract.txt",
+      "sha256": "286f562d3cc145309c719a66f046ec655647477c88b39ac140425b6f82dd11f0"
+    },
+    "worker-cli": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.537,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/worker-cli.txt",
+      "sha256": "9a96f2087fbee27444e72b5f4bb980490ccc44c4ba7c1b1b006b29999e681aaf"
+    },
+    "receipt-replacement": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.062,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/receipt-replacement.txt",
+      "sha256": "cbfac6f9b616d1209f6c585af3444482f6ef42088626f08655231220528582e5"
+    },
+    "compiler-parity": {
+      "exitCode": 0,
+      "elapsedSeconds": 20.183,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/compiler-parity.txt",
+      "sha256": "67a072dee9c8520097963ec4c3b59474252ddab6f30283c0ea96a6eaf1d3b356"
+    }
+  },
+  "limitations": [
+    "Local compiler and production-mode build only; no hosted database, provider billing, deployment or authenticated production flow is established.",
+    "Elapsed times are uncontrolled single observations and do not establish a performance change."
+  ],
+  "sqlCompilerAwaitingFinal107108Pins": true,
+  "taskTsconfigIncludesRestored": true,
+  "sourceIntegrityUnchanged": true,
+  "finishedAt": "2026-10-18T19:39:42.981176+00:00"
+}

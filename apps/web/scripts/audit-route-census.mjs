@@ -11,6 +11,7 @@ const defaultOutput = join(webRoot, 'performance/admin-route-consistency-2026101
 const historicalPublicMatrixPath = join(webRoot, 'performance/public-cms-followthrough-20261009/accepted-route-matrix.json');
 const historicalCapturePath = join(webRoot, 'performance/public-cms-followthrough-20261009/capture-results.json');
 const currentAdminRenderPath = join(webRoot, 'performance/goal-delivery-20261012/final-source-bound-render.json');
+const sourceOnlyPublicAdditions = ['/auth/complete'];
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -143,6 +144,8 @@ export function buildRouteCensus() {
   const publicPages = routes.filter((route) => route.category === 'public-or-account-page');
   const shareHandlers = routes.filter((route) => route.category === 'public-share-handler');
   const adminPages = routes.filter((route) => route.category === 'admin-page');
+  const patternsWithoutHistoricalRows = [...publicPages, ...shareHandlers]
+    .filter((route) => !matrixByRoute.has(route.routePattern)).map((route) => route.routePattern).sort();
   const manifest = routes.map(({ routePattern, sourcePath, sha256: sourceSha256 }) => ({ routePattern, sourcePath, sha256: sourceSha256 }));
   const sourceManifestSha256 = sha256(`${JSON.stringify(manifest)}\n`);
   const baseHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: webRoot, encoding: 'utf8' }).trim();
@@ -161,8 +164,10 @@ export function buildRouteCensus() {
       currentAdminSyntheticModules: renderedModules.size,
     },
     assertions: {
-      expectedCurrentCounts: publicPages.length === 21 && shareHandlers.length === 1 && adminPages.length === 5 && routes.length === 27,
-      historicalPublicMatrixCoversCurrentPublicPatterns: [...publicPages, ...shareHandlers].every((route) => matrixByRoute.has(route.routePattern)),
+      expectedCurrentCounts: publicPages.length === 22 && shareHandlers.length === 1 && adminPages.length === 5 && routes.length === 28,
+      historicalPublicMatrixCoversCurrentPublicPatterns: patternsWithoutHistoricalRows.length === 0,
+      missingHistoricalRowsMatchDeclaredSourceOnlyAdditions: JSON.stringify(patternsWithoutHistoricalRows) === JSON.stringify(sourceOnlyPublicAdditions),
+      publicPatternsWithoutHistoricalRows: patternsWithoutHistoricalRows,
       historicalPublicOperatingVerificationCount: matrix.filter((row) => row.operatingAuthenticatedDataVerified === true).length,
     },
     evidenceInputs: [historicalPublicMatrixPath, historicalCapturePath, currentAdminRenderPath].map((path) => ({
@@ -184,7 +189,7 @@ const output = outputFlagIndex >= 0 && process.argv[outputFlagIndex + 1]
   ? resolve(process.argv[outputFlagIndex + 1])
   : defaultOutput;
 const census = buildRouteCensus();
-if (!census.assertions.expectedCurrentCounts || !census.assertions.historicalPublicMatrixCoversCurrentPublicPatterns) {
+if (!census.assertions.expectedCurrentCounts || !census.assertions.missingHistoricalRowsMatchDeclaredSourceOnlyAdditions) {
   throw new Error('route-census-contract-failed');
 }
 mkdirSync(dirname(output), { recursive: true });

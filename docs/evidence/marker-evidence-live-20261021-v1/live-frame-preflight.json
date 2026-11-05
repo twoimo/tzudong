@@ -1,0 +1,28 @@
+{
+  "manifestPreviewHash": "7c8b4fcad17fd3c0fdf9bba1d34a568132f5c6a58e32f0a49047519660d7d47f",
+  "projectId": "aqlcofblfxdrjhhdmarw",
+  "operation": "read-only preflight",
+  "eligible": true,
+  "restaurants": [
+    {
+      "id": "00e97a0d-b54e-4bcc-85e6-5db8f739e0c0",
+      "status": "approved",
+      "youtube_link": "https://www.youtube.com/watch?v=m3FE0WmS8xU"
+    },
+    {
+      "id": "0e0fb0fc-ccff-44d2-908b-e902d4b0232c",
+      "status": "approved",
+      "youtube_link": "https://www.youtube.com/watch?v=fcWQMtEjwJY"
+    },
+    {
+      "id": "11952225-45b2-4faa-ae95-bfcfcaa424ce",
+      "status": "approved",
+      "youtube_link": "https://www.youtube.com/watch?v=JXGKeq14Lbk"
+    },
+    {
+      "id": "4f08bf24-9faf-42e5-a4c9-5660d45248e3",
+      "status": "approved",
+      "youtube_link": "https://www.youtube.com/watch?v=jEM5_8SsSVE"
+    }
+  ]
+}

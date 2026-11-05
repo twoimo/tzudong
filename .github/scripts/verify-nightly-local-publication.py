@@ -126,7 +126,6 @@ STACK_SERVICES = {
     "supavisor",
     "vector",
 }
-EXPECTED_LEDGER_UNITS = 140
 SEQUENCE_MARKERS = (
     "prerequisite",
     "migration",
@@ -153,14 +152,14 @@ EXPECTED_IMAGES = {
 }
 EXPECTED_TYPEGEN_IMAGE = {
     "cli_version": "2.109.1",
-    "registry": "public.ecr.aws",
+    "registry": "ghcr.io",
     "image": "public.ecr.aws/supabase/postgres-meta:v0.96.6",
     "pull_reference": (
-        "public.ecr.aws/supabase/postgres-meta@sha256:"
+        "ghcr.io/supabase/postgres-meta@sha256:"
         "b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed"
     ),
     "repo_digest": (
-        "public.ecr.aws/supabase/postgres-meta@sha256:"
+        "ghcr.io/supabase/postgres-meta@sha256:"
         "b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed"
     ),
     "image_id": (
@@ -401,7 +400,10 @@ def verify_e2e_failure_evidence(
         reject_credential_fields(payload, "nightly E2E runner stage evidence")
         return
     if (
-        set(payload) != E2E_EVIDENCE_FIELDS
+        set(payload) not in (
+            E2E_EVIDENCE_FIELDS,
+            E2E_EVIDENCE_FIELDS | {"slow_tests", "reported_tests"},
+        )
         or payload.get("schema") != "nightly-playwright-failure-evidence-v1"
         or payload.get("source") != "playwright-json-report-v2"
         or not _bounded_count(expected_exit_code, 255)
@@ -415,6 +417,50 @@ def verify_e2e_failure_evidence(
         fail("nightly E2E failure evidence contract mismatch")
 
     test_status_counts = payload.get("test_status_counts")
+    reported_attempts = {}
+    if "slow_tests" in payload:
+        reported_tests = payload["reported_tests"]
+        if not isinstance(reported_tests, list) or len(reported_tests) != payload["test_count"]:
+            fail("nightly E2E reported test count mismatch")
+        next_index_by_spec = {}
+        for test in reported_tests:
+            if (
+                not isinstance(test, dict)
+                or set(test) != {"spec_id", "test_index", "attempt_count"}
+                or not isinstance(test.get("spec_id"), str)
+                or test.get("spec_id") not in E2E_SPEC_IDS
+                or not _bounded_count(test.get("test_index"), 127)
+                or not _bounded_count(test.get("attempt_count"), 8)
+                or test["test_index"] != next_index_by_spec.get(test["spec_id"], 0)
+            ):
+                fail("nightly E2E reported test entry mismatch")
+            identity = (test["spec_id"], test["test_index"])
+            reported_attempts[identity] = test["attempt_count"]
+            next_index_by_spec[test["spec_id"]] = test["test_index"] + 1
+        timings = payload["slow_tests"]
+        if not isinstance(timings, list) or not 1 <= len(timings) <= 3:
+            fail("nightly E2E timing evidence bound mismatch")
+        timing_ids = set()
+        previous_duration = 600_000
+        for timing in timings:
+            if (
+                not isinstance(timing, dict)
+                or set(timing) != {"spec_id", "test_index", "attempt_index", "duration_ms"}
+                or not isinstance(timing.get("spec_id"), str)
+                or timing.get("spec_id") not in E2E_SPEC_IDS
+                or not _bounded_count(timing.get("test_index"), 127)
+                or not _bounded_count(timing.get("attempt_index"), 7)
+                or not _bounded_count(timing.get("duration_ms"), previous_duration)
+            ):
+                fail("nightly E2E timing evidence entry mismatch")
+            identity = (timing["spec_id"], timing["test_index"], timing["attempt_index"])
+            if (
+                identity in timing_ids
+                or timing["attempt_index"] >= reported_attempts.get(identity[:2], 0)
+            ):
+                fail("nightly E2E timing evidence identity mismatch")
+            timing_ids.add(identity)
+            previous_duration = timing["duration_ms"]
     result_status_counts = payload.get("result_status_counts")
     failure_class_counts = payload.get("failure_class_counts")
     failures = payload.get("failures")
@@ -441,6 +487,10 @@ def verify_e2e_failure_evidence(
     expected_test_failure_counts = {
         failure_class: 0 for failure_class in E2E_TEST_FAILURE_CLASSES
     }
+    if "slow_tests" in payload and len(payload["slow_tests"]) > sum(result_status_counts.values()):
+        fail("nightly E2E timing evidence count mismatch")
+    if "reported_tests" in payload and sum(reported_attempts.values()) != sum(result_status_counts.values()):
+        fail("nightly E2E reported attempt count mismatch")
     identities: set[tuple[str, int]] = set()
     for failure in failures:
         if (
@@ -473,6 +523,8 @@ def verify_e2e_failure_evidence(
         if identity in identities:
             fail("nightly E2E failure evidence identity mismatch")
         identities.add(identity)
+        if "reported_tests" in payload and reported_attempts.get(identity) != failure["attempt_count"]:
+            fail("nightly E2E reported failure attempt mismatch")
         if (
             failure["classification"] == "no_result"
             and failure["attempt_count"] != 0
@@ -640,13 +692,16 @@ def load_source_module(name: str, path: Path) -> object:
 
 
 def verify_manifest(payload: dict[str, object]) -> None:
+    count = load_source_module(
+        "nightly_publication_local_migrate", LOCAL_MIGRATE_PATH,
+    ).expected_ledger_units()
     source = payload.get("source")
     exclusions = payload.get("exclusions")
     if (
         not isinstance(source, dict)
         or set(source) != {"root", "migrationCount", "chainSha256", "files"}
         or source.get("root") != "backend/supabase/migrations"
-        or source.get("migrationCount") != EXPECTED_LEDGER_UNITS
+        or source.get("migrationCount") != count
         or not isinstance(source.get("chainSha256"), str)
         or SHA256.fullmatch(source["chainSha256"]) is None
         or exclusions != [
@@ -658,7 +713,7 @@ def verify_manifest(payload: dict[str, object]) -> None:
     ):
         fail("local migration manifest contract mismatch")
     files = source.get("files")
-    if not isinstance(files, list) or len(files) != EXPECTED_LEDGER_UNITS:
+    if not isinstance(files, list) or len(files) != count:
         fail("local migration manifest unit count mismatch")
     for ordinal, item in enumerate(files, 1):
         if not isinstance(item, dict) or set(item) != {
@@ -735,10 +790,13 @@ def verify_migration_summary(
         fail("local migration publication summary contract mismatch")
 
     files = source.get("files")
+    count = load_source_module(
+        "nightly_publication_local_migrate", LOCAL_MIGRATE_PATH,
+    ).expected_ledger_units()
     if (
         not isinstance(files, list)
         or payload.get("ledger_count") != len(files)
-        or payload.get("ledger_count") != EXPECTED_LEDGER_UNITS
+        or payload.get("ledger_count") != count
     ):
         fail("local migration publication ledger count mismatch")
 
@@ -780,8 +838,8 @@ def verify_migration_summary(
         or set(section_counts) != set(READBACK_SECTIONS)
         or any(type(value) is not int or value < 0 for value in section_counts.values())
         or any(section_counts[section] < 1 for section in READBACK_SECTIONS)
-        or section_counts.get("review_media_functions") != 15
-        or section_counts.get("storage_policies") != 22
+        or section_counts.get("review_media_functions") != 17
+        or section_counts.get("storage_policies") != 23
         or section_counts.get("storage_buckets") != 7
         or section_counts.get("seed_buckets") != 7
         or payload.get("readback_row_count") != sum(section_counts.values())

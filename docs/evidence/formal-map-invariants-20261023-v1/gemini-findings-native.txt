@@ -1,0 +1,69 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-formal/marker-state-model.test.mjs:
+FORMAL_BROWSER 156.0.8078.47
+FORMAL_VISUAL_TRANSITIONS 9216
+(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [3367.12ms]
+(pass) a review-only transition retains the image and avoids an SDK icon replacement [1058.24ms]
+FORMAL_OWNERSHIP_STEPS 18056
+(pass) every pool/click action sequence through depth four keeps current callback ownership [1305.46ms]
+(pass) review patches preserve retained masking, clamp and clone-descriptor round trips [3549.40ms]
+(pass) cluster frames updated through the pool restore the requested frame and count [1862.59ms]
+
+tests-unit/naver-map-cluster-visuals.test.ts:
+(pass) naver map cluster visuals > hashes string keys deterministically [0.65ms]
+(pass) naver map cluster visuals > builds cluster feature with lng/lat coordinates [0.06ms]
+(pass) naver map cluster visuals > builds cluster marker html content [0.18ms]
+(pass) naver map cluster visuals > returns naver cluster marker visual payload [0.15ms]
+(pass) naver map cluster visuals > builds cluster marker render plan from position and current animation index [0.10ms]
+(pass) naver map cluster visuals > builds animation icon plan from key and injected index resolver [0.89ms]
+(pass) naver map cluster visuals > skips a marker icon write when the content and anchor are unchanged [0.06ms]
+
+tests-unit/retained-marker-accessibility.test.ts:
+(pass) outside-padded mask is owned, reversible and has no geometry or focus changes [0.14ms]
+(pass) does not remove a hidden state owned by another source [0.02ms]
+(pass) release/replacement cleanup allows the newly generated SDK root to be masked [0.02ms]
+(pass) SDK root not yet present stays retryable; removed root clears release ownership [0.02ms]
+(pass) delayed SDK roots share one observer and are masked on insertion without another render [0.12ms]
+(pass) visible/released marker cancels a pending root and does not later hide a replacement [0.02ms]
+(pass) changing map target disconnects the old pending observer [0.03ms]
+(pass) an SDK root replacement with the same desired state is masked again [0.06ms]
+(pass) hides the app overlay anchor containing a sibling review button and restores it [0.04ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > failed provider detachment is discarded and does not strand clear or reuse a corrupt marker [0.31ms]
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.10ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.04ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.09ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.08ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.04ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.33ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.27ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.08ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.03ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.65ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.32ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [3.31ms]
+
+tests-unit/visible-marker-review-bubbles.test.ts:
+(pass) visible marker review bubble signatures > in-place review field updates reach the wrapped HTML [0.36ms]
+(pass) visible marker review bubble signatures > reuses the id signature for the same restaurant list [0.04ms]
+(pass) visible marker review bubble signatures > changes when rendered bubble content changes under the same review id [0.04ms]
+(pass) visible marker review bubble signatures > is stable regardless of record insertion order [0.02ms]
+(pass) visible marker review bubble signatures > reuses one bubble render token until its fields change [0.02ms]
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [32.86ms]
+(pass) malformed count values remain missing instead of coercing into a public flame [46.92ms]
+(pass) conflicting metrics for the same video fail in either input order [21.55ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [47.45ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [10.28ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [23.85ms]
+(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [11.54ms]
+(pass) duplicate observations reject timestamp conflicts in either order and normalize video identity [22.14ms]
+
+ 48 pass
+ 0 fail
+ 1254 expect() calls
+Ran 48 tests across 6 files. [11.76s]

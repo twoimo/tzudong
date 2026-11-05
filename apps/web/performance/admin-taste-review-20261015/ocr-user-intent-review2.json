@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-16",
+  "sourceHead": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "status": "source_stable",
+  "scope": "receipt photo preparation and interrupted OCR readback user-intent cancellation",
+  "behavior": {
+    "deferredCompression": "Switching from AI to photo-only revokes the OCR preparation lease while preserving the active photo attachment preparation.",
+    "interruptedStreamReadback": "Choosing direct input aborts the active OCR/status controller, advances the run generation, and blocks late result application and automatic navigation.",
+    "providerReplay": false,
+    "indeterminateExecution": false
+  },
+  "stableSources": [
+    {
+      "path": "components/reviews/ReviewModal.tsx",
+      "sha256": "dd1fdc477cee76d47f6dd4da857b83f1bcf794c5851bc57d329d08eb65e7787c"
+    },
+    {
+      "path": "lib/ocr/review-modal-ocr-ux.ts",
+      "sha256": "285a0019e50cd6d73bfeb667143a0168f2f08abe36a38cb63b9c660b8372db72"
+    },
+    {
+      "path": "lib/ocr/latest-selection.ts",
+      "sha256": "109fc4dc6ba16a24433fa698c7497ac9968dfb2cb003cbe799cdf79663825179"
+    },
+    {
+      "path": "lib/ocr/receipt-upload-preparation.ts",
+      "sha256": "14a011d50aa019157770bca7705bf9582a6b1a48a48e334acd8e19ba0b4bc7cd"
+    }
+  ],
+  "stableTests": [
+    {
+      "path": "tests-unit/review-save-submit.test.ts",
+      "sha256": "ab1ff1a3bfeb1b5c1a8c01066505de621939aa0d5913187709e3f090dc8ba686"
+    },
+    {
+      "path": "tests-unit/review-modal-ocr-ux.test.ts",
+      "sha256": "7ace244b148f6ff13c625f980d8f4893dc5aab1e3242c580ba52e078fb22f94f"
+    },
+    {
+      "path": "tests-unit/latest-selection.test.ts",
+      "sha256": "5a0e9d17ca5565ef7c6d695a21ea86f20719d5c4f01e1cf442e3f4c4f644ac7d"
+    },
+    {
+      "path": "tests-unit/review-storage-verification.test.ts",
+      "sha256": "a3a4e112186824193a1598faa82320da7c33c5fd074908266fdf68baca47f355"
+    },
+    {
+      "path": "tests-unit/review-close-revision-browser.test.ts",
+      "sha256": "964142f1a8c115c84000847129d84c1c48fea45a4e7d3f030419ba400e4618b9"
+    },
+    {
+      "path": "tests-unit/review-draft-revision-browser.test.ts",
+      "sha256": "8f033e7fa4193ccab4788faa7c0ee9de942562315e36f0a17e0690a0437266ab"
+    }
+  ],
+  "verification": {
+    "bun": "1.4.0",
+    "deterministicUnitTests": {
+      "status": "passed",
+      "tests": 66,
+      "assertions": 572
+    },
+    "reactIndexedDbTests": {
+      "status": "passed",
+      "tests": 2,
+      "assertions": 42,
+      "externalRequests": 0
+    },
+    "eslint": {
+      "status": "passed",
+      "warnings": 0,
+      "files": 10
+    },
+    "typescriptParity": {
+      "status": "passed",
+      "node": "24.21.0",
+      "npm": "11.6.2",
+      "diagnostics": 0,
+      "logicalInputs": 3324,
+      "nonLibraryContentSha256": "b44d81b78c5814301552ccfc1c4681a64568b947bf9e6d1f44c86fd6190ab920"
+    },
+    "diffCheck": "passed"
+  },
+  "privacy": {
+    "containsRawOcr": false,
+    "containsProviderDiagnostics": false,
+    "containsCredentialsOrTokens": false
+  },
+  "externalActions": {
+    "providerCalls": 0,
+    "databaseWrites": 0,
+    "workflowDispatches": 0,
+    "remoteGitWrites": 0
+  },
+  "limits": [
+    "This receipt records local source and test behavior only.",
+    "No full suite or build was run for this follow-up; earlier 189-test and build receipts remain bound to their earlier snapshot."
+  ]
+}

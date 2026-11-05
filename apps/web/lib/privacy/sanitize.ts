@@ -367,7 +367,9 @@ const sensitiveKindForString = (
   const rrns = countMatches(value, RRN_LIKE_PATTERN);
   if (rrns > 0) return { kind: "rrn", count: rrns };
 
-  const emails = countMatches(value, EMAIL_PATTERN);
+  // Every match contains @. Skip only when that necessary symbol is absent;
+  // preserve the original global matcher, including adjacent address counts.
+  const emails = value.includes("@") ? countMatches(value, EMAIL_PATTERN) : 0;
   if (emails > 0) return { kind: "email", count: emails };
 
   const phones = countMatches(
@@ -1300,6 +1302,20 @@ export class PrivacyUnsafeValueError extends Error {
     this.findings = findings.map(({ kind, path, count }) => ({ kind, path, count }));
   }
 }
+
+/**
+ * Screen one already typed plain-text field in full, up to 64 KiB. This sink
+ * assertion retains no text and does not serialize or truncate a document.
+ * Object/diagnostic/OCR boundaries still require assertPrivacySafe instead.
+ */
+export const assertPrivacySafeText = (value: string): void => {
+  if (typeof value !== "string" || value.length > HARD_MAX_INPUT_BYTES
+    || utf8ByteLengthUpTo(value, HARD_MAX_INPUT_BYTES) > HARD_MAX_INPUT_BYTES) {
+    throw new PrivacyUnsafeValueError([{ kind: "bounded_value", path: "$", count: 1 }]);
+  }
+  const finding = sensitiveKindForString(value);
+  if (finding) throw new PrivacyUnsafeValueError([{ ...finding, path: "$" }]);
+};
 
 /**
  * Blocks risky values at a sink without exposing their content in an error.

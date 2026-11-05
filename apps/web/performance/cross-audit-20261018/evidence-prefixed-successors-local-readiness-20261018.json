@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "kind": "evidence-prefixed-successors-local-readiness",
+  "status": "local_ready_launch_held",
+  "sourceHead": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "preservedContracts": [
+    {
+      "path": ".github/review-media-sql-successor.v1.json",
+      "sha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6",
+      "transition": "86->97",
+      "changed": false
+    },
+    {
+      "path": ".github/review-media-feature-sql-successor.v1.json",
+      "sha256": "360e5b56fd2214523ee5738eec94e1d77f9050f899dd243136abff3b6b1cb3df",
+      "transition": "97->102",
+      "changed": false
+    }
+  ],
+  "inputs": {
+    "hostedBaseMapping": {
+      "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+      "sha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a",
+      "rowCount": 86,
+      "identityRoot": "394d3517244d79a673b0595dec0fefa40e6d8257b3762c27dd56a01cc198115d"
+    },
+    "evidenceMigrations": [
+      {
+        "version": "20261017043000",
+        "sha256": "d254fe76eb8c74587183bc89372891cd08a6a1cf92a99b8aa041497fa6ca7733"
+      },
+      {
+        "version": "20261017140000",
+        "sha256": "fe0621f3a6f663beec2c14a60729ddbb17ba715205a114f24879af9b4dba11c6"
+      },
+      {
+        "version": "20261017160000",
+        "sha256": "4ba19ee5b7ae3fbbfc4ffa00a93ed30e1197cd2ad1763e063a75f75158a48426"
+      }
+    ],
+    "historicalAppliedVariant": {
+      "version": "20261008124858",
+      "name": "public_profile_leaderboard_read_boundary",
+      "statementCount": 1,
+      "statementVectorSha256": "8bab7119608afa8cf4fec529fb5cab6546fbd0c9326e08b56c9a053daa21b360",
+      "disposition": "pinned_immutable_predecessor"
+    }
+  },
+  "artifacts": [
+    {
+      "path": ".github/review-media-evidence-prefixed-predecessor-successor.v1.json",
+      "sha256": "dbec21b6a2d7b26a2c4a40da189347facd3fd255ac19e3301737c2d683aa92b5"
+    },
+    {
+      "path": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
+      "sha256": "b8a8f7c3495ceea1c57e687d8e1fda7266bb88077bebba30d35b863ae7a33cd8"
+    },
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+      "sha256": "bdb9a30dca157e3c55bc639dc64d983c597f586130be0a5a0a90641cb6e29654"
+    },
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-predecessor-sql-successor.mjs",
+      "sha256": "54d5a66695938c66b75c2c89b456dbfae9e876592fcbe3d5f9310ffc7cf2a07f"
+    },
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-feature-sql-successor.mjs",
+      "sha256": "1abc26c0bc4a2546f0e8930067a2d0e089d156b37ed5d160eee6a3e53e5ef618"
+    },
+    {
+      "path": "apps/web/tests-unit/review-media-evidence-prefixed-sql-successors.test.ts",
+      "sha256": "10b466eaa744e6a6b481014e38059422de456901b0c24e9872ab4f366f5e3233"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+      "sha256": "b3e258046c7bd908c41f915b13bfb8c5bc4f7e2580d06628ae1319b32b921b43"
+    }
+  ],
+  "contracts": {
+    "predecessor": {
+      "transition": "89->100",
+      "launchState": "held",
+      "evidenceIdentityRoot": "37d598ad72fd4c0a057a34579e5c2053fc9a7a92645d8d045530890ad1034802",
+      "operatingPrefixIdentityRoot": "2a92473931847b85f90224bbc645a14425c96fc3d92019b6eeca8e6f43a504ea",
+      "terminalIdentityRoot": "3bddf89c99ba6f4e635ed25c66451a92c23eaf95c2b387434978c04baad900d1"
+    },
+    "feature": {
+      "transition": "100->105",
+      "launchState": "held",
+      "operatingPrefixIdentityRoot": "3bddf89c99ba6f4e635ed25c66451a92c23eaf95c2b387434978c04baad900d1",
+      "terminalIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c"
+    },
+    "identityBoundary": "Operating hosted86 identities and local rehearsal fixture identities are validated separately."
+  },
+  "verification": {
+    "contractChecks": {
+      "predecessor": "passed",
+      "feature": "passed"
+    },
+    "unit": {
+      "command": "bun test tests-unit/review-media-evidence-prefixed-sql-successors.test.ts tests-unit/review-media-sql-successor-harness.test.ts tests-unit/review-media-feature-sql-successor.test.ts",
+      "passed": 38,
+      "failed": 0,
+      "expectations": 235
+    },
+    "eslint": {
+      "status": "passed",
+      "files": 5
+    },
+    "pg17Replay": {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-evidence-prefixed-successors-20261018.json",
+      "sha256": "88d1fd0d382ebdfbfe84828b7abe6864e29a6160538d57a65bedaff3e5bb2e9e",
+      "status": "passed",
+      "findings": 0,
+      "engine": "17.6",
+      "predecessorStages": 12,
+      "featureStages": 6,
+      "terminalLedger": 105,
+      "sourceCatalogSha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+      "sourceCatalogSha256After": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+      "ownedContainerRemoved": true
+    },
+    "lifecycle": {
+      "profileOriginalState": "stopped",
+      "sourceContainerOriginalState": "exited",
+      "sourceContainerFinalState": "exited",
+      "profileFinalState": "stopped"
+    }
+  },
+  "limitations": [
+    "Local source and PG17 replay evidence only; no hosted SELECT, DDL, deployment or operating apply was executed.",
+    "Both new launch policies remain held until fresh protected-source admissions and operating readbacks are prepared.",
+    "The PG17 replay uses a synthetic 86-row ledger fixture for migration behavior and separately binds the sanitized hosted86 identity projection for operating admission."
+  ]
+}

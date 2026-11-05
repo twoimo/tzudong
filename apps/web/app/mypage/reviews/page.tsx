@@ -28,11 +28,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { ReviewMediaMutation, createReviewMediaDependencies, retryReviewMediaCleanup, reviewMutationMessage } from "@/lib/reviews/review-media-mutation";
+import { FEATURE_DATABASE_HELD_MESSAGE, fetchFeatureDatabaseReadiness } from "@/lib/runtime-feature-readiness-contract";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
@@ -48,6 +49,8 @@ import {
 import { resolveReviewPhotoUrl } from "@/lib/review-photo-url";
 import { createCanonicalVisitedLookup } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
+
+import { isMyPageReviewStatus, type MyPageReviewStatus } from "@/lib/mypage-route-state";
 
 const REVIEW_DELETE_CONFIRMATION = "리뷰삭제";
 
@@ -142,6 +145,14 @@ ReviewStatusBadge.displayName = "ReviewStatusBadge";
 export default function ReviewsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { data: featureReadiness } = useQuery({
+    queryKey: ['feature-database-readiness', user?.id],
+    queryFn: () => fetchFeatureDatabaseReadiness(),
+    enabled: Boolean(user?.id),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const featureHeld = featureReadiness?.status !== 'ready';
   const ownerRef = useRef(user?.id);
   useLayoutEffect(() => { ownerRef.current = user?.id; }, [user?.id]);
   const deleteMutation = useRef<ReviewMediaMutation | null>(null);
@@ -163,7 +174,8 @@ export default function ReviewsPage() {
     return cleanupRunner.current.request(cancelInterrupted);
   }, []);
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const initialStatus = searchParams.get("status");
+  const [filterStatus, setFilterStatus] = useState<MyPageReviewStatus>(isMyPageReviewStatus(initialStatus) ? initialStatus : "all");
   const [editingReview, setEditingReview] = useState<MyReview | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(
@@ -173,6 +185,10 @@ export default function ReviewsPage() {
     null,
   );
   const [deleteReviewConfirmation, setDeleteReviewConfirmation] = useState("");
+  useLayoutEffect(() => {
+    setIsEditModalOpen(false);
+    setEditingReview(null);
+  }, [user?.id]);
 
   useEffect(() => {
     deleteMutation.current = new ReviewMediaMutation(createReviewMediaDependencies(supabase, () => ownerRef.current));
@@ -181,8 +197,8 @@ export default function ReviewsPage() {
     setDeleteReviewTarget(null);
     setDeleteReviewConfirmation("");
     setCleanupPending(false);
-    void retryCleanup();
-  }, [user?.id, retryCleanup]);
+    if (!featureHeld) void retryCleanup();
+  }, [featureHeld, user?.id, retryCleanup]);
 
   // 내 리뷰 조회 - 무한 스크롤
   const {
@@ -359,9 +375,7 @@ export default function ReviewsPage() {
     const status = searchParams.get("status");
     const reviewId = searchParams.get("reviewId");
 
-    if (status && ["all", "approved", "pending", "rejected"].includes(status)) {
-      setFilterStatus(status);
-    }
+    setFilterStatus(isMyPageReviewStatus(status) ? status : "all");
 
     if (reviewId) {
       setHighlightedReviewId(reviewId);
@@ -450,7 +464,14 @@ export default function ReviewsPage() {
       description="작성한 리뷰와 검수 상태를 차분한 카드 흐름으로 확인합니다."
       countLabel={`총 ${filteredReviews.length}개`}
       action={
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={(value) => {
+          if (!isMyPageReviewStatus(value)) return;
+          setFilterStatus(value);
+          const url = new URL(window.location.href);
+          if (value === "all") url.searchParams.delete("status");
+          else url.searchParams.set("status", value);
+          window.history.replaceState(window.history.state, "", url.pathname + url.search);
+        }}>
           <SelectTrigger
             className="h-9 w-[104px] rounded-full border-0 bg-transparent px-2 text-xs shadow-none md:h-10 md:w-[140px] md:border md:bg-background md:px-3 md:text-sm"
             aria-label="리뷰 상태 필터"
@@ -467,12 +488,18 @@ export default function ReviewsPage() {
       }
       data-section="reviews"
     >
+      {featureHeld && (
+        <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+          <p className="font-semibold">리뷰 변경 기능 준비 중</p>
+          <p className="mt-1">{FEATURE_DATABASE_HELD_MESSAGE}</p>
+        </div>
+      )}
       {cleanupPending && (
         <div className="mb-3 space-y-2" role="status">
           <p className="text-sm">리뷰 사진 정리가 남아 있거나 정리 상태를 확인하지 못했습니다. 다시 시도해 주세요.</p>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" disabled={isCleaning}>{isCleaning ? '사진 정리 확인 중…' : '사진 정리 다시 시도'}</Button>
+              <Button variant="outline" disabled={featureHeld || isCleaning}>{isCleaning ? '사진 정리 확인 중…' : '사진 정리 다시 시도'}</Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -558,6 +585,7 @@ export default function ReviewsPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        disabled={featureHeld}
                         onClick={() => {
                           setEditingReview(review);
                           setIsEditModalOpen(true);
@@ -571,6 +599,7 @@ export default function ReviewsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={featureHeld}
                         onClick={() => {
                           setEditingReview(review);
                           setIsEditModalOpen(true);
@@ -584,6 +613,7 @@ export default function ReviewsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={featureHeld}
                       onClick={() => {
                         if (deleteMutation.current?.pending || isDeleting) return;
                         setDeleteReviewTarget(review);
@@ -703,7 +733,7 @@ export default function ReviewsPage() {
                         type="button"
                         variant="destructive"
                         disabled={
-                          isDeleting || deleteReviewConfirmation !==
+                          featureHeld || isDeleting || deleteReviewConfirmation !==
                           REVIEW_DELETE_CONFIRMATION
                         }
                         onClick={() => handleDeleteReview(review.id)}

@@ -1,0 +1,445 @@
+{
+  "boundaries": [
+    "Local disposable PostgreSQL 17.6 evidence only.",
+    "The historical retained 105 fixture dump was not read or reused.",
+    "No hosted database, provider, Storage, Git, account or deployment state was changed.",
+    "Explicit aclexplode rows establish grants; effective has_* privilege was not used as ACL proof.",
+    "Post-install drift used the source fixture that refreshes the seal before each rejection assertion."
+  ],
+  "cases": {
+    "aggregate-default": {
+      "caseReceipt": {
+        "sha256": "2348ce0d492da3968c7238f860169b8810500130142e20dddb87236bc1059587"
+      },
+      "execution": null,
+      "failureCode": "RECEIPT_OCR_ACL_V2_INITIAL_ADMISSION_FAILED",
+      "forbiddenAclCount": null,
+      "g014Normalization": {
+        "mismatchAfter": 0,
+        "mismatchBefore": 6,
+        "normalized": 6
+      },
+      "idempotency": null,
+      "idempotencyDumpMatched": null,
+      "leaseSemantics": null,
+      "ledger": {
+        "aclHelper": false,
+        "ledgerCount": 105,
+        "releaseTable": false,
+        "stage106": 0,
+        "stage107": 0
+      },
+      "passed": true,
+      "postinstallFixturePassed": null,
+      "roleAfter": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      },
+      "roleBefore": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      },
+      "roleState": null
+    },
+    "canonical": {
+      "caseReceipt": {
+        "sha256": "4fe00f7bdbbefa4f3ace2e97b7061fb53c04638339f082ff8fffe158a786d0d6"
+      },
+      "execution": {
+        "stderrBytes": 115,
+        "stderrSha256": "6c1fb454a251aade5707f12fa302b013a9fb0ae6dd5b64dfaca842b398683ab0",
+        "stdoutBytes": 1043,
+        "stdoutSha256": "db0dfa7556e417f1f0ed8a4e976b92f3f6df52bd592b0daafff3010afd761e41"
+      },
+      "failureCode": null,
+      "forbiddenAclCount": null,
+      "g014Normalization": {
+        "mismatchAfter": 0,
+        "mismatchBefore": 6,
+        "normalized": 6
+      },
+      "idempotency": {
+        "code": "MIGRATION_LEDGER_CONFLICT",
+        "exitCode": 3,
+        "stderrBytes": 121,
+        "stderrSha256": "f67545a0af6a6e26e0ca86bd738c47193151f0f17bf8a0578cc4f5da362871cf",
+        "stdoutBytes": 0,
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "idempotencyDumpMatched": true,
+      "leaseSemantics": {
+        "actor": {
+          "currentUser": "privacy_workflow_owner",
+          "sessionUser": "postgres"
+        },
+        "after": {
+          "currentUser": "postgres",
+          "membershipCount": 1,
+          "selfLease": [],
+          "setAvailable": false,
+          "usageAvailable": false
+        },
+        "before": {
+          "currentUser": "postgres",
+          "membershipCount": 1,
+          "selfLease": [],
+          "setAvailable": false,
+          "usageAvailable": false
+        },
+        "during": {
+          "currentUser": "postgres",
+          "membershipCount": 2,
+          "selfLease": [
+            {
+              "adminOption": false,
+              "grantor": "postgres",
+              "inheritOption": false,
+              "setOption": true
+            }
+          ],
+          "setAvailable": true,
+          "usageAvailable": false
+        },
+        "transactionRolledBack": true
+      },
+      "ledger": {
+        "aclAdmitted": true,
+        "base106Present": true,
+        "capability": {
+          "capability_version": "receipt-ocr-definitive-credential-release-v2",
+          "schema_version": 1,
+          "status": "ready"
+        },
+        "ledgerCount": 107,
+        "ledgerIdentityRoot": "cd04aebfc1efcc5588486adf3b7ba47fc5b5b76e39a9c23e316768f2919d9d9e",
+        "migration107Present": true,
+        "schemaVersion": 1,
+        "v1ContractSealed": true,
+        "v2ContractSealed": true
+      },
+      "passed": true,
+      "postinstallFixturePassed": true,
+      "roleAfter": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      },
+      "roleBefore": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      },
+      "roleState": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      }
+    },
+    "function-default": {
+      "caseReceipt": {
+        "sha256": "864783c39892efc19e28a4d5f859761b2bad1ca72526a0963710a1cc9a741cb7"
+      },
+      "execution": {
+        "stderrBytes": 0,
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdoutBytes": 660,
+        "stdoutSha256": "2fa4c42fbc2b1c77949de26e9bba01a228cf5aacad8e0566b90b102dafb71fbf"
+      },
+      "failureCode": "RECEIPT_OCR_ACL_V2_INITIAL_ADMISSION_FAILED",
+      "forbiddenAclCount": 4,
+      "g014Normalization": {
+        "mismatchAfter": 0,
+        "mismatchBefore": 6,
+        "normalized": 6
+      },
+      "idempotency": null,
+      "idempotencyDumpMatched": null,
+      "leaseSemantics": null,
+      "ledger": {
+        "aclAdmitted": false,
+        "count": 106,
+        "stage106": 1,
+        "stage107": 0
+      },
+      "passed": true,
+      "postinstallFixturePassed": null,
+      "roleAfter": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      },
+      "roleBefore": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      },
+      "roleState": null
+    },
+    "table-default": {
+      "caseReceipt": {
+        "sha256": "8ca02c6a5a6274c81fe5e5d08dc36a124753f879b4eb0ceb57ff8067b2c2fa47"
+      },
+      "execution": {
+        "stderrBytes": 0,
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdoutBytes": 660,
+        "stdoutSha256": "2fa4c42fbc2b1c77949de26e9bba01a228cf5aacad8e0566b90b102dafb71fbf"
+      },
+      "failureCode": "RECEIPT_OCR_ACL_V2_INITIAL_ADMISSION_FAILED",
+      "forbiddenAclCount": 2,
+      "g014Normalization": {
+        "mismatchAfter": 0,
+        "mismatchBefore": 6,
+        "normalized": 6
+      },
+      "idempotency": null,
+      "idempotencyDumpMatched": null,
+      "leaseSemantics": null,
+      "ledger": {
+        "aclAdmitted": false,
+        "count": 106,
+        "stage106": 1,
+        "stage107": 0
+      },
+      "passed": true,
+      "postinstallFixturePassed": null,
+      "roleAfter": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      },
+      "roleBefore": {
+        "membership": {
+          "adminOption": true,
+          "grantor": "supabase_admin",
+          "inheritOption": false,
+          "rowCount": 1,
+          "setOption": false
+        },
+        "postgres": {
+          "rolbypassrls": true,
+          "rolcreatedb": true,
+          "rolcreaterole": true,
+          "rolinherit": true,
+          "rolreplication": true,
+          "rolsuper": false
+        },
+        "privacyWorkflowOwner": {
+          "rolbypassrls": false,
+          "rolcreatedb": false,
+          "rolcreaterole": false,
+          "rolinherit": false,
+          "rolreplication": false,
+          "rolsuper": false
+        }
+      },
+      "roleState": null
+    }
+  },
+  "engine": "17.6",
+  "freshBaseline": {
+    "baselineSource": "task-owned-operating105-private-dump",
+    "exactBaseResolutionCounts": {
+      "exactEmpty": 7,
+      "historical": 1,
+      "recovered25": 25,
+      "workingTree": 53
+    },
+    "operating105LedgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+    "ownedBaselineDumpNormalizedSha256": "4bacb5ab7e9995840983abba6f99c96476bd5babdc6a1d1f49e3e3bb3ba51e2a",
+    "ownedBaselineDumpRawSha256": "a505f0a35ab04afc3b48a13dff212ddf6b55d792732bb01a7415b57f4a8b3966",
+    "priorRetainedFixtureDumpRead": false,
+    "priorRetainedFixtureMutated": false,
+    "sourceCatalogSha256After": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "sourceCatalogSha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "sourceUnchanged": true
+  },
+  "kind": "receipt-ocr-107-independent-pg17-acl-admission-proof",
+  "ownership": {
+    "allExactTargetsRemoved": true,
+    "ownedTargetCount": 4,
+    "ownerLabelResidualCount": 0,
+    "retainedFixtureStateUnchanged": true,
+    "sourceUnchanged": true
+  },
+  "postinstallFixtureContinuity": "PG17 derived fixture was executed. Repository fixture correction to those exact bytes is tracked separately.",
+  "runtimePublicProofSha256": "b0542a630503d8fc29c22b59fff5b00c1078efbdba74ebfbe4158692c4583bd2",
+  "schemaVersion": 1,
+  "sourceBindings": {
+    "bindingSha256": "a5d909a87e46e3db3d6c70e3d71c8e4c409138de34f6758ced2cf3bfe0506dc7",
+    "compilerSha256": "5dd0c66725e14ee9584dd162dccda4419c304ddbda6f3f28b1e645b7aa686b21",
+    "manifestSha256": "58adb514cbdf4221952b9bddfc75dead6a91f74d6fedc0d39445983c542e9b5a",
+    "migrationSha256": "512f778b71a196e28f092266782fe5938b7d15ec72b61bf05978f3b1696faec9",
+    "operating105Root": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+    "operating107Root": "cd04aebfc1efcc5588486adf3b7ba47fc5b5b76e39a9c23e316768f2919d9d9e",
+    "planSqlBytes": 415499,
+    "planSqlSha256": "710bfa12877e8eedc1e933b581a5c17d7a6052a9dab3542447baab6afccd4255",
+    "postinstallFixturePg17DerivedSha256": "bfda0b4a616d30270ecdb0d604ecff4c3ffb2671b8ce6623a5ff14797cfaaccc",
+    "postinstallFixtureSourceSha256": "7f1362e4f538e84ed3abcb7a479d33bd85cedcb0ba0e28034712d137e1524232",
+    "statementCount": 27,
+    "statementVectorSha256": "37decc48cfcd3cbb9e40afd6511929262da2400264aa1f18e51317a01d92e9bf"
+  },
+  "status": "passed"
+}

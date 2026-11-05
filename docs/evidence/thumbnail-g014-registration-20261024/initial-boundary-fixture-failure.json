@@ -1,0 +1,36 @@
+{
+  "version": "postgres (PostgreSQL) 17.11 (Homebrew)",
+  "sourceBefore": {
+    "backend/supabase/tests/test_thumbnail_g014_contract_pg17.py": "8785c76f6394b0ec71151f379c43d1691e59530c1e188f26330c15c67bb3f741",
+    "backend/supabase/candidates/20261024_thumbnail_g014_registration.sql": "47ba57c9e7f07e4b9505f3fbbdd6685f8f1a5d33cc069f5dbde3614f580514f2",
+    "backend/supabase/candidates/20261023_thumbnail_gemini_queue.sql": "24fbdb8d1c99b0666de4b4f5c1b33896f6c7fa4ea20af4ad6ebd491722d4945a",
+    "backend/supabase/tests/fixtures/thumbnail-g014-hosted-preimage-20261024.json": "5c0a877eb8101967692de0067d1ee10c1401747447aa4377656fdf5713d0e4c1",
+    "backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+  },
+  "sourceAfter": {
+    "backend/supabase/tests/test_thumbnail_g014_contract_pg17.py": "8785c76f6394b0ec71151f379c43d1691e59530c1e188f26330c15c67bb3f741",
+    "backend/supabase/candidates/20261024_thumbnail_g014_registration.sql": "47ba57c9e7f07e4b9505f3fbbdd6685f8f1a5d33cc069f5dbde3614f580514f2",
+    "backend/supabase/candidates/20261023_thumbnail_gemini_queue.sql": "24fbdb8d1c99b0666de4b4f5c1b33896f6c7fa4ea20af4ad6ebd491722d4945a",
+    "backend/supabase/tests/fixtures/thumbnail-g014-hosted-preimage-20261024.json": "5c0a877eb8101967692de0067d1ee10c1401747447aa4377656fdf5713d0e4c1",
+    "backend/supabase/migrations/20261003182338_storyboard_service_role_bridge.sql": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+  },
+  "sourceStable": true,
+  "cases": {
+    "actualBranchNegativeControls": 2,
+    "missingLeaseDenied": true,
+    "executorDenials": 5,
+    "registryBoundaryDriftsDenied": 4,
+    "rpcDriftsDenied": 7,
+    "secondAssertionFailureAtomic": true
+  },
+  "cleanup": {
+    "ownedPid": 84245,
+    "statusExit": 3,
+    "pidFileAbsent": true,
+    "socketAbsent": true,
+    "tcpClosed": true
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "limits": "Owned PG17.11 registration checks using actual queue SQL and G014 bodies.\n\nThe complete hosted G014 prerequisite graph and hosted PG17.6 are NOT executed.\nTwo extracted, byte-matched invoker branches supplement actual metadata/rollback\nchecks; they are not a replacement for the full pre/post G014 release gate.\n"
+}

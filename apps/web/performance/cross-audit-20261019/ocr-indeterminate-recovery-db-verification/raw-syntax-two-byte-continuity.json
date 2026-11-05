@@ -1,0 +1,19 @@
+{
+  "schema": "tzudong-recovery108-raw-syntax-continuity/v1",
+  "observedAt": "2026-10-18T20:11:55.316610+00:00",
+  "migrationPath": "backend/supabase/migrations/20261019130000_receipt_ocr_indeterminate_recovery.sql",
+  "beforeSha256": "c2c93eb5c605ae9191961b2eda2c37ed2ce285f4982cdd389b90fba0cb9c47c9",
+  "afterSha256": "abc1cb12005e84ad49e40e04c35ab388289772938ba4ccc8882c58a6c61687ed",
+  "byteDelta": 2,
+  "beforeBytesReconstructedByExactTwoParenthesesRemoval": true,
+  "appInputsMatchedPriorIntegration": true,
+  "appInputChanges": [],
+  "previousAppVerificationSha256": "48022cd71a7785e35f78a1f012feabc70bee168dc267556d0ab4bc781af2dafa",
+  "newManifestSha256": "fec7a54c676a758e9e6d68ed565a958ebe66c5f25c399ec64f9a7ab67064179f",
+  "compilerSha256": "740d03fd882fb8f74d89615ea3fe2279f67eee7cc98d507587148ba106f058ac",
+  "limitations": [
+    "Original PG15/PG17 failure is retained as an actual raw source defect.",
+    "New real database replays are required and pending at this checkpoint.",
+    "Prior app/build proof does not establish the new raw migration or hosted state; compiler tests were rerun separately."
+  ]
+}

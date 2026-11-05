@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-15",
+  "sourceHead": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "scope": "receipt OCR API policy, durable reset generation, and interrupted stream readback",
+  "reviewFindings": [
+    {
+      "threadId": "PRRT_kwDOQGRyNc6sq8at",
+      "status": "resolved_in_current_source",
+      "evidence": [
+        "app/api/ocr/extract/route.ts derives modelPolicy with getOcrModelPolicy and passes modelPolicy.join(',') to the provider",
+        "app/api/ocr/extract/stream/route.ts uses the same complete ordered policy",
+        "tests-unit/zz-ocr-route-contract.test.ts guards both provider entrypoints"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6sq8a2",
+      "status": "resolved_in_current_source",
+      "evidence": [
+        "the review reset trigger rotates the durable generation",
+        "admin-receipt-processor.ts reads that generation before durable execution",
+        "tests-unit/durable-receipt-ocr.test.ts guards the source binding"
+      ]
+    },
+    {
+      "threadId": "PRRT_kwDOQGRyNc6sq8bR",
+      "status": "fixed_locally",
+      "evidence": [
+        "ReviewModal uses bounded status-only reconciliation after an interrupted stream",
+        "only OCR_RESULT_PROCESSING is retried",
+        "indeterminate, unavailable, missing, and cancelled readback stays fail-closed without a provider replay"
+      ]
+    }
+  ],
+  "verification": {
+    "bun": "1.4.0",
+    "focusedTests": {
+      "status": "passed",
+      "files": 5,
+      "tests": 75,
+      "assertions": 632
+    },
+    "reviewModalAndSaveTests": {
+      "status": "passed",
+      "tests": 55,
+      "assertions": 505
+    },
+    "eslint": {
+      "status": "passed",
+      "warnings": 0,
+      "files": 6
+    },
+    "typescriptParity": {
+      "status": "passed",
+      "node": "24.21.0",
+      "npm": "11.6.2",
+      "diagnostics": 0,
+      "logicalInputs": 3324
+    }
+  },
+  "privacy": {
+    "containsRawOcr": false,
+    "containsProviderDiagnostics": false,
+    "containsCredentialsOrTokens": false
+  },
+  "externalActions": {
+    "providerCalls": 0,
+    "databaseWrites": 0,
+    "workflowDispatches": 0,
+    "remoteGitWrites": 0
+  },
+  "limits": [
+    "Verification is local and does not prove hosted database trigger installation or live provider behavior.",
+    "Interrupted processing is retried through at most four status requests; exhausted processing remains pending for explicit user readback."
+  ]
+}

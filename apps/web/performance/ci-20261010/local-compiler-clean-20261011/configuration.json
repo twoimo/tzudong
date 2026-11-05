@@ -1,0 +1,35 @@
+{
+  "aaPairs": 7,
+  "acceptanceBudgets": {
+    "absoluteMeanReductionBootstrap95CiLowerBoundMs": 2000,
+    "noiseAaMeanDifference95CiMustIncludeZero": true,
+    "noiseAaP95AbsoluteRelativeDifferencePercentMaximum": 5,
+    "relativeMeanReductionBootstrap95CiLowerBoundPercent": 5
+  },
+  "bootstrapSamples": 10000,
+  "bootstrapSeed": 20261010,
+  "createdBeforeMeasurementAt": "2026-10-11T10:03:27Z",
+  "expectedBenchmarkScriptSha256": "7f9df77e63482b7db9b0e41c7db3277bc8b47ba0434a7099f0bf2c0885db0719",
+  "expectedDependencyHashes": {
+    "@typescript/native/package.json": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e",
+    "@typescript/old/package.json": "bb6ee7e709ae60426e30b8d393df4d939ee61407794b4f053ce6338d6eaa8c63",
+    "@typescript/typescript-darwin-arm64/package.json": "e88558e22e3db6c4da920e15a60eb2bbea801732b94aedb67e972be2a7f485b8",
+    "typescript/package.json": "d9b8fb53c67c947fece83bcb73fa8512227ea6a12b110e096fdab8ecdc02b655"
+  },
+  "expectedGitHead": "6098055f2d8d141625a216a99d6c8f99956de2a0",
+  "expectedNodeModulesTarget": "<shared-node-modules-root>",
+  "expectedNodePath": "/opt/homebrew/Cellar/node@24/24.21.0_2/bin/node",
+  "expectedNodeVersion": "v24.21.0",
+  "expectedSourceHashes": {
+    "package-lock.json": "ce2e7d9dee5cb837a77f504028452b5e04f9f96a3413bfa2e9a005fa5de7531d",
+    "package.json": "d271e307e944fca7aa8c354bf664733807ee6f03958de2ab05c2adf96fcd44be",
+    "scripts/run-typecheck.mjs": "3e006896b1c85d61b9b8f5ac0020822faf573212c473c70089b190d84313fb9d",
+    "scripts/verify-typescript-toolchain.mjs": "b7f7450e7477e3664b410b4a501df99317e2711c8c3db03911826a157d0689f5",
+    "tsconfig.json": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+  },
+  "expectedSourceTreeSha": "24e0a272dc0fab99351890337ef10fe28f3ae88c",
+  "pairs": 7,
+  "rationale": "Prospective rerun after historical dirty-source evidence was de-admitted; budgets are frozen before this measurement and remain local-only.",
+  "schema": "tzudong-ci-performance/v2/local-compiler-experiment",
+  "warmups": 1
+}

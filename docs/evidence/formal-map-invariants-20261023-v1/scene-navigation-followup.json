@@ -1,0 +1,42 @@
+{
+  "finding": "UI-F-02",
+  "sourceRevision": "6c81d79485af9c4c571ecf74ed1de428af10c0da",
+  "observedPreviewSource": "e8b52464bfc55941980a20f370d5d54b491504d5",
+  "observedPreviewDeployment": "dpl_3FYe1FyvRGykmsPGMKL3ybbUvgjs",
+  "observedAt": "2026-10-24T00:16:59.383Z",
+  "observedFailure": "ArrowRight on the focused 1440px scene scroller invokes the global restaurant keyboard handler, changes selection away from Ilmi, and prevents native horizontal scrolling. Actual URL/title/screenshot retained privately.",
+  "cause": "The scene strip had tabindex=0 but no carousel ownership semantic. The existing panel touch-start guard checks aria-roledescription=carousel, and the global keyboard target guard omitted carousels.",
+  "fix": "Give the scene strip role=region and aria-roledescription=carousel; recognize the same carousel ownership in the existing keyboard guard. Preserve default native scrolling and restaurant navigation outside that strip.",
+  "nativeBefore": {
+    "source": "e8b52464bfc55941980a20f370d5d54b491504d5",
+    "cases": 3,
+    "failed": 3,
+    "desktop": "Actual keyboard helper navigated once from the focused scene strip.",
+    "mobileAndTablet": "Actual extracted panel touch-start handler claimed the scene gesture (starts=1). This does not claim every native overflow gesture changed the restaurant; browsers may cancel touch dispatch during scrolling.",
+    "fixture": "UTF-8 HTML, real overflowing carousel, actual component/global keyboard helper and exact parent touch declarations, native Chrome CDP touch events; all external requests blocked."
+  },
+  "after": {
+    "tests": 52,
+    "files": 7,
+    "assertions": 313,
+    "failed": 0,
+    "viewportWidths": [
+      1440,
+      390,
+      820
+    ],
+    "nativeGesture": "Inside scene strip: native scrolling advances, parent touch-start count=0 and restaurant navigation count=0. Outside strip: normal restaurant navigation still fires once.",
+    "imageErrorBoundary": "Real 404 fallback and new-source image recovery remain passing.",
+    "lint": "PASS",
+    "parityDiagnostics": 0,
+    "logicalInputs": 3388
+  },
+  "oracleCorrection": "An initial offline fixture omitted UTF-8 HTML charset, so its Korean CSS selector did not apply. That invalid layout attempt is retained privately and excluded. The corrected fixture asserts actual overflow before each input test.",
+  "priorSecurity": "80dbce08 source CI6/6, Security6/6 and CodeQL6/6 actually settled success. Full local tests4226pass/12skip/0fail are historical for that source. The new input-boundary change uses its own targeted checks and new delivery CI.",
+  "externalReview": "Routine reproduced input-boundary defect; retain all completed source-bound formal reports without duplicate dispatch. MarkerPool/SDK ownership contracts and frozen publications unchanged.",
+  "newHostReverification": "PENDING",
+  "protectedRelease": "PENDING",
+  "productionChanged": false,
+  "overallComplete": false,
+  "nightly": "SEPARATE_HISTORICAL_FAILURE_39457197351_NO_RERUN"
+}

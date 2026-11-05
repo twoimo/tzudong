@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { compareCohortShadow, decay, refuseOperationalWrite, visitsMultiplier } from "../lib/evidence-engineering/scoring";
 
 describe("cohort shadow", () => {
-  test("a missing comparison blocks live writes and a complete one still does not overwrite", () => {
+  test("missing and complete signal observations both block unestablished scalar comparisons", () => {
     const freshness = decay(10, 0.5, 460);
     const visits = visitsMultiplier(["abc123DEF45", "abc123DEF45"], 0.25);
     expect(visits).toBe(1);
@@ -20,11 +20,15 @@ describe("cohort shadow", () => {
       { identity: "shop:b", operational_score: null, candidate_signals: signals },
     ]);
     expect(complete.summary.count).toBe(2);
-    expect(complete.summary.differ_count).toBe(1);
+    expect(complete.summary.differ_count).toBeNull();
+    expect(complete.records.every(row => !row.comparison_present && row.differs === null)).toBe(true);
     expect(complete.records[0]?.candidate_freshness).toBe(freshness);
     expect(complete.records[0]?.candidate_visit_multiplier).toBe(visits);
     expect(complete.records[0]?.operational_score).toBe(4);
-    const kept = refuseOperationalWrite(complete.summary);
+    expect(complete.summary.live_write_allowed).toBe(false);
+    expect(() => refuseOperationalWrite(complete.summary)).toThrow("shadow_comparison_required");
+    // Even a separately established comparison cannot turn this helper into a writer.
+    const kept = refuseOperationalWrite({ live_write_allowed: true });
     expect(kept.popularity_score).toBeNull();
     expect(kept.popularity_tier).toBeNull();
     expect(kept.overwrites_operational_values).toBe(false);

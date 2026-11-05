@@ -1,0 +1,14 @@
+✔ explicit worker environment scopes both budget acquisition and release (496.970459ms)
+✔ real helper accepts the parent lease identity and releases capacity (234.690834ms)
+✔ a spawn failure creates no fictitious release debt (359.561458ms)
+✔ a definitive acquire rejection creates no release debt for a corrected environment (154.579ms)
+✔ a nonzero exit after committed partial output is ambiguous and releases the selected lease (382.50975ms)
+✔ abort terminates a waiting acquire child and releases a commit-before-close lease exactly once (401.962458ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2112.212083

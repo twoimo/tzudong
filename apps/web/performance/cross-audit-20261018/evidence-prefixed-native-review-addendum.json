@@ -1,0 +1,115 @@
+{
+  "schema": "tzudong-evidence-prefixed-native-review-addendum/v1",
+  "generatedAt": "2026-10-18T22:25:11+09:00",
+  "kind": "aggregate-compiled-execution-addendum",
+  "baseReview": {
+    "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-native-review.json",
+    "sha256": "a629f0f67af555586a4e8bcc2fae5bf42cc6fea93081a7ac686c7d1438db6da3",
+    "preservedUnchanged": true,
+    "priorLimitation": "The PG17 receipt applies the constituent migrations and evaluates all stage queries in rehearsal mode. It does not execute the final aggregate SQL string returned by compileEvidencePrefixedApplyPlan."
+  },
+  "verdict": "LOCAL_REHEARSAL_AGGREGATE_EXECUTION_GAP_CLOSED",
+  "operatingReadiness": "UNVERIFIED_LAUNCH_HELD",
+  "externalDeepResearch": "INCOMPLETE_NOT_REPLACED",
+  "scope": {
+    "receiptAndSourceReadOnlyReview": true,
+    "sqlReexecutedByThisReview": false,
+    "databaseOrExternalCallsByThisReview": 0,
+    "projectSourceOrManifestEditedByThisReview": false
+  },
+  "inputs": [
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-evidence-prefixed-aggregate-compiled-20261018.json",
+      "sha256": "0efdf7f1c9c60feda3d14d9473c464fa8ce91a23d5f12d9427bfbac2d4ccc0c6"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-aggregate-execution-20261018.json",
+      "sha256": "dedd656403e1f2577c75eab435ea27acf7adcdb57cd3b34b244f0849f5e5ca2b"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-evidence-prefixed-aggregate-compiled.mjs",
+      "sha256": "10ba2c13767738a70e71332d4a2534ab015b84356b165299cb70a938339f2fc3"
+    },
+    {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+      "sha256": "d76e45f0d3284d47a32231495409843b640f8107969ebf23814498f277827d3d"
+    },
+    {
+      "path": ".github/review-media-evidence-prefixed-predecessor-successor.v1.json",
+      "sha256": "a48f4d883db91a2b4f44869476c9fe9e4f329468c1e406e3703823ffef1d6f92"
+    },
+    {
+      "path": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
+      "sha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867"
+    }
+  ],
+  "crossChecks": [
+    {
+      "id": "EP-ADD-001",
+      "check": "receipt and summary identity",
+      "result": "PASS",
+      "evidence": "The summary pins aggregate receipt SHA-256 0efdf7f1... and the detached sidecars match both JSON files."
+    },
+    {
+      "id": "EP-ADD-002",
+      "check": "current source binding",
+      "result": "PASS",
+      "evidence": "The aggregate receipt's controller, harness and two manifest hashes equal the current file bytes: d76e45f0..., 10ba2c13..., a48f4d88... and 45b7f146.... The receipt also preserves one frozen 33-source snapshot root."
+    },
+    {
+      "id": "EP-ADD-003",
+      "check": "compiler-produced predecessor aggregate execution",
+      "result": "PASS",
+      "evidence": "The harness compiles rehearsal identity through compileEvidencePrefixedRehearsalAggregatePlan and sends the exact returned SQL to psql with ON_ERROR_STOP=1 and --single-transaction. The receipt records 11 plans, 6,786,264 bytes, SQL SHA-256 597c152d..., baseline-state SHA-256 17beae20..., terminal-state SHA-256 91d90ee2..., stdout SHA-256 f88f2a81..., terminal ledger 100 and terminal identity root 7257f93f...."
+    },
+    {
+      "id": "EP-ADD-004",
+      "check": "compiler-produced feature aggregate execution",
+      "result": "PASS",
+      "evidence": "The feature phase is compiled after the predecessor aggregate reaches ledger 100 and is executed through a separate --single-transaction psql call. The receipt records 5 plans, 6,045,945 bytes, SQL SHA-256 b71e2cf3..., baseline-state SHA-256 743fd272..., terminal-state SHA-256 5bda81da..., stdout SHA-256 b8169726..., terminal ledger 105 and terminal identity root 2a154875...."
+    },
+    {
+      "id": "EP-ADD-005",
+      "check": "terminal output and database readback equality",
+      "result": "PASS",
+      "evidence": "For each phase the harness requires compiled stdout to equal the previously validated constituent terminal stage, then reruns the state query and requires that database terminal readback to equal the same stage. Ledger counts are separately required to be 100 then 105."
+    },
+    {
+      "id": "EP-ADD-006",
+      "check": "fresh disposable target separation",
+      "result": "PASS_WITH_RECEIPT_LIMIT",
+      "evidence": "The bound harness creates an owned labeled container for constituent-stage derivation, removes it, creates another owned labeled container from the restored baseline for aggregate execution, and removes it. The receipt records two owned containers and complete cleanup. Actual container IDs are retained only as a boolean/count in the published JSON, not exposed as sanitized ID values."
+    },
+    {
+      "id": "EP-ADD-007",
+      "check": "source catalog preservation",
+      "result": "PASS",
+      "evidence": "The source ranking_clone dump is normalized and hashed before target creation and after aggregate completion. Both hashes are b7777306... over 2,633,559 bytes, sourceCatalog.unchanged=true, and all frozen local source files are rehashed before receipt creation."
+    },
+    {
+      "id": "EP-ADD-008",
+      "check": "rehearsal versus operating boundary",
+      "result": "PASS",
+      "evidence": "The newly executed SQL is explicitly compiled with identityMode=rehearsal from synthetic stage states. Operating compilation still requires hosted-root admission, both launch policies remain held, and neither receipt claims hosted apply or readiness."
+    }
+  ],
+  "verification": {
+    "command": "cd apps/web && bun test tests-unit/review-media-evidence-prefixed-sql-successors.test.ts tests-unit/review-media-sql-successor-harness.test.ts tests-unit/review-media-feature-sql-successor.test.ts",
+    "passed": 39,
+    "failed": 0,
+    "expectations": 245,
+    "syntaxChecks": [
+      "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+      "apps/web/performance/feature-sql-integration-20261013/verify-evidence-prefixed-aggregate-compiled.mjs"
+    ]
+  },
+  "findings": [],
+  "closedLimitation": "The final compiler-produced predecessor and feature aggregate SQL strings now have retained exact-version PG17.6 execution evidence in separate outer transactions with terminal output/readback equality.",
+  "remainingLimitations": [
+    "This closes only the local synthetic rehearsal aggregate-execution gap. It is not a hosted operating admission, DDL deployment, readiness or field result.",
+    "The aggregate receipt does not publish the two sanitized container IDs themselves; freshness is supported by the exact harness lifecycle plus count/cleanup fields.",
+    "The hosted 86-row projection remains a separately pinned input. It was not queried or applied by this addendum review.",
+    "Both launch policies remain held pending fresh protected-source, writer-fence, inflight and hosted terminal readbacks.",
+    "This native addendum does not replace or complete the external web Deep Research audit."
+  ]
+}

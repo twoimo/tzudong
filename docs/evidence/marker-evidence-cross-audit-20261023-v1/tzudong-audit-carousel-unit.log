@@ -1,0 +1,18 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/evidence-engineering-remaining.test.ts:
+(pass) evidence engineering remaining tasks > uploads only the immutable webp key and refuses collisions [0.39ms]
+(pass) evidence engineering remaining tasks > moderation requires preview, confirm, apply, and readback before an audit record [0.28ms]
+(pass) evidence engineering remaining tasks > public carousel keeps approved sign evidence and its seek url [0.66ms]
+(pass) evidence engineering remaining tasks > operational caution ignores a plain search miss and does not use device coordinates [0.03ms]
+(pass) evidence engineering remaining tasks > marker wrapper stays on transform and opacity [0.32ms]
+(pass) evidence engineering remaining tasks > merged media unions approved frames and does not promote a higher tier [0.52ms]
+(pass) evidence engineering remaining tasks > missing evidence embed falls back without dropping restaurants [0.26ms]
+(pass) evidence engineering remaining tasks > badge viewer stays closed until experimental mode is opened and can close again [0.11ms]
+(pass) evidence engineering remaining tasks > open cross-check clauses stay locked without new formulas [0.53ms]
+(pass) evidence engineering remaining tasks > render summary records percentiles without a 60fps gate [0.04ms]
+
+ 10 pass
+ 0 fail
+ 117 expect() calls
+Ran 10 tests across 1 file. [49.00ms]

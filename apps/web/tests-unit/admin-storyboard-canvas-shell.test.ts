@@ -5,28 +5,29 @@ import { join } from 'node:path';
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('admin storyboard canvas shell extraction', () => {
-  test('keeps canvas shell attributes in the extracted presentational component', () => {
-    const generatorSource = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
-    const shellSource = source('components/admin/storyboard/StoryboardCanvasShell.tsx');
+  test('keeps current scene output inside the Gemini project workspace', () => {
+    const workspaceSource = source('components/admin/storyboard/LocalStoryboardWorkspace.tsx');
+    const aliasSource = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
 
-    expect(generatorSource).toContain('StoryboardCanvasShell');
-    expect(generatorSource).toContain('StoryboardFrameGrid');
-    expect(shellSource).toContain('data-storyboard-result-panel="image-frames-only"');
-    expect(shellSource).toContain('aria-label="스토리보드 이미지 생성 결과"');
-    expect(shellSource).toContain('role="region"');
-    expect(shellSource).toContain('data-storyboard-image-board="true"');
-    expect(shellSource).toContain('data-storyboard-frame-grid="true"');
+    expect(workspaceSource).toContain('aria-labelledby="local-scenes-title"');
+    expect(workspaceSource).toContain('view.project.document.scenes.map');
+    expect(workspaceSource).toContain('function AssetImage');
+    expect(workspaceSource).toContain('function Provenance');
+    expect(workspaceSource).toContain('privateAssetUrl');
+    expect(workspaceSource).toContain('VersionHistory');
+    expect(aliasSource).toContain('export { AdminStoryboardGenerator }');
+    expect(aliasSource).not.toContain('StoryboardCanvasShell');
   });
 
-  test('leaves provider readiness and trusted-image decisions in the orchestrator', () => {
-    const generatorSource = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
-    const shellSource = source('components/admin/storyboard/StoryboardCanvasShell.tsx');
+  test('keeps historical image trust separate from current stored asset rendering', () => {
+    const archiveSource = source('components/admin/storyboard/AdminStoryboardGenerator.tsx');
+    const workspaceSource = source('components/admin/storyboard/LocalStoryboardWorkspace.tsx');
 
-    expect(generatorSource).toContain('mapStoryboardImageProviderReadiness');
-    expect(generatorSource).toContain('getTrustedStoryboardGeneratedImage');
-    expect(generatorSource).toContain('stripUntrustedStoryboardGeneratedImages');
-    expect(shellSource).not.toContain('getTrustedStoryboardGeneratedImage');
-    expect(shellSource).not.toContain('STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE');
+    expect(archiveSource).toContain('getTrustedStoryboardGeneratedImage');
+    expect(archiveSource).toContain('data-storyboard-archive="read-only"');
+    expect(workspaceSource).toContain('asset.provenance');
+    expect(workspaceSource).toContain('modelEvidence === "unverified"');
+    expect(workspaceSource).not.toContain('STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE');
   });
   test('releases the embedded storyboard shell at stacked responsive widths only', () => {
     const appGlobalsSource = source('app/app-globals.css');

@@ -124,12 +124,36 @@ def schema(video_id, start, end):
 
 
 def wire_schema():
-    """Small transport contract; nested semantics stay fail-closed locally."""
-    properties = {"schemaVersion": {"type": "integer"}, "videoId": {"type": "string"},
-                  "coverage": {"type": "object"}, "summary": {"type": "array"},
-                  "restaurants": {"type": "array"}, "claims": {"type": "array"},
-                  "uncertainty": {"type": "array"}}
-    return {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}
+    """Provider-supported structural contract; exact semantics stay local.
+
+    The full value/range schema is intentionally enforced by ``schema`` and
+    ``validate_analysis``.  The transport schema repeats only the documented
+    JSON types, object keys and array item shapes.  Leaving ``coverage`` and
+    array ``items`` unspecified lets structured output legally return an empty
+    object or scalar array entries, which cannot satisfy the local contract.
+    """
+    def obj(properties):
+        return {"type": "object", "properties": properties, "required": list(properties),
+                "additionalProperties": False}
+
+    def array(items):
+        return {"type": "array", "items": items}
+
+    strings = array({"type": "string"})
+    evidence = array(obj({"startSeconds": {"type": "number"}, "endSeconds": {"type": "number"},
+                          "modality": {"type": "string", "enum": ["audio", "visual", "both"]}}))
+    facts = array(obj({"text": {"type": "string"},
+                       "kind": {"type": "string", "enum": ["spoken", "visual", "inference"]},
+                       "evidence": evidence, "confidence": {"type": "number"},
+                       "uncertainty": strings}))
+    coverage = obj({"startSeconds": {"type": "number"}, "endSeconds": {"type": "number"},
+                    "complete": {"type": "boolean"}, "limitations": strings})
+    restaurant = obj({"name": {"type": "string"}, "evidence": evidence,
+                      "confidence": {"type": "number"}, "uncertainty": strings,
+                      "menus": facts, "claims": facts})
+    return obj({"schemaVersion": {"type": "integer", "enum": [1]}, "videoId": {"type": "string"},
+                "coverage": coverage, "summary": facts, "restaurants": array(restaurant),
+                "claims": facts, "uncertainty": strings})
 
 
 def load_engine(checkout):

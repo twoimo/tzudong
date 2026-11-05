@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "supabase-gotrue-platform-source",
+  "purpose": "Generator-only native GoTrue platform initialization for source-only catalog reconstruction; it is not production evidence or database input.",
+  "repository": "https://github.com/supabase/auth",
+  "sourceCommit": "6a8fc26f6042ba92cda51bc62b70f1b61c2cd12e",
+  "sourceRef": "v2.184.0",
+  "composeSource": {
+    "path": "backend/supabase/docker-compose.yml",
+    "image": "supabase/gotrue:v2.184.0"
+  },
+  "ociImage": "docker.io/supabase/gotrue:v2.184.0",
+  "ociIndexDigest": "sha256:c485010238ab429edf4ac8eb70b37b41aae0a0905277a935d4a0b64bb848e393",
+  "ociAmd64ManifestDigest": "sha256:b9c5b998bd6a79f77a391db7d6607f23af2ca4cb9df00505ccb9350aebbdbfae",
+  "nativeCommand": [
+    "gotrue",
+    "migrate"
+  ],
+  "requiredRelations": [
+    "auth.users",
+    "auth.identities",
+    "auth.sessions",
+    "auth.refresh_tokens",
+    "auth.schema_migrations"
+  ]
+}

@@ -2,9 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import vm from 'node:vm';
-import ts from 'typescript';
-import * as jsxRuntime from 'react/jsx-runtime';
 import { GET } from '../app/api/public-popularity/route';
 import { mergeRestaurants } from '../hooks/use-restaurants';
 import { buildRestaurantDetailFromMergeRows } from '../hooks/use-restaurant-detail';
@@ -140,43 +137,30 @@ describe('operator-published public popularity', () => {
         ] })).toThrow('PUBLIC_POPULARITY_PUBLICATION_INVALID');
     });
 
-    test('the shared panel badge binding resolves raw feed/direct rows through the publication boundary', () => {
-        // Execute the real shared panel's JSX prop binding without mounting its
-        // unrelated auth/map providers. No caller-provided tier is trusted.
-        const source = readFileSync(resolve(import.meta.dir, '../components/restaurant/RestaurantDetailPanel.tsx'), 'utf8');
-        const file = ts.createSourceFile('panel.tsx', source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);
-        let node: ts.JsxSelfClosingElement | undefined;
-        const visit = (part: ts.Node) => {
-            if (ts.isJsxSelfClosingElement(part) && part.tagName.getText(file) === 'PopularityBadge') node = part;
-            ts.forEachChild(part, visit);
-        };
-        visit(file);
-        if (!node) throw new Error('SHARED_PANEL_BADGE_BINDING_MISSING');
-        const expression = ts.createPrinter().printNode(ts.EmitHint.Unspecified, node, file);
-        const compiled = ts.transpileModule(`exports.render = (restaurant) => (${expression});`, {
-            compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
-        }).outputText;
+    test('published membership overrides a stale caller tier and the detail panel does not mention flame counts', () => {
         const data = snapshot(); data.entries[0].memberRestaurantIds.push('public-z');
         const lookup = createPublishedPopularityLookup(data);
-        const exports = {} as { render: (r: { id: string; popularity_tier?: string }) => { key: string; props: { tier: string } } };
-        vm.runInNewContext(compiled, { exports, PopularityBadge: () => null,
-            resolvePublishedPopularityTier: (restaurant: Restaurant) => resolvePublishedPopularityTier(restaurant, lookup),
-            require: (name: string) => { if (name === 'react/jsx-runtime') return jsxRuntime; throw new Error('UNEXPECTED_BINDING_IMPORT'); } });
-        expect(exports.render({ id: 'public-a' }).props.tier).toBe('fire');
-        expect(exports.render({ id: 'public-z', popularity_tier: 'rainbow' }).props.tier).toBe('fire');
-        expect(exports.render({ id: 'private', popularity_tier: 'rainbow' }).props.tier).toBe('standard');
-        expect(exports.render({ id: 'public-a' }).key).toBe('public-a:fire');
+        expect(resolvePublishedPopularityTier({ id: 'public-a' }, lookup)).toBe('fire');
+        expect(resolvePublishedPopularityTier({ id: 'public-z' }, lookup)).toBe('fire');
+        expect(resolvePublishedPopularityTier({ id: 'private' }, lookup)).toBe('standard');
+        const panel = readFileSync(resolve(import.meta.dir, '../components/restaurant/RestaurantDetailPanel.tsx'), 'utf8');
+        expect(panel).not.toContain('PopularityMention');
+        expect(panel).not.toContain('불꽃 3개');
+        expect(panel).not.toContain('제일 맛있는 맛집');
     });
 
-    test('published endpoint returns only the bundled reviewed shape, stable ETag and no active cohort by default', async () => {
+    test('published endpoint returns the reviewed public snapshot and stable ETag without raw scores', async () => {
         const response = GET();
         const body = await response.text();
         expect(response.status).toBe(200);
         expect(JSON.parse(body)).toEqual(publicPopularityPublication);
         expect(response.headers.get('etag')).toBe(`"${createHash('sha256').update(body).digest('hex')}"`);
         expect(response.headers.get('cache-control')).toBe('public, max-age=0, must-revalidate');
-        expect(publicPopularityPublication.entries).toEqual([]);
-        expect(publicPopularityPublication.publicationVersion).toBe('unpublished');
+        expect(publicPopularityPublication.entries.length).toBeGreaterThan(0);
+        expect(publicPopularityPublication.publicationVersion).not.toBe('unpublished');
+        for (const entry of publicPopularityPublication.entries) {
+            for (const id of entry.memberRestaurantIds) expect(createPublishedPopularityLookup(publicPopularityPublication)(id)).toBe(entry.tier);
+        }
         expect(createPublishedPopularityLookup(publicPopularityPublication)('missing')).toBe('standard');
     });
 });

@@ -1,6 +1,10 @@
 import type { ThumbnailBriefPreset, ThumbnailGeneratorPayload, ThumbnailReferenceImage } from './types';
 import { validateThumbnailSafety } from './safety';
 
+/** Prompt/safety policy is independent of the execution provider and archived provider IDs. */
+export type ThumbnailPromptPayload = Pick<ThumbnailGeneratorPayload, 'topic' | 'headline' | 'subHeadline'
+  | 'stylePreset' | 'acknowledgedSafety' | 'textLayers' | 'retrievalEvidence' | 'retrievalDiagnostics'>;
+
 const BRIEF_PRESET_PROMPTS: Record<ThumbnailBriefPreset, string> = {
   'tzuyang-food-travel-collage':
     'Tzudong-style food travel collage: high-energy food-first composition, oversized glossy food foreground, dense local food-place background, large editable Korean title safe area; host/person appears only when a host/person reference is supplied.',
@@ -18,7 +22,7 @@ const TZUYANG_TOPIC_PATTERN = /(쯔양|tzuyang)/i;
 const TZUYANG_CHANNEL_PRESET = 'tzuyang-food-travel-collage';
 const PERSON_REFERENCE_ROLES = new Set<ThumbnailReferenceImage['role']>(['host', 'person']);
 
-function requestsSpecificCreatorHost(payload: ThumbnailGeneratorPayload) {
+export function requestsSpecificCreatorHost(payload: ThumbnailPromptPayload) {
   return TZUYANG_TOPIC_PATTERN.test(payload.topic)
     || (payload.stylePreset ?? TZUYANG_CHANNEL_PRESET) === TZUYANG_CHANNEL_PRESET;
 }
@@ -27,18 +31,18 @@ function hasHostPersonReference(referenceImages: ThumbnailReferenceImage[]) {
   return referenceImages.some((image) => PERSON_REFERENCE_ROLES.has(image.role));
 }
 
-function allowsSpecificCreatorHost(_payload: ThumbnailGeneratorPayload, referenceImages: ThumbnailReferenceImage[]) {
+function allowsSpecificCreatorHost(_payload: ThumbnailPromptPayload, referenceImages: ThumbnailReferenceImage[]) {
   return hasHostPersonReference(referenceImages);
 }
 
-function isRedWarmHighSignalTopic(payload: ThumbnailGeneratorPayload) {
+function isRedWarmHighSignalTopic(payload: ThumbnailPromptPayload) {
   return /(매운|불맛|마라|불닭|떡볶|제육|닭발|쭈꾸미|라면|치킨|갈비|빨간|고추장|양념|폭탄|도전|역대|전메뉴|전\s*메뉴)/i.test(
     `${payload.topic} ${payload.headline} ${payload.subHeadline ?? ''}`,
   );
 }
 
 export function buildYoutubeThumbnailPrompt(
-  payload: ThumbnailGeneratorPayload,
+  payload: ThumbnailPromptPayload,
   referenceImages: ThumbnailReferenceImage[] = [],
 ) {
   validateThumbnailSafety(payload);

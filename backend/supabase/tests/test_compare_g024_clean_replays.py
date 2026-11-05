@@ -39,6 +39,9 @@ GENERATOR_ARTIFACTS = (
     "g014-owner-final-pg15-verification.sql", "g014-owner-final-pg15-receipt.json",
     "g016-identity-pg15-verification.sql", "g016-identity-pg15-receipt.json",
     "operational-archive-binding.json",
+    "hosted-pending-custody-pg15-replay.sql", "hosted-pending-custody-pg15-replay.json",
+    "hosted-pending-custody-pg15-assertions.json",
+    "hosted-pending-candidate-index-disposition.json",
     "postgres-image-00000000000001-auth-schema.sql",
     "pre-20260214-overlap-classification.jsonl",
     "reconstruction-compatibility-exclusions.jsonl",
@@ -49,6 +52,9 @@ GENERATOR_ARTIFACTS = (
 )
 
 NEW_REPLAY_ARTIFACTS = (
+    "hosted-pending-custody-pg15-replay.sql", "hosted-pending-custody-pg15-replay.json",
+    "hosted-pending-custody-pg15-assertions.json",
+    "hosted-pending-candidate-index-disposition.json",
     "g014-owner-final-pg15-verification.sql", "g014-owner-final-pg15-receipt.json",
     "g016-identity-pg15-verification.sql", "g016-identity-pg15-receipt.json",
     "operational-archive-binding.json",

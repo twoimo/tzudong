@@ -1,0 +1,23 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/review-save-submit.test.ts:
+349 |         const recoveryCount = f.recoveryStates.length; const messageCount = f.messages.length;
+350 |         const before = { uploads: f.counts.uploads, inserts: f.counts.inserts };
+351 |         const pending = f.confirm(); await entered.promise;
+352 |         f.bindings.composerOpenRef.current = false;
+353 |         release.resolve(); await pending;
+354 |         expect(f.recoveryStates).toHaveLength(recoveryCount);
+                                       ^
+error: expect(received).toHaveLength(expected)
+
+Expected length: 1
+Received length: 2
+
+[REDACTED:phone]
+(fail) actual receipt result recovery > a blocked result confirmation cannot notify a composer closed by its parent while awaiting readback [113.85ms]
+
+ 0 pass
+ 80 filtered out
+ 1 fail
+ 10 expect() calls
+Ran 1 test across 1 file. [355.00ms]

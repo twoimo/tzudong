@@ -28,6 +28,9 @@ import {
 } from '@/lib/home-map-swipe-restaurants';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapLayoutMode, HomeMapPanelSide } from '@/lib/home-map-user-preferences';
+import { loadOverseasMap } from '@/lib/overseas-map-loader';
+import { loadNaverMap } from '@/lib/naver-map-loader';
+import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
 
 import {
     EMPTY_DOMESTIC_CONTEXTUAL_RESTAURANTS,
@@ -35,8 +38,8 @@ import {
     type HomeMapContextualRestaurantsPayload,
 } from '@/lib/home-map-contextual-restaurants';
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
-const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
-const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
+const NaverMapView = lazy(loadNaverMap);
+const OverseasMap = lazy(loadOverseasMap);
 const RestaurantDetailPanel = lazy(() =>
     // Load through the deferred-panel barrel so app/home-detail-globals.css
     // (the Tailwind entry that owns restaurant/review utilities) ships with it.
@@ -66,7 +69,7 @@ interface HomeMapContainerProps {
     onMapReady: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick: (restaurant: Restaurant) => void;
     onPanelClose: () => void;
-    onDetailPanelBack?: () => void;
+    onDetailPanelBack?: () => boolean | void;
     onReviewModalOpen: () => void;
     onTogglePanelCollapse?: () => void;
     activePanel?: 'map' | 'detail' | 'control';
@@ -1421,7 +1424,7 @@ function HomeMapContainerComponent({
                     />
                 </Suspense>
             ) : (
-                <Suspense fallback={null}>
+                <Suspense fallback={<MapSkeleton message="해외 지도 화면을 준비하고 있어요" />}>
                     <OverseasMap
                         mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}

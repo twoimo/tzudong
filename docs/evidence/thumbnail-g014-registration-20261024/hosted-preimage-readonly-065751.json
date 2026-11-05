@@ -1,0 +1,41 @@
+{
+  "kind": "hosted_read_only_installation_preimage",
+  "projectId": "aqlcofblfxdrjhhdmarw",
+  "candidateSourceCommit": "c9f49c225978aa41e56ac8d70a351871e2d24825",
+  "singleSelect": true,
+  "observation": {
+    "observed_at": "2026-10-24 06:57:51.36565+00",
+    "server_version": "17.6",
+    "caller": "postgres",
+    "caller_bypass_rls": true,
+    "thumbnail_schema_present": false,
+    "thumbnail_rpc_count": 0,
+    "visible_bounded_rows": 137,
+    "registry_digest": "e18337a71017c051d5e8dd1624806010a07d756aa11b2ffb1338005421ee2c16",
+    "thumbnail_bucket_count": 0,
+    "executor_owner_memberships": [
+      {
+        "set": false,
+        "admin": true,
+        "grantor": "supabase_admin",
+        "inherit": false
+      }
+    ],
+    "assertions": [
+      {
+        "name": "assert_g014_catalog_contract",
+        "body_sha256": "50948ddce54dbba9497978964bebc535c27ebe98fb0f46bf05e2ec17ab0b9e01",
+        "caller_execute": false
+      },
+      {
+        "name": "assert_g014_definer_contract",
+        "body_sha256": "b9e2f7d812783deee6c91d27d22d6c2019be9aa04e4f1221cc7482567775354a",
+        "caller_execute": false
+      }
+    ]
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "assertionsInvoked": 0,
+  "scope": "Read-only preimage evidence at the returned timestamp. It is not full G014 execution, release admission, a current writer fence, owner lease provisioning or installation."
+}

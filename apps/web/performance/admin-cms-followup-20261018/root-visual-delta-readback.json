@@ -1,0 +1,31 @@
+{
+  "kind": "root-visual-followup",
+  "sourceIntegrity": {
+    "apps/web/app/admin/banners/page.tsx": {
+      "priorSha256": "7ea65f864dd14d36e8fec935843964e7f836ebe1f050f002ec53b313f41563fb",
+      "currentSha256": "b0b100c854b619e75c3db5535c7208f2322587f4a66ce1aba2a19ebc022c0235"
+    },
+    "apps/web/components/admin/AdminUsersPanel.tsx": {
+      "priorSha256": "5685300df4b5d42f2bbf897c022ddf1e4032c114e1bfdb321050ad2976e21a7e",
+      "currentSha256": "671b8a93ca3c663827166001a1ba36591b05a8bae7cc1a12ebebeb38c96e2a3d"
+    },
+    "apps/web/styles/admin-ui.css": {
+      "priorSha256": "936bbf3a6177fadc5bf063bb3a09c91e668786533cd29f7f8677f55be153c999",
+      "currentSha256": "54ba62adad95ebb3aac23e472786e818e607d8ada6bbd610efbc31f7ddc0755a"
+    },
+    "apps/web/tests-unit/admin-user-management-source.test.ts": {
+      "priorSha256": "1e287ffe7210d3c7f97543d62c0bb55d51a70ef16327758c167ed94ff04e8c19",
+      "currentSha256": "e062014256da90bbaa1eb424f62953b76f573c77e6b20fdff30917055f477ed1"
+    }
+  },
+  "ownerSourceReconstructionMatched": true,
+  "changes": [
+    "Share the compact two-row mobile CMS header between users and banners.",
+    "Use semantic green active banner badges and a flat column header.",
+    "Keep the tablet priority column label on one row.",
+    "Align banner search/filter sizes with users and keep mobile primary inspector buttons at least 44px; native switch/checkbox appearance retained."
+  ],
+  "functionalChangesAfterOwnerFreeze": false,
+  "renderMetrics": "apps/web/performance/admin-cms-followup-20261018/render-metrics.json",
+  "operatingValidation": false
+}

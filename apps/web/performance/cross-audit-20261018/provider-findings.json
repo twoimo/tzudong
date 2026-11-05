@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "kind": "provider-budget-cross-audit-findings",
+  "measuredAt": "2026-10-18T12:16:15Z",
+  "source": {
+    "head": "457023a656c7d17671527870679f093ee01e5aeb",
+    "state": "candidate-with-scoped-uncommitted-change",
+    "researchReport": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+    "researchAuthority": "evidence-only"
+  },
+  "findings": [
+    {
+      "id": "TZ-TH-001",
+      "decision": "ACCEPT",
+      "evidenceLevel": "BOUNDARY_INTEGRATION_TESTED",
+      "claim": "Transport text and a generic nonzero exit did not prove that an acquire had no committed lease.",
+      "evidence": [
+        "The canonical Python helper committed SQLite state before emitting the lease identity, while its former broad OSError boundary collapsed output failure into the same sentinel as pre-commit rejection.",
+        "A custom runner could commit the parent-selected lease, emit no stdout, imitate the rejection result, and suppress cleanup.",
+        "The fixed protocol reserves exit 20 for canonical pre-commit rejection and exit 21 for commit/output ambiguity; custom RUN_DAILY_PYTHON runners cannot assert the definite protocol.",
+        "Captured stdout is bounded to 128 characters even when the first child chunk is larger than the remaining buffer.",
+        "Synthetic subprocess tests confirm that false custom rejection is released and canonical pre-commit path failure creates no debt.",
+        "A Python test commits a real SQLite lease, fails stdout flush, returns the ambiguous exit, and confirms the same identity remains available for parent cleanup."
+      ],
+      "changedFiles": [
+        "backend/utils/provider-budget.mjs",
+        "backend/utils/provider_budget.py",
+        "backend/utils/tests/provider-budget-js.test.mjs",
+        "backend/utils/tests/test_pipeline_performance.py"
+      ],
+      "rawResultPaths": [
+        "apps/web/performance/cross-audit-20261018/provider-node24-results.txt",
+        "apps/web/performance/cross-audit-20261018/provider-python314-results.txt",
+        "apps/web/performance/cross-audit-20261018/provider-python311-results.txt"
+      ],
+      "remainingConditions": [
+        "The default python3 executable, PATH, and repository module resolution are trusted host configuration controlled by the operator, not remote caller input; explicit RUN_DAILY_PYTHON runners are always treated conservatively.",
+        "These are local process and SQLite boundary tests, not provider quota, billing, or Gemini request evidence."
+      ]
+    },
+    {
+      "id": "TZ-TH-002",
+      "decision": "ACCEPT",
+      "evidenceLevel": "BOUNDARY_INTEGRATION_TESTED",
+      "claim": "Release debt captured a broken runner executable and prevented a later healthy runner from making progress.",
+      "evidence": [
+        "Debt now freezes only the lease and original budget target environment.",
+        "Drain retries use the current healthy runner with the old project/path identity, preventing release against a different budget.",
+        "The recovery fixture removes runner A after acquire, loses runner B's first release response after deleting the old lease, then verifies an idempotent second release before B acquires in its own scope.",
+        "The existing Gemini client same-process debt test still blocks while the runner remains broken and recovers after it becomes healthy."
+      ],
+      "changedFiles": [
+        "backend/utils/provider-budget.mjs",
+        "backend/utils/tests/provider-budget-js.test.mjs",
+        "backend/utils/tests/gemini-client.test.mjs"
+      ],
+      "rawResultPaths": [
+        "apps/web/performance/cross-audit-20261018/provider-node24-results.txt",
+        "apps/web/performance/cross-audit-20261018/provider-integration-results.txt"
+      ],
+      "remainingConditions": [
+        "Recovery remains fail-closed if the original budget storage target itself is unavailable.",
+        "A healthy runner must implement the canonical idempotent release action for the frozen target identity."
+      ]
+    },
+    {
+      "id": "TZ-TH-003",
+      "decision": "ACCEPT",
+      "evidenceLevel": "BOUNDARY_INTEGRATION_TESTED",
+      "claim": "Abort before an ENOENT spawn error lost childStarted=false and could create fictitious release debt.",
+      "evidence": [
+        "BudgetCommandFailure now carries childStarted and acquireRejected as internal command state while the original AbortError is rethrown to the caller.",
+        "Cleanup occurs only when the child actually emitted spawn or when a successful command response made commit possible.",
+        "The immediate abort plus missing executable fixture preserves the exact abort reason and allows the next healthy acquire without a debt drain failure.",
+        "The existing commit-before-close abort fixture still terminates the child and releases the exact selected lease once."
+      ],
+      "changedFiles": [
+        "backend/utils/provider-budget.mjs",
+        "backend/utils/tests/provider-budget-js.test.mjs"
+      ],
+      "rawResultPaths": [
+        "apps/web/performance/cross-audit-20261018/provider-node24-results.txt"
+      ],
+      "remainingConditions": [
+        "The race coverage is synthetic process-boundary evidence and does not claim every operating-system scheduler interleaving.",
+        "No actual provider request was started."
+      ]
+    }
+  ],
+  "verification": {
+    "commands": [
+      "PATH=\"/Users/twoimo/Documents/projects/tzudong/.venv/bin:/opt/homebrew/opt/node@24/bin:$PATH\" PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/opt/node@24/bin/node --test backend/utils/tests/provider-budget-js.test.mjs",
+      "PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.11 -m unittest backend.utils.tests.test_pipeline_performance.ReadBudgetTests",
+      "PYTHONDONTWRITEBYTECODE=1 /Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest backend.utils.tests.test_pipeline_performance.ReadBudgetTests",
+      "PATH=\"/Users/twoimo/Documents/projects/tzudong/.venv/bin:/opt/homebrew/opt/node@24/bin:$PATH\" PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/opt/node@24/bin/node --test --test-name-pattern='release debt recovers' backend/utils/tests/gemini-client.test.mjs",
+      "git diff --check -- backend/utils/provider-budget.mjs backend/utils/provider_budget.py backend/utils/tests/provider-budget-js.test.mjs backend/utils/tests/test_pipeline_performance.py backend/utils/tests/gemini-client.test.mjs",
+      "/opt/homebrew/opt/node@24/bin/node --check backend/utils/provider-budget.mjs"
+    ],
+    "node": "24.22.0",
+    "python": [
+      "3.14.8 (project pinned)",
+      "3.11.17 (preserved compatibility run)"
+    ],
+    "passed": 40,
+    "failed": 0
+  },
+  "sourceIntegrity": {
+    "backend/utils/provider-budget.mjs": "8313b93666a36342bd1c53581c9ec2034a07c23225ac5fb9e6988424fe395f27",
+    "backend/utils/provider_budget.py": "edfd9b77125f05a81209fd9799c5e8465f169dbf175d9ca8361adf3cb50b78e7",
+    "backend/utils/tests/provider-budget-js.test.mjs": "43972f416ebaff2b29b9508b60c5569a7a9391b41d188a56a23cd313ebbed61f",
+    "backend/utils/tests/test_pipeline_performance.py": "9903c57f4f618fa2bae71cd32edc835dc6d514a10aa8c5e4723f9d61d908b8c8",
+    "backend/utils/tests/gemini-client.test.mjs": "ff776a35a4c414dff9fbc10cff57a5b4e5c3f1813f55f5a0656d47721b70704f"
+  },
+  "limits": [
+    "No global configuration, model setting, paid capacity, provider call, or Gemini request was changed or used.",
+    "The research report was not edited and did not authorize any external action."
+  ]
+}

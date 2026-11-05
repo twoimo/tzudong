@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-application-inline-focus-readback",
+  "observedAt": "2026-10-18T13:31:59.536737+00:00",
+  "sourceRevision": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "source": {
+    "path": "apps/web/components/admin/SubmissionListView.tsx",
+    "sha256": "cab43ce4b4ab31dd47c159dc46f3fa059658205a8d581974358ff2040e6eaade",
+    "equalToCommittedSource": true
+  },
+  "rawInteraction": {
+    "path": "apps/web/performance/admin-cms-followup-20261018/focus-and-dirty-interactions.json",
+    "sha256": "720949d3899dfe07cb93f5fedc2ab049b551e0b558f98a5051cb0b6ad2a4ea74"
+  },
+  "environment": {
+    "transport": "CUA controlled Chrome",
+    "origin": "http://127.0.0.1:18822",
+    "viewport": {
+      "width": 1440,
+      "height": 960
+    },
+    "syntheticDataOnly": true,
+    "gatewayMethods": [
+      "GET",
+      "HEAD"
+    ],
+    "hostedDatabaseWrites": 0,
+    "providerCalls": 0
+  },
+  "directCases": [
+    {
+      "activeLabel": "검증 맛집 1검증용 리뷰 1. 음식과 공간의 분위기를 확인하는 합성 데이터입니다.닉네임을 불러올 수 없음 · 10. 03. 오전 09:00사진 0OCR 미처리",
+      "activeRect": {
+        "height": 39.328125,
+        "width": 688,
+        "x": 238,
+        "y": 217.5
+      },
+      "activeTag": "BUTTON",
+      "case": "review-inline-close",
+      "detailClosed": true
+    },
+    {
+      "activeLabel": "검증 제보 맛집서울특별시 중구 검증로 1닉네임을 불러올 수 없음 · 10. 03. 오전 09:00영상 링크",
+      "activeRect": {
+        "height": 39.328125,
+        "width": 688,
+        "x": 238,
+        "y": 307.828125
+      },
+      "activeTag": "BUTTON",
+      "case": "submission-inline-close-visible-trigger",
+      "detailClosed": true
+    }
+  ],
+  "passed": 2,
+  "failed": 0,
+  "externalSearchSupplemental": {
+    "activeLabel": "리뷰 검색",
+    "case": "review-external-search-escape",
+    "detailClosed": true,
+    "value": ""
+  },
+  "limitations": [
+    "Actual local application development rendering; not a deployment or operating mutation.",
+    "The review search Escape observation includes query clearing and is supplemental, not the direct close gate."
+  ]
+}

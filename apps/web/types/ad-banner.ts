@@ -12,8 +12,8 @@ export const AdBannerSchema = z.object({
     is_active: z.boolean().default(true),
     priority: z.number().int().min(0).max(1000).default(0),
     display_target: z.array(z.enum(['sidebar', 'mobile_popup'])).default(['sidebar', 'mobile_popup']),
-    created_at: z.string().datetime(),
-    updated_at: z.string().datetime(),
+    created_at: z.string().datetime({ offset: true }),
+    updated_at: z.string().datetime({ offset: true }),
     created_by: z.string().uuid().nullable(),
 });
 

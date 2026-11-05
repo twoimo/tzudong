@@ -1,0 +1,370 @@
+{
+  "config": {
+    "redacted": "Playwright configuration omitted; test suites, failures and stats retained"
+  },
+  "suites": [
+    {
+      "title": "privacy-safeguards.spec.ts",
+      "file": "privacy-safeguards.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "G010 privacy safeguards",
+          "file": "privacy-safeguards.spec.ts",
+          "line": 5,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "device location controls",
+              "file": "privacy-safeguards.spec.ts",
+              "line": 34,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "shows inline disclosure and locates with one click and no app dialog",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 5677,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:48:60",
+                            "location": {
+                              "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                              "column": 60,
+                              "line": 48
+                            },
+                            "snippet": "  46 |       await button.click();\n  47 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n> 48 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();\n     |                                                            ^\n  49 |       expect(dialogs).toBe(0);\n  50 |       expect(fixture.readinessCalls()).toBe(1);\n  51 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(1);"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                                "column": 60,
+                                "line": 48
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n\n\n  46 |       await button.click();\n  47 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n> 48 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();\n     |                                                            ^\n  49 |       expect(dialogs).toBe(0);\n  50 |       expect(fixture.readinessCalls()).toBe(1);\n  51 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(1);\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:48:60"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:31.106Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results/privacy-safeguards-G010-pr-21c33-one-click-and-no-app-dialog-chromium/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                            "column": 60,
+                            "line": 48
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-c2dc83efba1a654f740f",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 35,
+                  "column": 5
+                },
+                {
+                  "title": "denies readiness without calling permission APIs",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 559,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:37.099Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-777a369bd482a2241b6e",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 54,
+                  "column": 5
+                },
+                {
+                  "title": "locks duplicate clicks during readiness and ignores a cancelled readiness response",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 641,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:37.757Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-05c2ec784476a13bb55b",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 69,
+                  "column": 5
+                },
+                {
+                  "title": "late error after visibility cancellation cannot cancel a newer request",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 5801,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:114:60",
+                            "location": {
+                              "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                              "column": 60,
+                              "line": 114
+                            },
+                            "snippet": "  112 |       await page.evaluate(() => (window as unknown as DeviceLocationTestWindow).__deviceLocationProbe.resolve(1));\n  113 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n> 114 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();\n      |                                                            ^\n  115 |     });\n  116 |\n  117 |     for (const outcome of ['denied', 'timeout'] as const) test(`${outcome} permits an explicit retry without another app dialog`, async ({ page }) => {"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                                "column": 60,
+                                "line": 114
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('10m', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('10m', { exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('10m', { exact: true })\u001b[22m\n\n\n  112 |       await page.evaluate(() => (window as unknown as DeviceLocationTestWindow).__deviceLocationProbe.resolve(1));\n  113 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n> 114 |       await expect(page.getByText('10m', { exact: true })).toBeVisible();\n      |                                                            ^\n  115 |     });\n  116 |\n  117 |     for (const outcome of ['denied', 'timeout'] as const) test(`${outcome} permits an explicit retry without another app dialog`, async ({ page }) => {\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:114:60"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:38.403Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results/privacy-safeguards-G010-pr-13400-nnot-cancel-a-newer-request-chromium/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                            "column": 60,
+                            "line": 114
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-7c80e2d877d5c94427a8",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 98,
+                  "column": 5
+                },
+                {
+                  "title": "denied permits an explicit retry without another app dialog",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 12841,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:44.441Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-f3cba1afa584705152fa",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 117,
+                  "column": 59
+                },
+                {
+                  "title": "timeout permits an explicit retry without another app dialog",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 614,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/현재 위치를 찾는 시간이 초과됐어요/)\nExpected: visible\nError: strict mode violation: getByText(/현재 위치를 찾는 시간이 초과됐어요/) resolved to 2 elements:\n    1) <div class=\"min-w-0 text-sm font-semibold leading-5 sm:whitespace-nowrap\">현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</div> aka getByText('현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.', { exact: true })\n    2) <span role=\"status\" aria-live=\"assertive\">Notification 현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</span> aka getByText('Notification')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/현재 위치를 찾는 시간이 초과됐어요/) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/현재 위치를 찾는 시간이 초과됐어요/)\u001b[22m\n",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/현재 위치를 찾는 시간이 초과됐어요/)\nExpected: visible\nError: strict mode violation: getByText(/현재 위치를 찾는 시간이 초과됐어요/) resolved to 2 elements:\n    1) <div class=\"min-w-0 text-sm font-semibold leading-5 sm:whitespace-nowrap\">현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</div> aka getByText('현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.', { exact: true })\n    2) <span role=\"status\" aria-live=\"assertive\">Notification 현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</span> aka getByText('Notification')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/현재 위치를 찾는 시간이 초과됐어요/) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/현재 위치를 찾는 시간이 초과됐어요/)\u001b[22m\n\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:123:99",
+                            "location": {
+                              "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                              "column": 99,
+                              "line": 123
+                            },
+                            "snippet": "  121 |       page.on('dialog', async dialog => { dialogs++; await dialog.dismiss(); });\n  122 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();\n> 123 |       await expect(page.getByText(outcome === 'denied' ? /위치 권한이 거부됐어요/ : /현재 위치를 찾는 시간이 초과됐어요/)).toBeVisible();\n      |                                                                                                   ^\n  124 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();\n  125 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n  126 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(2);"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                                "column": 99,
+                                "line": 123
+                              },
+                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/현재 위치를 찾는 시간이 초과됐어요/)\nExpected: visible\nError: strict mode violation: getByText(/현재 위치를 찾는 시간이 초과됐어요/) resolved to 2 elements:\n    1) <div class=\"min-w-0 text-sm font-semibold leading-5 sm:whitespace-nowrap\">현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</div> aka getByText('현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.', { exact: true })\n    2) <span role=\"status\" aria-live=\"assertive\">Notification 현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.</span> aka getByText('Notification')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText(/현재 위치를 찾는 시간이 초과됐어요/) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/현재 위치를 찾는 시간이 초과됐어요/)\u001b[22m\n\n\n  121 |       page.on('dialog', async dialog => { dialogs++; await dialog.dismiss(); });\n  122 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();\n> 123 |       await expect(page.getByText(outcome === 'denied' ? /위치 권한이 거부됐어요/ : /현재 위치를 찾는 시간이 초과됐어요/)).toBeVisible();\n      |                                                                                                   ^\n  124 |       await page.getByRole('button', { name: '현재 위치 보기', exact: true }).click();\n  125 |       await expect(page.getByRole('button', { name: '현재 위치 기준 방향 확인', exact: true })).toBeEnabled();\n  126 |       expect((await readDeviceLocationCounts(page)).getCalls).toBe(2);\n    at /Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts:123:99"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:57.377Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/test-results/privacy-safeguards-G010-pr-786bb--without-another-app-dialog-chromium/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/twoimo/.codex/worktrees/badge-next-runtime-20261020/tzudong/apps/web/tests/privacy-safeguards.spec.ts",
+                            "column": 99,
+                            "line": 123
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-715ce044d7b550e11391",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 117,
+                  "column": 59
+                },
+                {
+                  "title": "heading toggles off and clears its watcher without another app confirmation",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 25147,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-10-20T20:00:58.204Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "36c5840ad3c817b4e6d1-e8cc21c0de369eaa16b0",
+                  "file": "privacy-safeguards.spec.ts",
+                  "line": 130,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-20T20:00:30.587Z",
+    "duration": 52892.549999999996,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 3,
+    "flaky": 0
+  }
+}

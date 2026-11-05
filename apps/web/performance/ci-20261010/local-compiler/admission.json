@@ -1,0 +1,35 @@
+{
+  "admitted": false,
+  "assessmentDate": "2026-10-11",
+  "historicalObservation": {
+    "emptyGitStatusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "gitStatusSha256": "66614aafdceae524e2793b00aa0a004bd2bc6374c1d583b7ac415b1d19aecb0a",
+    "measuredPairCount": 7,
+    "rawSha256": "cb8249a9e1cf90641b2789098e58a5841d8d85ad5bfe78bfcdefeac69258c93e",
+    "retainedSelectedInputHashCount": 5,
+    "reportedMeanPairedReductionPercent": 49.002472553469644
+  },
+  "officialApproval": false,
+  "postHocFutureBudgets": {
+    "absoluteMeanReductionBootstrap95CiLowerBoundMs": 2000,
+    "integrity": [
+      "all measured sequences succeed",
+      "existing parity output contract passes",
+      "clean exact apps/web Git tree is retained",
+      "complete measured input is reconstructable"
+    ],
+    "noiseAaMeanDifference95CiMustIncludeZero": true,
+    "noiseAaP95AbsoluteRelativeDifferencePercentMaximum": 5,
+    "noiseAaPairCount": 7,
+    "relativeMeanReductionBootstrap95CiLowerBoundPercent": 5
+  },
+  "reasons": [
+    "the measured apps/web source was dirty",
+    "the complete measured TypeScript input tree was not retained",
+    "only five selected input files were content-hashed",
+    "no predeclared absolute, relative, or noise acceptance budget existed",
+    "no independent A/A noise control was retained"
+  ],
+  "replacementMeasurement": null,
+  "schema": "tzudong-ci-performance/v1/local-compiler-admission"
+}

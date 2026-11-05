@@ -205,6 +205,8 @@ export default function NewSubmissionsPage() {
     isFetchingNextPage,
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useInfiniteQuery({
     queryKey: ["myNewSubmissions", user?.id],
     queryFn: async ({ pageParam = 0 }) => {
@@ -591,6 +593,8 @@ export default function NewSubmissionsPage() {
   if (isError) {
     return (
       <MyPageErrorState
+        onRetry={() => void refetch()}
+        retrying={isFetching}
         title="신규 맛집 제보를 불러오지 못했습니다"
         description="제보 내역을 다시 불러오려면 잠시 후 재시도해주세요."
       />

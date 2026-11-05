@@ -1,5 +1,7 @@
 import importlib.util
 import unittest
+import contextlib
+import io
 from pathlib import Path
 from unittest.mock import patch
 
@@ -114,6 +116,47 @@ class TranscriptContextBackendTests(unittest.TestCase):
         with patch.object(mod.requests, "get", return_value=FakeResponse()):
             with patch.object(mod.sys, "argv", ["03-1-generate-transcript-context.py", "--check-connection-only", "--model", "missing-model"]):
                 self.assertEqual(mod.main(), 1)
+
+
+    def test_openai_preflight_passes_only_explicit_key_and_preserves_endpoint(self):
+        response = type("Response", (), {"status_code": 200, "json": lambda self: {"data": [{"id": "synthetic-model"}]}})()
+        with patch.dict("os.environ", {"TRANSCRIPT_CONTEXT_API_KEY": "synthetic-context-key"}, clear=True), patch.object(mod.requests, "get", return_value=response) as get, contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertTrue(mod.check_openai_compatible_connection("https://synthetic.invalid/v1", "synthetic-model"))
+        self.assertEqual(get.call_args.args, ("https://synthetic.invalid/v1/models",))
+        self.assertEqual(get.call_args.kwargs.get("headers"), {"Authorization": "Bearer synthetic-context-key"})
+        self.assertEqual(get.call_args.kwargs.get("timeout"), 5)
+        self.assertIs(get.call_args.kwargs.get("allow_redirects"), False)
+        self.assertNotIn("synthetic-context-key", output.getvalue())
+
+    def test_local_preflight_without_key_does_not_invent_credentials(self):
+        response = type("Response", (), {"status_code": 200, "json": lambda self: {"data": [{"id": "synthetic-model"}]}})()
+        with patch.dict("os.environ", {}, clear=True), patch.object(mod.requests, "get", return_value=response) as get:
+            self.assertTrue(mod.check_openai_compatible_connection("http://127.0.0.1:8080/v1", "synthetic-model"))
+        self.assertEqual(get.call_args.kwargs.get("headers"), {})
+
+    def test_preflight_rejects_redirect_without_reading_its_body(self):
+        response = type("Response", (), {"status_code": 302, "json": lambda self: (_ for _ in ()).throw(AssertionError("body must not be read"))})()
+        with patch.dict("os.environ", {"TRANSCRIPT_CONTEXT_API_KEY": "synthetic-context-key"}, clear=True), patch.object(mod.requests, "get", return_value=response) as get:
+            self.assertFalse(mod.check_openai_compatible_connection("https://synthetic.invalid/v1", "synthetic-model"))
+        self.assertIs(get.call_args.kwargs.get("allow_redirects"), False)
+
+    def test_preflight_rejects_malformed_model_envelopes_and_accepts_mixed_entries(self):
+        for payload in [None, [], {"data": "invalid"}, {"data": [None, "invalid"]}]:
+            with self.subTest(payload=type(payload).__name__):
+                response = type("Response", (), {"status_code": 200, "json": lambda self, p=payload: p})()
+                with patch.object(mod.requests, "get", return_value=response):
+                    self.assertFalse(mod.check_openai_compatible_connection("https://synthetic.invalid/v1", "synthetic-model"))
+        response = type("Response", (), {"status_code": 200, "json": lambda self: {"data": [None, {"id": "synthetic-model"}]}})()
+        with patch.object(mod.requests, "get", return_value=response):
+            self.assertTrue(mod.check_openai_compatible_connection("https://synthetic.invalid/v1", "synthetic-model"))
+
+    def test_preflight_json_and_network_errors_do_not_log_provider_details(self):
+        for network_error in [False, True]:
+            response = type("Response", (), {"status_code": 200, "json": lambda self: (_ for _ in ()).throw(ValueError("synthetic-private-diagnostic"))})()
+            kwargs = {"side_effect": mod.requests.exceptions.RequestException("synthetic-private-diagnostic")} if network_error else {"return_value": response}
+            with patch.object(mod.requests, "get", **kwargs), contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertFalse(mod.check_openai_compatible_connection("https://synthetic.invalid/v1", "synthetic-model"))
+            self.assertNotIn("synthetic-private-diagnostic", output.getvalue())
 
 
 if __name__ == "__main__":

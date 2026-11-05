@@ -1,0 +1,38 @@
+{
+  "saved_at": "2026-10-22T20:41:03.429152+00:00",
+  "url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "actual_ui_model": "GPT-6 / Pro",
+  "actual_research": "off",
+  "backend_identity": "UNVERIFIED",
+  "source_bundle": "6edea509e566107a4a4bbced53055aed79ea3ca3c1094367a468bf7cb0f047e5",
+  "source_revision": "ac80e35da566db242420a62bbf3e3320b5c00e76",
+  "parts": [
+    {
+      "path": "chatgpt_thesis_part1.md",
+      "turn": "5a27c60b-1d2a-44f8-9bcd-444212c8605e",
+      "bytes": 17688,
+      "sha256": "c59ea2a1eae102c72d9bb63065a0054615f20f5090a78a7db816fa752e029018"
+    },
+    {
+      "path": "chatgpt_thesis_part2.md",
+      "turn": "920de74b-5878-4f11-acb6-59409e95f062",
+      "bytes": 15662,
+      "sha256": "665efc4c1ffef886e461cc2a6618bae0eeadcbea2251df3aa53bdad2dcd6c400"
+    },
+    {
+      "path": "chatgpt_thesis_part3.md",
+      "turn": "de8250f8-69a5-4dc4-b59f-1a7446521c37",
+      "bytes": 11622,
+      "sha256": "fd09245302549cc160f4573f192095d50fb5e6e4b22a785b0e4a3b6569679a79"
+    }
+  ],
+  "combined": {
+    "path": "chatgpt_master_plan.md",
+    "bytes": 44976,
+    "sha256": "f0b823f93ffc1052e041843f3fbdd50c11b4c66a04f7f67ec7b23b60bd48564f",
+    "construction": "Exact unedited part1 + twoLF + part2 + twoLF + part3. All part hashes independently match official UI copy; cutoffs and ID drift retained, annotations separate."
+  },
+  "completion": "Final section9, every listed TH finding, ADR/risk/work sequence and native gates present. Conditional findings are not host-test passes.",
+  "source_access": "First large attachment retrieval explicitly missing; necessary unchanged core supplement95063B added in accepted followup, actual function/arithmetic/guard samples matched. Original prepared source identity retained.",
+  "chronology_exception": "First native typeText terminal newline submitted once before a separate ready snapshot; readiness reconstructed from same accepted associated files. No replay; later continuations explicit ready then send."
+}

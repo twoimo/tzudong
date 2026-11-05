@@ -1,0 +1,121 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-formal/marker-state-model.test.mjs:
+FORMAL_BROWSER 156.0.8078.47
+FORMAL_VISUAL_TRANSITIONS 9216
+(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [4185.29ms]
+(pass) a review-only transition retains the image and avoids an SDK icon replacement [1458.34ms]
+FORMAL_OWNERSHIP_STEPS 18056
+(pass) every pool/click action sequence through depth four keeps current callback ownership [1284.77ms]
+
+tests-unit/retained-marker-accessibility.test.ts:
+(pass) outside-padded mask is owned, reversible and has no geometry or focus changes [0.15ms]
+(pass) does not remove a hidden state owned by another source [0.03ms]
+(pass) release/replacement cleanup allows the newly generated SDK root to be masked [0.07ms]
+(pass) SDK root not yet present stays retryable; removed root clears release ownership [0.03ms]
+(pass) delayed SDK roots share one observer and are masked on insertion without another render [0.19ms]
+(pass) visible/released marker cancels a pending root and does not later hide a replacement [0.03ms]
+(pass) changing map target disconnects the old pending observer [0.03ms]
+(pass) an SDK root replacement with the same desired state is masked again [0.03ms]
+(pass) hides the app overlay anchor containing a sibling review button and restores it [0.02ms]
+
+tests-unit/home-map-contextual-restaurants-source.test.ts:
+(pass) home map contextual visible-marker restaurants > keeps raw visible swipe callback separate from contextual presentation payload [1.07ms]
+(pass) home map contextual visible-marker restaurants > selects a bounded deterministic subset for marker review bubbles [0.26ms]
+(pass) home map contextual visible-marker restaurants > renders compact review bubble markup with photo and escaped content [0.15ms]
+(pass) home map contextual visible-marker restaurants > wires contextual state through container and home controls without overseas presentation [0.40ms]
+(pass) home map contextual visible-marker restaurants > renders desktop and mobile contextual discovery only as presentation UI [2.38ms]
+
+tests-unit/visible-marker-review-bubble-photo.test.ts:
+(pass) visible marker review bubble photo resolution > resolves a stored object path to the review-bound public URL [0.38ms]
+(pass) visible marker review bubble photo resolution > uses the first usable path and ignores blank entries [0.03ms]
+(pass) visible marker review bubble photo resolution > refuses a path that is not bound to the review owner [0.11ms]
+(pass) visible marker review bubble photo resolution > returns null when there is no photo or no owner [0.01ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > failed provider detachment is discarded and does not strand clear or reuse a corrupt marker [0.55ms]
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.12ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.05ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.07ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.20ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.08ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.06ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.12ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.10ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.03ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.02ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.20ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.05ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [1.46ms]
+
+tests-unit/expanded-cluster-flow-invariants.test.ts:
+(pass) expanded cluster flow invariants > provider marker culling does not remove list or swipe candidates [0.92ms]
+(pass) expanded cluster flow invariants > selected and searched offscreen restaurants remain provider exceptions [0.10ms]
+(pass) expanded cluster flow invariants > pan to an empty viewport releases stale candidates and pan back restores the same ordered rows [0.99ms]
+(pass) expanded cluster flow invariants > a refreshed array identity reindexes changed coordinates and changes the render signature [0.40ms]
+(pass) expanded cluster flow invariants > empty viewport cleanup keeps an expanded selection renderable until expansion clears [0.01ms]
+(pass) expanded cluster flow invariants > idle and resize invalidate expanded markers before scheduling the unchanged cluster debounce [0.22ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [2.30ms]
+(pass) expanded cluster flow invariants > fast pan return restores culled markers without an away idle (cluster index: %s) [1.01ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.21ms]
+(pass) expanded cluster flow invariants > raw viewport changes invalidate only expanded markers (expanded: %s) [0.05ms]
+(pass) expanded cluster flow invariants > unchanged repeated idle keeps the marker signature while viewport revision invalidates it [0.16ms]
+
+tests-unit/evidence-numeric-bounds.test.ts:
+(pass) finite inputs cannot leak infinity from half-life or visit multiplier arithmetic [0.34ms]
+(pass) sampling-window arithmetic cannot produce an unsafe timestamp from a safe input [0.05ms]
+(pass) an unscored signal vector cannot establish a scalar difference or permit a live write [0.05ms]
+
+tests-unit/evidence-cohort-shadow.test.ts:
+(pass) cohort shadow > missing and complete signal observations both block unestablished scalar comparisons [0.28ms]
+
+tests-unit/visible-marker-review-bubbles.test.ts:
+(pass) visible marker review bubble signatures > in-place review field updates reach the wrapped HTML [0.14ms]
+(pass) visible marker review bubble signatures > reuses the id signature for the same restaurant list [0.04ms]
+(pass) visible marker review bubble signatures > changes when rendered bubble content changes under the same review id [0.03ms]
+(pass) visible marker review bubble signatures > is stable regardless of record insertion order [0.02ms]
+(pass) visible marker review bubble signatures > reuses one bubble render token until its fields change [0.01ms]
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [4.43ms]
+(pass) malformed count values remain missing instead of coercing into a public flame [10.27ms]
+(pass) conflicting metrics for the same video fail in either input order [2.70ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [7.96ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [1.38ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [2.79ms]
+(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [4.57ms]
+
+tests-unit/naver-map-event-wiring.test.ts:
+(pass) actual Naver blank-click registration dispatches the current handlers and cancels retained callbacks [21.82ms]
+(pass) actual drag/pinch registration releases search ownership and becomes inert after cleanup [5.51ms]
+
+tests-unit/evidence-engineering-foundation.test.ts:
+(pass) evidence engineering foundation > locks the hyperbolic half-life correction and rejects the 460-day claim [0.18ms]
+(pass) evidence engineering foundation > floor decay uses the decayable half-life, with unlocked coefficients [0.08ms]
+(pass) evidence engineering foundation > visit multiplier ignores duplicate video ids and rejects a negative gamma [0.13ms]
+(pass) evidence engineering foundation > counts keep null distinct from zero and clamp only real non-negative integers [0.09ms]
+(pass) evidence engineering foundation > the same video contributes its counts once, and conflicting duplicates fail closed [0.14ms]
+(pass) evidence engineering foundation > assembled signals are deterministic and do not collapse into one multiplied score [0.07ms]
+(pass) evidence engineering foundation > broad Naver stages and search misses never become closed_store [0.18ms]
+(pass) evidence engineering foundation > exact stages need two families, and a complete closure record stays a candidate [0.22ms]
+(pass) evidence engineering foundation > Levenshtein is available and is not an automatic identity cutoff [0.25ms]
+(pass) evidence engineering foundation > seek URLs keep the canonical watch form and storage keys keep milliseconds [0.16ms]
+(pass) evidence engineering foundation > frame parsing separates collection from review and rejects raw OCR [0.49ms]
+(pass) evidence engineering foundation > approved frames union by id and refuse mixed moderation or colliding keys [0.60ms]
+(pass) evidence engineering foundation > sampling plans decode a bounded window and do not promise I-frame 2fps [0.05ms]
+(pass) evidence engineering foundation > tier records keep cohort identity and do not select the highest tier [0.23ms]
+(pass) evidence engineering foundation > fetch classification separates challenges from temporary limits [0.07ms]
+(pass) evidence engineering foundation > marker and badge contracts stay on the compositor path [0.04ms]
+(pass) evidence engineering foundation > foundation source has no deferred stubs or unadopted cutoffs [0.63ms]
+
+tests-unit/visible-marker-review-bubble-selection.test.ts:
+(pass) visible marker review bubble selection > matches a full stable sort for reviewed restaurants and keeps merged ids [0.43ms]
+(pass) visible marker review bubble selection > uses every identified restaurant when none has a review count [0.04ms]
+(pass) visible marker review bubble selection > returns an empty list for an empty candidate list, a non-positive limit, or rows without ids [0.02ms]
+(pass) visible marker review bubble selection > rejects a missing list or options without throwing [0.04ms]
+(pass) visible marker review bubble selection > truncates a fractional limit the same way a stable slice does [0.03ms]
+
+ 86 pass
+ 0 fail
+ 1681 expect() calls
+Ran 86 tests across 13 files. [7.93s]

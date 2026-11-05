@@ -1,7 +1,9 @@
 import { access, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import type { Metadata } from "next";
 
 import { AdminConsoleOverview } from "@/components/admin/AdminConsoleOverview";
+import { getAdminPageMetadata } from "@/lib/admin/admin-module-metadata";
 import type {
   StoryboardInitialResult,
   StoryboardInitialResultSource,
@@ -15,6 +17,14 @@ import { getVisibleTrustedStoryboardPageScenes } from "@/lib/admin/storyboard/vi
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  return getAdminPageMetadata(await searchParams);
+}
 
 const STORYBOARD_FRAMES_PER_PAGE = 4;
 const PUBLIC_DIR = join(process.cwd(), "public");

@@ -1,0 +1,12 @@
+{
+  "meter_key": "chatgpt:primary:gpt-6-pro",
+  "event_id": "0f58fac5-c067-4797-b937-a0652bb221ab",
+  "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "model": "GPT-6 / Pro",
+  "reservation": "cc3ddf342d3299e63deafde2",
+  "status": "accepted",
+  "evidence": "Exactlyoneacceptedcurrentreverseuserturn readbackID0f58fac5; actualUIall7fileassociationandprompt99afb65a; GPT6checkedPro5of5researchoff. APIcompletedflag is notreportcompletionproof; UIterminal stillrequired.",
+  "occurred_at": "2026-10-22T21:18:24.258468+00:00",
+  "updated_at": "2026-10-22T21:18:24.258468+00:00"
+}

@@ -1,5 +1,8 @@
 'use client';
 
+import { LoadingSurface } from "@/components/ui/loading-surface";
+import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
+
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
@@ -13,7 +16,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { MapPanelHeader, mapPanelIconButtonClass, pageHeaderIconButtonClass } from '@/components/home/map-panel-chrome';
 import { cn } from '@/lib/utils';
-import { FeedSkeleton } from "@/components/ui/skeleton-loaders";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
@@ -119,6 +121,29 @@ interface FeedContentProps {
 
 
 // ========== Main Component ==========
+function FeedLoadingContent() {
+    const { ref: loadingFeedRef, count: loadingRowCount } = useFilledSkeletonCount(280, 4);
+    return (
+        <div ref={loadingFeedRef} data-testid="feed-skeleton">
+            <LoadingSurface label="리뷰 피드를 불러오는 중" className="mx-auto w-full max-w-2xl p-4" style={{ contain: "content" }}>
+                <div className="space-y-4">
+                    {Array.from({ length: loadingRowCount }, (_, index) => (
+                        <article key={index} className="space-y-3 rounded-lg border border-border/50 p-4">
+                            <header className="flex items-center gap-3">
+                                <svg viewBox="0 0 36 36" role="img" aria-label="프로필" className="h-9 w-9 shrink-0 rounded-full"><circle cx="18" cy="12" r="6" fill="currentColor" opacity="0.12" /><path d="M5 34a13 13 0 0 1 26 0" fill="currentColor" opacity="0.12" /></svg>
+                                <h3 className="truncate text-sm font-medium leading-4">맛집 여행자</h3>
+                            </header>
+                            <p className="truncate text-sm leading-4">영상 속 맛집에 다녀온 이야기를 나눠요</p>
+                            <p className="truncate text-sm leading-4">새로운 음식과 여행을 함께 만나보세요</p>
+                            <svg viewBox="0 0 320 160" role="img" aria-label="방문 사진" className="h-40 w-full rounded-lg"><path d="M0 140 80 40 160 100 250 20 320 120V160H0Z" fill="currentColor" opacity="0.12" /></svg>
+                        </article>
+                    ))}
+                </div>
+            </LoadingSurface>
+        </div>
+    );
+}
+
 export default function FeedContent({
     variant,
     onClose,
@@ -245,6 +270,8 @@ export default function FeedContent({
     // 리뷰 피드 데이터 조회 (무한 스크롤)
     const {
         data: feedPages,
+        refetch,
+        isFetching,
         fetchNextPage,
         hasNextPage,
         isError,
@@ -289,6 +316,8 @@ export default function FeedContent({
                     : Promise.resolve({ data: [] }),
             ]);
 
+            if (restaurantsResult.error) throw new Error('FEED_RESTAURANTS_UNAVAILABLE');
+            if ('error' in userLikesResult && userLikesResult.error) throw new Error('FEED_LIKES_UNAVAILABLE');
             const restaurantsData = (restaurantsResult.data ?? []) as FeedRestaurantRecord[];
             const restaurantsMap = new Map<string, FeedRestaurantRecord>((restaurantsData || []).map((restaurantRow) => {
                 return [restaurantRow.id, normalizeFeedRestaurantRecord(restaurantRow)];
@@ -307,13 +336,14 @@ export default function FeedContent({
                     ),
                 ]
                 : [];
-            const { data: approvedRestaurantRowsRaw } = reviewedRestaurantNames.length > 0
+            const { data: approvedRestaurantRowsRaw, error: approvedRestaurantsError } = reviewedRestaurantNames.length > 0
                 ? await supabase
                     .from('restaurants')
                     .select(FEED_RESTAURANT_SELECT)
                     .eq('status', 'approved')
                     .in('approved_name', reviewedRestaurantNames)
-                : { data: [] };
+                : { data: [], error: null };
+            if (approvedRestaurantsError) throw new Error('FEED_RESTAURANTS_UNAVAILABLE');
             const approvedRestaurants = ((approvedRestaurantRowsRaw ?? []) as FeedRestaurantRecord[])
                 .map(normalizeFeedRestaurantRecord);
 
@@ -586,12 +616,13 @@ export default function FeedContent({
                 {showHeader && (
                     <div className="shrink-0 bg-background">
                         <MapPanelHeader
+                            eyebrow={isOverlay ? undefined : '쯔양 맛집 방문 후기 모음'}
                             title={isOverlay ? '리뷰' : '쯔동여지도 리뷰'}
                             titleAs="h1"
                             variant={isOverlay ? "panel" : "page"}
                             titleIcon={!isOverlay ? <MessageSquareText /> : undefined}
                             count={isLoading ? undefined : allReviews.length}
-                            description={!isOverlay ? (isLoggedIn ? '맛집 방문 후기를 공유해보세요!' : '로그인하여 리뷰를 작성해보세요!') : undefined}
+                            description={!isOverlay ? (isLoggedIn ? '맛집 방문 후기를 공유해보세요!' : '로그인하여 리뷰를 작성해보세요!') : '맛집을 다녀온 이야기를 나눠요'}
                             onClose={isOverlay ? onClose : undefined}
                             closeLabel="리뷰 패널 닫기"
                             actions={(
@@ -667,11 +698,14 @@ export default function FeedContent({
                     isOverlay && "overflow-y-auto"
                 )}>
                     {isLoading ? (
-                        <FeedSkeleton count={4} />
+                        <FeedLoadingContent />
                     ) : isError && allReviews.length === 0 ? (
                         <div className="flex h-64 flex-col items-center justify-center text-muted-foreground" role="alert">
                             <p>리뷰 데이터를 불러오지 못했습니다.</p>
                             <p className="mt-1 text-sm">잠시 후 다시 시도해 주세요.</p>
+                            <Button type="button" variant="outline" size="sm" className="mt-3" disabled={isFetching} onClick={() => void refetch()}>
+                                다시 시도
+                            </Button>
                         </div>
                     ) : allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">

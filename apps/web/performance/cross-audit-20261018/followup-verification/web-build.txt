@@ -1,0 +1,5 @@
+
+> web@1.2.4 build
+> node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs
+
+▲ Next.js 16.3.8 (webpack) ⨯ Failed to load next.config.mjs, see more info here https://nextjs.org/docs/messages/next-config-error  > Build error occurred Error: NEXT_PUBLIC_SUPABASE_URL must be a canonical HTTPS *.supabase.co origin without credentials, an explicit port, path, query, or fragment.     at getValidatedSupabaseImageOrigin (next.config.mjs:76:11)     at buildImageRemotePatterns (next.config.mjs:80:33)     at <unknown> (next.config.mjs:153:25) 

@@ -1,0 +1,2786 @@
+Tzudong scoped source bundle v2
+Dirty snapshot; base HEAD ea08db3ae0c1a8d2525da15e6026ca4556ec0260
+Public repository: https://github.com/twoimo/tzudong
+Each patch is relative to base HEAD with 20 context lines; it is not the entire application.
+
+
+===== backend/utils/provider-budget.mjs | kind=full | full-file SHA256=156ea50a8ef4ead49f545c2be513df1389ce31144f4e3d05a632d5a610cab968 | selected SHA256=156ea50a8ef4ead49f545c2be513df1389ce31144f4e3d05a632d5a610cab968 =====
+import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
+const pendingReleases = new Set();
+
+function budgetCommand(args, env = process.env, { signal } = {}) {
+    signal?.throwIfAborted();
+    return new Promise((resolve, reject) => {
+        const child = spawn(env.RUN_DAILY_PYTHON || 'python3',
+            ['-m', 'backend.utils.provider_budget', ...args],
+            { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe'] });
+        let result = '';
+        let failure = '';
+        let settled = false;
+        let aborted = false;
+        let childStarted = false;
+        let forceKill;
+        const abortError = () => signal?.reason ?? new DOMException('Provider budget acquisition cancelled', 'AbortError');
+        const finish = (error, value) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(forceKill);
+            signal?.removeEventListener('abort', abort);
+            if (error) reject(error); else resolve(value);
+        };
+        const abort = () => {
+            if (settled || aborted) return;
+            aborted = true;
+            child.kill('SIGTERM');
+            forceKill = setTimeout(() => child.kill('SIGKILL'), 250);
+            forceKill.unref?.();
+        };
+        child.once('spawn', () => { childStarted = true; });
+        child.stdout.on('data', chunk => { if (result.length < 128) result += chunk; });
+        // The canonical helper emits one fixed non-sensitive sentinel for
+        // rejections reached before it can return a lease. Keep stderr bounded
+        // and private; arbitrary provider/runtime diagnostics are never echoed.
+        child.stderr.on('data', chunk => { if (failure.length < 128) failure += chunk; });
+        child.once('error', (cause) => {
+            if (aborted) finish(abortError());
+            else {
+                const error = new Error('PROVIDER_BUDGET_UNAVAILABLE', { cause });
+                error.budgetChildStarted = childStarted;
+                finish(error);
+            }
+        });
+        child.once('close', code => {
+            if (aborted) return finish(abortError());
+            if (code === 0) return finish(undefined, result.trim());
+            const error = new Error('PROVIDER_BUDGET_UNAVAILABLE');
+            // Only the canonical helper's explicit fixed rejection sentinel is
+            // definite. An arbitrary non-zero exit can happen after a custom
+            // helper committed the parent-selected lease and is ambiguous.
+            if (args[0] === 'acquire' && code === 1 && result.length === 0
+                && failure.trim() === 'PROVIDER_BUDGET_UNAVAILABLE') {
+                error.budgetAcquireRejected = true;
+            }
+            finish(error);
+        });
+        signal?.addEventListener('abort', abort, { once: true });
+        if (signal?.aborted) abort();
+    });
+}
+
+export function retryAfterSeconds(error) {
+    const headers = error?.response?.headers || error?.headers;
+    const raw = typeof headers?.get === 'function' ? headers.get('retry-after') : headers?.['retry-after'];
+    if (!raw) return null;
+    const number = Number(raw);
+    const seconds = Number.isFinite(number) ? number : (Date.parse(raw) - Date.now()) / 1000;
+    return Number.isFinite(seconds) ? Math.max(0, seconds) : null;
+}
+
+export async function applyProjectCooldown(error, env = process.env) {
+    const delay = retryAfterSeconds(error);
+    if (delay !== null) await budgetCommand(['cooldown', '--delay', String(delay)], env);
+}
+
+async function releasePermit(debt) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            await budgetCommand(['release', '--lease', debt.lease], debt.env);
+            pendingReleases.delete(debt);
+            return true;
+        } catch {
+            if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
+        }
+    }
+    pendingReleases.add(debt);
+    return false;
+}
+
+/**
+ * @template T
+ * @param {() => Promise<T>} work
+ * @param {{ acquireTimeoutMs?: number, env?: NodeJS.ProcessEnv, signal?: AbortSignal }} [options]
+ * @returns {Promise<T>}
+ */
+export async function withProjectBudget(work, { acquireTimeoutMs = 600000, env: requestedEnv, signal } = {}) {
+    if (!Number.isSafeInteger(acquireTimeoutMs) || acquireTimeoutMs < 1 || acquireTimeoutMs > 600000)
+        throw new Error('PROVIDER_BUDGET_INVALID');
+    for (const debt of [...pendingReleases]) await releasePermit(debt);
+    if (pendingReleases.size) throw new Error('PROVIDER_BUDGET_UNAVAILABLE');
+    // Cleanup uses the acquisition scope even if a caller changes its environment.
+    const env = { ...(requestedEnv ?? process.env) };
+    signal?.throwIfAborted();
+    // The parent chooses the identity so an abort racing with a committed child
+    // can still release the exact lease after that child has exited.
+    const lease = randomBytes(16).toString('hex');
+    const debt = { lease, env };
+    try {
+        const acquired = await budgetCommand([
+            'acquire', '--pid', String(process.pid), '--timeout', String(acquireTimeoutMs / 1000), '--lease', lease,
+        ], env, { signal });
+        if (acquired !== lease) throw new Error('PROVIDER_BUDGET_UNAVAILABLE');
+        signal?.throwIfAborted();
+    } catch (error) {
+        if (error?.budgetChildStarted !== false && error?.budgetAcquireRejected !== true
+            && !await releasePermit(debt)) {
+            process.stderr.write('warning=PROVIDER_BUDGET_RELEASE_UNAVAILABLE\n');
+        }
+        throw error;
+    }
+    try { return await work(); }
+    catch (error) {
+        try { await applyProjectCooldown(error, env); }
+        catch { process.stderr.write('warning=PROVIDER_BUDGET_COOLDOWN_UNAVAILABLE\n'); }
+        throw error;
+    } finally {
+        // A bookkeeping failure cannot discard a settled paid response or
+        // replace the provider's original error with a retryable local error.
+        if (!await releasePermit(debt)) process.stderr.write('warning=PROVIDER_BUDGET_RELEASE_UNAVAILABLE\n');
+    }
+}
+
+
+===== backend/utils/provider_budget.py | kind=full | full-file SHA256=79cfb4e2b7cf047414ced105ff40dfd5c26d2b9bd6e41af9baf683e35507e6ca | selected SHA256=79cfb4e2b7cf047414ced105ff40dfd5c26d2b9bd6e41af9baf683e35507e6ca =====
+"""Local cross-process project pacing. No keys, prompts, or responses on disk."""
+from __future__ import annotations
+import argparse
+from contextlib import contextmanager
+import os
+from pathlib import Path
+import re
+import sqlite3
+import sys
+import time
+import uuid
+
+
+def positive_int(value: str | None, default: int, ceiling: int) -> int:
+    try:
+        parsed = int(value or default)
+    except ValueError:
+        raise ValueError("provider_budget_invalid") from None
+    if not 0 < parsed <= ceiling:
+        raise ValueError("provider_budget_invalid")
+    return parsed
+
+
+def budget_path() -> Path:
+    """A host-wide default prevents separate checkouts multiplying one quota."""
+    explicit = os.getenv('GEMINI_BUDGET_PATH')
+    if explicit:
+        return Path(explicit)
+    directory = Path(os.getenv('TZUDONG_PROVIDER_STATE_DIR', str(Path.home()/'.cache'/'tzudong')))
+    return directory/'provider-budget.sqlite'
+
+
+def process_birth(pid: int) -> tuple[str, float, float] | None:
+    """Kernel birth identity, epoch start and timestamp uncertainty; no shell/ps parsing."""
+    if type(pid) is not int or pid <= 0:
+        return None
+    try:
+        if sys.platform.startswith("linux"):
+            # Field 22 follows a parenthesized comm which may contain spaces/').
+            fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+            ticks = int(fields[19])
+            boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+            boot_epoch = next(int(line.split()[1]) for line in Path("/proc/stat").read_text().splitlines() if line.startswith("btime "))
+            if not boot or ticks < 0:
+                return None
+            # btime is integral seconds, unlike the exact identity's tick count.
+            return f"linux:{boot}:{ticks}", boot_epoch + ticks / os.sysconf("SC_CLK_TCK"), 1.0
+        if sys.platform == "darwin":
+            import ctypes
+            import struct
+            # Apple's proc_bsdinfo: 12 uint32, 16/32-byte names, 6 uint32,
+            # then uint64 pbi_start_tvsec/pbi_start_tvusec (PROC_PIDTBSDINFO=3).
+            buffer = ctypes.create_string_buffer(136)
+            proc = ctypes.CDLL("/usr/lib/libproc.dylib").proc_pidinfo
+            proc.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_int]
+            proc.restype = ctypes.c_int
+            if proc(pid, 3, 0, buffer, len(buffer)) != len(buffer):
+                return None
+            owner = struct.unpack_from("=I", buffer.raw, 12)[0]
+            seconds, micros = struct.unpack_from("=QQ", buffer.raw, 120)
+            if owner != pid or seconds <= 0 or micros >= 1_000_000:
+                return None
+            return f"darwin:{seconds}:{micros}", seconds + micros / 1_000_000, 0.000001
+    except (OSError, ValueError, IndexError, StopIteration):
+        return None
+    return None
+
+
+class ProjectBudget:
+    def __init__(self, path: Path, scope: str, *, rpm: int = 30, concurrency: int = 1):
+        import re
+        if not re.fullmatch(r'[a-z][a-z0-9-]{0,62}', scope):
+            raise ValueError("provider_scope_invalid")
+        if not 0 < rpm <= 100000 or not 0 < concurrency <= 8:
+            raise ValueError("provider_budget_invalid")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.path, self.scope = path, scope
+        self.interval, self.concurrency = 60 / rpm, concurrency
+        with self.connect() as db:
+            db.execute("CREATE TABLE IF NOT EXISTS pacing(scope TEXT PRIMARY KEY, next REAL NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS leases(scope TEXT, id TEXT PRIMARY KEY, pid INTEGER, started REAL)")
+            # Keep the original four-column table compatible with older clients.
+            db.execute("CREATE TABLE IF NOT EXISTS lease_births(id TEXT PRIMARY KEY, birth TEXT NOT NULL)")
+
+    @contextmanager
+    def connect(self):
+        db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
+        try:
+            yield db
+        finally:
+            db.close()
+
+    @staticmethod
+    def alive(pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+
+    def acquire(self, pid: int, *, timeout: float = 600, identity: str | None = None) -> str:
+        owner_birth = process_birth(pid)
+        if owner_birth is None:
+            raise ValueError("provider_process_identity_unavailable")
+        deadline = time.monotonic() + timeout
+        identity = identity or uuid.uuid4().hex
+        if re.fullmatch(r"[a-f0-9]{32}", identity) is None:
+            raise ValueError("provider_lease_invalid")
+        while True:
+            wait = 0.1
+            with self.connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                now = time.time()
+                for lease, owner, started, stored_birth in db.execute(
+                    "SELECT leases.id,pid,started,birth FROM leases LEFT JOIN lease_births ON leases.id=lease_births.id WHERE scope=?", (self.scope,)
+                ).fetchall():
+                    alive = self.alive(owner)
+                    observed = process_birth(owner) if alive else None
+                    stale = not alive
+                    if observed is not None:
+                        stale = (stored_birth is not None and stored_birth != observed[0]) or (
+                            stored_birth is None and isinstance(started, (int, float)) and observed[1] > started + observed[2])
+                        # Backfill only a positively older process, never an ambiguous
+                        # legacy row. Unknown birth state keeps capacity reserved.
+                        if not stale and stored_birth is None and isinstance(started, (int, float)) and observed[1] < started - observed[2]:
+                            db.execute("INSERT OR IGNORE INTO lease_births VALUES(?,?)", (lease, observed[0]))
+                    if stale:
+                        db.execute("DELETE FROM leases WHERE id=?", (lease,))
+                        db.execute("DELETE FROM lease_births WHERE id=?", (lease,))
+                db.execute("DELETE FROM lease_births WHERE NOT EXISTS (SELECT 1 FROM leases WHERE leases.id=lease_births.id)")
+                count = db.execute("SELECT count(*) FROM leases WHERE scope=?", (self.scope,)).fetchone()[0]
+                row = db.execute("SELECT next FROM pacing WHERE scope=?", (self.scope,)).fetchone()
+                ready = row[0] if row else 0
+                if count < self.concurrency and ready <= now:
+                    current_birth = process_birth(pid)
+                    if current_birth is None or current_birth[0] != owner_birth[0]:
+                        raise ValueError("provider_process_identity_changed")
+                    db.execute("INSERT INTO leases VALUES(?,?,?,?)", (self.scope, identity, pid, now))
+                    db.execute("INSERT INTO lease_births VALUES(?,?)", (identity, owner_birth[0]))
+                    db.execute("INSERT INTO pacing VALUES(?,?) ON CONFLICT(scope) DO UPDATE SET next=excluded.next", (self.scope, now + self.interval))
+                    db.commit()
+                    return identity
+                wait = min(1.0, max(0.01, ready - now)) if ready > now else 0.1
+                db.commit()
+            if time.monotonic() + wait > deadline:
+                raise TimeoutError("provider_budget_timeout")
+            time.sleep(wait)
+
+    def release(self, identity: str) -> None:
+        with self.connect() as db:
+            db.execute("DELETE FROM leases WHERE id=? AND scope=?", (identity, self.scope))
+            db.execute("DELETE FROM lease_births WHERE id=? AND NOT EXISTS (SELECT 1 FROM leases WHERE id=?)", (identity, identity))
+
+    def cooldown(self, delay: float) -> None:
+        import math
+        if not math.isfinite(delay) or delay < 0:
+            raise ValueError("provider_cooldown_invalid")
+        with self.connect() as db:
+            db.execute("INSERT INTO pacing VALUES(?,?) ON CONFLICT(scope) DO UPDATE SET next=max(next,excluded.next)", (self.scope, time.time() + delay))
+
+    @contextmanager
+    def lease(self):
+        identity = self.acquire(os.getpid())
+        try:
+            yield
+        finally:
+            self.release(identity)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("action", choices=("acquire", "release", "cooldown"))
+    parser.add_argument("--pid", type=int, default=os.getppid())
+    parser.add_argument("--lease", default="")
+    parser.add_argument("--delay", type=float, default=0)
+    parser.add_argument("--timeout", type=float, default=600)
+    args = parser.parse_args()
+    budget = ProjectBudget(budget_path(),
+                           os.getenv("GEMINI_BUDGET_PROJECT", "configured-project"),
+                           rpm=positive_int(os.getenv("GEMINI_REQUESTS_PER_MINUTE"), 30, 100000),
+                           concurrency=positive_int(os.getenv("GEMINI_MAX_INFLIGHT"), 1, 8))
+    if args.action == "acquire":
+        if not 0 < args.timeout <= 600:
+            raise ValueError('provider_budget_invalid')
+        print(budget.acquire(args.pid, timeout=args.timeout, identity=args.lease or None))
+    elif args.action == "release":
+        budget.release(args.lease)
+    else:
+        budget.cooldown(args.delay)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError, sqlite3.Error, TimeoutError):
+        raise SystemExit("PROVIDER_BUDGET_UNAVAILABLE") from None
+
+
+===== backend/utils/tests/provider-budget-js.test.mjs | kind=full | full-file SHA256=b91f9299baa3f7ffcfd373e93f43ef2d67a9a3b1e0d964b21b17ac6edd4456b1 | selected SHA256=b91f9299baa3f7ffcfd373e93f43ef2d67a9a3b1e0d964b21b17ac6edd4456b1 =====
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+
+import { withProjectBudget } from '../provider-budget.mjs';
+
+const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'provider-budget-js-test-'));
+test.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function waitForFile(file, timeoutMs = 2000) {
+    const deadline = Date.now() + timeoutMs;
+    while (!fs.existsSync(file)) {
+        if (Date.now() >= deadline) throw new Error('fixture_timeout');
+        await pause(10);
+    }
+}
+
+test('explicit worker environment scopes both budget acquisition and release', async () => {
+    const script = path.join(directory, 'env-budget-fixture');
+    const log = path.join(directory, 'env-budget-log');
+    fs.writeFileSync(script, `#!${process.execPath}\nconst fs=require('fs');\nconst args=process.argv.slice(2);\nconst action=args.find(value=>['acquire','release','cooldown'].includes(value));\nconst lease=args[args.indexOf('--lease')+1];\nfs.appendFileSync(process.env.FX_ENV_LOG,JSON.stringify({action,project:process.env.GEMINI_BUDGET_PROJECT})+'\\n');\nif(action==='acquire')process.stdout.write(lease);\n`, { mode: 0o700 });
+    const env = { ...process.env, RUN_DAILY_PYTHON: script, FX_ENV_LOG: log, GEMINI_BUDGET_PROJECT: 'worker-env-file' };
+
+    assert.equal(await withProjectBudget(async () => 'scoped', { env, acquireTimeoutMs: 1000 }), 'scoped');
+
+    const entries = fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    assert.deepEqual(entries, [
+        { action: 'acquire', project: 'worker-env-file' },
+        { action: 'release', project: 'worker-env-file' },
+    ]);
+});
+
+test('real helper accepts the parent lease identity and releases capacity', async () => {
+    const env = {
+        ...process.env,
+        GEMINI_BUDGET_PATH: path.join(directory, 'real-budget.sqlite'),
+        GEMINI_BUDGET_PROJECT: 'worker-real-fixture',
+        GEMINI_REQUESTS_PER_MINUTE: '100000',
+        GEMINI_MAX_INFLIGHT: '1',
+    };
+    delete env.RUN_DAILY_PYTHON;
+    let calls = 0;
+
+    assert.equal(await withProjectBudget(async () => ++calls, { env, acquireTimeoutMs: 1000 }), 1);
+    assert.equal(await withProjectBudget(async () => ++calls, { env, acquireTimeoutMs: 1000 }), 2);
+});
+
+test('a spawn failure creates no fictitious release debt', async () => {
+    let workStarted = false;
+    await assert.rejects(withProjectBudget(async () => { workStarted = true; }, {
+        env: { ...process.env, RUN_DAILY_PYTHON: path.join(directory, 'missing-python') },
+        acquireTimeoutMs: 1000,
+    }), /PROVIDER_BUDGET_UNAVAILABLE/);
+    assert.equal(workStarted, false);
+
+    const script = path.join(directory, 'recovered-budget-fixture');
+    fs.writeFileSync(script, `#!${process.execPath}\nconst args=process.argv.slice(2);\nconst action=args.find(value=>['acquire','release'].includes(value));\nif(action==='acquire')process.stdout.write(args[args.indexOf('--lease')+1]);\n`, { mode: 0o700 });
+    assert.equal(await withProjectBudget(async () => 'recovered', {
+        env: { ...process.env, RUN_DAILY_PYTHON: script }, acquireTimeoutMs: 1000,
+    }), 'recovered');
+});
+
+test('a definitive acquire rejection creates no release debt for a corrected environment', async () => {
+    const budgetPath = path.join(directory, 'rejected-budget.sqlite');
+    const rejectedEnv = {
+        ...process.env,
+        GEMINI_BUDGET_PATH: budgetPath,
+        GEMINI_BUDGET_PROJECT: 'invalid/project',
+        GEMINI_REQUESTS_PER_MINUTE: '100000',
+        GEMINI_MAX_INFLIGHT: '1',
+    };
+    delete rejectedEnv.RUN_DAILY_PYTHON;
+    let workStarted = false;
+
+    await assert.rejects(withProjectBudget(async () => { workStarted = true; }, {
+        env: rejectedEnv,
+        acquireTimeoutMs: 1000,
+    }), /PROVIDER_BUDGET_UNAVAILABLE/);
+    assert.equal(workStarted, false);
+
+    const correctedEnv = { ...rejectedEnv, GEMINI_BUDGET_PROJECT: 'corrected-project' };
+    assert.equal(await withProjectBudget(async () => 'recovered', {
+        env: correctedEnv,
+        acquireTimeoutMs: 1000,
+    }), 'recovered');
+});
+
+test('a nonzero exit after committed partial output is ambiguous and releases the selected lease', async () => {
+    const script = path.join(directory, 'ambiguous-exit-budget-fixture');
+    const ledger = path.join(directory, 'ambiguous-exit-budget-ledger');
+    const releases = path.join(directory, 'ambiguous-exit-budget-releases');
+    fs.writeFileSync(script, `#!${process.execPath}\nconst fs=require('fs');\nconst args=process.argv.slice(2);\nconst action=args.find(value=>['acquire','release'].includes(value));\nconst lease=args[args.indexOf('--lease')+1];\nif(action==='acquire'){fs.writeFileSync(process.env.FX_LEDGER,lease);process.stdout.write(lease.slice(0,8));process.stderr.write('PROVIDER_BUDGET_UNAVAILABLE\\n');process.exit(1);}\nif(action==='release'){if(fs.existsSync(process.env.FX_LEDGER)&&fs.readFileSync(process.env.FX_LEDGER,'utf8')===lease)fs.unlinkSync(process.env.FX_LEDGER);fs.appendFileSync(process.env.FX_RELEASES,lease+'\\n');}\n`, { mode: 0o700 });
+    const env = {
+        ...process.env, RUN_DAILY_PYTHON: script, FX_LEDGER: ledger, FX_RELEASES: releases,
+    };
+    let workStarted = false;
+
+    await assert.rejects(withProjectBudget(async () => { workStarted = true; }, {
+        env, acquireTimeoutMs: 1000,
+    }), /PROVIDER_BUDGET_UNAVAILABLE/);
+
+    assert.equal(workStarted, false);
+    assert.equal(fs.existsSync(ledger), false);
+    assert.equal(fs.readFileSync(releases, 'utf8').trim().split('\n').length, 1);
+});
+
+test('abort terminates a waiting acquire child and releases a commit-before-close lease exactly once', async () => {
+    const script = path.join(directory, 'abort-budget-fixture');
+    const started = path.join(directory, 'abort-budget-started.json');
+    const terminated = path.join(directory, 'abort-budget-terminated');
+    const ledger = path.join(directory, 'abort-budget-ledger');
+    const released = path.join(directory, 'abort-budget-released');
+    fs.writeFileSync(script, `#!${process.execPath}\nconst fs=require('fs');\nconst args=process.argv.slice(2);\nconst action=args.find(value=>['acquire','release','cooldown'].includes(value));\nconst lease=args[args.indexOf('--lease')+1];\nif(action==='acquire'){\n process.on('SIGTERM',()=>{fs.writeFileSync(process.env.FX_TERMINATED,'yes');process.exit(143);});\n fs.writeFileSync(process.env.FX_LEDGER,lease);\n fs.writeFileSync(process.env.FX_STARTED,JSON.stringify({pid:process.pid,lease}));\n process.stdout.write(lease);\n setInterval(()=>{},1000);\n}else if(action==='release'){\n if(fs.existsSync(process.env.FX_LEDGER)&&fs.readFileSync(process.env.FX_LEDGER,'utf8')===lease)fs.unlinkSync(process.env.FX_LEDGER);\n fs.appendFileSync(process.env.FX_RELEASED,lease+'\\n');\n}\n`, { mode: 0o700 });
+    const env = {
+        ...process.env, RUN_DAILY_PYTHON: script, FX_STARTED: started, FX_TERMINATED: terminated,
+        FX_LEDGER: ledger, FX_RELEASED: released,
+    };
+    const controller = new AbortController();
+    let workStarted = false;
+    const pending = withProjectBudget(async () => { workStarted = true; return 'unexpected'; }, { env, signal: controller.signal });
+    await waitForFile(started);
+    const child = JSON.parse(fs.readFileSync(started, 'utf8'));
+    const reason = new DOMException('fixture_cancelled', 'AbortError');
+    controller.abort(reason);
+
+    await assert.rejects(pending, (error) => error === reason);
+    assert.equal(workStarted, false);
+    assert.equal(fs.existsSync(terminated), true);
+    assert.equal(fs.existsSync(ledger), false);
+    assert.deepEqual(fs.readFileSync(released, 'utf8').trim().split('\n'), [child.lease]);
+    assert.throws(() => process.kill(child.pid, 0), (error) => error.code === 'ESRCH');
+});
+
+
+===== apps/web/components/admin/SubmissionListView.tsx | kind=patch | full-file SHA256=fcfc187f26c9e0a334bb0aba2a183787033d076785e73895f7065469208def89 | selected SHA256=022260fd0b9010a91e2a8de1eae5596f67edd0ae093a6f319443d88d86376593 =====
+diff --git a/apps/web/components/admin/SubmissionListView.tsx b/apps/web/components/admin/SubmissionListView.tsx
+index 4adfff47..4e7246f6 100644
+--- a/apps/web/components/admin/SubmissionListView.tsx
++++ b/apps/web/components/admin/SubmissionListView.tsx
+@@ -1,52 +1,53 @@
+ 'use client';
+ 
+ import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
+-import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
++import { useState, useCallback, useMemo, useEffect, useRef, memo, type ReactNode } from 'react';
+ import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
+ import Image from 'next/image';
+ import { Button } from '@/components/ui/button';
+ import { Badge } from '@/components/ui/badge';
+ import { Textarea } from '@/components/ui/textarea';
+ import { Label } from '@/components/ui/label';
+ import { Input } from '@/components/ui/input';
+ import { Skeleton } from '@/components/ui/skeleton';
+ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+ import { adminReviewModerationStatus, selectAdminModerationRows, type AdminModerationFilter, type AdminModerationSort } from '@/lib/admin/submission-list-view-model';
+ import { toast } from '@/lib/no-toast';
+ import {
+     CheckCircle2,
+     XCircle,
+     Trash2,
+     Loader2,
+     Clock,
+     AlertCircle,
+     Video,
+     Edit,
+     Search,
+     X,
+     MapPin,
+     Calendar,
+     MessageSquare,
+     AlertTriangle,
+     ScanSearch,
+     RefreshCw,
++    ChevronRight,
+ } from 'lucide-react';
+ import { YouTubeIcon } from '@/components/icons/YouTubeIcon';
+ import { Card } from '@/components/ui/card';
+ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+ import {
+     SubmissionDetailView,
+     SubmissionRecord,
+     ApprovalData,
+     GeocodingResult,
+     ItemDecision,
+     NaverSearchResult,
+ } from './SubmissionDetailView';
+ import {
+     TooltipProvider,
+ } from '@/components/ui/tooltip';
+ import { cn } from '@/lib/utils';
+ import { supabase } from '@/integrations/supabase/client';
+ import { useIsMobile } from '@/hooks/use-mobile';
+ import { GUARDED_MUTATION_CONFIRMATION } from '@/lib/admin/guarded-mutation-contract';
+ import { getSubmissionApprovalState } from '@/lib/admin/submission-approval-state';
+@@ -61,40 +62,62 @@ import {
+ import { resolveReviewPhotoUrl, type ReviewPhotoOwnership } from '@/lib/review-photo-url';
+ import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
+ import { decodeBasicHtmlEntities, stripUnsafeMarkup } from '@/lib/html-escape';
+ import {
+     FEATURE_DATABASE_HELD_MESSAGE,
+     parseFeatureDatabaseReadiness,
+ } from '@/lib/runtime-feature-readiness-contract';
+ 
+ type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews';
+ 
+ const SUBMISSION_TAB_ORDER: SubmissionAdminTab[] = ['new', 'edit', 'recommend', 'reviews'];
+ const SUBMISSION_DELETE_CONFIRMATION = '제보삭제';
+ const RECOMMEND_APPROVE_CONFIRMATION = '추천승인';
+ const RECOMMEND_REJECT_CONFIRMATION = '추천거부';
+ const REVIEW_DELETE_CONFIRMATION = '리뷰삭제';
+ const OCR_RESET_ALL_CONFIRMATION = 'OCR초기화';
+ const OVERRIDE_APPROVAL_CONFIRMATION = '무시승인';
+ const GUARDED_OCR_CONFIRMATION_MESSAGE =
+     `이 OCR 작업은 ${GUARDED_MUTATION_CONFIRMATION} 보호 절차로 실행됩니다. 계속하시겠습니까?`;
+ 
++const SUBMISSION_TYPE_LABELS: Record<SubmissionRecord['submission_type'], string> = {
++    new: '신규 제보',
++    edit: '수정 요청',
++    recommend: '쯔양 제보',
++};
++
++function formatModerationReceivedAt(value: string): string {
++    const date = new Date(value);
++    if (Number.isNaN(date.getTime())) return '—';
++
++    return date.toLocaleString('ko-KR', {
++        month: '2-digit',
++        day: '2-digit',
++        hour: '2-digit',
++        minute: '2-digit',
++    });
++}
++
++function getModerationRecordLabel(id: string): string {
++    return `…${id.slice(-8)}`;
++}
++
+ function confirmGuardedOcrMutation(actionLabel: string): boolean {
+     return window.confirm(`${actionLabel}\n\n${GUARDED_OCR_CONFIRMATION_MESSAGE}`);
+ }
+ 
+ function getGuardedMutationCorrelationId(payload: unknown): string | null {
+     if (!payload || typeof payload !== 'object') return null;
+     const guardedMutation = (payload as { guardedMutation?: unknown }).guardedMutation;
+     if (!guardedMutation || typeof guardedMutation !== 'object') return null;
+     const audit = (guardedMutation as { audit?: unknown }).audit;
+     if (!audit || typeof audit !== 'object') return null;
+     const correlationId = (audit as { correlationId?: unknown }).correlationId;
+     return typeof correlationId === 'string' && correlationId.trim()
+         ? correlationId.trim()
+         : null;
+ }
+ 
+ function getGuardedMutationReadbackLabel(payload: unknown): string | null {
+     if (!payload || typeof payload !== 'object') return null;
+     const guardedMutation = (payload as { guardedMutation?: unknown }).guardedMutation;
+     if (!guardedMutation || typeof guardedMutation !== 'object') return null;
+@@ -181,41 +204,41 @@ interface ReviewPhotoItemProps {
+     labelVariant: 'receipt' | 'food';
+     onClick: () => void;
+ }
+ 
+ const ReviewPhotoItem = memo(function ReviewPhotoItem({
+     src,
+     alt,
+     label,
+     labelVariant,
+     onClick,
+ }: ReviewPhotoItemProps) {
+     const [isLoading, setIsLoading] = useState(true);
+ 
+     // 영수증은 세로로 길게, 음식 사진은 정사각형에 가깝게
+     const isReceipt = labelVariant === 'receipt';
+ 
+     return (
+         <button
+             type="button"
+             className={cn(
+-                "flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-shadow",
++                "flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-shadow", // taste-skill-ignore: Selectable receipt/image form control.
+                 isReceipt ? "h-48 min-w-28" : "h-32 min-w-24"  // 영수증은 더 크게
+             )}
+             onClick={onClick}
+             aria-label={alt}
+         >
+             {isLoading && (
+                 <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground motion-reduce:animate-none" />
+                 </div>
+             )}
+             <Image
+                 src={src}
+                 alt={alt}
+                 fill
+                 unoptimized
+                 sizes={isReceipt ? "256px" : "192px"}
+                 className={cn(
+                     "w-auto object-contain transition-opacity",  // object-cover -> object-contain으로 변경
+                     isReceipt ? "h-48 max-w-64" : "h-32 max-w-48",
+                     isLoading ? "opacity-0" : "opacity-100"
+@@ -235,61 +258,63 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
+                 {label}
+             </Badge>
+         </button>
+     );
+ }, (prev, next) =>
+     prev.src === next.src &&
+     prev.alt === next.alt &&
+     prev.label === next.label &&
+     prev.labelVariant === next.labelVariant
+ );
+ 
+ interface SubmissionListViewProps {
+     submissions: SubmissionRecord[];
+     onApprove: (submission: SubmissionRecord, approvalData: ApprovalData, itemDecisions: Record<string, ItemDecision>, forceApprove: boolean, editableData: { name: string; address: string; phone: string; categories: string[] }, adminNote?: string) => void;
+     onReject: (submission: SubmissionRecord, reason: string) => void;
+     onDelete: (submission: SubmissionRecord) => void;
+     hasNextSubmissionPage?: boolean;
+     isFetchingNextSubmissionPage?: boolean;
+     onLoadMoreSubmissions?: () => void;
+     onRefresh?: () => void;
++    toolbarTrailingAction?: ReactNode;
+     loading?: boolean;
+     // 리뷰 관련 props
+     reviews?: Review[];
+     onApproveReview?: (review: Review, adminNote: string) => void;
+     onRejectReview?: (review: Review, adminNote: string) => void;
+     onDeleteReview?: (review: Review) => void;
+     reviewsLoading?: boolean;
+     // 초기 탭 설정
+     initialTab?: SubmissionAdminTab;
+ }
+ 
+ export function SubmissionListView({
+     submissions,
+     onApprove,
+     onReject,
+     onDelete,
+     loading = false,
+     hasNextSubmissionPage = false,
+     isFetchingNextSubmissionPage = false,
+     onLoadMoreSubmissions,
+     onRefresh,
++    toolbarTrailingAction,
+     // 리뷰 관련 props
+     reviews = [],
+     onApproveReview,
+     onRejectReview,
+     onDeleteReview,
+     reviewsLoading = false,
+     initialTab = 'new',
+ }: SubmissionListViewProps) {
+     // 탭 상태 (초기 탭 지정 가능)
+     const [activeTab, setActiveTab] = useState<SubmissionAdminTab>(initialTab);
+     const submissionListSkeleton = useFilledSkeletonCount(76, 4, 40);
+     const isMobile = useIsMobile();
+     const [inlineInspector, setInlineInspector] = useState(false);
+     const rowTriggerRef = useRef<HTMLButtonElement | null>(null);
+     const listScrollRef = useRef<HTMLDivElement | null>(null);
+     const reviewDetailPanelRef = useRef<HTMLElement>(null);
+     useEffect(() => {
+         const media = window.matchMedia('(min-width: 1280px)');
+         const update = () => setInlineInspector(media.matches);
+         update();
+@@ -365,54 +390,55 @@ export function SubmissionListView({
+     const ocrPollingRef = useRef<NodeJS.Timeout | null>(null);
+     const ocrRealtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+     const ocrCountdownRef = useRef<NodeJS.Timeout | null>(null);
+     const submissionTabSwipeStartXRef = useRef<number | null>(null);
+     const submissionTabSwipeEndXRef = useRef<number | null>(null);
+     const submissionTabSwipeStartYRef = useRef<number | null>(null);
+     const submissionTabSwipeEndYRef = useRef<number | null>(null);
+     const submissionTabSwipeLastHandledAtRef = useRef(0);
+     const submissionTabSwipePointerIdRef = useRef<number | null>(null);
+     const submissionTabSwipeInputRef = useRef<'pointer' | 'touch' | null>(null);
+     const isSubmissionTabSwipeActiveRef = useRef(false);
+     const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+     const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
+     const wasFetchingNextSubmissionPageRef = useRef(false);
+     const isLoadingMoreRef = useRef(false);
+ 
+     const [visibleNewCount, setVisibleNewCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
+     const [visibleEditCount, setVisibleEditCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
+     const [visibleRecommendCount, setVisibleRecommendCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
+     const [visibleReviewCount, setVisibleReviewCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
++    const isFocusedReviewWorkspace = initialTab === 'reviews';
+ 
+ 
+     const SUBMISSION_TAB_SWIPE_DISTANCE = 24;
+ 
+     const handleSubmissionTabTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+-        if (isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current === 'pointer') return;
++        if (isFocusedReviewWorkspace || isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current === 'pointer') return;
+         submissionTabSwipeInputRef.current = 'touch';
+         submissionTabSwipePointerIdRef.current = null;
+         submissionTabSwipeStartXRef.current = e.touches[0].clientX;
+         submissionTabSwipeStartYRef.current = e.touches[0].clientY;
+         submissionTabSwipeEndXRef.current = null;
+         submissionTabSwipeEndYRef.current = null;
+         isSubmissionTabSwipeActiveRef.current = true;
+-    }, []);
++    }, [isFocusedReviewWorkspace]);
+ 
+     const handleSubmissionTabTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+         if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'touch') return;
+         submissionTabSwipeEndXRef.current = e.touches[0].clientX;
+         submissionTabSwipeEndYRef.current = e.touches[0].clientY;
+     }, []);
+ 
+     const resetVisibleCountByTab = useCallback((tab: SubmissionAdminTab) => {
+         if (tab === 'new') {
+             setVisibleNewCount(SUBMISSION_LIST_PAGE_SIZE);
+             return;
+         }
+ 
+         if (tab === 'edit') {
+             setVisibleEditCount(SUBMISSION_LIST_PAGE_SIZE);
+             return;
+         }
+ 
+         if (tab === 'recommend') {
+             setVisibleRecommendCount(SUBMISSION_LIST_PAGE_SIZE);
+@@ -466,49 +492,49 @@ export function SubmissionListView({
+             return false;
+         }
+ 
+         const currentIndex = SUBMISSION_TAB_ORDER.indexOf(activeTab);
+         if (currentIndex === -1) return false;
+ 
+         if (distanceX > 0 && currentIndex < SUBMISSION_TAB_ORDER.length - 1) {
+             setActiveTabWithReset(SUBMISSION_TAB_ORDER[currentIndex + 1]);
+             return true;
+         }
+ 
+         if (distanceX < 0 && currentIndex > 0) {
+             setActiveTabWithReset(SUBMISSION_TAB_ORDER[currentIndex - 1]);
+             return true;
+         }
+ 
+         return false;
+     }, [activeTab, setActiveTabWithReset]);
+ 
+     const handleSubmissionTabPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+-        if (isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current === 'touch') return;
++        if (isFocusedReviewWorkspace || isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current === 'touch') return;
+         submissionTabSwipeInputRef.current = 'pointer';
+         submissionTabSwipePointerIdRef.current = e.pointerId;
+         isSubmissionTabSwipeActiveRef.current = true;
+         submissionTabSwipeStartXRef.current = e.clientX;
+         submissionTabSwipeStartYRef.current = e.clientY;
+         submissionTabSwipeEndXRef.current = null;
+         submissionTabSwipeEndYRef.current = null;
+-    }, []);
++    }, [isFocusedReviewWorkspace]);
+ 
+     const handleSubmissionTabPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+         if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'pointer' || submissionTabSwipePointerIdRef.current !== e.pointerId) return;
+         submissionTabSwipeEndXRef.current = e.clientX;
+         submissionTabSwipeEndYRef.current = e.clientY;
+         const dx = e.clientX - (submissionTabSwipeStartXRef.current ?? e.clientX);
+         const dy = e.clientY - (submissionTabSwipeStartYRef.current ?? e.clientY);
+         if (Math.abs(dx) >= SUBMISSION_TAB_SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy)) {
+             try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* Pointer may already have ended. */ }
+         }
+     }, []);
+ 
+     const handleSubmissionTabPointerEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+         if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'pointer' || submissionTabSwipePointerIdRef.current !== e.pointerId) return;
+         if (Date.now() - submissionTabSwipeLastHandledAtRef.current < 250) {
+             isSubmissionTabSwipeActiveRef.current = false;
+             submissionTabSwipeInputRef.current = null;
+             submissionTabSwipePointerIdRef.current = null;
+             try {
+                 e.currentTarget.releasePointerCapture(e.pointerId);
+@@ -1244,126 +1270,126 @@ export function SubmissionListView({
+                 if (entries[0]?.isIntersecting && hasMoreCards && !isCurrentListLoading) {
+                     handleLoadMoreCards();
+                 }
+             },
+             { root: containerRoot, rootMargin: '200px 0px 0px 0px', threshold: 0.01 }
+         );
+ 
+         loadMoreObserverRef.current.observe(sentinel);
+ 
+         return () => {
+             if (loadMoreObserverRef.current) {
+                 loadMoreObserverRef.current.disconnect();
+                 loadMoreObserverRef.current = null;
+             }
+         };
+     }, [handleLoadMoreCards, hasMoreCards, isCurrentListLoading]);
+     // 상태 뱃지
+     const getStatusBadge = (status: string) => {
+         switch (status) {
+             case 'approved':
+-                return <Badge className="bg-green-600 text-xs">승인</Badge>;
++                return <Badge variant="outline" className="rounded border-emerald-200 bg-emerald-50 text-xs font-medium text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200">승인</Badge>;
+             case 'partially_approved':
+-                return <Badge className="bg-amber-500 text-xs">부분승인</Badge>;
++                return <Badge variant="outline" className="rounded border-amber-200 bg-amber-50 text-xs font-medium text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200">부분승인</Badge>;
+             case 'rejected':
+-                return <Badge variant="destructive" className="text-xs">거부</Badge>;
++                return <Badge variant="outline" className="rounded border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive">거부</Badge>;
+             case 'pending':
+-                return <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />대기</Badge>;
++                return <Badge variant="outline" className="rounded border-border bg-muted/55 text-xs font-medium text-foreground"><Clock className="mr-1 h-3 w-3" />대기</Badge>;
+             default:
+-                return <Badge variant="outline" className="text-xs">미확인</Badge>;
++                return <Badge variant="outline" className="rounded text-xs font-medium text-muted-foreground">미확인</Badge>;
+         }
+     };
+     const getSubmissionQueueReasonBadgeClassName = (reason: AdminSubmissionQueueReason) =>
+         cn(
+-            "max-w-full rounded-full px-2 py-0 text-2xs font-semibold leading-5 xl:text-2xs",
++            "max-w-full rounded px-1.5 py-0 text-2xs font-medium leading-5 xl:text-2xs",
+             reason.severity === 'danger' && "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/25 dark:text-red-200",
+             reason.severity === 'warning' && "border-border bg-secondary text-foreground",
+             reason.severity === 'info' && "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/25 dark:text-blue-200"
+         );
+ 
+     const renderSubmissionQueueSafetyBadges = (
+         summary: AdminSubmissionQueueSafetySummary | undefined,
+         placement: 'card' | 'detail'
+     ) => {
+         if (!summary?.reasons.length) return null;
+ 
+         const reasons = placement === 'card' ? summary.reasons.slice(0, 2) : summary.reasons;
+ 
+         return (
+             <div
+-                className="mt-1 flex flex-wrap gap-1"
++                className={cn("flex flex-wrap gap-1", placement === 'detail' && "mt-2")}
+                 data-admin-submission-safety-badges={placement}
+                 aria-label="제보 큐 검수 사유"
+             >
+                 {reasons.map((reason) => (
+                     <Badge
+                         key={reason.code}
+                         variant="outline"
+                         className={getSubmissionQueueReasonBadgeClassName(reason)}
+                         title={reason.message}
+                         data-admin-submission-safety-badge={reason.code}
+                     >
+                         {reason.label}
+                     </Badge>
+                 ))}
+                 {placement === 'card' && summary.reasons.length > reasons.length && (
+                     <Badge
+                         variant="outline"
+-                        className="rounded-full px-2 py-0 text-2xs leading-5 text-muted-foreground xl:text-2xs"
++                        className="rounded px-1.5 py-0 text-2xs leading-5 text-muted-foreground xl:text-2xs"
+                         data-admin-submission-safety-badge="more"
+                     >
+                         +{summary.reasons.length - reasons.length}
+                     </Badge>
+                 )}
+             </div>
+         );
+     };
+ 
+     const getReviewFlags = (review: Review) => {
+         const isPending = !review.is_verified && (!review.admin_note || !review.admin_note.includes('거부'));
+         const isApproved = review.is_verified;
+         const isRejected = !review.is_verified && review.admin_note?.includes('거부');
+         return { isPending, isApproved, isRejected };
+     };
+ 
+     const renderReviewStatusBadge = (review: Review) => {
+         const { isPending, isApproved, isRejected } = getReviewFlags(review);
+ 
+         if (isPending) {
+             return (
+-                <Badge variant="secondary" className="gap-1 text-xs">
++                <Badge variant="outline" className="gap-1 rounded border-border bg-muted/55 text-xs font-medium text-foreground">
+                     <Clock className="h-3 w-3" /> 대기
+                 </Badge>
+             );
+         }
+ 
+         if (isApproved) {
+             return (
+-                <Badge className="gap-1 bg-green-500 text-xs">
++                <Badge variant="outline" className="gap-1 rounded border-emerald-200 bg-emerald-50 text-xs font-medium text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200">
+                     <CheckCircle2 className="h-3 w-3" /> 승인
+                 </Badge>
+             );
+         }
+ 
+         if (isRejected) {
+             return (
+-                <Badge variant="destructive" className="gap-1 text-xs">
++                <Badge variant="outline" className="gap-1 rounded border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive">
+                     <XCircle className="h-3 w-3" /> 거부
+                 </Badge>
+             );
+         }
+ 
+         return null;
+     };
+ 
+     // 상세 패널 열기
+     const openSubmissionDetail = useCallback((submission: SubmissionRecord) => {
+         setSelectedSubmission(submission);
+         setSubmissionDeleteTarget(null);
+         setSubmissionDeleteConfirmation('');
+         setApprovalData({
+             lat: '',
+             lng: '',
+             road_address: '',
+             jibun_address: '',
+             english_address: '',
+             address_elements: null,
+@@ -2019,68 +2045,70 @@ export function SubmissionListView({
+                             </div>
+                         </div>
+                         <p className="text-xs leading-5 text-amber-900/80 dark:text-amber-100/80">
+                             승인·거부는 처리 결과와 감사 ID가 확인되면 완료됩니다.
+                         </p>
+                     </div>
+                 </Card>
+             )}
+         </div>
+         );
+     };
+     const renderSubmissionDetailPanel = () => (
+         <section
+             aria-label="제보 상세 작업 패널"
+             key={selectedSubmission?.id}
+             ref={submissionDetailPanelRef}
+             tabIndex={-1}
+             data-admin-moderation-inspector="true"
+             className={cn("admin-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden", inlineInspector && "admin-cms-inspector")}
+         >
+-            <div className="flex min-h-11 items-center justify-between gap-2 border-b px-3 py-2 md:min-h-10">
++            <div data-ui="moderation-inspector-header" className="flex min-h-11 items-center justify-between gap-2 border-b px-3 py-2 md:min-h-10">
+                 <div className="min-w-0">
+                     <h3 className="admin-section-title truncate">{selectedSubmission?.restaurant_name || '왼쪽 목록에서 제보를 선택하세요'}</h3>
++                    {selectedSubmission && <p className="mt-0.5 truncate text-[11px] text-muted-foreground" title={selectedSubmission.id}>{SUBMISSION_TYPE_LABELS[selectedSubmission.submission_type]} · <span aria-hidden="true">{getModerationRecordLabel(selectedSubmission.id)}</span><span className="sr-only">전체 식별자 {selectedSubmission.id}</span></p>}
+                 </div>
+                 {selectedSubmission && (
+                     <div className="flex shrink-0 gap-1">
+                         {selectedSubmission.submission_type !== 'recommend' && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" aria-label="선택한 제보 삭제" disabled={loading} onClick={handleDeleteSelectedSubmission}><Trash2 className="h-3.5 w-3.5" /></Button>}
+                         <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={closeSubmissionDetail}>닫기</Button>
+                     </div>
+                 )}
+             </div>
+ 
+             {!selectedSubmission ? (
+                 <div className="admin-empty-state flex min-h-[360px] flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
+                     <Edit className="h-8 w-8" />
+                     <p>제보를 선택하세요.</p>
+                 </div>
+             ) : (
+                 <>
+                     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+                         <Card className="admin-detail-section p-3 shadow-none">
+-                            <div className="flex flex-wrap items-center justify-between gap-2">
+-                                <div className="min-w-0">
+-                                    <p className="truncate text-sm font-semibold">{selectedSubmission.restaurant_name}</p>
+-                                    <p className="mt-1 break-all text-xs text-muted-foreground">{selectedSubmission.restaurant_address || '주소 없음'}</p>
+-                                </div>
++                            <div className="flex items-start justify-between gap-3">
++                                <p className="min-w-0 break-words text-xs leading-5 text-muted-foreground">{selectedSubmission.restaurant_address || '주소 없음'}</p>
+                                 {getStatusBadge(selectedSubmission.status)}
+                             </div>
++                            <dl data-ui="moderation-record-fields" className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t pt-3 text-xs">
++                                <div className="min-w-0"><dt className="admin-field-label text-muted-foreground">제보자</dt><dd className="mt-0.5 truncate font-medium text-foreground">{selectedSubmission.profiles?.nickname || '익명'}</dd></div>
++                                <div className="min-w-0"><dt className="admin-field-label text-muted-foreground">접수</dt><dd className="mt-0.5 tabular-nums text-foreground">{formatModerationReceivedAt(selectedSubmission.created_at)}</dd></div>
++                            </dl>
+                             {renderSubmissionQueueSafetyBadges(selectedSubmissionQueueSafetySummary, 'detail')}
+                         </Card>
+                         {renderApprovalContractPanel()}
+                         {selectedSubmission.submission_type === 'recommend' ? (
+                             renderRecommendationDetailContent(selectedSubmission)
+                         ) : (
+                             <SubmissionDetailView
+                                 submission={selectedSubmission}
+                                 approvalData={approvalData}
+                                 onApprovalDataChange={setApprovalData}
+                                 geocodingResults={geocodingResults}
+                                 onGeocodingResultsChange={setGeocodingResults}
+                                 selectedGeocodingIndex={selectedGeocodingIndex}
+                                 onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
+                                 itemDecisions={itemDecisions}
+                                 onItemDecisionsChange={setItemDecisions}
+                                 forceApprove={forceApprove}
+                                 onForceApproveChange={setForceApprove}
+                                 editableData={editableData}
+                                 onEditableDataChange={handleEditableDataChange}
+@@ -2137,41 +2165,41 @@ export function SubmissionListView({
+                                                 setSubmissionDeleteTarget(null);
+                                                 setSubmissionDeleteConfirmation('');
+                                             }}
+                                         >
+                                             취소
+                                         </Button>
+                                         <Button
+                                             variant="destructive"
+                                             size="sm"
+                                             onClick={handleConfirmDeleteSubmission}
+                                             disabled={submissionDeleteConfirmation !== SUBMISSION_DELETE_CONFIRMATION}
+                                         >
+                                             삭제
+                                         </Button>
+                                     </div>
+                                 </div>
+                             </Card>
+                         )}
+                     </div>
+                     {(selectedSubmission.status === 'pending' || selectedSubmission.status === 'partially_approved') && (
+-                        <div className="grid shrink-0 grid-cols-2 gap-2 border-t bg-background p-3 sm:grid-cols-[1fr_1fr_1.4fr] [&_button]:min-h-11 md:[&_button]:min-h-8">
++                        <div data-ui="moderation-inspector-actions" className="grid shrink-0 grid-cols-2 gap-2 border-t bg-background p-3 sm:grid-cols-[1fr_1fr_1.4fr] [&_button]:min-h-11 md:[&_button]:min-h-8">
+                             <Button type="button" variant="outline" size="sm" onClick={closeSubmissionDetail} disabled={loading}>
+                                 닫기
+                             </Button>
+                             <Button type="button" size="sm" variant="destructive" onClick={() => setShowRejectModal(true)} disabled={loading}>
+                                 <XCircle className="mr-1 h-4 w-4" />
+                                 {selectedSubmission.submission_type === 'recommend' ? '추천 거부' : '전체 거부'}
+                             </Button>
+                             <Button
+                                 size="sm"
+                                 onClick={handleApprove}
+                                 disabled={loading || !approvalState.canApprove}
+                                 title={approvalState.canApprove ? '승인' : `${approvalState.nextAction} ${approvalState.blockers.join(' ')}`.trim()}
+                             >
+                                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />}
+                                 {selectedSubmission.submission_type === 'recommend' ? '추천 승인' : '승인'}
+                             </Button>
+                         </div>
+                     )}
+                 </>
+             )}
+@@ -2223,75 +2251,76 @@ export function SubmissionListView({
+                             <div className="space-y-2 text-sm">
+                                 {review.receipt_data.store_name && (
+                                     <div className="flex justify-between gap-3">
+                                         <span className="text-muted-foreground">가게명</span>
+                                         <span className="font-medium">{review.receipt_data.store_name}</span>
+                                     </div>
+                                 )}
+                                 {review.receipt_data.date && (
+                                     <div className="flex justify-between gap-3">
+                                         <span className="text-muted-foreground">날짜</span>
+                                         <span>{review.receipt_data.date}</span>
+                                     </div>
+                                 )}
+                                 {review.receipt_data.total_amount && (
+                                     <div className="flex justify-between gap-3">
+                                         <span className="text-muted-foreground">결제 금액</span>
+                                         <span className="font-medium text-green-600">{review.receipt_data.total_amount.toLocaleString()}원</span>
+                                     </div>
+                                 )}
+                                 {review.receipt_data.confidence !== undefined && (
+-                                    <div className="flex justify-between gap-3 border-t pt-2">
++                                    <div className="flex justify-between gap-3 pt-2">
+                                         <span className="text-muted-foreground">OCR 신뢰도</span>
+                                         <Badge variant={review.receipt_data.confidence >= 0.8 ? 'default' : 'secondary'} className="text-xs">
+                                             {(review.receipt_data.confidence * 100).toFixed(0)}%
+                                         </Badge>
+                                     </div>
+                                 )}
+                                 {review.is_duplicate && review.receipt_data.duplicate_of && (
+-                                    <div className="border-t pt-2 text-red-600 dark:text-red-400">
++                                    <div className="pt-2 text-red-600 dark:text-red-400">
+                                         <AlertTriangle className="mr-1 inline h-4 w-4" />
+                                         중복 영수증 · 원본 {review.receipt_data.duplicate_of.slice(0, 8)}...
+                                     </div>
+                                 )}
+                             </div>
+                         </Card>
+                     )
+                 ) : (
+                     <Card className="bg-muted/50 p-3 text-sm text-muted-foreground shadow-none">OCR 데이터 없음</Card>
+                 )
+             )}
+         </div>
+     );
+ 
+     const renderReviewDetailPanel = () => (
+         <section
+             aria-label="리뷰 상세 작업 패널"
+             key={selectedReview?.id}
+             ref={reviewDetailPanelRef}
+             tabIndex={-1}
+             data-admin-moderation-inspector="true"
+             className={cn("admin-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden", inlineInspector && "admin-cms-inspector")}
+         >
+-            <div className="flex min-h-11 items-center justify-between gap-2 border-b px-3 py-2 md:min-h-10">
++            <div data-ui="moderation-inspector-header" className="flex min-h-11 items-center justify-between gap-2 border-b px-3 py-2 md:min-h-10">
+                 <div className="min-w-0">
+                     <h3 className="admin-section-title truncate">{selectedReview?.restaurants?.name || '왼쪽 목록에서 리뷰를 선택하세요'}</h3>
++                    {selectedReview && <p className="mt-0.5 truncate text-[11px] text-muted-foreground" title={selectedReview.id}>리뷰 · <span aria-hidden="true">{getModerationRecordLabel(selectedReview.id)}</span><span className="sr-only">전체 식별자 {selectedReview.id}</span></p>}
+                 </div>
+                 {selectedReview && (
+                     <Button
+                         variant="ghost"
+                         size="sm"
+                         className="h-8 px-2 text-xs"
+                         onClick={() => {
+                             setSelectedReview(null);
+                             setReviewAction(null);
+                             setReviewAdminNote('');
+                             setPreviewImage(null);
+                         }}
+                     >
+                         선택 해제
+                     </Button>
+                 )}
+             </div>
+ 
+             {!selectedReview ? (
+                 <div className="admin-empty-state flex min-h-[360px] flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
+@@ -2329,41 +2358,41 @@ export function SubmissionListView({
+                                     </span>
+                                 </div>
+                                 <p className="whitespace-pre-wrap text-muted-foreground">{selectedReview.content}</p>
+                             </div>
+                         </Card>
+ 
+                         {previewImage && (
+                             <Card className="p-2 shadow-none">
+                                 <div className="relative">
+                                     <Image
+                                         src={previewImage.url}
+                                         alt={previewImage.alt}
+                                         width={1400}
+                                         height={1000}
+                                         unoptimized
+                                         className="max-h-[46dvh] w-full rounded-lg object-contain"
+                                     />
+                                     <Button
+                                         variant="secondary"
+                                         size="icon"
+-                                        className="absolute right-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
++                                        data-ui="receipt-image-overlay" className="absolute right-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+                                         onClick={() => setPreviewImage(null)}
+                                     >
+                                         <X className="h-4 w-4 text-gray-700" />
+                                     </Button>
+                                 </div>
+                             </Card>
+                         )}
+ 
+                         <div className="space-y-2">
+                             <Label className="text-sm font-medium">제출된 사진</Label>
+                             {!selectedReviewPhotos.verificationPhotoUrl && selectedReviewPhotos.foodPhotos.length === 0 ? (
+                                 <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">제출된 사진이 없습니다</div>
+                             ) : (
+                                 <div className="flex gap-2 overflow-x-auto pb-2">
+                                     {selectedReviewPhotos.verificationPhotoUrl && (
+                                         <ReviewPhotoItem
+                                             src={selectedReviewPhotos.verificationPhotoUrl}
+                                             alt="영수증"
+                                             label="영수증"
+                                             labelVariant="receipt"
+@@ -2442,161 +2471,194 @@ export function SubmissionListView({
+                                             onClick={() => {
+                                                 setReviewDeleteTarget(null);
+                                                 setReviewDeleteConfirmation('');
+                                             }}
+                                         >
+                                             취소
+                                         </Button>
+                                         <Button
+                                             variant="destructive"
+                                             size="sm"
+                                             onClick={handleConfirmDeleteReview}
+                                             disabled={reviewDeleteConfirmation !== REVIEW_DELETE_CONFIRMATION}
+                                         >
+                                             삭제
+                                         </Button>
+                                     </div>
+                                 </div>
+                             </Card>
+                         )}
+                     </div>
+-                    <div className="grid shrink-0 grid-cols-3 gap-2 border-t bg-background p-3 [&_button]:min-h-11 md:[&_button]:min-h-8">
++                    <div data-ui="moderation-inspector-actions" className="grid shrink-0 grid-cols-3 gap-2 border-t bg-background p-3 [&_button]:min-h-11 md:[&_button]:min-h-8">
+                         <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => handleDeleteReview(selectedReview)}
+                         >
+                             <Trash2 className="mr-1 h-4 w-4" />
+                             삭제
+                         </Button>
+                         <Button
+                             variant="destructive"
+                             size="sm"
+                             onClick={() => {
+                                 setReviewAction('reject');
+                                 handleConfirmReviewAction('reject');
+                             }}
+                             disabled={!reviewAdminNote.trim()}
+                         >
+                             거부
+                         </Button>
+                         <Button
+                             size="sm"
+                             onClick={() => {
+                                 setReviewAction('approve');
+                                 handleConfirmReviewAction('approve');
+                             }}
+                             disabled={selectedReview.is_duplicate}
+                             className="bg-green-500 hover:bg-green-600 disabled:opacity-50"
+                         >
+                             {selectedReview.is_duplicate ? '승인불가' : '승인'}
+                         </Button>
+                     </div>
+                 </>
+             )}
+         </section>
+     );
+ 
+     const hasSelection = activeTab === 'reviews' ? !!selectedReview : !!selectedSubmission;
+     const resultCount = activeTab === 'reviews' ? orderedReviews.length : filteredSubmissions.length;
+     const displayedCount = activeTab === 'reviews' ? displayedReviews.length : displayedSubmissions.length;
++    const restoreRowTriggerFocus = useCallback(() => {
++        const activeElement = document.activeElement;
++        const focusStayedInInspector = activeElement instanceof Element
++            && activeElement.closest('[data-admin-moderation-drawer]') !== null;
++        const focusNeedsRestoring = activeElement === null
++            || activeElement === document.body
++            || activeElement === document.documentElement
++            || focusStayedInInspector;
++        if (focusNeedsRestoring && rowTriggerRef.current?.isConnected && !rowTriggerRef.current.disabled) {
++            rowTriggerRef.current?.focus();
++        }
++    }, []);
+     const closeInspector = () => {
+         if (activeTab === 'reviews') {
+             setSelectedReview(null); setReviewAction(null); setReviewAdminNote('');
+             setReviewDeleteTarget(null); setReviewDeleteConfirmation(''); setPreviewImage(null);
+         } else closeSubmissionDetail();
+-        if (inlineInspector) window.requestAnimationFrame(() => rowTriggerRef.current?.focus());
++        if (inlineInspector) window.requestAnimationFrame(restoreRowTriggerFocus);
+     };
+     const searchValue = activeTab === 'reviews' ? reviewSearchQuery : searchQuery;
+     const changeSearch = (value: string) => activeTab === 'reviews' ? setReviewSearchQuery(value) : setSearchQuery(value);
+     const tabs = [
+         { id: 'new' as const, label: '신규 제보', count: newCount, icon: <Video className="h-3.5 w-3.5" /> },
+         { id: 'edit' as const, label: '수정 요청', count: editCount, icon: <Edit className="h-3.5 w-3.5" /> },
+         { id: 'recommend' as const, label: '쯔양 제보', count: recommendCount, icon: <YouTubeIcon className="h-3.5 w-3.5" /> },
+         { id: 'reviews' as const, label: '리뷰', count: reviewPendingCount, icon: <MessageSquare className="h-3.5 w-3.5" /> },
+     ];
+ 
+     return (
+         <TooltipProvider>
+             <div data-admin-moderation-workspace={activeTab === 'reviews' ? 'reviews' : 'submissions'} className="flex h-full min-h-0 min-w-0 flex-col gap-2 p-2">
+-                <nav className="grid shrink-0 grid-cols-4 gap-1 bg-muted/50 p-1" aria-label="제보·리뷰 종류">
++                {!(isFocusedReviewWorkspace && activeTab === 'reviews') && <nav className="grid shrink-0 grid-cols-4 gap-1 bg-muted/50 p-1" aria-label="제보·리뷰 종류">
+                     {tabs.map(tab => <button key={tab.id} type="button" aria-pressed={activeTab === tab.id} onClick={() => setActiveTabWithReset(tab.id)} className={cn('flex min-h-11 min-w-0 flex-wrap items-center justify-center gap-1 rounded-md px-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:min-h-8', activeTab === tab.id ? 'bg-background text-primary' : 'text-muted-foreground hover:bg-muted')}>
+                         <span className="hidden sm:inline-flex">{tab.icon}</span><span>{tab.label}</span><span className="tabular-nums text-muted-foreground" aria-label={`대기 ${tab.count}건`}>{tab.count}</span>
+                     </button>)}
+-                </nav>
++                </nav>}
+                 <div data-admin-moderation-toolbar className="admin-toolbar admin-cms-toolbar shrink-0">
+                     <div className="relative min-w-[180px] flex-1">
+                         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                         <Input type="search" aria-label={activeTab === 'reviews' ? '리뷰 검색' : '제보 검색'} placeholder={activeTab === 'reviews' ? '맛집·리뷰·작성자 검색' : '맛집·주소·제보자 검색'} value={searchValue} onChange={event => changeSearch(event.target.value)} className="h-11 pl-8 pr-8 text-sm md:h-8" />
+                         {searchValue && <button type="button" aria-label="검색 지우기" onClick={() => changeSearch('')} className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md hover:bg-muted"><X className="h-3.5 w-3.5" /></button>}
+                     </div>
+                     <select aria-label="처리 상태" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as AdminModerationFilter); resetVisibleCountByTab(activeTab); }} className={filterClassName}>
+                         <option value="all">전체 상태 ({currentTabSummary.total})</option><option value="pending">대기 ({currentTabSummary.pending})</option><option value="approved">승인 ({currentTabSummary.approved})</option><option value="rejected">거부 ({currentTabSummary.rejected})</option>
+                         {activeTab === 'reviews' ? <option value="duplicate">중복 영수증</option> : <option value="partially_approved">부분 승인</option>}
+                     </select>
+                     <select aria-label="목록 정렬" value={sortOrder} onChange={event => setSortOrder(event.target.value as AdminModerationSort)} className={filterClassName}>
+                         <option value="priority">대기 우선</option><option value="newest">최근 접수순</option><option value="oldest">오래된 접수순</option><option value="name">맛집 이름순</option>
+                     </select>
+                     {onRefresh && activeTab !== 'reviews' && <Button type="button" variant="outline" size="icon" className="h-11 w-11 md:h-8 md:w-8" aria-label="목록 새로고침" onClick={onRefresh} disabled={loading}><RefreshCw className="h-3.5 w-3.5" /></Button>}
+                     {activeTab === 'reviews' && <details className="relative text-xs">
+                         <summary className="flex h-11 cursor-pointer items-center gap-1 rounded-md border px-2 md:h-8"><ScanSearch className="h-3.5 w-3.5" />OCR 관리</summary>
+-                        <div className="absolute right-0 top-10 z-20 w-64 space-y-3 rounded-lg border bg-popover p-3 shadow-md">
++                        <div data-ui="moderation-ocr-popover" className="absolute right-0 top-10 z-20 w-64 space-y-3 rounded-lg border bg-popover p-3 shadow-md">
+                             <p className="text-muted-foreground">대기 {ocrStatus?.pending ?? '미확인'} · 중복 {ocrStatus?.duplicate ?? '미확인'}</p>
+                             <Button size="sm" variant="outline" onClick={handleRunOcr} disabled={isOcrRunning || (ocrStatus?.pending === 0)} className="h-8 w-full text-xs">{isOcrRunning ? '처리 중' : '대기 OCR 실행'}</Button>
+                             <label className="block space-y-1"><span>배치 초기화 확인</span><Input value={ocrResetConfirmation} onChange={event => setOcrResetConfirmation(event.target.value)} placeholder={OCR_RESET_ALL_CONFIRMATION} className="h-8 text-xs" /></label>
+                             <Button size="sm" variant="outline" onClick={handleResetAllOcr} disabled={isOcrRunning || ocrResetConfirmation !== OCR_RESET_ALL_CONFIRMATION} className="h-8 w-full text-xs text-destructive">최대 50건 다시 실행</Button>
+                         </div>
+                     </details>}
++                    {toolbarTrailingAction}
+                 </div>
+                 <div className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted-foreground" aria-live="polite">
+                     <span><strong className="font-semibold text-foreground">{currentTabSummary.label}</strong> · {resultCount}건</span>
+                     <span>{searchValue || statusFilter !== 'all' || queueReasonFilter !== 'all' ? '필터 적용 중' : '전체 조회'}</span>
+                 </div>
+                 {activeTab !== 'reviews' && <div className="flex shrink-0 flex-wrap gap-1" data-admin-submission-queue-reason-filter="true" aria-label="제보 큐 검수 사유 필터">
+                     {queueReasonFilterOptions.filter(option => option.value === 'all' || option.count > 0 || option.value === queueReasonFilter).map(option => <button key={option.value} type="button" aria-pressed={queueReasonFilter === option.value} data-admin-submission-queue-reason-filter-option={option.value} onClick={() => handleQueueReasonFilterChange(option.value)} className={cn('min-h-7 rounded-md border px-2 text-[11px]', queueReasonFilter === option.value ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted')}>
+                         {option.label}<span className="ml-1 tabular-nums">{option.count}</span>
+                     </button>)}
+                 </div>}
+                 <div className={cn('grid min-h-0 flex-1 gap-2 overflow-hidden', inlineInspector && hasSelection && 'xl:grid-cols-[minmax(0,1fr)_360px]')}>
+                     <section data-admin-moderation-list className="admin-surface flex min-h-0 min-w-0 flex-col overflow-hidden" aria-label={activeTab === 'reviews' ? '리뷰 목록' : '제보 목록'}>
+                         {(activeTab === 'reviews' ? reviewsLoading : loading && !submissions.length) ? renderListSkeletonCards(currentTabSummary.label) : <div ref={listScrollRef} className={listBodyClassName}
+                             style={isMobile && activeTab === 'reviews' ? { touchAction: 'pan-y' } : undefined}
+                             onPointerDown={isMobile && activeTab === 'reviews' ? handleSubmissionTabPointerDown : undefined}
+                             onPointerMove={isMobile && activeTab === 'reviews' ? handleSubmissionTabPointerMove : undefined}
+                             onPointerUp={isMobile && activeTab === 'reviews' ? handleSubmissionTabPointerEnd : undefined}
+                             onPointerCancel={isMobile && activeTab === 'reviews' ? handleSubmissionTabPointerCancel : undefined}
+                             onTouchStart={isMobile && activeTab === 'reviews' ? handleSubmissionTabTouchStart : undefined}
+                             onTouchMove={isMobile && activeTab === 'reviews' ? handleSubmissionTabTouchMove : undefined}
+                             onTouchEnd={isMobile && activeTab === 'reviews' ? handleSubmissionTabSwipeEnd : undefined}
+                             onTouchCancel={isMobile && activeTab === 'reviews' ? handleSubmissionTabTouchCancel : undefined}>
+-                            {resultCount === 0 ? <div role="status" className="admin-empty-state flex min-h-40 flex-col items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><p>{searchValue || statusFilter !== 'all' || queueReasonFilter !== 'all' ? '조건에 맞는 항목이 없습니다.' : '조회된 항목이 없습니다.'}</p>{(searchValue || statusFilter !== 'all' || queueReasonFilter !== 'all') && <Button variant="outline" size="sm" onClick={() => { changeSearch(''); setStatusFilter('all'); handleQueueReasonFilterChange('all'); }}>필터 초기화</Button>}</div> : <table className="admin-cms-table table-fixed"><thead className="sticky top-0 z-10 bg-card"><tr><th scope="col">{activeTab === 'reviews' ? '맛집 · 리뷰' : '맛집 · 주소'}</th><th scope="col" className="hidden w-28 sm:table-cell">작성자 · 접수일</th><th scope="col" className="w-24">처리 상태</th></tr></thead><tbody>
+-                                {activeTab === 'reviews' ? displayedReviews.map(review => <tr key={review.id} data-admin-review-row={review.id} className={cn('cursor-pointer', selectedReview?.id === review.id && 'admin-cms-row-selected')} onClick={event => { rowTriggerRef.current = event.currentTarget.querySelector('button'); handleReviewAction('approve', review); }}>
+-                                    <td><button type="button" aria-pressed={selectedReview?.id === review.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className={rowButtonClassName}>
+-                                        <span className="block truncate text-sm font-medium">{review.restaurants?.name || '맛집 미확인'}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{review.content || review.title || '내용 없음'}</span><span className="mt-1 block text-[11px] text-muted-foreground sm:hidden">{review.profiles?.nickname || '익명'} · {new Date(review.created_at).toLocaleDateString('ko-KR')}</span>
+-                                    </button></td>
+-                                    <td className="hidden text-muted-foreground sm:table-cell"><span className="block truncate">{review.profiles?.nickname || '익명'}</span><span className="mt-1 block text-[11px] tabular-nums">{new Date(review.created_at).toLocaleDateString('ko-KR')}</span></td>
+-                                    <td><span className="flex flex-col items-start gap-1">{renderReviewStatusBadge(review)}{review.is_duplicate && <span className="text-[11px] text-destructive">중복 영수증</span>}</span></td>
+-                                </tr>) : displayedSubmissions.map(submission => <tr key={submission.id} data-admin-submission-row={submission.id} className={cn('cursor-pointer', selectedSubmission?.id === submission.id && 'admin-cms-row-selected')} onClick={event => { rowTriggerRef.current = event.currentTarget.querySelector('button'); openSubmissionDetail(submission); }}>
+-                                    <td><button type="button" aria-pressed={selectedSubmission?.id === submission.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className={rowButtonClassName}>
+-                                        <span className="block truncate text-sm font-medium">{submission.restaurant_name}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{submission.restaurant_address || '주소 없음'}</span><span className="mt-1 block text-[11px] text-muted-foreground sm:hidden">{submission.profiles?.nickname || '익명'} · {new Date(submission.created_at).toLocaleDateString('ko-KR')}</span>{renderSubmissionQueueSafetyBadges(submissionQueueSafetyById.get(submission.id), 'card')}
+-                                    </button></td>
+-                                    <td className="hidden text-muted-foreground sm:table-cell"><span className="block truncate">{submission.profiles?.nickname || '익명'}</span><span className="mt-1 block text-[11px] tabular-nums">{new Date(submission.created_at).toLocaleDateString('ko-KR')}</span></td>
+-                                    <td>{getStatusBadge(submission.status)}</td>
+-                                </tr>)}
++                            {resultCount === 0 ? <div role="status" className="admin-empty-state flex min-h-40 flex-col items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><p>{searchValue || statusFilter !== 'all' || queueReasonFilter !== 'all' ? '조건에 맞는 항목이 없습니다.' : '조회된 항목이 없습니다.'}</p>{(searchValue || statusFilter !== 'all' || queueReasonFilter !== 'all') && <Button variant="outline" size="sm" onClick={() => { changeSearch(''); setStatusFilter('all'); handleQueueReasonFilterChange('all'); }}>필터 초기화</Button>}</div> : <table className="admin-cms-table admin-records-table table-fixed" data-admin-moderation-table={activeTab === 'reviews' ? 'reviews' : 'submissions'}><thead className="sticky top-0 z-10 bg-card"><tr><th scope="col" className="admin-records-identity">{activeTab === 'reviews' ? '맛집 · 리뷰' : '맛집 · 주소'}</th><th scope="col" className="admin-records-meta hidden w-40 lg:table-cell">검수 신호</th><th scope="col" className="admin-records-meta hidden w-32 sm:table-cell">작성자 · 접수</th><th scope="col" className="admin-records-status w-24">처리 상태</th><th scope="col" className="admin-records-actions w-10"><span className="sr-only">상세</span></th></tr></thead><tbody>
++                                {activeTab === 'reviews' ? displayedReviews.map(review => {
++                                    const photoCount = review.food_photos.length + (review.verification_photo ? 1 : 0);
++                                    return <tr key={review.id} data-admin-review-row={review.id} className={cn('cursor-pointer [&>td]:align-middle', selectedReview?.id === review.id && 'admin-cms-row-selected')} onClick={event => { rowTriggerRef.current = event.currentTarget.querySelector('button'); handleReviewAction('approve', review); }}>
++                                        <td className="admin-records-identity"><button type="button" aria-pressed={selectedReview?.id === review.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className={rowButtonClassName}>
++                                            <span className="block truncate text-sm font-semibold text-foreground">{review.restaurants?.name || '맛집 미확인'}</span>
++                                            <span className="mt-0.5 block truncate text-xs text-muted-foreground">{review.content || review.title || '내용 없음'}</span>
++                                            <span className="mt-1 block truncate text-[11px] text-muted-foreground sm:hidden">{review.profiles?.nickname || '익명'} · {formatModerationReceivedAt(review.created_at)}</span>
++                                            <span className="mt-1 flex flex-wrap gap-1 lg:hidden" aria-label="리뷰 검수 신호">
++                                                <span className="text-[11px] text-muted-foreground">사진 {photoCount}</span>
++                                                <span className="text-[11px] text-muted-foreground">{review.ocr_processed_at ? 'OCR 완료' : 'OCR 미처리'}</span>
++                                                {review.is_duplicate && <span className="text-[11px] font-medium text-destructive">중복 영수증</span>}
++                                            </span>
++                                        </button></td>
++                                        <td className="admin-records-meta hidden lg:table-cell"><div className="flex flex-wrap gap-x-2 gap-y-1 text-[11px]"><span className="text-muted-foreground">사진 <strong className="font-medium tabular-nums text-foreground">{photoCount}</strong></span><span className="text-muted-foreground">{review.ocr_processed_at ? 'OCR 완료' : 'OCR 미처리'}</span>{review.is_duplicate && <span className="font-medium text-destructive">중복 영수증</span>}</div></td>
++                                        <td className="admin-records-meta hidden text-muted-foreground sm:table-cell"><span className="block truncate text-xs text-foreground">{review.profiles?.nickname || '익명'}</span><span className="mt-0.5 block text-[11px] tabular-nums">{formatModerationReceivedAt(review.created_at)}</span></td>
++                                        <td className="admin-records-status"><span className="flex flex-col items-start gap-1">{renderReviewStatusBadge(review)}</span></td>
++                                        <td className="admin-records-actions px-1" aria-hidden="true"><ChevronRight className="mx-auto h-4 w-4 text-muted-foreground" /></td>
++                                    </tr>;
++                                }) : displayedSubmissions.map(submission => {
++                                    const queueSafetySummary = submissionQueueSafetyById.get(submission.id);
++                                    return <tr key={submission.id} data-admin-submission-row={submission.id} className={cn('cursor-pointer [&>td]:align-middle', selectedSubmission?.id === submission.id && 'admin-cms-row-selected')} onClick={event => { rowTriggerRef.current = event.currentTarget.querySelector('button'); openSubmissionDetail(submission); }}>
++                                        <td className="admin-records-identity"><button type="button" aria-pressed={selectedSubmission?.id === submission.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className={rowButtonClassName}>
++                                            <span className="block truncate text-sm font-semibold text-foreground">{submission.restaurant_name}</span>
++                                            <span className="mt-0.5 block truncate text-xs text-muted-foreground">{submission.restaurant_address || '주소 없음'}</span>
++                                            <span className="mt-1 block truncate text-[11px] text-muted-foreground sm:hidden">{submission.profiles?.nickname || '익명'} · {formatModerationReceivedAt(submission.created_at)}</span>
++                                            <div className="mt-1 lg:hidden">{renderSubmissionQueueSafetyBadges(queueSafetySummary, 'card')}</div>
++                                        </button></td>
++                                        <td className="admin-records-meta hidden lg:table-cell"><div className="space-y-1">{submission.items.length > 0 && <span className="block text-[11px] text-muted-foreground">항목 <strong className="font-medium tabular-nums text-foreground">{submission.items.length}</strong></span>}{renderSubmissionQueueSafetyBadges(queueSafetySummary, 'card') || <span className="text-muted-foreground">—</span>}</div></td>
++                                        <td className="admin-records-meta hidden text-muted-foreground sm:table-cell"><span className="block truncate text-xs text-foreground">{submission.profiles?.nickname || '익명'}</span><span className="mt-0.5 block text-[11px] tabular-nums">{formatModerationReceivedAt(submission.created_at)}</span></td>
++                                        <td className="admin-records-status">{getStatusBadge(submission.status)}</td>
++                                        <td className="admin-records-actions px-1" aria-hidden="true"><ChevronRight className="mx-auto h-4 w-4 text-muted-foreground" /></td>
++                                    </tr>;
++                                })}
+                             </tbody></table>}
+                             <div ref={loadMoreSentinelRef} className="h-1" />
+                             {hasMoreCards && <div className="p-2 text-center"><Button type="button" variant="outline" size="sm" disabled={isCurrentListLoading} onClick={handleLoadMoreCards}>더 보기</Button></div>}
+                         </div>}
+                         <div className="admin-cms-footer shrink-0 justify-between"><span role="status">{isCurrentListLoading ? '조회 중' : `${displayedCount} / ${resultCount}건`}</span><span>조회된 목록 기준</span></div>
+                     </section>
+                     {inlineInspector && hasSelection ? (activeTab === 'reviews' ? renderReviewDetailPanel() : renderSubmissionDetailPanel()) : null}
+                 </div>
+                 <Sheet open={!inlineInspector && hasSelection} onOpenChange={open => { if (!open) closeInspector(); }}>
+-                    <SheetContent data-admin-moderation-drawer className="flex w-full flex-col gap-2 p-2 pt-12 sm:max-w-2xl" onCloseAutoFocus={event => { event.preventDefault(); rowTriggerRef.current?.focus(); }}>
++                    <SheetContent data-admin-moderation-drawer className="flex w-full flex-col gap-2 p-2 pt-12 sm:max-w-2xl" onCloseAutoFocus={event => { event.preventDefault(); restoreRowTriggerFocus(); }}>
+                         <SheetHeader className="sr-only"><SheetTitle>{activeTab === 'reviews' ? '리뷰 상세' : '제보 상세'}</SheetTitle><SheetDescription>선택한 항목의 검수와 처리</SheetDescription></SheetHeader>
+                         {!inlineInspector && hasSelection ? (activeTab === 'reviews' ? renderReviewDetailPanel() : renderSubmissionDetailPanel()) : null}
+                     </SheetContent>
+                 </Sheet>
+             </div>
+         </TooltipProvider>
+     );
+ }
+
+
+===== apps/web/components/reviews/ReviewModal.tsx | kind=patch | full-file SHA256=bf326190c050c282593e332a4e868ad50b3dd026f52add200a12b9805067ea8d | selected SHA256=98e8fa8955a64a92a049a33f7472867771ff0697a69f7e865c4a17fac3405772 =====
+diff --git a/apps/web/components/reviews/ReviewModal.tsx b/apps/web/components/reviews/ReviewModal.tsx
+index 5e34332a..21b249f7 100644
+--- a/apps/web/components/reviews/ReviewModal.tsx
++++ b/apps/web/components/reviews/ReviewModal.tsx
+@@ -36,40 +36,41 @@ import {
+ import {
+     prepareVerificationUploadFile,
+     ReceiptUploadPreparationError,
+ } from "@/lib/ocr/receipt-upload-preparation";
+ import { createLatestSelection } from "@/lib/ocr/latest-selection";
+ 
+ // 음식 사진용 압축 옵션 (스토리지 최적화)
+ const FOOD_PHOTO_OPTIONS = {
+     maxSizeMB: 0.3,           // 최대 300KB
+     maxWidthOrHeight: 1200,   // 최대 1200px
+     fileType: "image/webp" as const,
+     useWebWorker: true,
+ };
+ const SUPPORTED_RECEIPT_MIME_TYPES = new Set([
+     "image/avif",
+     "image/jpeg",
+     "image/png",
+     "image/webp",
+ ]);
+ const RECEIPT_IMAGE_ACCEPT = "image/avif,image/jpeg,image/png,image/webp";
++const REVIEW_CONTENT_MAX_LENGTH = 4_000;
+ const isSupportedReceiptImage = (file: File): boolean => SUPPORTED_RECEIPT_MIME_TYPES.has(file.type);
+ 
+ // 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
+ const generateSafeFilename = (extension: string = ".webp"): string => {
+     const randomString = Math.random().toString(36).substring(2, 15);
+     const timestamp = Date.now();
+     return `${timestamp}_${randomString}${extension}`;
+ };
+ 
+ // 음식 사진 압축 (WebP - 스토리지 최적화)
+ const compressFoodImage = async (file: File): Promise<File> => {
+     try {
+         const compressedBlob = await imageCompression(file, FOOD_PHOTO_OPTIONS);
+         const safeFileName = generateSafeFilename(".webp");
+         return new File([compressedBlob], safeFileName, { type: "image/webp" });
+     } catch (error) {
+         console.warn("음식 사진 압축 실패, 원본 사용:");
+         return file;
+     }
+ };
+@@ -826,40 +827,46 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+             receiptOcrPreparationRef.current.invalidate();
+         } else if (!verificationSelectionRef.current.isCurrent(expectedGeneration)) {
+             return false;
+         }
+         ocrRunGenerationRef.current += 1;
+         ocrAbortControllerRef.current?.abort();
+         ocrAbortControllerRef.current = null;
+         ocrRecoveryContextRef.current = null;
+         setIsAnalyzing(false);
+         setOcrProgress(null);
+         if (verificationPhotoUrlRef.current) {
+             URL.revokeObjectURL(verificationPhotoUrlRef.current);
+         }
+ 
+         const nextUrl = file ? URL.createObjectURL(file) : null;
+         verificationPhotoUrlRef.current = nextUrl;
+         setVerificationPhotoUrl(nextUrl);
+         setVerificationPhoto(file);
+         setOcrResultRef(null);
+         setOcrResultRevision(null);
++        latestSaveInputsRef.current = {
++            ...latestSaveInputsRef.current,
++            verificationPhoto: file,
++            ocrResultRef: null,
++            ocrResultRevision: null,
++        };
+         return true;
+     }, []);
+ 
+     const foodPhotoUrls = useMemo(() => {
+         return foodPhotos.map(photo => URL.createObjectURL(photo));
+     }, [foodPhotos]);
+ 
+     // URL 정리 (메모리 누수 방지)
+     useEffect(() => {
+         return () => {
+             if (verificationPhotoUrlRef.current) {
+                 URL.revokeObjectURL(verificationPhotoUrlRef.current);
+                 verificationPhotoUrlRef.current = null;
+             }
+         };
+     }, []);
+ 
+     useEffect(() => {
+         return () => {
+             foodPhotoUrls.forEach(url => URL.revokeObjectURL(url));
+@@ -1384,40 +1391,45 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+                     type: 'pending',
+                     message: '분석 연결이 끊겨 저장된 결과를 확인하고 있어요.',
+                     detail: '같은 사진을 AI에 다시 보내지 않습니다.',
+                 });
+                 data = await reconcileInterruptedOcrReadback({
+                     signal: abortController.signal,
+                     readStatus: () => readReceiptOcrStatus(file, token, abortController.signal),
+                     isProcessingError: error => error instanceof OcrStreamHttpError
+                         && error.code === 'OCR_RESULT_PROCESSING',
+                 });
+             }
+ 
+             if (!isCurrentOcrRun()) return;
+             const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+             if (!data.ocr_result_ref || !uuidPattern.test(data.ocr_result_ref)
+                 || !data.ocr_result_revision || !uuidPattern.test(data.ocr_result_revision)) {
+                 throw new Error('OCR 검증 결과를 확인할 수 없습니다.');
+             }
+             setOcrResultRef(data.ocr_result_ref);
+             setOcrResultRevision(data.ocr_result_revision);
++            latestSaveInputsRef.current = {
++                ...latestSaveInputsRef.current,
++                ocrResultRef: data.ocr_result_ref,
++                ocrResultRevision: data.ocr_result_revision,
++            };
+ 
+             // 4. provider/model/prompt/preprocess-aware server cache에만 저장한다.
+             // 클라이언트 sessionStorage cache는 Track 1 정확도 실험 동안 사용하지 않는다.
+ 
+             const autoFilledParts: string[] = [];
+             // 캐시/일반 fallback 응답도 SSE 최종 응답과 동일하게 폼에 반영하고,
+             // 모바일에서는 방문 정보(2단계) -> 리뷰(3단계) 순서로 실제 입력 위치를 보여준다.
+             applyOcrFieldPatch(data);
+             revealOcrAutoFillSequence(data);
+ 
+             // 1. 맛집 자동 검색 및 설정
+             // 수정: 이미 선택된 맛집이 있어도(selectedRestaurant) OCR 결과가 있으면 교체 시도 (단, props로 고정된 restaurant가 없어야 함)
+             const manuallyEdited = manuallyEditedOcrFieldsRef.current;
+ 
+             const canApplyOcrRestaurant = canReplaceSelectedRestaurantFromOcr({
+                 hasSelectedRestaurant: Boolean(selectedRestaurant),
+                 manuallyEditedRestaurant: manuallyEdited.has("restaurant"),
+                 fieldTrust: data.field_trust,
+             });
+ 
+@@ -1568,72 +1580,94 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+         const targetRestaurant = selectedRestaurant || restaurant;
+         // 필수 항목 검증
+         if (!visitedDate || !visitedTime || !targetRestaurant?.id || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
+             toast({
+                 title: "필수 항목 누락",
+                 description: "모든 필수 항목을 입력해주세요",
+                 variant: "destructive",
+             });
+             return;
+         }
+ 
+         // 리뷰 내용 길이 검증 (최소 20자)
+         if (content.trim().length < 20) {
+             toast({
+                 title: "리뷰 내용이 너무 짧습니다",
+                 description: "최소 20자 이상 작성해주세요 (현재 " + content.trim().length + "자)",
+                 variant: "destructive",
+             });
+             return;
+         }
++        if (content.length > REVIEW_CONTENT_MAX_LENGTH) {
++            toast({
++                title: "리뷰 내용이 너무 깁니다",
++                description: `리뷰 내용은 최대 ${REVIEW_CONTENT_MAX_LENGTH.toLocaleString()}자까지 작성할 수 있습니다.`,
++                variant: "destructive",
++            });
++            return;
++        }
++
++        const currentInputs = latestSaveInputsRef.current;
++        const submissionMode = verificationInputModeRef.current;
++        if (submissionMode === "ai"
++            && (isAnalyzing
++                || !submittedInputs.ocrResultRef || !submittedInputs.ocrResultRevision
++                || currentInputs.ocrResultRef !== submittedInputs.ocrResultRef
++                || currentInputs.ocrResultRevision !== submittedInputs.ocrResultRevision)) {
++            toast({
++                title: "영수증 분석을 확인해주세요",
++                description: "AI 분석이 끝난 뒤 등록하거나 사진만 첨부를 선택해주세요.",
++            });
++            return;
++        }
+ 
+         if (!user) {
+             toast({
+                 title: "로그인 필요",
+                 description: "리뷰를 작성하려면 로그인이 필요합니다",
+                 variant: "destructive",
+             });
+             return;
+         }
+ 
+         if (!targetRestaurant) {
+             toast({
+                 title: "맛집 정보 오류",
+                 description: "맛집을 선택해주세요.",
+                 variant: "destructive",
+             });
+             return;
+         }
+ 
+         if (submitInFlightRef.current || closeRequestedRef.current) return;
+         const timeWithSeconds = visitedTime.split(':').length === 2 ? `${visitedTime}:00` : visitedTime;
+         const visitedAt = `${visitedDate}T${timeWithSeconds}`;
+         if (Number.isNaN(new Date(visitedAt).getTime())) {
+             toast({ title: "방문 일시 확인", description: "올바른 방문 날짜와 시간을 입력해주세요.", variant: "destructive" });
+             return;
+         }
+         const draft: ReviewSaveDraft = {
+             ownerId: user.id, restaurantId: targetRestaurant.id,
+             title: `${targetRestaurant.name} 방문 후기`, content: content.trim(), visitedAt,
+             categories, verificationPhoto, foodPhotos,
+-            ocrResultRef: submittedInputs.ocrResultRef,
+-            ocrResultRevision: submittedInputs.ocrResultRevision,
++            ocrResultRef: submissionMode === "manual" ? null : submittedInputs.ocrResultRef,
++            ocrResultRevision: submissionMode === "manual" ? null : submittedInputs.ocrResultRevision,
+         };
+         submitInFlightRef.current = true;
+         setIsSubmitting(true);
+         try {
+             await autoSaveInFlightRef.current;
+             if (closeRequestedRef.current || saveOwnerRef.current !== user.id) return;
+             const result = await saveOperationRef.current!.submit(draft);
+             const latest = latestSaveInputsRef.current;
+             const changedDuringSave = Object.keys(submittedInputs).some(key => (
+                 submittedInputs[key as keyof typeof submittedInputs] !== latest[key as keyof typeof latest]
+             ));
+             if (saveOwnerRef.current !== user.id) {
+                 // A known commit survives unmount/auth changes. Finish only the
+                 // captured local draft cleanup; do not notify a different owner
+                 // or update an unmounted form, and never remove saved photos.
+                 if (result === 'saved' || result === 'saved-previous') await saveOperationRef.current!.clearSavedDraft();
+                 return;
+             }
+             if (closeRequestedRef.current) return; // handleClose owns cancellation readback and notification.
+             if (!composerOpenRef.current) {
+@@ -1714,63 +1748,72 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+         setForceOcrRefresh(false);
+         setOcrFocusTarget(null);
+         setOcrProgress(null);
+         setOcrFallbackNotice(null);
+         setAiFilledFields(new Set());
+         setCurrentStep(1);
+         onClose();
+     }, [onClose, replaceVerificationPhoto, clearDraft, notifySavedReview, setReceiptVerificationInputMode]);
+ 
+     const saveRecoveryNotice = saveRecovery ? (
+         <div role="status" className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+             <p>{saveRecovery === 'edit'
+                 ? "리뷰가 이미 등록되었습니다. 현재 변경한 입력은 이 창에 유지됩니다. 등록된 리뷰를 열어 수정해주세요."
+                 : "리뷰는 등록되었지만 임시 저장 정리가 남아 있습니다. 다시 시도하면 정리만 확인하며 중복 등록하지 않습니다."}</p>
+             <a className="mt-2 inline-block underline underline-offset-4" href="/mypage/reviews" target="_blank" rel="noopener noreferrer">
+                 등록된 리뷰 확인 (새 탭)
+             </a>
+         </div>
+     ) : null;
+ 
+-    // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
++    // 폼 유효성 검사 메모이제이션 (리뷰 내용 20~4,000자)
+     const isFormValid = useMemo(() => {
+-        return visitedDate && visitedTime && reviewTargetRestaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
++        return visitedDate && visitedTime && reviewTargetRestaurant?.id && categories.length > 0
++            && content.trim().length >= 20 && content.length <= REVIEW_CONTENT_MAX_LENGTH
++            && verificationPhoto && foodPhotos.length > 0;
+     }, [visitedDate, visitedTime, reviewTargetRestaurant?.id, categories.length, content, verificationPhoto, foodPhotos.length]);
+ 
++    const isOcrBindingReadyForSubmit = verificationInputMode === "manual"
++        || (!isAnalyzing && Boolean(ocrResultRef && ocrResultRevision));
++    const canSubmitReview = Boolean(isFormValid && isOcrBindingReadyForSubmit);
++
+     const isStepValid = useMemo<Record<ReviewFormStep, boolean>>(() => ({
+         1: Boolean(verificationPhoto) && !isAnalyzing,
+         2: Boolean(visitedDate && visitedTime && reviewTargetRestaurant?.id && categories.length > 0),
+-        3: Boolean(content.trim().length >= 20 && foodPhotos.length > 0),
++        3: Boolean(content.trim().length >= 20 && content.length <= REVIEW_CONTENT_MAX_LENGTH && foodPhotos.length > 0),
+     }), [categories.length, content, foodPhotos.length, isAnalyzing, reviewTargetRestaurant?.id, verificationPhoto, visitedDate, visitedTime]);
+ 
+     const getStepValidationMessage = useCallback((step: ReviewFormStep) => {
+         if (step === 1) {
+             if (isAnalyzing) return "AI 분석이 끝난 뒤 다음 단계로 이동할 수 있어요.";
+             return "영수증 인증 사진을 먼저 첨부해주세요.";
+         }
+ 
+         if (step === 2) {
+             return "방문 맛집, 방문 날짜/시간, 카테고리를 모두 입력해주세요.";
+         }
+ 
++        if (content.length > REVIEW_CONTENT_MAX_LENGTH) {
++            return `리뷰 내용은 최대 ${REVIEW_CONTENT_MAX_LENGTH.toLocaleString()}자까지 작성할 수 있습니다.`;
++        }
+         return "음식 사진 1장 이상과 리뷰 내용 20자 이상을 입력해주세요.";
+-    }, [isAnalyzing]);
++    }, [content.length, isAnalyzing]);
+ 
+     const handleNextStep = useCallback(() => {
+         userStepOverrideDuringOcrRef.current = true;
+         lastManualOcrInteractionAtRef.current = Date.now();
+         if (!isStepValid[currentStep]) {
+             toast({
+                 title: "아직 다음 단계로 이동할 수 없어요",
+                 description: getStepValidationMessage(currentStep),
+                 variant: "destructive",
+             });
+             return;
+         }
+ 
+         setCurrentStep((step) => Math.min(step + 1, 3) as ReviewFormStep);
+     }, [currentStep, getStepValidationMessage, isStepValid]);
+ 
+     const handlePreviousStep = useCallback(() => {
+         userStepOverrideDuringOcrRef.current = true;
+         lastManualOcrInteractionAtRef.current = Date.now();
+         setCurrentStep((step) => Math.max(step - 1, 1) as ReviewFormStep);
+@@ -2121,49 +2164,51 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+             </Label>
+ 
+             <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
+                 <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
+                     <p className="font-semibold flex items-center gap-1">
+                         💡 작성 가이드
+                     </p>
+                     <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
+                         <li>어떤 메뉴를 드셨나요?</li>
+                         <li>맛은 어떠셨나요?</li>
+                         <li>분위기나 서비스는 어땠나요?</li>
+                         <li>추천하고 싶은 메뉴가 있나요?</li>
+                     </ul>
+                 </div>
+             </Card>
+ 
+             <Textarea
+                 id={id}
+                 placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
+                 value={content}
++                aria-invalid={content.length > REVIEW_CONTENT_MAX_LENGTH}
++                aria-describedby={`${id}-length`}
+                 onChange={(e) => {
+                     markManualOcrInteraction("review");
+                     setContent(e.target.value);
+                 }}
+                 rows={8}
+                 className="resize-none"
+             />
+-            <p className="text-xs text-muted-foreground text-right">
+-                {content.length} / 최소 20자
++            <p id={`${id}-length`} className={`text-xs text-right ${content.length > REVIEW_CONTENT_MAX_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}>
++                {content.length.toLocaleString()} / 최대 {REVIEW_CONTENT_MAX_LENGTH.toLocaleString()}자 (최소 20자)
+             </p>
+         </div>
+     ), [content, getOcrFocusClass, markManualOcrInteraction, renderAiFilledBadge]);
+ 
+     // inline 모드: Dialog 없이 콘텐츠만 렌더링
+     if (inline) {
+         return (
+             <div className="flex flex-col h-full overflow-hidden">
+                 {/* 헤더 */}
+                 <div className="px-6 pt-6 pb-4 border-b relative shrink-0">
+                     {lastSavedAt && (
+                         <div className="absolute top-1.5 left-6 flex items-center gap-1 text-2xs text-muted-foreground">
+                             {isSaving ? (
+                                 <>
+                                     <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
+                                     <span>저장 중</span>
+                                 </>
+                             ) : (
+                                 <>
+                                     <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+@@ -2606,41 +2651,41 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+                     <div className="flex items-center justify-center sm:justify-start gap-4">
+                         <div className="text-xs text-muted-foreground">
+                             {isFormValid ? (
+                                 <span className="text-green-600 flex items-center gap-1">
+                                     <CheckCircle2 className="h-3 w-3" />
+                                     모든 필수 항목이 입력되었습니다
+                                 </span>
+                             ) : (
+                                 <span className="text-amber-600 flex items-center gap-1">
+                                     <CircleAlert className="h-3 w-3" />
+                                     필수 항목을 모두 입력해주세요
+                                 </span>
+                             )}
+                         </div>
+                     </div>
+                     {saveRecoveryNotice}
+                     <div className="flex gap-2">
+                         <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
+                             취소
+                         </Button>
+-                        <Button onClick={handleSubmit} disabled={featureHeld || !isFormValid || isSubmitting || saveRecovery === 'edit'} className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none">
++                        <Button onClick={handleSubmit} disabled={featureHeld || !canSubmitReview || isSubmitting || saveRecovery === 'edit'} className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none">
+                             {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
+                         </Button>
+                     </div>
+                 </div>
+             </div>
+         );
+     }
+ 
+     if (isMobileOrTablet || shouldRenderMapPanel) {
+         const mobileTitleId = 'review-sheet-title';
+         const mobileDescriptionId = 'review-sheet-description';
+ 
+         const reviewSheetContent = isOpen ? (
+                     <div
+                         ref={mobileScrollRef}
+                         className={`h-full overflow-y-auto overscroll-contain bg-background ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}
+                         style={{ WebkitOverflowScrolling: 'touch' }}
+                     >
+                         <div ref={mobileFrameRef} className={`relative isolate ${mobileSheetStyles.frame}`}>
+                             <div
+@@ -3183,41 +3228,41 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+                                         disabled={isSubmitting}
+                                         className="flex-1"
+                                     >
+                                         이전
+                                     </Button>
+                                 )}
+ 
+                                 {currentStep < 3 ? (
+                                     <Button
+                                         type="button"
+                                         onClick={handleNextStep}
+                                         disabled={!isStepValid[currentStep] || isSubmitting}
+                                         className={`${mobileSheetStyles.primaryAction} flex-1`}
+                                     >
+                                         다음
+                                     </Button>
+                                 ) : (
+                                     <Button
+                                         type="button"
+                                         onClick={handleSubmit}
+-                                        disabled={featureHeld || !isFormValid || isSubmitting || saveRecovery === 'edit'}
++                                        disabled={featureHeld || !canSubmitReview || isSubmitting || saveRecovery === 'edit'}
+                                         className={`${mobileSheetStyles.primaryAction} flex-1`}
+                                     >
+                                         {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
+                                     </Button>
+                                 )}
+                             </div>
+                             </div>
+                         </div>
+                     </div>
+         ) : null;
+ 
+         if (shouldRenderMapPanel) {
+             if (!isOpen) return null;
+ 
+             return (
+                 <section
+                     ref={desktopReviewMapPanelRef}
+                     className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
+                     style={{ transform: `translate3d(${desktopReviewMapPanelPosition.x}px, ${desktopReviewMapPanelPosition.y}px, 0)` }}
+                     data-desktop-map-review-panel="true"
+@@ -3740,33 +3785,33 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
+                                         <span className="text-amber-600 flex items-center gap-1">
+                                             <AlertCircle className="h-3 w-3" />
+                                             필수 항목을 모두 입력해주세요
+                                         </span>
+                                     )}
+                                 </div>
+                             </div>
+ 
+                             {saveRecoveryNotice}
+                             <div className="flex gap-2">
+                                 <Button
+                                     variant="outline"
+                                     onClick={handleClose}
+                                     disabled={isSubmitting}
+                                     className="flex-1 sm:flex-none"
+                                 >
+                                     취소
+                                 </Button>
+                                 <Button
+                                     onClick={handleSubmit}
+-                                    disabled={featureHeld || !isFormValid || isSubmitting || saveRecovery === 'edit'}
++                                    disabled={featureHeld || !canSubmitReview || isSubmitting || saveRecovery === 'edit'}
+                                     className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none"
+                                 >
+                                     {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
+                                 </Button>
+                             </div>
+                         </div>
+                     </DialogContent>
+                 )}
+             </Dialog >
+         </>
+     );
+ }
+
+
+===== apps/web/lib/admin/storyboard/runtime-source-binding.ts | kind=full | full-file SHA256=b14a2ff8c3ca951212d713c3d16aad9369f568bdfafb2090c6fa55551ef7f3a8 | selected SHA256=b14a2ff8c3ca951212d713c3d16aad9369f568bdfafb2090c6fa55551ef7f3a8 =====
+import { createHash } from 'node:crypto';
+import { constants, lstatSync, openSync, closeSync, fstatSync, readFileSync, realpathSync } from 'node:fs';
+import { dirname, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+export const STORYBOARD_RUNTIME_SOURCE_BINDING_SCHEMA_VERSION = 1 as const;
+
+/**
+ * Every executable storyboard boundary that can admit a provider, model or worker.
+ * The build hashes these exact source bytes before Next bundles the public readback.
+ */
+export const STORYBOARD_RUNTIME_SOURCE_PATHS = Object.freeze([
+  'apps/web/scripts/storyboard-gemini-worker.ts',
+  'apps/web/lib/admin/storyboard/gemini-models.ts',
+  'apps/web/lib/admin/storyboard/production-contract.ts',
+  'apps/web/lib/admin/storyboard/production-worker-auth.ts',
+  'apps/web/lib/admin/storyboard/production-store.ts',
+  'apps/web/lib/admin/storyboard/production-api.ts',
+  'apps/web/lib/admin/storyboard/gemini-client.ts',
+  'apps/web/lib/admin/storyboard/outbound-worker-contract.ts',
+  'apps/web/lib/admin/storyboard/outbound-worker.ts',
+  'apps/web/lib/admin/storyboard/retired-api.ts',
+  'apps/web/lib/runtime-feature-readiness-contract.ts',
+  'apps/web/lib/server/runtime-feature-readiness.ts',
+  'apps/web/app/api/storyboard-worker/route.ts',
+  'apps/web/app/api/storyboard-worker/images/route.ts',
+  'apps/web/app/api/admin/storyboard/route.ts',
+  'apps/web/app/api/admin/storyboard/chat/route.ts',
+  'apps/web/app/api/admin/storyboard/images/route.ts',
+  'apps/web/app/api/admin/storyboard/jobs/route.ts',
+  'apps/web/app/api/admin/storyboard/production/route.ts',
+  'apps/web/app/api/admin/storyboard/production/[id]/route.ts',
+  'apps/web/app/api/admin/storyboard/production/[id]/images/route.ts',
+  'apps/web/app/api/admin/storyboard/production/[id]/export/route.ts',
+  'apps/web/app/api/admin/storyboard/production/[id]/assets/[assetId]/route.ts',
+  'apps/web/app/api/admin/operating-readback/storyboard-policy/route.ts',
+  'apps/web/app/api/admin/operating-readback/storyboard-policy/readback-response.ts',
+  'apps/web/app/api/runtime-compatibility/storyboard/route.ts',
+  'apps/web/app/api/runtime-compatibility/storyboard/runtime-response.ts',
+  'apps/web/app/api/runtime-compatibility/features/route.ts',
+  'apps/web/lib/admin/storyboard/runtime-policy.ts',
+  'apps/web/lib/admin/storyboard/runtime-source-binding.ts',
+] as const);
+
+const MAX_SOURCE_BYTES = 2 * 1024 * 1024;
+const SHA256 = /^[0-9a-f]{64}$/;
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(',')}}`;
+}
+
+function defaultRepositoryRoot() {
+  return resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
+}
+
+function readBoundedSource(repositoryRoot: string, sourcePath: string) {
+  const root = realpathSync(repositoryRoot);
+  const absolute = resolve(root, sourcePath);
+  const fromRoot = relative(root, absolute);
+  if (!fromRoot || fromRoot.startsWith(`..${sep}`) || fromRoot === '..' || fromRoot.startsWith(sep)) {
+    throw new Error('storyboard_runtime_source_path_invalid');
+  }
+  const status = lstatSync(absolute);
+  if (!status.isFile() || status.isSymbolicLink() || status.size < 1 || status.size > MAX_SOURCE_BYTES
+    || realpathSync(absolute) !== absolute) {
+    throw new Error('storyboard_runtime_source_invalid');
+  }
+  const descriptor = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const before = fstatSync(descriptor, { bigint: true });
+    if (!before.isFile() || before.size < 1n || before.size > BigInt(MAX_SOURCE_BYTES)) {
+      throw new Error('storyboard_runtime_source_invalid');
+    }
+    const bytes = readFileSync(descriptor);
+    const after = fstatSync(descriptor, { bigint: true });
+    if (bytes.length !== status.size
+      || before.dev !== after.dev
+      || before.ino !== after.ino
+      || before.size !== after.size
+      || before.mtimeNs !== after.mtimeNs
+      || before.ctimeNs !== after.ctimeNs) {
+      throw new Error('storyboard_runtime_source_changed');
+    }
+    return Object.freeze({
+      bytes: bytes.length,
+      path: sourcePath,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+    });
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+export function calculateStoryboardRuntimeSourceBinding({
+  repositoryRoot = defaultRepositoryRoot(),
+}: { repositoryRoot?: string } = {}) {
+  const sources = STORYBOARD_RUNTIME_SOURCE_PATHS.map((sourcePath) =>
+    readBoundedSource(repositoryRoot, sourcePath));
+  const document = Object.freeze({
+    algorithm: 'storyboard-runtime-source-binding/v1',
+    schemaVersion: STORYBOARD_RUNTIME_SOURCE_BINDING_SCHEMA_VERSION,
+    sources,
+  });
+  const sha256 = createHash('sha256').update(canonicalJson(document), 'utf8').digest('hex');
+  if (!SHA256.test(sha256)) throw new Error('storyboard_runtime_source_binding_invalid');
+  return Object.freeze({ ...document, sha256 });
+}
+
+
+===== backend/knowledge_graph/caption_osk_adapter.py | kind=patch | full-file SHA256=2263613f9c4e9a493fd47cd3865c331b2edcbe0d49811b6ffdd02e62d0864ddf | selected SHA256=ae8762f108a69dfc1949f30789873bc699975966d387fc743f37ca1da8a40fbd =====
+diff --git a/backend/knowledge_graph/caption_osk_adapter.py b/backend/knowledge_graph/caption_osk_adapter.py
+index c55689b3..39a7d428 100644
+--- a/backend/knowledge_graph/caption_osk_adapter.py
++++ b/backend/knowledge_graph/caption_osk_adapter.py
+@@ -1,40 +1,41 @@
+ """Bounded caption registration for validated Tzuyang longform membership.
+ 
+ Planning and resume are offline apart from exact OSK reads. The adapter never
+ downloads media or calls a model. A caption review is only an unverified,
+ untimed source registration; it is not full visual or audio analysis.
+ """
+ from __future__ import annotations
+ 
+ import argparse
+ import base64
+ from contextlib import contextmanager
+ import hashlib
+ import json
+ import os
+ from pathlib import Path
+ import re
+ import secrets
+ import stat
+ 
+ from backend.knowledge_graph import osk_projection as projection
++from backend.knowledge_graph import longform_inventory as inventory_materializer
+ from backend.knowledge_graph.longform_analysis import (
+     AnalysisError,
+     decode as strict_decode,
+     file_lock,
+ )
+ from backend.knowledge_graph.osk_publication import Engine, SPACE, PublicationError
+ 
+ 
+ CHANNEL_ID = "UCfpaSruWW3S4dibonKXENjA"
+ MAX_VIDEOS = 10_000
+ # Historical pilot IDs remain available to the separate title migration and
+ # its fixtures. They are not an execution allowlist.
+ IDS = (
+     "F93TnnxCNvY", "3Z-ngM3DVi0", "BTyT60UWiLc", "-C4280KT3S4",
+     "Tsy8xRjMpB0", "xRf_bhPFZrY", "zkOBLQUSEr0", "DNGGl1-jFcU",
+     "Ck5UrobZuKA",
+ )
+ PLAN_SCHEMA = "tzudong-caption-plan/v3"
+ COVERAGE_SCHEMA = "caption-longform-membership/v2"
+ CHECKPOINT_SCHEMA = "tzudong-caption-checkpoint/v2"
+@@ -255,59 +256,96 @@ def source_bindings(root, vid):
+     versions = review.get("sourceVersions") if isinstance(review, dict) else None
+     if not isinstance(versions, dict):
+         fail("CAPTION_SOURCE_INVALID")
+     files = {review_path: review_data}
+     for version in versions.values():
+         if not isinstance(version, dict):
+             fail("CAPTION_SOURCE_INVALID")
+         for field in ("subtitleFile", "transcriptFile"):
+             relative = version.get(field)
+             if not isinstance(relative, str):
+                 fail("CAPTION_SOURCE_INVALID")
+             _, files[relative] = file_snapshot(relative, root)
+     bindings = _source_bindings_from_files(vid, review, files)
+     if bindings[0] != review_binding:
+         fail("CAPTION_SOURCE_CHANGED")
+     return bindings
+ 
+ 
+ def _membership_data(data, tab):
+     value = _decode_json(data, "CAPTION_COVERAGE_INVALID")
+-    if not isinstance(value, dict):
++    expected_url = f"{inventory_materializer.CHANNEL_URL}/{tab}"
++    if (not isinstance(value, dict)
++            or set(value) != inventory_materializer._SHARD_KEYS):
+         fail("CAPTION_COVERAGE_INVALID")
+     rows = value.get("rows")
+-    if (value.get("tab") != tab or value.get("channelId") != CHANNEL_ID
+-            or not isinstance(rows, list) or len(rows) > 100_000
+-            or ("entryCount" in value and value["entryCount"] != len(rows))):
++    if (value.get("schema") != inventory_materializer.SHARD_SCHEMA
++            or value.get("tab") != tab
++            or value.get("sourceUrl") != expected_url
++            or value.get("channelId") != CHANNEL_ID
++            or type(value.get("exitCode")) is not int
++            or value["exitCode"] != 0
++            or value.get("noPlaylistLimit") is not True
++            or value.get("canonicalSourceOrQueueChanged") is not False
++            or value.get("noMediaOrCaptionsDownloaded") is not True
++            or value.get("rawPersonalContactFieldsPersisted") is not False
++            or not isinstance(rows, list)
++            or len(rows) > inventory_materializer.MAX_SHARD_ROWS
++            or type(value.get("entryCount")) is not int
++            or type(value.get("reportedPlaylistCount")) is not int
++            or value["entryCount"] != len(rows)
++            or value["reportedPlaylistCount"] != len(rows)
++            or type(value.get("rawResponseBytes")) is not int
++            or value["rawResponseBytes"] < 0
++            or not isinstance(value.get("rawResponseSha256"), str)
++            or not inventory_materializer.SHA256.fullmatch(value["rawResponseSha256"])):
++        fail("CAPTION_COVERAGE_INVALID")
++    try:
++        inventory_materializer._timestamp(value.get("observedAtUtc"))
++    except inventory_materializer.MaterializationError:
+         fail("CAPTION_COVERAGE_INVALID")
+     ids, admitted, blocked = [], [], []
+-    allowed_statuses = {None, "not_live", "was_live", "is_live", "is_upcoming", "post_live"}
+     for row in rows:
+-        if (not isinstance(row, dict) or not projection.VIDEO_ID.fullmatch(str(row.get("id", "")))
+-                or row.get("channelId") not in (None, CHANNEL_ID)
+-                or row.get("liveStatus") not in allowed_statuses):
++        if (not isinstance(row, dict)
++                or set(row) != inventory_materializer._ROW_KEYS
++                or not isinstance(row.get("id"), str)
++                or not inventory_materializer.VIDEO_ID.fullmatch(row["id"])
++                or row.get("channelId") not in (None, CHANNEL_ID)):
+             fail("CAPTION_COVERAGE_INVALID")
+         video_id = row["id"]
+         ids.append(video_id)
+-        live_status = row.get("liveStatus")
+-        if ((tab == "videos" and live_status in (None, "not_live", "was_live"))
+-                or (tab == "streams" and live_status == "was_live")):
++        duration, live_status = row.get("duration"), row.get("liveStatus")
++        if (tab == "videos"
++                and (not inventory_materializer._positive_integer(duration)
++                     or live_status is not None)):
++            fail("CAPTION_COVERAGE_INVALID")
++        if tab == "shorts" and (duration is not None or live_status is not None):
++            fail("CAPTION_COVERAGE_INVALID")
++        if tab == "streams":
++            if live_status not in ("was_live", "is_live", "is_upcoming", "post_live"):
++                fail("CAPTION_COVERAGE_INVALID")
++            if (live_status == "was_live" and not inventory_materializer._positive_integer(duration)):
++                fail("CAPTION_COVERAGE_INVALID")
++            if (live_status != "was_live" and duration is not None
++                    and not inventory_materializer._positive_integer(duration)):
++                fail("CAPTION_COVERAGE_INVALID")
++        if tab == "videos" or (tab == "streams" and live_status == "was_live"):
+             admitted.append(video_id)
+         elif tab in ("videos", "streams"):
+             blocked.append(video_id)
+     if len(ids) != len(set(ids)):
+         fail("CAPTION_COVERAGE_INVALID")
+     return {
+         "tab": tab,
+         "sha256": digest(data),
+         "bytes": len(data),
+         "entryCount": len(rows),
+         "idSetSha256": digest(canonical(sorted(ids)).encode()),
+     }, set(ids), set(admitted), set(blocked)
+ 
+ 
+ def _membership_file(path, tab):
+     data = _read_anchored_file_snapshot(path, "CAPTION_COVERAGE_INVALID")
+     return (*_membership_data(data, tab), data)
+ 
+ 
+ def _reviews_from_files(files):
+
+
+===== backend/knowledge_graph/longform_analysis.py | kind=patch | full-file SHA256=2e38a3e59c8a154c2b8495fccd82fb26fa0f3df4f4040b49e69058601522af5d | selected SHA256=ed9661342a1a6d417c0f036442aaff336bcf476eb0990d2085b4d120da594c06 =====
+diff --git a/backend/knowledge_graph/longform_analysis.py b/backend/knowledge_graph/longform_analysis.py
+index b9ba2ff5..d7f62037 100644
+--- a/backend/knowledge_graph/longform_analysis.py
++++ b/backend/knowledge_graph/longform_analysis.py
+@@ -1328,52 +1328,56 @@ def _known_segment_disposition(state, row, config):
+         for receipt_path in sorted(segment_directory.glob("*.receipt.json")):
+             receipt = checked_document(receipt_path)
+             receipt_identity = receipt.get("identity")
+             span = spans.get(receipt_identity.get("inputSha256") if isinstance(receipt_identity, dict) else None)
+             if (span is None or receipt_identity.get("videoId") != row["videoId"]
+                     or receipt_identity.get("configSha256") != config_sha):
+                 continue
+             state_name = receipt.get("state")
+             if state_name == "succeeded":
+                 continue
+             observation_path = receipt_path.with_name(receipt_path.name.replace(
+                 ".receipt.json", ".observation.json"))
+             observation = checked_document(observation_path) if observation_path.is_file() else None
+             binding_matches = (observation is not None
+                                and receipt.get("observationSha256") == digest(observation))
+             if not binding_matches:
+                 return {"state": "readback_required", "kind": "uncertain", "code": receipt.get("code"),
+                         "uncertaintyReason": "REQUEST_OBSERVATION_BINDING_MISMATCH",
+                         "providerGetEligible": False}
+             observation = validate_observation(observation)
++            provider_get_eligible = (
++                observation["responseId"] is not None
++                and observation["operation"] in ("generate", "readback")
++            )
+             confirmed = (state_name == "rejected"
+                          and observation["httpOutcome"] in ("http_success", "http_rejected")
+                          and receipt.get("code") not in ("WATCH_RESPONSE_NOT_COMPLETED", "WATCH_TRANSPORT_UNCERTAIN"))
+             if confirmed:
+                 terminal = {"state": "terminal_rejected",
+                             "kind": "partial" if receipt.get("code") == "ANALYSIS_PARTIAL" else "failed",
+                             "code": receipt.get("code"), "uncertaintyReason": None,
+                             "providerGetEligible": False}
+                 continue
+             return {"state": "readback_required", "kind": "uncertain", "code": receipt.get("code"),
+                     "uncertaintyReason": "PROVIDER_RESULT_UNCERTAIN",
+-                    "providerGetEligible": False}
++                    "providerGetEligible": provider_get_eligible}
+     return terminal
+ 
+ 
+ def _cached_state(state: Path, row, config, *, repair=None):
+     admitted_row(row)
+     lineage = repair_lineage(state, row, config, repair)
+     directory, receipt_path, evidence_path = paths(state, row, config)
+     if lineage:
+         directory, receipt_path, evidence_path = paths(state, row, config, legacy_fallback=False)
+         if receipt_path.exists():
+             destination = checked_document(receipt_path)
+             if destination.get("repairLineageSha256") != digest(lineage):
+                 raise AnalysisError("REPAIR_LINEAGE_CHANGED")
+         elif repair is None:
+             return "readback_required"
+     if directory.is_symlink():
+         raise AnalysisError("RECEIPT_CORRUPT")
+     if any(not path.with_name(path.name.replace(".analysis.json", ".receipt.json")).is_file()
+            for path in directory.rglob("*.analysis.json")):
+         return "readback_required"
+
+
+===== backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql | kind=full | full-file SHA256=469dbea773cc838feecb4519ca1b5c03e9ea2fab32462007f7769c5ed1b7fed9 | selected SHA256=469dbea773cc838feecb4519ca1b5c03e9ea2fab32462007f7769c5ed1b7fed9 =====
+-- Forward-only successor for an already applied durable OCR migration.
+-- The earlier migrations remain immutable. This replacement tightens only the
+-- private runtime capability predicate so drift in either Storage metadata
+-- fence returns FEATURE_DATABASE_HELD before any admin mutation is admitted.
+BEGIN;
+SET LOCAL lock_timeout = '2s';
+SELECT pg_catalog.pg_advisory_xact_lock(
+  pg_catalog.hashtextextended('tzudong:feature-runtime-storage-fence:v1', 0)
+);
+
+DO $prerequisites$
+DECLARE
+  capability_oid oid := pg_catalog.to_regprocedure(
+    'ocr_private.get_feature_runtime_capability(uuid)'
+  );
+BEGIN
+  IF current_user <> 'postgres'
+    OR session_user <> 'postgres'
+    OR pg_catalog.current_setting('server_version_num')::integer / 10000 <> 17
+    OR pg_catalog.current_setting('transaction_read_only') <> 'off'
+    OR capability_oid IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.get_feature_runtime_capability(uuid)'
+    ) IS NULL
+  THEN
+    RAISE EXCEPTION 'FEATURE_RUNTIME_STORAGE_FENCE_PREREQUISITE_MISSING';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_proc AS function_row
+    WHERE function_row.oid = capability_oid
+      AND function_row.proowner = 'postgres'::pg_catalog.regrole
+      AND function_row.prosecdef
+      AND function_row.proconfig = ARRAY['search_path=""']::text[]
+      AND function_row.prokind = 'f'
+      AND function_row.provolatile = 's'
+      AND NOT function_row.proretset
+      AND function_row.prorettype = 'jsonb'::pg_catalog.regtype
+      AND function_row.prolang = (
+        SELECT language.oid
+        FROM pg_catalog.pg_language AS language
+        WHERE language.lanname = 'plpgsql'
+      )
+  ) THEN
+    RAISE EXCEPTION 'FEATURE_RUNTIME_STORAGE_FENCE_CAPABILITY_DRIFT';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_trigger AS trigger_row
+    JOIN pg_catalog.pg_proc AS function_row
+      ON function_row.oid = trigger_row.tgfoid
+    WHERE trigger_row.tgrelid = 'storage.objects'::pg_catalog.regclass
+      AND trigger_row.tgname = 'a01_review_verification_immutable_update'
+      AND trigger_row.tgenabled = 'O'
+      AND NOT trigger_row.tgisinternal
+      AND trigger_row.tgtype = 19
+      AND function_row.oid =
+        'review_media_private.reject_verification_object_update()'::pg_catalog.regprocedure
+      AND pg_catalog.encode(
+        pg_catalog.sha256(pg_catalog.convert_to(function_row.prosrc, 'UTF8')),
+        'hex'
+      ) = 'aa1d4951b8d5fdd15249b090c6d6efba897f39eaceee86bf09221eb1d942d545'
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_trigger AS trigger_row
+    JOIN pg_catalog.pg_proc AS function_row
+      ON function_row.oid = trigger_row.tgfoid
+    WHERE trigger_row.tgrelid = 'storage.objects'::pg_catalog.regclass
+      AND trigger_row.tgname = 'a01_review_verification_guard_delete'
+      AND trigger_row.tgenabled = 'O'
+      AND NOT trigger_row.tgisinternal
+      AND trigger_row.tgtype = 11
+      AND function_row.oid =
+        'review_media_private.guard_verification_object_delete()'::pg_catalog.regprocedure
+      AND pg_catalog.encode(
+        pg_catalog.sha256(pg_catalog.convert_to(function_row.prosrc, 'UTF8')),
+        'hex'
+      ) = '24311fc7071597fbc78c4c54897690da5aaa70edb62c24f7912fd23fecf515b0'
+  ) THEN
+    RAISE EXCEPTION 'FEATURE_RUNTIME_STORAGE_FENCE_SOURCE_DRIFT';
+  END IF;
+END;
+$prerequisites$;
+
+CREATE OR REPLACE FUNCTION ocr_private.get_feature_runtime_capability(p_user_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_ready boolean;
+  v_contracts_ready boolean;
+  v_review_ocr_columns_ready boolean;
+  v_review_ocr_indexes_ready boolean;
+  v_trigger_helper_oid oid := pg_catalog.to_regprocedure(
+    'ocr_private.register_review_ocr_generation()'
+  );
+BEGIN
+  IF p_user_id IS NULL OR NOT EXISTS (
+    SELECT 1 FROM auth.users AS user_row WHERE user_row.id = p_user_id
+  ) THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'schema_version', 1,
+      'status', 'held',
+      'code', 'FEATURE_DATABASE_HELD',
+      'capability_version', 'review-media-feature-v1'
+    );
+  END IF;
+
+  SELECT NOT EXISTS (
+    SELECT 1
+    FROM (
+      VALUES
+        ('public.claim_receipt_ocr_result(uuid,text,text,text,jsonb,uuid,text,text,text,uuid,boolean)', 'jsonb'::pg_catalog.regtype, false, 'v'::"char"),
+        ('public.mark_receipt_ocr_dispatched(uuid,uuid)', 'jsonb'::pg_catalog.regtype, false, 'v'::"char"),
+        ('public.complete_receipt_ocr_result(uuid,uuid,jsonb)', 'jsonb'::pg_catalog.regtype, false, 'v'::"char"),
+        ('public.mark_receipt_ocr_result_indeterminate(uuid,uuid)', 'jsonb'::pg_catalog.regtype, false, 'v'::"char"),
+        ('public.release_receipt_ocr_claim(uuid,uuid)', 'jsonb'::pg_catalog.regtype, false, 'v'::"char"),
+        ('public.read_receipt_ocr_result(uuid,text,text,text,jsonb,uuid,text,text,text)', 'jsonb'::pg_catalog.regtype, false, 's'::"char"),
+        ('public.get_review_receipt_ocr_generation(uuid,uuid)', 'jsonb'::pg_catalog.regtype, false, 's'::"char"),
+        ('public.publish_review_receipt_ocr_result(uuid,uuid,uuid,uuid,uuid,text,jsonb,boolean)', 'jsonb'::pg_catalog.regtype, false, 'v'::"char"),
+        ('public.get_feature_runtime_capability(uuid)', 'jsonb'::pg_catalog.regtype, false, 's'::"char"),
+        ('public.get_owned_review_storage_objects(uuid,uuid,text,text[])', 'record'::pg_catalog.regtype, true, 'v'::"char"),
+        ('public.create_review_with_receipt_ocr(uuid,uuid,uuid,text,text,timestamptz,text,text[],text[],uuid,uuid,uuid,text,timestamptz,text,jsonb)', 'uuid'::pg_catalog.regtype, false, 'v'::"char")
+    ) AS required(signature, return_type, returns_set, volatility)
+    LEFT JOIN pg_catalog.pg_proc AS procedure_row
+      ON procedure_row.oid = pg_catalog.to_regprocedure(required.signature)
+    WHERE procedure_row.oid IS NULL
+      OR procedure_row.proowner <> 'privacy_workflow_owner'::pg_catalog.regrole
+      OR NOT procedure_row.prosecdef
+      OR procedure_row.proconfig IS DISTINCT FROM ARRAY['search_path=""']::text[]
+      OR procedure_row.prokind <> 'f'
+      OR procedure_row.provolatile <> required.volatility
+      OR procedure_row.prorettype <> required.return_type
+      OR procedure_row.proretset IS DISTINCT FROM required.returns_set
+      OR procedure_row.prolang <> (
+        SELECT language.oid
+        FROM pg_catalog.pg_language AS language
+        WHERE language.lanname = 'sql'
+      )
+      OR NOT pg_catalog.has_function_privilege('service_role', procedure_row.oid, 'EXECUTE')
+      OR pg_catalog.has_function_privilege('anon', procedure_row.oid, 'EXECUTE')
+      OR pg_catalog.has_function_privilege('authenticated', procedure_row.oid, 'EXECUTE')
+  ) INTO v_contracts_ready;
+
+  -- Keep the runtime decision tied to the same exact review-column contract
+  -- that the migration and successor controller admit. A later same-name
+  -- column with a different type, default, nullability, identity or generated
+  -- shape must put the feature back on hold.
+  SELECT pg_catalog.count(*) = 4
+    AND pg_catalog.bool_and(
+      NOT attribute.attnotnull
+      AND attribute.atttypmod = -1
+      AND attribute.attidentity = ''
+      AND attribute.attgenerated = ''
+      AND CASE attribute.attname
+        WHEN 'receipt_hash' THEN
+          attribute.atttypid = 'text'::pg_catalog.regtype
+          AND default_value.oid IS NULL
+        WHEN 'receipt_data' THEN
+          attribute.atttypid = 'jsonb'::pg_catalog.regtype
+          AND default_value.oid IS NULL
+        WHEN 'is_duplicate' THEN
+          attribute.atttypid = 'boolean'::pg_catalog.regtype
+          AND pg_catalog.pg_get_expr(
+            default_value.adbin,
+            default_value.adrelid
+          ) = 'false'
+        WHEN 'ocr_processed_at' THEN
+          attribute.atttypid = 'timestamp with time zone'::pg_catalog.regtype
+          AND default_value.oid IS NULL
+        ELSE false
+      END
+    )
+  INTO v_review_ocr_columns_ready
+  FROM pg_catalog.pg_attribute AS attribute
+  LEFT JOIN pg_catalog.pg_attrdef AS default_value
+    ON default_value.adrelid = attribute.attrelid
+   AND default_value.adnum = attribute.attnum
+  WHERE attribute.attrelid = 'public.reviews'::regclass
+    AND attribute.attnum > 0
+    AND NOT attribute.attisdropped
+    AND attribute.attname = ANY (ARRAY[
+      'receipt_hash',
+      'receipt_data',
+      'is_duplicate',
+      'ocr_processed_at'
+    ]::name[]);
+
+  -- Index identity is not enough: method, key, predicate and online-validity
+  -- flags are all part of the runtime contract.
+  SELECT pg_catalog.count(*) = 3
+    AND pg_catalog.bool_and(
+      index_relation.relkind = 'i'
+      AND index_row.indrelid = 'public.reviews'::regclass
+      AND access_method.amname = 'btree'
+      AND index_row.indnkeyatts = 1
+      AND index_row.indnatts = 1
+      AND index_row.indexprs IS NULL
+      AND index_row.indisvalid
+      AND index_row.indisready
+      AND index_row.indislive
+      AND NOT index_row.indisprimary
+      AND NOT index_row.indisexclusion
+      AND CASE index_relation.relname
+        WHEN 'idx_reviews_receipt_hash' THEN
+          index_row.indisunique
+          AND pg_catalog.pg_get_indexdef(index_relation.oid, 1, true) = 'receipt_hash'
+          AND pg_catalog.pg_get_expr(
+            index_row.indpred,
+            index_row.indrelid
+          ) = '(receipt_hash IS NOT NULL)'
+        WHEN 'reviews_ocr_pending_idx' THEN
+          NOT index_row.indisunique
+          AND pg_catalog.pg_get_indexdef(index_relation.oid, 1, true) = 'ocr_processed_at'
+          AND pg_catalog.pg_get_expr(
+            index_row.indpred,
+            index_row.indrelid
+          ) = '(verification_photo IS NOT NULL)'
+        WHEN 'reviews_duplicate_idx' THEN
+          NOT index_row.indisunique
+          AND pg_catalog.pg_get_indexdef(index_relation.oid, 1, true) = 'is_duplicate'
+          AND index_row.indpred IS NULL
+        ELSE false
+      END
+    )
+  INTO v_review_ocr_indexes_ready
+  FROM pg_catalog.pg_class AS index_relation
+  JOIN pg_catalog.pg_namespace AS namespace
+    ON namespace.oid = index_relation.relnamespace
+  JOIN pg_catalog.pg_index AS index_row
+    ON index_row.indexrelid = index_relation.oid
+  JOIN pg_catalog.pg_am AS access_method
+    ON access_method.oid = index_relation.relam
+  WHERE namespace.nspname = 'public'
+    AND index_relation.relname = ANY (ARRAY[
+      'idx_reviews_receipt_hash',
+      'reviews_ocr_pending_idx',
+      'reviews_duplicate_idx'
+    ]::name[]);
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM ocr_private.feature_runtime_capability AS capability
+    WHERE capability.capability_version = 'review-media-feature-v1'
+      AND capability.schema_version = 1
+  )
+  AND v_contracts_ready
+  AND coalesce(v_review_ocr_columns_ready, false)
+  AND coalesce(v_review_ocr_indexes_ready, false)
+  AND pg_catalog.to_regprocedure('public.storyboard_production_admin(uuid,text,uuid,integer,jsonb)') IS NOT NULL
+  AND pg_catalog.to_regprocedure('public.storyboard_production_worker(uuid,text,uuid,uuid,jsonb)') IS NOT NULL
+  AND EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class AS table_row
+    WHERE table_row.oid = 'ocr_private.receipt_results'::pg_catalog.regclass
+      AND table_row.relowner = 'postgres'::pg_catalog.regrole
+      AND table_row.relrowsecurity
+      AND table_row.relforcerowsecurity
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class AS table_row
+    WHERE table_row.oid = 'ocr_private.review_generations'::pg_catalog.regclass
+      AND table_row.relowner = 'postgres'::pg_catalog.regrole
+      AND table_row.relrowsecurity
+      AND table_row.relforcerowsecurity
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_proc AS helper
+    WHERE helper.oid = v_trigger_helper_oid
+      AND helper.proowner = 'postgres'::pg_catalog.regrole
+      AND helper.prosecdef
+      AND helper.proconfig = ARRAY['search_path=""']::text[]
+      AND helper.prorettype = 'trigger'::pg_catalog.regtype
+      AND helper.prolang = (
+        SELECT language.oid
+        FROM pg_catalog.pg_language AS language
+        WHERE language.lanname = 'plpgsql'
+      )
+      AND NOT pg_catalog.has_function_privilege('anon', helper.oid, 'EXECUTE')
+      AND NOT pg_catalog.has_function_privilege('authenticated', helper.oid, 'EXECUTE')
+      AND NOT pg_catalog.has_function_privilege('service_role', helper.oid, 'EXECUTE')
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_trigger AS trigger_row
+    WHERE trigger_row.tgrelid = 'public.reviews'::pg_catalog.regclass
+      AND trigger_row.tgfoid = v_trigger_helper_oid
+      AND trigger_row.tgname IN (
+        'review_ocr_generation_on_insert',
+        'review_ocr_generation_on_reset'
+      )
+      AND NOT trigger_row.tgisinternal
+    GROUP BY trigger_row.tgfoid
+    HAVING pg_catalog.count(*) = 2
+  )
+  -- The metadata fence is operational only while both installed triggers and
+  -- their implementation functions retain the exact audited contract. A
+  -- disabled, retargeted, redefined or newly exposed helper holds the feature.
+  AND EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_trigger AS trigger_row
+    JOIN pg_catalog.pg_proc AS function_row
+      ON function_row.oid = trigger_row.tgfoid
+    WHERE trigger_row.tgrelid = 'storage.objects'::pg_catalog.regclass
+      AND trigger_row.tgname = 'a01_review_verification_immutable_update'
+      AND trigger_row.tgenabled = 'O'
+      AND NOT trigger_row.tgisinternal
+      AND trigger_row.tgtype = 19
+      AND pg_catalog.pg_get_triggerdef(trigger_row.oid, false) =
+        'CREATE TRIGGER a01_review_verification_immutable_update BEFORE UPDATE ON storage.objects FOR EACH ROW EXECUTE FUNCTION review_media_private.reject_verification_object_update()'
+      AND function_row.oid =
+        'review_media_private.reject_verification_object_update()'::pg_catalog.regprocedure
+      AND NOT function_row.prosecdef
+      AND function_row.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
+      AND function_row.proconfig = ARRAY['search_path=""']::text[]
+      AND function_row.prokind = 'f'
+      AND function_row.provolatile = 'v'
+      AND NOT function_row.proretset
+      AND function_row.prorettype = 'trigger'::pg_catalog.regtype
+      AND function_row.prolang = (
+        SELECT language.oid
+        FROM pg_catalog.pg_language AS language
+        WHERE language.lanname = 'plpgsql'
+      )
+      AND pg_catalog.encode(
+        pg_catalog.sha256(pg_catalog.convert_to(function_row.prosrc, 'UTF8')),
+        'hex'
+      ) = 'aa1d4951b8d5fdd15249b090c6d6efba897f39eaceee86bf09221eb1d942d545'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.unnest(ARRAY[
+          'anon',
+          'authenticated',
+          'service_role',
+          'supabase_storage_admin',
+          'postgres'
+        ]) AS role_name
+        WHERE pg_catalog.has_function_privilege(
+          role_name,
+          function_row.oid,
+          'EXECUTE'
+        )
+      )
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_trigger AS trigger_row
+    JOIN pg_catalog.pg_proc AS function_row
+      ON function_row.oid = trigger_row.tgfoid
+    WHERE trigger_row.tgrelid = 'storage.objects'::pg_catalog.regclass
+      AND trigger_row.tgname = 'a01_review_verification_guard_delete'
+      AND trigger_row.tgenabled = 'O'
+      AND NOT trigger_row.tgisinternal
+      AND trigger_row.tgtype = 11
+      AND pg_catalog.pg_get_triggerdef(trigger_row.oid, false) =
+        'CREATE TRIGGER a01_review_verification_guard_delete BEFORE DELETE ON storage.objects FOR EACH ROW EXECUTE FUNCTION review_media_private.guard_verification_object_delete()'
+      AND function_row.oid =
+        'review_media_private.guard_verification_object_delete()'::pg_catalog.regprocedure
+      AND function_row.prosecdef
+      AND function_row.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
+      AND function_row.proconfig = ARRAY['search_path=""']::text[]
+      AND function_row.prokind = 'f'
+      AND function_row.provolatile = 'v'
+      AND NOT function_row.proretset
+      AND function_row.prorettype = 'trigger'::pg_catalog.regtype
+      AND function_row.prolang = (
+        SELECT language.oid
+        FROM pg_catalog.pg_language AS language
+        WHERE language.lanname = 'plpgsql'
+      )
+      AND pg_catalog.encode(
+        pg_catalog.sha256(pg_catalog.convert_to(function_row.prosrc, 'UTF8')),
+        'hex'
+      ) = '24311fc7071597fbc78c4c54897690da5aaa70edb62c24f7912fd23fecf515b0'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.unnest(ARRAY[
+          'anon',
+          'authenticated',
+          'service_role',
+          'supabase_storage_admin',
+          'postgres'
+        ]) AS role_name
+        WHERE pg_catalog.has_function_privilege(
+          role_name,
+          function_row.oid,
+          'EXECUTE'
+        )
+      )
+  )
+  INTO v_ready;
+
+  RETURN pg_catalog.jsonb_build_object(
+    'schema_version', 1,
+    'status', CASE WHEN v_ready THEN 'ready' ELSE 'held' END,
+    'code', CASE WHEN v_ready THEN 'FEATURE_DATABASE_READY' ELSE 'FEATURE_DATABASE_HELD' END,
+    'capability_version', 'review-media-feature-v1'
+  );
+END;
+$$;
+
+ALTER FUNCTION ocr_private.get_feature_runtime_capability(uuid)
+  OWNER TO postgres;
+REVOKE ALL ON FUNCTION ocr_private.get_feature_runtime_capability(uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION ocr_private.get_feature_runtime_capability(uuid)
+  TO privacy_workflow_owner;
+
+DO $readback$
+DECLARE
+  capability_oid oid := pg_catalog.to_regprocedure(
+    'ocr_private.get_feature_runtime_capability(uuid)'
+  );
+  capability_source text;
+BEGIN
+  SELECT function_row.prosrc
+  INTO STRICT capability_source
+  FROM pg_catalog.pg_proc AS function_row
+  WHERE function_row.oid = capability_oid
+    AND function_row.proowner = 'postgres'::pg_catalog.regrole
+    AND function_row.prosecdef
+    AND function_row.proconfig = ARRAY['search_path=""']::text[]
+    AND function_row.prokind = 'f'
+    AND function_row.provolatile = 's'
+    AND NOT function_row.proretset
+    AND function_row.prorettype = 'jsonb'::pg_catalog.regtype
+    AND function_row.prolang = (
+      SELECT language.oid
+      FROM pg_catalog.pg_language AS language
+      WHERE language.lanname = 'plpgsql'
+    );
+
+  IF pg_catalog.strpos(
+      capability_source,
+      'a01_review_verification_guard_delete'
+    ) = 0
+    OR pg_catalog.strpos(
+      capability_source,
+      '24311fc7071597fbc78c4c54897690da5aaa70edb62c24f7912fd23fecf515b0'
+    ) = 0
+    OR pg_catalog.strpos(
+      capability_source,
+      'pg_catalog.pg_get_triggerdef(trigger_row.oid, false)'
+    ) = 0
+    OR NOT pg_catalog.has_function_privilege(
+      'privacy_workflow_owner',
+      capability_oid,
+      'EXECUTE'
+    )
+    OR pg_catalog.has_function_privilege('anon', capability_oid, 'EXECUTE')
+    OR pg_catalog.has_function_privilege(
+      'authenticated',
+      capability_oid,
+      'EXECUTE'
+    )
+    OR pg_catalog.has_function_privilege(
+      'service_role',
+      capability_oid,
+      'EXECUTE'
+    )
+  THEN
+    RAISE EXCEPTION 'FEATURE_RUNTIME_STORAGE_FENCE_READBACK_DRIFT';
+  END IF;
+END;
+$readback$;
+
+COMMIT;
+
+
+
+===== apps/web/tests-unit/review-verification-runtime-readiness.test.ts | kind=full | full-file SHA256=fc2d8e56e36c6af6c36cb4b0573f340e93ef993d7b773aaa88015ebac0092695 | selected SHA256=fc2d8e56e36c6af6c36cb4b0573f340e93ef993d7b773aaa88015ebac0092695 =====
+import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const predecessorPath = join(
+  import.meta.dir,
+  '../../../backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql',
+);
+const successorPath = join(
+  import.meta.dir,
+  '../../../backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql',
+);
+const predecessor = readFileSync(predecessorPath, 'utf8');
+const successor = readFileSync(successorPath, 'utf8');
+
+describe('review verification runtime readiness successor', () => {
+  test('leaves the applied durable OCR migration immutable and replaces the private helper forward-only', () => {
+    expect(predecessor).not.toContain('24311fc7071597fbc78c4c54897690da5aaa70edb62c24f7912fd23fecf515b0');
+    expect(successor).toContain('Forward-only successor for an already applied durable OCR migration');
+    expect(successor).toContain(
+      'CREATE OR REPLACE FUNCTION ocr_private.get_feature_runtime_capability(p_user_id uuid)',
+    );
+    expect(successor).not.toContain('CREATE OR REPLACE FUNCTION public.get_feature_runtime_capability');
+  });
+
+  test('holds runtime on exact delete trigger, helper body, metadata, and execute exposure drift', () => {
+    expect(successor).toContain("trigger_row.tgname = 'a01_review_verification_guard_delete'");
+    expect(successor).toContain("trigger_row.tgenabled = 'O'");
+    expect(successor).toContain('trigger_row.tgtype = 11');
+    expect(successor).toContain('pg_catalog.pg_get_triggerdef(trigger_row.oid, false)');
+    expect(successor).toContain(
+      'CREATE TRIGGER a01_review_verification_guard_delete BEFORE DELETE ON storage.objects FOR EACH ROW EXECUTE FUNCTION review_media_private.guard_verification_object_delete()',
+    );
+    expect(successor).toContain(
+      "'review_media_private.guard_verification_object_delete()'::pg_catalog.regprocedure",
+    );
+    expect(successor).toContain(
+      '24311fc7071597fbc78c4c54897690da5aaa70edb62c24f7912fd23fecf515b0',
+    );
+    expect(successor).toContain("function_row.proowner = 'privacy_workflow_owner'::pg_catalog.regrole");
+    expect(successor).toContain('AND function_row.prosecdef');
+    expect(successor).toContain("'supabase_storage_admin'");
+    expect(successor).toContain('pg_catalog.has_function_privilege(');
+  });
+
+  test('keeps the feature receipt bounded and verifies the replacement ACL before commit', () => {
+    const readbackIndex = successor.indexOf('DO $readback$');
+    const commitIndex = successor.lastIndexOf('COMMIT;');
+    expect(readbackIndex).toBeGreaterThanOrEqual(0);
+    expect(commitIndex).toBeGreaterThan(readbackIndex);
+    expect(successor).toContain("'status', CASE WHEN v_ready THEN 'ready' ELSE 'held' END");
+    expect(successor).toContain("'code', CASE WHEN v_ready THEN 'FEATURE_DATABASE_READY' ELSE 'FEATURE_DATABASE_HELD' END");
+    expect(successor).toContain(
+      'GRANT EXECUTE ON FUNCTION ocr_private.get_feature_runtime_capability(uuid)\n  TO privacy_workflow_owner',
+    );
+    expect(successor).toContain("pg_catalog.has_function_privilege(\n      'service_role',\n      capability_oid");
+  });
+});

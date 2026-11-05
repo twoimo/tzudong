@@ -1,0 +1,74 @@
+{
+  "deployment": "dpl_255EcsTYcwjcENzBW986NgnqgysA",
+  "sha": "c737f073b690cb301fccc58098d2d24b9f8a6384",
+  "url": "https://tzudong-a07xfrcdh-twoimos-projects.vercel.app",
+  "checks": [
+    {
+      "mode": "overseas",
+      "viewport": [
+        820,
+        1180
+      ],
+      "flames": 1,
+      "decodedFrames": 3,
+      "dimensions": [
+        640,
+        360
+      ],
+      "rootError": false,
+      "horizontalOverflow": false
+    },
+    {
+      "mode": "overseas",
+      "viewport": [
+        390,
+        844
+      ],
+      "flames": 1,
+      "decodedFrames": 3,
+      "dimensions": [
+        640,
+        360
+      ],
+      "rootError": false,
+      "horizontalOverflow": false
+    },
+    {
+      "mode": "overseas",
+      "viewport": [
+        1440,
+        1000
+      ],
+      "flames": 1,
+      "decodedFrames": 3,
+      "dimensions": [
+        640,
+        360
+      ],
+      "rootError": false,
+      "horizontalOverflow": false
+    },
+    {
+      "mode": "domestic",
+      "viewport": [
+        1440,
+        1000
+      ],
+      "flames": 0,
+      "decodedFrames": 3,
+      "dimensions": [
+        640,
+        360
+      ],
+      "rootError": false,
+      "horizontalOverflow": false
+    }
+  ],
+  "limits": [
+    "Naver preview origin auth denied; domestic map/flame proof uses existing production baseline and final production readback, not preview.",
+    "Nonfatal provider-internal removeDOMListener failure remained on unauthorized preview. Application root boundary no longer reached.",
+    "No physical device proof"
+  ],
+  "status": "HISTORICAL_PREVIEW_BEFORE_FINAL_FINDINGS_FIX",
+  "superseded_by_revision": "0aa001d7e5f31c898c3cc34864c0f1fcf9b8b946"
+}

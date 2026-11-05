@@ -1,0 +1,21 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/receipt-ocr-recovery108-sql-successor.test.ts:
+(pass) held receipt OCR recovery 107 to 108 successor > binds exact migration, fixture, compiler, and statement vector source [563.73ms]
+(pass) held receipt OCR recovery 107 to 108 successor > compiles only the bound 108 transaction and keeps operating launch held [648.55ms]
+(pass) held receipt OCR recovery 107 to 108 successor > pins the discriminating processing, ack-loss, stale-snapshot and late-publish counterexamples [0.28ms]
+
+tests-unit/receipt-ocr-post106-acl-admission-sql-successor.test.ts:
+(pass) held receipt OCR 105 -> 106 -> 107 ACL admission successor > pins frozen 106 as held_unapplied and binds the exact 107 source identity [586.72ms]
+(pass) held receipt OCR 105 -> 106 -> 107 ACL admission successor > compiles both migrations in one explicit outer transaction with ordered seals [617.62ms]
+(pass) held receipt OCR 105 -> 106 -> 107 ACL admission successor > keeps operating and rehearsal identities separate while requiring v2 readiness [618.77ms]
+(pass) held receipt OCR 105 -> 106 -> 107 ACL admission successor > rejects target readback drift instead of accepting a 106-only state [669.73ms]
+(pass) held receipt OCR 105 -> 106 -> 107 ACL admission successor > fails closed on manifest identity drift [565.36ms]
+(pass) held receipt OCR 105 -> 106 -> 107 ACL admission successor > source encodes an independent exact ACL allowlist before snapshot equality [0.13ms]
+(pass) held receipt OCR 105 -> 106 -> 107 ACL admission successor > owner-role lease preserves preexisting membership options and stays outside the PG15 adapter boundary [1.08ms]
+(pass) held receipt OCR 105 -> 106 -> 107 ACL admission successor > fixtures cover creator defaults and forbidden ACL even when the seal matches [0.83ms]
+
+ 11 pass
+ 0 fail
+ 111 expect() calls
+Ran 11 tests across 2 files. [4.32s]

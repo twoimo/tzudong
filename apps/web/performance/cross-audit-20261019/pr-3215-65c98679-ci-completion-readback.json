@@ -1,0 +1,106 @@
+{
+  "counts": {
+    "CANCELLED": 1,
+    "SKIPPED": 2,
+    "SUCCESS": 30
+  },
+  "duplicateCancellationCause": "UNVERIFIED",
+  "interpretation": [
+    "Thirty successful checks and two skips observed at this source revision; a separate cancelled Promotion Path attempt is preserved alongside a successful same-source attempt.",
+    "No failed or pending check was present in this readback.",
+    "This source precedes the uncommitted107 ACL-admission and108 explicit-recovery candidates.",
+    "Skipped Freshness and hosted-migration-ledger do not establish hosted readiness.",
+    "Source mergeability remains blocked; no merge, workflow rerun, operating SQL or deployment was performed."
+  ],
+  "mergeStateStatus": "BLOCKED",
+  "observedAt": "2026-10-18T19:07:12.567609+00:00",
+  "promotionRuns": [
+    {
+      "attempt": 1,
+      "conclusion": "cancelled",
+      "event": "pull_request_target",
+      "id": 39155988090,
+      "sourceRevision": "65c9867998d9e0597e3a85c17271c8370fa85649"
+    },
+    {
+      "attempt": 1,
+      "conclusion": "success",
+      "event": "pull_request_target",
+      "id": 39155999196,
+      "sourceRevision": "65c9867998d9e0597e3a85c17271c8370fa85649"
+    }
+  ],
+  "pullRequest": "https://github.com/twoimo/tzudong/pull/3215",
+  "runtimeReadback": {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/pr-3215-65c98679-ci-completion-readback.json",
+    "sha256": "8a6a5c5f5c4f916a78b8db853a2989bc2953d34ccfb3ff435f4caf44e9cd6766"
+  },
+  "schemaVersion": 1,
+  "selectedChecks": [
+    {
+      "conclusion": "CANCELLED",
+      "name": "Promotion Path",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39155988090/job/117759202793"
+    },
+    {
+      "conclusion": "SKIPPED",
+      "name": "Freshness",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39155990886/job/117759210739"
+    },
+    {
+      "conclusion": "SUCCESS",
+      "name": "generate",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39155990921/job/117759208995"
+    },
+    {
+      "conclusion": "SUCCESS",
+      "name": "Promotion Path",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39155999196/job/117759268315"
+    },
+    {
+      "conclusion": "SUCCESS",
+      "name": "Analyze (swift)",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39155987427/job/117759202094"
+    },
+    {
+      "conclusion": "SKIPPED",
+      "name": "hosted-migration-ledger",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39155990921/job/117759210292"
+    },
+    {
+      "conclusion": "SUCCESS",
+      "name": "secret-pattern-scan",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39155990885/job/117759209521"
+    },
+    {
+      "conclusion": "SUCCESS",
+      "name": "Admin",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39155990891/job/117759209332"
+    },
+    {
+      "conclusion": "SUCCESS",
+      "name": "GitGuardian Security Checks",
+      "status": "COMPLETED",
+      "type": "CheckRun",
+      "url": "https://dashboard.gitguardian.com"
+    }
+  ],
+  "sourceRevision": "65c9867998d9e0597e3a85c17271c8370fa85649",
+  "state": "OPEN"
+}

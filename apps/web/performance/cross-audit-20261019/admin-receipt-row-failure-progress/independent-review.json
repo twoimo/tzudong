@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-source-review",
+  "createdAt": "2026-10-19T00:22:58+09:00",
+  "sourceRevision": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "reviewedReceipt": {
+    "path": "apps/web/performance/cross-audit-20261019/admin-receipt-row-failure-progress/receipt.json",
+    "sha256": "0041f3ab93c3bf4f4b61efbc1f3ebcf6ae927e4150298e93469404a0179170ff",
+    "hashVerified": true
+  },
+  "overallVerdict": "ACCEPT",
+  "findings": [
+    {
+      "id": "OCR-ROW-TERMINAL-001",
+      "verdict": "ACCEPT",
+      "claim": "Only deterministic local input defects and an exact Storage missing-object result enter terminal row-failure persistence.",
+      "evidence": [
+        "The processor calls terminalRowFailureResponse only for absent verification_photo, an invalid owned object path, an exact missing-object classification, or locally rejected canonical image bytes.",
+        "isMissingReviewVerificationObject accepts only Supabase Storage 404/NoSuchKey shapes. A 403 or transport exception returns no row-failure code and falls through to OCR_READBACK_FAILED/OCR_PROCESSING_FAILED without terminal persistence.",
+        "Missing credentials return OCR_PROVIDER_UNAVAILABLE 503. Provider, quota, transport, durable-result, and persistence exceptions do not call persistAdminReceiptRowFailure."
+      ],
+      "sourceLocations": [
+        "apps/web/lib/reviews/private-verification.ts:11-15",
+        "apps/web/lib/ocr/admin-receipt-row-failure.ts:78-80",
+        "apps/web/lib/ocr/admin-receipt-processor.ts:545-606",
+        "apps/web/lib/ocr/admin-receipt-processor.ts:630-669",
+        "apps/web/lib/ocr/admin-receipt-processor.ts:772-793"
+      ]
+    },
+    {
+      "id": "OCR-ROW-CAS-002",
+      "verdict": "ACCEPT",
+      "claim": "Terminal failure persistence cannot overwrite an administrator photo replacement, owner change, or OCR snapshot change.",
+      "evidence": [
+        "The update CAS binds id, user_id, null ocr_processed_at, verification_photo, receipt_hash, exact JSON receipt_data, and is_duplicate from the selected snapshot.",
+        "The independent readback accepts the requested failure only when owner, photo, cleared hash, duplicate flag, exact failure object, and processed timestamp match. A concurrent processed/failed winner is preserved; a changed nonterminal photo fails closed."
+      ],
+      "sourceLocations": [
+        "apps/web/lib/ocr/admin-receipt-row-failure.ts:47-76",
+        "apps/web/lib/ocr/admin-receipt-row-failure.ts:87-156",
+        "apps/web/tests-unit/admin-receipt-processor-terminal-failure.test.ts:39-155"
+      ]
+    },
+    {
+      "id": "OCR-ROW-BATCH-003",
+      "verdict": "ACCEPT",
+      "claim": "The workflow does not process a later row without terminal readback for the current row, and a confirmed terminal defect no longer starves the next selection.",
+      "evidence": [
+        "persistAdminReceiptRowFailure performs an independent row read after the mutation and throws unless a processed/failed terminal row is observed.",
+        "runAdminReceiptOcrBatch performs another post-call read. A nonterminal 4xx/5xx increments failed and stops; a lost response/read increments indeterminate and stops. Only a terminal readback advances the loop.",
+        "The two-selection fixture first terminalizes the defective oldest row, then selects and processes the next pending row; a third selection is empty."
+      ],
+      "sourceLocations": [
+        "apps/web/lib/ocr/admin-receipt-row-failure.ts:116-156",
+        "apps/web/lib/ocr/admin-receipt-batch.ts:46-90",
+        "apps/web/scripts/run-admin-receipt-ocr-workflow.ts:41-63",
+        "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts:143-222"
+      ]
+    },
+    {
+      "id": "OCR-ROW-RERUN-004",
+      "verdict": "ACCEPT",
+      "claim": "After an operator replaces the verification photo, the existing guarded rerun can reset the terminal OCR snapshot without overwriting that photo.",
+      "conditions": [
+        "The rerun reads the current row and requires a current verification_photo.",
+        "Guarded confirmation, readiness, workflow configuration, and workflow preflight must pass.",
+        "The OCR reset CAS binds the current OCR snapshot and updates only OCR result fields; verification_photo is not written."
+      ],
+      "sourceLocations": [
+        "apps/web/app/api/admin/ocr-receipts/rerun/route.ts:103-145",
+        "apps/web/app/api/admin/ocr-receipts/rerun/route.ts:192-228",
+        "apps/web/lib/ocr/admin-receipt-reset.ts:44-70",
+        "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts:364-405"
+      ]
+    }
+  ],
+  "counterexampleResults": [
+    {
+      "case": "Storage 404/NoSuchKey",
+      "result": "verification_object_missing is eligible for exact terminal CAS"
+    },
+    {
+      "case": "Storage 403 or transport failure",
+      "result": "not classified as a row defect; row remains pending and the batch stops"
+    },
+    {
+      "case": "provider credential, quota, provider transport, or persistence uncertainty",
+      "result": "no row-failure persistence call; nonterminal readback stops the batch"
+    },
+    {
+      "case": "administrator replaces verification_photo during row-failure CAS",
+      "result": "CAS returns no match and nonterminal independent readback throws; later row is not processed"
+    },
+    {
+      "case": "mutation response is uncertain but exact terminal readback exists",
+      "result": "recovered terminal outcome; advancing is allowed only after readback"
+    },
+    {
+      "case": "oldest defective row followed by a valid pending row",
+      "result": "first selection terminalizes only the defect; second selection processes the later row; third selects none"
+    },
+    {
+      "case": "terminal row after operator photo replacement and guarded rerun",
+      "result": "current photo is retained while exact OCR snapshot fields reset to pending before bounded dispatch"
+    }
+  ],
+  "verification": {
+    "command": "bun test tests-unit/admin-receipt-ocr-workflow.test.ts tests-unit/admin-receipt-processor-terminal-failure.test.ts",
+    "workingDirectory": "apps/web",
+    "result": "22 pass, 0 fail, 137 expect calls",
+    "reviewedReceiptSourceHashes": "6 of 6 matched"
+  },
+  "sourceHashesSha256": {
+    "apps/web/lib/reviews/private-verification.ts": "f2a5a6674f4124166e45f07360fa53113f3ded86f08d7ffdfc640d4f40714c79",
+    "apps/web/lib/ocr/admin-receipt-row-failure.ts": "64dfbae0a221e54f50632c491d8765b2cd1ec429f52c9c38d82af2bafc5207eb",
+    "apps/web/lib/ocr/admin-receipt-processor.ts": "c9a902b79a64b006adeda5c5f6356ad659bef806681f532d504b0d5009843be5",
+    "apps/web/lib/ocr/admin-receipt-batch.ts": "f2ba1392b39990839b01baeaea6358d9e80b9397aa01ea4ec42c2b077ecbfaa2",
+    "apps/web/scripts/run-admin-receipt-ocr-workflow.ts": "4da7cfecd87ef24161cdd5e97a63c20931a1f717bcb9828a2811f8f36c08a09a",
+    "apps/web/lib/ocr/admin-receipt-reset.ts": "8ddb5a38ecd70a05c956a993d6b2f508041edd0460037c9f92cb0824ff8ff7",
+    "apps/web/app/api/admin/ocr-receipts/rerun/route.ts": "d50607b6f18934518499e0dd7628f15cf25fecc5a1c29e2e968ca64ec0358e8e",
+    "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts": "f9094239047cb6378a1a6d7bcad72a46989f7e752463d3df3d96107297e1f6fc",
+    "apps/web/tests-unit/admin-receipt-processor-terminal-failure.test.ts": "fe91a675f8393b49fd53086362b485e68a399d9f85f9074ed1b7b2189c3fb937"
+  },
+  "limitations": [
+    "This is source-bound local verification. It does not prove hosted database trigger state, Storage behavior, provider/quota behavior, GitHub workflow delivery, deployment, or production execution.",
+    "The guarded-rerun evidence combines the isolated exact-CAS test with route source assertions; no external workflow dispatch was attempted.",
+    "The existing external Deep Research stages remain outside this independent read-only review."
+  ],
+  "boundaries": {
+    "sourceEdits": 0,
+    "sqlEdits": 0,
+    "externalCalls": 0,
+    "databaseReads": 0,
+    "databaseWrites": 0,
+    "storageCalls": 0,
+    "gitMutations": 0
+  }
+}

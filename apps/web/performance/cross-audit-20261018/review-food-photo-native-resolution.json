@@ -1,0 +1,86 @@
+{
+  "schema_version": "tzudong.review-food-photo-native-resolution.v1",
+  "captured_at": "2026-10-18T23:49:07+0900",
+  "base_head": "17eec51ae1f487d6e4445368cc2a7fead0dc8911",
+  "resolves": {
+    "path": "apps/web/performance/cross-audit-20261018/review-food-photo-native-findings.json",
+    "sha256": "bb9747313d954db868a601feb155a090c6e13b42f675fd61b23d35920ec741b4",
+    "event_id": "RFP-NATIVE-001"
+  },
+  "owner_recovery_receipt": {
+    "path": "apps/web/performance/cross-audit-20261018/review-food-photo-recovery-source-receipt.json",
+    "sha256": "7e3aad012accc94fb36e2203e1d27ca2cc2311fb0977e6de515efc67a472a4df",
+    "source_match_before_followup": true
+  },
+  "verdict": "resolved_locally",
+  "resolution": {
+    "operation": [
+      "hasPendingConfirmation exposes only an owner-bound retained unknown or saved operation.",
+      "confirmPending serializes with active work and reads only the retained operation; it cannot allocate an id, capture a replacement draft, prepare, upload, insert, or clean up an absent readback.",
+      "A saved readback returns the original draft, while absent, unavailable, mismatched, wrong-owner, and concurrent confirmation cases remain blocked.",
+      "A completed blocked cancel latch is cleared only to allow the same read-only confirmation."
+    ],
+    "modal": [
+      "A blocked retained write exposes result-check recovery independently of current form validity, readiness, and OCR state.",
+      "The dedicated result-check action remains available when the live draft contains 0 or 21 food photos, while all normal create controls remain disabled.",
+      "A verified original commit enters saved-previous handling, preserves the current live input, and performs no additional prepare, upload, or insert.",
+      "Draft cleanup failure transitions to a dedicated cleanup action that is also independent of 0 or 21-photo validity.",
+      "Owner, close-request, and mount state are rechecked after confirmation and after draft cleanup before state or toast effects."
+    ],
+    "empty_readback": "An absent confirmation remains blocked with the original operation retained; a changed invalid draft cannot trigger a replacement insert."
+  },
+  "post_owner_followup": {
+    "counterexample": "The parent may set isOpen=false while confirmation readback is pending without setting closeRequestedRef. A blocked result previously wrote recovery state and emitted a toast to the closed composer.",
+    "fix": "The non-saved confirmation branch now also requires composerOpenRef.current before setSaveRecovery or toast.",
+    "source_bound_evidence": {
+      "directory": "apps/web/performance/cross-audit-20261018/review-food-photo-closed-composer",
+      "before_json_sha256": "3c9cf6a0385bb33d66122acb4f5a36f471964863846b4835cbafbcdf711488e4",
+      "before_raw_sha256": "002511f7e15aa7930967a63acdcfc140ee94ab78db26fe8162d201cc2f00642a",
+      "after_json_sha256": "a9cf5c281040e1bc2d60a9ca191e617bd0b3af5eb5d59516df951b1d36e84339",
+      "after_full_tests_sha256": "0017eed149fbc9320018fe230cfb85745a742bc7b1a7184fb29d43236b169fd3",
+      "before_result": "0 pass, 1 fail",
+      "after_result": "174 pass, 0 fail, 2642 expect calls"
+    },
+    "changed_paths": {
+      "apps/web/components/reviews/ReviewModal.tsx": {
+        "owner_receipt_sha256": "09a6759c65f2e5c4295bd79395cdbe51c89d0867b1e674834cae0c12abd2e411",
+        "current_sha256": "5f3e9ab0ca2f549d47ef6475073b66365fff717d53f13a038b6408e4a0c0f5fb"
+      },
+      "apps/web/tests-unit/review-save-submit.test.ts": {
+        "owner_receipt_sha256": "82d4bc9cebd280e5231ff4d061e87333e29b60137c1eb7f0e2fcd5960588c44b",
+        "current_sha256": "70c1c53f8fd41763ae0ad306d9c5d0b02e984dd1aa3643cd8dc0db6630a3414d"
+      }
+    }
+  },
+  "final_source_sha256": {
+    "apps/web/components/reviews/ReviewModal.tsx": "5f3e9ab0ca2f549d47ef6475073b66365fff717d53f13a038b6408e4a0c0f5fb",
+    "apps/web/lib/reviews/review-save-operation.ts": "48def0f277e7e0081f91b557e2d9b5b953a6e0461360668bee1169ba3939dabe",
+    "apps/web/app/api/ocr/reviews/save/route.ts": "a1ee27c435f4d6e6edc37758a2c846d8b7bfb713c915c51e3a5bfef623b32e11",
+    "apps/web/tests-unit/review-save-operation.test.ts": "50254e9bd20da2db4b6f2386193dc60174b26546cf523fc2a9f16d7daaf5454f",
+    "apps/web/tests-unit/review-save-submit.test.ts": "70c1c53f8fd41763ae0ad306d9c5d0b02e984dd1aa3643cd8dc0db6630a3414d",
+    "apps/web/tests-unit/review-upload-uncertainty.test.ts": "569edc7db091e94a872cb12079c62553972564c4b94dc9400c0de0e2c80c9584"
+  },
+  "independent_targeted_verification": [
+    {
+      "source_binding": "owner recovery receipt hashes",
+      "command": "/Users/twoimo/.bun/bin/bun test tests-unit/review-save-operation.test.ts --test-name-pattern 'confirmPending|absent confirmation'",
+      "result": "3 pass, 0 fail, 16 expect calls"
+    },
+    {
+      "source_binding": "owner recovery receipt hashes",
+      "command": "/Users/twoimo/.bun/bin/bun test tests-unit/review-save-submit.test.ts --test-name-pattern 'result check recovers|blocked close resets|draft cleanup retry remains|result check rechecks|recovery renders edit and result-check'",
+      "result": "9 pass, 0 fail, 590 expect calls"
+    },
+    {
+      "source_binding": "final followup hashes",
+      "command": "/Users/twoimo/.bun/bin/bun test tests-unit/review-save-submit.test.ts --test-name-pattern 'blocked result confirmation cannot notify'",
+      "result": "1 pass, 0 fail, 12 expect calls"
+    }
+  ],
+  "new_findings": [],
+  "evidence_limits": [
+    "The review verifies local source order and synthetic counterexamples only.",
+    "Root is running broader parity and production build verification separately.",
+    "No hosted database, Storage, provider, browser, application server, deployment, commit, push, user temp, or sealed bundle mutation was performed."
+  ]
+}

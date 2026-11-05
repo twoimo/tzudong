@@ -1,0 +1,101 @@
+{
+  "dependencyFileCount": 12,
+  "dependencyFiles": [
+    {
+      "path": "@typescript/native/bin/tsc",
+      "sha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd"
+    },
+    {
+      "path": "@typescript/native/lib/getExePath.js",
+      "sha256": "96c10fd3a18e165d7323de8e314ac8d755ad96811f9fbc304a5b3ba4e05285cc"
+    },
+    {
+      "path": "@typescript/native/lib/tsc.js",
+      "sha256": "cbdfbf11c26ed00dfc073155e316a42d6d6d8a387be61006b82fa9aa93ac572e"
+    },
+    {
+      "path": "@typescript/native/package.json",
+      "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+    },
+    {
+      "path": "@typescript/old/lib/_tsc.js",
+      "sha256": "2cf94b017788761cff62c0f58d6fa3c299afd0c51f6576ca5786f5762b172962"
+    },
+    {
+      "path": "@typescript/old/lib/tsc.js",
+      "sha256": "2cffde0b8c6760dfb0b5b0382bbb7e00ba6a8b2d981b9205b256a700a481d983"
+    },
+    {
+      "path": "@typescript/old/package.json",
+      "sha256": "bb6ee7e709ae60426e30b8d393df4d939ee61407794b4f053ce6338d6eaa8c63"
+    },
+    {
+      "path": "@typescript/typescript-darwin-arm64/lib/tsc",
+      "sha256": "a82f731365ad69d5c4c15f5e18fba4584bf3b7b839960172a76c3462b5114bf2"
+    },
+    {
+      "path": "@typescript/typescript-darwin-arm64/package.json",
+      "sha256": "e88558e22e3db6c4da920e15a60eb2bbea801732b94aedb67e972be2a7f485b8"
+    },
+    {
+      "path": "typescript/bin/tsc6",
+      "sha256": "8d5fa5bd883fec0979fc2004f1fe1d99aef40570155d550eadc0b03b55513bf0"
+    },
+    {
+      "path": "typescript/lib/tsc.js",
+      "sha256": "a3032799a95ae97f51d986ee0bd7d3da80c12d854f733d42a29d5dbda5d167f2"
+    },
+    {
+      "path": "typescript/package.json",
+      "sha256": "d9b8fb53c67c947fece83bcb73fa8512227ea6a12b110e096fdab8ecdc02b655"
+    }
+  ],
+  "executedCompilerRoleCount": 8,
+  "executedCompilerRoles": [
+    {
+      "path": "typescript/lib/tsc.js",
+      "role": "compatBridgeImplementation",
+      "sha256": "a3032799a95ae97f51d986ee0bd7d3da80c12d854f733d42a29d5dbda5d167f2"
+    },
+    {
+      "path": "typescript/bin/tsc6",
+      "role": "compatCliEntrypoint",
+      "sha256": "8d5fa5bd883fec0979fc2004f1fe1d99aef40570155d550eadc0b03b55513bf0"
+    },
+    {
+      "path": "@typescript/old/lib/tsc.js",
+      "role": "compatCliImplementation",
+      "sha256": "2cffde0b8c6760dfb0b5b0382bbb7e00ba6a8b2d981b9205b256a700a481d983"
+    },
+    {
+      "path": "@typescript/old/lib/_tsc.js",
+      "role": "compatCompilerImplementation",
+      "sha256": "2cf94b017788761cff62c0f58d6fa3c299afd0c51f6576ca5786f5762b172962"
+    },
+    {
+      "path": "@typescript/native/bin/tsc",
+      "role": "nativeCliEntrypoint",
+      "sha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd"
+    },
+    {
+      "path": "@typescript/native/lib/getExePath.js",
+      "role": "nativeExecutableResolver",
+      "sha256": "96c10fd3a18e165d7323de8e314ac8d755ad96811f9fbc304a5b3ba4e05285cc"
+    },
+    {
+      "path": "@typescript/native/lib/tsc.js",
+      "role": "nativeLauncherImplementation",
+      "sha256": "cbdfbf11c26ed00dfc073155e316a42d6d6d8a387be61006b82fa9aa93ac572e"
+    },
+    {
+      "path": "@typescript/typescript-darwin-arm64/lib/tsc",
+      "role": "nativePlatformBinary",
+      "sha256": "a82f731365ad69d5c4c15f5e18fba4584bf3b7b839960172a76c3462b5114bf2"
+    }
+  ],
+  "gitHead": "215cb86185ce65246afdfbda8bb8fcbffb79d675",
+  "inventorySha256": "6a35c1ab0ca5db9142daa3198df360119de11b69669cd86a4bd02a065ae21446",
+  "schema": "tzudong-ci-performance/v1/compiler-provenance-inventory",
+  "sourceContractUnchanged": true,
+  "sourceTreeSha": "671a84d19c0a1a424daba802a3bb5094fbf683a0"
+}

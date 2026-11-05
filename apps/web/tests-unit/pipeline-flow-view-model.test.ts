@@ -100,10 +100,10 @@ describe('pipeline execution read model', () => {
   test('GHA needs identical identity; normalized fallback live/failure defaults are not observations', () => {
     const s = parsePipelineStatus(status({ source: 'github_actions', jobs: [{ ...job, id: '99', profile: 'lite_gha', status: 'Failed', error_code: 'github_crawler', dry_run: false }], failures: [{ error_code: 'failure' }] }));
     const gha = (id: number, status: string, conclusion: string | null) => parsePipelineManifest({ githubActions: { enabled: true, configured: true, reachable: true, latestRunId: id, latestRunStatus: status, latestRunConclusion: conclusion } });
-    expect(pipelineJobsForDisplay(s, undefined)[0]).toMatchObject({ status: 'Unknown', dry_run: undefined, adapter_index: null });
-    expect(pipelineJobsForDisplay(s, parsePipelineManifest({ githubActions: { enabled: true, configured: false, reachable: false, latestRunId: 99, latestRunStatus: 'completed', latestRunConclusion: 'success' } }))[0].status).toBe('Unknown');
-    expect(pipelineJobsForDisplay(s, gha(98, 'completed', 'success'))[0].status).toBe('Unknown');
-    const cases: [string, string | null, string][] = [['in_progress', null, 'Fetching'], ['queued', null, 'Queued'], ['completed', 'success', 'Succeeded'], ['completed', 'failure', 'Failed'], ['completed', 'cancelled', 'Cancelled'], ['completed', null, 'Unknown'], ['completed', 'neutral', 'Unknown']];
+    expect(pipelineJobsForDisplay(s, undefined)[0]).toMatchObject({ status: 'Failed', dry_run: undefined, adapter_index: null });
+    expect(pipelineJobsForDisplay(s, parsePipelineManifest({ githubActions: { enabled: true, configured: false, reachable: false, latestRunId: 99, latestRunStatus: 'completed', latestRunConclusion: 'success' } }))[0].status).toBe('Failed');
+    expect(pipelineJobsForDisplay(s, gha(98, 'completed', 'success'))[0].status).toBe('Failed');
+    const cases: [string, string | null, string][] = [['in_progress', null, 'Fetching'], ['queued', null, 'Queued'], ['completed', 'success', 'Succeeded'], ['completed', 'failure', 'Failed'], ['completed', 'cancelled', 'Cancelled'], ['completed', null, 'Failed'], ['completed', 'neutral', 'Unknown']];
     for (const [status, conclusion, expected] of cases) expect(pipelineJobsForDisplay(s, gha(99, status, conclusion))[0].status).toBe(expected);
     expect(pipelineJobsForDisplay(s, gha(99, 'in_progress', null))[0].hasError).toBe(false);
     expect(pipelineJobsForDisplay(s, gha(99, 'completed', 'failure'))[0].hasError).toBe(true);
@@ -142,16 +142,16 @@ describe('pipeline execution read model', () => {
     ]) {
       const invalid = parsePipelineManifest({ githubActions: { ...raw, ...patch } });
       expect(invalid.github).toBeNull();
-      expect(pipelineJobsForDisplay(snapshot, invalid)[0]).toMatchObject({ status: 'Unknown', hasError: false });
+      expect(pipelineJobsForDisplay(snapshot, invalid)[0]).toMatchObject({ status: 'Failed', hasError: true });
       expect(JSON.stringify(invalid)).not.toContain('private@');
     }
     const uncertain = pipelineJobsForDisplay(snapshot, undefined);
     const recovered = pipelineJobsForDisplay(snapshot, parsePipelineManifest({ githubActions: { ...raw, latestRunConclusion: 'failure' } }));
     expect(recovered[0]).toMatchObject({ status: 'Failed', hasError: true });
-    expect(uncertain[0]).toMatchObject({ status: 'Unknown', hasError: false });
+    expect(uncertain[0]).toMatchObject({ status: 'Failed', hasError: true });
     expect(snapshot.partial).toBe(true);
     const otherRun = parsePipelineManifest({ githubActions: { ...raw, latestRunId: 100, latestRunConclusion: 'failure' } });
-    expect(pipelineJobsForDisplay(snapshot, otherRun)[0]).toMatchObject({ status: 'Unknown', hasError: false });
+    expect(pipelineJobsForDisplay(snapshot, otherRun)[0]).toMatchObject({ status: 'Failed', hasError: true });
     for (const action of ['pause', 'resume', 'cancel'] as const) expect(canControlPipelineJob(snapshot.source, recovered[0], action)).toBe(false);
   });
   test('controls require API, UUID, known profile and a valid transition', () => {
@@ -192,7 +192,9 @@ describe('pipeline preview and confirmation', () => {
 test('display reliability follows GitHub manifest admission while preserving job_api control truth', () => {
  const snapshot=parsePipelineStatus(status({source:'github_actions',jobs:[{...job,id:'77'}]}));
  expect(snapshot.partial).toBe(false);
- for(const record of [undefined,{...manifest(),github:{id:'78',status:'completed',conclusion:'success'}},{...manifest(),github:{id:'77',status:'future',conclusion:null}}]) expect(pipelineDisplayIsReliable(snapshot,record)).toBe(false);
+ expect(pipelineDisplayIsReliable(snapshot, undefined)).toBe(true);
+ expect(pipelineDisplayIsReliable(snapshot, {...manifest(),github:{id:'78',status:'completed',conclusion:'success'}})).toBe(true);
+ expect(pipelineDisplayIsReliable(snapshot, {...manifest(),github:{id:'77',status:'future',conclusion:null}})).toBe(false);
  expect(pipelineDisplayIsReliable(snapshot,{...manifest(),github:{id:'77',status:'in_progress',conclusion:null}})).toBe(true);
  expect(pipelineDisplayIsReliable(parsePipelineStatus(status()),undefined)).toBe(true);
  expect(pipelineDisplayIsReliable(parsePipelineStatus(status({targets:[{id:'tzuyang',status:'future'}]})),undefined)).toBe(false);

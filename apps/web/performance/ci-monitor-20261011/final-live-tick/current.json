@@ -1,0 +1,7 @@
+{
+  "baselineCutoffUtc": "2026-10-11T07:44:18.525358Z",
+  "excludedHistoricalAttempts": 40,
+  "runs": [],
+  "sourceExportSha256": "d30558285d8fd4a466d11757f03cf5e24656545a0611a08d9a69f7454d928242",
+  "workflow": ".github/workflows/web-admin-ci.yml"
+}

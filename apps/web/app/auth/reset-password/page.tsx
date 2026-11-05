@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Dialog,
@@ -14,48 +14,14 @@ import { ResetPasswordProgressiveSkeleton } from '@/components/auth/ResetPasswor
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/lib/no-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from '@/lib/debug-log';
-import { consumePasswordRecoveryProof } from '@/lib/auth/password-recovery-proof';
-
-function hasValidRecoveryQuery(searchParams: URLSearchParams) {
-    const keys = [...searchParams.keys()];
-    if (new Set(keys).size !== keys.length) return false;
-    if (keys.some((key) => !['code', 'token', 'token_hash', 'type'].includes(key))) return false;
-
-    const code = searchParams.get('code');
-    const token = searchParams.get('token');
-    const tokenHash = searchParams.get('token_hash');
-    const type = searchParams.get('type');
-    if ((code ? 1 : 0) + (token ? 1 : 0) + (tokenHash ? 1 : 0) > 1) return false;
-    if (code || token) return (code ?? token)!.length <= 2048 && (type === null || type === 'recovery');
-    if (tokenHash) return tokenHash.length <= 2048 && type === 'recovery';
-    return keys.length === 0;
-}
-
-function hasValidRecoveryFragment(hashParams: URLSearchParams) {
-    const keys = [...hashParams.keys()];
-    const accessToken = hashParams.get('access_token');
-    return keys.length > 0
-        && keys.every((key) => (
-            key === 'access_token'
-            || key === 'refresh_token'
-            || key === 'expires_in'
-            || key === 'token_type'
-            || key === 'type'
-        ))
-        && hashParams.getAll('access_token').length === 1
-        && hashParams.getAll('type').length === 1
-        && hashParams.get('type') === 'recovery'
-        && typeof accessToken === 'string'
-        && accessToken.length > 0
-        && accessToken.length <= 4096;
-}
+import { openBrowserPasswordRecovery } from '@/lib/auth/isolated-browser-pkce';
+type Recovery = Awaited<ReturnType<typeof openBrowserPasswordRecovery>>;
 
 export default function ResetPasswordPage() {
     const router = useRouter();
-    const { updatePassword } = useAuth();
+    const recovery = useRef<Recovery | null>(null);
+    const attempt = useRef<{ users: number; promise: Promise<Recovery> } | null>(null);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -64,92 +30,40 @@ export default function ResetPasswordPage() {
     const [isOpen, setIsOpen] = useState(true);
 
     useEffect(() => {
-        const handleRecoverySession = async () => {
-            // 1. URL 파라미터 확인 (Hash 및 Query 모두 확인)
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const queryParams = new URLSearchParams(window.location.search);
-            if (!hasValidRecoveryQuery(queryParams) || !hasValidRecoveryFragment(hashParams) && hashParams.size > 0) {
-                setIsCheckingSession(false);
-                return;
-            }
-
-            const type = hashParams.get('type') || queryParams.get('type');
-            const accessToken = hasValidRecoveryFragment(hashParams)
-                ? hashParams.get('access_token')
-                : null;
-            const code = queryParams.get('code');
-            const token = queryParams.get('token');
-            const tokenHash = queryParams.get('token_hash');
-
-            // 2. 이벤트 리스너 설정 (PKCE Flow 등에서 발생)
-            const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-                if (event === 'PASSWORD_RECOVERY') {
-                    setIsValidSession(true);
-                    setIsCheckingSession(false);
-                }
-            });
-
-            // A successful exchange alone is not recovery authority. Only the
-            // provider PASSWORD_RECOVERY event above enables password updates.
-            if (code && (type === 'recovery' || type === null)) {
-                try {
-                    const { error } = await supabase.auth.exchangeCodeForSession(code);
-                    if (error) throw error;
-                } catch {
-                    debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED, {
-                        reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED,
-                    });
-                }
-            } else if (token && (type === 'recovery' || type === null)) {
-                try {
-                    const { error } = await supabase.auth.exchangeCodeForSession(token);
-                    if (error) throw error;
-                } catch {
-                    debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED, {
-                        reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED,
-                    });
-                }
-            } else if (tokenHash && type === 'recovery') {
-                try {
-                    const { error } = await supabase.auth.verifyOtp({
-                        type: 'recovery',
-                        token_hash: tokenHash,
-                    });
-                    if (error) throw error;
-                } catch {
-                    debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED, {
-                        reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED,
-                    });
-                }
-            }
-
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user?.id && consumePasswordRecoveryProof(session.user.id)) {
-                setIsValidSession(true);
-                setIsCheckingSession(false);
-            }
-
-            if (accessToken || code || token || tokenHash) {
-                setTimeout(() => {
-                    setIsCheckingSession(false);
-                }, 3000);
-            } else {
-                setIsCheckingSession(false);
-            }
-
-            return () => {
-                subscription.unsubscribe();
-            };
-        };
-
-        void handleRecoverySession().catch(() => {
+        if (!attempt.current) {
+            const search = window.location.search;
+            const hasFragment = window.location.hash.length > 0;
+            window.history.replaceState(window.history.state, '', '/auth/reset-password');
+            attempt.current = { users: 0, promise: hasFragment
+                ? Promise.reject(new Error('AUTH_RECOVERY_LINK_REQUIRED'))
+                : openBrowserPasswordRecovery(search) };
+        }
+        const current = attempt.current;
+        current.users += 1;
+        let active = true;
+        void current.promise.then(value => {
+            if (!active) return;
+            recovery.current = value;
+            setIsValidSession(true);
+        }).catch(() => {
+            if (!active) return;
             debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_SESSION_CHECK_FAILED, {
                 reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_SESSION_CHECK_FAILED,
             });
             setIsValidSession(false);
-            setIsCheckingSession(false);
+        }).finally(() => {
+            if (active) setIsCheckingSession(false);
         });
-    }, [router, isValidSession]);
+        return () => {
+            active = false;
+            current.users -= 1;
+            // Strict Mode replays the effect. Share its one-use exchange and
+            // release the isolated issuer session only after the last owner.
+            queueMicrotask(() => {
+                void current.promise.then(value => { if (current.users === 0) return value.dispose(); }).catch(() => {});
+            });
+        };
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -171,15 +85,18 @@ export default function ResetPasswordPage() {
 
         setIsLoading(true);
         try {
-            await updatePassword(newPassword);
+            if (!isValidSession || !recovery.current) throw new Error('AUTH_RECOVERY_LINK_REQUIRED');
+            await recovery.current.updatePassword(newPassword);
             toast.success('비밀번호가 성공적으로 변경되었습니다');
             setIsOpen(false);
             router.push('/');
         } catch {
+            recovery.current = null;
+            setIsValidSession(false);
             debugLog(DEBUG_LOG_EVENT.PASSWORD_UPDATE_FAILED, {
                 reason: DEBUG_LOG_REASON_CODE.PASSWORD_UPDATE_FAILED,
             });
-            toast.error('비밀번호 변경에 실패했습니다. 잠시 후 다시 시도해주세요.');
+            toast.error('비밀번호 변경을 확인하지 못했습니다. 새 재설정 링크로 다시 확인해주세요.');
         } finally {
             setIsLoading(false);
         }

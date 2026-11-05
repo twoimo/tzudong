@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "kind": "hosted-ledger-successor-findings",
+  "status": "local_successors_aggregate_verified_launch_held",
+  "evidence": {
+    "path": "apps/web/performance/cross-audit-20261018/hosted-catalog-metadata-20261018.json",
+    "sha256": "40aae58d1e548e6129b64e0bdbc73729cacc8dbded75b20125444c6f9244cbee",
+    "observedAt": "2026-10-18T12:22:45.566417+00:00",
+    "projectRef": "aqlcofblfxdrjhhdmarw",
+    "serverVersionNum": "170006",
+    "ledgerCount": 89,
+    "featureFiveCount": 0,
+    "upstreamEvidenceCount": 3,
+    "reviewVerificationHelpersPresent": false,
+    "reviewVerificationTriggersPresent": false,
+    "identityPath": "apps/web/performance/cross-audit-20261018/hosted-ledger-identity-20261018.json",
+    "identitySha256": "7fac1417a3625968c4cac3f4b68ae142f89eb3990cada9a3d33af95045a434a8",
+    "mappingPath": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+    "mappingSha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a",
+    "comparisonPath": "apps/web/performance/cross-audit-20261018/hosted-ledger-local86-comparison-20261018.json",
+    "comparisonSha256": "263b6d6c650c52485afa90fc46baeeae033b36464787ff7114489345b64fdfeb",
+    "localReadinessPath": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-local-readiness-20261018.json",
+    "localReadinessSha256": "7e9a89ddd73b2b73f5ee67267b5924ad055f508e3545ea0306024f5e74466650",
+    "aggregateExecutionPath": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-aggregate-execution-20261018.json",
+    "aggregateExecutionSha256": "dedd656403e1f2577c75eab435ea27acf7adcdb57cd3b34b244f0849f5e5ca2b",
+    "identityResult": {
+      "predecessorCount": 0,
+      "featureFiveCount": 0,
+      "upstreamEvidenceCount": 3,
+      "upstreamEvidenceIdentitiesMatch": true,
+      "baseWithoutEvidenceCount": 86,
+      "baseWithoutEvidenceRoot": "f2791773560e1404f5e88a51d314d925c38814066f517f72a6195853a900a5bf"
+    }
+  },
+  "contracts": {
+    "reviewMediaPredecessor": {
+      "manifest": ".github/review-media-sql-successor.v1.json",
+      "transition": "86->97",
+      "targetCount": 11,
+      "retainedHistoricalReplayPrefixRoot": "c975c881e8eb3af88c4b0fc87f1109ac4e1507258f29363de88760f20713dba2",
+      "retainedHistoricalReplayReceipt": "apps/web/performance/review-db-successor-20261012/pg17-current-review-fixes-20261014-v2.json",
+      "prefixRootAuthority": "historical synthetic stage-0 rehearsal observation only; not a hardcoded manifest value and not a copy of the hosted 86-row ledger",
+      "historicalReplayLedgerFixture": "86 generated local_predecessor rows over an initially empty application ledger"
+    },
+    "featureSuccessor": {
+      "manifest": ".github/review-media-feature-sql-successor.v1.json",
+      "transition": "97->102",
+      "targetCount": 5
+    },
+    "upstreamEvidence": {
+      "intendedSeparateTransition": "102->105",
+      "observedHostedCount": 3,
+      "expectedStatementVectors": [
+        {
+          "version": "20261017043000",
+          "name": "evidence_frames_and_popularity",
+          "statementCount": 8,
+          "statementVectorSha256": "e8c4dbbe5fad3c9af301d5dfd0843417c3de148bbbddbde677c8b755ed6e45e4"
+        },
+        {
+          "version": "20261017140000",
+          "name": "restaurant_popularity_shadow",
+          "statementCount": 3,
+          "statementVectorSha256": "6b1de5b932c1cf769436d5048fdde157127c7e5cb294c2b284ca63940995d16a"
+        },
+        {
+          "version": "20261017160000",
+          "name": "restaurant_popularity_shadow_tier",
+          "statementCount": 1,
+          "statementVectorSha256": "ed0eacead47eab1f9ceffacd0ab49abb035c40a7a7ecb1bacb19e34070088359"
+        }
+      ]
+    }
+  },
+  "findings": [
+    {
+      "id": "HOSTED-LEDGER-001",
+      "severity": "blocker",
+      "status": "open",
+      "finding": "The hosted ledger is not an admissible baseline for either existing successor. The 86->97 controller requires targetCount=0 and priorCount=86 at rehearsal start; the already-recorded evidence migrations or any partially installed predecessor row make that exact stage-0 state impossible."
+    },
+    {
+      "id": "HOSTED-LEDGER-002",
+      "severity": "blocker",
+      "status": "open",
+      "finding": "The 97->102 feature successor cannot follow the hosted topology unchanged. If the three evidence rows are retained while all eleven predecessor rows are installed, its non-feature prefix becomes 100 instead of 97. Its preflight therefore fails closed even though the five feature rows are currently absent."
+    },
+    {
+      "id": "HOSTED-LEDGER-003",
+      "severity": "blocker",
+      "status": "resolved",
+      "finding": "Q1 and Q3 resolve the expected-version topology and the 86-row identity mapping. The retained October 4 snapshot matches 62 rows exactly; canonical parsing matches 23 of the 24 later rows to current sources or immutable applied receipts; the remaining hosted row is an identified historical applied variant that must be preserved as observed."
+    },
+    {
+      "id": "HOSTED-LEDGER-004",
+      "severity": "high",
+      "status": "open",
+      "finding": "The evidence migrations are observed before their intended 102->105 promotion. Existing 102 evidence must not be relabeled as hosted 105 evidence, and the current manifests must remain pinned to their original transitions."
+    },
+    {
+      "id": "HOSTED-LEDGER-005",
+      "severity": "high",
+      "status": "resolved_local_rehearsal",
+      "finding": "The isolated PG17.6 evidence-first constituent replay validated 12 predecessor and 6 feature stages through ledger 105. A separate fresh-container replay then executed the compiler-produced 11-plan and 5-plan aggregate SQL strings in one outer transaction per phase and matched their terminal state identities. Both proofs preserved the source dump hash and removed all disposable containers; operating admission remains held."
+    },
+    {
+      "id": "HOSTED-LEDGER-006",
+      "severity": "blocker",
+      "status": "resolved_correction",
+      "finding": "The c975c881... value came from 86 synthetic local_predecessor fixture rows inserted by the historical PG17 harness after verifying its application ledger was empty. Its difference from the hosted f2791773... raw-statement root is expected and is not hosted drift. A new contract must keep rehearsal-fixture identity and operating baseline identity separate."
+    },
+    {
+      "id": "HOSTED-LEDGER-007",
+      "severity": "high",
+      "status": "mitigated_local_contract",
+      "finding": "Hosted row 20261008124858/public_profile_leaderboard_read_boundary is pinned as an immutable operating predecessor identity. The new contracts reject substitution by current source 20261008084856, while launch remains held until a fresh operating readback confirms that identity."
+    }
+  ],
+  "recommendedReadOnlyQueries": [
+    {
+      "id": "Q1_EXPECTED_VERSION_IDENTITIES",
+      "status": "executed_read_only",
+      "purpose": "Return at most 19 expected ledger rows with names and statement-vector hashes; no statement bodies or user data are returned.",
+      "observedResult": "Only the three evidence rows were present, and all three identities matched.",
+      "sql": "SELECT version, name, pg_catalog.cardinality(statements) AS statement_count, pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.array_to_json(statements)::text, 'UTF8')), 'hex') AS statement_vector_sha256 FROM supabase_migrations.schema_migrations WHERE version = ANY (ARRAY['20261008192455','20261008200719','20261008201635','20261011072824','20261011085342','20261011094346','20261011100730','20261011103501','20261011105114','20261011110108','20261011175912','20261013093518','20261013190000','20261013190100','20261013190200','20261016090000','20261017043000','20261017140000','20261017160000']::text[]) ORDER BY version;"
+    },
+    {
+      "id": "Q2_BASE86_PREFIX_ROOT",
+      "status": "executed_read_only",
+      "purpose": "Hash the remaining ledger after excluding the three observed evidence versions using the controller's material expression.",
+      "expectedCount": 86,
+      "retainedHistoricalReplayRoot": "c975c881e8eb3af88c4b0fc87f1109ac4e1507258f29363de88760f20713dba2",
+      "observedCount": 86,
+      "observedRoot": "f2791773560e1404f5e88a51d314d925c38814066f517f72a6195853a900a5bf",
+      "sql": "SELECT pg_catalog.jsonb_build_object('count', pg_catalog.count(*), 'root', pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(COALESCE(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('version', version, 'name', name, 'statements', statements) ORDER BY version), '[]'::jsonb)::text, 'UTF8')), 'hex')) FROM supabase_migrations.schema_migrations WHERE version <> ALL (ARRAY['20261017043000','20261017140000','20261017160000']::text[]);"
+    },
+    {
+      "id": "Q3_BASE86_ROW_HASH_MAPPING",
+      "status": "executed_read_only",
+      "purpose": "Return at most 87 non-evidence ledger identities so the 86-row root mismatch can be localized without returning statement bodies or user data.",
+      "expectedCurrentCount": 86,
+      "observedCount": 86,
+      "observedAt": "2026-10-18T12:33:26.361806+00:00",
+      "observedResult": "All 86 bounded row identities were retained in hosted-ledger-mapping-20261018.json and classified locally.",
+      "sql": "WITH bounded AS (SELECT version, name, pg_catalog.cardinality(statements)::int AS statement_count, pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(pg_catalog.array_to_json(statements)::text, 'UTF8')), 'hex') AS statement_vector_sha256 FROM supabase_migrations.schema_migrations WHERE version <> ALL (ARRAY['20261017043000','20261017140000','20261017160000']::text[]) ORDER BY version, name LIMIT 87) SELECT pg_catalog.jsonb_build_object('count', pg_catalog.count(*), 'rows', COALESCE(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('version', version, 'name', name, 'statement_count', statement_count, 'statement_vector_sha256', statement_vector_sha256) ORDER BY version, name), '[]'::jsonb)) FROM bounded;"
+    }
+  ],
+  "nextProcedure": [
+    "Keep the new 89->100 and 100->105 launch policies held. Preserve the existing 86->97 and 97->102 contracts and receipts unchanged.",
+    "Before any operating apply, obtain a fresh bounded readback in the same Q1/Q3 shape and require the exact hosted86 projection, historical row 20261008124858, three evidence identities, and absence of all eleven predecessor plus five feature rows.",
+    "Prepare a protected-source admission for 89->100 that binds the fresh operating readback and the retained PG17 evidence-first replay. Insert only the eleven existing predecessor vectors and verify all 89 non-target identities remain unchanged at ledger=100.",
+    "After an independently confirmed 89->100 terminal readback, prepare a separate protected-source admission for 100->105. Pin the completed predecessor and evidence identities, apply only the five existing feature sources, and keep the original 97->102 manifest unchanged.",
+    "After 100->105, perform bounded hosted readback for ledger=105, featureFiveCount=5, evidenceCount=3, exact helper and trigger definitions, ACLs, function hashes and runtime capability status.",
+    "Do not relabel the retained 102 feature receipt or the three evidence rows as a hosted 105 receipt."
+  ],
+  "limitations": [
+    "This document is local analysis of a retained read-only hosted metadata result.",
+    "No hosted query, DDL, deployment, Docker, admission or release action was executed.",
+    "Q1 and Q2 were executed by the owning agent and retained separately; this document did not execute them.",
+    "Q3 was executed by the owning agent and retained separately; this document only compares its sanitized row identities.",
+    "The historical applied variant has no matching retained local statement body. It is preserved by exact ledger identity, while catalog and runtime semantics remain separate readback gates.",
+    "The new local contracts, constituent replay and aggregate compiler-output execution do not constitute hosted admission, deployment or application."
+  ]
+}

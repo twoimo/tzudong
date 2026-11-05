@@ -20,12 +20,13 @@ function fixture() {
         row: { id: review, user_id: owner, updated_at: 'revision-1', content: 'Original fixture review text.', categories: ['한식'], food_photos: [old] } as ReviewMediaRow | null,
         objects: new Set([old, proof]), bucketObjects, queue: new Set<string>(), receipts: new Set<string>(), events: [] as string[],
         removeBuckets: [] as string[],
-        mode: 'ok', confirmation: true, cleanup: true, removal: 'ok', upload: 'ok', mutations: 0, uploads: 0,
+        mode: 'ok', confirmation: true, cleanup: true, removal: 'ok', upload: 'ok', ready: true, mutations: 0, uploads: 0,
         rpcArgs: [] as Record<string, unknown>[],
     };
     const live = (path: string) => f.row !== null && (f.row.food_photos?.includes(path) || path === proof);
     const deps: ReviewMediaDependencies = {
         owner: () => f.currentOwner, id: () => operationId, prepare: async file => file,
+        ready: async () => f.ready,
         read: async () => ({ data: f.row, error: null }),
         upload: async path => {
             f.uploads++;
@@ -96,6 +97,38 @@ function fixture() {
     return { f, deps };
 }
 describe('review commit and media failure boundaries', () => {
+    for (const phase of ['ready', 'read', 'capability'] as const) test(`keeps the runner active before an operation exists during ${phase}`, async () => {
+        const { f, deps } = fixture();
+        let release!: () => void;
+        let entered!: () => void;
+        const held = new Promise<void>(resolve => { release = resolve; });
+        const started = new Promise<void>(resolve => { entered = resolve; });
+        const hold = async () => { entered(); await held; };
+        if (phase === 'ready') deps.ready = async () => { await hold(); return true; };
+        else if (phase === 'read') {
+            const read = deps.read;
+            deps.read = async (...args) => { await hold(); return read(...args); };
+        } else {
+            const rpc = deps.rpc;
+            let first = true;
+            deps.rpc = async (...args) => {
+                if (args[0] === 'read_review_media_commit' && first) { first = false; await hold(); }
+                return rpc(...args);
+            };
+        }
+        f.mode = 'throw-after'; f.confirmation = false;
+        const mutation = new ReviewMediaMutation(deps);
+        const input: ReviewMutationInput = { ownerId: owner, reviewId: review, kind: 'delete' };
+        const request = mutation.run(input);
+        await started;
+        expect(mutation.running).toBe(true); expect(mutation.pending).toBe(false);
+        release();
+        expect(await request).toEqual({ committed: false, code: 'REVIEW_NOT_CONFIRMED' });
+        expect(mutation.running).toBe(false); expect(mutation.pending).toBe(true);
+        f.confirmation = true;
+        expect(await mutation.run(input)).toEqual({ committed: true, code: 'REVIEW_COMMITTED' });
+        expect(f.mutations).toBe(1);
+    });
     test('DB rejection before commit preserves old media and retires only unused uploads', async () => {
         const { f, deps } = fixture(); f.mode = 'reject';
         expect(await new ReviewMediaMutation(deps).run(edit())).toEqual({ committed: false, code: 'REVIEW_CONFLICT' });
@@ -223,6 +256,11 @@ describe('review commit and media failure boundaries', () => {
         deps.rpc = async () => ({ data: null, error: privateFailure });
         expect((await new ReviewMediaMutation(deps).run(edit())).code).toBe('REVIEW_NOT_CONFIRMED');
         expect(f.uploads).toBe(0); expect(f.mutations).toBe(0);
+    });
+    test('held feature catalog stops before review reads, RPCs, uploads, or mutations', async () => {
+        const { f, deps } = fixture(); f.ready = false;
+        expect(await new ReviewMediaMutation(deps).run(edit())).toEqual({ committed: false, code: 'REVIEW_FEATURE_HELD' });
+        expect(f.events).toEqual([]); expect(f.uploads).toBe(0); expect(f.mutations).toBe(0);
     });
     test('a different action cannot join an active edit and report its result as a deletion', async () => {
         const { f, deps } = fixture(); const op = new ReviewMediaMutation(deps);

@@ -1,0 +1,16 @@
+{
+  "imageCases": 12,
+  "chatCases": 18,
+  "exactProviderInputDigestAndCanonicalBytesEqual": true,
+  "reexportsKeepClassAndFunctionIdentity": true,
+  "fetchCalls": 0,
+  "providerGeneratorsInvoked": 0,
+  "scope": "Bounded actual old/new preparation correspondence; not all inputs or cross-OS encoder equivalence.",
+  "baseline": "ee1a518d6017fc613749c613f4027a7ea0978896",
+  "sourceSha256": {
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-image-input.ts": "195f8c3b0756e60885ebf578b14e03d5485dbedf98f7dfc43a8648e6fd6de34a",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-chat-input.ts": "b8e86fe162495f0ff3acfbb0dc22da5aaa508dc4391659c8328ea71c44b04ba4",
+    "apps/web/lib/admin/youtube-thumbnail-generator/gemini-worker-client.ts": "d3b38c78cc9fbfde7ff4e9252952c88b7aa2b595dafd9e5b404c890aa54d0cd0",
+    "apps/web/lib/admin/youtube-thumbnail-generator/chat-gemini-client.ts": "4037c9886365ebac0eee41a908aa564baa0c8f600f14fd17c01e35e1bd9d2889"
+  }
+}

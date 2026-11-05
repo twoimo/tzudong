@@ -4,17 +4,20 @@ import { buildOverseasCountryAddressOrFilter, sanitizePostgrestOrTerm } from "@/
 import { perfMonitor } from "@/lib/performance-monitor";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
-import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn } from "@/lib/supabase-rest-client";
+import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn, SupabaseRestRowsError } from "@/lib/supabase-rest-client";
 import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-counts";
 import { fetchVerifiedReviewCountRows } from "@/lib/verified-review-count-rows";
 import {
     applyHomeMapThemeFilter,
+    homeMapThemeFilterHasUsableMetrics,
     isHomeMapThemeFilterId,
     isYoutubeMetadataBackedHomeMapThemeFilterId,
     type HomeMapThemeFilterId,
 } from "@/lib/home-map-theme-filters";
 import { enrichRestaurantsWithHomeMapYoutubeKpiMetrics } from "@/lib/home-map-youtube-kpi";
 import { describeErrorCodeForLog } from "@/lib/debug-log";
+import { selectHomeMapResultCandidates } from '@/lib/home-map-result-summary';
+import type { HomeMapMode } from '@/lib/home-map-mode-filter';
 import { lookupPublishedPopularityTier, resolvePublishedPopularityTier, type PublishedPopularityLookup } from "@/lib/evidence-engineering/published-popularity";
 
 
@@ -96,7 +99,7 @@ export function selectWithoutEvidenceEmbed(select: string): string {
 }
 
 export function isMissingEvidenceRelationError(error: unknown): boolean {
-    return error instanceof Error && error.message.includes("PGRST200");
+    return error instanceof SupabaseRestRowsError && error.status === 400 && error.code === 'PGRST200';
 }
 
 export async function fetchRestaurantsRecoveringMissingEmbed<T>(
@@ -113,6 +116,26 @@ export async function fetchRestaurantsRecoveringMissingEmbed<T>(
         return fetchRows(query.map(([key, value]) => (
             key === "select" ? ["select", selectWithoutEvidenceEmbed(select)] : [key, value]
         )));
+    }
+}
+
+/** Fetch until an empty page, even when the server caps rows below our requested size.
+ * A failed later page rejects the whole result instead of publishing partial membership. */
+export async function fetchCompleteRestaurantRows<T extends { id: string }>(
+    query: Array<[string, string | number]>,
+    fetchPage: (query: Array<[string, string | number]>) => Promise<T[]> = fetchRestaurantsRecoveringMissingEmbed<T>,
+): Promise<T[]> {
+    const rows: T[] = [];
+    const seen = new Set<string>();
+    for (;;) {
+        const page = await fetchPage([...query, ['limit', 1000], ['offset', rows.length]]);
+        if (page.length === 0) return rows;
+        // Repeated pages or shifting membership are not a complete snapshot.
+        for (const row of page) {
+            if (seen.has(row.id)) throw new Error('restaurant_pagination_changed');
+            seen.add(row.id);
+        }
+        rows.push(...page);
     }
 }
 
@@ -141,6 +164,9 @@ interface UseRestaurantsOptions {
     enabled?: boolean;
     includeVerifiedReviewCounts?: boolean;
     compact?: boolean;
+    requireComplete?: boolean;
+    homeMapMode?: HomeMapMode;
+    showUserSubmittedMarkers?: boolean;
 }
 
 type NormalizedBounds = [number, number, number, number];
@@ -660,6 +686,9 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         enabled = true,
         includeVerifiedReviewCounts = true,
         compact = false,
+        requireComplete = false,
+        homeMapMode,
+        showUserSubmittedMarkers = true,
     } = options;
 
     const normalizedBounds = normalizeBounds(bounds);
@@ -680,6 +709,8 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         includeVerifiedReviewCounts,
         compact,
         includeYoutubeMetaForTheme,
+        ...(requireComplete ? ['complete'] : []),
+        ...(homeMapMode ? ['home-mode', homeMapMode, showUserSubmittedMarkers] : []),
     ] as const;
 
     return useQuery({
@@ -696,7 +727,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             const query: Array<[string, string | number]> = [
                 ['select', selectFields],
                 ['status', 'eq.approved'],
-                ['order', 'approved_name.asc'],
+                ['order', requireComplete ? 'approved_name.asc,id.asc' : 'approved_name.asc'],
             ];
 
             // 경계(Bounds) 필터 적용 (제공된 경우)
@@ -759,7 +790,9 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             let data: RestaurantWithOptionalName[] = [];
             try {
-                data = await fetchRestaurantsRecoveringMissingEmbed<RestaurantWithOptionalName>(query);
+                data = requireComplete
+                    ? await fetchCompleteRestaurantRows<RestaurantWithOptionalName>(query)
+                    : await fetchRestaurantsRecoveringMissingEmbed<RestaurantWithOptionalName>(query);
             } catch (error) {
                 console.error('레스토랑 데이터 조회 실패:', describeErrorCodeForLog(error));
                 throw error;
@@ -767,10 +800,20 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             // 승인된 리뷰 수 조회: approved canonical과 동일 이름/동일 주소 deleted duplicate 리뷰도 합산합니다.
             const rawRestaurants = (data || []) as RestaurantWithOptionalName[];
+            const mergedRestaurants = mergeRestaurants(rawRestaurants);
+            const candidates = homeMapMode
+                ? selectHomeMapResultCandidates(mergedRestaurants, homeMapMode,
+                    homeMapMode === 'overseas' ? normalizedRegion ?? null : null, showUserSubmittedMarkers)
+                : mergedRestaurants;
             const restaurants = await enrichRestaurantsWithHomeMapYoutubeKpiMetrics(
-                mergeRestaurants(rawRestaurants),
+                candidates,
                 normalizedFeaturedTheme,
             );
+            if (requireComplete && restaurants.length > 0
+                && isYoutubeMetadataBackedHomeMapThemeFilterId(normalizedFeaturedTheme)
+                && !homeMapThemeFilterHasUsableMetrics(restaurants, normalizedFeaturedTheme)) {
+                throw new Error('restaurant_theme_metrics_unavailable');
+            }
             if (!includeVerifiedReviewCounts) {
                 return applyHomeMapThemeFilter(restaurants, normalizedFeaturedTheme) as Restaurant[];
             }

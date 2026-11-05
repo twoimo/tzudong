@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-taste-read-only-interaction-audit-partial",
+  "status": "interrupted",
+  "reason": "A Bun static-check command executed the audit script. The process was stopped before the source-stable final run.",
+  "completedCaseCount": 18,
+  "screenshotCount": 18,
+  "reportWritten": false,
+  "syntheticFixture": true,
+  "productionEvidence": false,
+  "taskSpeedEvidence": false,
+  "usableForFinalPass": false,
+  "mutationAuthority": false
+}

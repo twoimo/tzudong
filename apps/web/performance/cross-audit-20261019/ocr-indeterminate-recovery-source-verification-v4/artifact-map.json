@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "scope": "receipt-ocr-recovery108-fixture-candidate",
+  "artifacts": [
+    {
+      "path": "compiler-check.json",
+      "sha256": "b8bfff843b4a51d3379e17c0ac0421c5c5456395cb6368fcf1faca30e0702ebd",
+      "bytes": 421
+    },
+    {
+      "path": "compiler-unit.txt",
+      "sha256": "f558e1a4fbebc27ea0d6832a41c5037233867906192ed9008c8f2bb21bcd95bf",
+      "bytes": 606
+    },
+    {
+      "path": "eslint.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "fixture-trust-boundary-check.txt",
+      "sha256": "62678fdd31ba8a5840030af9f3d07bac2765dec1143b95f8bae9e100599c8bd2",
+      "bytes": 105
+    },
+    {
+      "path": "source-hashes.txt",
+      "sha256": "dcb02debdc75d86935e2aff1b92a4216f681d4e5c7a753857304415a0e2f78c7",
+      "bytes": 974
+    },
+    {
+      "path": "untracked-whitespace-check.txt",
+      "sha256": "6bdb87985ec7d08b2f4e0aa5ec9126ae4036d9d7f40d5a276b4166968b233332",
+      "bytes": 34
+    }
+  ]
+}

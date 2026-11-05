@@ -1,0 +1,43 @@
+{
+  "observed_at": "2026-10-20T09:42:28.638268+00:00",
+  "base_commit": "604867645198dd653de1a2000837af0ba4f39af4",
+  "prior_final_review_sha256": "694cdb96fe51d11f7b98feb483d9b42eb95d8067360dc0d1c1d7c54fe8f8de9e",
+  "prior_bundle_sha256": "a5037ceed60bf1400941d97c39a7074c83e7d2c3c82932e29f3c79cefe2fcb45",
+  "source_files": [
+    {
+      "path": "apps/web/components/restaurant/PopularityBadge.tsx",
+      "bytes": 5436,
+      "sha256": "35eed050e8c73b5b1c58301ac63fa19681cb33a733eec63002c5e206dc82596b"
+    },
+    {
+      "path": "apps/web/hooks/useDevicePerformance.ts",
+      "bytes": 8389,
+      "sha256": "db9f8cfeecf7d7086482752e48455a4d9fd1150412a1a360cd28715d9d05f5ca"
+    },
+    {
+      "path": "apps/web/components/restaurant/Badge3DViewer.tsx",
+      "bytes": 5473,
+      "sha256": "a54439aa7e2046f7ab96c8cedf9963d7fb0abd258e5a0fb21080581ba58ed760"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-device-capability.ts",
+      "bytes": 929,
+      "sha256": "d3d0f575f0e483dfbb5ab465379f0f65c95d28ec97b0190335710cd840125b68"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts",
+      "bytes": 3306,
+      "sha256": "b470fe9fb3c3a8c9984cc075f3be1004f394c6732872b6c6b94e67310372dfd0"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-viewer-session.ts",
+      "bytes": 1369,
+      "sha256": "a91586c89ded779c3ab47995696a98e5e19502c81f7b1751e1fd9d750cc822a6"
+    },
+    {
+      "path": "apps/web/types/three.d.ts",
+      "bytes": 1784,
+      "sha256": "a44ee2cd369612f5160db8a7343c34c75f5b9042027deb86784abb0bf9567054"
+    }
+  ]
+}

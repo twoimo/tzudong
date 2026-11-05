@@ -11,7 +11,7 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const ROUTE_CANDIDATE_SELECT = 'id, name, approved_name, categories, road_address, jibun_address, lat, lng, youtube_link, youtube_meta, source_type, status, is_missing, is_not_selected';
+const ROUTE_CANDIDATE_SELECT = 'id, name:approved_name, approved_name, categories, road_address, jibun_address, lat, lng, youtube_link, youtube_meta, source_type, status, is_missing, is_not_selected';
 const ROUTE_CANDIDATE_POOL_LIMIT = 500;
 const ROUTE_CANDIDATE_DEFAULT_LIMIT = 7;
 const ROUTE_CANDIDATE_MAX_LIMIT = 7;

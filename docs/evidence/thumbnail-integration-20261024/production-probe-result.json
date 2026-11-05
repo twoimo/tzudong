@@ -1,0 +1,11 @@
+{
+  "distDirectory": "/Users/twoimo/.codex/worktrees/admin-submission-read-20261023/tzudong/apps/web/.next-pr3515-47ecb50a",
+  "port": 62112,
+  "scope": "Existing full production dependency runner, isolated dist/port; no hosted writes or paid generation",
+  "command": [
+    "/opt/homebrew/opt/node@24/bin/node",
+    "scripts/run-dependency-modernization-browser.mjs"
+  ],
+  "exit": 1,
+  "fixedOutput": "error=Error code=DEPENDENCY_MODERNIZATION_BUILD_FAILED\n"
+}

@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import {
   MAX_STORYBOARD_IMAGE_BYTES, MAX_STORYBOARD_IMAGE_PIXELS,
-  StoryboardProductionError, storyboardProductionAssetSchema,
+  StoryboardProductionError, storyboardProductionAssetSchema, storyboardStoredProductionAssetSchema,
   type StoryboardProductionAsset, type StoryboardProductionProvenance,
 } from './production-contract.ts';
 
@@ -12,7 +12,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const formats = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' } as const;
 
 export function trustedStoryboardAsset(value: unknown, projectId: string): StoryboardProductionAsset | null {
-  const parsed = storyboardProductionAssetSchema.safeParse(value);
+  const parsed = storyboardStoredProductionAssetSchema.safeParse(value);
   if (!parsed.success || !uuid.test(projectId)) return null;
   const asset = parsed.data;
   const prefix = `${projectId}/${asset.id}/`;

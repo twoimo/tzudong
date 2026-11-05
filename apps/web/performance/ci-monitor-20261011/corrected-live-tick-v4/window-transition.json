@@ -1,0 +1,23 @@
+{
+  "schema": "tzudong-ci-monitor-window-transition/v1",
+  "oldVersion": "v3",
+  "newVersion": "v4",
+  "reason": "authenticate and parse identical byte snapshots; reject default tick path escapes",
+  "oldBaselineChanged": false,
+  "oldCheckpointChanged": false,
+  "oldConfigChanged": false,
+  "analysisCheckpointCopied": false,
+  "cacheBackup": {
+    "attempts": 67,
+    "runsSha256": "97871f435cd780b7c08cf99ed74bd2fae403a4019674ea7e0229c72408e14ee4",
+    "integrity": "ok"
+  },
+  "oldAlertKeysPreserved": true,
+  "archiveFileCount": 16,
+  "archiveManifestSha256": "9d46316657be0acbc38503a6db9862043df645d8b5803a9a34e2e33fc43125f1",
+  "status": "activated_first_manual_tick_verified",
+  "firstTickId": "20261011T103501.642176Z",
+  "configSha256": "b78b6876a47cb6d1220aeb5462f8bd094496b291e6ed6df7c2f192fe927dae36",
+  "automationPromptSha256": "2fd09c35799e57b2c8bbad01a4057bba666b4b57d0ddc9621727c501a71e6aeb",
+  "futureScheduledTickVerified": false
+}

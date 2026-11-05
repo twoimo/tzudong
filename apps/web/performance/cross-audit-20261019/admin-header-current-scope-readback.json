@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-scope-admin-header-render-readback",
+  "recordedAt": "2026-10-18T18:05:02.301671+00:00",
+  "sourceHeadBefore": "dfa77ca0b509c508ac29ec5f93fe7eb3f45cc16f",
+  "sourceHeadAfter": "14a8f5da4268df890c7adf10bf89e99ce071f6f5",
+  "wholeTreeEqualityClaimed": false,
+  "scopedHeaderSignature": "56d4f6020f5ef68fd99aa5d89ca812cefe7b775f61573628533132dd4eaca82f",
+  "scopedHeaderInputs": {
+    "apps/web/components/admin/AdminConsoleOverview.tsx": "35bfe60a0284d51ad78bb0c1ad8b1c86c86dbe13e0b1be51ff102d244965bc9c",
+    "apps/web/components/admin/AdminPageHeader.tsx": "ac2621a32fbed7b801798675683a439b8900621ef86e6116034d71a1cfb40a73",
+    "apps/web/styles/admin-ui.css": "54ba62adad95ebb3aac23e472786e818e607d8ada6bbd610efbc31f7ddc0755a",
+    "apps/web/lib/admin/sidebar-order.ts": "683c58425a93d003937aea4f6f7e835ab0e57d56057d4a71c30bfe10eb11b6dc",
+    "apps/web/lib/admin/admin-module-routing.ts": "878c7dc8e5fc8a2bf29c4b17a9fe4544c548c1b95c8aa76a53abdb138981c22a",
+    "apps/web/lib/admin/admin-module-metadata.ts": "fa51249ba3430c3473840b2e73ca6bb2dcef6f9de69f449f0acd3c7a8d955520",
+    "apps/web/app/admin/page.tsx": "765f9964b40fe4adaea536e358550271fe651b41869d11a408b873e78c8cf235"
+  },
+  "scopedHeaderInputsCurrentMatched": 7,
+  "comparisonCondition": {
+    "historicalReceipt": "apps/web/performance/admin-header-consistency-20261011/scroll-owner-final-render-readback.json",
+    "historicalReceiptSha256": "602a6717fffc566be05517bb5e45d4f21dfc55179831dc82feaf4b2646f7dbb1",
+    "modules": [
+      {
+        "id": "overview",
+        "title": "대시보드 (KPI)"
+      },
+      {
+        "id": "restaurants",
+        "title": "맛집 관리"
+      },
+      {
+        "id": "submissions",
+        "title": "제보 관리"
+      },
+      {
+        "id": "reviews",
+        "title": "리뷰 관리"
+      },
+      {
+        "id": "users",
+        "title": "사용자 관리"
+      },
+      {
+        "id": "banners",
+        "title": "배너 관리"
+      },
+      {
+        "id": "insights",
+        "title": "영상 성과 분석"
+      },
+      {
+        "id": "pipeline",
+        "title": "크롤러 파이프라인"
+      },
+      {
+        "id": "knowledge-graph",
+        "title": "지식 그래프"
+      },
+      {
+        "id": "sentry",
+        "title": "오류 모니터링"
+      },
+      {
+        "id": "youtube-thumbnail-generator",
+        "title": "유튜브 썸네일 생성"
+      },
+      {
+        "id": "storyboard",
+        "title": "스토리보드 생성"
+      },
+      {
+        "id": "routes",
+        "title": "맛집 동선 추천"
+      },
+      {
+        "id": "llm",
+        "title": "운영 보조"
+      },
+      {
+        "id": "audit",
+        "title": "감사 로그"
+      }
+    ],
+    "viewports": [
+      {
+        "width": 1423,
+        "height": 954
+      },
+      {
+        "width": 768,
+        "height": 1024
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "colorScheme": "light",
+    "reducedMotion": "reduce"
+  },
+  "summary": {
+    "total": 45,
+    "expected": 45,
+    "uniquePairs": 45,
+    "sidebarEntries": 45,
+    "titleMismatches": 0,
+    "titleClipping": 0,
+    "documentHorizontalOverflow": 0,
+    "headerHorizontalOverflow": 0,
+    "actionClipping": 0,
+    "visibleH1Violations": 0,
+    "casesWithViolations": 0,
+    "pageErrors": 0,
+    "consoleErrors": 212,
+    "consoleWarnings": 0,
+    "blockedNonLoopbackRequests": 0,
+    "blockedNonLoopbackWebsockets": 0
+  },
+  "fixtureHttpStatusCounts": {
+    "404": 121,
+    "405": 88,
+    "503": 3
+  },
+  "teardown": {
+    "taskOwnedBrowserClosed": true,
+    "taskOwnedServerStopped": true,
+    "portsStopped": [
+      18820,
+      18821,
+      18822
+    ],
+    "tsconfigRestoredExact": true,
+    "nextEnvRestoredExact": true,
+    "historicalSourceVerificationRestoredExact": true,
+    "appOrHarnessSourceEdited": false,
+    "gitWrites": 0
+  },
+  "limits": [
+    "Synthetic loopback fixture only; no hosted database, provider, deployed admin or record mutation was exercised.",
+    "The header verdict covers title and action placement, horizontal overflow, clipping, one visible h1 and sidebar entry for 15 menus at three fixed viewports.",
+    "Loopback fixture endpoint gaps are retained and prevent any claim that all menu workflows function normally.",
+    "No whole-tree equality is claimed; only the listed scoped header inputs were compared before and after rendering."
+  ],
+  "originalLocalArtifact": {
+    "path": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/current-headers-dfa77ca0/render-readback.json",
+    "sha256": "a50b2b7fb294497425c6b50e1976c6a4955f9329184e5b2b960bc8275bb2e89e"
+  },
+  "screenshots": {
+    "locationKind": "local_runtime_artifact",
+    "directory": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/current-headers-dfa77ca0/screenshots",
+    "manifestPath": "/Users/twoimo/.codex/runtime-cache/tzudong-resume-20261018/current-headers-dfa77ca0/screenshots.sha256",
+    "manifestSha256": "f7088c22d8f9f69e81d46c37835e12c9c03f958f7c6171524de9188d90701b8e",
+    "rootVerifiedCount": 45
+  },
+  "rootVisualReview": {
+    "screenshotsReviewed": [
+      "restaurants-1423x954.png",
+      "users-390x844.png"
+    ],
+    "observations": [
+      "Restaurant desktop shows the title, count, mode and automation controls in one primary row; table rows use neutral surfaces with semantic failure markers.",
+      "User mobile shows a single-column search/filter/list/detail pattern with aligned actions."
+    ],
+    "subjectiveScore": null,
+    "limitations": "This component review does not claim a full marketing-page taste-skill inspector gate, production functionality, task-time improvement or statistical confidence."
+  }
+}

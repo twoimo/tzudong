@@ -1,0 +1,176 @@
+{
+  "schema_version": "tzudong.cms-final-diff-audit.v1",
+  "captured_at": "2026-10-18T22:18:44+0900",
+  "repository_head": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "mode": "read-only source audit",
+  "operations_not_performed": [
+    "source edits",
+    "test reruns",
+    "browser actions",
+    "hosted database reads or writes",
+    "storage reads or writes",
+    "git mutation"
+  ],
+  "scope": {
+    "user_paths": [
+      "apps/web/components/admin/AdminUsersPanel.tsx",
+      "apps/web/app/api/admin/users/route.ts",
+      "apps/web/tests-unit/admin-user-management-source.test.ts",
+      "apps/web/tests-unit/admin-users-mutation-scope.test.ts",
+      "apps/web/tests-unit/admin-users-pagination-contract.test.ts"
+    ],
+    "banner_paths": [
+      "apps/web/app/admin/banners/page.tsx",
+      "apps/web/hooks/use-ad-banners.tsx",
+      "apps/web/app/api/admin/banners/route.ts",
+      "apps/web/tests-unit/ad-banner-url-security.test.ts",
+      "apps/web/tests-unit/admin-banners-functional-contract.test.ts"
+    ]
+  },
+  "source_freeze_sha256": {
+    "apps/web/app/admin/banners/page.tsx": "4d608e7f0cd4d019cf4d10b449c7873bd40cd602852cc6e44291235702fca30c",
+    "apps/web/hooks/use-ad-banners.tsx": "5850f5ff435a579311424b14d9e398712d55539c9fe72a7a20ed7e9ff23bff3a",
+    "apps/web/app/api/admin/banners/route.ts": "c21824ff05eaa81aaecb0136acf343aafe5b6013a0fbb196355fc5112e72bdc6",
+    "apps/web/components/admin/AdminUsersPanel.tsx": "9c2cde69fc0a9abe6189642795aaecc37f117c674dc6f51b65339ccae9f6d9c0",
+    "apps/web/app/api/admin/users/route.ts": "6f7251f0f7fd84227bfc26609395cbfaf4437d7254cf94c7f6870ab4a327bc99",
+    "apps/web/tests-unit/admin-banners-functional-contract.test.ts": "1e01a06f5fe9f79c712f0601b90f3850482aaecbd8acd241edb52e303bc68d0d",
+    "apps/web/tests-unit/admin-users-pagination-contract.test.ts": "4797cf2abaea7a4154279800495869ef7fc458fd019362be0fae0f6881c5ff6c"
+  },
+  "frozen_ocr_sha256": {
+    "apps/web/lib/ocr/gemini.ts": "341f17e62809b22746e2574d6bb2482fb849e53a7e86591236ec4aa350c44e6e",
+    "apps/web/tests-unit/gemini-ocr.test.ts": "b5281bbd5181bf244e9f302610cee80e53aa5a5d6ab2a6f53c2b419ae7000b7b"
+  },
+  "findings": [
+    {
+      "id": "CMS-FINAL-001",
+      "severity": "high",
+      "verdict": "must_fix_before_release",
+      "phase": "banner save conflict detection before mutation",
+      "paths": [
+        "apps/web/app/admin/banners/page.tsx:556",
+        "apps/web/app/admin/banners/page.tsx:643",
+        "apps/web/hooks/use-ad-banners.tsx:314"
+      ],
+      "counterexample": [
+        "Admin A opens banner revision v1 and edits only the description.",
+        "Admin B changes the title or activation state, producing revision v2.",
+        "Admin A saves without manually refreshing first.",
+        "The update reads only current persistence URLs, then updates by id with A's complete stale form; no updated_at or equivalent revision predicate is applied."
+      ],
+      "observed_control_flow": "The refreshConflict guard blocks only conflicts discovered by refreshBannerList. handleSubmit then calls updateBanner.mutateAsync, whose update is filtered only by id.",
+      "impact": "A stale clean baseline can overwrite a newer title, state, priority, targets, or URL without warning. The post-write readback can confirm A's overwrite, so it does not detect the lost update.",
+      "minimal_reproduction": {
+        "fixture": "one banner with identical id and different updated_at values",
+        "assertion": "a save based on v1 must reject or surface conflict when the stored row is v2; current source has no revision input or predicate"
+      },
+      "test_gap": "admin-banners-functional-contract.test.ts covers conflicts found during refresh, but no concurrent v2 update between editor open and save."
+    },
+    {
+      "id": "CMS-FINAL-002",
+      "severity": "high",
+      "verdict": "must_fix_before_release",
+      "phase": "banner delete conflict and media cleanup",
+      "paths": [
+        "apps/web/app/admin/banners/page.tsx:667",
+        "apps/web/app/admin/banners/page.tsx:676",
+        "apps/web/hooks/use-ad-banners.tsx:355"
+      ],
+      "counterexample": [
+        "Admin A opens banner v1 containing media path old.webp.",
+        "Admin B updates the same banner to v2 containing media path new.webp.",
+        "Admin A deletes without refreshing.",
+        "The row delete is filtered only by id, and cleanup paths are derived from A's stale bannerToDelete snapshot."
+      ],
+      "observed_control_flow": "Neither the delete mutation nor handleDelete compares the opened updated_at with the current row. After deletion, media cleanup uses the stale image_url and video_url.",
+      "impact": "A newer banner revision can be deleted without a conflict prompt, old media can be removed, and the authoritative v2 media object can be orphaned.",
+      "minimal_reproduction": {
+        "fixture": "v1 and v2 rows with the same id and different updated_at and media URL",
+        "assertion": "delete from a v1 editor must fail closed when the stored revision is v2 and must clean only the deleted authoritative row's media"
+      },
+      "test_gap": "The current functional contract checks a refresh-discovered conflict flag, but it does not exercise a concurrent update followed directly by delete."
+    },
+    {
+      "id": "CMS-FINAL-003",
+      "severity": "medium",
+      "verdict": "must_fix_before_release",
+      "phase": "banner save or delete readback mismatch recovery",
+      "paths": [
+        "apps/web/app/admin/banners/page.tsx:648",
+        "apps/web/app/admin/banners/page.tsx:690",
+        "apps/web/app/admin/banners/page.tsx:714"
+      ],
+      "counterexample": [
+        "A save succeeds, but the next list read returns a valid newer row that differs from the saved snapshot; or a delete reports success but the target row remains.",
+        "pendingReadback remains set.",
+        "Each manual state recheck returns early at the pending branch before getBannerRefreshEditorDecision can create a recoverable refreshConflict.",
+        "For an unconfirmed delete, resetForm already clears the target editor while the pending lock remains."
+      ],
+      "observed_control_flow": "Saved mismatch returns at line 723 and delete mismatch returns at line 727. The explicit conflict decision begins later at line 736. Editor, list, create, save, delete, and close controls are disabled while pendingReadback is set.",
+      "impact": "A valid conflicting latest state cannot be accepted in the current session. The admin is left in a repeated recheck loop; the delete path additionally shows a blank disabled editor. Reloading the page is the only evident escape.",
+      "minimal_reproduction": {
+        "save": "pending saved snapshot S plus refetch row L with the same id but different title",
+        "delete": "pending deletedId D plus refetch data still containing D",
+        "assertion": "the UI must expose accept-latest, retry-safe, or explicit unresolved recovery instead of returning with a permanent pending lock"
+      },
+      "test_gap": "The new helper tests stop at refresh decision classification and do not run the pending saved/deleted mismatch branches through a second recheck."
+    },
+    {
+      "id": "CMS-FINAL-004",
+      "severity": "medium",
+      "verdict": "conditional",
+      "phase": "admin user mutation conflict recovery",
+      "paths": [
+        "apps/web/components/admin/AdminUsersPanel.tsx:371",
+        "apps/web/components/admin/AdminUsersPanel.tsx:509",
+        "apps/web/tests-unit/admin-users-mutation-scope.test.ts"
+      ],
+      "counterexample": [
+        "A user mutation returns success, but another administrator changes the same field before exact readback.",
+        "The exact row is valid but does not match pending.expected.",
+        "pendingReadback is deliberately retained, all list and mutation intents except state recheck are blocked, and repeated reads of the newer state cannot resolve the lock."
+      ],
+      "impact": "No duplicate mutation is sent, but the session cannot accept the authoritative newer user state or continue managing other users without a page reload.",
+      "condition": "Release-blocking if recoverability without reload is a CMS requirement; otherwise document reload as the explicit recovery path and present it in the alert.",
+      "test_observation": "The mutation-scope test explicitly asserts that a newer nonmatching exact result never releases the lock, so this is current intended behavior rather than an uncovered branch."
+    }
+  ],
+  "verified_source_contracts": [
+    {
+      "id": "CMS-PASS-001",
+      "phase": "dirty intent",
+      "result": "pass",
+      "evidence": "User profile dirty state defers select, search, filter, sort, page, reset, and refresh intents. Banner dirty state defers selection and close until explicit discard."
+    },
+    {
+      "id": "CMS-PASS-002",
+      "phase": "single deferred banner refetch",
+      "result": "pass_with_limit",
+      "evidence": "readBannerRefresh compares a live editor revision after await and preserves edits or selection changed during that one refetch.",
+      "limit": "No refresh generation orders two overlapping refetch completions; this audit did not establish that React Query can expose reverse-order results in this page."
+    },
+    {
+      "id": "CMS-PASS-003",
+      "phase": "user exact readback merge",
+      "result": "pass",
+      "evidence": "A matching exact readback generation-safely replaces the visible row before a following list failure, preserving the verified detail state."
+    },
+    {
+      "id": "CMS-PASS-004",
+      "phase": "bounded user filtering and pagination",
+      "result": "pass_with_declared_limit",
+      "evidence": "Filtered scans are capped at 1,000 source users, return isPartial, and the UI discloses the cap and directs exact ID lookup."
+    },
+    {
+      "id": "CMS-PASS-005",
+      "phase": "admin banner read boundary",
+      "result": "pass",
+      "evidence": "Malformed admin banner rows fail the query instead of disappearing, and authenticated GET success, failure, and auth rejection carry private no-store headers."
+    }
+  ],
+  "evidence_limits": [
+    "This is source and test-contract inspection only.",
+    "No live concurrency, browser interaction, Supabase policy, database row, or Storage object was observed.",
+    "Existing passing test results were not rerun.",
+    "The findings describe reachable control flow and missing revision predicates; they do not claim a production incident occurred."
+  ]
+}

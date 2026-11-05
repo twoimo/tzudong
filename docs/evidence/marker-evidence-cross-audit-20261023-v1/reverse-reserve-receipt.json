@@ -1,0 +1,35 @@
+{
+  "status": "reserved",
+  "reservation": {
+    "provider": "chatgpt",
+    "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+    "job": "tzudong-8d47c225-reverse-20261023",
+    "bundle": "518e75cc2d05ed2dc3dedfdd7e27a3c5d41dd053e460ab3897768f96f7b106b2",
+    "request_id": "cc3ddf342d3299e63deafde2",
+    "queued_at": "2026-10-22T21:16:32.568145+00:00",
+    "account_hint": "primary",
+    "work_state": "ready",
+    "stage": "reverse",
+    "account": "primary",
+    "model": "GPT-6 / Pro",
+    "research": "off",
+    "phase": "prepared",
+    "reserved_at": "2026-10-22T21:16:32.568447+00:00",
+    "url": null,
+    "admission_mode": "user_override",
+    "lifecycle_managed": true,
+    "lifecycle_version": 2,
+    "require_source_inputs": true,
+    "audit_mode": true,
+    "actual_model": "GPT-6 / Pro",
+    "actual_research": "off",
+    "mode_contract": "chatgpt-gpt6-pro-thinking",
+    "user_override": {
+      "authorization": "Currenthuman2026-10-23explicitlyapprovesTzudongonlyFIFOandlocalslotexceptionforGeminihighestthinkingandGPT6Proordinaryreverse; preserveactualquotas, servicewarnings,otherowneroperations,queuesanduncertainsends.",
+      "at": "2026-10-22T21:16:32.568539+00:00",
+      "scope": "this reservation only",
+      "local_policy": "fifo",
+      "active_count_before": 2
+    }
+  }
+}

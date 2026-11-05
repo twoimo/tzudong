@@ -61,11 +61,12 @@ export function buildStorageObjectKey(videoId: string, timestampMs: number, cont
 export function planFrameSamplingWindow(videoId: string, targetTimestampMs: number): FrameSamplingPlan {
   const id = requireYouTubeVideoId(videoId);
   const target = requireTimestampMs(targetTimestampMs);
+  const end = requireTimestampMs(target + FRAME_SAMPLING.windowMs);
   return {
     video_id: id,
     target_timestamp_ms: target,
     window_start_ms: Math.max(0, target - FRAME_SAMPLING.windowMs),
-    window_end_ms: target + FRAME_SAMPLING.windowMs,
+    window_end_ms: end,
     sample_fps: FRAME_SAMPLING.sampleFpsAfterDecode,
     keyframe_role: FRAME_SAMPLING.keyframeRole,
     loads_full_video_in_node: false,
@@ -174,6 +175,16 @@ function sameIdentity(left: RestaurantEvidenceFrame, right: RestaurantEvidenceFr
     left.detected_shop_name === right.detected_shop_name &&
     left.detected_branch_name === right.detected_branch_name
   );
+}
+
+// Public detail rendering must fail closed without taking down the restaurant panel.
+export function approvedEvidenceFramesOrEmpty(groups: readonly RestaurantEvidenceFrame[][]): RestaurantEvidenceFrame[] {
+  try {
+    return unionApprovedEvidenceFrames(groups);
+  } catch (error) {
+    if (error instanceof EvidenceContractError) return [];
+    throw error;
+  }
 }
 
 export function unionApprovedEvidenceFrames(groups: readonly RestaurantEvidenceFrame[][]): RestaurantEvidenceFrame[] {

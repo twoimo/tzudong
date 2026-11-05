@@ -1,0 +1,612 @@
+{
+  "schema": "tzudong-storyboard-gemini-verification-v3-cutover-race",
+  "recordedAt": "2026-10-13T11:07:02.044749Z",
+  "evidenceClass": "local source, mocked runtime and exact PostgreSQL 17.6 fixture only",
+  "supersedes": {
+    "path": "apps/web/performance/ui-renewal-20261003/storyboard-gemini-only-verification-20261013-corrected.json",
+    "sha256": "19f5163cab98747d2ce4c5a30d3d5e682b363e387fe6e2f8c2185d8a0e5ed482",
+    "reason": "Adds durable archive table guards and exact pre-cutover RPC race coverage. The prior corrected receipt remains unchanged."
+  },
+  "sourceFreeze": {
+    "baselineCommit": "683f8975069ebd6d366112e6a1816959e751eb19",
+    "branch": "codex/feature-completion-20261013",
+    "independentReview": "/root/storyboard_independent_review",
+    "cutoverRaceFixApplied": true,
+    "independentRaceRetestPending": true,
+    "staged": false,
+    "committed": false,
+    "pushed": false,
+    "deployed": false
+  },
+  "executionPolicy": {
+    "workflow": "storyboard-gemini-v1",
+    "archiveWorkflow": "storyboard-mlx-v1",
+    "provider": "gemini-api",
+    "executableModels": {
+      "text": [
+        "gemini-3.8-flash"
+      ],
+      "image": [
+        "gemini-3.1-flash-image",
+        "gemini-3-pro-image"
+      ]
+    },
+    "textThinkingLevel": "MEDIUM",
+    "held": "All other provider/model identifiers and storyboard-mlx-v1 mutations/claims are rejected.",
+    "liveAccountAvailabilityVerified": false
+  },
+  "runtime": {
+    "bun": "1.4.0",
+    "node": "v26.11.1",
+    "python": "3.14.8",
+    "psycopg2": "2.9.11",
+    "postgresFixture": "17.6",
+    "fixtureTransport": "task-owned Unix socket /Users/twoimo/.codex/runtime-cache/tzudong-postgresql-17.6/socket, port 18797; no hosted database"
+  },
+  "cutoverInvariant": {
+    "guardFunction": "public.storyboard_production_reject_archived_write()",
+    "guardedTables": [
+      "admin_storyboard_production_projects",
+      "admin_storyboard_production_jobs",
+      "admin_storyboard_production_assets",
+      "admin_storyboard_production_events",
+      "admin_storyboard_production_revisions",
+      "admin_storyboard_production_restores"
+    ],
+    "operations": "BEFORE INSERT OR UPDATE",
+    "error": {
+      "sqlstate": "55000",
+      "message": "archived_project_read_only"
+    },
+    "triggerSecurity": {
+      "owner": "postgres",
+      "securityDefiner": false,
+      "searchPath": "",
+      "anonExecute": false,
+      "authenticatedExecute": false,
+      "serviceRoleExecute": true
+    },
+    "preservation": "Existing archive rows remain readable. The one-time cutover holds active jobs before installing guards; no archive document, asset, revision, restore receipt, or prior event is deleted."
+  },
+  "sourceBinding": {
+    "algorithm": "sha256(path NUL file-sha LF), followed by D NUL deleted-path LF in listed order",
+    "aggregateSha256": "6634a95480a122833910a703dd4edeb4e877f421fc40fc11f80363679500dda2",
+    "files": [
+      {
+        "path": "apps/web/app/api/admin/storyboard/production/[id]/images/route.ts",
+        "sha256": "f4e430ad1d0a5eff6c19ed13cfffba1d561710d701b7b68a0ccec1af6df2d465",
+        "bytes": 191
+      },
+      {
+        "path": "apps/web/app/api/admin/storyboard/production/route.ts",
+        "sha256": "b847d1e6e849d7dc2b1c380fe72ed426fcac1b8471be4f938d6909683bcd0803",
+        "bytes": 261
+      },
+      {
+        "path": "apps/web/app/api/storyboard-worker/images/route.ts",
+        "sha256": "b3f71403e3d1f87fdaf52f0cd064e656c544ea36204422b8ab4b9e466b81db2b",
+        "bytes": 216
+      },
+      {
+        "path": "apps/web/app/api/storyboard-worker/route.ts",
+        "sha256": "a009f6a702efc42dc3731f2b76cc6dfce69761313e9d947ada4c9b9b86eba2c5",
+        "bytes": 211
+      },
+      {
+        "path": "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+        "sha256": "cb8dcc7bcd01d62d293793fd13461817063ea68b61acf040d5e452cf7c15a752",
+        "bytes": 2503
+      },
+      {
+        "path": "apps/web/components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+        "sha256": "3bae4ca55cc5dfa55791321242d6281aa34d4e20f2044886fafb440de8cff1f8",
+        "bytes": 59474
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/gemini-client.ts",
+        "sha256": "cacefadf6e7aae666c544cfb716662b9a2eb39a68f65ca840478797fadbb036f",
+        "bytes": 9175
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/gemini-models.ts",
+        "sha256": "ab400eb533abb4c4a65d2a1c31329fbe744c4569e3a7187a8d2e01a4c3816dca",
+        "bytes": 2192
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/outbound-worker-contract.ts",
+        "sha256": "e54bb5c1a26bdba03c8c3f485b784b6a7a313ba5602a82bc8a01cdcbcfe901cf",
+        "bytes": 1644
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/outbound-worker.ts",
+        "sha256": "48e722f0d62d2e44a595b7fcc10feed04d026b23e2ebd4ff2a74618094269140",
+        "bytes": 21445
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-api.ts",
+        "sha256": "a3f6bd9fe82ce1e072052cbf6d75feef34c56afa2ab2f666d362d81636203d9f",
+        "bytes": 10960
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-assets.ts",
+        "sha256": "445f1a9395ba32772e216e8e7cb3e6a814d60fa6d795ba733959329a14913814",
+        "bytes": 4234
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-contract.ts",
+        "sha256": "1e4a0676ccb4672021b2c1f1ddc7eb9060eda70efcf3a3c1f7760a3e538a0132",
+        "bytes": 14271
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-model-catalog.ts",
+        "sha256": "a3eefe24d95c603c978d7daaf8e051fd64f73a0d74b5ab8d552012f28f0aa750",
+        "bytes": 1417
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-store.ts",
+        "sha256": "f2f7c56bbf0596853a9acf2dd9c9518a2aa75631f0b6063355c9e3e71adc3cdd",
+        "bytes": 27324
+      },
+      {
+        "path": "apps/web/lib/admin/storyboard/production-worker-auth.ts",
+        "sha256": "f3993b0cb2d2a2cbf41c9d2d005dc26ed48cc5c2751fa9a5c908babded3e35a2",
+        "bytes": 4990
+      },
+      {
+        "path": "apps/web/package.json",
+        "sha256": "769833dbc4cf52e21f70c7b9d826f34a9f5fd09c5be87574dbb7485366c75485",
+        "bytes": 7151
+      },
+      {
+        "path": "apps/web/bun.lock",
+        "sha256": "f8d69a346d03c28298bfcf715dcf94bc2f6854c1493286ddb7ca3e80a5fee22d",
+        "bytes": 247901
+      },
+      {
+        "path": "apps/web/scripts/preview-design-fixtures.mjs",
+        "sha256": "580365d4e7c0a7a6469544fb8ce99debc93367b10501aafbe5d5975beaef23f4",
+        "bytes": 24101
+      },
+      {
+        "path": "apps/web/scripts/run-unit-tests.mjs",
+        "sha256": "563fca587ac4abce9517844e989d91d9a5d87d9f6300cc648c2db4e218e238a3",
+        "bytes": 4446
+      },
+      {
+        "path": "apps/web/scripts/storyboard-gemini-worker.ts",
+        "sha256": "b937d14c2dc76e41f0521596a21a5ac3fcf50eb726e085f22666b516eeb6e38a",
+        "bytes": 2484
+      },
+      {
+        "path": "apps/web/scripts/verify-storyboard-gemini-live.ts",
+        "sha256": "da08d8b1061a86aa1f1f7a94e10cdf6f6ff7ab89f19abc18ae15e3a5755dfe4d",
+        "bytes": 4596
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-gemini-client.test.ts",
+        "sha256": "b5708bb1d73bdbdc68895f782f80cccb25edadeb27204b76bb75c0ecb4d3d4e9",
+        "bytes": 10082
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-gemini-execution-contract.test.ts",
+        "sha256": "a1cdc0f82fb76efdbb1445c33ad9e737fb54bdb430f7488cfbc54a5a7df77b70",
+        "bytes": 9017
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-outbound-worker.test.ts",
+        "sha256": "47449ae9d659a266a91f9cc9da962f2982683bccbe4f0685c0442db4b448afdd",
+        "bytes": 33521
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-production-api.test.ts",
+        "sha256": "f416858ac9b51409041181386064bbf024126de869f0f38c77eec2645ad3a2e0",
+        "bytes": 31933
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-provider-allowlist-parity.test.ts",
+        "sha256": "bf88bc3fce2c4cba41a501878117bf0e464602683576ec1a36f6623d2100bb42",
+        "bytes": 2852
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-resource-invariants.test.ts",
+        "sha256": "22adb6c7ddd8f85203a63f2a75a3f80566e1178ccee5b788c9c13d128309b85c",
+        "bytes": 3272
+      },
+      {
+        "path": "apps/web/tests-unit/storyboard-retired-cli.test.ts",
+        "sha256": "9b5474655324cde569e04e6c5b86dd584bf9fe2565dc58efdb8f6281a2020585",
+        "bytes": 1296
+      },
+      {
+        "path": "apps/web/tests/local-storyboard-workspace-ui.spec.ts",
+        "sha256": "059cfda4b6b91be6046739e5e9ce92eba22951fc194c22dabf6e1f3dde8d33a7",
+        "bytes": 33963
+      },
+      {
+        "path": "apps/web/tests/fixtures/local-storyboard-ui/build.mjs",
+        "sha256": "bf47acce685f551b7832f5486b4656410eabbeab5096987224377c5df16455ee",
+        "bytes": 1128
+      },
+      {
+        "path": "apps/web/tests/fixtures/local-storyboard-ui/entry.ts",
+        "sha256": "ec49df6da2d6a85d403c1db3a258e020b23cf50146f80eacb540cc15d95b587e",
+        "bytes": 398
+      },
+      {
+        "path": "apps/web/tests/fixtures/local-storyboard-ui/input.css",
+        "sha256": "651e215d9dc7189c8c4d296ce9f4bfd5bd4cba1c1978e6c2e9f1c3ef84a18906",
+        "bytes": 76
+      },
+      {
+        "path": "apps/web/tests/fixtures/local-storyboard-ui/next-image-shim.ts",
+        "sha256": "bf9876adfa7e9504d0fab86626113754c62c4f72325add7b8faf74e7dda4d14e",
+        "bytes": 233
+      },
+      {
+        "path": "backend/bin/verify_storyboard_gemini_migration.py",
+        "sha256": "1b7b60185d8191e15ed121e33d62031c6773ddd66be16eddda6ded4563db1df5",
+        "bytes": 41321
+      },
+      {
+        "path": "backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql",
+        "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e",
+        "bytes": 15228
+      }
+    ],
+    "deletedPaths": [
+      "apps/web/lib/admin/storyboard/mlx-client.ts",
+      "apps/web/lib/admin/storyboard/mlx-transport.ts",
+      "apps/web/scripts/codex-imagegen-storyboard-provider.py",
+      "apps/web/scripts/storyboard-eight-real-provider-smoke.ts",
+      "apps/web/scripts/storyboard-gemini-only.mjs",
+      "apps/web/scripts/storyboard-local-bridge.ts",
+      "apps/web/scripts/storyboard-mlx-live.ts",
+      "apps/web/scripts/storyboard-mlx-worker.ts",
+      "apps/web/scripts/storyboard-rag-ollama-pull.mjs",
+      "apps/web/tests-unit/admin-storyboard-local-bridge.test.ts",
+      "apps/web/tests-unit/storyboard-local-egress-child.ts",
+      "apps/web/tests-unit/storyboard-local-egress.test.ts",
+      "apps/web/tests-unit/storyboard-mlx-provider.test.ts",
+      "scripts/codex-imagegen-storyboard-provider.py"
+    ]
+  },
+  "testRuns": [
+    {
+      "id": "storyboard-unit-all",
+      "cwd": "apps/web",
+      "command": "bun test tests-unit/storyboard*.test.ts --timeout 30000",
+      "result": {
+        "exitCode": 0,
+        "passed": 131,
+        "failed": 0,
+        "expectCalls": 817
+      },
+      "providerCalls": 0,
+      "hostedCalls": 0
+    },
+    {
+      "id": "native-typecheck",
+      "cwd": "apps/web",
+      "command": "npm run typecheck:native",
+      "result": {
+        "exitCode": 0
+      },
+      "providerCalls": 0,
+      "hostedCalls": 0
+    },
+    {
+      "id": "diff-whitespace",
+      "cwd": ".",
+      "command": "git diff --check",
+      "result": {
+        "exitCode": 0
+      },
+      "providerCalls": 0,
+      "hostedCalls": 0
+    }
+  ],
+  "priorUnchangedVerification": {
+    "receiptSha256": "19f5163cab98747d2ce4c5a30d3d5e682b363e387fe6e2f8c2185d8a0e5ed482",
+    "adminStoryboardUnits": {
+      "passed": 171,
+      "skipped": 8,
+      "failed": 0
+    },
+    "isolatedChromiumUi": {
+      "passed": 25,
+      "failed": 0
+    },
+    "note": "Not rerun because this correction changes only the SQL migration, SQL verifier and its static source-contract assertion."
+  },
+  "sqlFixtureVerification": {
+    "chains": [
+      {
+        "chain": "original",
+        "command": "TZUDONG_FIXTURE_PG_SOCKET=/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-17.6/socket TZUDONG_FIXTURE_PG_PORT=18797 /Users/twoimo/Documents/projects/tzudong/.venv/bin/python backend/bin/verify_storyboard_gemini_migration.py --chain original --output /private/tmp/storyboard-gemini-cutover-pg17-original.json",
+        "exitCode": 0,
+        "postgresVersion": "17.6",
+        "assertionCount": 30,
+        "assertions": [
+          "idempotent_create",
+          "remote_models_claim_without_fake_disk_bytes",
+          "draft_checkpoint_readback",
+          "non_gemini_create_denied",
+          "stale_lease_rejected",
+          "duplicate_result_rejected_without_resend",
+          "five_images_checkpoint_and_finish_ready",
+          "cas_edit_and_restore_replay_preserve_assets",
+          "expired_lease_backoff_and_restart",
+          "active_cancel_readback",
+          "concurrent_workers_never_double_claim",
+          "browser_roles_denied",
+          "empty_search_path_preserved",
+          "existing_auth_table_grants_unchanged",
+          "bridge_reapply_preserves_all_seven_data_tables",
+          "legacy_public_definers_removed",
+          "unknown_installed_body_fails_and_rolls_back",
+          "expired_claim_never_requeues_paid_generation",
+          "explicit_operator_retry_creates_one_fresh_job",
+          "compatible_job_after_65_incompatible_jobs_is_claimed",
+          "capability_filter_preserves_rpc_metadata_and_incompatible_jobs",
+          "pre_cutover_rpc_bodies_cannot_write_after_cutover",
+          "legacy_active_jobs_retired_without_history_loss",
+          "legacy_heartbeat_recovery_and_checkpoint_are_held",
+          "archived_table_guards_cover_all_execution_children",
+          "archive_readable_but_retry_rejected_before_queue",
+          "non_gemini_create_has_zero_queue_writes",
+          "split_workers_cannot_claim_or_increment_attempts",
+          "new_gemini_workflow_creates_and_claims_exact_pair",
+          "gemini_execution_migration_preserves_rpc_metadata"
+        ],
+        "cutoverRace": {
+          "initialWaits": [
+            [
+              "storyboard_pre_cutover_create",
+              "Lock",
+              "relation"
+            ],
+            [
+              "storyboard_pre_cutover_heartbeat",
+              "Lock",
+              "relation"
+            ]
+          ],
+          "tableLockWaits": [
+            [
+              "storyboard_pre_cutover_create",
+              "admin_storyboard_production_projects",
+              "AccessShareLock"
+            ],
+            [
+              "storyboard_pre_cutover_heartbeat",
+              "admin_storyboard_production_projects",
+              "RowShareLock"
+            ]
+          ],
+          "create": {
+            "sqlstate": "55000",
+            "message": "archived_project_read_only"
+          },
+          "heartbeat": {
+            "result": {
+              "ok": true,
+              "leaseValid": false
+            }
+          },
+          "requestId": "a6afc0e1-c230-41f8-b6bb-838a3696220e"
+        },
+        "archiveWriteGuards": {
+          "triggers": [
+            "storyboard_archive_assets_write_guard",
+            "storyboard_archive_events_write_guard",
+            "storyboard_archive_jobs_write_guard",
+            "storyboard_archive_projects_write_guard",
+            "storyboard_archive_restores_write_guard",
+            "storyboard_archive_revisions_write_guard"
+          ],
+          "tables": 6
+        },
+        "legacyHistorySha256": {
+          "before": "22bf6bdf2713d38fbd43e306a3e72a28b5bb2f81df31f68cbb5bdc82e0413574",
+          "after": "22bf6bdf2713d38fbd43e306a3e72a28b5bb2f81df31f68cbb5bdc82e0413574",
+          "heldJobs": 68
+        },
+        "migrations": [
+          {
+            "file": "20260918021531_storyboard_mlx_worker.sql",
+            "sha256": "3584d659ad253971771bc1a1f49e2f19e837e609e375c22c078673095105a5fa"
+          },
+          {
+            "file": "20260920021531_storyboard_historical_restore.sql",
+            "sha256": "6cd66d48f9fde8b86d89f089da3a5f4cc15dd85475fa0769e5724d40f68d2b95"
+          },
+          {
+            "file": "20261003000812_storyboard_gemini_only.sql",
+            "sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470"
+          },
+          {
+            "file": "20261003182338_storyboard_service_role_bridge.sql",
+            "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+          },
+          {
+            "file": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+            "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0"
+          },
+          {
+            "file": "20261004023841_storyboard_claim_capability_order.sql",
+            "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+          },
+          {
+            "file": "20261013093518_storyboard_gemini_execution_v1.sql",
+            "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e"
+          }
+        ],
+        "operationalDatabaseChanges": false,
+        "rawReceipt": "/private/tmp/storyboard-gemini-cutover-pg17-original.json",
+        "rawReceiptSha256": "1b71481b2dc8c9f4353dcdbdf5b1863dafbf285ac28f06cf048289776e7ca942"
+      },
+      {
+        "chain": "receipt",
+        "command": "TZUDONG_FIXTURE_PG_SOCKET=/Users/twoimo/.codex/runtime-cache/tzudong-postgresql-17.6/socket TZUDONG_FIXTURE_PG_PORT=18797 /Users/twoimo/Documents/projects/tzudong/.venv/bin/python backend/bin/verify_storyboard_gemini_migration.py --chain receipt --output /private/tmp/storyboard-gemini-cutover-pg17-receipt.json",
+        "exitCode": 0,
+        "postgresVersion": "17.6",
+        "assertionCount": 30,
+        "assertions": [
+          "idempotent_create",
+          "remote_models_claim_without_fake_disk_bytes",
+          "draft_checkpoint_readback",
+          "non_gemini_create_denied",
+          "stale_lease_rejected",
+          "duplicate_result_rejected_without_resend",
+          "five_images_checkpoint_and_finish_ready",
+          "cas_edit_and_restore_replay_preserve_assets",
+          "expired_lease_backoff_and_restart",
+          "active_cancel_readback",
+          "concurrent_workers_never_double_claim",
+          "browser_roles_denied",
+          "empty_search_path_preserved",
+          "existing_auth_table_grants_unchanged",
+          "bridge_reapply_preserves_all_seven_data_tables",
+          "legacy_public_definers_removed",
+          "unknown_installed_body_fails_and_rolls_back",
+          "expired_claim_never_requeues_paid_generation",
+          "explicit_operator_retry_creates_one_fresh_job",
+          "compatible_job_after_65_incompatible_jobs_is_claimed",
+          "capability_filter_preserves_rpc_metadata_and_incompatible_jobs",
+          "pre_cutover_rpc_bodies_cannot_write_after_cutover",
+          "legacy_active_jobs_retired_without_history_loss",
+          "legacy_heartbeat_recovery_and_checkpoint_are_held",
+          "archived_table_guards_cover_all_execution_children",
+          "archive_readable_but_retry_rejected_before_queue",
+          "non_gemini_create_has_zero_queue_writes",
+          "split_workers_cannot_claim_or_increment_attempts",
+          "new_gemini_workflow_creates_and_claims_exact_pair",
+          "gemini_execution_migration_preserves_rpc_metadata"
+        ],
+        "cutoverRace": {
+          "initialWaits": [
+            [
+              "storyboard_pre_cutover_create",
+              "Lock",
+              "relation"
+            ],
+            [
+              "storyboard_pre_cutover_heartbeat",
+              "Lock",
+              "relation"
+            ]
+          ],
+          "tableLockWaits": [
+            [
+              "storyboard_pre_cutover_create",
+              "admin_storyboard_production_projects",
+              "AccessShareLock"
+            ],
+            [
+              "storyboard_pre_cutover_heartbeat",
+              "admin_storyboard_production_projects",
+              "RowShareLock"
+            ]
+          ],
+          "create": {
+            "sqlstate": "55000",
+            "message": "archived_project_read_only"
+          },
+          "heartbeat": {
+            "result": {
+              "ok": true,
+              "leaseValid": false
+            }
+          },
+          "requestId": "da59602b-5cf4-4bae-aba1-b1a059db7421"
+        },
+        "archiveWriteGuards": {
+          "triggers": [
+            "storyboard_archive_assets_write_guard",
+            "storyboard_archive_events_write_guard",
+            "storyboard_archive_jobs_write_guard",
+            "storyboard_archive_projects_write_guard",
+            "storyboard_archive_restores_write_guard",
+            "storyboard_archive_revisions_write_guard"
+          ],
+          "tables": 6
+        },
+        "legacyHistorySha256": {
+          "before": "de0d0eebf20cc9d1c61afb883a4e475ef5f8ed4c04a6a60b3b6e923300f16379",
+          "after": "de0d0eebf20cc9d1c61afb883a4e475ef5f8ed4c04a6a60b3b6e923300f16379",
+          "heldJobs": 68
+        },
+        "migrations": [
+          {
+            "file": "20261003000711_storyboard_production_foundation.sql",
+            "sha256": "3364e8c2857b6cb89975f1f91c4b36ffc6007804002152b1db93a597765d5e7e"
+          },
+          {
+            "file": "20261003000811_storyboard_historical_restore.sql",
+            "sha256": "27f610ca03aa1f2513a99c7984f4d07874bbdc9f1069cf2de1775e5cd1da5100"
+          },
+          {
+            "file": "20261003000812_storyboard_gemini_only.sql",
+            "sha256": "a8b26fae49470cab9f1f6e6471930c48b16ddf3b91f18f734bdf24b4f2930470"
+          },
+          {
+            "file": "20261003182338_storyboard_service_role_bridge.sql",
+            "sha256": "d45da517fb2efd94da50c0dc1b78312965f7177a6829b9fb197a0b9d5f144436"
+          },
+          {
+            "file": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+            "sha256": "8ff385edd91aced61c6384c28cee78c2b00f6c7a573c0ac24d4d7a4e7ed4a7c0"
+          },
+          {
+            "file": "20261004023841_storyboard_claim_capability_order.sql",
+            "sha256": "ac20f93c7feb4febb91a3d4ba187e38feba55427da131e011d730505e3dad8a0"
+          },
+          {
+            "file": "20261013093518_storyboard_gemini_execution_v1.sql",
+            "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e"
+          }
+        ],
+        "operationalDatabaseChanges": false,
+        "rawReceipt": "/private/tmp/storyboard-gemini-cutover-pg17-receipt.json",
+        "rawReceiptSha256": "34242e03e2e61d84fd7c16d2cbeac502c045c8ff1829e9e3038a010ce37085b1"
+      }
+    ],
+    "leftoverFixtureDatabases": 0,
+    "providerCalls": 0,
+    "hostedCalls": 0,
+    "hostedWrites": 0
+  },
+  "preservedStandaloneUiArtifacts": [
+    {
+      "classification": "pre-independent-review-fixes",
+      "artifactRoot": "/private/tmp/tzudong-storyboard-gemini-ui-20261013",
+      "bundleSha256": "c530de7b9ec2465971adbb970885c5df462c489a9f0a1cde484ea467eb67e5c7",
+      "loopbackUrl": "http://127.0.0.1:59996/admin?module=storyboard&storyboardProject=10000000-0000-4000-8000-000000000001#workspace",
+      "execSessionId": 21248
+    },
+    {
+      "classification": "post-three-review-fixes; UI source unchanged by cutover-race correction",
+      "artifactRoot": "/private/tmp/tzudong-storyboard-gemini-ui-20261013-corrected",
+      "bundleSha256": "e2849a95ba71412a91fa1b15f26ea2298e10be76e9bf88b9f1099891cbdd14e0",
+      "loopbackUrl": "http://127.0.0.1:57554/admin?module=storyboard&storyboardProject=10000000-0000-4000-8000-000000000001#workspace",
+      "execSessionId": 80811
+    }
+  ],
+  "externalOperations": {
+    "geminiProviderCalls": 0,
+    "otherModelProviderCalls": 0,
+    "hostedDatabaseCalls": 0,
+    "hostedStorageCalls": 0,
+    "hostedWrites": 0,
+    "deployments": 0
+  },
+  "operatingPrerequisites": [
+    "Independent race-fix retest and Root integration remain pending.",
+    "The additive migration was replayed only in owned PostgreSQL 17.6 fixture databases; no hosted migration was applied.",
+    "A funded live Gemini credential/account remains untested; no live provider availability or quota claim is made."
+  ],
+  "limitations": [
+    "The cutover race uses real concurrent PostgreSQL 17.6 sessions and locks against disposable fixture databases; it is not hosted Supabase evidence.",
+    "The preserved standalone artifacts are synthetic and do not prove the full Admin shell, hosted authentication, deployment, or live provider behavior."
+  ]
+}

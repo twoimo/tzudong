@@ -1,0 +1,50 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/popularity-input-boundary.test.ts:
+17 |   return buildPublicPopularity(join(dir, 'source.json'), join(dir, 'metrics.json'), 'a'.repeat(40));
+18 | }
+19 | 
+20 | test('rejects unapproved source rows before merge rather than granting a public tier', async () => {
+21 |   for (const status of ['pending', 'deleted', null]) {
+22 |     await expect(build({ status })).rejects.toThrow('popularity_source_not_approved');
+                                                 ^
+error: expect(received).rejects.toThrow(expected)
+
+Expected promise that rejects
+Received promise that resolved: Promise { <resolved> }
+
+      at <anonymous> (apps/web/tests-unit/popularity-input-boundary.test.ts:22:45)
+(fail) rejects unapproved source rows before merge rather than granting a public tier [2.60ms]
+23 |   }
+24 | });
+25 | 
+26 | test('rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them', async () => {
+27 |   for (const patch of [{ lat: null }, { lng: null }, { lat: '' }, { lng: ' ' }, { lat: 'NaN' }, { lat: 91 }, { lng: -181 }]) {
+28 |     await expect(build(patch)).rejects.toThrow('popularity_source_coordinates_invalid');
+                                            ^
+error: expect(received).rejects.toThrow(expected)
+
+Expected promise that rejects
+Received promise that resolved: Promise { <resolved> }
+
+      at <anonymous> (apps/web/tests-unit/popularity-input-boundary.test.ts:28:40)
+(fail) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [0.87ms]
+29 |   }
+30 | });
+31 | 
+32 | test('preserves approved names and records the actual P98/P95/P85 policy for valid inputs', async () => {
+33 |   const result = await build();
+34 |   expect(result.evidence.groups[0].name).toBe('승인 식당명');
+                                              ^
+error: expect(received).toBe(expected)
+
+Expected: "승인 식당명"
+Received: "한식당"
+
+      at <anonymous> (apps/web/tests-unit/popularity-input-boundary.test.ts:34:42)
+(fail) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [0.82ms]
+
+ 0 pass
+ 3 fail
+ 3 expect() calls
+Ran 3 tests across 1 file. [135.00ms]

@@ -1,0 +1,46 @@
+{
+  "baseCommit": "de62e9426ffd761c4be974a4ca670c034d98489e",
+  "scope": "Direct device-location action and existing authorization/cleanup boundaries. Prior unrelated map/header/stamp changes remain in the candidate.",
+  "sources": [
+    {
+      "path": "apps/web/app/home-client.tsx",
+      "bytes": 49294,
+      "sha256": "efbdee255c00b67aa701a6e1f09b54256d86427db307f6fa501fdb7bd87656ea"
+    },
+    {
+      "path": "apps/web/components/home/SubmissionFloatingButton.tsx",
+      "bytes": 7410,
+      "sha256": "7ed02d611505a748c6ab0d69a3e227a167f2c8e9d98ae4019b7e14a803d7751d"
+    },
+    {
+      "path": "apps/web/components/home/MobileControlOverlay.tsx",
+      "bytes": 77984,
+      "sha256": "62798d583ee235f08eb5372a3ac12c18bd8d9aaca9488115ffe1e8dddef7f4ee"
+    },
+    {
+      "path": "apps/web/components/home/DeviceLocationDisclosure.tsx",
+      "bytes": 546,
+      "sha256": "07508330fab6052617862f49dd7d163a90bf68741e352f85e8fa09a271a12632"
+    },
+    {
+      "path": "apps/web/tests-unit/device-location-privacy.test.ts",
+      "bytes": 18770,
+      "sha256": "e26420e803b7e42a61e89309de3933c188a62ff33da4517b73bc593e181c17b6"
+    },
+    {
+      "path": "apps/web/tests/privacy-safeguards.spec.ts",
+      "bytes": 9934,
+      "sha256": "680cf33397c27fd2f0ab5cf7d958e3d673ac565b9372f9fa03c8d390e9bf1298"
+    },
+    {
+      "path": "apps/web/tests/device-location-helpers.ts",
+      "bytes": 3412,
+      "sha256": "9df8a00abd943fd46041c9a924f354c826f1441be1cd7054ea0c59d622c6086d"
+    },
+    {
+      "path": "apps/web/tests/device-location-local-probes.ts",
+      "bytes": 4019,
+      "sha256": "9cdd570eefd2e0664f88974168dcacea8b7afd8a87d5249f420acdec679b4442"
+    }
+  ]
+}

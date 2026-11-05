@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "status": "VERCEL_BUILD_RATE_LIMIT_HOLD",
+  "observed_at": "2026-10-22T22:51:23.414370+00:00",
+  "project_id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "team_id": "team_OUj64KeLxJI3PkEbOaFZnorA",
+  "plan_observed": "hobby",
+  "source_revision": "e67cf90cae09685ebc949127868f5604f444b2e5",
+  "provider_status_updated_at": "2026-10-22T22:37:06Z",
+  "provider_status": "failure",
+  "bounded_code": "BUILD_RATE_LIMIT",
+  "retry_guidance_hours": 24,
+  "exact_reset": "UNVERIFIED",
+  "current_usage_count": "UNVERIFIED",
+  "timezone_note": "Status timestamp is UTC. 24h is the service retry guidance, not independently verified availability at a derived reset.",
+  "status_source": "https://api.github.com/repos/twoimo/tzudong/commits/e67cf90cae09685ebc949127868f5604f444b2e5/status",
+  "provider_target": "https://vercel.com/twoimos-projects?upgradeToPro=build-rate-limit",
+  "official_policy": "https://vercel.com/docs/limits#deployments-per-day-hobby",
+  "new_final_source_deployment_created": false,
+  "final_source_preview_verified": false,
+  "main_pr": "https://github.com/twoimo/tzudong/pull/3490",
+  "main_pr_state": "DRAFT_HOLD",
+  "production_approval_sha_unchanged": "6e6cad4e3891b3ed64a79c9a04ec38e41e53c4fb",
+  "preserved": [
+    "Current production deployment and aliases",
+    "Other owner work and reservations",
+    "Existing paused heartbeat state",
+    "All three verbatim audit reports"
+  ],
+  "not_performed": [
+    "Manual duplicate deployment after actual rate limit",
+    "Plan/account upgrade or identity switch",
+    "Production main merge or approval marker change",
+    "Nightly rerun"
+  ]
+}

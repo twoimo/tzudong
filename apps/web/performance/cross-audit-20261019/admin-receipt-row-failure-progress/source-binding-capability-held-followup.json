@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "append-only-source-binding-followup",
+  "capturedAt": "2026-10-19T01:09:08+09:00",
+  "sourceRevision": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "status": "current_source_verified",
+  "predecessors": [
+    {
+      "path": "apps/web/performance/cross-audit-20261019/admin-receipt-row-failure-progress/receipt.json",
+      "sha256": "0041f3ab93c3bf4f4b61efbc1f3ebcf6ae927e4150298e93469404a0179170ff",
+      "status": "historical_source_identity_findings_preserved"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261019/admin-receipt-row-failure-progress/independent-review.json",
+      "sha256": "3a2adf1e9cd1030f3a86dec69d500c46751689b8b87b2f521fd65051deea37b0",
+      "status": "historical_source_identity_verdict_preserved"
+    }
+  ],
+  "processorDeltaProof": {
+    "priorSha256": "c9a902b79a64b006adeda5c5f6356ad659bef806681f532d504b0d5009843be5",
+    "currentSha256": "698c5b0fa972b6c4f4daf896b07e35319c268e300ab258d95a2480600cc7ee94",
+    "newElements": [
+      "DurableReceiptOcrCapabilityHeldError import",
+      "outer catch mapping of DurableReceiptOcrCapabilityHeldError to the fixed no-store capability-held HTTP 503 response"
+    ],
+    "reconstruction": {
+      "method": "Remove exactly the one new import line and one new held catch block in memory; do not write source.",
+      "importOccurrences": 1,
+      "catchBlockOccurrences": 1,
+      "reconstructedSha256": "c9a902b79a64b006adeda5c5f6356ad659bef806681f532d504b0d5009843be5",
+      "matchesPriorSha256": true
+    }
+  },
+  "p1QuarantineReadback": {
+    "verdict": "ACCEPT_UNCHANGED",
+    "invariants": [
+      "Only local missing or invalid verification input and exact Storage missing-object classification call terminalRowFailureResponse.",
+      "Storage authorization, transport, provider, quota, durable persistence, and capability-held failures do not enter terminal row-failure persistence.",
+      "The exact pending-state CAS still binds review id, owner, verification photo, OCR timestamp, receipt data, receipt hash, and duplicate state.",
+      "Independent terminal readback remains required before the worker can advance, and guarded rerun remains snapshot-CAS bounded."
+    ],
+    "unchangedFullFileHashes": {
+      "apps/web/lib/ocr/admin-receipt-batch.ts": "f2ba1392b39990839b01baeaea6358d9e80b9397aa01ea4ec42c2b077ecbfaa2",
+      "apps/web/lib/ocr/admin-receipt-row-failure.ts": "64dfbae0a221e54f50632c491d8765b2cd1ec429f52c9c38d82af2bafc5207eb",
+      "apps/web/scripts/run-admin-receipt-ocr-workflow.ts": "4da7cfecd87ef24161cdd5e97a63c20931a1f717bcb9828a2811f8f36c08a09a",
+      "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts": "f9094239047cb6378a1a6d7bcad72a46989f7e752463d3df3d96107297e1f6fc",
+      "apps/web/tests-unit/admin-receipt-processor-terminal-failure.test.ts": "fe91a675f8393b49fd53086362b485e68a399d9f85f9074ed1b7b2189c3fb937"
+    }
+  },
+  "currentSourceHashesSha256": {
+    "apps/web/lib/ocr/admin-receipt-batch.ts": "f2ba1392b39990839b01baeaea6358d9e80b9397aa01ea4ec42c2b077ecbfaa2",
+    "apps/web/lib/ocr/admin-receipt-processor.ts": "698c5b0fa972b6c4f4daf896b07e35319c268e300ab258d95a2480600cc7ee94",
+    "apps/web/lib/ocr/admin-receipt-row-failure.ts": "64dfbae0a221e54f50632c491d8765b2cd1ec429f52c9c38d82af2bafc5207eb",
+    "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+    "apps/web/lib/runtime-feature-readiness-contract.ts": "83761d3ae754f4ebfc7b2be23b4bdf0788f3b7dd3f1bfac03f3801859e0b3bba",
+    "apps/web/app/api/ocr/extract/route.ts": "417c64461809e89b60716b3831345ad582654635c364ca390c07114edc038503",
+    "apps/web/app/api/ocr/extract/stream/route.ts": "c59b79938b19fb9105d5026ab9390162c351e56c24c47b5c33192275702cf81b",
+    "apps/web/scripts/run-admin-receipt-ocr-workflow.ts": "4da7cfecd87ef24161cdd5e97a63c20931a1f717bcb9828a2811f8f36c08a09a",
+    "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts": "f9094239047cb6378a1a6d7bcad72a46989f7e752463d3df3d96107297e1f6fc",
+    "apps/web/tests-unit/admin-receipt-processor-terminal-failure.test.ts": "fe91a675f8393b49fd53086362b485e68a399d9f85f9074ed1b7b2189c3fb937",
+    "apps/web/tests-unit/receipt-ocr-capability-held-routes.test.ts": "5914f3899df19701a2e6d94e8ce41a7e8e1833031f5e9ce2e95211a87e7bcdd0"
+  },
+  "verification": {
+    "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/admin-receipt-ocr-workflow.test.ts tests-unit/admin-receipt-processor-terminal-failure.test.ts tests-unit/receipt-ocr-capability-held-routes.test.ts",
+    "workingDirectory": "apps/web",
+    "runtime": "bun 1.4.0",
+    "result": "26 pass, 0 fail, 155 expect calls",
+    "groups": {
+      "p1RowFailure": "22 pass",
+      "capabilityHeldRoutes": "4 pass"
+    }
+  },
+  "boundaries": {
+    "productSourceEdits": 0,
+    "sqlEdits": 0,
+    "gitMutations": 0,
+    "externalCalls": 0,
+    "databaseCalls": 0,
+    "storageCalls": 0,
+    "providerCalls": 0,
+    "globalBuildRuns": 0,
+    "existingReceiptOrLogOverwrites": 0
+  },
+  "remainingGates": [
+    "Root-owned integrated build completion and readback remain separate evidence."
+  ]
+}

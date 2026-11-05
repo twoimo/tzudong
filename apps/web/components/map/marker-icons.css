@@ -8,6 +8,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 .tzudong-marker-picture { display: block; width: 100%; height: 100%; }
+.tzudong-individual-marker,
+.cluster-marker-container {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.tzudong-individual-marker:focus-visible,
+.cluster-marker-container:focus-visible {
+  outline: 3px solid hsl(var(--ring));
+  outline-offset: 4px;
+  border-radius: 8px;
+}
 .tzudong-marker-image { width: 100%; height: 100%; object-fit: contain; }
 .tzudong-individual-marker > .tzuyang-visit-count-badge {
   position: absolute;

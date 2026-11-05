@@ -1,0 +1,50 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/evidence-frame-failure-browser.test.ts:
+(pass) context-only frames keep an honest heading and original video link after image failure, and recover for a new source [7843.89ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.50ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.10ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.10ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.21ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.15ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.06ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.12ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.08ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.03ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.02ms]
+(pass) marker pool > keeps the category image when only the review bubble changes [0.32ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.41ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.13ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [1.71ms]
+
+tests-unit/naver-loader-failure-browser.test.ts:
+(pass) live SDK success becomes ready without requesting the local stub [449.58ms]
+(pass) live network-error remains a visible error and never becomes a simulated map [597.91ms]
+(pass) explicit retry recovers after network-error without a page reload [474.55ms]
+(pass) live missing-api remains a visible error and never becomes a simulated map [576.25ms]
+(pass) explicit retry recovers after missing-api without a page reload [499.25ms]
+(pass) one retry after network-error recovers every concurrent consumer [583.49ms]
+(pass) admin error control recovers after network-error [551.24ms]
+(pass) configured SDK URL shares one retry after network-error [599.90ms]
+(pass) one retry after missing-api recovers every concurrent consumer [555.57ms]
+(pass) admin error control recovers after missing-api [493.82ms]
+(pass) configured SDK URL shares one retry after missing-api [516.26ms]
+(pass) explicit local offline mode still uses its deterministic stub [337.11ms]
+(pass) unmount releases provider subscriptions and settled script callbacks [311.77ms]
+(pass) lazy consumers share one deferred request and one explicit retry [601.20ms]
+(pass) unmount cancels deferred provider work before script injection [515.78ms]
+
+tests-unit/naver-map-event-cleanup.test.ts:
+(pass) listener removal preserves the provider receiver and handle [0.08ms]
+(pass) absent provider or listener is safe during partial initialization [0.03ms]
+(pass) one failed provider removal does not prevent the next teardown [0.05ms]
+
+tests-unit/overseas-marker-refresh-browser.test.ts:
+(pass) retained overseas markers refresh content, location and click data without recreating or losing selection [2464.50ms]
+
+ 34 pass
+ 0 fail
+ 1183 expect() calls
+Ran 34 tests across 5 files. [19.05s]

@@ -1,5 +1,7 @@
 import { formatTzuyangReviewForDisplay } from '@/lib/tzuyang-review-display';
 import { getEvaluationConflictTargetId } from '@/lib/admin/normalize-evaluation-record';
+import { parseApprovalEligibility } from '@/lib/admin/evaluation-approval-eligibility';
+import { EvaluationApprovalReasons } from './EvaluationApprovalReasons';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
 import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
@@ -14,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSurface } from '@/components/ui/loading-surface';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ChevronDown, ChevronUp, Check, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X, Undo2, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, Trash2, AlertCircle, Edit, RotateCcw, Search, X, Undo2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
@@ -40,7 +42,7 @@ import {
 import {
   needsEvaluationRerun,
 } from '@/lib/admin-evaluation-completeness';
-import { getAdminEvaluationVideoLabel, hasAdminEvaluationYoutubeTitle } from '@/lib/admin-evaluation-name';
+import { getAdminEvaluationDisplayName, getAdminEvaluationVideoLabel, hasAdminEvaluationYoutubeTitle } from '@/lib/admin-evaluation-name';
 import {
   extractCanonicalYouTubeVideoId,
   normalizeCanonicalYouTubeWatchUrl,
@@ -55,7 +57,9 @@ interface EvaluationTableProps {
   onRegisterMissing?: (record: EvaluationRecord) => void;
   onResolveConflict?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
+  onRecover?: (record: EvaluationRecord) => void;
   loading?: boolean;
+  readFailed?: boolean;
   isDeletedFilterActive?: boolean; // 삭제 필터 활성화 여부
   searchQuery?: string; // 검색어
   onSearchChange?: (query: string) => void; // 검색어 변경 핸들러
@@ -75,6 +79,7 @@ interface EvaluationTableProps {
   onRequestDetails?: (record: EvaluationRecord) => Promise<boolean>;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  totalCount?: number;
 }
 
 const FILTER_TOOLTIPS = {
@@ -108,7 +113,7 @@ const FILTER_TOOLTIPS = {
 // 유틸리티 함수: 상태 뱃지 반환 (컴포넌트 외부)
 const STATUS_VARIANTS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: '미처리', variant: 'secondary' },
-  approved: { label: '승인됨', variant: 'default' },
+  approved: { label: '승인됨', variant: 'outline' },
   hold: { label: '보류', variant: 'outline' },
   missing: { label: '누락', variant: 'destructive' },
   geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
@@ -127,9 +132,37 @@ const MOBILE_STATUS_QUICK_FILTERS: { value: string; label: string }[] = [
   { value: 'deleted', label: '삭제됨' },
 ];
 
+const DESKTOP_TABLE_COLUMNS = {
+  expander: 'w-12 min-w-[48px] max-w-[48px]',
+  restaurant: 'w-[280px] min-w-[280px] max-w-[280px]',
+  score: 'w-[84px] min-w-[84px] max-w-[84px]',
+  boolean: 'w-[88px] min-w-[88px] max-w-[88px]',
+  address: 'w-[88px] min-w-[88px] max-w-[88px]',
+  category: 'w-[96px] min-w-[96px] max-w-[96px]',
+  status: 'w-[92px] min-w-[92px] max-w-[92px]',
+  actions: 'w-[136px] min-w-[136px] max-w-[136px]',
+} as const;
+
+const DESKTOP_METRIC_CELL = 'px-2 text-center text-xs tabular-nums';
+
+type ScoreMetric = 'visit_authenticity' | 'rb_inference_score' | 'review_faithfulness_score';
+type BooleanMetric = 'rb_grounding_TF' | 'category_validity_TF' | 'category_TF';
+
+const SCORE_MEANINGS: Record<ScoreMetric, Record<string, string>> = {
+  visit_authenticity: { '0': '무관', '1': '직접 방문', '2': '지점 불명', '3': '포장·배달', '4': '언급/비식당' },
+  rb_inference_score: { '0': '근거 부족', '1': '명확', '2': '복합' },
+  review_faithfulness_score: { '0': '왜곡', '1': '충실' },
+};
+
+const BOOLEAN_MEANINGS: Record<BooleanMetric, { true: string; false: string }> = {
+  rb_grounding_TF: { true: '확인됨', false: '불일치' },
+  category_validity_TF: { true: '유효', false: '무효' },
+  category_TF: { true: '일치', false: '불일치' },
+};
+
 const getStatusBadge = (status: string) => {
   const config = STATUS_VARIANTS[status] || { label: status, variant: 'default' as const };
-  return <Badge variant={config.variant} className="whitespace-nowrap">{config.label}</Badge>;
+  return <Badge variant={config.variant} data-admin-record-status={status} className="admin-record-status whitespace-nowrap">{config.label}</Badge>;
 };
 
 const getMobileCardTone = (status: string): string => {
@@ -153,40 +186,40 @@ const getMobileCardTone = (status: string): string => {
   }
 };
 
-const getBooleanLabel = (value: boolean | null | undefined): string => {
-  if (value === true) return '일치';
-  if (value === false) return '불일치';
-  return '-';
-};
-
-const getDisplayValue = (value: string | number | null | undefined): string => {
-  if (value === null || value === undefined || value === '') return '-';
-  return String(value);
-};
-
 const shouldShowMetricFallback = (record: EvaluationRecord) => (
   record.status === 'not_selected' || record.is_not_selected === true
 );
 
-const renderMetricScore = (record: EvaluationRecord, value: string | number | null | undefined) => {
+const renderMetricScore = (record: EvaluationRecord, metric: ScoreMetric, value: string | number | null | undefined) => {
   if (shouldShowMetricFallback(record)) return '-';
-  return value === null || value === undefined || value === '' ? '-' : value;
+  if (value === null || value === undefined || value === '') return '-';
+  const meaning = SCORE_MEANINGS[metric][String(value)];
+  if (!meaning) return value;
+  return <span className="inline-flex flex-col items-center leading-4">
+    <span className="font-semibold text-foreground">{value}<span className="sr-only">점</span></span>
+    <span className="admin-evaluation-score-meaning whitespace-nowrap text-muted-foreground">{meaning}</span>
+  </span>;
 };
 
-const renderMetricBoolean = (record: EvaluationRecord, value: boolean | null | undefined) => {
+const renderMetricBoolean = (record: EvaluationRecord, metric: BooleanMetric, value: boolean | null | undefined) => {
   if (shouldShowMetricFallback(record)) return '-';
   if (value === undefined || value === null) return '-';
 
   return value
-    ? <Badge variant="default" className="bg-green-600">일치</Badge>
-    : <Badge variant="destructive">불일치</Badge>;
+    ? <Badge variant="outline" className="admin-evaluation-signal admin-evaluation-positive">{BOOLEAN_MEANINGS[metric].true}</Badge>
+    : <Badge variant="outline" className="admin-evaluation-signal admin-evaluation-negative">{BOOLEAN_MEANINGS[metric].false}</Badge>;
 };
 
-const getMobileMetricDisplayValue = (record: EvaluationRecord, value: string | number | boolean | null | undefined): string => {
+const getMobileScoreDisplayValue = (record: EvaluationRecord, metric: ScoreMetric, value: string | number | null | undefined): string => {
   if (shouldShowMetricFallback(record)) return '-';
   if (value === null || value === undefined || value === '') return '-';
-  if (typeof value === 'boolean') return getBooleanLabel(value);
-  return getDisplayValue(value);
+  const meaning = SCORE_MEANINGS[metric][String(value)];
+  return meaning ? `${value}점 · ${meaning}` : String(value);
+};
+
+const getMobileBooleanDisplayValue = (record: EvaluationRecord, metric: BooleanMetric, value: boolean | null | undefined): string => {
+  if (shouldShowMetricFallback(record) || value === null || value === undefined) return '-';
+  return BOOLEAN_MEANINGS[metric][String(value) as 'true' | 'false'];
 };
 
 const getOriginAddress = (record: EvaluationRecord): string => {
@@ -221,49 +254,52 @@ const FilterDropdown = memo(function FilterDropdown({
   onFilterChange,
 }: FilterDropdownProps) {
   const isActive = currentValue !== undefined && currentValue !== '';
+  const accessibleLabel = filterKey === 'category_validity_TF'
+    ? '카테고리 유효'
+    : filterKey === 'category_TF'
+      ? '카테고리 정합'
+      : label;
 
   return (
-    <div className="flex items-center gap-1">
-      <span className="text-xs font-medium truncate">{label}</span>
+    <div className="min-w-0">
       <Tooltip>
-        <TooltipTrigger asChild>
-          <HelpCircle className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-        </TooltipTrigger>
+        <DropdownMenu>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={`${accessibleLabel} 필터 열기`}
+                className={cn(
+                  "h-7 w-full min-w-0 justify-between gap-1 px-1 text-xs font-medium",
+                  isActive && "bg-green-100 text-green-800 hover:bg-green-200 hover:text-green-900"
+                )}
+              >
+                <span className="min-w-0 truncate">{label}</span>
+                <ChevronDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <DropdownMenuContent align="start">
+            {options.map(option => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => onFilterChange(filterKey, option.value === 'all' ? '' : option.value)}
+                className={cn(
+                  currentValue === option.value || (!currentValue && option.value === 'all')
+                    ? 'bg-accent'
+                    : ''
+                )}
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <TooltipContent className="max-w-sm">
           <p className="whitespace-pre-line text-xs">{tooltip}</p>
         </TooltipContent>
       </Tooltip>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`${label} 필터 열기`}
-            title={`${label} 필터 열기`}
-            className={cn(
-              "h-5 w-5 p-0",
-              isActive && "bg-green-100 hover:bg-green-200"
-            )}
-          >
-            <Menu className={cn("h-3 w-3", isActive && "text-green-700")} />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          {options.map(option => (
-            <DropdownMenuItem
-              key={option.value}
-              onClick={() => onFilterChange(filterKey, option.value === 'all' ? '' : option.value)}
-              className={cn(
-                currentValue === option.value || (!currentValue && option.value === 'all')
-                  ? 'bg-accent'
-                  : ''
-              )}
-            >
-              {option.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 });
@@ -273,6 +309,7 @@ interface EvaluationTableRowProps {
   record: EvaluationRecord;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  onRequestDetails?: (record: EvaluationRecord) => Promise<boolean>;
   onApprove: (record: EvaluationRecord) => void;
   onDelete: (record: EvaluationRecord) => void;
   onRestore?: (record: EvaluationRecord) => void;
@@ -292,6 +329,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
       record,
       isExpanded,
       onToggleExpand,
+      onRequestDetails,
       onApprove,
       onDelete,
       onRestore,
@@ -305,8 +343,27 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     },
     ref
   ) {
+    const eligibility = parseApprovalEligibility(record.approval_eligibility);
+    const approvalUnknown = !eligibility || eligibility.state === 'unknown';
+    const approvalReasonsId = `evaluation-desktop-approval-${record.id}`;
+    const canApprove = eligibility?.state === 'local_checks_passed' && !needsEvaluationRerun(record) && canApproveAddressConsistencyRecord(record);
+    const requestDetails = () => { if (onRequestDetails) void onRequestDetails(record); else onToggleExpand(); };
     const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
     const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
+    const restaurantName = getAdminEvaluationDisplayName(record);
+    const hasYoutubeTitle = hasAdminEvaluationYoutubeTitle(record);
+    const videoEvidenceLabel = hasYoutubeTitle
+      ? getAdminEvaluationVideoLabel(record)
+      : canonicalYoutubeUrl
+        ? '영상 제목 없음'
+        : '연결된 영상 없음';
+    const categoryText = formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '');
+    const restaurantMeta = categoryText
+      || record.road_address
+      || record.jibun_address
+      || record.restaurant_info?.origin_address
+      || '분류 없음';
+    const publishedAt = new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR');
     // 썸네일 로딩 트리거
     useEffect(() => {
       if (videoId && !thumbnailState) {
@@ -317,13 +374,14 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     return (
       <TableRow
         ref={ref}
-        className={cn("group bg-card hover:bg-primary/5 transition-colors cursor-pointer", isExpanded && "bg-primary/5 border-l-4 border-l-primary")}
+        className={cn("group cursor-pointer bg-card hover:bg-primary/5", isExpanded && "admin-cms-row-selected bg-primary/5")}
         onClick={onToggleExpand}
       >
         <TableCell
           className={cn(
-            "sticky left-0 z-10 px-2 sm:px-4 transition-colors",
-            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
+            DESKTOP_TABLE_COLUMNS.expander,
+            "sticky left-0 z-10 px-2",
+            isExpanded ? "bg-primary/5" : "bg-card group-hover:bg-primary/5"
           )}
         >
           <Button
@@ -347,106 +405,105 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
 
         <TableCell
           className={cn(
-            "min-w-[220px] sm:min-w-[280px] lg:sticky lg:left-12 lg:z-10 transition-colors",
-            isExpanded ? "lg:bg-card lg:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "lg:bg-card lg:group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
+            DESKTOP_TABLE_COLUMNS.restaurant,
+            "px-3 lg:sticky lg:left-12 lg:z-10",
+            isExpanded ? "lg:bg-primary/5" : "lg:bg-card lg:group-hover:bg-primary/5"
           )}
         >
-          <div className="flex items-center gap-3">
-            {canonicalYoutubeUrl && videoId && (
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-baseline gap-2">
+              <p className="admin-record-identity min-w-0 flex-1 truncate text-sm font-semibold text-foreground" title={restaurantName}>
+                {restaurantName}
+              </p>
+              <span className="admin-record-meta max-w-[42%] shrink-0 truncate text-2xs text-muted-foreground" title={restaurantMeta}>
+                {restaurantMeta}
+              </span>
+            </div>
+
+            {canonicalYoutubeUrl ? (
               <a
                 href={canonicalYoutubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-shrink-0"
+                aria-label={`YouTube 근거 영상 열기: ${videoEvidenceLabel}`}
+                className="admin-record-meta group/evidence mt-1 flex min-w-0 items-center gap-1.5 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="h-14 w-20 rounded bg-muted relative flex items-center justify-center overflow-hidden transition-opacity hover:opacity-80 sm:h-16 sm:w-24">
-                  {/* 로딩 상태 */}
-                  {thumbnailState === 'loading' && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none"></div>
-                    </div>
-                  )}
-
-                  {/* 성공 상태 - 썸네일 표시 */}
-                  {thumbnailState === 'loaded' && thumbnailUrl && (
-                    <NextImage
-                      src={thumbnailUrl}
-                      alt="유튜브 썸네일"
-                      fill
-                      unoptimized
-                      sizes="(max-width: 640px) 80px, 96px"
-                      className="object-cover"
-                    />
-                  )}
-
-                  {/* 에러 상태 또는 기본 상태 - YouTube 아이콘 표시 */}
-                  {(thumbnailState === 'error' || !thumbnailState) && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                      <svg
-                        className="w-6 h-6 text-muted-foreground"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
+                {videoId && (
+                  <span className="relative flex h-6 w-9 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-muted">
+                    {thumbnailState === 'loading' && (
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none" />
+                    )}
+                    {thumbnailState === 'loaded' && thumbnailUrl && (
+                      <NextImage
+                        src={thumbnailUrl}
+                        alt=""
+                        fill
+                        unoptimized
+                        sizes="36px"
+                        className="object-cover"
+                      />
+                    )}
+                    {(thumbnailState === 'error' || !thumbnailState) && (
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+                    )}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1 truncate text-2xs text-muted-foreground group-hover/evidence:text-foreground group-hover/evidence:underline" title={videoEvidenceLabel}>
+                  {videoEvidenceLabel}
+                </span>
+                <span className="shrink-0 text-2xs tabular-nums text-muted-foreground/80">{publishedAt}</span>
               </a>
+            ) : (
+              <div className="admin-record-meta mt-1 flex min-w-0 items-center gap-1.5 border-l-2 border-border pl-2">
+                <p className="min-w-0 flex-1 truncate text-2xs text-muted-foreground" title={videoEvidenceLabel}>{videoEvidenceLabel}</p>
+                <span className="shrink-0 text-2xs tabular-nums text-muted-foreground/80">{publishedAt}</span>
+              </div>
             )}
-            <div className="min-w-0 flex-1">
-              <div className="line-clamp-2 text-xs font-medium sm:text-sm">
-                {getAdminEvaluationVideoLabel(record)}
-              </div>
-              <div className="mt-1 text-2xs text-muted-foreground sm:text-xs">
-                {hasAdminEvaluationYoutubeTitle(record) ? null : '제목 없음 · '}
-                {new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR')}
-              </div>
-            </div>
           </div>
         </TableCell>
 
         {/* 평가 컬럼 값들 */}
-        <TableCell className="text-center text-sm">
-          {renderMetricScore(record, record.evaluation_results?.visit_authenticity?.eval_value)}
+        <TableCell className={cn(DESKTOP_TABLE_COLUMNS.score, DESKTOP_METRIC_CELL)}>
+          {renderMetricScore(record, 'visit_authenticity', record.evaluation_results?.visit_authenticity?.eval_value)}
         </TableCell>
 
-        <TableCell className="hidden text-center text-sm lg:table-cell">
-          {renderMetricScore(record, record.evaluation_results?.rb_inference_score?.eval_value)}
+        <TableCell className={cn(DESKTOP_TABLE_COLUMNS.score, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
+          {renderMetricScore(record, 'rb_inference_score', record.evaluation_results?.rb_inference_score?.eval_value)}
         </TableCell>
 
-        <TableCell className="hidden text-center text-sm lg:table-cell">
-          {renderMetricBoolean(record, record.evaluation_results?.rb_grounding_TF?.eval_value)}
+        <TableCell className={cn(DESKTOP_TABLE_COLUMNS.boolean, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
+          {renderMetricBoolean(record, 'rb_grounding_TF', record.evaluation_results?.rb_grounding_TF?.eval_value)}
         </TableCell>
 
-        <TableCell className="hidden text-center text-sm lg:table-cell">
-          {renderMetricScore(record, record.evaluation_results?.review_faithfulness_score?.eval_value)}
+        <TableCell className={cn(DESKTOP_TABLE_COLUMNS.score, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
+          {renderMetricScore(record, 'review_faithfulness_score', record.evaluation_results?.review_faithfulness_score?.eval_value)}
         </TableCell>
 
-        <TableCell className="text-center text-sm">
+        <TableCell className={cn(DESKTOP_TABLE_COLUMNS.address, DESKTOP_METRIC_CELL)}>
           {record.status === 'not_selected' ? '-' : (
             getAddressConsistencyDisplayLabel(record) === '-'
               ? '-'
               : (
-                <Badge className={getAddressConsistencyBadgeClass(record)}>{getAddressConsistencyDisplayLabel(record)}</Badge>
+                <Badge variant="outline" className={cn('admin-evaluation-signal', getAddressConsistencyBadgeClass(record))}>{getAddressConsistencyDisplayLabel(record)}</Badge>
               )
           )}
         </TableCell>
 
-        <TableCell className="hidden text-center text-sm lg:table-cell">
-          {renderMetricBoolean(record, record.evaluation_results?.category_validity_TF?.eval_value)}
+        <TableCell className={cn(DESKTOP_TABLE_COLUMNS.category, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
+          {renderMetricBoolean(record, 'category_validity_TF', record.evaluation_results?.category_validity_TF?.eval_value)}
         </TableCell>
 
-        <TableCell className="hidden text-center text-sm lg:table-cell">
-          {renderMetricBoolean(record, record.evaluation_results?.category_TF?.eval_value)}
+        <TableCell className={cn(DESKTOP_TABLE_COLUMNS.category, DESKTOP_METRIC_CELL, "hidden lg:table-cell")}>
+          {renderMetricBoolean(record, 'category_TF', record.evaluation_results?.category_TF?.eval_value)}
         </TableCell>
 
         {/* 고정 컬럼: 상태 */}
         <TableCell
           className={cn(
-            "sticky right-[120px] z-10 min-w-[84px] text-center lg:right-[160px] lg:min-w-[96px] transition-colors",
-            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
+            DESKTOP_TABLE_COLUMNS.status,
+            "sticky right-[136px] z-10 px-2 text-center",
+            isExpanded ? "bg-primary/5" : "bg-card group-hover:bg-primary/5"
           )}
         >
           <div className="flex flex-col items-center gap-1">
@@ -457,20 +514,21 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
         {/* 고정 컬럼: 액션 */}
         <TableCell
           className={cn(
-            "sticky right-0 z-10 min-w-[120px] lg:min-w-[160px] transition-colors",
-            isExpanded ? "bg-card shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]" : "bg-card group-hover:shadow-[inset_0_0_0_9999px_hsl(var(--primary)/0.05)]"
+            DESKTOP_TABLE_COLUMNS.actions,
+            "admin-record-actions sticky right-0 z-10 px-2",
+            isExpanded ? "bg-primary/5" : "bg-card group-hover:bg-primary/5"
           )}
         >
-          <div className="flex flex-wrap justify-center gap-1 lg:gap-2">
-            {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-8 px-2 lg:px-3" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
-            {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-8 px-2 lg:px-3" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
+          <div className="flex flex-wrap justify-center gap-1">
+            {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-8 px-2 text-xs" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
+            {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-8 px-2 text-xs" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
 
             {record.status === 'deleted' ? (
               // 삭제된 레코드 - 되돌리기 버튼만 표시
               <>
                 <Button
                   size="sm"
-                  className="h-8 px-2 lg:px-3"
+                  className="h-8 px-2 text-xs"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRestore?.(record);
@@ -487,7 +545,9 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
               <>
                 <Button
                   size="sm"
-                  className="h-8 px-2 lg:px-3"
+                  aria-label="검수 항목 수정"
+                  title={!record.geocoding_success ? `검수 항목 수정 · 주소 확인 ${getAddressConsistencyDisplayLabel(record)}` : "검수 항목 수정"}
+                  className="h-8 w-8 p-0"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit?.(record);
@@ -495,16 +555,15 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
                   disabled={loading}
                   variant="outline"
                 >
-                  <Edit className="h-4 w-4 lg:mr-1" />
-                  <span className="hidden lg:inline">수정</span>
+                  <Edit className="h-4 w-4" />
                 </Button>
 
                 <Button
                   size="sm"
                   aria-label="검수 항목 삭제"
                   title="검수 항목 삭제"
-                  className="h-8 w-8 p-0 lg:h-9 lg:w-9"
-                  variant="destructive"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(record);
@@ -516,24 +575,30 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
               </>
             ) : (
               <>
-                <Button
-                  size="sm"
-                  className="h-8 px-2 lg:px-3"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onApprove(record);
-                  }}
-                  disabled={loading || needsEvaluationRerun(record) || !canApproveAddressConsistencyRecord(record)}
-                  title={needsEvaluationRerun(record) ? '평가값/근거 확인 후 승인하세요' : undefined}
-                >
-                  <Check className="h-4 w-4 lg:mr-1" />
-                  <span className="hidden lg:inline">승인</span>
-                </Button>
+                {record.status !== 'approved' && (
+                  <Button
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    aria-label={approvalUnknown ? '승인 전 상세 확인' : '검수 항목 승인'}
+                    aria-describedby={approvalReasonsId}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (approvalUnknown) requestDetails();
+                      else if (canApprove) onApprove(record);
+                    }}
+                    disabled={loading || (!approvalUnknown && !canApprove)}
+                    title={approvalUnknown ? '승인 전 상세 확인' : canApprove ? '최종 서버 검사 필요' : '승인 불가 사유 확인'}
+                  >
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                )}
 
                 {onEdit && (
                   <Button
                     size="sm"
-                    className="h-8 px-2 lg:px-3"
+                    aria-label="검수 항목 수정"
+                    title={!record.geocoding_success ? `검수 항목 수정 · 주소 확인 ${getAddressConsistencyDisplayLabel(record)}` : "검수 항목 수정"}
+                    className="h-8 w-8 p-0"
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -541,8 +606,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
                     }}
                     disabled={loading}
                   >
-                    <Edit className="h-4 w-4 lg:mr-1" />
-                    <span className="hidden lg:inline">수정</span>
+                    <Edit className="h-4 w-4" />
                   </Button>
                 )}
 
@@ -550,8 +614,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
                   size="sm"
                   aria-label="검수 항목 삭제"
                   title="검수 항목 삭제"
-                  className="h-8 w-8 p-0 lg:h-9 lg:w-9"
-                  variant="destructive"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(record);
@@ -563,13 +627,10 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
               </>
             )}
           </div>
-
-          {!record.geocoding_success && record.status !== 'missing' && (
-            <div className="mt-1 hidden items-center justify-center gap-1 text-center text-xs text-destructive lg:flex">
-              <AlertCircle className="w-3 h-3" />
-              주소 확인 {getAddressConsistencyDisplayLabel(record)}
-            </div>
+          {record.status !== 'approved' && record.status !== 'deleted' && (
+            <EvaluationApprovalReasons eligibility={eligibility ?? undefined} id={approvalReasonsId} onRequestDetails={requestDetails} loading={loading} />
           )}
+
         </TableCell>
       </TableRow>
     );
@@ -584,7 +645,9 @@ export function EvaluationTable({
   onRegisterMissing,
   onResolveConflict,
   onEdit,
+  onRecover,
   loading,
+  readFailed = false,
   isDeletedFilterActive = false,
   searchQuery = '',
   onSearchChange,
@@ -595,7 +658,11 @@ export function EvaluationTable({
   onRequestDetails,
   hasMore = false,
   isLoadingMore = false,
+  totalCount,
 }: EvaluationTableProps) {
+  const recordCountLabel = totalCount === undefined
+    ? `${records.length}개`
+    : `${records.length} / ${totalCount}개`;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showMobileAdvancedFilters, setShowMobileAdvancedFilters] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -897,7 +964,7 @@ export function EvaluationTable({
   }, [records, loadThumbnail]);
 
   const mobileControls = (
-    <div className="sticky top-0 z-30 -mx-2 bg-background/95 px-2 pb-2 pt-1 backdrop-blur lg:hidden">
+    <div className="sticky top-0 z-30 bg-background pb-2 pt-1 lg:hidden">
       <div className="space-y-2 bg-transparent p-0 shadow-none" data-admin-evaluation-mobile-controls="borderless" data-layout-primitives="stack wrap-row">
         <div
           className="grid grid-cols-3 gap-1.5"
@@ -915,7 +982,7 @@ export function EvaluationTable({
                 aria-label={`상태 필터: ${filter.label}`}
                 aria-pressed={isActive}
                 data-admin-evaluation-mobile-status-filter-option={filter.value || 'all'}
-                className="h-8 min-w-0 rounded-full px-2 text-xs font-medium"
+                className="h-11 min-w-0 rounded-md px-2 text-xs font-medium"
                 onClick={(event) => {
                   event.stopPropagation();
                   handleMobileStatusQuickFilterChange(filter.value);
@@ -935,7 +1002,7 @@ export function EvaluationTable({
             placeholder="상호·영상 ID 검색..."
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}
-            className="h-9 pl-8 pr-8 text-sm"
+            className="h-11 pl-8 pr-8 text-sm"
           />
           {searchQuery && (
             <Button
@@ -958,10 +1025,12 @@ export function EvaluationTable({
         >
           <div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">
             <span>검수 항목</span>
-            {loading && records.length === 0 ? (
+            {loading && records.length === 0 && !readFailed ? (
               <span className="ml-1 font-medium">집계 중</span>
+            ) : readFailed && records.length === 0 ? (
+              <strong className="ml-1 text-sm font-bold text-foreground">미확인</strong>
             ) : (
-              <strong className="ml-1 text-sm font-bold text-foreground">{records.length}개</strong>
+              <strong className="ml-1 text-sm font-bold text-foreground">{recordCountLabel}</strong>
             )}
             {activeFilterCount > 0 && (
               <>
@@ -974,7 +1043,7 @@ export function EvaluationTable({
             <Button
               variant={showMobileAdvancedFilters ? "secondary" : "outline"}
               size="sm"
-              className="h-8 rounded-full px-2.5 text-xs font-semibold"
+              className="h-11 rounded-md px-2.5 text-xs font-semibold"
               onClick={() => setShowMobileAdvancedFilters(prev => !prev)}
             >
               {showMobileAdvancedFilters ? '닫기' : '상세 필터'}
@@ -986,7 +1055,7 @@ export function EvaluationTable({
                 onClick={onResetFilters}
                 aria-label="필터 초기화"
                 title="필터 초기화"
-                className="h-8 w-8 rounded-full p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="h-11 w-11 rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span className="sr-only">초기화</span>
@@ -996,7 +1065,7 @@ export function EvaluationTable({
         </div>
 
         {showMobileAdvancedFilters && (
-          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/35 p-2">
+          <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/35 p-2">
             {renderFilterDropdown(
               "status",
               "상태",
@@ -1033,7 +1102,7 @@ export function EvaluationTable({
               FILTER_TOOLTIPS.rb_grounding_TF,
               [
                 { value: 'all', label: '전체' },
-                { value: 'True', label: '일치' },
+                { value: 'True', label: '확인됨' },
                 { value: 'False', label: '불일치' },
               ]
             )}
@@ -1065,17 +1134,17 @@ export function EvaluationTable({
             )}
             {renderFilterDropdown(
               "category_validity_TF",
-              "카테고리 유효",
+              "분류 유효",
               FILTER_TOOLTIPS.category_validity_TF,
               [
                 { value: 'all', label: '전체' },
-                { value: 'True', label: '일치' },
-                { value: 'False', label: '불일치' },
+                { value: 'True', label: '유효' },
+                { value: 'False', label: '무효' },
               ]
             )}
             {renderFilterDropdown(
               "category_TF",
-              "카테고리 정합",
+              "분류 일치",
               FILTER_TOOLTIPS.category_TF,
               [
                 { value: 'all', label: '전체' },
@@ -1091,52 +1160,117 @@ export function EvaluationTable({
 
   const loadMoreSentinel = hasMore && onLoadMore ? <div ref={loadMoreSentinelRef} className="h-8" /> : null;
   const mobileLoadingCards = (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중">
-      {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
-        <div key={index} className="rounded-lg border bg-card p-2">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              <div className="grid grid-cols-3 gap-1.5">
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            </div>
-          </div>
+    <div className="lg:hidden" role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중">
+
+      <LoadingSurface label="맛집 검수 카드 로딩 중" className="col-span-full">
+
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+
+          {
+            Array.from({ length: mobileSkeletonCount }, (_, index) => (
+              <article key={index} className="rounded-md border border-border/70 bg-card p-3">
+
+                <div className="flex items-center gap-2">
+
+                  <svg
+                    viewBox="0 0 64 48"
+                    role="img"
+                    aria-label="맛집 사진"
+                    className="h-12 w-16 shrink-0 rounded-md border"
+                  >
+
+                    <rect width="64" height="48" fill="currentColor" opacity="0.1" />
+
+                  </svg>
+
+                  <div className="min-w-0 flex-1 space-y-1.5">
+
+                    <h3 className="text-sm font-semibold">맛집 검수 항목</h3>
+
+                    <p className="text-xs">영상과 맛집 정보</p>
+
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+
+                      <span>검수</span>
+
+                      <span>위치</span>
+
+                      <span>분류</span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </article>
+            ))
+          }
+
         </div>
-      ))}
+
+      </LoadingSurface>
+
     </div>
   );
-  const desktopLoadingRows = Array.from({ length: desktopSkeletonCount }).map((_, index) => (
-    <TableRow key={`evaluation-loading-${index}`} aria-hidden="true">
-      <TableCell className="sticky left-0 z-10 bg-background/95 px-2 sm:px-4">
-        <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+  const desktopLoadingRows = (
+    <TableRow>
+
+      <TableCell colSpan={11} className="p-0">
+
+        <LoadingSurface label="맛집 검수 목록 로딩 중">
+
+          <table className="w-full table-fixed text-xs">
+
+            <tbody>
+
+              {
+                Array.from({ length: desktopSkeletonCount }, (_, index) => (
+                  <tr key={index} className="h-[72px]">
+
+                    <td className={DESKTOP_TABLE_COLUMNS.expander}>선택</td>
+
+                    <td className={DESKTOP_TABLE_COLUMNS.restaurant}>
+
+                      <p className="text-sm font-semibold">맛집 검수 항목</p>
+
+                      <p className="mt-1">영상과 맛집 정보</p>
+
+                    </td>
+
+                    {
+                      [
+
+                        DESKTOP_TABLE_COLUMNS.score,
+                        cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.boolean, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.score, 'hidden lg:table-cell'),
+                        DESKTOP_TABLE_COLUMNS.address,
+                        cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell'),
+                        cn(DESKTOP_TABLE_COLUMNS.category, 'hidden lg:table-cell')
+                      ].map((columnClass, cellIndex) => (
+                        <td key={cellIndex} className={cn(columnClass, DESKTOP_METRIC_CELL)}>검토 정보</td>
+                      ))
+                    }
+
+                    <td className={DESKTOP_TABLE_COLUMNS.status}>검수 상태</td>
+
+                    <td className={DESKTOP_TABLE_COLUMNS.actions}>상세 보기</td>
+
+                  </tr>
+                ))
+              }
+
+            </tbody>
+
+          </table>
+
+        </LoadingSurface>
+
       </TableCell>
-      <TableCell className="lg:sticky lg:left-12 lg:z-10 lg:bg-background">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-            <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-          </div>
-        </div>
-      </TableCell>
-      {Array.from({ length: 7 }).map((__, cellIndex) => (
-        <TableCell key={cellIndex} className={cn("text-center", cellIndex === 1 || cellIndex === 2 || cellIndex === 4 || cellIndex === 5 ? "hidden lg:table-cell" : undefined)}>
-          <Skeleton className="mx-auto h-6 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-        </TableCell>
-      ))}
-      <TableCell className="sticky right-[120px] z-10 bg-background text-center lg:right-[160px]">
-        <Skeleton className="mx-auto h-6 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
-      <TableCell className="sticky right-0 z-10 bg-background text-center">
-        <Skeleton className="mx-auto h-7 w-20 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
+
     </TableRow>
-  ));
+  );
 
   const mobileCards = (
     <>
@@ -1146,13 +1280,22 @@ export function EvaluationTable({
         const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
         const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
         const isExpanded = expandedId === record.id;
-        const visitValue = getMobileMetricDisplayValue(record, record.evaluation_results?.visit_authenticity?.eval_value);
-        const inferenceValue = getMobileMetricDisplayValue(record, record.evaluation_results?.rb_inference_score?.eval_value);
-        const groundingValue = getMobileMetricDisplayValue(record, record.evaluation_results?.rb_grounding_TF?.eval_value);
-        const reviewValue = getMobileMetricDisplayValue(record, record.evaluation_results?.review_faithfulness_score?.eval_value);
+        const eligibility = parseApprovalEligibility(record.approval_eligibility);
+        const approvalUnknown = !eligibility || eligibility.state === 'unknown';
+        const approvalReasonsId = `evaluation-mobile-approval-${record.id}`;
+        const canApprove = eligibility?.state === 'local_checks_passed' && !needsEvaluationRerun(record) && canApproveAddressConsistencyRecord(record);
+        const requestDetails = () => { if (onRequestDetails) void onRequestDetails(record); else void toggleExpand(record.id); };
+        const mobileRestaurantName = getAdminEvaluationDisplayName(record);
+        const mobileVideoLabel = hasAdminEvaluationYoutubeTitle(record)
+          ? getAdminEvaluationVideoLabel(record)
+          : '영상 제목 없음';
+        const visitValue = getMobileScoreDisplayValue(record, 'visit_authenticity', record.evaluation_results?.visit_authenticity?.eval_value);
+        const inferenceValue = getMobileScoreDisplayValue(record, 'rb_inference_score', record.evaluation_results?.rb_inference_score?.eval_value);
+        const groundingValue = getMobileBooleanDisplayValue(record, 'rb_grounding_TF', record.evaluation_results?.rb_grounding_TF?.eval_value);
+        const reviewValue = getMobileScoreDisplayValue(record, 'review_faithfulness_score', record.evaluation_results?.review_faithfulness_score?.eval_value);
         const geocodingText = getAddressConsistencyDisplayLabel(record);
-        const categoryValidity = getMobileMetricDisplayValue(record, record.evaluation_results?.category_validity_TF?.eval_value);
-        const categoryMatch = getMobileMetricDisplayValue(record, record.evaluation_results?.category_TF?.eval_value);
+        const categoryValidity = getMobileBooleanDisplayValue(record, 'category_validity_TF', record.evaluation_results?.category_validity_TF?.eval_value);
+        const categoryMatch = getMobileBooleanDisplayValue(record, 'category_TF', record.evaluation_results?.category_TF?.eval_value);
 
         const categoryText = formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '-');
         const originAddress = getOriginAddress(record);
@@ -1183,19 +1326,19 @@ export function EvaluationTable({
               data-layout-primitives="stack frame"
               data-admin-evaluation-mobile-card="true"
               className={cn(
-                "rounded-xl border border-border/70 bg-card/95 p-2.5",
+                "admin-surface border border-border bg-card p-2.5",
                 getMobileCardTone(record.status),
-                isExpanded && "shadow-sm"
+                isExpanded && "admin-cms-row-selected bg-primary/5"
               )}
             >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <h2 id={titleId} className="line-clamp-2 text-sm font-semibold">
-                  {record.restaurant_name || record.name || '이름 없음'}
+                  {mobileRestaurantName}
                 </h2>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
                   <span>{publishedAt}</span>
-                  <Badge variant="outline" className="rounded-full text-2xs">주소 {geocodingText}</Badge>
+                  <Badge variant="outline" className={cn('admin-evaluation-signal', getAddressConsistencyBadgeClass(record))}>주소 {geocodingText}</Badge>
                 </div>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1">
@@ -1237,7 +1380,7 @@ export function EvaluationTable({
 
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {getAdminEvaluationVideoLabel(record)}
+                  {mobileVideoLabel}
                 </p>
                 {!hasAdminEvaluationYoutubeTitle(record) && (
                   <p className="mt-1 text-2xs text-amber-700">제목 없음 · 메타 백필 필요</p>
@@ -1247,7 +1390,7 @@ export function EvaluationTable({
                     href={canonicalYoutubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 truncate text-2xs text-blue-600 hover:underline"
+                    className="mt-1 inline-flex items-center gap-1 truncate text-2xs text-blue-600 hover:underline dark:text-blue-300"
                     onClick={(e) => e.stopPropagation()}
                   >
                     영상 열기
@@ -1257,14 +1400,15 @@ export function EvaluationTable({
               </div>
             </div>}
 
-            {[visitValue,inferenceValue,groundingValue].some(value => value !== '-') && <div className="-mx-1 mt-2 overflow-x-auto px-1 scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex min-w-max flex-nowrap gap-1.5">
-                {visitValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">방문 {visitValue}</Badge>}
-                {inferenceValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">추론 {inferenceValue}</Badge>}
-                {groundingValue !== '-' && <Badge variant="outline" className="shrink-0 rounded-full text-2xs">근거 {groundingValue}</Badge>}
-              </div>
+            {[visitValue,inferenceValue,groundingValue].some(value => value !== '-') && <div className="mt-2 flex min-w-0 flex-wrap gap-1.5" data-admin-evaluation-mobile-metrics="wrap">
+                {visitValue !== '-' && <Badge variant="outline" className="admin-evaluation-signal admin-evaluation-neutral">방문 {visitValue}</Badge>}
+                {inferenceValue !== '-' && <Badge variant="outline" className="admin-evaluation-signal admin-evaluation-neutral">추론 {inferenceValue}</Badge>}
+                {groundingValue !== '-' && <Badge variant="outline" className={cn('admin-evaluation-signal', record.evaluation_results?.rb_grounding_TF?.eval_value === true ? 'admin-evaluation-positive' : 'admin-evaluation-negative')}>근거 {groundingValue}</Badge>}
             </div>}
 
+            {record.status !== 'approved' && record.status !== 'deleted' && (
+              <EvaluationApprovalReasons eligibility={eligibility ?? undefined} id={approvalReasonsId} onRequestDetails={requestDetails} loading={loading} />
+            )}
             <div className="mt-2 flex flex-wrap gap-1.5">
             {record.status !== 'deleted' && (record.is_missing || record.status === 'missing') && onRegisterMissing && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onRegisterMissing(record); }}>누락 등록</Button>}
             {record.status !== 'deleted' && (record.status === 'db_conflict' || getEvaluationConflictTargetId(record)) && onResolveConflict && <Button size="sm" variant="outline" className="h-11 shrink-0 rounded-lg px-2" disabled={loading} onClick={event => { event.stopPropagation(); onResolveConflict(record); }}>충돌 해결</Button>}
@@ -1315,19 +1459,23 @@ export function EvaluationTable({
                 </>
               ) : (
                 <>
-                  <Button
-                    size="sm"
-                    className="h-11 min-w-0 flex-1 rounded-lg"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onApprove(record);
-                    }}
-                    disabled={loading || needsEvaluationRerun(record) || !canApproveAddressConsistencyRecord(record)}
-                    title={needsEvaluationRerun(record) ? '평가값/근거 확인 후 승인하세요' : undefined}
-                  >
-                    <Check className="mr-1 h-3.5 w-3.5" />
-                    승인
-                  </Button>
+                  {record.status !== 'approved' && (
+                    <Button
+                      size="sm"
+                      className="h-11 min-w-0 flex-1 rounded-lg"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (approvalUnknown) requestDetails();
+                        else if (canApprove) onApprove(record);
+                      }}
+                      disabled={loading || (!approvalUnknown && !canApprove)}
+                      aria-describedby={approvalReasonsId}
+                      title={approvalUnknown ? '승인 전 상세 확인' : canApprove ? '최종 서버 검사 필요' : '승인 불가 사유 확인'}
+                    >
+                      <Check className="mr-1 h-3.5 w-3.5" />
+                      {approvalUnknown ? '상세 확인' : '승인'}
+                    </Button>
+                  )}
                   {onEdit && (
                     <Button
                       size="sm"
@@ -1375,7 +1523,7 @@ export function EvaluationTable({
 
             {isExpanded && (
               <div id={`admin-evaluation-mobile-details-${record.id}`} className="mt-2 space-y-2 rounded-xl bg-muted/35 p-2.5 text-2xs">
-                <p className="break-all font-mono text-muted-foreground">ID {record.id}</p>
+                <p className="break-all font-mono text-muted-foreground">ID {record.id}</p> {/* taste-skill-ignore: record IDs are literal machine identifiers */}
                 <div>
                   <p className="font-semibold text-foreground">평가 항목</p>
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -1406,7 +1554,7 @@ export function EvaluationTable({
                     </div>
                     <div className="flex justify-between gap-2">
                       <dt className="text-muted-foreground">좌표</dt>
-                      <dd className="font-mono">{coordinates}</dd>
+                      <dd className="font-mono">{coordinates}</dd> {/* taste-skill-ignore: coordinates are literal machine values */}
                     </div>
                     <div className="flex justify-between gap-2">
                       <dt className="text-muted-foreground">리뷰 수</dt>
@@ -1460,6 +1608,7 @@ export function EvaluationTable({
                   <EvaluationRowDetails
                     record={record}
                     onEdit={() => onEdit?.(record)}
+                    onRecover={onRecover ? () => onRecover(record) : undefined}
                   />
                 </div>
               </div>
@@ -1484,12 +1633,12 @@ export function EvaluationTable({
         {shouldRenderMobile && (
           <>
             {mobileControls}
-            {loading && records.length === 0 ? (
+            {loading && records.length === 0 && !readFailed ? (
               mobileLoadingCards
             ) : records.length > 0 ? (
               mobileCards
-            ) : (
-              <div className="rounded-lg border bg-card text-center text-sm text-muted-foreground lg:hidden flex min-h-0 flex-1 items-center justify-center p-6">
+            ) : readFailed ? null : (
+              <div className="admin-empty-state flex min-h-0 flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground lg:hidden">
                 표시할 데이터가 없습니다
               </div>
             )}
@@ -1497,11 +1646,12 @@ export function EvaluationTable({
         )}
 
         {shouldRenderDesktop && (
-          <div className="hidden rounded-lg border lg:block">
-          <Table allowHorizontalScroll horizontalScrollOwner="admin-evaluation-table">
-          <TableHeader className="sticky top-0 bg-background z-20">
+          <div className="admin-surface hidden min-h-0 flex-1 flex-col overflow-hidden lg:flex">
+          <div className="min-h-0 flex-1 overflow-auto">
+          <Table className="admin-records-table min-w-[1176px] table-fixed" allowHorizontalScroll horizontalScrollOwner="admin-evaluation-table">
+          <TableHeader className="sticky top-0 bg-card z-20">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-10 sticky left-0 z-10 bg-background/95 px-2 sm:w-12 sm:px-4">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.expander, "sticky left-0 z-10 bg-card px-2")}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -1524,7 +1674,8 @@ export function EvaluationTable({
                   </TooltipContent>
                 </Tooltip>
               </TableHead>
-              <TableHead className="min-w-[220px] sm:min-w-[280px] lg:sticky lg:left-12 lg:z-10 lg:bg-background">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.restaurant, "px-3 lg:sticky lg:left-12 lg:z-10 lg:bg-card")}>
+                <span className="sr-only">식당 및 영상 근거</span>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1553,7 +1704,7 @@ export function EvaluationTable({
               </TableHead>
 
               {/* 평가 컬럼들 */}
-              <TableHead className="min-w-[90px]">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.score, "!px-1")}>
                 {renderFilterDropdown(
                   "visit_authenticity",
                   "방문여부",
@@ -1569,7 +1720,7 @@ export function EvaluationTable({
                 )}
               </TableHead>
 
-              <TableHead className="hidden min-w-[80px] lg:table-cell">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.score, "hidden !px-1 lg:table-cell")}>
                 {renderFilterDropdown(
                   "rb_inference_score",
                   "추론합리",
@@ -1583,20 +1734,20 @@ export function EvaluationTable({
                 )}
               </TableHead>
 
-              <TableHead className="hidden min-w-[90px] lg:table-cell">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.boolean, "hidden !px-1 lg:table-cell")}>
                 {renderFilterDropdown(
                   "rb_grounding_TF",
                   "근거일치",
                   FILTER_TOOLTIPS.rb_grounding_TF,
                   [
                     { value: 'all', label: '전체' },
-                    { value: 'True', label: '일치' },
+                    { value: 'True', label: '확인됨' },
                     { value: 'False', label: '불일치' },
                   ]
                 )}
               </TableHead>
 
-              <TableHead className="hidden min-w-[80px] lg:table-cell">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.score, "hidden !px-1 lg:table-cell")}>
                 {renderFilterDropdown(
                   "review_faithfulness_score",
                   "리뷰충실",
@@ -1609,7 +1760,7 @@ export function EvaluationTable({
                 )}
               </TableHead>
 
-              <TableHead className="min-w-[80px]">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.address, "!px-1")}>
                 {renderFilterDropdown(
                   "geocoding_success",
                   "주소 확인",
@@ -1628,23 +1779,23 @@ export function EvaluationTable({
                 )}
               </TableHead>
 
-              <TableHead className="hidden min-w-[90px] lg:table-cell">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.category, "hidden !px-1 lg:table-cell")}>
                 {renderFilterDropdown(
                   "category_validity_TF",
-                  "카테고리 유효",
+                  "분류 유효",
                   FILTER_TOOLTIPS.category_validity_TF,
                   [
                     { value: 'all', label: '전체' },
-                    { value: 'True', label: '일치' },
-                    { value: 'False', label: '불일치' },
+                    { value: 'True', label: '유효' },
+                    { value: 'False', label: '무효' },
                   ]
                 )}
               </TableHead>
 
-              <TableHead className="hidden min-w-[90px] lg:table-cell">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.category, "hidden !px-1 lg:table-cell")}>
                 {renderFilterDropdown(
                   "category_TF",
-                  "카테고리 정합",
+                  "분류 일치",
                   FILTER_TOOLTIPS.category_TF,
                   [
                     { value: 'all', label: '전체' },
@@ -1655,7 +1806,7 @@ export function EvaluationTable({
               </TableHead>
 
               {/* 고정 컬럼 */}
-              <TableHead className="sticky right-[120px] z-10 min-w-[84px] bg-background text-center lg:right-[160px] lg:min-w-[96px]">
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.status, "sticky right-[136px] z-10 bg-card !px-1 text-center")}>
                 {/* 삭제 필터 활성화 시 드롭다운 숨김 */}
                 {isDeletedFilterActive ? (
                   <div className="text-sm font-medium">상태</div>
@@ -1668,16 +1819,16 @@ export function EvaluationTable({
                   )
                 )}
               </TableHead>
-              <TableHead className="sticky right-0 z-10 min-w-[120px] bg-background text-center lg:min-w-[160px]">액션</TableHead>
+              <TableHead className={cn(DESKTOP_TABLE_COLUMNS.actions, "admin-record-actions sticky right-0 z-10 bg-card px-2 text-center")}>액션</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && records.length === 0 ? (
+            {loading && records.length === 0 && !readFailed ? (
               desktopLoadingRows
-            ) : records.length === 0 ? (
+            ) : records.length === 0 ? (readFailed ? null :
               <TableRow>
-                <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
-                  표시할 데이터가 없습니다
+                <TableCell colSpan={11} className="h-32 p-0 text-center text-muted-foreground">
+                  <div className="admin-empty-state flex h-32 items-center justify-center">표시할 데이터가 없습니다</div>
                 </TableCell>
               </TableRow>
             ) : (
@@ -1697,6 +1848,7 @@ export function EvaluationTable({
                     record={record}
                     isExpanded={expandedId === record.id}
                     onToggleExpand={() => toggleExpand(record.id)}
+                    onRequestDetails={onRequestDetails}
                     onApprove={onApprove}
                     onDelete={onDelete}
                     onRestore={onRestore}
@@ -1717,6 +1869,7 @@ export function EvaluationTable({
                         <EvaluationRowDetails
                           record={record}
                           onEdit={() => onEdit?.(record)}
+                          onRecover={onRecover ? () => onRecover(record) : undefined}
                         />
                       </div>
                     </TableCell>
@@ -1730,6 +1883,14 @@ export function EvaluationTable({
         </Table>
         <div className="h-8" /> {/* 마지막 레코드가 잘리지 않도록 충분한 하단 여백 */}
           </div>
+          <div className="admin-cms-footer shrink-0 justify-between" role="status" aria-busy={isLoadingMore || (loading && records.length === 0)}>
+            <span>{records.length === 0 && readFailed ? '미확인' : records.length === 0 && loading ? '조회 중' : recordCountLabel}</span>
+            <span>{isLoadingMore ? '불러오는 중' : activeFilterCount > 0 ? `필터 ${activeFilterCount}개 적용` : ''}</span>
+          </div>
+          </div>
+        )}
+        {shouldRenderMobile && isLoadingMore && (
+          <div className="shrink-0 py-2 text-center text-xs text-muted-foreground" role="status">불러오는 중</div>
         )}
         {loadMoreSentinel}
       </div>

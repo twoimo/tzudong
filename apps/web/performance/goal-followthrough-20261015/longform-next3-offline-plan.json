@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-next-three-offline-plan",
+  "generatedAt": "2026-10-15T06:39:47Z",
+  "execution": {
+    "performed": false,
+    "providerCalls": 0,
+    "generationCalls": 0,
+    "databaseWrites": 0,
+    "deployments": 0
+  },
+  "frozenSource": {
+    "eligibleRows": 1071,
+    "inventorySha256": "c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73",
+    "fullOfflinePlan": {
+      "reusable": 1,
+      "new": 1069,
+      "readbackRequired": 1,
+      "corrupt": 0,
+      "remainingSegments": 2009,
+      "upperProviderCalls": 4018,
+      "upperReservedInputTokens": 2106589184,
+      "upperElapsedSeconds": 2671970,
+      "costEstimated": false
+    }
+  },
+  "selection": {
+    "method": "first three rows in frozen source order after excluding every known succeeded, rejected, uncertain/readback-required or already-published video",
+    "excludedVideoIds": [
+      "-D43ezc57z8",
+      "iRcaePXQRto",
+      "QWtvZ6NfNJ8",
+      "-8wi-fVqTwk"
+    ],
+    "candidateInventoryFileSha256": "b7e79b6e89e19b1a3e0694b971d78261181264f0b53e892100cbce955f141e86",
+    "candidateCanonicalInventorySha256": "2689b09cfcef7a5b133d2cabdcc9e142050c002604c11a7f4b1529ad1ce36d9a",
+    "sourceRowsExact": true,
+    "sourceMembershipEvidenceExact": true,
+    "channelIdentityExact": true,
+    "candidateIdsDistinct": true,
+    "videos": [
+      {
+        "selectionOrder": 1,
+        "frozenEligibleRow": 1,
+        "videoId": "-1OU4tkFJns",
+        "durationSeconds": 780,
+        "plannedSegments": 1,
+        "plannedCalls": 2
+      },
+      {
+        "selectionOrder": 2,
+        "frozenEligibleRow": 3,
+        "videoId": "-C4280KT3S4",
+        "durationSeconds": 1316,
+        "plannedSegments": 2,
+        "plannedCalls": 4
+      },
+      {
+        "selectionOrder": 3,
+        "frozenEligibleRow": 5,
+        "videoId": "-H-mhUeu_qk",
+        "durationSeconds": 937,
+        "plannedSegments": 2,
+        "plannedCalls": 4
+      }
+    ]
+  },
+  "unchangedRuntime": {
+    "route": "standard Interactions",
+    "model": "gemini-3.8-flash",
+    "temperatureChanged": false,
+    "tokenLimitsChanged": false,
+    "concurrencyChanged": false,
+    "engineChanged": false,
+    "requestsPerMinute": 1,
+    "maxInflight": 1,
+    "modelInputLimitPerSegment": 1048576,
+    "modelOutputLimitPerSegment": 65536,
+    "callsPerSegment": 2
+  },
+  "offlinePlan": {
+    "videos": 3,
+    "durationSeconds": 3033,
+    "reusable": 0,
+    "new": 3,
+    "readbackRequired": 0,
+    "corrupt": 0,
+    "remainingSegments": 5,
+    "countTokenCalls": 5,
+    "interactionCreateCalls": 5,
+    "upperProviderCalls": 10,
+    "upperReservedInputTokens": 5242880,
+    "derivedOutputTokenCap": 327680,
+    "upperElapsedSeconds": 6650,
+    "elapsedIsTimeoutBoundNotForecast": true
+  },
+  "quotaObservation": {
+    "evidenceFileSha256": "3238d8e64b1303ec17676d2717d82f86b1205d00977917903edb523b7d98e85f",
+    "observedAt": "2026-10-15T05:50:18.714963+00:00",
+    "projectTier": "Tier 1",
+    "displayedLimits": {
+      "rpm": 1000,
+      "tpm": 2000000,
+      "rpd": 10000
+    },
+    "historical28DayPeaks": {
+      "rpm": 1,
+      "tpmDisplay": "92.17K",
+      "rpd": 16
+    },
+    "usageAggregationDelayMinutes": 15,
+    "planBounds": {
+      "serializedRpm": 1,
+      "maxSingleCallInputReservation": 1048576,
+      "providerCalls": 10
+    },
+    "limits": [
+      "Displayed quotas are project-wide and do not prove current spare capacity.",
+      "Historical peaks are not a current usage readback.",
+      "No quota, billing, model or concurrency setting was changed."
+    ]
+  },
+  "cumulativePilotActualsBeforeNextThree": {
+    "scope": "first rejected pilot plus second successful pilot",
+    "httpCalls": 6,
+    "countTokenCalls": 2,
+    "interactionCreateCalls": 2,
+    "interactionGetCalls": 2,
+    "generationCalls": 2,
+    "retries": 0,
+    "inputTokens": 153721,
+    "outputTokens": 1981,
+    "thinkingTokens": 709,
+    "outputPlusThinkingTokens": 2690,
+    "totalTokens": 156411,
+    "countedInputTokens": 173920,
+    "billingVerified": false
+  },
+  "pricingArithmetic": {
+    "source": "https://ai.google.dev/gemini-api/docs/pricing",
+    "rateWindow": "Gemini 3.8 Flash rates stated through 2026-12-31",
+    "standard": {
+      "inputUsdPerMillion": 0.75,
+      "outputAndThinkingUsdPerMillion": 3.75
+    },
+    "batchComparisonOnly": {
+      "inputUsdPerMillion": 0.375,
+      "outputAndThinkingUsdPerMillion": 1.875,
+      "usedByPlan": false
+    },
+    "actualPilotArithmetic": {
+      "inputUsd": 0.11529075,
+      "outputAndThinkingUsd": 0.0100875,
+      "totalUsd": 0.12537825,
+      "formula": "153721*0.75/1000000 + 2690*3.75/1000000",
+      "costVerified": false
+    },
+    "successfulPilotOnlyArithmetic": {
+      "inputUsd": 0.05731125,
+      "outputAndThinkingUsd": 0.00680625,
+      "totalUsd": 0.0641175,
+      "formula": "76415*0.75/1000000 + (1490+325)*3.75/1000000",
+      "costVerified": false
+    },
+    "nextThreeReservationArithmetic": {
+      "inputReservationUsd": 3.93216,
+      "outputAndThinkingTokenCapUsd": 1.2288,
+      "providerTokenChargeArithmeticUpperUsd": 5.16096,
+      "formula": "5242880*0.75/1000000 + 327680*3.75/1000000",
+      "thinkingIncludedInMaxOutputTokens": true,
+      "tokenLimitSource": "https://ai.google.dev/gemini-api/docs/thinking#token_limits_and_max_output_tokens",
+      "providerTokenChargeArithmeticUpperBound": true,
+      "actualBillingTaxAndOtherFeaturesVerified": false,
+      "batchComparisonProviderTokenChargeArithmeticUpperUsd": 2.58048,
+      "batchRoutePlanned": false,
+      "costVerified": false
+    }
+  },
+  "decisionBoundaries": [
+    "Do not start generation from this plan without a fresh bounded execution authorization and current quota readback.",
+    "Do not infer the quality, cost or completion time of all 1071 videos from one successful video.",
+    "Do not change model, temperature, limits, concurrency, engine or standard Interactions routing.",
+    "Preserve the rejected and readback-required private records without rewrite or retransmission."
+  ]
+}

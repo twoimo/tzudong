@@ -1,0 +1,391 @@
+{
+  "batchId": "pilot-iRcaePXQRto-20261015-01",
+  "defect": {
+    "cause": "TRANSPORT_SCHEMA_UNDERSPECIFIED_NESTED_STRUCTURE",
+    "localSemanticValidatorRejectedDiagnosedShape": true,
+    "oldWireSchemaAcceptedDiagnosedShapeOffline": true,
+    "validatorWeakeningApplied": false
+  },
+  "diagnostic": {
+    "claimItemKeyShapes": [
+      {
+        "count": 3,
+        "keys": [
+          "confidence",
+          "evidence",
+          "kind",
+          "text",
+          "uncertainty"
+        ]
+      }
+    ],
+    "coverageKeys": [],
+    "getCount": 1,
+    "modelOutputTextPartCount": 1,
+    "providerEnvelopeKeys": [
+      "created",
+      "generation_config",
+      "id",
+      "model",
+      "object",
+      "response_format",
+      "status",
+      "steps",
+      "updated",
+      "usage"
+    ],
+    "providerOutputTextPersisted": false,
+    "providerStepCount": 3,
+    "providerStepTypeCounts": {
+      "model_output": 1,
+      "thought": 1,
+      "user_input": 1
+    },
+    "rawProviderBodyPersisted": false,
+    "responseRootKeys": [
+      "claims",
+      "coverage",
+      "restaurants",
+      "schemaVersion",
+      "summary",
+      "uncertainty",
+      "videoId"
+    ],
+    "responseRootType": "object",
+    "restaurantItemKeyShapes": [
+      {
+        "count": 1,
+        "keys": [
+          "claims",
+          "confidence",
+          "evidence",
+          "menus",
+          "name",
+          "uncertainty"
+        ]
+      }
+    ],
+    "sourceResponseIdReused": true,
+    "summaryItemKeyShapes": [
+      {
+        "count": 1,
+        "keys": [
+          "confidence",
+          "evidence",
+          "kind",
+          "text",
+          "uncertainty"
+        ]
+      }
+    ],
+    "topLevelArrayCounts": {
+      "claims": 3,
+      "restaurants": 1,
+      "summary": 1,
+      "uncertainty": 0
+    },
+    "validatorCode": "ANALYSIS_SCHEMA_INVALID",
+    "validatorIssues": [
+      {
+        "missingKeys": [
+          "complete",
+          "endSeconds",
+          "limitations",
+          "startSeconds"
+        ],
+        "path": "$.coverage",
+        "reason": "MISSING_KEYS"
+      },
+      {
+        "actualType": "string",
+        "path": "$.summary[0].evidence[0]",
+        "reason": "EXPECTED_OBJECT"
+      },
+      {
+        "actualType": "string",
+        "path": "$.restaurants[0].evidence[0]",
+        "reason": "EXPECTED_OBJECT"
+      },
+      {
+        "actualType": "string",
+        "path": "$.restaurants[0].menus[0]",
+        "reason": "EXPECTED_OBJECT"
+      },
+      {
+        "actualType": "string",
+        "path": "$.restaurants[0].claims[0]",
+        "reason": "EXPECTED_OBJECT"
+      },
+      {
+        "actualType": "string",
+        "path": "$.claims[0].evidence[0]",
+        "reason": "EXPECTED_OBJECT"
+      },
+      {
+        "actualType": "string",
+        "path": "$.claims[1].evidence[0]",
+        "reason": "EXPECTED_OBJECT"
+      },
+      {
+        "actualType": "string",
+        "path": "$.claims[2].kind",
+        "reason": "ENUM_MISMATCH"
+      },
+      {
+        "actualType": "string",
+        "path": "$.claims[2].evidence[0]",
+        "reason": "EXPECTED_OBJECT"
+      }
+    ]
+  },
+  "durationSeconds": 844,
+  "fix": {
+    "activeReadbackCommitOrder": [
+      "binding",
+      "observation",
+      "receipt",
+      "binding_cleanup"
+    ],
+    "followupFullSemanticSchemaSha256": "7168c8153f3922ebc33cfdd6f4a07e89e947374e5af882dc122bade3495a9efd",
+    "fullSemanticSchemaSha256": "28f581bb49ad214a63b76b02b944a857bd8b98109e5ce0125a54395b844b8678",
+    "fullSemanticValidatorWeakened": false,
+    "interruptedCommitRecoveryNeedsProviderCall": false,
+    "newGenerationPerformed": true,
+    "notSentObservationPersisted": false,
+    "providerAcceptanceVerified": true,
+    "sourceCommitted": false,
+    "sourceFiles": {
+      "backend/knowledge_graph/claude_video_adapter.py": "9969cc50edb6fc552b8e3f2010315983b5ca4a75e2ecd3f995a81225eccff3af",
+      "backend/knowledge_graph/longform_analysis.py": "9f355d15e58259f1e7d7375818026c953b3c919d1ca8404fec82fa2b338ad643",
+      "backend/knowledge_graph/tests/test_claude_video_adapter.py": "0b4afc81f653fefd10898407eb27ef26d7b9c188f17c731c15c5f1ec28c65c0d",
+      "backend/knowledge_graph/tests/test_longform_segments.py": "c4e4e8998846ecb0eae90f2d8facfaccaed75b21788d9e8d895f53c6898f3110"
+    },
+    "wireSchemaBytes": 3600,
+    "wireSchemaEnums": {
+      "evidenceModality": [
+        "audio",
+        "visual",
+        "both"
+      ],
+      "factKind": [
+        "spoken",
+        "visual",
+        "inference"
+      ],
+      "schemaVersion": [
+        1
+      ]
+    },
+    "wireSchemaOfficialSource": "https://ai.google.dev/gemini-api/docs/structured-output",
+    "wireSchemaSha256": "73b3aed03cc12cd373ee91d0134f73c61b5ac26b00e6efdc528355eac9630343",
+    "wireSchemaUsesOfficialSupportedSubset": [
+      "type",
+      "properties",
+      "required",
+      "additionalProperties",
+      "items",
+      "enum"
+    ]
+  },
+  "followupPilot": {
+    "batchId": "pilot-D43ezc57z8-structural-v2-20261015-01",
+    "cacheState": "reusable",
+    "candidateSha256": "6c395640d5dba3c4037f916f0af12309e3fc6f620cd4de06ac9b0438bb73d4b5",
+    "completedVideosIncrement": 1,
+    "execution": {
+      "attempted": 1,
+      "code": "BOUNDED_EXECUTION_COMPLETED",
+      "segmentsSucceeded": 1,
+      "succeeded": 1,
+      "unconfirmed": 0
+    },
+    "fullEvidenceReadbackPassed": true,
+    "initialPlan": {
+      "corrupt": 0,
+      "new": 1,
+      "readback_required": 0,
+      "reusable": 0
+    },
+    "inventoryCompletion": {
+      "admitted": 1071,
+      "completed": 1
+    },
+    "limits": {
+      "generationCalls": 1,
+      "maxCalls": 2,
+      "maxInflight": 1,
+      "maxReadbackCalls": 1,
+      "maxVideos": 1,
+      "readbackCallsUsed": 0,
+      "requestsPerMinute": 1,
+      "reservedInputTokens": 1048576,
+      "reservedOutputTokens": 65536
+    },
+    "localReadback": {
+      "providerReadbackCalls": 0,
+      "recovered": 0,
+      "unresolved": 0
+    },
+    "privacy": {
+      "credentialValuePersisted": false,
+      "rawProviderBodyPersisted": false,
+      "rawProviderEnvelopePersisted": false,
+      "readbackBindingPersisted": false
+    },
+    "privateState": {
+      "batchSha256": "c47e61f9dd41f47892432a4ed7ac229229bcbfb059f2cfafc182b48e5a246034",
+      "opaqueResponseIdStored": true,
+      "receiptEvidencePairMatched": true,
+      "receiptObservationPairMatched": true,
+      "segmentEvidenceSha256": "a5fbb3bf4c3d2805add6b55d7d1d2c1fce9528e91f610f8f7814ee90a6228398",
+      "segmentObservationSha256": "03e3f9957ca0e700e83f8a26cdc9baf5d9db5498effe02edd9198c1e2174852c",
+      "segmentReceiptSha256": "2a4aacd35543799522cfbcd469d0c47f187e96114256e6f9f348ae3950d8ab7f",
+      "videoEvidenceSha256": "8a2ade2fefeb26073319d50aff19d6b708106909407d35cd4de800d0476445f1",
+      "videoReceiptSha256": "77b2585a3dd3e7ed342522c4b33f37a544b2a219405eeea74d9710709555a574"
+    },
+    "providerAcceptanceVerified": true,
+    "providerCalls": {
+      "countTokens": 1,
+      "generationCount": 1,
+      "generationRetried": false,
+      "interactionsCreate": 1,
+      "interactionsGet": 0,
+      "readbackGet": 0,
+      "totalHttpCalls": 2
+    },
+    "savedEvidenceValidated": true,
+    "semanticValidationPassed": true,
+    "sourceInventorySha256": "c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73",
+    "sourceRowExact": true,
+    "usage": {
+      "completeness": "complete",
+      "costVerified": false,
+      "countedInputTokens": 86492,
+      "inputTokens": 76415,
+      "outputTokens": 1490,
+      "thinkingTokens": 325,
+      "totalTokens": 78230
+    },
+    "videoId": "-D43ezc57z8"
+  },
+  "inventory": {
+    "admittedLongform": 1,
+    "fileSha256": "786100c7ac9d066465890e87388a06e9ec5323eda1c713084dc9be1af0f28e86",
+    "rows": 1
+  },
+  "kind": "tzudong_longform_pilot_readback",
+  "limits": {
+    "maxInflight": 1,
+    "maxInitialCalls": 2,
+    "maxReadbackCalls": 1,
+    "maxVideos": 1,
+    "requestsPerMinute": 1,
+    "reservedInputTokens": 1048576,
+    "reservedOutputTokens": 65536
+  },
+  "nextAction": "FREEZE_NO_FURTHER_GENERATION_PENDING_ROOT_AUTHORITY",
+  "observedAt": "2026-10-15T05:59:46.305667+00:00",
+  "privacy": {
+    "credentialValuePersisted": false,
+    "diagnosticBodyPersisted": false,
+    "diagnosticOutputTextPersisted": false,
+    "diagnosticSecretPersisted": false,
+    "opaqueResponseIdCopiedToReceipt": false,
+    "rawOcrPersisted": false,
+    "rawProviderBodyPersisted": false,
+    "userInformationPersisted": false
+  },
+  "privateState": {
+    "batchFileSha256": "e7c536fc18c88082d276af7d5649904dff4d975967b490d1e7b7b6456b0288a2",
+    "cacheName": "tzudong-longform-current-1071-h1051_q9",
+    "currentObservationPayloadSha256": "21ff3fdbf53d76169694dcc08577711c22674980833efbde977feb288cbdd0f8",
+    "historicalBytesRewritten": false,
+    "historicalMismatchPreserved": true,
+    "observationFileSha256": "bc44450d9254aae105e45e35a82a2a88da74b20fb058058613a47004a67d6679",
+    "receiptStoredObservationSha256": "825fcbc975dafea524f9ab3c794efc3ed069b3c86e136151e663b1f6b4481c1c",
+    "segmentReceiptFileSha256": "bb4fbf2b95cd863252e210bdcf2d92a8a7dd54a769264fe4f88e2cbe2fd34ca2"
+  },
+  "providerCalls": {
+    "countTokens": 1,
+    "diagnosticGet": 1,
+    "generationCount": 1,
+    "generationRetried": false,
+    "interactionsCreate": 1,
+    "interactionsGet": 2,
+    "readbackGet": 1,
+    "totalHttpCalls": 4
+  },
+  "repairAssessment": {
+    "applicable": false,
+    "cacheStateAfterFollowup": "readback_required",
+    "currentCallsAttempted": 2,
+    "currentCode": "ANALYSIS_SCHEMA_INVALID",
+    "currentState": "rejected",
+    "exactOldBatchReceiptObservationShaVerified": true,
+    "historicalBytesRewritten": false,
+    "offlineRecoveryToSuccessPossible": false,
+    "reason": "ACTIVE_PROTOCOL2_SCHEMA_REJECTION_DOES_NOT_MATCH_NARROW_LEGACY_PROTOCOL1_REPAIR_CONTRACT",
+    "requiredLegacyCallsAttempted": 1,
+    "requiredLegacyCode": "ANALYSIS_EVIDENCE_INVALID",
+    "requiredLegacyState": "uncertain"
+  },
+  "result": {
+    "code": "ANALYSIS_SCHEMA_INVALID",
+    "completedVideosIncrement": 0,
+    "historicalMismatchPreserved": true,
+    "latestObservationHttpOutcome": "http_success",
+    "latestObservationOperation": "readback",
+    "opaqueResponseIdStoredInPrivateState": true,
+    "readbackAttempted": true,
+    "readbackResolved": false,
+    "receiptObservationShaMatchesLatestObservation": false,
+    "segmentState": "rejected",
+    "semanticEvidenceStored": false,
+    "sourceFixLiveVerified": false,
+    "videoCode": "SEGMENTS_PENDING",
+    "videoState": "segmented"
+  },
+  "runtime": {
+    "aiStudioKeyName": "tzudong-gemini-free-20260828",
+    "aiStudioProjectName": "tzudong-free-zero",
+    "claudeVideoCommit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+    "credentialAlias": "GEMINI_API_KEY",
+    "maskedSuffixMatchedFreshUi": true,
+    "model": "gemini-3.8-flash",
+    "python": "3.14.8",
+    "sourceWasOriginalBackendDotenv": true
+  },
+  "schemaVersion": 1,
+  "supersedesReceiptSha256": "7e8a7c4c31f4cb517bf07982208ce0b48a5caf66f689dcf92cee0fa5f24c0c9b",
+  "updatedAt": "2026-10-15T06:16:33.038913+00:00",
+  "usage": {
+    "completeness": "complete",
+    "costVerified": false,
+    "countedInputTokens": 87428,
+    "inputTokens": 77306,
+    "outputTokens": 491,
+    "thinkingTokens": 384,
+    "totalTokens": 78181
+  },
+  "verification": {
+    "commitInterruptionBoundariesVerified": [
+      "binding",
+      "observation",
+      "receipt"
+    ],
+    "diagnosedShapeRejectedByNewWireSchemaOffline": true,
+    "followupCacheState": "reusable",
+    "newWorkPlanned": 1,
+    "privateStateAfterSourceFix": "readback_required",
+    "providerAcceptanceVerified": true,
+    "python": "3.14.8",
+    "rejectedRepairTestsPassed": 16,
+    "relatedTestsPassed": 150,
+    "relatedTestsSkipped": 4,
+    "semanticEvidenceReadbackVerified": true,
+    "skipReason": "OSK_TEST_ENGINE_UNAVAILABLE",
+    "targetedTestsPassed": 45,
+    "validShapeAcceptedByNewWireSchemaOffline": true
+  },
+  "videoId": "iRcaePXQRto"
+}

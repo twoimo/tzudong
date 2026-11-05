@@ -1,3 +1,4 @@
+import type { SponsorshipInfo } from '@/lib/sponsorship-state';
 import type { RestaurantDatabaseRow, ReviewDatabaseRow } from "@/integrations/supabase/types";
 import type { RestaurantEvidenceFrame } from "@/lib/evidence-engineering/types";
 
@@ -7,10 +8,7 @@ type BaseRestaurant = RestaurantDatabaseRow;
 // YouTube Meta 타입 정의 (DB에 저장된 실제 구조)
 export interface YoutubeMeta {
     title?: string;
-    ads_info?: {
-        is_ads: boolean;
-        what_ads: string[] | null;
-    };
+    ads_info?: SponsorshipInfo<string[] | null>;
     duration?: number;
     is_shorts?: boolean;
     publishedAt?: string; // ISO 8601 날짜 문자열
@@ -31,7 +29,7 @@ export interface Restaurant extends BaseRestaurant {
     reviewed_status?: string | null;
     reviewed?: boolean | null;
     // 공개 행에 없으면 standard다. shadow 테이블에서는 읽지 않는다.
-    popularity_tier?: "fire" | "rainbow" | "standard" | null;
+    popularity_tier?: "fire" | "ember" | "rainbow" | "standard" | null;
 
     // 검색 관련 (주간 인기 검색용)
     weekly_search_count: number | null; // 주간 검색 횟수

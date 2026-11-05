@@ -10,12 +10,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createUserNotification } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LoadingPreview } from '@/components/ui/loading-surface';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/no-toast";
 import { useRecordAction } from "@/lib/admin/use-record-action";
-import { isRecordActionCancelled, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT } from "@/lib/admin/record-action-client";
+import { shouldNotifyRecordActionError, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT } from "@/lib/admin/record-action-client";
 import type { RecordActionReceipt } from "@/lib/admin/record-action-contract";
 import { ADMIN_PENDING_COUNTS_QUERY_KEY } from "@/lib/admin/pending-counts";
 import { invalidateRestaurantDiscoveryQueries } from "@/lib/restaurant-discovery-cache";
@@ -30,6 +31,8 @@ import {
     Loader2,
     ChevronRight,
     ChevronLeft,
+    LockKeyhole,
+    Camera,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -170,6 +173,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
     const [adminNote, setAdminNote] = useState("");
+    const [reloadingReviews, setReloadingReviews] = useState(false);
 
     const {
         data: reviewsPages,
@@ -309,7 +313,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
     };
     const recordActions = useRecordAction(receipt => { void onRecordApplied(receipt); }, { recover: isOpen && isAdmin });
     const notifyRecordActionError = (error: unknown) => {
-        if (!isRecordActionCancelled(error)) toast.error(recordActionErrorMessage(error));
+        if (shouldNotifyRecordActionError(error)) toast.error(recordActionErrorMessage(error));
     };
     type ModerationInput = { review: Review; note: string };
     const afterModeration = async (receipt: RecordActionReceipt, { review, note }: ModerationInput) => {
@@ -374,6 +378,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
         );
     };
 
+    const countsUnknown = reviews.length === 0 && (reloadingReviews || (isError && !isFetchNextPageError));
     const pendingReviews = reviews.filter(r => !r.is_verified && !r.admin_note?.startsWith('거부: '));
     const approvedReviews = reviews.filter(r => r.is_verified);
     const rejectedReviews = reviews.filter(r => !r.is_verified && r.admin_note?.startsWith('거부: '));
@@ -384,7 +389,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 <MapPanelHeader title="리뷰관리" onClose={onClose} closeLabel="리뷰관리 패널 닫기" />
                 <div className="flex-1 flex items-center justify-center p-8">
                     <Card className="p-8 text-center">
-                        <div className="text-4xl mb-3">🔒</div>
+                        <LockKeyhole className="mx-auto mb-3 h-8 w-8 text-muted-foreground" aria-hidden="true" />
                         <h3 className="text-lg font-semibold mb-2">접근 권한 없음</h3>
                         <p className="text-sm text-muted-foreground">관리자만 접근할 수 있습니다.</p>
                     </Card>
@@ -414,7 +419,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             {/* 헤더 */}
             <MapPanelHeader
                 title="리뷰관리"
-                description={`불러온 리뷰 ${reviews.length}건`}
+                description={countsUnknown ? "불러온 리뷰 미확인" : `불러온 리뷰 ${reviews.length}건`}
                 onClose={onClose}
                 closeLabel="리뷰관리 패널 닫기"
             />
@@ -423,33 +428,34 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             <div aria-label="불러온 리뷰 상태" className="grid grid-cols-3 gap-2 p-3 border-b border-border">
                 <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded">
                     <p className="text-xs text-muted-foreground">대기</p>
-                    <p className="text-lg font-bold">{pendingReviews.length}</p>
+                    <p className="text-lg font-bold">{countsUnknown ? "미확인" : pendingReviews.length}</p>
                 </div>
                 <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded">
                     <p className="text-xs text-muted-foreground">승인</p>
-                    <p className="text-lg font-bold">{approvedReviews.length}</p>
+                    <p className="text-lg font-bold">{countsUnknown ? "미확인" : approvedReviews.length}</p>
                 </div>
                 <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded">
                     <p className="text-xs text-muted-foreground">거부</p>
-                    <p className="text-lg font-bold">{rejectedReviews.length}</p>
+                    <p className="text-lg font-bold">{countsUnknown ? "미확인" : rejectedReviews.length}</p>
                 </div>
             </div>
 
             {/* 대기 중인 리뷰 목록 */}
             <div className="flex-1 overflow-auto p-3 space-y-2">
-                {isError && !isFetchNextPageError ? (
+                {(isError && !isFetchNextPageError) || reloadingReviews ? (
                     <div role="alert" className="space-y-2 p-3 text-sm">
                         <p>리뷰를 불러오지 못했습니다.</p>
-                        <Button variant="outline" size="sm" onClick={() => void refetch()}>다시 불러오기</Button>
+                        <Button variant="outline" size="sm" aria-busy={reloadingReviews} aria-disabled={reloadingReviews || undefined} onClick={() => {
+                            if (reloadingReviews) return;
+                            setReloadingReviews(true);
+                            void Promise.resolve(refetch()).finally(() => setReloadingReviews(false));
+                        }}>다시 불러오기</Button>
                     </div>
                 ) : isLoading ? (
                     <div className="space-y-2">
-                        {[1, 2, 3].map(i => (
-                            <Card key={i} className="p-3">
-                                <div className="h-4 bg-muted rounded animate-pulse w-32 mb-2" />
-                                <div className="h-3 bg-muted rounded animate-pulse w-48" />
-                            </Card>
-                        ))}
+
+                        <LoadingPreview kind="list" rows={3} showHeader={false} label="리뷰 목록 조회 중" />
+
                     </div>
                 ) : pendingReviews.length === 0 ? (
                     <Card className="p-6 text-center">
@@ -476,7 +482,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 )}
                 <div ref={loadMoreRef} aria-hidden="true" className="h-px" />
                 {isFetchNextPageError && <p role="alert" className="text-sm text-destructive">다음 리뷰를 불러오지 못했습니다.</p>}
-                {hasNextPage && <Button variant="outline" size="sm" className="w-full" onClick={() => { if (!isFetchingNextPage) void fetchNextPage(); }} disabled={isFetchingNextPage}>{isFetchNextPageError ? '다음 리뷰 다시 불러오기' : '리뷰 더 불러오기'}</Button>}
+                {hasNextPage && <Button variant="outline" size="sm" className="w-full" aria-disabled={isFetchingNextPage || undefined} aria-busy={isFetchingNextPage || undefined} onClick={() => { if (!isFetchingNextPage) void fetchNextPage(); }}>{isFetchNextPageError ? '다음 리뷰 다시 불러오기' : '리뷰 더 불러오기'}</Button>}
             </div>
 
             {recordActions.dialog}
@@ -610,7 +616,7 @@ const ReviewCard = forwardRef<HTMLDivElement, ReviewCardProps>(
                             {new Date(review.visited_at).toLocaleDateString('ko-KR')}
                         </span>
                         {review.food_photos?.length > 0 && (
-                            <Badge variant="outline" className="text-xs">📷 {review.food_photos.length}</Badge>
+                            <Badge variant="outline" className="gap-1 text-xs"><Camera className="h-3 w-3" aria-hidden="true" />{review.food_photos.length}</Badge>
                         )}
                     </div>
 

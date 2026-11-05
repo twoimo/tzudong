@@ -83,6 +83,7 @@ fn format_transcript_range(
 }
 
 /// `plan_chunks(video_id, duration, segments, overlap_sec=10.0) -> list[dict]`.
+/// Media ranges do not overlap. `overlap_sec` is prior transcript context.
 ///
 /// `video_id` is accepted to keep the Python signature identical but is not
 /// used in the computation (it is not in the Python function body either).

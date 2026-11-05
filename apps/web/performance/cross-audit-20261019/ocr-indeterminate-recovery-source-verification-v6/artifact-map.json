@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "scope": "receipt-ocr-recovery108-v12-actual-catalog-correction",
+  "artifacts": [
+    {
+      "path": "compiler-check.json",
+      "sha256": "696f39feb8ed2a9cb0bab7d7fc2dd2194687ad67671f711c820c5739fcbe8579",
+      "bytes": 421
+    },
+    {
+      "path": "compiler-unit.txt",
+      "sha256": "882ac870b8568731d33c43e7db6ecbca92f4dfb1c7d2f5c020cbf3f8cf42f51b",
+      "bytes": 606
+    },
+    {
+      "path": "fixture-source-check.txt",
+      "sha256": "41d443f3ef22f001df0608cc0751f7ec96487adf39740ac7d8f6cec0f0e11891",
+      "bytes": 71
+    },
+    {
+      "path": "source-hashes.txt",
+      "sha256": "cd2af6efe98524029bc8e2b09d67a771ffb0691ed9d0a5db52ac77ae60a32e5f",
+      "bytes": 540
+    },
+    {
+      "path": "untracked-whitespace-check.txt",
+      "sha256": "6bdb87985ec7d08b2f4e0aa5ec9126ae4036d9d7f40d5a276b4166968b233332",
+      "bytes": 34
+    },
+    {
+      "path": "v12-to-v13-minimal-delta.txt",
+      "sha256": "e77624d8a4bb1d407c8c4aff5601e01c3e39b23743a087128c2f5162a7b9fb54",
+      "bytes": 372
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "candidateHead": "457023a656c7d17671527870679f093ee01e5aeb",
+  "sourceReport": {
+    "path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+    "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82"
+  },
+  "findings": [
+    {
+      "id": "TZ-TH-009",
+      "verdict": "ACCEPT",
+      "severity": "medium",
+      "scope": "provider GET response ID originating-request lineage",
+      "evidence": [
+        {
+          "path": "backend/knowledge_graph/longform_analysis.py",
+          "symbols": [
+            "_known_segment_disposition",
+            "execute",
+            "readback"
+          ],
+          "finding": "Before the fix, the durable segment receipt retained only observationSha256. Eligibility required a non-null responseId and generate/readback operation but did not retain and compare the pre-response request digest or the first provider response ID. Rehashing an observation containing request A's digest and request B's response ID therefore made B GET-eligible."
+        },
+        {
+          "path": "backend/knowledge_graph/claude_video_adapter.py",
+          "symbols": [
+            "observe_response",
+            "invoke"
+          ],
+          "finding": "The actual longform provider path computes requestSha256 from the exact active payload and validates a GET result against the supplied response ID. That blocks a whole-observation A/B swap when B retains B's request digest, but it cannot prove that a supplied opaque B response ID originated from request A when the persisted observation pairs B with A's digest."
+        },
+        {
+          "path": "backend/knowledge_graph/caption_osk_adapter.py",
+          "finding": "This module has no responseId/requestSha256 provider-readback contract and is not imported by longform_analysis.py. The applicable adapter is claude_video_adapter.py; caption_osk_adapter.py was inspected and left unchanged."
+        },
+        {
+          "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+          "symbol": "test_cross_swapped_response_id_is_not_get_eligible_or_sent",
+          "finding": "The synthetic regression rewrites the observation to request B's response ID while preserving request A's digest and recomputes observationSha256. Before the fix the targeted test reported providerGetEligible=1; after the fix planning reports a binding mismatch and provider readback performs zero calls."
+        },
+        {
+          "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+          "symbol": "test_pre_lineage_success_and_uncertainty_remain_byte_identical_provider_holds",
+          "finding": "Segment receipts created without requestSha256/responseId were exercised through planning, execute, and explicit provider readback. A prior success remains a corrupt hold and prior uncertainty remains readback_required; both retain every video JSON byte, attempt zero generation calls, and perform zero provider GET calls."
+        }
+      ],
+      "change": [
+        "Persist requestSha256 from the first pre-generation count observation and the first non-null responseId in the segment receipt.",
+        "Require receipt identity plus retained requestSha256 plus retained responseId plus observationSha256 before declaring provider GET eligibility, accepting completed segment evidence, or issuing active-schema readback.",
+        "Use the receipt-retained request digest for adapter readback and fail closed before incrementing the readback call count when lineage differs.",
+        "Keep the existing exact wire-schema predecessor recovery path separate; no provider, OSK, deployment, global model, or caption adapter write was performed."
+      ],
+      "commands": [
+        "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest backend.knowledge_graph.tests.test_longform_segments.SegmentExecutionTests.test_hash_bound_uncertain_response_id_is_get_eligible_only_for_provider_operations backend.knowledge_graph.tests.test_longform_segments.SegmentExecutionTests.test_cross_swapped_response_id_is_not_get_eligible_or_sent",
+        "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest -v backend.knowledge_graph.tests.test_longform_segments.SegmentExecutionTests.test_pre_lineage_success_and_uncertainty_remain_byte_identical_provider_holds",
+        "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest backend.knowledge_graph.tests.test_longform_segments",
+        "/Users/twoimo/Documents/projects/tzudong/.venv/bin/python3 -m unittest -v backend.knowledge_graph.tests.test_longform_analysis backend.knowledge_graph.tests.test_longform_segments backend.knowledge_graph.tests.test_claude_video_adapter"
+      ],
+      "results": {
+        "preFixTargeted": "2 tests: 1 failure and 1 error; missing receipt requestSha256 and providerGetEligible was 1 for the cross-swapped ID",
+        "postFixTargeted": "2 tests passed",
+        "postFixSegmentSuite": "34 tests passed",
+        "preLineageReceiptBoundary": "success: corrupt hold; uncertainty: readback_required hold; both providerGetEligible=0, attempted=0, readbackCalls=0, byte-identical",
+        "postFixRelatedSuite": "86 tests passed in 1.926s"
+      },
+      "rawResult": {
+        "path": "apps/web/performance/cross-audit-20261018/tz-th-009-unittest.txt",
+        "sha256": "0e0a803156b209b0e22a6a829d93058c73a60ff27cf939bb83b6f1441c848f59"
+      },
+      "residualConditions": [
+        "Verification is local and synthetic. No paid provider GET, OSK write, hosted deployment, or billing observation was performed.",
+        "Pre-fix active-schema receipts do not contain the new retained request/response lineage. Completed receipts fail closed as corrupt and unresolved receipts remain readback_required; neither is deleted, re-generated, or GET-eligible. The reviewed wire-schema predecessor path remains governed by its separately reconstructed exact request contract.",
+        "The receipt files are local unsigned evidence. Coordinated malicious rewriting of the receipt identity, retained IDs, observation, and all hashes is outside this local integrity contract and would require a signed or append-only external ledger."
+      ]
+    }
+  ]
+}

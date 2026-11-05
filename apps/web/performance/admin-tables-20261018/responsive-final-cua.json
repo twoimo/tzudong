@@ -1,0 +1,410 @@
+{
+  "capturedAt": "2026-10-18T11:27:12.653Z",
+  "cases": [
+    {
+      "module": "restaurants",
+      "mobileCards": 25,
+      "pageOverflow": 0,
+      "tables": [],
+      "viewport": [
+        834,
+        954
+      ],
+      "internalOverflow": [],
+      "screenshot": "restaurants-834-fixed.png"
+    },
+    {
+      "module": "restaurants",
+      "mobileCards": 25,
+      "pageOverflow": 0,
+      "tables": [],
+      "viewport": [
+        390,
+        844
+      ],
+      "screenshot": "restaurants-390-fixed.png"
+    },
+    {
+      "module": "restaurants",
+      "mobileCards": 0,
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "clip": {
+            "bottom": 850.6358413696289,
+            "left": 228,
+            "right": 1405,
+            "top": 126.1358413696289
+          },
+          "columns": [
+            {
+              "label": "",
+              "width": 48.03125
+            },
+            {
+              "label": "식당 및 영상 근거",
+              "width": 280.234375
+            },
+            {
+              "label": "방문여부",
+              "width": 84.0625
+            },
+            {
+              "label": "추론합리",
+              "width": 84.0625
+            },
+            {
+              "label": "근거일치",
+              "width": 88.0625
+            },
+            {
+              "label": "리뷰충실",
+              "width": 84.0625
+            },
+            {
+              "label": "주소 확인",
+              "width": 88.0625
+            },
+            {
+              "label": "분류 유효",
+              "width": 96.078125
+            },
+            {
+              "label": "분류 일치",
+              "width": 96.078125
+            },
+            {
+              "label": "상태",
+              "width": 92.078125
+            },
+            {
+              "label": "액션",
+              "width": 136.1875
+            }
+          ],
+          "fullyVisibleRows": 12,
+          "rows": [
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 55.99999237060547
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56.000030517578125
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": true,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            },
+            {
+              "buttons": 3,
+              "fullyVisible": false,
+              "height": 56
+            }
+          ],
+          "width": 1177
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ],
+      "screenshot": "restaurants-1440x960-final.png"
+    },
+    {
+      "module": "submissions",
+      "mobileCards": 0,
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "clip": {
+            "bottom": 904.3301696777344,
+            "left": 228,
+            "right": 1420,
+            "top": 300.3301696777344
+          },
+          "columns": [
+            {
+              "label": "맛집 · 주소",
+              "width": 708
+            },
+            {
+              "label": "검수 신호",
+              "width": 176
+            },
+            {
+              "label": "작성자 · 접수",
+              "width": 160
+            },
+            {
+              "label": "처리 상태",
+              "width": 96
+            },
+            {
+              "label": "상세",
+              "width": 52
+            }
+          ],
+          "fullyVisibleRows": 1,
+          "rows": [
+            {
+              "buttons": 1,
+              "fullyVisible": true,
+              "height": 61
+            }
+          ],
+          "width": 1192
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ],
+      "screenshot": "submissions-1440x960-final.png"
+    },
+    {
+      "module": "reviews",
+      "mobileCards": 0,
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "clip": {
+            "bottom": 903.1538696289062,
+            "left": 228,
+            "right": 1420,
+            "top": 211.15386962890625
+          },
+          "columns": [
+            {
+              "label": "맛집 · 리뷰",
+              "width": 708
+            },
+            {
+              "label": "검수 신호",
+              "width": 176
+            },
+            {
+              "label": "작성자 · 접수",
+              "width": 160
+            },
+            {
+              "label": "처리 상태",
+              "width": 96
+            },
+            {
+              "label": "상세",
+              "width": 52
+            }
+          ],
+          "fullyVisibleRows": 3,
+          "rows": [
+            {
+              "buttons": 1,
+              "fullyVisible": true,
+              "height": 56.328125
+            },
+            {
+              "buttons": 1,
+              "fullyVisible": true,
+              "height": 56.328125
+            },
+            {
+              "buttons": 1,
+              "fullyVisible": true,
+              "height": 56.328125
+            }
+          ],
+          "width": 1192
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ],
+      "screenshot": "reviews-1440x960-final.png"
+    }
+  ],
+  "header390": [
+    {
+      "disabled": false,
+      "height": 44,
+      "label": "검수",
+      "left": 22,
+      "right": 70.203125,
+      "top": 126,
+      "withinViewport": true
+    },
+    {
+      "disabled": false,
+      "height": 44,
+      "label": "최신화·이력",
+      "left": 70.203125,
+      "right": 158.390625,
+      "top": 126,
+      "withinViewport": true
+    },
+    {
+      "disabled": false,
+      "height": 44,
+      "label": "맛집 등록",
+      "left": 194.21875,
+      "right": 272,
+      "top": 126,
+      "withinViewport": true
+    },
+    {
+      "disabled": false,
+      "height": 44,
+      "label": "리스트 뷰",
+      "left": 276,
+      "right": 320,
+      "top": 126,
+      "withinViewport": true
+    },
+    {
+      "disabled": false,
+      "height": 44,
+      "label": "슬라이드 뷰",
+      "left": 324,
+      "right": 368,
+      "top": 126,
+      "withinViewport": true
+    },
+    {
+      "disabled": false,
+      "height": 44,
+      "label": "자동 운영 상태 새로고침",
+      "left": 169.078125,
+      "right": 213.078125,
+      "top": 197.328125,
+      "withinViewport": true
+    },
+    {
+      "disabled": true,
+      "height": 44,
+      "label": "설정",
+      "left": 217.078125,
+      "right": 291.5625,
+      "top": 197.328125,
+      "withinViewport": true
+    },
+    {
+      "disabled": false,
+      "height": 44,
+      "label": "이력·정책",
+      "left": 295.5625,
+      "right": 368,
+      "top": 197.328125,
+      "withinViewport": true
+    }
+  ],
+  "policyOpened": true
+}

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "kind": "followup-verification-index",
+  "capturedAt": "2026-10-18T14:09:35.692001+00:00",
+  "sourceRevision": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "sourceState": "hash-bound followups pending commit",
+  "currentVerification": {
+    "path": "apps/web/performance/cross-audit-20261018/followup-verification/verification-current.json",
+    "sha256": "6853ab355e36036d20fcfd8ea2f0f5cb3e7d828c564a4daebe65b68c198c9679"
+  },
+  "checks": {
+    "cms": {
+      "passed": 41,
+      "failed": 0,
+      "assertions": 468
+    },
+    "ocr": {
+      "passed": 74,
+      "failed": 0,
+      "assertions": 614,
+      "receipt": "apps/web/performance/cross-audit-20261018/ocr-credential-fallback-raw.txt",
+      "sourceSha256": "341f17e62809b22746e2574d6bb2482fb849e53a7e86591236ec4aa350c44e6e"
+    },
+    "sql": {
+      "passed": 39,
+      "failed": 0,
+      "assertions": 245,
+      "receipt": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-aggregate-execution-20261018.json"
+    },
+    "independentCmsCounterexamples": {
+      "passed": 4,
+      "failed": 0,
+      "overlapWithCoreRegression": true
+    },
+    "compilerParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3350,
+      "logicalInputNamesSha256": "e94a1b97bc68dbab10fb0acb523e012791e2967aa0818beb0d4bb7103dcd7167",
+      "nonLibraryContentSha256": "362c9bfb3ee96c2ce8017c84d6108cdb402e579c7eca21868a856e49b99cc879",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    },
+    "build": {
+      "exitCode": 0,
+      "staticPages": 54,
+      "routeCssBytes": {
+        "home": 195887,
+        "generalApp": 329148,
+        "admin": 349615,
+        "deferred": 195887
+      },
+      "singleBuildObservationSeconds": 93.365,
+      "performanceComparison": "not admitted"
+    },
+    "rendering": {
+      "modules": 2,
+      "widths": [
+        390,
+        834,
+        1440
+      ],
+      "finalCaptures": 6,
+      "overflowFree": 6,
+      "artifactMap": "apps/web/performance/admin-cms-followup-20261018/artifact-map.json"
+    }
+  },
+  "sourceIntegrity": {
+    ".github/review-media-evidence-prefixed-feature-successor.v1.json": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+    ".github/review-media-evidence-prefixed-predecessor-successor.v1.json": "a48f4d883db91a2b4f44869476c9fe9e4f329468c1e406e3703823ffef1d6f92",
+    "apps/web/app/admin/banners/page.tsx": "b0b100c854b619e75c3db5535c7208f2322587f4a66ce1aba2a19ebc022c0235",
+    "apps/web/app/api/admin/banners/route.ts": "5c2bb24c1f0b4c1e6cbff87bd12fd7e5ebb3716668933ed82990e27cd8bbf54e",
+    "apps/web/app/api/admin/users/route.ts": "d5c7cd52e71968f8ffb03b2cb296b0f94620c0dc5991e93b1031b9170cc86da9",
+    "apps/web/app/api/ocr/extract/route.ts": "9ef49e254a75942d20418502127649d934d5433a60d494da6533b95da2760aa5",
+    "apps/web/app/api/ocr/extract/stream/route.ts": "a7b2def343dfe88be312a9e9162573b18509bf2d19d19f555247fbcd1d4e82e8",
+    "apps/web/components/admin/AdminUsersPanel.tsx": "671b8a93ca3c663827166001a1ba36591b05a8bae7cc1a12ebebeb38c96e2a3d",
+    "apps/web/hooks/use-ad-banners.tsx": "b314ab92baf377b648e5ad80b9d6a6cd49579ea1e781b1a192b820e53b74f86f",
+    "apps/web/lib/ocr/admin-receipt-processor.ts": "462eae8188af7c26493ee85b3d4957f17a95ede67830d5e3bc9e7a4609e2f5be",
+    "apps/web/lib/ocr/gemini.ts": "341f17e62809b22746e2574d6bb2482fb849e53a7e86591236ec4aa350c44e6e",
+    "apps/web/scripts/review-media-evidence-prefixed-feature-sql-successor.mjs": "1abc26c0bc4a2546f0e8930067a2d0e089d156b37ed5d160eee6a3e53e5ef618",
+    "apps/web/scripts/review-media-evidence-prefixed-predecessor-sql-successor.mjs": "54d5a66695938c66b75c2c89b456dbfae9e876592fcbe3d5f9310ffc7cf2a07f",
+    "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs": "d76e45f0d3284d47a32231495409843b640f8107969ebf23814498f277827d3d",
+    "apps/web/styles/admin-ui.css": "54ba62adad95ebb3aac23e472786e818e607d8ada6bbd610efbc31f7ddc0755a",
+    "apps/web/tests-unit/ad-banner-url-security.test.ts": "09a0935b913536aaa17250825413efd231f901e1f6369683d5d92f5daa31bbec",
+    "apps/web/tests-unit/admin-banners-functional-contract.test.ts": "244d696df6ef90aede9147150cd28e8d8cf26ffc63e6462e802928708db06070",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "9c0c97aece2729716f9d0e22034ac99cbeaa81b977fadccfcdb60ebca0e7b834",
+    "apps/web/tests-unit/admin-user-management-source.test.ts": "e062014256da90bbaa1eb424f62953b76f573c77e6b20fdff30917055f477ed1",
+    "apps/web/tests-unit/admin-users-mutation-scope.test.ts": "d504bbb8c0f29629371da1adecfe37d1fe1b8f438fcacede848c43c8963ee309",
+    "apps/web/tests-unit/admin-users-pagination-contract.test.ts": "4797cf2abaea7a4154279800495869ef7fc458fd019362be0fae0f6881c5ff6c",
+    "apps/web/tests-unit/gemini-ocr.test.ts": "b5281bbd5181bf244e9f302610cee80e53aa5a5d6ab2a6f53c2b419ae7000b7b",
+    "apps/web/tests-unit/review-media-evidence-prefixed-sql-successors.test.ts": "94225e1111c33db554a34e24bef3d6ac2e47eaa80a7a1367b2d408dba7c83581",
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": "c058770baaa294e5a045be2b7c37886872755e3f9e299bbc8368c54c4bd92edc"
+  },
+  "limitations": [
+    "Local tests and rendering are not operating or provider evidence.",
+    "The original failed local build configuration is preserved in verification.json; no configuration guard was bypassed.",
+    "No credentials were supplied to the successful build. Outbound network traffic was not instrumented; the environment request-zero field is not a network measurement.",
+    "The prepared current-source package does not replace or dispatch the original queued Gemini job.",
+    "Hosted banner revision-trigger behavior, operating SQL admission/apply, promotion, deployment and full live menu validation remain incomplete."
+  ]
+}

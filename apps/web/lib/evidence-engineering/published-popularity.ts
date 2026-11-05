@@ -1,7 +1,7 @@
 import publication from './public-popularity-publication.json';
 import type { Restaurant } from '@/types/restaurant';
 
-export type PublishedPopularityTier = 'fire' | 'rainbow' | 'standard';
+export type PublishedPopularityTier = 'fire' | 'ember' | 'rainbow' | 'standard';
 export type PublishedPopularityLookup = (restaurantId: string) => PublishedPopularityTier;
 export interface PublicPopularityPublication {
     readonly schemaVersion: 2;
@@ -38,7 +38,7 @@ export function parsePublicPopularityPublication(value: unknown): PublicPopulari
         const row = entry as Record<string, unknown>;
         if (!exactKeys(row, ['restaurantId', 'memberRestaurantIds', 'tier'])
             || typeof row.restaurantId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(row.restaurantId)
-            || typeof row.tier !== 'string' || !['fire', 'rainbow', 'standard'].includes(row.tier)
+            || typeof row.tier !== 'string' || !['fire', 'ember', 'rainbow', 'standard'].includes(row.tier)
             || !Array.isArray(row.memberRestaurantIds) || !row.memberRestaurantIds.length
             || row.memberRestaurantIds.length > MAX_PUBLICATIONS) return fail();
         const members: string[] = [];

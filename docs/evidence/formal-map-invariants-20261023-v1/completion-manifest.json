@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_EXTERNAL_DELTA_AND_VALID_LOCAL_FINDINGS_CLOSED_CI_HOST_RELEASE_PENDING",
+  "overallComplete": false,
+  "sourceRevision": "6c81d79485af9c4c571ecf74ed1de428af10c0da",
+  "baseRevision": "56427320a44fdd65a86dc49e7e63d80dd9935c2e",
+  "findingIds": [
+    "FORMAL-01",
+    "FORMAL-02",
+    "FORMAL-03",
+    "FORMAL-04",
+    "FORMAL-05",
+    "FORMAL-06",
+    "FORMAL-07",
+    "FORMAL-08",
+    "GEM-F-01",
+    "GEM-F-02",
+    "GEM-F-03",
+    "GEM-F-04",
+    "GEM-F-05",
+    "EVIDENCE-01",
+    "REV-F-01",
+    "REV-F-01-SDK",
+    "EVIDENCE-01-RELEASE"
+  ],
+  "findingsDecision": "LOCAL_VALID_FINDINGS_FIXED_NATIVE_VERIFIED; SDK_AND_RELEASE_CONDITIONS_DEFER",
+  "boundedChecks": {
+    "visualTransitions": 9216,
+    "ownershipTraceDepth": 4,
+    "ownershipTraces": 4681,
+    "ownershipSteps": 18056,
+    "mutantsDetected": 12
+  },
+  "wholeSystemProof": false,
+  "tool": "Bun 1.4.0 + Chromium 156.0.8078.47; actual TS and DOM, synthetic provider",
+  "priorThreeStageAudit": "UNCHANGED_VALID_REPORTS_REUSED",
+  "currentDeltaReview": "PRIOR_SUPPLIED_SCOPE_COMPLETE;ROUTINE_SDK_F_01_HOST_GUARD_SEPARATE",
+  "queueRequestId": "86eb51ad0f69dcedd3c5dd33",
+  "bundleSha256": "c3fb6be051942230565e8e551f6f9988d6c0da2175c2a9df553a5398e6865f23",
+  "sourceAccessRemote": "Prior supplied source and raw evidence reviewed; SDK-F-01 localized host guard not represented as a new external review",
+  "productionDeployment": "NOT_PERFORMED",
+  "VercelAdvisoryRecheck": "2026-10-24T07:37:06+09:00",
+  "verifiedVercelReset": false,
+  "Nightly": "SEPARATE_HISTORICAL_FAILURE_39457197351_NO_RERUN",
+  "nextActions": [
+    "current delivery head required CI",
+    "actual Vercel availability after retained advisory time, no time-only availability assumption",
+    "final exact-source hosted PC1440/mobile390/tablet820 SDK/accessibility/flame/frame/flicker checks",
+    "protected develop -> data -> main with exact-SHA, rollback, READY/alias/health/assets/markers/live readback"
+  ],
+  "sourceModelCorrespondence": "Actual Naver and browser model import the same wrapper; fresh and retained review-object updates are covered. Prior inline-only and fresh-object-only models were insufficient and remain historical evidence.",
+  "reviewedSourceRevision": "fe4b73dac510d4670517c7d3eca4f0c2470d4297",
+  "currentVerification": {
+    "sourceRevision": "a1dd40016ff7cf23055073c8637d5b3ee00d6781",
+    "harnessBaseline": {
+      "tests": 23,
+      "files": 5,
+      "assertions": 94,
+      "failed": 0
+    },
+    "harnessRestored": {
+      "tests": 9,
+      "files": 2,
+      "assertions": 18,
+      "failed": 0
+    },
+    "targetedRuns": [
+      {
+        "tests": 29,
+        "files": 3,
+        "assertions": 1162,
+        "raw": "rev-f-01-native.txt"
+      },
+      {
+        "tests": 24,
+        "files": 2,
+        "assertions": 1163,
+        "raw": "rev-f-01-boundaries.txt"
+      }
+    ],
+    "overlappingRuns": "These runs overlap; do not sum their counts.",
+    "parityDiagnostics": 0,
+    "logicalInputs": 3382,
+    "mutantsDetected": 12,
+    "raw": "rev-f-01-native-and-mutation-checks.json",
+    "historicalE2fRun": {
+      "sourceRevision": "e2f60f7ea944776c81d538b5b042ed28ac9b04ae",
+      "tests": 48,
+      "files": 6,
+      "assertions": 1254,
+      "raw": "gemini-findings-native.txt"
+    },
+    "historicalFe4Run": "verification.json and original86tests retained at fe4 snapshot"
+  },
+  "externalDeltaAuditCompleteForSuppliedScope": true,
+  "reports": [
+    {
+      "path": "gemini_4_argon_formal_delta_report.visible.txt",
+      "bytes": 22643,
+      "sha256": "6fa6553f61a67185aecad159dd1eb93f2ced17368c01b1f63468dae0d4902069"
+    },
+    {
+      "path": "gpt6_pro_formal_reverse_report.visible.txt",
+      "bytes": 12553,
+      "sha256": "9b607abdc958702fdb1207b75b845dc469873cf998918f1758f4591ff171aeac"
+    },
+    {
+      "path": "gpt6_pro_formal_root_followup_report.visible.txt",
+      "bytes": 10773,
+      "sha256": "ffedf822efa3011b98f0343fa7735faee687d0945d15e55471fb81afed4f10d2"
+    }
+  ],
+  "ciFollowup": {
+    "finding": "CI-F-01",
+    "testRevision": "1c0461bb114e9f6085d33c85a0eb911d0a98cab9",
+    "receipt": "ci-publication-version-followup.json",
+    "status": "LOCAL_REGRESSION_FIXED_NEW_DELIVERY_HEAD_CI_PENDING",
+    "runtimeChanged": false
+  },
+  "hostFollowup": {
+    "finding": "SDK-F-01",
+    "runtimeRevision": "a62683bae44ce8d2036e7352f9ea7d40d8efd0e5",
+    "receipt": "sdk-loss-followup.json",
+    "status": "NATIVE_FIXED_EXACT_HOST_RECHECK_PENDING"
+  },
+  "securityFollowup": {
+    "finding": "SEC-F-01",
+    "sourceRevision": "1ca3d984598e7caca575ceeca4118ee418da60cf",
+    "receipt": "security-zod-followup.json",
+    "status": "LOCAL_PATCH_VERIFIED_NEW_CI_PREVIEW_RELEASE_PENDING"
+  },
+  "sceneNavigationFollowup": {
+    "finding": "UI-F-02",
+    "sourceRevision": "6c81d79485af9c4c571ecf74ed1de428af10c0da",
+    "receipt": "scene-navigation-followup.json",
+    "status": "LOCAL_NATIVE_INPUT_FIXED_NEW_HOST_AND_CI_PENDING"
+  }
+}

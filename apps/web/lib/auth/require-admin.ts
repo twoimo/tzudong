@@ -119,12 +119,12 @@ export async function requireAdmin(options: RequireAdminOptions = {}): Promise<R
 
   const { data: accountStatus, error: accountStatusError } = await supabase
     .from('user_account_status' as never)
-    .select('account_status')
+    .select('account_status, disabled_at')
     .eq('user_id', user.id)
     .maybeSingle()
-    .returns<{ account_status: string }>();
+    .returns<{ account_status: string; disabled_at: string | null }>();
 
-  if (accountStatusError || accountStatus?.account_status !== 'active') {
+  if (accountStatusError || accountStatus?.account_status !== 'active' || accountStatus.disabled_at !== null) {
     return {
       ok: false,
       response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),

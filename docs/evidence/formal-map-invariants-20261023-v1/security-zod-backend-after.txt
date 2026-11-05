@@ -1,0 +1,20 @@
+✔ map crawler loads js-yaml named exports before the no-channel exit (107.11875ms)
+✔ transcript crawler loads YAML and dotenv without starting collection (73.4885ms)
+✔ URL extractor import preserves JSON stdout and existing environment (131.319916ms)
+✔ build_google_maps_browser_review_queue.mjs emits one JSON document with a local empty DB double (64.866458ms)
+✔ build_supabase_address_consistency_guarded_plan.mjs emits one JSON document with a local empty DB double (70.924375ms)
+✔ build_tzuyang_address_evidence_ledger.mjs emits one JSON document with a local empty DB double (68.070167ms)
+✔ validate_supabase_review_queue_live.mjs preserves JSON stdout for an empty local queue (65.884666ms)
+✔ validate_supabase_same_origin_candidates.mjs preserves JSON stdout for an empty local queue (59.405458ms)
+✔ apply ledger environment loader stays silent without executing apply (59.032792ms)
+✔ GenAI caller imports and consumed SDK methods remain available offline (99.163791ms)
+✔ brace expansion remains compatible and bounded through node_modules/minimatch/package.json (171.113917ms)
+✔ brace expansion remains compatible and bounded through node_modules/gaxios/node_modules/minimatch/package.json (205.507333ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1233.92925

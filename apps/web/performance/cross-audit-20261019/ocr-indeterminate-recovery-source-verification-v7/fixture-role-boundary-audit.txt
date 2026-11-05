@@ -1,0 +1,39 @@
+PRIVATE_DIRECT_REFERENCES
+86 | postgres | FROM ocr_private.review_generations
+89 | postgres | FROM ocr_private.review_generations
+92 | postgres | INSERT INTO ocr_private.receipt_results (
+104 | postgres | INSERT INTO ocr_private.receipt_results (
+167 | postgres | SELECT 1 FROM ocr_private.receipt_ocr_indeterminate_recoveries
+289 | postgres | FROM ocr_private.receipt_ocr_indeterminate_recoveries
+453 | postgres | FROM ocr_private.receipt_ocr_recovery_execution_leases AS lease
+512 | postgres | FROM ocr_private.receipt_ocr_recovery_execution_leases AS lease
+531 | postgres | FROM ocr_private.receipt_ocr_indeterminate_recoveries
+534 | postgres | INSERT INTO ocr_private.receipt_results (
+602 | postgres | SELECT generation FROM ocr_private.review_generations
+PUBLIC_PRODUCT_RPC_REFERENCES
+24 | service_role | IF public.get_receipt_ocr_indeterminate_recovery_capability() IS DISTINCT FROM
+129 | service_role | SELECT (public.get_review_receipt_ocr_generation(
+133 | service_role | preview := public.preview_review_receipt_ocr_indeterminate_recovery(
+139 | service_role | attempted := public.recover_review_receipt_ocr_indeterminate(
+148 | service_role | SELECT (public.get_review_receipt_ocr_generation(
+190 | service_role | preview := public.preview_review_receipt_ocr_indeterminate_recovery(
+198 | service_role | wrong_snapshot := public.recover_review_receipt_ocr_indeterminate(
+211 | service_role | first_apply := public.recover_review_receipt_ocr_indeterminate(
+231 | service_role | ack_loss_retry := public.recover_review_receipt_ocr_indeterminate(
+250 | service_role | admin_swap_retry := public.recover_review_receipt_ocr_indeterminate(
+266 | service_role | stale_apply := public.recover_review_receipt_ocr_indeterminate(
+313 | service_role | SELECT (public.get_review_receipt_ocr_generation(
+317 | service_role | SELECT (public.get_review_receipt_ocr_generation(
+331 | service_role | PERFORM public.authorize_review_receipt_ocr_execution(
+350 | service_role | first_admission := public.authorize_review_receipt_ocr_execution(
+358 | service_role | replay_admission := public.authorize_review_receipt_ocr_execution(
+373 | service_role | PERFORM public.authorize_review_receipt_ocr_execution(
+385 | service_role | normal_admission := public.authorize_review_receipt_ocr_execution(
+397 | service_role | PERFORM public.claim_receipt_ocr_result(
+407 | service_role | first_claim := public.claim_receipt_ocr_recovery_result(
+414 | service_role | duplicate_claim := public.claim_receipt_ocr_recovery_result(
+497 | service_role | release_result := public.release_receipt_ocr_claim(first_result_ref, first_claim_token);
+574 | service_role | PERFORM public.publish_review_receipt_ocr_result(
+618 | service_role | SELECT (public.get_review_receipt_ocr_generation(
+625 | service_role | PERFORM public.claim_receipt_ocr_result(
+SUMMARY private_postgres=11 public_service_role=25 final_role=postgres

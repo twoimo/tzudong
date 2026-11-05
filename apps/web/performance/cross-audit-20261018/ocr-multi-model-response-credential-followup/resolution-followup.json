@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "tzudong-source-bound-runtime-followup-v1",
+  "receiptId": "OCR-MULTI-MODEL-CREDENTIAL-STOP-FOLLOWUP-20261019",
+  "recordedAt": "2026-10-18T18:30:19Z",
+  "baseHead": "7d04fca8469c9d282f8885714435bd5124f3e826",
+  "priorReceipt": {
+    "path": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/resolution.json",
+    "sha256": "22983ee33eafaed4f1434bb21a7dc4f096d83409e330326457df2736c005240b",
+    "preservedUnmodified": true,
+    "corrections": [
+      "The prior baseHead b1c505cd... is superseded by the actual pre-change HEAD 7d04fca8469c9d282f8885714435bd5124f3e826.",
+      "The prior broad statement that provider call ordering was unchanged is superseded: mixed response-then-credential operations now intentionally stop before remaining models and credentials."
+    ]
+  },
+  "preservedOriginalBeforeBindings": {
+    "helperSha256": "341f17e62809b22746e2574d6bb2482fb849e53a7e86591236ec4aa350c44e6e",
+    "testSha256": "b5281bbd5181bf244e9f302610cee80e53aa5a5d6ab2a6f53c2b419ae7000b7b",
+    "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/before-counterexample-bun.txt",
+    "rawSha256": "451aac22f14d5b94b1316b95e0a9ea3166849ba20634ca29aa6b07df3119be34"
+  },
+  "priorFirstFixBindings": {
+    "helperSha256": "1131f039b2448970356e55a573265465f72c631fdc9b4ca3915ebd7fbb3e116f",
+    "testSha256": "42b0e5d1caef145d4016304ff8bc37be117bdbf7e24021fed24f002f9bc012a8",
+    "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/after-gemini-bun.txt",
+    "rawSha256": "3bcecb8dcb47b0d969df844ec00aa0cf5f282e91e28d4cc5ec9b2c5ecd007827"
+  },
+  "finding": {
+    "id": "OCR-MULTI-MODEL-CREDENTIAL-002",
+    "verdict": "ACCEPT_RESOLVED_IN_SOURCE",
+    "counterexample": "With response-model, credential-model, and third-model under two credentials, the first fix marked the mixed result non-definitive but status 400 remained fallback-safe, so third-model dispatched and could resolve the operation."
+  },
+  "beforeFollowup": {
+    "helperSha256": "1131f039b2448970356e55a573265465f72c631fdc9b4ca3915ebd7fbb3e116f",
+    "testSha256": "e5d8bf3b91b6adbef392d80e728f272a6bc8bf2841714b1bd3874dd49e3e883b",
+    "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/gemini-ocr.test.ts --timeout 30000 -t \"does not downgrade a prior model response\"",
+    "result": "0 pass, 1 fail; promise unexpectedly resolved from third-model",
+    "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/before-third-model-stop-bun.txt",
+    "rawSha256": "a58c2305f681440674efa1be91b7e3e3b7f51da50c161e3d0765f3dd01def82a"
+  },
+  "sourceHashes": {
+    "apps/web/lib/ocr/gemini.ts": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef",
+    "apps/web/tests-unit/gemini-ocr.test.ts": "e5d8bf3b91b6adbef392d80e728f272a6bc8bf2841714b1bd3874dd49e3e883b"
+  },
+  "finalBehavior": [
+    {
+      "id": "OCR-MMC-STOP-001",
+      "status": "resolved",
+      "behavior": "A structured credential rejection remains definitive=true only when it is the first credential-classifiable outcome in the operation."
+    },
+    {
+      "id": "OCR-MMC-STOP-002",
+      "status": "resolved",
+      "behavior": "If a prior response or other non-credential outcome already made the operation mixed, a later structured credential rejection stops the current model loop and returns definitiveCredentialRejection=false. Remaining models and later credentials are not dispatched."
+    },
+    {
+      "id": "OCR-MMC-STOP-003",
+      "status": "preserved",
+      "behavior": "A credential-only first rejection still rotates to the next credential and can recover. Transport uncertainty still stops without model or credential fallback. Parse failures and supported fallback statuses may still advance models until a credential rejection or uncertain outcome stops the operation."
+    }
+  ],
+  "dispatchBoundary": {
+    "intentionallyChanged": "response-model -> credential-model now stops; third-model calls=0 and next credential calls=0",
+    "unchanged": [
+      "declared model ordering before the stop condition",
+      "credential ordering for credential-only rejection",
+      "model list and normalization",
+      "quota reservation and daily cap",
+      "timeout and credential classifier rules"
+    ]
+  },
+  "verification": [
+    {
+      "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/gemini-ocr.test.ts --timeout 30000",
+      "result": "26 pass, 0 fail, 116 assertions; third-model and next credential are absent from observed calls",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/after-third-model-stop-bun.txt",
+      "rawSha256": "eac385293f29ece95e52aa9733f109e3575759fa89373c9d9aa23c9a713edd0e"
+    },
+    {
+      "command": "node scripts/run-web-tool.mjs eslint lib/ocr/gemini.ts tests-unit/gemini-ocr.test.ts --max-warnings=0",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/targeted-eslint-followup.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check -- apps/web/lib/ocr/gemini.ts apps/web/tests-unit/gemini-ocr.test.ts",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/diff-check-followup.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "privacy": {
+    "realProviderCalls": 0,
+    "rawOcrPersisted": false,
+    "credentialsPersisted": false,
+    "fixtures": "non-credential synthetic markers only"
+  },
+  "remainingGate": "Root owns integrated parity/build and final source binding.",
+  "externalEffects": {
+    "providerCalls": 0,
+    "hostedDatabaseWrites": 0,
+    "storageCalls": 0,
+    "gitWrites": 0
+  }
+}

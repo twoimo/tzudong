@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { submissionApprovalInput, submissionEditInput } from '../lib/admin/evaluation-record-actions';
 import { parseRecordActionRequest, type RecordActionReceipt, type RecordActionRequest } from '../lib/admin/record-action-contract';
-import { isRecordActionCancelled, recordActionErrorMessage, recordActionMediaNotice, type RecordActionInput } from '../lib/admin/record-action-client';
+import { shouldNotifyRecordActionError, recordActionErrorMessage, recordActionMediaNotice, type RecordActionInput } from '../lib/admin/record-action-client';
 import type { SubmissionRecord } from '../components/admin/SubmissionDetailView';
 const id = '11111111-1111-4111-8111-111111111111', itemId = '22222222-2222-4222-8222-222222222222', item2 = '33333333-3333-4333-8333-333333333333';
 const submission: SubmissionRecord = { id, user_id: id, submission_type: 'new', status: 'pending', restaurant_name: '합성 맛집', restaurant_address: '서울 합성로', restaurant_phone: null, restaurant_categories: ['한식'], admin_notes: null, rejection_reason: null, resolved_by_admin_id: null, reviewed_at: null, created_at: '', updated_at: '', items: [itemId, item2].map(item => ({ id: item, submission_id: id, item_status: 'pending', youtube_link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', tzuyang_review: '근거', target_restaurant_id: null, rejection_reason: null, created_at: '' })) };
@@ -44,7 +44,7 @@ test('actual page mutation callbacks all validate guarded requests and shared ap
   let refresh = 0, pendingRefresh = 0, publicRefresh = 0;
   const receipt: RecordActionReceipt = { operationId: id, action: 'restaurant.delete', state: 'applied', targetIds: [id], auditId: itemId, previewHash: 'a'.repeat(64), expiresAt: '2026-10-05T12:00:00Z', readback: [], mediaCleanupPending: false };
   const dependencies = {
-    toast: (notice: unknown) => notices.push(notice), isRecordActionCancelled, recordActionErrorMessage, recordActionMediaNotice, submissionApprovalInput, submissionEditInput,
+    toast: (notice: unknown) => notices.push(notice), shouldNotifyRecordActionError, recordActionErrorMessage, recordActionMediaNotice, submissionApprovalInput, submissionEditInput,
     queryClient: { invalidateQueries: async (query: unknown) => { invalidations.push(query); } }, invalidateAdminPendingCounts: () => { pendingRefresh++; },
     invalidateRestaurantDiscoveryQueries: async () => { publicRefresh++; }, refreshRecordViews: async () => { refresh++; }, showSubmissionView: false, reviewsData: [],
     setEditingSubmission: () => {}, setSubmissionDraft: () => {}, useMutation: (config: unknown) => config,

@@ -1,0 +1,28 @@
+{
+  "schema": "storyboard-native-synthetic-observation/v1",
+  "capturedAt": "2026-10-13T10:28:21.115Z",
+  "artifactBundleSha256": "c530de7b9ec2465971adbb970885c5df462c489a9f0a1cde484ea467eb67e5c7",
+  "classification": "pre-independent-review-fixes-synthetic-ui",
+  "uiObservations": [
+    "팝업 버튼 텍스트 모델, Value: Gemini 3.8 Flash",
+    "팝업 버튼 이미지 모델, Value: Nano Banana 2",
+    "버튼 프로젝트 만들기",
+    "The focused UI element is 63 팝업 버튼 이미지 모델, Value: Nano Banana 2"
+  ],
+  "imageMenu": [
+    "(selected) Nano Banana 2, ID: menuItemSelected:",
+    "Nano Banana Pro, ID: menuItemSelected:"
+  ],
+  "mutationsAttempted": 0,
+  "providerCalls": 0,
+  "hostedWrites": 0,
+  "notProven": [
+    "post-review-corrected-worker-state",
+    "model-account-access",
+    "real-generation",
+    "hosted-store",
+    "deployment",
+    "exact-geometry",
+    "all-sidebar-layout"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-taste-pr-review-followthrough",
+  "initialReviewRevision": "51414ef",
+  "validatedRevision": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "threads": [
+    {
+      "id": "PRRT_kwDOQGRyNc6sq8bA",
+      "path": "lib/admin/storyboard/outbound-worker.ts",
+      "statusAtValidatedRevision": "partially_resolved",
+      "remainingIssue": "The five-minute client catalog cache was reused, but a transient refresh failure still escaped runOnce and terminated continuous idle polling.",
+      "followthrough": "Transient provider_failed and provider_rate_limited catalog reads now return idle without heartbeat or claim and emit a sanitized model_catalog_deferred event. Authentication, authorization, cancellation, unexpected errors and invalid catalogs remain hard failures.",
+      "boundedReplay": {
+        "polls": 120,
+        "pollIntervalSeconds": 5,
+        "providerModelMetadataReads": 6,
+        "source": "deterministic fixture test",
+        "costClaim": false
+      }
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6sq8bW",
+      "path": "scripts/preview-design-fixtures.mjs",
+      "statusAtValidatedRevision": "resolved_before_followthrough",
+      "resolvingCommit": "44839430",
+      "followthrough": "Both synthetic records use storyboard-mlx-v1 request and document archive contracts. The Gemini-labeled synthetic history keeps user-import verification, null response identity and unverified model evidence.",
+      "contractCounts": {
+        "storyboardGeminiV1Mentions": 0,
+        "archiveWorkflowLiteral": 1,
+        "archiveSchemaLiteral": 1,
+        "userImportLiteral": 1,
+        "nullResponseIdentityLiteral": 1,
+        "unverifiedEvidenceLiteral": 1
+      }
+    }
+  ],
+  "sourceSha256": {
+    "lib/admin/storyboard/outbound-worker.ts": "9110e912fd54094d6cd2323ce6044d8ca0028c250e2c7778409ad74b272fda9a",
+    "tests-unit/storyboard-outbound-worker.test.ts": "ceadf815ee3cc389d10eb802bcbc4417eb5e6ae0467659a00e887d09e56146dd",
+    "scripts/preview-design-fixtures.mjs": "a4b2eac5cde5b5b48edb4e3a4d5e7adbf232defaa3b2317edd48ff251d672906"
+  },
+  "checks": {
+    "targetedTests": {
+      "status": "passed",
+      "files": [
+        "tests-unit/storyboard-outbound-worker.test.ts",
+        "tests-unit/storyboard-gemini-client.test.ts",
+        "tests-unit/storyboard-gemini-execution-contract.test.ts"
+      ],
+      "passed": 58,
+      "failed": 0
+    },
+    "eslint": {
+      "status": "passed",
+      "files": [
+        "lib/admin/storyboard/outbound-worker.ts",
+        "tests-unit/storyboard-outbound-worker.test.ts",
+        "scripts/preview-design-fixtures.mjs"
+      ]
+    },
+    "typecheckParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3324
+    },
+    "diffCheck": "passed"
+  },
+  "boundaries": {
+    "providerCalls": 0,
+    "databaseWrites": 0,
+    "browserLaunches": 0,
+    "builds": 0,
+    "modelChanges": 0,
+    "dependencyChanges": 0,
+    "performanceOrCostClaim": false,
+    "priorFrozenMapsModified": false
+  }
+}

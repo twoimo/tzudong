@@ -4,10 +4,19 @@ import argparse
 from contextlib import contextmanager
 import os
 from pathlib import Path
+import re
 import sqlite3
 import sys
 import time
 import uuid
+
+
+ACQUIRE_REJECTED_EXIT = 20
+ACQUIRE_AMBIGUOUS_EXIT = 21
+
+
+class AcquireOutcomeUnknown(Exception):
+    """The lease commit may have succeeded and must be released by identity."""
 
 
 def positive_int(value: str | None, default: int, ceiling: int) -> int:
@@ -99,48 +108,57 @@ class ProjectBudget:
         except PermissionError:
             return True
 
-    def acquire(self, pid: int, *, timeout: float = 600) -> str:
+    def acquire(self, pid: int, *, timeout: float = 600, identity: str | None = None) -> str:
         owner_birth = process_birth(pid)
         if owner_birth is None:
             raise ValueError("provider_process_identity_unavailable")
         deadline = time.monotonic() + timeout
-        identity = uuid.uuid4().hex
+        identity = identity or uuid.uuid4().hex
+        if re.fullmatch(r"[a-f0-9]{32}", identity) is None:
+            raise ValueError("provider_lease_invalid")
         while True:
             wait = 0.1
-            with self.connect() as db:
-                db.execute("BEGIN IMMEDIATE")
-                now = time.time()
-                for lease, owner, started, stored_birth in db.execute(
-                    "SELECT leases.id,pid,started,birth FROM leases LEFT JOIN lease_births ON leases.id=lease_births.id WHERE scope=?", (self.scope,)
-                ).fetchall():
-                    alive = self.alive(owner)
-                    observed = process_birth(owner) if alive else None
-                    stale = not alive
-                    if observed is not None:
-                        stale = (stored_birth is not None and stored_birth != observed[0]) or (
-                            stored_birth is None and isinstance(started, (int, float)) and observed[1] > started + observed[2])
-                        # Backfill only a positively older process, never an ambiguous
-                        # legacy row. Unknown birth state keeps capacity reserved.
-                        if not stale and stored_birth is None and isinstance(started, (int, float)) and observed[1] < started - observed[2]:
-                            db.execute("INSERT OR IGNORE INTO lease_births VALUES(?,?)", (lease, observed[0]))
-                    if stale:
-                        db.execute("DELETE FROM leases WHERE id=?", (lease,))
-                        db.execute("DELETE FROM lease_births WHERE id=?", (lease,))
-                db.execute("DELETE FROM lease_births WHERE NOT EXISTS (SELECT 1 FROM leases WHERE leases.id=lease_births.id)")
-                count = db.execute("SELECT count(*) FROM leases WHERE scope=?", (self.scope,)).fetchone()[0]
-                row = db.execute("SELECT next FROM pacing WHERE scope=?", (self.scope,)).fetchone()
-                ready = row[0] if row else 0
-                if count < self.concurrency and ready <= now:
-                    current_birth = process_birth(pid)
-                    if current_birth is None or current_birth[0] != owner_birth[0]:
-                        raise ValueError("provider_process_identity_changed")
-                    db.execute("INSERT INTO leases VALUES(?,?,?,?)", (self.scope, identity, pid, now))
-                    db.execute("INSERT INTO lease_births VALUES(?,?)", (identity, owner_birth[0]))
-                    db.execute("INSERT INTO pacing VALUES(?,?) ON CONFLICT(scope) DO UPDATE SET next=excluded.next", (self.scope, now + self.interval))
+            lease_commit_attempted = False
+            try:
+                with self.connect() as db:
+                    db.execute("BEGIN IMMEDIATE")
+                    now = time.time()
+                    for lease, owner, started, stored_birth in db.execute(
+                        "SELECT leases.id,pid,started,birth FROM leases LEFT JOIN lease_births ON leases.id=lease_births.id WHERE scope=?", (self.scope,)
+                    ).fetchall():
+                        alive = self.alive(owner)
+                        observed = process_birth(owner) if alive else None
+                        stale = not alive
+                        if observed is not None:
+                            stale = (stored_birth is not None and stored_birth != observed[0]) or (
+                                stored_birth is None and isinstance(started, (int, float)) and observed[1] > started + observed[2])
+                            # Backfill only a positively older process, never an ambiguous
+                            # legacy row. Unknown birth state keeps capacity reserved.
+                            if not stale and stored_birth is None and isinstance(started, (int, float)) and observed[1] < started - observed[2]:
+                                db.execute("INSERT OR IGNORE INTO lease_births VALUES(?,?)", (lease, observed[0]))
+                        if stale:
+                            db.execute("DELETE FROM leases WHERE id=?", (lease,))
+                            db.execute("DELETE FROM lease_births WHERE id=?", (lease,))
+                    db.execute("DELETE FROM lease_births WHERE NOT EXISTS (SELECT 1 FROM leases WHERE leases.id=lease_births.id)")
+                    count = db.execute("SELECT count(*) FROM leases WHERE scope=?", (self.scope,)).fetchone()[0]
+                    row = db.execute("SELECT next FROM pacing WHERE scope=?", (self.scope,)).fetchone()
+                    ready = row[0] if row else 0
+                    if count < self.concurrency and ready <= now:
+                        current_birth = process_birth(pid)
+                        if current_birth is None or current_birth[0] != owner_birth[0]:
+                            raise ValueError("provider_process_identity_changed")
+                        db.execute("INSERT INTO leases VALUES(?,?,?,?)", (self.scope, identity, pid, now))
+                        db.execute("INSERT INTO lease_births VALUES(?,?)", (identity, owner_birth[0]))
+                        db.execute("INSERT INTO pacing VALUES(?,?) ON CONFLICT(scope) DO UPDATE SET next=excluded.next", (self.scope, now + self.interval))
+                        lease_commit_attempted = True
+                        db.commit()
+                        return identity
+                    wait = min(1.0, max(0.01, ready - now)) if ready > now else 0.1
                     db.commit()
-                    return identity
-                wait = min(1.0, max(0.01, ready - now)) if ready > now else 0.1
-                db.commit()
+            except (OSError, sqlite3.Error) as cause:
+                if lease_commit_attempted:
+                    raise AcquireOutcomeUnknown("provider_budget_acquire_unknown") from cause
+                raise
             if time.monotonic() + wait > deadline:
                 raise TimeoutError("provider_budget_timeout")
             time.sleep(wait)
@@ -166,22 +184,43 @@ class ProjectBudget:
             self.release(identity)
 
 
-def main() -> int:
+def _emit_acquired_lease(identity: str, stream) -> int:
+    payload = identity + "\n"
+    try:
+        written = stream.write(payload)
+        stream.flush()
+    except OSError:
+        return ACQUIRE_AMBIGUOUS_EXIT
+    return 0 if written is None or written == len(payload) else ACQUIRE_AMBIGUOUS_EXIT
+
+
+def main(argv=None, stdout=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("acquire", "release", "cooldown"))
     parser.add_argument("--pid", type=int, default=os.getppid())
     parser.add_argument("--lease", default="")
     parser.add_argument("--delay", type=float, default=0)
     parser.add_argument("--timeout", type=float, default=600)
-    args = parser.parse_args()
-    budget = ProjectBudget(budget_path(),
-                           os.getenv("GEMINI_BUDGET_PROJECT", "configured-project"),
-                           rpm=positive_int(os.getenv("GEMINI_REQUESTS_PER_MINUTE"), 30, 100000),
-                           concurrency=positive_int(os.getenv("GEMINI_MAX_INFLIGHT"), 1, 8))
+    args = parser.parse_args(argv)
+    try:
+        budget = ProjectBudget(budget_path(),
+                               os.getenv("GEMINI_BUDGET_PROJECT", "configured-project"),
+                               rpm=positive_int(os.getenv("GEMINI_REQUESTS_PER_MINUTE"), 30, 100000),
+                               concurrency=positive_int(os.getenv("GEMINI_MAX_INFLIGHT"), 1, 8))
+    except (OSError, ValueError, sqlite3.Error):
+        if args.action == "acquire":
+            return ACQUIRE_REJECTED_EXIT
+        raise
     if args.action == "acquire":
         if not 0 < args.timeout <= 600:
-            raise ValueError('provider_budget_invalid')
-        print(budget.acquire(args.pid, timeout=args.timeout))
+            return ACQUIRE_REJECTED_EXIT
+        try:
+            identity = budget.acquire(args.pid, timeout=args.timeout, identity=args.lease or None)
+        except AcquireOutcomeUnknown:
+            return ACQUIRE_AMBIGUOUS_EXIT
+        except (OSError, ValueError, sqlite3.Error, TimeoutError):
+            return ACQUIRE_REJECTED_EXIT
+        return _emit_acquired_lease(identity, stdout or sys.stdout)
     elif args.action == "release":
         budget.release(args.lease)
     else:

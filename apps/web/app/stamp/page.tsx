@@ -1,5 +1,7 @@
 'use client';
 
+import { LoadingSurface } from "@/components/ui/loading-surface";
+
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { buildDesktopStampHomeRedirectPath, buildHomeAuthLoginPath, buildStampReviewContinuationPath } from "@/lib/auth/auth-redirect";
@@ -9,7 +11,6 @@ import { MapPanelHeader } from "@/components/home/map-panel-chrome";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
     Table,
     TableBody,
@@ -34,7 +35,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { describeErrorCodeForLog } from "@/lib/debug-log";
-import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
@@ -325,7 +325,7 @@ export default function StampPage() {
 
     // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
-    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError, refetch: refetchRestaurants } = useRestaurants({
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError, isSuccess: isRestaurantsSuccess, refetch: refetchRestaurants } = useRestaurants({
         enabled: true,
         includeVerifiedReviewCounts: false,
     });
@@ -367,7 +367,7 @@ export default function StampPage() {
     }, [allMergedRestaurants, authLoading, isRestaurantsLoading, reviewContinuationQuery, router, user]);
 
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
-    const { data: allRestaurants = [], isLoading: isSearchLoading, isError: isSearchError, refetch: refetchSearch } = useQuery({
+    const { data: allRestaurants = [], isLoading: isSearchLoading, isError: isSearchError, isSuccess: isSearchSuccess, refetch: refetchSearch } = useQuery({
         queryKey: ['all-restaurants', searchQuery],
         queryFn: async () => {
             if (!searchQuery.trim()) return [];
@@ -903,6 +903,7 @@ export default function StampPage() {
     // [Check before render]
     const isStampSearchActive = !!searchQuery.trim();
     const isStampReadError = isStampSearchActive ? isSearchError : isRestaurantsError;
+    const isStampReadSuccess = isStampSearchActive ? isSearchSuccess : isRestaurantsSuccess;
     const isStampDynamicLoading = !isMounted || (isStampSearchActive ? isSearchLoading : isRestaurantsLoading);
     const shouldShowStampFilterToggle = !isMounted || isMobileOrTablet;
     const shouldShowStampViewToggle = isMounted && !isMobileOrTablet;
@@ -932,11 +933,14 @@ export default function StampPage() {
                         <MapPanelHeader
                             variant="page"
                             titleAs="h1"
+                            eyebrow="쯔양이 다녀간 맛집 도장깨기"
                             title="쯔동여지도 도장"
                             titleIcon={<Trophy />}
                             count={isRestaurantsLoading || isRestaurantsError ? undefined : totalRestaurantCount}
                             titleAddon={isRestaurantsLoading ? (
-                                <Skeleton className="h-4 w-12 shrink-0 rounded-full" data-stamp-total-count-skeleton="true" />
+                                <div className="h-4 w-12 shrink-0" data-stamp-total-count-skeleton="true">
+                                    <LoadingSurface label="전체 맛집 수 집계 중"><span className="block text-xs leading-4">00개</span></LoadingSurface>
+                                </div>
                             ) : isRestaurantsError ? <span className="text-xs text-muted-foreground" role="status">전체 수 확인 불가</span> : undefined}
                             description="맛집을 찾아 도장을 찍어보세요!"
                             actions={(
@@ -1153,6 +1157,15 @@ export default function StampPage() {
                             className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background"
                             data-stamp-loading-behavior="static-shell-dynamic-skeleton"
                         >
+                            {!isStampDynamicLoading && isStampReadSuccess && filteredAndSortedRestaurants.length === 0 && (
+                                <div role="status" className="mb-4 grid min-h-40 place-items-center rounded-2xl border border-dashed border-border bg-muted/30 p-5 text-center text-sm text-muted-foreground">
+                                    <div>
+                                        <Trophy className="mx-auto mb-2 h-10 w-10 rounded-full bg-primary/10 p-2 text-primary/70" aria-hidden="true" />
+                                        <p className="font-medium text-foreground">조건에 맞는 도장 맛집이 없습니다</p>
+                                        <p className="mt-1 text-xs leading-5">검색어를 줄이거나 필터를 초기화해 다시 확인해 보세요.</p>
+                                    </div>
+                                </div>
+                            )}
                             {isStampDynamicLoading ? (
                                 <div className="space-y-3">
                                     {showStampGuide && (
@@ -1177,7 +1190,18 @@ export default function StampPage() {
                                             />
                                         </div>
                                     )}
-                                    <StampGridSkeleton count={STAMP_PAGE_SIZE} showHeader={false} />
+                                    <LoadingSurface label="도장 맛집 목록 로딩 중">
+                                        <div className="grid gap-3 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
+                                            {Array.from({ length: STAMP_PAGE_SIZE }, (_, index) => (
+                                                <article key={index} className="space-y-2">
+                                                    <svg viewBox="0 0 320 180" role="img" aria-label="맛집 사진" className="aspect-video w-full rounded-lg">
+                                                        <path d="M0 150 80 50 160 110 250 30 320 130V180H0Z" fill="currentColor" opacity="0.12" />
+                                                    </svg>
+                                                    <h3 className="truncate text-sm font-medium leading-4">영상 속 맛집</h3>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    </LoadingSurface>
                                 </div>
                             ) : isStampReadError ? (
                                 <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">

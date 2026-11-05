@@ -1,0 +1,321 @@
+{
+  "admittedRunCount": 20,
+  "analysis": {
+    "actorsRetained": false,
+    "algorithmicCost": {
+      "bootstrap": "O(B * (n_before + n_after)) per comparable metric and cohort",
+      "boundedCheckpointReadWrite": "O(H), with H limited by maxCheckpointRuns",
+      "duplicateCheckpointLookup": "O(1) average per run ID",
+      "offlineAggregation": "O(r * (j + s)) for newly supplied runs",
+      "upstreamApiCollection": "not performed; report collector API cost separately"
+    },
+    "bootstrap": {
+      "confidenceLevel": 0.95,
+      "method": "deterministic independent source-tree-cluster percentile bootstrap of mean cluster-median reductions",
+      "resamples": 10000,
+      "seed": 20261011
+    },
+    "censoredRunCount": 3,
+    "cohorts": [
+      {
+        "afterFailureRate": {
+          "failures": 0,
+          "n": 0,
+          "percent": null
+        },
+        "afterRunCount": 0,
+        "afterSourceTreeCount": 0,
+        "afterStageProfile": {},
+        "afterTimingSuccessCount": 0,
+        "beforeFailureRate": {
+          "failures": 1,
+          "n": 2,
+          "percent": 50.0
+        },
+        "beforeRunCount": 2,
+        "beforeSourceTreeCount": 1,
+        "beforeStageProfile": {
+          "benchmark_report": {
+            "clusterMedianSecondsMean": 1266.0,
+            "clusterMedianSecondsP50": 1266.0,
+            "sourceTreeClusters": 1
+          },
+          "build": {
+            "clusterMedianSecondsMean": 120.0,
+            "clusterMedianSecondsP50": 120.0,
+            "sourceTreeClusters": 1
+          },
+          "combined_install_build_browser_test": {
+            "clusterMedianSecondsMean": 194.0,
+            "clusterMedianSecondsP50": 194.0,
+            "sourceTreeClusters": 1
+          },
+          "install": {
+            "clusterMedianSecondsMean": 158.0,
+            "clusterMedianSecondsP50": 158.0,
+            "sourceTreeClusters": 1
+          },
+          "lint": {
+            "clusterMedianSecondsMean": 128.0,
+            "clusterMedianSecondsP50": 128.0,
+            "sourceTreeClusters": 1
+          },
+          "other": {
+            "clusterMedianSecondsMean": 22.0,
+            "clusterMedianSecondsP50": 22.0,
+            "sourceTreeClusters": 1
+          },
+          "setup": {
+            "clusterMedianSecondsMean": 209.0,
+            "clusterMedianSecondsP50": 209.0,
+            "sourceTreeClusters": 1
+          },
+          "test": {
+            "clusterMedianSecondsMean": 390.0,
+            "clusterMedianSecondsP50": 390.0,
+            "sourceTreeClusters": 1
+          },
+          "typecheck": {
+            "clusterMedianSecondsMean": 5.0,
+            "clusterMedianSecondsP50": 5.0,
+            "sourceTreeClusters": 1
+          },
+          "upload": {
+            "clusterMedianSecondsMean": 16.0,
+            "clusterMedianSecondsP50": 16.0,
+            "sourceTreeClusters": 1
+          }
+        },
+        "beforeTimingSuccessCount": 1,
+        "causalClaimAllowed": false,
+        "cohortKey": ".github/workflows/web-admin-ci.yml|pull_request|linux,windows|505c729a49e3da89005405844dd778cb47b7920e|full_benchmark|c39652d55c37bae285ae018d0bfe3e4daa547f7d7c8a85fbe003074d0233470e",
+        "effectiveSampleUnit": "source_tree_cluster_median",
+        "failureSignal": "insufficient_samples",
+        "metrics": {},
+        "warnings": [
+          "minimum_7_before_and_7_after_successes_not_met",
+          "minimum_source_tree_clusters_not_met"
+        ]
+      },
+      {
+        "afterFailureRate": {
+          "failures": 0,
+          "n": 0,
+          "percent": null
+        },
+        "afterRunCount": 0,
+        "afterSourceTreeCount": 0,
+        "afterStageProfile": {},
+        "afterTimingSuccessCount": 0,
+        "beforeFailureRate": {
+          "failures": 2,
+          "n": 11,
+          "percent": 18.181818
+        },
+        "beforeRunCount": 11,
+        "beforeSourceTreeCount": 5,
+        "beforeStageProfile": {
+          "benchmark_report": {
+            "clusterMedianSecondsMean": 1442.8,
+            "clusterMedianSecondsP50": 1438.0,
+            "sourceTreeClusters": 5
+          },
+          "build": {
+            "clusterMedianSecondsMean": 109.8,
+            "clusterMedianSecondsP50": 120.0,
+            "sourceTreeClusters": 5
+          },
+          "combined_install_build_browser_test": {
+            "clusterMedianSecondsMean": 325.8,
+            "clusterMedianSecondsP50": 329.0,
+            "sourceTreeClusters": 5
+          },
+          "install": {
+            "clusterMedianSecondsMean": 174.0,
+            "clusterMedianSecondsP50": 177.0,
+            "sourceTreeClusters": 5
+          },
+          "lint": {
+            "clusterMedianSecondsMean": 140.4,
+            "clusterMedianSecondsP50": 141.0,
+            "sourceTreeClusters": 5
+          },
+          "other": {
+            "clusterMedianSecondsMean": 19.0,
+            "clusterMedianSecondsP50": 20.0,
+            "sourceTreeClusters": 5
+          },
+          "setup": {
+            "clusterMedianSecondsMean": 161.6,
+            "clusterMedianSecondsP50": 162.0,
+            "sourceTreeClusters": 5
+          },
+          "test": {
+            "clusterMedianSecondsMean": 440.4,
+            "clusterMedianSecondsP50": 447.0,
+            "sourceTreeClusters": 5
+          },
+          "typecheck": {
+            "clusterMedianSecondsMean": 303.4,
+            "clusterMedianSecondsP50": 299.0,
+            "sourceTreeClusters": 5
+          },
+          "upload": {
+            "clusterMedianSecondsMean": 18.0,
+            "clusterMedianSecondsP50": 18.0,
+            "sourceTreeClusters": 5
+          }
+        },
+        "beforeTimingSuccessCount": 9,
+        "causalClaimAllowed": false,
+        "cohortKey": ".github/workflows/web-admin-ci.yml|pull_request|linux,windows|7b0db1b538b7f6737e4bb292a5a87b4dc1dfba06|full_benchmark|c39652d55c37bae285ae018d0bfe3e4daa547f7d7c8a85fbe003074d0233470e",
+        "effectiveSampleUnit": "source_tree_cluster_median",
+        "failureSignal": "insufficient_samples",
+        "metrics": {},
+        "warnings": [
+          "minimum_7_before_and_7_after_successes_not_met",
+          "minimum_source_tree_clusters_not_met"
+        ]
+      },
+      {
+        "afterFailureRate": {
+          "failures": 0,
+          "n": 0,
+          "percent": null
+        },
+        "afterRunCount": 0,
+        "afterSourceTreeCount": 0,
+        "afterStageProfile": {},
+        "afterTimingSuccessCount": 0,
+        "beforeFailureRate": {
+          "failures": 0,
+          "n": 7,
+          "percent": 0.0
+        },
+        "beforeRunCount": 7,
+        "beforeSourceTreeCount": 3,
+        "beforeStageProfile": {
+          "benchmark_report": {
+            "clusterMedianSecondsMean": 1413.666667,
+            "clusterMedianSecondsP50": 1457.0,
+            "sourceTreeClusters": 3
+          },
+          "build": {
+            "clusterMedianSecondsMean": 113.666667,
+            "clusterMedianSecondsP50": 121.0,
+            "sourceTreeClusters": 3
+          },
+          "combined_install_build_browser_test": {
+            "clusterMedianSecondsMean": 336.666667,
+            "clusterMedianSecondsP50": 336.0,
+            "sourceTreeClusters": 3
+          },
+          "install": {
+            "clusterMedianSecondsMean": 174.666667,
+            "clusterMedianSecondsP50": 175.0,
+            "sourceTreeClusters": 3
+          },
+          "lint": {
+            "clusterMedianSecondsMean": 143.333333,
+            "clusterMedianSecondsP50": 144.0,
+            "sourceTreeClusters": 3
+          },
+          "other": {
+            "clusterMedianSecondsMean": 21.666667,
+            "clusterMedianSecondsP50": 19.0,
+            "sourceTreeClusters": 3
+          },
+          "setup": {
+            "clusterMedianSecondsMean": 162.0,
+            "clusterMedianSecondsP50": 160.0,
+            "sourceTreeClusters": 3
+          },
+          "test": {
+            "clusterMedianSecondsMean": 443.0,
+            "clusterMedianSecondsP50": 433.0,
+            "sourceTreeClusters": 3
+          },
+          "typecheck": {
+            "clusterMedianSecondsMean": 299.333333,
+            "clusterMedianSecondsP50": 289.0,
+            "sourceTreeClusters": 3
+          },
+          "upload": {
+            "clusterMedianSecondsMean": 19.333333,
+            "clusterMedianSecondsP50": 19.0,
+            "sourceTreeClusters": 3
+          }
+        },
+        "beforeTimingSuccessCount": 7,
+        "causalClaimAllowed": false,
+        "cohortKey": ".github/workflows/web-admin-ci.yml|push|linux,windows|7b0db1b538b7f6737e4bb292a5a87b4dc1dfba06|full_benchmark|c39652d55c37bae285ae018d0bfe3e4daa547f7d7c8a85fbe003074d0233470e",
+        "effectiveSampleUnit": "source_tree_cluster_median",
+        "failureSignal": "insufficient_samples",
+        "metrics": {},
+        "warnings": [
+          "minimum_7_before_and_7_after_successes_not_met",
+          "minimum_source_tree_clusters_not_met"
+        ]
+      }
+    ],
+    "duplicateRunIdCountThisInvocation": 0,
+    "failedJobCount": 5,
+    "failedStepCount": 9,
+    "incompleteAttemptJobSetRunCount": 0,
+    "incompleteStepCount": 0,
+    "jobOrStepNamesRetained": false,
+    "malformedTimestampRunCount": 0,
+    "minimumSourceTreeClustersPerPhase": 7,
+    "minimumSuccessfulRunsPerPhase": 7,
+    "modelsInvoked": 0,
+    "p95MinimumSourceTreeClusters": 20,
+    "rawLogsFetched": false,
+    "remoteMutations": 0,
+    "runConclusionCounts": {
+      "cancelled": 2,
+      "failure": 1,
+      "success": 17
+    },
+    "schema": "tzudong-ci-performance-monitor/v1/analysis",
+    "thresholdBasis": "conservative analytical defaults; the retained baseline declared no acceptance noise budget; these values are not a required release gate",
+    "thresholds": {
+      "criticalPathSeconds": {
+        "absoluteSeconds": 30.0,
+        "relativePercent": 5.0
+      },
+      "maxQueueSeconds": {
+        "absoluteSeconds": 20.0,
+        "relativePercent": 25.0
+      },
+      "runnerOccupiedSeconds": {
+        "absoluteSeconds": 120.0,
+        "relativePercent": 5.0
+      }
+    },
+    "timingUsableRunCount": 17,
+    "warnings": [
+      "observational_signal_is_not_causal_performance_proof",
+      "repeated_monitoring_inflates_false_positive_risk_without_sequential_correction",
+      "no_comparable_workflow_event_runner_cohort",
+      "multiple_looks_detected"
+    ]
+  },
+  "checkpointAfterSha256": "ffdc100cb447ad438ace8146b16144d748b628ede50eb5928425a6fe168ef97a",
+  "checkpointBeforeSha256": null,
+  "configHash": "ffa57365cd3dbf06b4f2bfa9c4dba20765b3e69769cf608cc09a91e7a12f95d8",
+  "duplicateRunIdCount": 0,
+  "inputRunCount": 20,
+  "inputs": [
+    {
+      "phase": "before",
+      "runCount": 20,
+      "sha256": "d8e08c6371f3dab93fdb3495d5b14266d457e6e0490876f1e2546177a0b89070"
+    },
+    {
+      "phase": "after",
+      "runCount": 0,
+      "sha256": "ba80d35aad0e3fe1697e35957870144cfe4efa4a0cfb00ba032079be48208b79"
+    }
+  ],
+  "schema": "tzudong-ci-performance-monitor/v1/receipt"
+}

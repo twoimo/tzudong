@@ -1,0 +1,91 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-formal/marker-state-model.test.mjs:
+FORMAL_BROWSER 156.0.8078.47
+147 | }
+148 | 
+149 | test('all 4,608 active/reacquired visual transitions show the current static marker and bubble', async () => {
+150 |   await withFixture(async page => {
+151 |     const result = await page.evaluate(() => window.__formal.visualPairs());
+152 |     expect(result).toEqual({ checked: 4608 });
+      ^
+error: expect(received).toEqual(expected)
+
+  {
+-   "checked": 4608,
++   "actual": {
++     "alt": "설명 0",
++     "bubbles": 2,
++     "currentReview": false,
++     "flames": 0,
++     "tier": "standard",
++     "visits": "1",
++   },
++   "after": {
++     "alt": 0,
++     "bubble": 2,
++     "tier": "standard",
++     "visits": 1,
++   },
++   "before": {
++     "alt": 0,
++     "bubble": 1,
++     "tier": "standard",
++     "visits": 1,
++   },
++   "checked": 101,
++   "expected": {
++     "alt": "설명 0",
++     "bubbles": 1,
++     "currentReview": true,
++     "flames": 0,
++     "tier": "standard",
++     "visits": "1",
++   },
++   "released": false,
+  }
+
+- Expected  - 1
++ Received  + 30
+
+      at toEqual (unknown:1:1)
+      at <repo>/apps/web/tests-formal/marker-state-model.test.mjs:152:20
+      at withFixture (<repo>/apps/web/tests-formal/marker-state-model.test.mjs:145:11)
+      at <repo>/apps/web/tests-formal/marker-state-model.test.mjs:150:9
+      at processTicksAndRejections (unknown:7:39)
+(fail) all 4,608 active/reacquired visual transitions show the current static marker and bubble [1398.53ms]
+155 | }, 60000);
+156 | 
+157 | test('a review-only transition retains the image and avoids an SDK icon replacement', async () => {
+158 |   await withFixture(async page => {
+159 |     expect(await page.evaluate(() => window.__formal.bubbleIdentity()))
+160 |       .toMatchObject({ retained: true, iconChanges: 0, bubbles: 1 });
+             ^
+error: expect(received).toMatchObject(expected)
+
+  {
+-   "bubbles": 1,
++   "alt": "설명 0",
++   "bubbles": 2,
++   "currentReview": false,
++   "flames": 0,
+    "iconChanges": 0,
+    "retained": true,
++   "tier": "standard",
++   "visits": "1",
+  }
+
+- Expected  - 1
++ Received  + 6
+
+      at <anonymous> (<repo>/apps/web/tests-formal/marker-state-model.test.mjs:160:8)
+      at async withFixture (<repo>/apps/web/tests-formal/marker-state-model.test.mjs:145:11)
+      at async <anonymous> (<repo>/apps/web/tests-formal/marker-state-model.test.mjs:158:9)
+(fail) a review-only transition retains the image and avoids an SDK icon replacement [1218.71ms]
+FORMAL_OWNERSHIP_STEPS 18056
+(pass) every pool/click action sequence through depth four keeps current callback ownership [1631.75ms]
+
+ 1 pass
+ 2 fail
+ 4 expect() calls
+Ran 3 tests across 1 file. [4.64s]

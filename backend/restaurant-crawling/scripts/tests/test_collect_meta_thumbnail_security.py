@@ -35,7 +35,14 @@ SPEC = importlib.util.spec_from_file_location("collect_meta_thumbnail_security",
 collect_meta = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
 sys.modules[SPEC.name] = collect_meta
-SPEC.loader.exec_module(collect_meta)
+# Unit discovery must not read an operator env or create runtime log directories.
+BACKEND_ROOT = MODULE_PATH.parents[2]
+sys.path.insert(0, str(BACKEND_ROOT))
+from utils import runtime_paths
+with patch.object(runtime_paths, "load_backend_env"), patch.object(
+    runtime_paths, "get_backend_log_dir", return_value=MODULE_PATH.parent
+):
+    SPEC.loader.exec_module(collect_meta)
 
 
 JPEG_FIXTURE = b"\xff\xd8\xfffixture-01"

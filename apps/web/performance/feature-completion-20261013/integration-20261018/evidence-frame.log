@@ -1,0 +1,36 @@
+[2026-10-18 11:42:45] [INFO ] FRAME_VIDEO_DOWNLOAD_ATTEMPTED
+[2026-10-18 11:42:45] [WARN ] FRAME_VIDEO_DOWNLOAD_FAILED Error
+[2026-10-18 11:42:45] [ERROR] FRAME_VIDEO_DOWNLOAD_RETRIES_EXHAUSTED
+[2026-10-18 11:42:45] [INFO ] FRAME_VIDEO_DOWNLOAD_ATTEMPTED
+[2026-10-18 11:42:45] [WARN ] FRAME_VIDEO_DOWNLOAD_FAILED Error
+✔ content hash and frame id stay separate and the same hash keeps one key prefix (1.382875ms)
+✔ evidence window is five seconds around the target and is not an I-frame rate (0.46625ms)
+✔ decode start is the latest keyframe at or before the window, and output sampling is fps=2 (0.302208ms)
+✔ provider auth blocks stop and temporary limits retry without reading a cookie (0.416458ms)
+[2026-10-18 11:42:47] [INFO ] FRAME_VIDEO_DOWNLOAD_ATTEMPTED
+[2026-10-18 11:42:47] [WARN ] FRAME_VIDEO_DOWNLOAD_FAILED Error
+[2026-10-18 11:42:47] [ERROR] FRAME_VIDEO_DOWNLOAD_RETRIES_EXHAUSTED
+[2026-10-18 11:42:47] [INFO ] FRAME_VIDEO_DOWNLOAD_ATTEMPTED
+[2026-10-18 11:42:47] [WARN ] FRAME_VIDEO_DOWNLOAD_FAILED Error
+[2026-10-18 11:42:47] [ERROR] FRAME_PROVIDER_STOP_SOURCE
+✔ download does not retry a temporary failure without a whole daily remaining count (2244.238042ms)
+✔ manifest keeps the frame caption contract and records PTS separately from I-frame output (0.358291ms)
+✔ download stops on an auth status instead of retrying (93.797458ms)
+[2026-10-18 11:42:47] [WARN ] FRAME_VIDEO_DURATION_PROBE_FAILED Error
+[2026-10-18 11:42:47] [INFO ] FRAME_SEGMENT_EXTRACTION_STARTED
+[2026-10-18 11:42:47] [INFO ] FRAME_SEGMENT_EXTRACTION_COMPLETED
+[2026-10-18 11:42:47] [INFO ] FRAME_HEATMAP_SEGMENTS_FOUND
+[2026-10-18 11:42:47] [INFO ] FRAME_QUALITIES_CONFIGURED
+[2026-10-18 11:42:47] [INFO ] FRAME_FORMATS_CONFIGURED
+[2026-10-18 11:42:47] [INFO ] FRAME_QUALITY_STARTED
+[2026-10-18 11:42:47] [INFO ] FRAME_EXTRACTION_COMPLETED
+✔ heatmap extraction seeks to the probed keyframe and then samples with the fps filter (258.4645ms)
+✔ processSingleVideo writes a 2fps evidence manifest from the local file without loading it (11.928958ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2678.935917

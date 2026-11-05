@@ -1,0 +1,35 @@
+{
+  "status": "reserved",
+  "reservation": {
+    "provider": "gemini",
+    "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+    "job": "tzudong-ac80e35d-antithesis-20261023",
+    "bundle": "6edea509e566107a4a4bbced53055aed79ea3ca3c1094367a468bf7cb0f047e5",
+    "request_id": "ed871242eed136afa7312b37",
+    "queued_at": "2026-10-22T20:42:36.080480+00:00",
+    "account_hint": "kss2740",
+    "work_state": "ready",
+    "stage": "delta",
+    "account": "kss2740",
+    "model": "4 Argon / 높음 (highest displayed level)",
+    "research": "off",
+    "phase": "prepared",
+    "reserved_at": "2026-10-22T20:42:36.080685+00:00",
+    "url": null,
+    "admission_mode": "user_override",
+    "lifecycle_managed": true,
+    "lifecycle_version": 2,
+    "require_source_inputs": true,
+    "audit_mode": true,
+    "actual_model": "4 Argon / 높음 (highest displayed level)",
+    "actual_research": "off",
+    "mode_contract": "gemini-4-argon-max-thinking",
+    "user_override": {
+      "authorization": "Direct current human2026-10-23 in this Tzudong chat explicitly approves Tzudong-only FIFO/slot exceptions for this thesis delta, Gemini highest-thinking adversarial review and GPT6Pro reverse, all ordinary research off. Keep actual limits, other-owner work/queues and uncertain sends protected.",
+      "at": "2026-10-22T20:42:36.080790+00:00",
+      "scope": "this reservation only",
+      "local_policy": "fifo",
+      "active_count_before": 0
+    }
+  }
+}

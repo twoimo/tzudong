@@ -26,6 +26,7 @@ export interface NotificationContextType {
   unreadCount: number;
   isLoading: boolean;
   isError: boolean;
+  retryNotifications?: () => Promise<boolean>;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => void;

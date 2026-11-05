@@ -1,0 +1,81 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/evidence-frame-failure-browser.test.ts:
+(pass) context-only frames keep an honest heading and original video link after image failure, and recover for a new source [2982.22ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > failed provider detachment is discarded and does not strand clear or reuse a corrupt marker [0.39ms]
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.08ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.05ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.07ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.08ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.15ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.26ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.10ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.04ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.03ms]
+(pass) marker pool > keeps the category image when only the review bubble changes [0.24ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.15ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.05ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [1.80ms]
+
+tests-unit/device-location-map.test.ts:
+(pass) device location map helpers > normalizes compass headings into clockwise degrees [0.03ms]
+(pass) device location map helpers > prefers iOS compass heading and converts absolute alpha fallback [0.03ms]
+(pass) device location map helpers > normalizes moving geolocation heading only when available
+(pass) device location map helpers > labels the floating button by tap progression [0.02ms]
+(pass) device location map helpers > focuses only when a locate request changes [0.01ms]
+(pass) device location map helpers > clamps accuracy radius for map overlays [0.02ms]
+(pass) device location map helpers > keeps device-location focus zoom at least the map minimum [0.01ms]
+(pass) device location map helpers > builds a pure device-location render plan for marker effects [0.04ms]
+(pass) device location map helpers > skips insignificant device-location jitter before it reaches React state [0.07ms]
+(pass) device location map helpers > renders a direction marker only after heading mode has a heading [0.04ms]
+(pass) device location map helpers > uses the bounded map radius for position-marker accuracy labels [0.09ms]
+
+tests-unit/overseas-map-marker-helpers.test.ts:
+(pass) overseas map marker helpers > validates the same coordinates before marker creation and external map movement [0.15ms]
+(pass) overseas map marker helpers > builds class-only marker HTML with valid local and HTTPS images [0.29ms]
+(pass) overseas map marker helpers > fails closed for unsafe marker image values and escapes alt text [0.10ms]
+(pass) overseas map marker helpers > prefers selected restaurant id over searched id [0.02ms]
+(pass) overseas map marker helpers > toggles only fixed size and selected classes without style mutation [0.20ms]
+
+tests-unit/naver-map-event-cleanup.test.ts:
+(pass) listener removal preserves the provider receiver and handle [0.06ms]
+(pass) absent provider or listener is safe during partial initialization [0.06ms]
+(pass) one failed provider removal does not prevent the next teardown [0.04ms]
+(pass) a retained idle handler becomes inert before callback and cannot repeat a stale correction [0.04ms]
+(pass) cleanup cancels a still-pending idle correction even if the provider retains its handler [0.01ms]
+(pass) canceled provider callbacks cannot dispatch stale props after failed listener removal [0.03ms]
+(pass) clearing location removes its visual and retains a failed SDK handle until retry succeeds [0.07ms]
+
+tests-unit/naver-map-wheel-helpers.test.ts:
+(pass) naver map wheel helpers > returns no-op when delta direction is zero [0.05ms]
+(pass) naver map wheel helpers > uses previous target zoom during fast continuous wheel input [0.01ms]
+(pass) naver map wheel helpers > clamps zoom to min/max bounds [0.01ms]
+(pass) naver map wheel helpers > builds viewport-relative mouse offsets and in-bounds flag [0.04ms]
+(pass) naver map wheel helpers > marks viewport plan as outside when wheel event is beyond bounds
+(pass) naver map wheel helpers > rebuilds center-relative mouse offset after zoom [0.01ms]
+(pass) naver map wheel helpers > builds anchor adjustment payload for hover-preserving zoom correction [0.02ms]
+(pass) naver map wheel helpers > builds stable wheel input payload [0.01ms]
+(pass) naver map wheel helpers > queues wheel input when anchor adjustment is still running [0.02ms]
+(pass) naver map wheel helpers > flushes queued wheel input only when anchor adjustment is idle [0.02ms]
+(pass) naver map wheel helpers > resolves post-adjust continuation state from current zoom and queue flag [0.01ms]
+(pass) naver map wheel helpers > builds projection adapter around map constructors and projection API [0.06ms]
+(pass) naver map wheel helpers > clears a pending anchor-adjust listener through injected remover [0.03ms]
+(pass) naver map wheel helpers > treats an unchanged projection offset as not ready for same-turn correction [0.03ms]
+(pass) naver map wheel helpers > resolves cleanup state by resetting anchor-adjust and queue state [0.01ms]
+
+tests-unit/overseas-marker-refresh-browser.test.ts:
+(pass) retained overseas markers refresh content, location and click data without recreating or losing selection [1990.14ms]
+
+tests-unit/naver-map-interaction-helpers.test.ts:
+(pass) naver map interaction helpers > exposes passive capture listener options [0.02ms]
+(pass) naver map interaction helpers > builds stable DOM and map interaction listener plan [0.02ms]
+(pass) naver map interaction helpers > marks map as user-moved, activates noncritical effects, and optionally releases search selection [0.06ms]
+(pass) naver map interaction helpers > declares activation events for noncritical map side effects
+
+ 59 pass
+ 0 fail
+ 1332 expect() calls
+Ran 59 tests across 8 files. [5.16s]
