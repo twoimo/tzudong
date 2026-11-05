@@ -41,6 +41,10 @@ SCRIPTS = {
     "transform": REPO_ROOT / "backend/restaurant-evaluation/scripts/12-transform.py",
 }
 
+# Metadata discovery can refill Shorts, but never expands the evaluated-video
+# budget (--limit remains 1..3). One bounded metadata batch per invocation.
+MAX_DISCOVERY_VIDEOS = 50
+
 
 def _run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
     completed = subprocess.run(argv, cwd=REPO_ROOT, env=env, check=False)
@@ -125,7 +129,11 @@ def _has_terminal_evaluation(record: dict) -> bool:
             return False
     if results["location_match_TF"].get("match_status") == "failed":
         return False
-    for key, maximum in (("visit_authenticity", 2), ("rb_inference_score", 2),
+    visit = results.get("visit_authenticity")
+    value = visit.get("eval_value") if isinstance(visit, dict) else None
+    if type(value) is not int or not 0 <= value <= 4:
+        return False
+    for key, maximum in (("rb_inference_score", 2),
                          ("review_faithfulness_score", 1)):
         item = results.get(key)
         value = item.get("eval_value") if isinstance(item, dict) else None
@@ -451,7 +459,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         seen.add(video_id)
         new_urls.append(f"https://www.youtube.com/watch?v={video_id}")
-        if len(new_urls) >= args.limit:
+        if len(new_urls) >= (args.limit if args.dry_run else MAX_DISCOVERY_VIDEOS):
             break
     print(f"legacyOrUnconfirmedHeld={len(set(held))}")
     print(f"deliveredSnapshots={len(set(delivered))}")
@@ -459,9 +467,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"localEvaluatedIds={len(local_done)}")
     print(f"permanentNoTranscriptIds={len(permanent_no_transcript)}")
     print(f"newVideoCount={len(new_urls)}")
+    print(f"discoveryVideoLimit={MAX_DISCOVERY_VIDEOS}")
+    print(f"evaluationVideoLimit={args.limit}")
     print(f"newVideoIds={[extract_youtube_video_id(item) for item in new_urls]}")
     if args.dry_run or not new_urls:
-        _write_urls(urls_path, before)
+        _write_urls(urls_path, before if args.dry_run else list(dict.fromkeys(after + before)))
         print("evaluate=skipped")
         if uncertain and not args.dry_run:
             print("error=pending_original_request_unconfirmed")
@@ -475,7 +485,10 @@ def main(argv: list[str] | None = None) -> int:
         short_ids = [video_id for video_id in new_ids if _is_short_video(crawling, video_id)]
         for video_id in short_ids:
             _mark_crawl_not_selected(evaluation, video_id, "shorts:is_shorts_le_180")
-        evaluable_ids = [video_id for video_id in new_ids if video_id not in set(short_ids)]
+        evaluable_ids = [video_id for video_id in new_ids if video_id not in set(short_ids)][:args.limit]
+        # Deferred long videos were only discovered, never evaluated. Confirmed
+        # Shorts keep their normal completion check; missing artifacts still fail.
+        new_ids = short_ids + evaluable_ids
         _write_urls(
             urls_path,
             [f"https://www.youtube.com/watch?v={video_id}" for video_id in evaluable_ids],
@@ -558,9 +571,9 @@ def main(argv: list[str] | None = None) -> int:
             required=False,
         )
     finally:
-        merged = list(new_urls)
+        merged = list(after)
         known = {extract_youtube_video_id(item) for item in merged}
-        for item in before + after:
+        for item in before:
             video_id = extract_youtube_video_id(item)
             if video_id is None or video_id in known:
                 continue

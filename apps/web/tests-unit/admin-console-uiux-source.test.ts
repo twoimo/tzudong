@@ -962,12 +962,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "data-storyboard-module-loading-cut={String(cutNo)}",
     );
     expect(consoleSource).toContain(
-      'data-storyboard-module-loading-shimmer="true"',
+      'data-storyboard-module-loading-shimmer="false"',
     );
-    expect(consoleSource).toContain("admin-module-loading-shimmer");
+    expect(consoleSource).not.toContain("admin-module-loading-shimmer");
+    expect(consoleSource).toContain("<LoadingSurface");
+    expect(consoleSource).toContain("<LoadingPreview");
     expect(consoleSource).toContain("STORYBOARD_MODULE_LOADING_CUT_NOS.map");
     expect(consoleSource).toContain(
-      'data-storyboard-module-loading-glass="true"',
+      'data-storyboard-module-loading-glass="false"',
     );
     expect(consoleSource).toContain('data-thumbnail-module-loading="true"');
     expect(consoleSource).toContain(
@@ -986,13 +988,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-module-loading-canvas-aspect="16:9"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas-glass="true"',
+      'data-thumbnail-module-loading-canvas-glass="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-glass-shell="true"',
+      'data-thumbnail-module-loading-glass-shell="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-page-shimmer="true"',
+      'data-thumbnail-module-loading-page-shimmer="false"',
     );
     expect(consoleSource).toContain(
       'data-thumbnail-module-loading-card-glass="chat"',
@@ -1001,22 +1003,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-module-loading-card-glass="canvas"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-shell-glass="true"',
+      'data-thumbnail-module-loading-chat-shell-glass="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-shell-shimmer="true"',
+      'data-thumbnail-module-loading-chat-shell-shimmer="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-glass="true"',
+      'data-thumbnail-module-loading-chat-glass="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-shimmer="true"',
+      'data-thumbnail-module-loading-chat-shimmer="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas-shell-glass="true"',
+      'data-thumbnail-module-loading-canvas-shell-glass="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas-shell-shimmer="true"',
+      'data-thumbnail-module-loading-canvas-shell-shimmer="false"',
     );
     expect(consoleSource).toContain(
       'data-thumbnail-module-loading-toolbar="true"',
@@ -1046,13 +1048,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-module-loading-chat-actions="outside-bubble"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-shimmer="true"',
+      'data-thumbnail-module-loading-shimmer="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-tool-glass="true"',
+      'data-thumbnail-module-loading-tool-glass="false"',
     );
     expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-tool-shimmer="true"',
+      'data-thumbnail-module-loading-tool-shimmer="false"',
     );
     expect(consoleSource).toContain("THUMBNAIL_MODULE_LOADING_TOOL_IDS.map");
     expect(consoleSource).not.toContain("[animation:storyboard-glass-shimmer_");
@@ -1150,26 +1152,26 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(evaluationTableSource).toContain(
       'role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중"',
     );
-    expect(evaluationTableSource).toContain("Array.from({ length: mobileSkeletonCount }).map");
+    expect(evaluationTableSource).toContain("Array.from({ length: mobileSkeletonCount },");
     expect(evaluationTableSource).toContain(
-      "const desktopLoadingRows = Array.from({ length: desktopSkeletonCount })",
+      "Array.from({ length: desktopSkeletonCount },",
     );
     expect(evaluationTableSource).toContain("Math.ceil((height - 48) / 72)");
-    expect(submissionListSource).toContain("Array.from({ length: submissionListSkeleton.count }).map");
-    expect(submissionListSource).toContain(
+    expect(submissionListSource.replace(/\s+/g, " ")).toContain("Array.from({ length: submissionListSkeleton.count },");
+    expect(submissionListSource.replace(/\s+/g, " ")).toContain(
       "grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_72px]",
     );
-    expect(submissionListSource).toContain(
+    expect(submissionListSource.replace(/\s+/g, " ")).toContain(
       'role="status" aria-busy="true" aria-label={`${label} 목록 로딩 중`}',
     );
-    expect(usersSource).toContain(
+    expect(usersSource.replace(/\s+/g, " ")).toContain(
       'role="status" aria-busy="true" aria-label="사용자 목록 로딩 중"',
     );
-    expect(usersSource).toContain("function UserTableSkeleton");
-    expect(usersSource).toContain(
+    expect(usersSource.replace(/\s+/g, " ")).toContain("function UserTableSkeleton");
+    expect(usersSource.replace(/\s+/g, " ")).toContain(
       '<caption className="sr-only">관리자 사용자 목록 로딩</caption>',
     );
-    expect(usersSource).toContain(
+    expect(usersSource.replace(/\s+/g, " ")).toContain(
       '<th scope="col" className="w-[40%] px-3 py-2 font-semibold">사용자</th>',
     );
     expect(refreshHistorySource).toContain(
@@ -1181,11 +1183,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(insightsSource).toContain("function InsightsClientLoadingSkeleton()");
     expect(insightsSource).toContain('data-insights-client-loading="true"');
     expect(insightsSource).toContain("return <InsightsClientLoadingSkeleton />;");
-    expect(usersSource).toContain("block min-w-0 text-left");
-    expect(usersSource).toContain("hidden overflow-hidden rounded-lg border bg-card md:block");
-    expect(usersSource).toContain(
-      'Badge variant="secondary" className="border-transparent bg-muted text-muted-foreground"',
-    );
+    const userLoadingSample = usersSource.split("function UserTableSkeleton()")[1]?.split("function StatusBadge")[0] ?? "";
+    expect(userLoadingSample).toContain('<LoadingSurface label="사용자 목록 로딩 중">');
+    expect(userLoadingSample).not.toContain("<button");
+    expect(usersSource.replace(/\s+/g, " ")).toContain("hidden overflow-hidden rounded-lg border bg-card md:block");
+    expect(userLoadingSample).toContain("사용자 권한");
+    expect(userLoadingSample).toContain("계정 상태");
     expect(usersSource).not.toContain(
       'Badge variant="outline" className="border-border bg-background text-muted-foreground"',
     );
@@ -2159,26 +2162,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("engagementRateStats");
     expect(consoleSource).toContain("function AdminDashboardKpiValueSkeleton");
     expect(consoleSource).toContain("function AdminDashboardPanelBodySkeleton");
+    expect(consoleSource).toContain("data-admin-dashboard-dynamic-skeleton={variant}");
     expect(consoleSource).toContain(
       'data-admin-dashboard-dynamic-skeleton="kpi"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="chart"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="bubble"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="line"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="stacked"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="diagnosis"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="table"',
     );
     expect(consoleSource).toContain(
       '<AdminDashboardPanelBodySkeleton variant="bubble" />',
@@ -4281,10 +4267,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "<BannerListItemSkeleton key={index} index={index} />",
     );
     expect(bannersSource).toContain(
-      "relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border",
+      "h-12 w-16 shrink-0 rounded-md border",
     );
     expect(bannersSource).toContain(
-      'Badge variant="secondary" className="rounded-full text-2xs"',
+      'className="mt-1 flex gap-2 text-xs"',
     );
     expect(bannersSource).not.toContain("bannersLoading && <Loader2");
     expect(bannersSource).toContain("Boolean(pendingReadback)");
@@ -4314,14 +4300,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
     );
     expect(announcementSource).toContain(
-      "isAnnouncementsLoading ? <InlineCountSkeleton /> : allDisplayAnnouncements.length",
+      "isAnnouncementsLoading ? <AnnouncementCountLoading /> : allDisplayAnnouncements.length",
     );
-    expect(announcementSource).toContain('aria-label="공지사항 목록 로딩 중"');
+    expect(announcementSource).toContain('label="공지사항 목록 로딩 중"');
     expect(announcementSource).toContain(
-      "function AnnouncementListItemSkeleton",
+      "function AnnouncementListItemPreview",
     );
     expect(announcementSource).toContain(
-      "<AnnouncementListItemSkeleton key={index} index={index} />",
+      "<AnnouncementListItemPreview key={index} index={index} />",
     );
     expect(announcementSource).not.toContain("공지사항을 불러오는 중입니다");
     expect(announcementSource).toContain(
@@ -4345,7 +4331,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("function ConnectedRoutesCard()");
     expect(usersSource).not.toContain("min-h-[560px]");
     expect(usersSource).toContain(
-      'isLoading ? <span className="inline-block h-5 w-10 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none sm:h-6 sm:w-12"',
+      'isLoading ? <LoadingSurface label={label + " 집계 중"} className="inline-flex h-5 w-10 sm:h-6 sm:w-12"',
     );
     expect(usersSource).not.toContain(
       "value={isLoading ? '—' : summary.loadedUsers}",

@@ -1,5 +1,7 @@
 'use client';
 
+import { LoadingSurface } from "@/components/ui/loading-surface";
+
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { buildDesktopStampHomeRedirectPath, buildHomeAuthLoginPath, buildStampReviewContinuationPath } from "@/lib/auth/auth-redirect";
@@ -9,7 +11,6 @@ import { MapPanelHeader } from "@/components/home/map-panel-chrome";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
     Table,
     TableBody,
@@ -34,7 +35,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { describeErrorCodeForLog } from "@/lib/debug-log";
-import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
@@ -938,7 +938,9 @@ export default function StampPage() {
                             titleIcon={<Trophy />}
                             count={isRestaurantsLoading || isRestaurantsError ? undefined : totalRestaurantCount}
                             titleAddon={isRestaurantsLoading ? (
-                                <Skeleton className="h-4 w-12 shrink-0 rounded-full" data-stamp-total-count-skeleton="true" />
+                                <div className="h-4 w-12 shrink-0" data-stamp-total-count-skeleton="true">
+                                    <LoadingSurface label="전체 맛집 수 집계 중"><span className="block text-xs leading-4">00개</span></LoadingSurface>
+                                </div>
                             ) : isRestaurantsError ? <span className="text-xs text-muted-foreground" role="status">전체 수 확인 불가</span> : undefined}
                             description="맛집을 찾아 도장을 찍어보세요!"
                             actions={(
@@ -1188,7 +1190,18 @@ export default function StampPage() {
                                             />
                                         </div>
                                     )}
-                                    <StampGridSkeleton count={STAMP_PAGE_SIZE} showHeader={false} />
+                                    <LoadingSurface label="도장 맛집 목록 로딩 중">
+                                        <div className="grid gap-3 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
+                                            {Array.from({ length: STAMP_PAGE_SIZE }, (_, index) => (
+                                                <article key={index} className="space-y-2">
+                                                    <svg viewBox="0 0 320 180" role="img" aria-label="맛집 사진" className="aspect-video w-full rounded-lg">
+                                                        <path d="M0 150 80 50 160 110 250 30 320 130V180H0Z" fill="currentColor" opacity="0.12" />
+                                                    </svg>
+                                                    <h3 className="truncate text-sm font-medium leading-4">영상 속 맛집</h3>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    </LoadingSurface>
                                 </div>
                             ) : isStampReadError ? (
                                 <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">

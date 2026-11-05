@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Bug, ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingPreview } from '@/components/ui/loading-surface';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { restoreAdminDetailFocus } from '@/lib/admin/detail-focus';
@@ -103,7 +103,11 @@ export function AdminSentryPanel() {
     </div>
     <div className="flex min-h-0 flex-1 overflow-hidden">
       <div ref={listRef} className="admin-cms-table-container flex-1" aria-busy={query.isFetching}>
-        {query.isPending && !reloading && !query.isPlaceholderData ? <div className="space-y-2 p-3" role="status" aria-label="오류 목록 조회 중">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-10 w-full motion-reduce:animate-none" />)}</div>
+        {query.isPending && !reloading && !query.isPlaceholderData ? <div className="space-y-2 p-3" role="status" aria-label="오류 목록 조회 중">
+
+            <LoadingPreview kind="list" rows={6} compact showHeader={false} label="오류 목록 조회 중" />
+
+        </div>
           : !available ? <div role="status" className="admin-empty-state m-3 !min-h-0 !flex-row !items-start !justify-start gap-3 p-3 !text-left"><Bug className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /><div className="min-w-0"><h2 className="text-sm font-semibold leading-5">{data?.state === 'not_configured' ? 'Sentry 연결 미설정' : '오류 목록 조회 실패'}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{data?.state === 'not_configured' ? '연결 설정이 완료되면 오류 목록을 조회할 수 있습니다.' : '새로고침해 연결 상태를 다시 확인하세요.'}</p>{data?.state !== 'not_configured' ? <Button size="sm" variant="outline" className="mt-2" aria-disabled={reloading || query.isFetching || undefined} aria-busy={reloading || query.isFetching || undefined} onClick={reload}>다시 조회</Button> : null}</div></div>
           : <><table className="admin-cms-table table-fixed" aria-label="Sentry 오류 목록"><thead className="sticky top-0 z-10 bg-background"><tr><th scope="col">오류 유형</th><th scope="col" className="w-20">심각도</th><th scope="col" className="w-20">발생</th><th scope="col" className="hidden w-28 xl:table-cell">최근 발생</th></tr></thead><tbody>{issues.map(issue => <tr key={issue.id} data-sentry-issue={issue.id} className={cn('cursor-pointer', selected?.id === issue.id && 'admin-cms-row-selected')} onClick={event => { rowRef.current = event.currentTarget.querySelector('button'); setSelectedId(issue.id); window.requestAnimationFrame(() => detailRef.current?.focus({ preventScroll: true })); }}>
             <td><button type="button" aria-pressed={selected?.id === issue.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className="block w-full min-w-0 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="block truncate text-sm font-medium">{issue.type}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{issue.shortId}</span><span className="mt-0.5 block text-[11px] text-muted-foreground xl:hidden">{displayDate(issue.lastSeen)}</span></button></td>

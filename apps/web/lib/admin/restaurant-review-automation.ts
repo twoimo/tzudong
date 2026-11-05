@@ -1,4 +1,5 @@
 import { isRecord } from './normalize-evaluation-record';
+import { isReviewAutomationCoverage, type ReviewAutomationCoverage } from './review-automation-coverage';
 
 export type ReviewRun = { id: string; started_at: string; scanned: number; approved: number; held: number; recheck: number; protected: number };
 export const REVIEW_EVIDENCE_CODES = ['visit_supported','identity_supported','review_grounded','category_supported','location_corroborated','source_consistent','insufficient_evidence','identity_conflict','location_conflict','review_unfaithful','category_conflict','source_conflict'] as const;
@@ -6,7 +7,7 @@ export type ReviewEvidenceCode = typeof REVIEW_EVIDENCE_CODES[number];
 export type ReviewGeminiDecision = { schemaVersion: 1; model: 'gemini-3.8-flash'; modelVersion: 'gemini-3.8-flash'; promptVersion: 'restaurant-review-v1'; inputSha256: string; promptSha256: string; recommendation: 'approve' | 'hold' | 'recheck'; evidenceCodes: ReviewEvidenceCode[]; outcome?: 'approve' | 'hold' | 'recheck' | 'protected' | 'blocked' | 'deferred'; decidedAt?: string };
 export type ReviewJudgmentEngine = { provider: 'gemini'; model: 'gemini-3.8-flash'; promptVersion: 'restaurant-review-v1'; requiredForApproval: true; maxCallsPerClaim: 1 };
 export type ReviewItem = { id: string; restaurant_id: string; restaurant_name?: string; reason: string; state: string; geminiDecision?: ReviewGeminiDecision | null };
-export type ReviewAutomationSnapshot = { policy: { version: number; enabled: boolean; batch_size: number; daily_limit: number; last_run_at: string | null }; runs: ReviewRun[]; items: ReviewItem[]; queue: { queued: number; running: number; failed: number }; judgmentEngine?: ReviewJudgmentEngine };
+export type ReviewAutomationSnapshot = { policy: { version: number; enabled: boolean; batch_size: number; daily_limit: number; last_run_at: string | null }; runs: ReviewRun[]; items: ReviewItem[]; queue: { queued: number; running: number; failed: number }; judgmentEngine?: ReviewJudgmentEngine; coverage?: ReviewAutomationCoverage };
 export type ReviewAutomationPreview = { version: string; previewHash: string; counts: Record<string, number>; batchSize: number; dailyLimit: number; action?: 'run' | 'stop'; queue?: { queued: number; running: number }; remainingApprovals?: number };
 const count = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 const limit = (value: unknown): value is number => count(value) && value >= 1 && value <= 200;
@@ -44,7 +45,8 @@ export function parseReviewAutomationSnapshot(value: unknown): ReviewAutomationS
     || !value.items.every(item => isRecord(item) && id(item.id) && id(item.restaurant_id) && (item.restaurant_name === undefined || (typeof item.restaurant_name === 'string' && item.restaurant_name.length <= 160)) && typeof item.reason === 'string' && /^[a-z_]{1,64}$/.test(item.reason)
       && ['applied','queued','running','succeeded','failed','cancelled'].includes(String(item.state))
       && (item.geminiDecision == null || isReviewGeminiDecision(item.geminiDecision)))
-    || (value.judgmentEngine !== undefined && !isReviewJudgmentEngine(value.judgmentEngine))) throw new Error('AUTOMATION_RESPONSE_INVALID');
+    || (value.judgmentEngine !== undefined && !isReviewJudgmentEngine(value.judgmentEngine))
+    || (value.coverage !== undefined && !isReviewAutomationCoverage(value.coverage))) throw new Error('AUTOMATION_RESPONSE_INVALID');
   return value as ReviewAutomationSnapshot;
 }
 

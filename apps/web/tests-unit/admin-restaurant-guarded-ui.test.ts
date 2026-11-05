@@ -268,7 +268,7 @@ test('approval includes the visible resolved name and category while partial sav
 
 test('actual slide approval keeps the selected candidate while confirmation/readback is pending', () => {
   const navigations: number[] = [], approvals: string[] = [], timers: Array<() => void> = [];
-  const deps = { currentRecord: { id }, currentIndex: 0, records: [{ id }, { id: second }], onNavigate: (index: number) => navigations.push(index), onApprove: (row: { id: string }) => { approvals.push(row.id); return new Promise(() => {}); }, setTimeout: (callback: () => void) => timers.push(callback) };
+  const deps = { approvalUnknown: false, canApproveCurrent: true, requestDetails: () => { throw new Error('UNEXPECTED_DETAIL_REFRESH'); }, currentRecord: { id }, currentIndex: 0, records: [{ id }, { id: second }], onNavigate: (index: number) => navigations.push(index), onApprove: (row: { id: string }) => { approvals.push(row.id); return new Promise(() => {}); }, setTimeout: (callback: () => void) => timers.push(callback) };
   const { handleApproveCurrent } = actual<{ handleApproveCurrent: () => void }>('EvaluationSlideView', '    const handleApproveCurrent =', '    const getStatusBadge', ['handleApproveCurrent'], deps);
   handleApproveCurrent(); timers.forEach(callback => callback());
   expect(approvals).toEqual([id]); expect(navigations).toEqual([]);

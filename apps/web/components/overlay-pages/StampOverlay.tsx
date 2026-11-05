@@ -1,5 +1,7 @@
 'use client';
 
+import { LoadingSurface } from "@/components/ui/loading-surface";
+
 import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
 import { AlertCircle, Search, Trophy, Eye, EyeOff, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -12,7 +14,6 @@ import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { REGIONS, extractRegion, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
@@ -128,8 +129,8 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
     const shouldShowStampOverlaySkeleton =
         isRestaurantsLoading || shouldWaitForStampState;
-    const skeletonCardCount = STAMP_PAGE_SIZE;
-    const skeletonGridColumns = singleColumnCards
+    const loadingCardCount = STAMP_PAGE_SIZE;
+    const loadingGridColumns = singleColumnCards
         ? "grid-cols-1 md:gap-3"
         : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4";
 
@@ -488,11 +489,18 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                                 />
                             </div>
                         )}
-                        <StampGridSkeleton
-                            count={skeletonCardCount}
-                            showHeader={false}
-                            columns={skeletonGridColumns}
-                        />
+                        <LoadingSurface label="도장 맛집 목록 로딩 중">
+                            <div className={cn("grid gap-3", loadingGridColumns)}>
+                                {Array.from({ length: loadingCardCount }, (_, index) => (
+                                    <article key={index} className="space-y-2">
+                                        <svg viewBox="0 0 320 180" role="img" aria-label="맛집 사진" className="aspect-video w-full rounded-lg">
+                                            <path d="M0 150 80 50 160 110 250 30 320 130V180H0Z" fill="currentColor" opacity="0.12" />
+                                        </svg>
+                                        <h3 className="truncate text-sm font-medium leading-4">영상 속 맛집</h3>
+                                    </article>
+                                ))}
+                            </div>
+                        </LoadingSurface>
                     </div>
                 ) : isRestaurantsError || isUserStampsError ? (
                     <div

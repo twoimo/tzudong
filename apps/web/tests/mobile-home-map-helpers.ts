@@ -641,7 +641,27 @@ function filterRestaurantsForRequest(url: URL): RestaurantFixture[] {
     return restaurants;
 }
 
-async function handleSupabaseRestRoute(route: Route) {
+// PostgREST applies limit/offset after every filter. requireComplete
+// pagination relies on an empty page past the end to terminate, so the
+// fixture must slice instead of repeating the full set for every offset.
+// Only the non-negative integer shape production sends is supported; any
+// other value is ignored like an absent parameter.
+
+function parsePaginationParam(value: string | null): number | null {
+    if (value === null) return null;
+    if (value.length === 0 || ![...value].every((ch) => ch >= '0' && ch <= '9')) return null;
+    return Number(value);
+}
+
+async function fulfillRestaurantsForRequest(route: Route, url: URL) {
+    const limit = parsePaginationParam(url.searchParams.get('limit'));
+    const offset = parsePaginationParam(url.searchParams.get('offset')) ?? 0;
+    const filtered = filterRestaurantsForRequest(url);
+    const rows = limit === null ? filtered.slice(offset) : filtered.slice(offset, offset + limit);
+    await fulfillJson(route, rows);
+}
+
+export async function handleSupabaseRestRoute(route: Route) {
     const request = route.request();
     const url = new URL(request.url());
     const method = request.method().toUpperCase();
@@ -700,7 +720,7 @@ async function handleSupabaseRestRoute(route: Route) {
     }
 
     if (url.pathname.endsWith('/rest/v1/restaurants')) {
-        await fulfillJson(route, filterRestaurantsForRequest(url));
+        await fulfillRestaurantsForRequest(route, url);
         return;
     }
 
