@@ -414,6 +414,46 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         self.assertIn("capability_hold_unicode_assigned_pg15", sql)
         self.assertNotIn("SQLSTATE IN ('P0001')", sql)
 
+    def test_evidence_recovery_guards_register_exact_denials(self):
+        candidates = [
+            ("pipeline_control", "evidence_recovery_guard", "uuid,uuid,bigint,text,text,uuid"),
+            ("pipeline_control", "evidence_recovery_validate_result", "jsonb,jsonb,text"),
+            ("public", "restaurant_evidence_recovery_context", "uuid,uuid"),
+            ("public", "restaurant_evidence_recovery_admin", "uuid,text,uuid,uuid,uuid,bigint,text,text,text,text"),
+            ("public", "restaurant_evidence_recovery_worker", "text,uuid,uuid,jsonb"),
+            ("public", "restaurant_evidence_recovery_status", "uuid,uuid"),
+        ]
+        sql = self.scanner._smoke_candidate_blocks([
+            {"schema": schema, "proname": proname, "identityArgumentsNormalized": args, "signature": f"{schema}.{proname}({args})"}
+            for schema, proname, args in candidates
+        ])
+        self.assertEqual(sql.count("SQLSTATE = '42501' AND SQLERRM = 'EVIDENCE_RECOVERY_FORBIDDEN'"), 5)
+        self.assertEqual(sql.count("SQLSTATE = 'P0001' AND SQLERRM = 'EVIDENCE_RECOVERY_RESULT_INVALID'"), 1)
+        self.assertEqual(sql.count("expected_guard_sqlstate_"), 6)
+        self.assertNotIn("SQLSTATE IN (", sql)
+        unregistered = self.scanner._smoke_candidate_blocks([
+            {"schema": "public", "proname": "restaurant_evidence_recovery_statusx",
+             "identityArgumentsNormalized": "uuid,uuid", "signature": "public.restaurant_evidence_recovery_statusx(uuid,uuid)"}
+        ])
+        self.assertNotIn("expected_guard_sqlstate_", unregistered)
+        self.assertNotIn("EVIDENCE_RECOVERY_FORBIDDEN", unregistered)
+        overloaded = self.scanner._smoke_candidate_blocks([
+            {"schema": "public", "proname": "restaurant_evidence_recovery_status",
+             "identityArgumentsNormalized": "uuid", "signature": "public.restaurant_evidence_recovery_status(uuid)"}
+        ])
+        self.assertNotIn("EVIDENCE_RECOVERY_FORBIDDEN", overloaded)
+        for schema, proname, args in candidates:
+            needle = f'"{schema}"."{proname}"'
+            start = sql.index(needle)
+            block = sql[start:sql.index("END;", start)]
+            if (schema, proname) == ("pipeline_control", "evidence_recovery_validate_result"):
+                expected = "SQLSTATE = 'P0001' AND SQLERRM = 'EVIDENCE_RECOVERY_RESULT_INVALID'"
+            else:
+                expected = "SQLSTATE = '42501' AND SQLERRM = 'EVIDENCE_RECOVERY_FORBIDDEN'"
+            self.assertIn(f"IF {expected} THEN", block)
+            self.assertIn("ELSE", block)
+            self.assertIn("'closure_candidate', 'failed', 'sqlstate_' || SQLSTATE);", block)
+
     def test_current_source_closure_candidate_receipt_is_exact(self):
         functions = self.scanner._source_inventory()
         candidates = self.scanner._candidate_functions(functions)
@@ -421,19 +461,19 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             item for item in functions
             if item["path"] != "backend/supabase/migrations/20261025063810_hosted_pending_atomic_delivery.sql"
         ])
-        self.assertEqual(len(legacy), 107)
+        self.assertEqual(len(legacy), 117)
         self.assertEqual(
             hashlib.sha256(
                 json.dumps(
                     legacy, ensure_ascii=True, sort_keys=True, separators=(",", ":")
                 ).encode("ascii")
             ).hexdigest(),
-            "c431ab6a834c7e2555437cdbfc31f207db938ea1c0c04e98b72496540a002c11",
+            "ef4aa737335f4f16beb66b56e620772737746a37d06d4974826acb09c97ba9f2",
         )
-        self.assertEqual(len(candidates), 119)
+        self.assertEqual(len(candidates), 129)
         self.assertEqual(
             self.scanner._sha256(self.scanner.canonical_json(candidates)),
-            "ca13a9be491f5f85f90b23eb058988194e650cf0997edf70d0c62b693dc7f7d3",
+            "7c4ac5ae535f406a743c79e1aa6fbcb38158c105e029c44f00503d114e941a1c",
         )
         key = lambda item: (item["schema"], item["proname"], item["identityArgumentsNormalized"])
         self.assertEqual(
