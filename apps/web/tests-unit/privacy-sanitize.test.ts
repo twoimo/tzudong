@@ -5,12 +5,45 @@ import { describe, expect, test } from 'bun:test';
 import {
   PrivacyUnsafeValueError,
   assertPrivacySafe,
+  assertPrivacySafeText,
   sanitizePrivacyValue,
 } from '../lib/privacy/sanitize';
 const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('privacy sanitizer', () => {
+  test('typed plain-text sink screens complete bounded text without changing the object sanitizer limits', () => {
+    const safe = 'food '.repeat(13_107) + 'a';
+    expect(new TextEncoder().encode(safe)).toHaveLength(65_536);
+    expect(() => assertPrivacySafeText(safe)).not.toThrow();
+    expect(() => assertPrivacySafeText('a'.repeat(65_536))).not.toThrow();
+    expect(() => assertPrivacySafeText('a'.repeat(65_520) + '@example.com')).toThrow(PrivacyUnsafeValueError);
+    expect(() => assertPrivacySafeText(safe + 'a')).toThrow(PrivacyUnsafeValueError);
+    expect(() => assertPrivacySafeText('가'.repeat(21_845) + 'a')).not.toThrow();
+    expect(() => assertPrivacySafeText('가'.repeat(21_846))).toThrow(PrivacyUnsafeValueError);
+    expect(() => assertPrivacySafe(safe, { maxStringLength: 65_536 })).toThrow(PrivacyUnsafeValueError);
+    for (const label of ['password', 'cookie', 'session']) {
+      const unsafe = 'food '.repeat(820) + [label, 'SINK_BLOCKED'].join('=');
+      try { assertPrivacySafeText(unsafe); throw new Error('missing privacy rejection'); }
+      catch (error) {
+        expect(error).toBeInstanceOf(PrivacyUnsafeValueError);
+        expect(JSON.stringify(error)).not.toContain('SINK_BLOCKED');
+        expect(String(error)).not.toContain('SINK_BLOCKED');
+      }
+    }
+  });
+  test('email presence shortcut preserves global counts including adjacent and multiple-at addresses', () => {
+    const previous = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+    for (const text of ['plain text', 'one@example.com', '+tag.one@example.com two@other.test',
+      'prefix@invalid@actual.example', '한글person@example.com', 'one@example.com@@two@other.test',
+      '.-_%+part@example.com', 'one@example.c', 'one@domain..com', 'one@example.com/two@other.test',
+      'one@example.com+two@other.test', 'one@example.com1@other.test']) {
+      const expected = [...text.matchAll(previous)].length;
+      const actual = sanitizePrivacyValue(text).findings.filter((finding) => finding.kind === 'email')
+        .reduce((sum, finding) => sum + finding.count, 0);
+      expect(actual).toBe(expected);
+    }
+  });
   test('redacts nested sensitive values without retaining their raw matches', () => {
     const rrn = '900101-1234567';
     const email = 'person@example.com';
@@ -154,11 +187,11 @@ describe('privacy sanitizer', () => {
     expect(authContextSource).toContain('DEBUG_LOG_EVENT.AUTH_SESSION_LOAD_FAILED');
     expect(authContextSource).not.toContain('console.error(');
     expect(resetPasswordSource).toContain(
-      'DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED',
+      'DEBUG_LOG_EVENT.PASSWORD_RECOVERY_SESSION_CHECK_FAILED',
     );
     expect(resetPasswordSource).toContain('DEBUG_LOG_EVENT.PASSWORD_UPDATE_FAILED');
     expect(resetPasswordSource).toContain(
-      "toast.error('비밀번호 변경에 실패했습니다. 잠시 후 다시 시도해주세요.');",
+      "toast.error('비밀번호 변경을 확인하지 못했습니다. 새 재설정 링크로 다시 확인해주세요.');",
     );
     expect(resetPasswordSource).not.toContain('console.error(');
     expect(resetPasswordSource).not.toContain('error instanceof Error');

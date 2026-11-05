@@ -1,0 +1,2414 @@
+Necessary same-source supplement after actual SOURCE_MISSING and truncated ordinary answer. Same immutable commit ac80e35da566db242420a62bbf3e3320b5c00e76. Every body below is unchanged and already included in original source_bundle SHA6edea509e566107a4a4bbced53055aed79ea3ca3c1094367a468bf7cb0f047e5. This supplement is needed because the receiving surface explicitly could not read these full bodies from the larger attachment; it is not a new scope/revision.
+
+
+===== apps/web/scripts/build-public-popularity.ts | SHA256 a6f71ce2fea76bc1183b09961cc153d97bf8d9970f87fed1ae49414893212dcd =====
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import { mergeRestaurants } from '../hooks/use-restaurants';
+import { extractCanonicalYouTubeVideoId } from '../lib/youtube-url';
+import { parsePublicPopularityPublication } from '../lib/evidence-engineering/published-popularity';
+import { restaurantMatchesOverseasCountry } from '../lib/overseas-region-matching';
+import { OVERSEAS_REGIONS } from '../constants/overseas-regions';
+import type { Tables } from '../integrations/supabase/types';
+
+export async function buildPublicPopularity(sourcePath: string, metricsPath: string, revision: string) {
+  const sourceBytes = await readFile(sourcePath);
+  const metricBytes = await readFile(metricsPath);
+  const source = JSON.parse(sourceBytes.toString()) as { rows: Array<Record<string, unknown>> };
+  const metrics = JSON.parse(metricBytes.toString()) as { rows: Array<{ video_id: string; view_count: number | string; fetched_at: string; bucket_started_at: string }> };
+  const byVideo = new Map(metrics.rows.map((r) => [r.video_id, r]));
+  const rows = source.rows.map((r) => ({ ...r, approved_name: r.name })) as unknown as Tables<'restaurants'>[];
+  const countries = [...new Set(Object.values(OVERSEAS_REGIONS).map((r) => r.country))];
+  const groups = mergeRestaurants(rows, () => 'standard').map((r) => {
+    const members = r.mergedRestaurants?.length ? r.mergedRestaurants : [r];
+    const ids = [...new Set(members.map((m) => m.id))].sort();
+    const videos = [...new Set(members.map((m) => extractCanonicalYouTubeVideoId(m.youtube_link ?? '')).filter((v): v is string => !!v))];
+    const observed = videos.flatMap((id) => {
+      const metric = byVideo.get(id); const count = Number(metric?.view_count);
+      return metric && Number.isSafeInteger(count) && count > 0 ? [{ videoId: id, count, observedAt: metric.fetched_at || metric.bucket_started_at }] : [];
+    });
+    const overseas = countries.some((country) => restaurantMatchesOverseasCountry(r, country)) || Number(r.lat) < 32 || Number(r.lat) > 40 || Number(r.lng) < 124 || Number(r.lng) > 132;
+    return { restaurantId: ids[0], memberRestaurantIds: ids, name: r.name, cohort: overseas ? 'overseas' : 'domestic', viewCount: observed.length ? Math.max(...observed.map((m) => m.count)) : null, observed };
+  });
+  const thresholds = ['domestic', 'overseas'].map((cohort) => {
+    const counts = groups.filter((g) => g.cohort === cohort && g.viewCount !== null).map((g) => g.viewCount!).sort((a, b) => a - b);
+    const percentile = (p: number) => counts.length ? counts[Math.max(0, Math.ceil(counts.length * p) - 1)] : null;
+    return { cohort, knownGroups: counts.length, fireAt: percentile(0.98), emberAt: percentile(0.95), rainbowAt: percentile(0.85) };
+  });
+  const entries = groups.map((group) => {
+    const cut = thresholds.find((c) => c.cohort === group.cohort)!;
+    const tier = group.viewCount === null || cut.fireAt === null ? 'standard' : group.viewCount >= cut.fireAt ? 'fire' : group.viewCount >= cut.emberAt! ? 'ember' : group.viewCount >= cut.rainbowAt! ? 'rainbow' : 'standard';
+    return { restaurantId: group.restaurantId, memberRestaurantIds: group.memberRestaurantIds, tier };
+  }).sort((a, b) => a.restaurantId.localeCompare(b.restaurantId));
+  const publication = parsePublicPopularityPublication({ schemaVersion: 2, publicationVersion: 'video-views-20261022-v1', sourceRevision: revision, entries });
+  const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
+  return { publication, evidence: { policy: 'map-cohort-max-linked-video-views-nearest-rank-p95-p85-v1', definition: 'Most-viewed linked video per merged restaurant, ranked separately within domestic and overseas approved restaurant cohorts. This measures video reach, not food quality.', sourceSha256: sha(sourceBytes), metricsSha256: sha(metricBytes), thresholds, groups } };
+}
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  const result = await buildPublicPopularity(args[0], args[1], args[2]);
+  await writeFile(args[3], JSON.stringify(result.publication, null, 2) + '\n');
+  await writeFile(args[4], JSON.stringify(result.evidence, null, 2) + '\n');
+  console.log(JSON.stringify({ groups: result.publication.entries.length, tiers: result.publication.entries.reduce((a, e) => ({ ...a, [e.tier]: (a[e.tier] ?? 0) + 1 }), {} as Record<string, number>), thresholds: result.evidence.thresholds }));
+}
+
+
+===== apps/web/lib/evidence-engineering/frames.ts | SHA256 253fda0e407c5c9b0353984ff639d4dc6688b2f4df9c5c90bcdc764d22cf90c1 =====
+import { buildCanonicalYouTubeWatchUrl } from "../youtube-url";
+import {
+  FRAME_SAMPLING,
+  LEVEL1_FRAME_TYPES,
+} from "./constants";
+import { formatStorageObjectKey } from "./storage-key.mjs";
+import { EvidenceContractCodes, EvidenceContractError } from "./errors";
+import {
+  assertNoForbiddenPayloadKeys,
+  isConfidenceLevel,
+  isEvidenceFrameType,
+  isEvidenceLevel,
+  isModerationStatus,
+  parseMember,
+  requireContentSha256,
+  requireDetectedName,
+  requireFrameId,
+  requireImageUrl,
+  requireTimestampMs,
+  requireYouTubeVideoId,
+} from "./guards";
+import type {
+  EvidenceFrameDraft,
+  FrameSamplingPlan,
+  RestaurantEvidenceFrame,
+} from "./types";
+
+const FRAME_PAYLOAD_KEYS = [
+  "frame_id",
+  "content_sha256",
+  "video_id",
+  "timestamp_ms",
+  "storage_object_key",
+  "youtube_seek_url",
+  "frame_type",
+  "evidence_level",
+  "confidence_level",
+  "moderation_status",
+  "detected_shop_name",
+  "detected_branch_name",
+  "image_url",
+] as const;
+
+export function buildEvidenceSeekUrl(videoId: string, timestampMs: number): string {
+  const id = requireYouTubeVideoId(videoId);
+  const timestamp = requireTimestampMs(timestampMs);
+  const watchUrl = buildCanonicalYouTubeWatchUrl(id);
+  if (!watchUrl) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidVideoId);
+  }
+  return `${watchUrl}&t=${Math.floor(timestamp / 1000)}`;
+}
+
+export function buildStorageObjectKey(videoId: string, timestampMs: number, contentSha256: string): string {
+  const id = requireYouTubeVideoId(videoId);
+  const timestamp = requireTimestampMs(timestampMs);
+  const hash = requireContentSha256(contentSha256);
+  return formatStorageObjectKey(id, timestamp, hash);
+}
+
+export function planFrameSamplingWindow(videoId: string, targetTimestampMs: number): FrameSamplingPlan {
+  const id = requireYouTubeVideoId(videoId);
+  const target = requireTimestampMs(targetTimestampMs);
+  return {
+    video_id: id,
+    target_timestamp_ms: target,
+    window_start_ms: Math.max(0, target - FRAME_SAMPLING.windowMs),
+    window_end_ms: target + FRAME_SAMPLING.windowMs,
+    sample_fps: FRAME_SAMPLING.sampleFpsAfterDecode,
+    keyframe_role: FRAME_SAMPLING.keyframeRole,
+    loads_full_video_in_node: false,
+  };
+}
+
+export function isLevel1SourceObserved(
+  frame: Pick<RestaurantEvidenceFrame, "evidence_level" | "frame_type" | "moderation_status">,
+): boolean {
+  return (
+    frame.moderation_status === "approved" &&
+    frame.evidence_level === "SOURCE_OBSERVED" &&
+    (LEVEL1_FRAME_TYPES as readonly string[]).includes(frame.frame_type)
+  );
+}
+
+export function buildEvidenceFrame(draft: EvidenceFrameDraft): RestaurantEvidenceFrame {
+  const videoId = requireYouTubeVideoId(draft.video_id);
+  const timestampMs = requireTimestampMs(draft.timestamp_ms);
+  const contentSha256 = requireContentSha256(draft.content_sha256);
+  const frame: RestaurantEvidenceFrame = {
+    frame_id: requireFrameId(draft.frame_id),
+    content_sha256: contentSha256,
+    video_id: videoId,
+    timestamp_ms: timestampMs,
+    storage_object_key: buildStorageObjectKey(videoId, timestampMs, contentSha256),
+    youtube_seek_url: buildEvidenceSeekUrl(videoId, timestampMs),
+    frame_type: parseMember(draft.frame_type, isEvidenceFrameType, EvidenceContractCodes.invalidFrameType),
+    evidence_level: parseMember(draft.evidence_level, isEvidenceLevel, EvidenceContractCodes.invalidEvidenceLevel),
+    confidence_level: parseMember(draft.confidence_level, isConfidenceLevel, EvidenceContractCodes.invalidConfidence),
+    moderation_status: parseMember(draft.moderation_status, isModerationStatus, EvidenceContractCodes.invalidModeration),
+    detected_shop_name: requireDetectedName(draft.detected_shop_name),
+    detected_branch_name: requireDetectedName(draft.detected_branch_name),
+    image_url: requireImageUrl(draft.image_url),
+  };
+  return frame;
+}
+
+export function parseEvidenceFrame(input: unknown): RestaurantEvidenceFrame {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidFrame);
+  }
+  assertNoForbiddenPayloadKeys(input);
+  const record = input as Record<string, unknown>;
+  for (const key of Object.keys(record)) {
+    if (!(FRAME_PAYLOAD_KEYS as readonly string[]).includes(key)) {
+      throw new EvidenceContractError(EvidenceContractCodes.invalidFrame);
+    }
+  }
+  const frame = buildEvidenceFrame({
+    frame_id: readString(record.frame_id, EvidenceContractCodes.invalidFrameId),
+    content_sha256: readString(record.content_sha256, EvidenceContractCodes.invalidContentSha256),
+    video_id: readString(record.video_id, EvidenceContractCodes.invalidVideoId),
+    timestamp_ms: readTimestamp(record.timestamp_ms),
+    frame_type: record.frame_type as EvidenceFrameDraft["frame_type"],
+    evidence_level: record.evidence_level as EvidenceFrameDraft["evidence_level"],
+    confidence_level: record.confidence_level as EvidenceFrameDraft["confidence_level"],
+    moderation_status: record.moderation_status as EvidenceFrameDraft["moderation_status"],
+    detected_shop_name: readNullableString(record.detected_shop_name, EvidenceContractCodes.invalidDetectedName),
+    detected_branch_name: readNullableString(record.detected_branch_name, EvidenceContractCodes.invalidDetectedName),
+    image_url: readNullableString(record.image_url, EvidenceContractCodes.invalidImageUrl),
+  });
+  if (typeof record.storage_object_key === "string" && record.storage_object_key !== frame.storage_object_key) {
+    throw new EvidenceContractError(EvidenceContractCodes.storageKeyMismatch);
+  }
+  if (typeof record.youtube_seek_url === "string" && record.youtube_seek_url !== frame.youtube_seek_url) {
+    throw new EvidenceContractError(EvidenceContractCodes.seekIntegrityMismatch);
+  }
+  if ("storage_object_key" in record && typeof record.storage_object_key !== "string") {
+    throw new EvidenceContractError(EvidenceContractCodes.storageKeyMismatch);
+  }
+  if ("youtube_seek_url" in record && typeof record.youtube_seek_url !== "string") {
+    throw new EvidenceContractError(EvidenceContractCodes.seekIntegrityMismatch);
+  }
+  return frame;
+}
+
+function readString(value: unknown, code: EvidenceContractError["code"]): string {
+  if (typeof value !== "string") throw new EvidenceContractError(code);
+  return value;
+}
+
+function readNullableString(value: unknown, code: EvidenceContractError["code"]): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string") throw new EvidenceContractError(code);
+  return value;
+}
+
+function readTimestamp(value: unknown): number {
+  if (typeof value !== "number") {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidTimestampMs);
+  }
+  return value;
+}
+
+function sameIdentity(left: RestaurantEvidenceFrame, right: RestaurantEvidenceFrame): boolean {
+  return (
+    left.content_sha256 === right.content_sha256 &&
+    left.video_id === right.video_id &&
+    left.timestamp_ms === right.timestamp_ms &&
+    left.storage_object_key === right.storage_object_key &&
+    left.youtube_seek_url === right.youtube_seek_url &&
+    left.frame_type === right.frame_type &&
+    left.evidence_level === right.evidence_level &&
+    left.confidence_level === right.confidence_level &&
+    left.detected_shop_name === right.detected_shop_name &&
+    left.detected_branch_name === right.detected_branch_name
+  );
+}
+
+export function unionApprovedEvidenceFrames(groups: readonly RestaurantEvidenceFrame[][]): RestaurantEvidenceFrame[] {
+  const grouped = new Map<string, RestaurantEvidenceFrame[]>();
+  for (const group of groups) {
+    for (const frame of group) {
+      const validated = parseEvidenceFrame(frame);
+      const existing = grouped.get(validated.frame_id);
+      if (existing) existing.push(validated);
+      else grouped.set(validated.frame_id, [validated]);
+    }
+  }
+
+  const approved: RestaurantEvidenceFrame[] = [];
+  for (const copies of grouped.values()) {
+    const anchor = copies[0];
+    if (copies.some((copy) => !sameIdentity(anchor, copy))) {
+      throw new EvidenceContractError(EvidenceContractCodes.duplicateFrameConflict);
+    }
+    const hasApproved = copies.some((copy) => copy.moderation_status === "approved");
+    const hasRejected = copies.some((copy) => copy.moderation_status === "rejected");
+    if (hasApproved && hasRejected) {
+      throw new EvidenceContractError(EvidenceContractCodes.moderationConflict);
+    }
+    if (!hasApproved) continue;
+    const approvedCopies = copies.filter((copy) => copy.moderation_status === "approved");
+    const imageUrls = new Set(approvedCopies.map((copy) => copy.image_url));
+    const imageUrl = imageUrls.size === 1 ? approvedCopies[0].image_url : null;
+    approved.push(buildEvidenceFrame({ ...approvedCopies[0], image_url: imageUrl, moderation_status: "approved" }));
+  }
+
+  approved.sort((left, right) => (
+    left.timestamp_ms - right.timestamp_ms || left.frame_id.localeCompare(right.frame_id)
+  ));
+  const storageKeys = new Set<string>();
+  for (const frame of approved) {
+    if (storageKeys.has(frame.storage_object_key)) {
+      throw new EvidenceContractError(EvidenceContractCodes.duplicateFrameConflict);
+    }
+    storageKeys.add(frame.storage_object_key);
+  }
+  return approved;
+}
+
+
+===== apps/web/lib/evidence-engineering/published-popularity.ts | SHA256 84ee9979ace9756456178449f6d831fe796cee0d68d66e155fc127aaef4163f1 =====
+import publication from './public-popularity-publication.json';
+import type { Restaurant } from '@/types/restaurant';
+
+export type PublishedPopularityTier = 'fire' | 'ember' | 'rainbow' | 'standard';
+export type PublishedPopularityLookup = (restaurantId: string) => PublishedPopularityTier;
+export interface PublicPopularityPublication {
+    readonly schemaVersion: 2;
+    readonly publicationVersion: string;
+    readonly sourceRevision: string | null;
+    readonly entries: readonly Readonly<{ restaurantId: string; memberRestaurantIds: readonly string[]; tier: PublishedPopularityTier }>[];
+}
+
+const MAX_PUBLICATIONS = 5000;
+const MAX_PUBLICATION_BYTES = 512 * 1024;
+const fail = (): never => { throw new Error('PUBLIC_POPULARITY_PUBLICATION_INVALID'); };
+
+function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+    const actual = Object.keys(value);
+    return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+}
+
+// Shape validation is not an operator approval receipt. The source is deliberately
+// empty until an operator-reviewed cohort is published through protected Git.
+// Never populate it automatically from the private metrics or shadow tables.
+export function parsePublicPopularityPublication(value: unknown): PublicPopularityPublication {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return fail();
+    const data = value as Record<string, unknown>;
+    if (!exactKeys(data, ['schemaVersion', 'publicationVersion', 'sourceRevision', 'entries'])
+        || data.schemaVersion !== 2
+        || typeof data.publicationVersion !== 'string'
+        || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(data.publicationVersion)
+        || (data.sourceRevision !== null && (typeof data.sourceRevision !== 'string' || !/^[a-f0-9]{40}$/.test(data.sourceRevision)))
+        || !Array.isArray(data.entries) || data.entries.length > MAX_PUBLICATIONS) return fail();
+    if (data.entries.length > 0 && (data.publicationVersion === 'unpublished' || data.sourceRevision === null)) return fail();
+    const seen = new Set<string>();
+    const entries = data.entries.map((entry: unknown) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return fail();
+        const row = entry as Record<string, unknown>;
+        if (!exactKeys(row, ['restaurantId', 'memberRestaurantIds', 'tier'])
+            || typeof row.restaurantId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(row.restaurantId)
+            || typeof row.tier !== 'string' || !['fire', 'ember', 'rainbow', 'standard'].includes(row.tier)
+            || !Array.isArray(row.memberRestaurantIds) || !row.memberRestaurantIds.length
+            || row.memberRestaurantIds.length > MAX_PUBLICATIONS) return fail();
+        const members: string[] = [];
+        for (const member of row.memberRestaurantIds) {
+            if (typeof member !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(member)
+                || seen.has(member) || (members.length > 0 && members[members.length - 1] >= member)
+                || seen.size >= MAX_PUBLICATIONS) return fail();
+            members.push(member);
+            seen.add(member);
+        }
+        // Explicit reviewed membership binds the grade, not whichever video row
+        // the compact/full projection selects as its display representative.
+        if (members[0] !== row.restaurantId) return fail();
+        return Object.freeze({ restaurantId: row.restaurantId,
+            memberRestaurantIds: Object.freeze(members), tier: row.tier as PublishedPopularityTier });
+    });
+    const result = { schemaVersion: 2 as const, publicationVersion: data.publicationVersion,
+        sourceRevision: data.sourceRevision as string | null, entries: Object.freeze(entries) };
+    if (new TextEncoder().encode(JSON.stringify(result)).byteLength > MAX_PUBLICATION_BYTES) return fail();
+    return Object.freeze(result);
+}
+
+function lookupFor(publication: PublicPopularityPublication): PublishedPopularityLookup {
+    const tiers = new Map<string, PublishedPopularityTier>();
+    for (const entry of publication.entries) {
+        for (const member of entry.memberRestaurantIds) tiers.set(member, entry.tier);
+    }
+    return (restaurantId) => tiers.get(restaurantId) ?? 'standard';
+}
+
+export function createPublishedPopularityLookup(value: unknown): PublishedPopularityLookup {
+    return lookupFor(parsePublicPopularityPublication(value));
+}
+
+export const publicPopularityPublication = parsePublicPopularityPublication(publication);
+export const lookupPublishedPopularityTier = lookupFor(publicPopularityPublication);
+
+export function resolvePublishedPopularityTier(
+    restaurant: { id: string; mergedRestaurants?: readonly { id: string }[] | null },
+    lookup: PublishedPopularityLookup = lookupPublishedPopularityTier,
+    members = restaurant.mergedRestaurants,
+): PublishedPopularityTier {
+    if (lookup === lookupPublishedPopularityTier && publicPopularityPublication.entries.length === 0) return 'standard';
+    const tier = lookup(restaurant.id);
+    // A new/unpublished member or conflicting publication invalidates the group
+    // display. Never choose the highest grade or trust the display representative.
+    for (const member of members ?? []) {
+        if (lookup(member.id) !== tier) return 'standard';
+    }
+    return tier;
+}
+
+export function projectPublishedPopularityTier(
+    restaurant: Restaurant,
+    lookup: PublishedPopularityLookup = lookupPublishedPopularityTier,
+): Restaurant {
+    const tier = resolvePublishedPopularityTier(restaurant, lookup);
+    return restaurant.popularity_tier === tier ? restaurant : { ...restaurant, popularity_tier: tier };
+}
+
+
+===== apps/web/lib/evidence-engineering/guards.ts | SHA256 5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4 =====
+import { extractCanonicalYouTubeVideoId } from "../youtube-url";
+import {
+  CALENDAR_DATE_PATTERN,
+  CANONICAL_KEY_PATTERN,
+  CONFIDENCE_LEVELS,
+  CONTENT_SHA256_PATTERN,
+  DETECTED_NAME_MAX_LENGTH,
+  EVIDENCE_FRAME_TYPES,
+  EVIDENCE_LEVELS,
+  FORBIDDEN_PAYLOAD_KEYS,
+  FRAME_ID_PATTERN,
+  ISO_TIMESTAMP_PATTERN,
+  MODERATION_STATUSES,
+  POPULARITY_TIERS,
+  VERSION_TOKEN_PATTERN,
+} from "./constants";
+import { EvidenceContractCodes, EvidenceContractError } from "./errors";
+import type {
+  ConfidenceLevel,
+  EvidenceFrameType,
+  EvidenceLevel,
+  ModerationStatus,
+  PopularityTier,
+} from "./types";
+
+const PHONE_LIKE_PATTERN = /\d{2,4}-\d{3,4}-\d{4}/;
+
+export function requireYouTubeVideoId(value: string): string {
+  const videoId = extractCanonicalYouTubeVideoId(value);
+  if (!videoId || videoId !== value) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidVideoId);
+  }
+  return videoId;
+}
+
+export function requireTimestampMs(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidTimestampMs);
+  }
+  return value;
+}
+
+export function requireContentSha256(value: string): string {
+  if (!CONTENT_SHA256_PATTERN.test(value)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidContentSha256);
+  }
+  return value;
+}
+
+export function requireFrameId(value: string): string {
+  if (!FRAME_ID_PATTERN.test(value)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidFrameId);
+  }
+  return value;
+}
+
+export function requireVersionToken(value: string, code: "invalid_scoring_version" | "invalid_cohort_version"): string {
+  if (!VERSION_TOKEN_PATTERN.test(value)) {
+    throw new EvidenceContractError(code);
+  }
+  return value;
+}
+
+export function requireIsoTimestamp(value: string): string {
+  if (!ISO_TIMESTAMP_PATTERN.test(value) || !Number.isFinite(Date.parse(value))) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidComputedAt);
+  }
+  return value;
+}
+
+export function requireCalendarDate(value: string): string {
+  if (!CALENDAR_DATE_PATTERN.test(value)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidCalendarDate);
+  }
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utc.getUTCFullYear() !== year ||
+    utc.getUTCMonth() !== month - 1 ||
+    utc.getUTCDate() !== day
+  ) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidCalendarDate);
+  }
+  return value;
+}
+
+export function requireCanonicalKey(value: string): string {
+  if (!CANONICAL_KEY_PATTERN.test(value)) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidCanonicalKey);
+  }
+  return value;
+}
+
+export function requireBoundedText(value: string, maxLength: number, code: "invalid_detected_name" | "invalid_closure_record"): string {
+  const trimmed = value.trim();
+  if (
+    trimmed.length === 0 ||
+    trimmed.length > maxLength ||
+    /[\u0000-\u001F\u007F]/.test(trimmed) ||
+    trimmed.includes("@") ||
+    PHONE_LIKE_PATTERN.test(trimmed)
+  ) {
+    throw new EvidenceContractError(code);
+  }
+  return trimmed;
+}
+
+export function requireDetectedName(value: string | null): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidDetectedName);
+  }
+  if (value.trim() === "") return null;
+  return requireBoundedText(value, DETECTED_NAME_MAX_LENGTH, EvidenceContractCodes.invalidDetectedName);
+}
+
+export function requireImageUrl(value: string | null): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.length === 0 || value.length > 2048) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidImageUrl);
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidImageUrl);
+  }
+  if (url.protocol !== "https:" || url.username || url.password) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidImageUrl);
+  }
+  return value;
+}
+
+export function assertNoForbiddenPayloadKeys(value: object): void {
+  for (const key of Object.keys(value)) {
+    if ((FORBIDDEN_PAYLOAD_KEYS as readonly string[]).includes(key)) {
+      throw new EvidenceContractError(EvidenceContractCodes.personalDataForbidden);
+    }
+  }
+}
+
+export function isEvidenceLevel(value: unknown): value is EvidenceLevel {
+  return typeof value === "string" && (EVIDENCE_LEVELS as readonly string[]).includes(value);
+}
+
+export function isEvidenceFrameType(value: unknown): value is EvidenceFrameType {
+  return typeof value === "string" && (EVIDENCE_FRAME_TYPES as readonly string[]).includes(value);
+}
+
+export function isConfidenceLevel(value: unknown): value is ConfidenceLevel {
+  return typeof value === "string" && (CONFIDENCE_LEVELS as readonly string[]).includes(value);
+}
+
+export function isModerationStatus(value: unknown): value is ModerationStatus {
+  return typeof value === "string" && (MODERATION_STATUSES as readonly string[]).includes(value);
+}
+
+export function isPopularityTier(value: unknown): value is PopularityTier {
+  return typeof value === "string" && (POPULARITY_TIERS as readonly string[]).includes(value);
+}
+
+export function parseMember<T extends string>(
+  value: unknown,
+  guard: (value: unknown) => value is T,
+  code: EvidenceContractError["code"],
+): T {
+  if (!guard(value)) throw new EvidenceContractError(code);
+  return value;
+}
+
+/**
+ * Parses a count the way the synthesis `safe_count` does.
+ * Null means missing. Zero means a real zero. Booleans are missing.
+ * Integral JavaScript numbers are accepted. Decimal strings are missing.
+ * Underscores follow Python `int` digit rules. Values above the maximum clamp.
+ */
+export function safeCount(value: unknown, maximum: number): number | null {
+  if (!Number.isSafeInteger(maximum) || maximum < 0) {
+    throw new EvidenceContractError(EvidenceContractCodes.invalidMaximum);
+  }
+  if (value === null || value === undefined) return null;
+  if (typeof value === "boolean") return null;
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value) || value < 0) return null;
+    return Math.min(value, maximum);
+  }
+  if (typeof value !== "string") return null;
+  const parsed = parsePythonInteger(value);
+  if (parsed === null || parsed < 0) return null;
+  return Math.min(parsed, maximum);
+}
+
+function parsePythonInteger(value: string): number | null {
+  const stripped = value.replaceAll(",", "").trim();
+  if (!/^[+-]?\d(?:_?\d)*$/.test(stripped)) return null;
+  const digits = stripped.replaceAll("_", "");
+  const negative = digits.startsWith("-");
+  const magnitude = negative ? digits.slice(1) : digits.replace(/^\+/, "");
+  if (!/^\d+$/.test(magnitude)) return null;
+  const numeric = Number(magnitude);
+  if (!Number.isSafeInteger(numeric)) return null;
+  return negative ? -numeric : numeric;
+}
+
+
+===== apps/web/lib/evidence-engineering/storage-key.mjs | SHA256 4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148 =====
+export const STORAGE_HASH_PREFIX_LENGTH = 12;
+
+export function formatStorageObjectKey(videoId, timestampMs, contentSha256) {
+    return `${videoId}/${timestampMs}_${contentSha256.slice(0, STORAGE_HASH_PREFIX_LENGTH)}.webp`;
+}
+
+
+===== apps/web/lib/evidence-engineering/upload-evidence-frame.ts | SHA256 d1ce82e82f186752229832b21adc33298e07626a76f6661b883fa2e1125e48e7 =====
+import { createHash } from "node:crypto";
+
+import { buildStorageObjectKey } from "./frames";
+
+const WEBP_KEY_PATTERN = /^[A-Za-z0-9_-]{11}\/\d+_[a-f0-9]{12}\.webp$/;
+
+export interface EvidenceObjectStore {
+  exists(key: string): Promise<boolean>;
+  put(key: string, bytes: Uint8Array, contentType: "image/webp"): Promise<{ publicUrl: string | null }>;
+}
+
+export class EvidenceUploadError extends Error {
+  readonly code: string;
+
+  constructor(code: string) {
+    super(code);
+    this.name = "EvidenceUploadError";
+    this.code = code;
+  }
+}
+
+export function assertWebpBytes(bytes: Uint8Array): void {
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength < 12) {
+    throw new EvidenceUploadError("invalid_webp");
+  }
+  const riff = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
+  const webp = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
+  if (riff !== "RIFF" || webp !== "WEBP") {
+    throw new EvidenceUploadError("invalid_webp");
+  }
+}
+
+export function uploadObjectKey(videoId: string, timestampMs: number, contentSha256: string): string {
+  const key = buildStorageObjectKey(videoId, timestampMs, contentSha256);
+  if (!WEBP_KEY_PATTERN.test(key) || key.endsWith(`/${timestampMs}.webp`)) {
+    throw new EvidenceUploadError("invalid_storage_key");
+  }
+  return key;
+}
+
+export async function uploadEvidenceWebp(
+  input: {
+    videoId: string;
+    timestampMs: number;
+    contentSha256: string;
+    bytes: Uint8Array;
+  },
+  store: EvidenceObjectStore,
+): Promise<{ storageObjectKey: string; imageUrl: string | null }> {
+  if (typeof window !== "undefined") {
+    throw new EvidenceUploadError("storage_client_forbidden_in_browser");
+  }
+  assertWebpBytes(input.bytes);
+  const actualHash = createHash("sha256").update(input.bytes).digest("hex");
+  if (actualHash !== input.contentSha256) {
+    throw new EvidenceUploadError("content_hash_mismatch");
+  }
+  const storageObjectKey = uploadObjectKey(input.videoId, input.timestampMs, input.contentSha256);
+  if (await store.exists(storageObjectKey)) {
+    throw new EvidenceUploadError("storage_key_collision");
+  }
+  const stored = await store.put(storageObjectKey, input.bytes, "image/webp");
+  return {
+    storageObjectKey,
+    imageUrl: stored.publicUrl,
+  };
+}
+
+
+===== apps/web/scripts/publish-evidence-frames.ts | SHA256 296ac93773968dda8b5daa8a8166ff234e782acbc31f8a9b178910221babee99 =====
+import { createHash } from 'node:crypto';
+import { lstat, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { dirname, resolve, sep } from 'node:path';
+import { parseEvidenceFrame } from '../lib/evidence-engineering/frames';
+import { uploadEvidenceWebp, type EvidenceObjectStore } from '../lib/evidence-engineering/upload-evidence-frame';
+import { extractCanonicalYouTubeVideoId } from '../lib/youtube-url';
+
+type ReviewedFrame = { restaurant_id: string; source_file: string; frame: unknown };
+
+export async function previewFramePublication(manifestPath: string, sourceDirectory: string) {
+  const source = await realpath(sourceDirectory);
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { restaurantSourceSha256: string; frames?: ReviewedFrame[] };
+  const restaurantBytes = await readFile(resolve(dirname(manifestPath), 'approved-source-rows.json'));
+  if (createHash('sha256').update(restaurantBytes).digest('hex') !== manifest.restaurantSourceSha256) throw new Error('restaurant_source_hash_mismatch');
+  const restaurants = JSON.parse(restaurantBytes.toString()) as { rows: Array<{ id: string; status: string; youtube_link: string }> };
+  const byRestaurant = new Map(restaurants.rows.map((row) => [row.id, row]));
+  if (!Array.isArray(manifest.frames) || manifest.frames.length < 1 || manifest.frames.length > 5000) throw new Error('invalid_frame_manifest');
+  const seen = new Set<string>();
+  const seenKeys = new Set<string>();
+  const entries = [];
+  for (const item of manifest.frames) {
+    if (!/^[a-f0-9-]{36}$/.test(item.restaurant_id) || typeof item.source_file !== 'string') throw new Error('invalid_frame_owner');
+    const frame = parseEvidenceFrame(item.frame);
+    const restaurant = byRestaurant.get(item.restaurant_id);
+    if (!restaurant || restaurant.status !== 'approved' || extractCanonicalYouTubeVideoId(restaurant.youtube_link) !== frame.video_id) throw new Error('frame_restaurant_video_mismatch');
+    if (frame.moderation_status !== 'approved' || frame.evidence_level !== 'SOURCE_OBSERVED') throw new Error('frame_not_reviewed');
+    if (seen.has(frame.frame_id) || seenKeys.has(frame.storage_object_key)) throw new Error('duplicate_frame');
+    seen.add(frame.frame_id); seenKeys.add(frame.storage_object_key);
+    const file = await realpath(resolve(source, item.source_file));
+    if (!file.startsWith(source + sep)) throw new Error('source_path_outside_root');
+    const bytes = await readFile(file);
+    // Run exactly the production upload validation during preview too.
+    await uploadEvidenceWebp({ videoId: frame.video_id, timestampMs: frame.timestamp_ms, contentSha256: frame.content_sha256, bytes }, { exists: async () => false, put: async () => ({ publicUrl: null }) });
+    entries.push({ restaurant_id: item.restaurant_id, frame, file, bytes });
+  }
+  const digest = createHash('sha256').update(JSON.stringify(entries.map(({ restaurant_id, frame }) => ({ restaurant_id, frame })))).digest('hex');
+  return { entries, previewHash: digest };
+}
+
+export async function publishFrameFiles(manifestPath: string, sourceDirectory: string, outputDirectory: string, confirmationHash: string) {
+  const preview = await previewFramePublication(manifestPath, sourceDirectory);
+  if (confirmationHash !== preview.previewHash) throw new Error('publication_confirmation_mismatch');
+  const output = resolve(outputDirectory);
+  await mkdir(output, { recursive: true });
+  const physicalOutput = await realpath(output);
+  for (const { frame, bytes } of preview.entries) {
+    const file = resolve(output, frame.storage_object_key);
+    if (!file.startsWith(output + sep)) throw new Error('output_path_outside_root');
+    await mkdir(dirname(file), { recursive: true });
+    if (!(await realpath(dirname(file))).startsWith(physicalOutput + sep)) throw new Error('output_symlink_outside_root');
+    let existing: Buffer | null = null;
+    try {
+      if ((await lstat(file)).isSymbolicLink()) throw new Error('output_file_is_symlink');
+      existing = await readFile(file);
+    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    if (existing) {
+      if (!existing.equals(bytes)) throw new Error('immutable_frame_collision');
+      continue;
+    }
+    const store: EvidenceObjectStore = {
+      exists: async () => false,
+      put: async (_key, body) => { await writeFile(file, body, { flag: 'wx' }); return { publicUrl: null }; },
+    };
+    await uploadEvidenceWebp({ videoId: frame.video_id, timestampMs: frame.timestamp_ms, contentSha256: frame.content_sha256, bytes }, store);
+  }
+  return { previewHash: preview.previewHash, frames: preview.entries.map(({ restaurant_id, frame }) => ({ restaurant_id, ...frame })) };
+}
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  const arg = (key: string) => args[args.indexOf(key) + 1];
+  if (!args.includes('--manifest') || !args.includes('--source-dir')) throw new Error('manifest_and_source_required');
+  const result = args.includes('--apply')
+    ? await publishFrameFiles(arg('--manifest'), arg('--source-dir'), args.includes('--output-dir') ? arg('--output-dir') : 'public/evidence-frames', arg('--confirm'))
+    : await previewFramePublication(arg('--manifest'), arg('--source-dir'));
+  console.log(JSON.stringify({ previewHash: result.previewHash, frames: 'frames' in result ? result.frames.length : result.entries.length, applied: args.includes('--apply') }));
+}
+
+
+===== apps/web/lib/naver-map-marker-visuals.ts | SHA256 6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8 =====
+import type { Restaurant } from '@/types/restaurant';
+import { publicPopularityTier, wrapMarkerWithPopularityTier } from '@/lib/evidence-engineering/popularity-marker';
+import { createIndividualMarkerHTML } from '@/lib/cluster-marker';
+import { getPrimaryCategory } from '@/lib/naver-map-view-helpers';
+import { getTzuyangVisitCount } from '@/lib/restaurant-visit-count';
+import {
+    RESTAURANT_MARKER_ASSET_VERSION,
+    resolveRestaurantMarkerKind,
+    type RestaurantMarkerKind,
+    type RestaurantOverlayMarkerKind,
+} from '@/lib/restaurant-marker-kind';
+
+type NaverIndividualMarkerRestaurant = Partial<Pick<
+    Restaurant,
+    | 'id'
+    | 'categories'
+    | 'youtube_link'
+    | 'youtube_links'
+    | 'tzuyang_review'
+    | 'tzuyang_reviews'
+    | 'mergedYoutubeLinks'
+    | 'mergedTzuyangReviews'
+    | 'mergedRestaurants'
+    | 'source_type'
+    | 'popularity_tier'
+>> & {
+    category?: string | string[] | null;
+};
+
+const MARKER_VISUAL_CACHE_LIMIT = 2000;
+const markerVisualCache = new Map<string, {
+    content: string;
+    anchor: { x: number; y: number };
+    zIndex: number;
+}>();
+
+function readMarkerVisualCache(key: string) {
+    const cached = markerVisualCache.get(key);
+    if (!cached) return null;
+    markerVisualCache.delete(key);
+    markerVisualCache.set(key, cached);
+    return cached;
+}
+
+function writeMarkerVisualCache(key: string, visual: {
+    content: string;
+    anchor: { x: number; y: number };
+    zIndex: number;
+}) {
+    if (markerVisualCache.size >= MARKER_VISUAL_CACHE_LIMIT) {
+        const oldest = markerVisualCache.keys().next().value;
+        if (oldest) markerVisualCache.delete(oldest);
+    }
+    markerVisualCache.set(key, visual);
+    return visual;
+}
+
+function getMarkerKindBadgeConfig(markerKind: Exclude<RestaurantMarkerKind, 'category'>) {
+    if (markerKind === 'trend') {
+        return {
+            label: '트렌드',
+            ariaLabel: '관리자 트렌드 맛집',
+            background: 'linear-gradient(135deg, #f97316 0%, #dc2626 100%)',
+        };
+    }
+
+    if (markerKind === 'seasonal') {
+        return {
+            label: '제철',
+            ariaLabel: '관리자 제철 맛집',
+            background: 'linear-gradient(135deg, #16a34a 0%, #0d9488 100%)',
+        };
+    }
+
+    return {
+        label: '제보',
+        ariaLabel: '사용자 제보 맛집',
+        background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+    };
+}
+
+function wrapSpecialMarkerContent(
+    content: string,
+    isSelected: boolean,
+    markerKind: Exclude<RestaurantMarkerKind, 'category'>,
+): string {
+    const badgeSize = isSelected ? 24 : 22;
+    const badgeFontSize = isSelected ? 10 : 9;
+    const badgeOffset = isSelected ? -10 : -9;
+    const badgeConfig = getMarkerKindBadgeConfig(markerKind);
+    const markerProvenance =
+        markerKind === 'user-submitted'
+            ? 'source_type:user_submission_new'
+            : `overlay:${markerKind}`;
+
+    return `
+        <div
+          data-restaurant-marker-kind="${markerKind}"
+          data-restaurant-marker-provenance="${markerProvenance}"
+          data-restaurant-marker-asset-version="${RESTAURANT_MARKER_ASSET_VERSION}"
+          style="
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+          "
+        >
+          ${content}
+          <span
+            aria-label="${badgeConfig.ariaLabel}"
+            style="
+              position: absolute;
+              right: ${badgeOffset}px;
+              bottom: ${badgeOffset}px;
+              min-width: ${badgeSize}px;
+              height: ${badgeSize}px;
+              padding: 0 4px;
+              border-radius: 9999px;
+              background: ${badgeConfig.background};
+              color: #ffffff;
+              border: 2px solid #ffffff;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              font-size: ${badgeFontSize}px;
+              font-weight: 900;
+              line-height: 1;
+              letter-spacing: -0.05em;
+              pointer-events: none;
+              box-sizing: border-box;
+              white-space: nowrap;
+            "
+          >${badgeConfig.label}</span>
+        </div>
+    `;
+}
+
+type IndividualMarkerVisual = {
+    content: string;
+    anchor: { x: number; y: number };
+    zIndex: number;
+};
+
+type IndividualMarkerStamp = {
+    youtube: string;
+    mergedYoutube: number;
+    mergedReviews: number;
+    mergedRestaurants: number;
+    hasReview: number;
+    categories0: string;
+    category0: string;
+    source: string;
+    popularityTier: ReturnType<typeof publicPopularityTier>;
+    visual: IndividualMarkerVisual;
+};
+
+const individualVisualCache = new WeakMap<object, {
+    selected?: IndividualMarkerStamp;
+    plain?: IndividualMarkerStamp;
+}>();
+
+function individualMarkerStampFields(restaurant: NaverIndividualMarkerRestaurant) {
+    return {
+        youtube: restaurant.youtube_link ?? '',
+        mergedYoutube: restaurant.mergedYoutubeLinks?.length ?? 0,
+        mergedReviews: restaurant.mergedTzuyangReviews?.length ?? 0,
+        mergedRestaurants: restaurant.mergedRestaurants?.length ?? 0,
+        hasReview: restaurant.tzuyang_review ? 1 : 0,
+        categories0: Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '',
+        category0: Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '',
+        source: restaurant.source_type ?? '',
+        popularityTier: publicPopularityTier(restaurant.popularity_tier),
+    };
+}
+
+function individualStampMatches(stamp: IndividualMarkerStamp, restaurant: NaverIndividualMarkerRestaurant) {
+    return stamp.youtube === (restaurant.youtube_link ?? '')
+        && stamp.mergedYoutube === (restaurant.mergedYoutubeLinks?.length ?? 0)
+        && stamp.mergedReviews === (restaurant.mergedTzuyangReviews?.length ?? 0)
+        && stamp.mergedRestaurants === (restaurant.mergedRestaurants?.length ?? 0)
+        && stamp.hasReview === (restaurant.tzuyang_review ? 1 : 0)
+        && stamp.categories0 === (Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '')
+        && stamp.category0 === (Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '')
+        && stamp.source === (restaurant.source_type ?? '')
+        && stamp.popularityTier === publicPopularityTier(restaurant.popularity_tier);
+}
+
+export function getNaverIndividualMarkerVisual(
+    restaurant: NaverIndividualMarkerRestaurant,
+    isSelected: boolean,
+    overlayKinds: readonly RestaurantOverlayMarkerKind[] = [],
+) {
+    const slot = isSelected ? 'selected' : 'plain';
+    const popularityTier = publicPopularityTier(restaurant.popularity_tier);
+    const canReuseObject = overlayKinds.length === 0;
+    if (canReuseObject) {
+        const cachedStamp = individualVisualCache.get(restaurant)?.[slot];
+        if (cachedStamp && individualStampMatches(cachedStamp, restaurant)) {
+            return cachedStamp.visual;
+        }
+    }
+
+    const cacheKey = [
+        restaurant.id ?? '',
+        isSelected ? '1' : '0',
+        overlayKinds.join(','),
+        restaurant.youtube_link ?? '',
+        restaurant.mergedYoutubeLinks?.length ?? 0,
+        restaurant.mergedTzuyangReviews?.length ?? 0,
+        restaurant.mergedRestaurants?.length ?? 0,
+        restaurant.tzuyang_review ? 1 : 0,
+        Array.isArray(restaurant.categories) ? restaurant.categories[0] ?? '' : '',
+        Array.isArray(restaurant.category) ? restaurant.category[0] ?? '' : restaurant.category ?? '',
+        restaurant.source_type ?? '',
+        popularityTier,
+    ].join('|');
+    const cached = readMarkerVisualCache(cacheKey);
+    if (cached) return cached;
+
+    const normalizedCategory = Array.isArray(restaurant.category)
+        ? restaurant.category
+        : (restaurant.category ? [restaurant.category] : []);
+    const category = getPrimaryCategory({
+        categories: restaurant.categories ?? [],
+        category: normalizedCategory,
+    });
+    const visitCount = getTzuyangVisitCount(restaurant);
+    const markerKind = resolveRestaurantMarkerKind(restaurant, overlayKinds);
+    const markerCategory =
+        markerKind === 'user-submitted'
+            ? '사용자 제보'
+            : markerKind === 'trend'
+                ? '트렌드'
+                : markerKind === 'seasonal'
+                    ? '제철'
+                    : category;
+    const content = createIndividualMarkerHTML(markerCategory, isSelected, visitCount, restaurant.id);
+    const markerHtml = markerKind !== 'category'
+        ? wrapSpecialMarkerContent(content, isSelected, markerKind)
+        : `<div data-restaurant-marker-kind="category" data-restaurant-marker-asset-version="${RESTAURANT_MARKER_ASSET_VERSION}">${content}</div>`;
+    const visual = writeMarkerVisualCache(cacheKey, {
+        content: wrapMarkerWithPopularityTier(markerHtml, popularityTier),
+        anchor: isSelected ? { x: 18, y: 18 } : { x: 14, y: 14 },
+        zIndex: isSelected ? 100 : 1,
+    });
+    if (canReuseObject) {
+        const entry = individualVisualCache.get(restaurant) ?? {};
+        entry[slot] = { ...individualMarkerStampFields(restaurant), visual };
+        individualVisualCache.set(restaurant, entry);
+    }
+    return visual;
+}
+
+
+===== apps/web/lib/naver-map-cluster-visuals.ts | SHA256 e6827ce69615a202ca866aa5ced193b78d8b16c3ab9f44d3abb665e7b94f4d92 =====
+import type { ClusterFeature } from 'supercluster';
+import { createClusterMarkerHTML } from '@/lib/cluster-marker';
+import type { ClusterProperties } from '@/lib/clustering';
+import { publicPopularityTier } from '@/lib/evidence-engineering/popularity-marker';
+
+const clusterVisualKeyCache = new Map<string, number>();
+
+export function getClusterVisualKey(uniqueKey: string | number) {
+    if (typeof uniqueKey === 'number') return uniqueKey;
+    const cached = clusterVisualKeyCache.get(uniqueKey);
+    if (cached !== undefined) return cached;
+
+    const hash = Math.abs(uniqueKey.split('').reduce((acc, value) => (acc * 31 + value.charCodeAt(0)) | 0, 0));
+    clusterVisualKeyCache.set(uniqueKey, hash);
+    return hash;
+}
+
+export function buildClusterMarkerFeature({
+    count,
+    lat,
+    lng,
+}: {
+    count: number;
+    lat: number;
+    lng: number;
+}): ClusterFeature<ClusterProperties> {
+    return {
+        properties: { point_count: count },
+        geometry: { coordinates: [lng, lat] },
+    } as unknown as ClusterFeature<ClusterProperties>;
+}
+
+const clusterMarkerHtmlCache = new Map<string, string>();
+const categoryJoinCache = new WeakMap<string[], string>();
+const CLUSTER_MARKER_HTML_CACHE_LIMIT = 256;
+
+function joinedClusterCategories(categories: string[]) {
+    const cached = categoryJoinCache.get(categories);
+    if (cached !== undefined) return cached;
+    const joined = categories.join('\n');
+    categoryJoinCache.set(categories, joined);
+    return joined;
+}
+
+export function buildClusterMarkerContent({
+    categories,
+    count,
+    currentIndex,
+    lat,
+    lng,
+    popularityTier,
+}: {
+    categories: string[];
+    count: number;
+    currentIndex: number;
+    lat: number;
+    lng: number;
+    popularityTier?: ClusterProperties["popularityTier"];
+}) {
+    const cacheKey = `${count}:${currentIndex}:${publicPopularityTier(popularityTier)}:${joinedClusterCategories(categories)}`;
+    const cached = clusterMarkerHtmlCache.get(cacheKey);
+    if (cached) return cached;
+
+    const html = createClusterMarkerHTML(
+        buildClusterMarkerFeature({ count, lat, lng }),
+        categories,
+        currentIndex,
+        popularityTier,
+    );
+    if (clusterMarkerHtmlCache.size >= CLUSTER_MARKER_HTML_CACHE_LIMIT) {
+        const oldest = clusterMarkerHtmlCache.keys().next().value;
+        if (oldest !== undefined) clusterMarkerHtmlCache.delete(oldest);
+    }
+    clusterMarkerHtmlCache.set(cacheKey, html);
+    return html;
+}
+
+const CLUSTER_MARKER_ANCHOR = { x: 24, y: 24 };
+const clusterVisualCache = new WeakMap<string[], Map<number, Map<string, { content: string; anchor: { x: number; y: number } }>>>();
+
+export function getNaverClusterMarkerVisual({
+    categories,
+    count,
+    currentIndex,
+    lat,
+    lng,
+    popularityTier,
+}: {
+    categories: string[];
+    count: number;
+    currentIndex: number;
+    lat: number;
+    lng: number;
+    popularityTier?: ClusterProperties["popularityTier"];
+}) {
+    let byCount = clusterVisualCache.get(categories);
+    if (!byCount) {
+        byCount = new Map();
+        clusterVisualCache.set(categories, byCount);
+    }
+    let byIndex = byCount.get(count);
+    if (!byIndex) {
+        byIndex = new Map();
+        byCount.set(count, byIndex);
+    }
+    const visualKey = `${currentIndex}:${publicPopularityTier(popularityTier)}`;
+    const cached = byIndex.get(visualKey);
+    if (cached) return cached;
+
+    const visual = {
+        content: buildClusterMarkerContent({ categories, count, currentIndex, lat, lng, popularityTier }),
+        anchor: CLUSTER_MARKER_ANCHOR,
+    };
+    byIndex.set(visualKey, visual);
+    return visual;
+}
+
+const clusterPlanCache = new WeakMap<object, {
+    anchor: { x: number; y: number };
+    content: string;
+    position: { lat: number; lng: number };
+}>();
+
+export function buildNaverClusterMarkerRenderPlan({
+    categories,
+    count,
+    currentIndex,
+    popularityTier,
+    position,
+}: {
+    categories: string[];
+    count: number;
+    currentIndex: number;
+    popularityTier?: ClusterProperties["popularityTier"];
+    position: { lat: number; lng: number };
+}) {
+    const visual = getNaverClusterMarkerVisual({
+        categories,
+        count,
+        currentIndex,
+        lat: position.lat,
+        lng: position.lng,
+        popularityTier,
+    });
+    const cachedPlan = clusterPlanCache.get(visual);
+    if (
+        cachedPlan &&
+        cachedPlan.position.lat === position.lat &&
+        cachedPlan.position.lng === position.lng
+    ) {
+        return cachedPlan;
+    }
+
+    const plan = {
+        anchor: visual.anchor,
+        content: visual.content,
+        position,
+    };
+    clusterPlanCache.set(visual, plan);
+    return plan;
+}
+
+export function buildNaverClusterAnimationIconPlan({
+    categories,
+    count,
+    getCurrentIndex,
+    popularityTier,
+    position,
+    uniqueKey,
+}: {
+    categories: string[];
+    count: number;
+    getCurrentIndex: (hash: number, categoryCount: number) => number;
+    popularityTier?: ClusterProperties["popularityTier"];
+    position: { lat: number; lng: number };
+    uniqueKey: string | number;
+}) {
+    const hash = getClusterVisualKey(uniqueKey);
+    const currentIndex = getCurrentIndex(hash, categories.length);
+    const renderPlan = buildNaverClusterMarkerRenderPlan({
+        categories,
+        count,
+        currentIndex,
+        popularityTier,
+        position,
+    });
+
+    return {
+        ...renderPlan,
+        currentIndex,
+        hash,
+    } as const;
+}
+
+export function shouldReplaceNaverMarkerIcon(
+    current: { content?: unknown; anchor?: { x?: number; y?: number } | null } | null | undefined,
+    next: { content: unknown; anchor: { x: number; y: number } },
+): boolean {
+    if (!current || current.content !== next.content) return true;
+    return current.anchor?.x !== next.anchor.x || current.anchor?.y !== next.anchor.y;
+}
+
+
+===== apps/web/lib/cluster-marker.ts | SHA256 43414721e67e9e4f33a44a8cbefbd2b17f81a9f7f5fbf49261952c7cc0e4690f =====
+/**
+ * 클러스터 마커 HTML 생성 및 애니메이션 관리
+ */
+
+import type { ClusterFeature } from 'supercluster';
+import type { ClusterProperties } from './clustering';
+import { popularityFlameMarkup, publicPopularityTier } from './evidence-engineering/popularity-marker';
+import { escapeHtmlAttribute } from './html-escape';
+
+/**
+ * 카테고리 이모지 순환 애니메이션 상태 관리
+ */
+class ClusterAnimationManager {
+  private categoryIndices: Map<number, number> = new Map();
+  private timerId: ReturnType<typeof setTimeout> | null = null;
+  private listeners: Set<() => void> = new Set();
+
+  /**
+   * 카테고리 순환은 프레임마다 돌 필요가 없다.
+   * 주기만큼만 한 번 깨우면 호출 횟수는 60 / (intervalMs/1000) 배 줄어든다.
+   */
+  public start(intervalMs: number = 1000): void {
+    if (this.timerId !== null || intervalMs <= 0) return;
+
+    const tick = () => {
+      this.categoryIndices.forEach((index, clusterId) => {
+        this.categoryIndices.set(clusterId, index + 1);
+      });
+      this.listeners.forEach((listener) => listener());
+      this.timerId = setTimeout(tick, intervalMs);
+    };
+
+    this.timerId = setTimeout(tick, intervalMs);
+  }
+
+  /**
+   * 애니메이션 정지
+   */
+  public stop(): void {
+    if (this.timerId !== null) {
+      clearTimeout(this.timerId);
+      this.timerId = null;
+    }
+  }
+
+  /**
+   * 클러스터 등록
+   *
+   * @param clusterId 클러스터 ID
+   */
+  public register(clusterId: number): void {
+    if (!this.categoryIndices.has(clusterId)) {
+      this.categoryIndices.set(clusterId, 0);
+    }
+  }
+
+  /**
+   * 클러스터 제거
+   *
+   * @param clusterId 클러스터 ID
+   */
+  public unregister(clusterId: number): void {
+    this.categoryIndices.delete(clusterId);
+  }
+
+  /**
+   * 현재 카테고리 인덱스 가져오기
+   *
+   * @param clusterId 클러스터 ID
+   * @param totalCategories 총 카테고리 개수
+   * @returns 현재 인덱스
+   */
+  public getCurrentIndex(clusterId: number, totalCategories: number): number {
+    const index = this.categoryIndices.get(clusterId) || 0;
+    return index % totalCategories;
+  }
+
+  /**
+   * 업데이트 리스너 등록
+   *
+   * @param listener 콜백 함수
+   * @returns cleanup 함수
+   */
+  public addListener(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * 모두 초기화
+   */
+  public clear(): void {
+    this.stop();
+    this.categoryIndices.clear();
+    this.listeners.clear();
+  }
+}
+
+/**
+ * 싱글톤 인스턴스
+ */
+export const clusterAnimationManager = new ClusterAnimationManager();
+
+/**
+ * 카테고리별 이미지 경로 매핑
+ */
+type CategoryMarkerImage = {
+  webp: string;
+  png: string;
+};
+
+const createCategoryMarkerImage = (name: string): CategoryMarkerImage => ({
+  webp: `/images/maker-images/webp/${name}.webp`,
+  png: `/images/maker-images/${name}.png`,
+});
+
+const CATEGORY_IMAGES: Record<string, CategoryMarkerImage> = {
+  '고기': createCategoryMarkerImage('meat_bbq'),
+  '치킨': createCategoryMarkerImage('chicken'),
+  '한식': createCategoryMarkerImage('korean'),
+  '중식': createCategoryMarkerImage('chinese'),
+  '일식': createCategoryMarkerImage('cutlet_sashimi'),
+  '양식': createCategoryMarkerImage('western'),
+  '분식': createCategoryMarkerImage('snack_bar'),
+  '카페·디저트': createCategoryMarkerImage('cafe_dessert'),
+  '아시안': createCategoryMarkerImage('asian'),
+  '패스트푸드': createCategoryMarkerImage('fastfood'),
+  '족발·보쌈': createCategoryMarkerImage('pork_feet'),
+  '돈까스·회': createCategoryMarkerImage('cutlet_sashimi'),
+  '피자': createCategoryMarkerImage('pizza'),
+  '찜·탕': createCategoryMarkerImage('stew'),
+  '야식': createCategoryMarkerImage('late_night'),
+  '도시락': createCategoryMarkerImage('lunch_box'),
+  '사용자 제보': createCategoryMarkerImage('user_submitted'),
+  '트렌드': createCategoryMarkerImage('trend'),
+  '제철': createCategoryMarkerImage('seasonal'),
+};
+
+/**
+ * 카테고리 이미지 경로 가져오기
+ */
+const getCategoryImage = (category: string): CategoryMarkerImage => {
+  return CATEGORY_IMAGES[category] || createCategoryMarkerImage('korean');
+};
+
+const createCategoryImageHTML = ({
+  image,
+  alt,
+}: {
+  image: CategoryMarkerImage;
+  alt: string;
+}): string => {
+  return `
+        <picture style="display: block; width: 100%; height: 100%;">
+          <source srcset="${image.webp}" type="image/webp" />
+          <img
+              src="${image.png}"
+              alt="${alt}"
+              style="width: 100%; height: 100%; object-fit: contain;"
+              draggable="false"
+              decoding="sync"
+          />
+        </picture>
+  `;
+};
+
+/**
+ * 클러스터 마커 HTML 생성 (애니메이션 포함)
+ *
+ * @param cluster 클러스터 Feature
+ * @param categories 클러스터에 포함된 카테고리 목록
+ * @param currentIndex 현재 표시할 카테고리 인덱스
+ * @returns HTML 문자열
+ */
+export const createClusterMarkerHTML = (
+  cluster: ClusterFeature<ClusterProperties>,
+  categories: string[],
+  currentIndex: number,
+  popularityTier: unknown = cluster.properties.popularityTier,
+): string => {
+  const count = cluster.properties.point_count || 0;
+  const safeTier = publicPopularityTier(popularityTier);
+  const flame = popularityFlameMarkup(safeTier);
+  const displayCategory = categories[currentIndex % categories.length] || '기타';
+  const image = getCategoryImage(displayCategory);
+
+  // 개수에 따라 크기 동적 조정 (32px ~ 72px) - 이미지에 맞춰 조정
+  let size: number;
+  if (count < 3) {
+    size = 32;
+  } else if (count < 5) {
+    size = 36;
+  } else if (count < 10) {
+    size = 42;
+  } else if (count < 20) {
+    size = 48;
+  } else if (count < 50) {
+    size = 56;
+  } else if (count < 100) {
+    size = 64;
+  } else {
+    size = 72;
+  }
+  // 아이콘 크기는 컨테이너의 70% 정도
+  const iconSize = Math.floor(size * 0.7);
+
+  // z-index 계산: 마커 개수가 많을수록 위에 표시 (100 ~ 200)
+  const zIndex = Math.min(100 + Math.floor(count / 5), 200);
+
+  return `
+    <div
+      class="cluster-marker-container"
+      data-popularity-tier="${safeTier}"
+      style="
+        width: ${size}px;
+        height: ${size}px;
+        position: relative;
+        cursor: pointer;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: ${zIndex};
+      "
+    >
+      ${flame}
+      <!-- 카테고리 이미지 (애니메이션) -->
+      <div
+        class="cluster-icon"
+        style="
+          width: ${iconSize}px;
+          height: ${iconSize}px;
+        "
+      >
+        ${createCategoryImageHTML({ image, alt: 'cluster' })}
+      </div>
+
+      <!-- 맛집 개수 배지 (우측 하단) -->
+      ${count > 0 ? `
+      <div
+        class="cluster-count-badge"
+        style="
+          position: absolute;
+          bottom: -4px;
+          right: -4px;
+          background-color: rgba(0, 0, 0, 0.75);
+          color: white;
+          font-size: 11px;
+          font-weight: bold;
+          padding: 2px 6px;
+          border-radius: 12px;
+          min-width: 18px;
+          text-align: center;
+          z-index: ${zIndex + 1};
+          border: 1px solid rgba(255,255,255,0.2);
+        "
+      >${count >= 1000 ? '999+' : count}</div>
+      ` : ''}
+    </div>
+  `;
+};
+
+/**
+ * 개별 마커 HTML 생성 (기존과 동일)
+ *
+ * @param category 카테고리
+ * @param isSelected 선택 여부
+ * @returns HTML 문자열
+ */
+export const createIndividualMarkerHTML = (
+  category: string,
+  isSelected: boolean,
+  visitCount = 0,
+  restaurantId?: string | null
+): string => {
+  const image = getCategoryImage(category);
+  // 이미지 마커: 선택 시 42px, 기본 32px
+  const size = isSelected ? 42 : 32;
+  const normalizedVisitCount = Number.isFinite(visitCount) ? Math.max(0, Math.floor(visitCount)) : 0;
+  const shouldShowVisitBadge = normalizedVisitCount >= 2;
+  const visitBadgeSize = isSelected ? 19 : 17;
+  const visitBadgeFontSize = isSelected ? 11 : 10;
+  const visitBadgeOffset = isSelected ? -6 : -5;
+  const displayVisitCount = normalizedVisitCount >= 100 ? '99+' : String(normalizedVisitCount);
+  const safeRestaurantId = restaurantId ? escapeHtmlAttribute(restaurantId) : null;
+
+  const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
+  const zIndex = isSelected ? '100' : '1';
+
+  const badge = shouldShowVisitBadge
+    ? `<span class="tzuyang-visit-count-badge" data-tzuyang-visit-count-badge="true" aria-label="쯔양 ${normalizedVisitCount}회 방문" style="background-color: #dc2626; top: ${visitBadgeOffset}px; right: ${visitBadgeOffset}px; min-width: ${visitBadgeSize}px; height: ${visitBadgeSize}px; font-size: ${visitBadgeFontSize}px;">${displayVisitCount}</span>`
+    : '';
+  const picture = `<picture class="tzudong-marker-picture"><source srcset="${image.webp}" type="image/webp" /><img class="tzudong-marker-image" src="${image.png}" alt="marker" draggable="false" decoding="sync" /></picture>`;
+  return `<div class="tzudong-individual-marker" style="width: ${size}px; height: ${size}px; transform: ${transform}; z-index: ${zIndex};" role="button" data-testid="marker"${safeRestaurantId ? ` data-restaurant-id="${safeRestaurantId}"` : ''}>${picture}${badge}</div>`;
+};
+
+/**
+ * 클러스터 마커 CSS 애니메이션 주입
+ */
+export const injectClusterCSS = (): void => {
+  return;
+};
+
+/**
+ * 클러스터 마커 CSS 제거
+ */
+export const removeClusterCSS = (): void => {
+  const style = document.getElementById('cluster-marker-styles');
+  if (style) {
+    style.remove();
+  }
+};
+
+
+===== apps/web/lib/clustering.ts | SHA256 915170037ddcabfdba190900eca37d9a4ebc6718d83d36ca300c0fef4802de5e =====
+/**
+ * 마커 클러스터링 유틸리티
+ * 
+ * Supercluster 기반 고성능 지리공간 클러스터링
+ * - KD-Tree 알고리즘으로 대량 마커 처리 최적화
+ * - 지역별 동적 maxZoom 설정 지원
+ */
+
+import Supercluster, { type ClusterFeature, type PointFeature } from 'supercluster';
+import { REGION_MAP_CONFIG } from '@/config/maps';
+import type { Restaurant, Region } from '@/types/restaurant';
+import { getPerformanceBasedClusterOptions } from './device-performance';
+import { bestPopularityTier, publicPopularityTier } from './evidence-engineering/popularity-marker';
+
+// Supercluster 타입 정의 (패키지에서 export하지 않으므로 직접 정의)
+type BBox = [number, number, number, number];
+type GeoJsonProperties = Record<string, unknown>;
+
+/**
+ * 클러스터 포인트 속성 인터페이스
+ */
+export interface ClusterProperties extends GeoJsonProperties {
+    restaurantId: string;
+    name?: string;
+    category: string;
+    categories?: string[];
+    address?: string | null;
+    reviewCount?: number | null;
+    cluster?: boolean;
+    point_count?: number;
+    point_count_abbreviated?: string | number;
+    popularityTier?: "fire" | "ember" | "rainbow" | "standard";
+}
+
+/**
+ * 레스토랑 GeoJSON Feature 타입
+ */
+export type RestaurantFeature = GeoJSON.Feature<GeoJSON.Point, ClusterProperties>;
+
+/**
+ * 클러스터 설정 옵션
+ */
+export interface ClusterOptions {
+    /** 클러스터 반경 (픽셀) */
+    radius?: number;
+    /** 최소 줌 레벨 */
+    minZoom?: number;
+    /** 최대 줌 레벨 (이 줌 이상이면 클러스터링 해제) */
+    maxZoom?: number;
+    /** 클러스터를 만들기 위한 최소 포인트 수 */
+    minPoints?: number;
+}
+
+/**
+ * 지역별 클러스터링 최대 줌 레벨 계산
+ * 
+ * [성능 최적화] 줌 12까지 클러스터링을 유지하여 마커 폭발 방지
+ * 
+ * 특정 지역 선택 시: 해당 지역의 기본 줌 레벨 - 1로 설정하여,
+ * 기본 줌 레벨 도달 시 클러스터가 해제되고 모든 개별 마커가 표시됩니다.
+ * 
+ * 전국 선택 시: 줌 12까지 클러스터링, 줌 13부터 개별 마커
+ * 
+ * @example
+ * // 전국(selectedRegion = null) → maxZoom: 12 (줌 13부터 개별 마커)
+ * getClusterMaxZoom(null) // 12
+ * 
+ * // 서울(zoom: 12) → maxZoom: 11 → 12레벨부터 개별 마커
+ * getClusterMaxZoom('서울특별시') // 11
+ * 
+ * @param selectedRegion 선택된 지역 (null이면 전국)
+ * @param defaultMaxZoom 기본 최대 줌 레벨 (전국일 때 사용)
+ * @returns 클러스터링 최대 줌 레벨
+ */
+export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom: number = 12): number => {
+    // 전국 선택 시 기본값 사용 (줌 12까지 클러스터링)
+    if (!selectedRegion) {
+        return defaultMaxZoom;
+    }
+
+    // 지역 설정이 없으면 기본값 사용
+    if (!(selectedRegion in REGION_MAP_CONFIG)) {
+        return defaultMaxZoom;
+    }
+
+    // 특정 지역 선택 시 해당 지역의 기본 줌 - 1
+    const regionConfig = REGION_MAP_CONFIG[selectedRegion as keyof typeof REGION_MAP_CONFIG];
+    return regionConfig.zoom - 1;
+};
+
+export const getClusterIndexMaxZoom = (
+    selectedRegion: Region | null,
+    options: ClusterOptions = {},
+    usePerformanceOptimization: boolean = true
+): number => {
+    const performanceOptions = usePerformanceOptimization
+        ? getPerformanceBasedClusterOptions()
+        : { maxZoom: 12, radius: 40, minPoints: 2 };
+    const regionMaxZoom = getClusterMaxZoom(selectedRegion, performanceOptions.maxZoom);
+
+    return options.maxZoom ?? Math.max(regionMaxZoom, performanceOptions.maxZoom);
+};
+
+/**
+ * [성능 최적화] GeoJSON 변환 캐시
+ * WeakMap을 사용하여 동일한 레스토랑 배열에 대한 재변환을 방지
+ */
+const geoJsonCache = new WeakMap<Restaurant[], RestaurantFeature[]>();
+
+/**
+ * 레스토랑 데이터를 GeoJSON Feature로 변환 (캐싱 포함)
+ * 
+ * @param restaurants 레스토랑 목록
+ * @returns GeoJSON Feature 배열
+ */
+export const restaurantsToGeoJSON = (restaurants: Restaurant[]): RestaurantFeature[] => {
+    // 캐시 확인
+    const cached = geoJsonCache.get(restaurants);
+    if (cached) {
+        return cached;
+    }
+
+    // 새로 변환
+    const features = restaurants
+        .filter((r) => r.lat != null && r.lng != null)
+        .map((r) => ({
+            type: 'Feature' as const,
+            properties: {
+                restaurantId: r.id,
+                category: (Array.isArray(r.categories) ? r.categories[0] : r.category || '기타') as string,
+                address: r.address,
+                popularityTier: publicPopularityTier(r.popularity_tier),
+            },
+            geometry: {
+                type: 'Point' as const,
+                coordinates: [r.lng!, r.lat!], // GeoJSON은 [lng, lat] 순서
+            },
+        })) as RestaurantFeature[];
+
+    // 캐시 저장
+    geoJsonCache.set(restaurants, features);
+
+    return features;
+};
+
+/**
+ * Supercluster 인덱스 생성
+ * 
+ * [성능 최적화] 디바이스 성능에 따라 동적으로 클러스터 옵션 조정
+ * - 저사양: maxZoom 14, radius 60px (더 공격적인 클러스터링)
+ * - 중사양: maxZoom 13, radius 50px
+ * - 고사양: maxZoom 12, radius 40px (정밀한 클러스터링)
+ * 
+ * @param selectedRegion 선택된 지역 (동적 maxZoom 계산용, null이면 전국)
+ * @param options 클러스터 옵션
+ * @param usePerformanceOptimization 성능 기반 최적화 사용 여부 (기본: true)
+ * @returns Supercluster 인스턴스
+ */
+export const createClusterIndex = (
+    selectedRegion: Region | null,
+    options: ClusterOptions = {},
+    usePerformanceOptimization: boolean = true
+): Supercluster<ClusterProperties> => {
+    // 성능 기반 옵션 가져오기
+    const performanceOptions = usePerformanceOptimization
+        ? getPerformanceBasedClusterOptions()
+        : { maxZoom: 12, radius: 40, minPoints: 2 };
+
+    // maxZoom 결정: 지역별 설정 vs 성능 기반 설정 중 더 높은 값(더 늦게 해제) 사용
+    const finalMaxZoom = getClusterIndexMaxZoom(selectedRegion, options, usePerformanceOptimization);
+
+    return new Supercluster<ClusterProperties>({
+        radius: options.radius ?? performanceOptions.radius,
+        maxZoom: finalMaxZoom,
+        minZoom: options.minZoom ?? 0,
+        minPoints: options.minPoints ?? performanceOptions.minPoints,
+        map: (properties) => ({ popularityTier: publicPopularityTier(properties.popularityTier) }),
+        reduce: (accumulated, properties) => {
+            accumulated.popularityTier = bestPopularityTier(accumulated.popularityTier, properties.popularityTier);
+        },
+    });
+};
+
+/**
+ * 현재 뷰포트의 클러스터 가져오기
+ * 
+ * @param index Supercluster 인스턴스
+ * @param bbox 바운딩 박스 [west, south, east, north]
+ * @param zoom 현재 줌 레벨
+ * @returns 클러스터/포인트 배열
+ */
+export const getClusters = (
+    index: Supercluster<ClusterProperties>,
+    bbox: BBox,
+    zoom: number
+): Array<ClusterFeature<ClusterProperties> | PointFeature<ClusterProperties>> => {
+    return index.getClusters(bbox, Math.floor(zoom)) as Array<ClusterFeature<ClusterProperties> | PointFeature<ClusterProperties>>;
+};
+
+/**
+ * 클러스터 확장 (클러스터를 개별 포인트로 펼치기)
+ * 
+ * @param index Supercluster 인스턴스
+ * @param clusterId 클러스터 ID
+ * @returns 클러스터에 포함된 레스토랑 ID 배열
+ */
+export const expandCluster = (
+    index: Supercluster<ClusterProperties>,
+    clusterId: number
+): string[] => {
+    const leaves = index.getLeaves(clusterId, Infinity);
+    return leaves.map((leaf) => leaf.properties.restaurantId);
+};
+
+/**
+ * 클러스터의 카테고리 목록 가져오기 (애니메이션용)
+ * 
+ * @param index Supercluster 인스턴스
+ * @param clusterId 클러스터 ID
+ * @returns 중복 제거된 카테고리 배열
+ */
+const clusterCategoryCache = new WeakMap<Supercluster<ClusterProperties>, Map<number, string[]>>();
+
+export const getClusterCategories = (
+    index: Supercluster<ClusterProperties>,
+    clusterId: number
+): string[] => {
+    let cache = clusterCategoryCache.get(index);
+    if (!cache) {
+        cache = new Map();
+        clusterCategoryCache.set(index, cache);
+    }
+    const cached = cache.get(clusterId);
+    if (cached) return cached;
+
+    const leaves = index.getLeaves(clusterId, Infinity);
+    const categoryCounts = new Map<string, number>();
+
+    leaves.forEach((leaf) => {
+        const category = leaf.properties.category;
+        if (category) {
+            categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
+        }
+    });
+
+    const categories = Array.from(categoryCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map((entry) => entry[0]);
+    cache.set(clusterId, categories);
+    return categories;
+};
+
+/**
+ * 클러스터인지 개별 포인트인지 판별
+ * 
+ * @param feature 클러스터 또는 포인트 Feature
+ * @returns 클러스터면 true
+ */
+export const isCluster = (
+    feature: ClusterFeature<ClusterProperties> | PointFeature<ClusterProperties>
+): feature is ClusterFeature<ClusterProperties> => {
+    return feature.properties.cluster === true;
+};
+
+/**
+ * 18개 지역 중심 좌표 (행정구역 클러스터링용 - 17개 행정구역 + 울릉도)
+ */
+export const REGIONAL_CENTERS: Record<string, { lat: number; lng: number }> = {
+    "서울특별시": { lat: 37.5512, lng: 126.9882 },
+    "부산광역시": { lat: 35.1152, lng: 129.0000 },
+    "대구광역시": { lat: 35.8714, lng: 128.6014 },
+    "인천광역시": { lat: 37.4496, lng: 126.6231 },
+    "광주광역시": { lat: 35.1595, lng: 126.8526 },
+    "대전광역시": { lat: 36.3504, lng: 127.3845 },
+    "울산광역시": { lat: 35.5384, lng: 129.3114 },
+    "세종특별자치시": { lat: 36.4800, lng: 127.2890 },
+    "경기도": { lat: 37.4492, lng: 127.1739 },
+    "충청북도": { lat: 36.6357, lng: 127.4915 },
+    "충청남도": { lat: 36.5184, lng: 126.8000 },
+    "전라남도": { lat: 34.8161, lng: 126.4629 },
+    "경상북도": { lat: 36.2419, lng: 128.8889 },
+    "경상남도": { lat: 35.4606, lng: 128.2132 },
+    "전북특별자치도": { lat: 35.7175, lng: 127.1530 },
+    "강원특별자치도": { lat: 37.8228, lng: 128.1555 },
+    "제주특별자치도": { lat: 33.3625, lng: 126.5339 },
+    "울릉도": { lat: 37.4918, lng: 130.8616 },
+};
+
+/**
+ * 서울특별시 25개 자치구 중심 좌표 (줌 10-12 최적화용)
+ */
+export const SEOUL_DISTRICT_CENTERS: Record<string, { lat: number; lng: number }> = {
+    "강남구": { lat: 37.5172, lng: 127.0473 },
+    "강동구": { lat: 37.5301, lng: 127.1238 },
+    "강북구": { lat: 37.6396, lng: 127.0257 },
+    "강서구": { lat: 37.5509, lng: 126.8497 },
+    "관악구": { lat: 37.4784, lng: 126.9516 },
+    "광진구": { lat: 37.5385, lng: 127.0823 },
+    "구로구": { lat: 37.4954, lng: 126.8874 },
+    "금천구": { lat: 37.4568, lng: 126.8952 },
+    "노원구": { lat: 37.6542, lng: 127.0568 },
+    "도봉구": { lat: 37.6688, lng: 127.0471 },
+    "동대문구": { lat: 37.5744, lng: 127.0400 },
+    "동작구": { lat: 37.5124, lng: 126.9393 },
+    "마포구": { lat: 37.5665, lng: 126.9018 },
+    "서대문구": { lat: 37.5791, lng: 126.9368 },
+    "서초구": { lat: 37.4837, lng: 127.0324 },
+    "성동구": { lat: 37.5633, lng: 127.0371 },
+    "성북구": { lat: 37.5891, lng: 127.0182 },
+    "송파구": { lat: 37.5145, lng: 127.1066 },
+    "양천구": { lat: 37.5169, lng: 126.8660 },
+    "영등포구": { lat: 37.5264, lng: 126.8962 },
+    "용산구": { lat: 37.5326, lng: 126.9904 },
+    "은평구": { lat: 37.6027, lng: 126.9291 },
+    "종로구": { lat: 37.5730, lng: 126.9794 },
+    "중구": { lat: 37.5641, lng: 126.9970 },
+    "중랑구": { lat: 37.6066, lng: 127.0927 },
+};
+
+/**
+ * 행정구역 클러스터 인터페이스
+ */
+export interface RegionalCluster {
+    /** 행정구역 이름 */
+    region: string;
+    /** 중심 좌표 */
+    center: { lat: number; lng: number };
+    /** 해당 지역 맛집 수 */
+    count: number;
+    /** 해당 지역 맛집 ID 배열 */
+    restaurantIds: string[];
+    /** 해당 지역 카테고리 배열 (중복 제거) */
+    categories: string[];
+    /** 묶인 맛집 중 가장 높은 공개 인기 등급 */
+    popularityTier: "fire" | "ember" | "rainbow" | "standard";
+}
+
+/**
+ * 서울 자치구 클러스터 인터페이스 (RegionalCluster 구조 상속)
+ */
+export type SeoulDistrictCluster = RegionalCluster;
+
+/**
+ * 두 좌표 간의 거리 계산 (Haversine formula 간소화)
+ */
+export const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const dLat = lat2 - lat1;
+    const dLng = lng2 - lng1;
+    return Math.sqrt(dLat * dLat + dLng * dLng);
+};
+/**
+ * 모듈 로드 시 한 번만 만드는 조회 표.
+ *
+ * 이전 구현은 조회 표를 호출 경로에서 매번 다시 만들었습니다.
+ * extractRegionFromAddress 는 식당마다 Object.keys(REGIONAL_CENTERS)(18개)와 18개
+ * 항목짜리 shortNames 객체 + 그 Object.entries 결과를 새로 만들었고,
+ * getSeoulDistrictClusters 는 호출마다 25개 구 이름/항목 배열을 다시 만들었습니다.
+ * 목록 4,000건이면 호출 1회당 배열/객체 할당이 수천 건 발생합니다. 표를 모듈 수준으로
+ * 올려 그 할당을 없앱니다. 표의 내용과 순회 순서는 이전 구현과 동일합니다.
+ */
+const REGIONAL_CENTER_NAMES = Object.keys(REGIONAL_CENTERS);
+const REGIONAL_CENTER_ENTRIES = Object.entries(REGIONAL_CENTERS);
+const SEOUL_DISTRICT_NAMES = Object.keys(SEOUL_DISTRICT_CENTERS);
+const SEOUL_DISTRICT_ENTRIES = Object.entries(SEOUL_DISTRICT_CENTERS);
+
+/** 주소 접두어 약어 -> 정식 행정구역명. 이전 구현과 같은 순서를 유지합니다. */
+const SHORT_REGION_ENTRIES: ReadonlyArray<readonly [string, string]> = [
+    ["서울", "서울특별시"],
+    ["부산", "부산광역시"],
+    ["대구", "대구광역시"],
+    ["인천", "인천광역시"],
+    ["광주", "광주광역시"],
+    ["대전", "대전광역시"],
+    ["울산", "울산광역시"],
+    ["세종", "세종특별자치시"],
+    ["경기", "경기도"],
+    ["충북", "충청북도"],
+    ["충남", "충청남도"],
+    ["전남", "전라남도"],
+    ["경북", "경상북도"],
+    ["경남", "경상남도"],
+    ["전북", "전북특별자치도"],
+    ["강원", "강원특별자치도"],
+    ["제주", "제주특별자치도"],
+    ["울릉", "울릉도"],
+];
+
+/**
+ * 가장 가까운 행정구역 중심 찾기
+ */
+const findNearestRegion = (lat: number, lng: number): string => {
+    let nearestRegion = "서울특별시";
+    let minDistance = Infinity;
+
+    for (let index = 0; index < REGIONAL_CENTER_ENTRIES.length; index += 1) {
+        const [region, center] = REGIONAL_CENTER_ENTRIES[index];
+        const distance = getDistance(lat, lng, center.lat, center.lng);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestRegion = region;
+        }
+    }
+
+    return nearestRegion;
+};
+
+/**
+ * 가장 가까운 서울 자치구 중심 찾기 (주소에 구가 없을 때의 보조 경로)
+ */
+const findNearestDistrict = (lat: number, lng: number): string | null => {
+    let nearestDistrict: string | null = null;
+    let minDistance = Infinity;
+
+    for (let index = 0; index < SEOUL_DISTRICT_ENTRIES.length; index += 1) {
+        const [district, center] = SEOUL_DISTRICT_ENTRIES[index];
+        const distance = getDistance(lat, lng, center.lat, center.lng);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestDistrict = district;
+        }
+    }
+
+    return nearestDistrict;
+};
+
+/**
+ * 식당 한 건에서 클러스터링에 쓰는 파생 값.
+ *
+ * 담고 있는 값(id/주소/lat/lng/카테고리)은 계산에 실제로 쓰는 원본 필드이므로,
+ * 식당을 제자리에서 수정해도 이전 결과가 재사용되지 않습니다.
+ *
+ * 행정구역과 자치구는 서로 다른 호출 경로만 쓰므로 각각 필요할 때 계산합니다
+ * (getRegionalClusters 는 행정구역만, getSeoulDistrictClusters 는 자치구만 씁니다).
+ * 미계산 표시는 undefined 입니다 - 계산 결과 자체가 null 일 수 있기 때문입니다.
+ */
+type RestaurantClusterEntry = {
+    id: string;
+    /** road 우선, 없으면 jibun (이전 구현과 동일) */
+    address: string;
+    lat: Restaurant['lat'];
+    lng: Restaurant['lng'];
+    /** 이전 구현과 동일한 카테고리 값. 문자열이 아닐 수 있어 Map 키로 그대로 씁니다. */
+    categoryLabel: string;
+    hasCoordinates: boolean;
+    region?: string | null;
+    district?: string | null;
+};
+
+/** 목록 -> 파생 항목 배열. 같은 목록에 대해 매번 다시 만들지 않습니다. */
+const clusterEntriesCache = new WeakMap<readonly Restaurant[], Array<RestaurantClusterEntry | undefined>>();
+
+const clusterAddressOf = (restaurant: Restaurant): string =>
+    restaurant.road_address || restaurant.jibun_address || '';
+
+const clusterCategoryLabel = (restaurant: Restaurant): string => {
+    const categories = restaurant.categories;
+    return (Array.isArray(categories) ? categories[0] : (restaurant.category || '기타')) as string;
+};
+
+const createClusterEntry = (restaurant: Restaurant): RestaurantClusterEntry => {
+    const lat = restaurant.lat;
+    const lng = restaurant.lng;
+    return {
+        id: restaurant.id,
+        address: clusterAddressOf(restaurant),
+        lat,
+        lng,
+        categoryLabel: clusterCategoryLabel(restaurant),
+        hasCoordinates: Boolean(lat) && Boolean(lng),
+    };
+};
+
+const isClusterEntryCurrent = (restaurant: Restaurant, entry: RestaurantClusterEntry): boolean =>
+    entry.id === restaurant.id
+    && entry.address === clusterAddressOf(restaurant)
+    && Object.is(entry.lat, restaurant.lat)
+    && Object.is(entry.lng, restaurant.lng)
+    && entry.categoryLabel === clusterCategoryLabel(restaurant);
+
+/**
+ * 캐시된 항목 배열이 지금 목록과 같은지 확인합니다.
+ * 길이와 자리별 원본 필드를 비교하므로 목록 제자리 수정(push/splice)과 식당 필드
+ * 제자리 수정을 모두 감지합니다.
+ */
+const isClusterEntriesCurrent = (
+    restaurants: readonly Restaurant[],
+    entries: ReadonlyArray<RestaurantClusterEntry | undefined>,
+): boolean => {
+    if (entries.length !== restaurants.length) return false;
+
+    for (let index = 0; index < entries.length; index += 1) {
+        const restaurant = restaurants[index];
+        const entry = entries[index];
+
+        if (!restaurant) {
+            if (entry) return false;
+            continue;
+        }
+
+        if (!entry || !isClusterEntryCurrent(restaurant, entry)) return false;
+    }
+
+    return true;
+};
+
+const buildClusterEntries = (restaurants: readonly Restaurant[]): Array<RestaurantClusterEntry | undefined> => {
+    const entries: Array<RestaurantClusterEntry | undefined> = new Array(restaurants.length);
+
+    for (let index = 0; index < restaurants.length; index += 1) {
+        const restaurant = restaurants[index];
+        if (!restaurant) continue;
+        entries[index] = createClusterEntry(restaurant);
+    }
+
+    return entries;
+};
+
+/** 캐시가 있으면 재사용하고, 없으면 만들어 저장합니다. */
+const resolveClusterEntries = (restaurants: readonly Restaurant[]) => {
+    const cached = clusterEntriesCache.get(restaurants);
+    if (cached && isClusterEntriesCurrent(restaurants, cached)) return cached;
+
+    const built = buildClusterEntries(restaurants);
+    clusterEntriesCache.set(restaurants, built);
+    return built;
+};
+
+/**
+ * 캐시가 이미 있을 때만 재사용합니다(없으면 null).
+ *
+ * getSeoulDistrictClusters 는 이 경로로만 캐시를 씁니다. 캐시가 비어 있는데 항목을
+ * 만들어 저장하면, 그 목록으로 이 함수만 호출하는 경우(캐시를 재사용할 기회가 없는
+ * 단발 호출)에 순수한 추가 비용이 됩니다. 그래서 없으면 그때그때 계산합니다.
+ */
+const lookupClusterEntries = (restaurants: readonly Restaurant[]) => {
+    const cached = clusterEntriesCache.get(restaurants);
+    return cached && isClusterEntriesCurrent(restaurants, cached) ? cached : null;
+};
+
+/**
+ * 행정구역: 1) 주소에 정식 명칭 포함, 2) 주소 접두어 약어, 3) 좌표상 가장 가까운 중심.
+ * 이전 extractRegionFromAddress + findNearestRegion 과 같은 순서/같은 결과입니다.
+ */
+const computeRegion = (address: string, hasCoordinates: boolean, lat: number, lng: number): string | null => {
+    for (let index = 0; index < REGIONAL_CENTER_NAMES.length; index += 1) {
+        if (address.includes(REGIONAL_CENTER_NAMES[index])) {
+            return REGIONAL_CENTER_NAMES[index];
+        }
+    }
+
+    for (let index = 0; index < SHORT_REGION_ENTRIES.length; index += 1) {
+        const [short, full] = SHORT_REGION_ENTRIES[index];
+        if (address.startsWith(short)) {
+            return full;
+        }
+    }
+
+    return hasCoordinates ? findNearestRegion(lat, lng) : null;
+};
+
+const resolveClusterRegion = (entry: RestaurantClusterEntry): string | null => {
+    if (entry.region !== undefined) return entry.region;
+
+    const region = computeRegion(entry.address, entry.hasCoordinates, Number(entry.lat), Number(entry.lng));
+    entry.region = region;
+    return region;
+};
+
+/**
+ * 카테고리 빈도 내림차순 상위 3개.
+ * 동률은 Map 삽입 순서(먼저 등장한 순서)를 따릅니다 - 이전 구현과 동일합니다.
+ */
+const topCategories = (counts: Map<string, number>): string[] =>
+    Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1]) // 빈도수 내림차순 정렬
+        .slice(0, 3) // 상위 3개만 추출
+        .map((entry) => entry[0]);
+
+/**
+ * 17개 행정구역 중앙 기준 클러스터링 (줌 레벨 8 이하)
+ * 
+ * 각 맛집을 가장 가까운 행정구역 중심에 할당하여 17개 클러스터 생성
+ * 
+ * @param restaurants 레스토랑 목록
+ * @returns 행정구역별 클러스터 배열
+ */
+export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[] => {
+    // 각 행정구역별로 맛집 그룹화
+    const regionMap = new Map<string, {
+        restaurantIds: string[];
+        categories: Map<string, number>;
+        popularityTier: "fire" | "ember" | "rainbow" | "standard";
+    }>();
+
+    // 모든 17개 행정구역 초기화
+    for (let index = 0; index < REGIONAL_CENTER_NAMES.length; index += 1) {
+        regionMap.set(REGIONAL_CENTER_NAMES[index], { restaurantIds: [], categories: new Map(), popularityTier: "standard" });
+    }
+
+    // 각 맛집을 행정구역에 할당 (주소 우선, 없으면 좌표로 가장 가까운 행정구역)
+    const entries = resolveClusterEntries(restaurants);
+
+    for (let index = 0; index < restaurants.length; index += 1) {
+        const restaurant = restaurants[index];
+        const entry = entries[index];
+        if (!restaurant || !entry || !entry.hasCoordinates) continue;
+
+        const region = resolveClusterRegion(entry);
+        if (!region) continue;
+
+        const group = regionMap.get(region);
+        if (!group) continue;
+
+        group.restaurantIds.push(restaurant.id);
+        group.popularityTier = bestPopularityTier(group.popularityTier, restaurant.popularity_tier);
+
+        // 카테고리 추가
+        const category = entry.categoryLabel;
+        if (category) {
+            group.categories.set(category, (group.categories.get(category) || 0) + 1);
+        }
+    }
+
+    // 맛집이 있는 행정구역만 클러스터로 반환
+    const clusters: RegionalCluster[] = [];
+
+    for (const [region, group] of regionMap.entries()) {
+        if (group.restaurantIds.length > 0) {
+            clusters.push({
+                region,
+                center: REGIONAL_CENTERS[region],
+                count: group.restaurantIds.length,
+                restaurantIds: group.restaurantIds,
+                categories: topCategories(group.categories),
+                popularityTier: group.popularityTier,
+            });
+        }
+    }
+
+    return clusters;
+};
+
+/**
+ * 서울 자치구 클러스터링 결과 인터페이스
+ * clusters: 마커 3개 이상인 구 (클러스터로 표시)
+ * individualRestaurants: 마커 2개 이하인 구의 맛집들 (개별 마커로 표시)
+ */
+export interface SeoulDistrictClusterResult {
+    clusters: SeoulDistrictCluster[];
+    individualRestaurantIds: string[];
+}
+
+/** 구 단위 그룹화 결과. positions 배열 대신 합계를 누적합니다(더하는 순서는 동일). */
+type SeoulDistrictGroup = {
+    restaurantIds: string[];
+    categories: Map<string, number>;
+    latSum: number;
+    lngSum: number;
+    popularityTier: "fire" | "ember" | "rainbow" | "standard";
+};
+
+/**
+ * 목록 전체를 25개 구로 한 번 분류한 결과.
+ *
+ * 지도 갱신 1회는 같은 목록으로 getSeoulDistrictClusters 를 minClusterSize 1과 3으로
+ * 두 번 호출합니다. 이전 구현은 구 분류(서울 판정 + 구 이름 25회 검사 + 필요 시 25개
+ * 중심 거리 계산)를 두 번 반복했습니다. 분류를 한 번만 하고 minClusterSize 별 결과는
+ * 그룹화에서 투영합니다.
+ */
+type SeoulDistrictGrouping = {
+    /** 이 그룹화를 만든 파생 항목 배열. 배열 정체성으로 재사용 여부를 판단합니다. */
+    entriesRef: Array<RestaurantClusterEntry | undefined> | null;
+    groups: Map<string, SeoulDistrictGroup>;
+};
+
+const seoulGroupingCache = new WeakMap<readonly Restaurant[], SeoulDistrictGrouping>();
+
+const createSeoulDistrictGroups = (): Map<string, SeoulDistrictGroup> => {
+    const groups = new Map<string, SeoulDistrictGroup>();
+
+    // 25개 구 초기화
+    for (let index = 0; index < SEOUL_DISTRICT_NAMES.length; index += 1) {
+        groups.set(SEOUL_DISTRICT_NAMES[index], {
+            restaurantIds: [],
+            categories: new Map(),
+            latSum: 0,
+            lngSum: 0,
+            popularityTier: "standard",
+        });
+    }
+
+    return groups;
+};
+
+/**
+ * 캐시된 파생 항목이 있는 경우의 구 그룹화.
+ *
+ * 항목이 이미 구 이름(district)을 계산해 두었으면 그 값을 그대로 씁니다. 항목은
+ * 목록과 같은지 검증된 뒤에만 넘어오므로 id/좌표/주소는 원본과 같은 값입니다.
+ */
+const buildSeoulDistrictGroupingFromEntries = (
+    restaurants: readonly Restaurant[],
+    entries: Array<RestaurantClusterEntry | undefined>,
+): SeoulDistrictGrouping => {
+    const groups = createSeoulDistrictGroups();
+
+    for (let index = 0; index < restaurants.length; index += 1) {
+        const restaurant = restaurants[index];
+        if (!restaurant) continue;
+
+        const entry = entries[index];
+        if (!entry) continue;
+
+        const lat = restaurant.lat;
+        const lng = restaurant.lng;
+        if (!lat || !lng) continue;
+
+        // 구 이름 매칭이 행당 비용을 지배합니다. 4,000건 실측에서 매칭을 작은 함수로
+        // 빼면 호출 오버헤드만 약 0.13ms 가 더 붙어(0.54ms vs 0.40ms), 루프 안에
+        // 펼쳐 둡니다. 좌표 보정(구 이름이 없을 때만)은 드문 경로라 함수로 남깁니다.
+        if (entry.district === undefined) {
+            let matched: string | null = null;
+
+            if (entry.hasCoordinates && entry.address.includes('서울')) {
+                for (let name = 0; name < SEOUL_DISTRICT_NAMES.length; name += 1) {
+                    if (entry.address.includes(SEOUL_DISTRICT_NAMES[name])) {
+                        matched = SEOUL_DISTRICT_NAMES[name];
+                        break;
+                    }
+                }
+
+                if (!matched) {
+                    matched = findNearestDistrict(lat, lng);
+                }
+            }
+
+            entry.district = matched;
+        }
+
+        const district = entry.district;
+        if (!district) continue;
+
+        const group = groups.get(district);
+        if (!group) continue;
+
+        group.restaurantIds.push(restaurant.id);
+        group.latSum += lat;
+        group.lngSum += lng;
+        group.popularityTier = bestPopularityTier(group.popularityTier, restaurant.popularity_tier);
+
+        if (entry.categoryLabel) {
+            group.categories.set(
+                entry.categoryLabel,
+                (group.categories.get(entry.categoryLabel) || 0) + 1
+            );
+        }
+    }
+
+    return { entriesRef: entries, groups };
+};
+
+/**
+ * 파생 항목 캐시가 없을 때(이 목록으로 단발 호출)의 구 그룹화.
+ *
+ * 주소/좌표에서 구를 직접 계산하며, 순서와 결과는 이전 구현과 같습니다. 두 경로를 한
+ * 함수로 합치면 인자와 지역 변수가 다형(항목 배열/없음)이 되고 본문이 커져 최적화가
+ * 흐려집니다. 4,000건 단발 호출 실측에서 합친 구현은 0.65ms -> 0.61ms(x1.06)로
+ * 밀렸고, 함수를 나눈 뒤 0.57ms(x1.12)로 회복했습니다.
+ */
+const buildSeoulDistrictGroupingFromRestaurants = (
+    restaurants: readonly Restaurant[],
+): SeoulDistrictGrouping => {
+    const groups = createSeoulDistrictGroups();
+
+    for (let index = 0; index < restaurants.length; index += 1) {
+        const restaurant = restaurants[index];
+        if (!restaurant) continue;
+
+        const lat = restaurant.lat;
+        const lng = restaurant.lng;
+        if (!lat || !lng) continue;
+
+        const address = restaurant.road_address || restaurant.jibun_address || '';
+        if (!address.includes('서울')) continue;
+
+        let district: string | null = null;
+
+        for (let name = 0; name < SEOUL_DISTRICT_NAMES.length; name += 1) {
+            if (address.includes(SEOUL_DISTRICT_NAMES[name])) {
+                district = SEOUL_DISTRICT_NAMES[name];
+                break;
+            }
+        }
+
+        if (!district) {
+            district = findNearestDistrict(lat, lng);
+        }
+
+        if (!district) continue;
+
+        const group = groups.get(district);
+        if (!group) continue;
+
+        group.restaurantIds.push(restaurant.id);
+        group.latSum += lat;
+        group.lngSum += lng;
+        group.popularityTier = bestPopularityTier(group.popularityTier, restaurant.popularity_tier);
+
+        const categories = restaurant.categories;
+        const category = (Array.isArray(categories)
+            ? categories[0]
+            : (restaurant.category || '기타')) as string;
+        if (category) {
+            group.categories.set(category, (group.categories.get(category) || 0) + 1);
+        }
+    }
+
+    return { entriesRef: null, groups };
+};
+
+const resolveSeoulDistrictGrouping = (restaurants: readonly Restaurant[]): SeoulDistrictGrouping => {
+    // 목록 파생 항목이 이미 있으면(같은 갱신에서 getRegionalClusters 가 먼저 만든 경우)
+    // 그룹화를 목록 단위로 재사용합니다. 없으면 캐시하지 않고 그때마다 계산합니다.
+    const entries = lookupClusterEntries(restaurants);
+
+    if (entries) {
+        const cached = seoulGroupingCache.get(restaurants);
+        if (cached && cached.entriesRef === entries) return cached;
+
+        const built = buildSeoulDistrictGroupingFromEntries(restaurants, entries);
+        seoulGroupingCache.set(restaurants, built);
+        return built;
+    }
+
+    return buildSeoulDistrictGroupingFromRestaurants(restaurants);
+};
+
+/**
+ * 구 단위 그룹화에서 minClusterSize 기준 결과를 투영합니다.
+ * 그룹 순서는 SEOUL_DISTRICT_CENTERS 키 순서를 그대로 따릅니다.
+ */
+const projectSeoulDistrictClusters = (
+    grouping: SeoulDistrictGrouping,
+    minClusterSize: number
+): SeoulDistrictClusterResult => {
+    const clusters: SeoulDistrictCluster[] = [];
+    const individualRestaurantIds: string[] = [];
+
+    // 캐시에 들어간 그룹화(entriesRef 가 있는 경우)는 다음 호출이 다시 읽습니다. 그때는
+    // 호출자가 결과 배열을 수정해도 캐시가 오염되지 않도록 복사해서 넘깁니다. 캐시하지
+    // 않은 그룹화는 이 호출이 소유하므로 복사 없이 그대로 넘깁니다.
+    const shared = grouping.entriesRef !== null;
+
+    for (const [district, group] of grouping.groups.entries()) {
+        const count = group.restaurantIds.length;
+
+        if (count >= minClusterSize) {
+            // minClusterSize 이상: 실제 마커들의 중심점 계산
+            clusters.push({
+                region: district,
+                center: { lat: group.latSum / count, lng: group.lngSum / count },
+                count,
+                restaurantIds: shared ? group.restaurantIds.slice() : group.restaurantIds,
+                categories: topCategories(group.categories),
+                popularityTier: group.popularityTier,
+            });
+        } else if (count > 0) {
+            // minClusterSize 미만: 개별 마커로 표시
+            individualRestaurantIds.push(...group.restaurantIds);
+        }
+    }
+
+    return { clusters, individualRestaurantIds };
+};
+
+/**
+ * 서울시 25개 자치구 기준 클러스터링
+ * 
+ * @param restaurants 레스토랑 목록
+ * @param minClusterSize 클러스터로 표시할 최소 마커 수 (기본값: 1)
+ *   - minClusterSize=1: 마커가 1개 이상이면 모두 클러스터로 표시 (줌 9-10)
+ *   - minClusterSize=3: 마커가 3개 이상일 때만 클러스터, 2개 이하는 개별 마커 (줌 11-12)
+ */
+export const getSeoulDistrictClusters = (
+    restaurants: Restaurant[],
+    minClusterSize: number = 1
+): SeoulDistrictClusterResult =>
+    projectSeoulDistrictClusters(resolveSeoulDistrictGrouping(restaurants), minClusterSize);

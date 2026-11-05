@@ -1,0 +1,595 @@
+diff --git a/apps/web/components/map/OverseasMap.tsx b/apps/web/components/map/OverseasMap.tsx
+index 43a344ce..57689e46 100644
+--- a/apps/web/components/map/OverseasMap.tsx
++++ b/apps/web/components/map/OverseasMap.tsx
+@@ -91,6 +91,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
+     const mapContainer = useRef<HTMLDivElement>(null);
+     const map = useRef<maplibregl.Map | null>(null);
+     const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
++    const markerHtmlRef = useRef(new WeakMap<HTMLElement, string>());
+     const deviceLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
+     const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
+     const mapPaddingRef = useRef(mapPadding);
+@@ -353,7 +354,11 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
+     useEffect(() => {
+         if (!map.current || !isMapLoaded) return;
+ 
+-        const currentMarkerIds = new Set(restaurantsToShow.map(r => r.id));
++        const renderableRestaurants = restaurantsToShow.filter(({ lat, lng }) =>
++            lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
++            && Math.abs(Number(lat)) <= 90 && Math.abs(Number(lng)) <= 180
++            && (Number(lat) !== 0 || Number(lng) !== 0));
++        const currentMarkerIds = new Set(renderableRestaurants.map(r => r.id));
+ 
+         // 1. Remove markers that are no longer in the list
+         markersRef.current.forEach((marker, id) => {
+@@ -364,43 +369,33 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
+         });
+ 
+         // 2. Add or update markers
+-        restaurantsToShow.forEach(restaurant => {
+-            if (!markersRef.current.has(restaurant.id)) {
+-                const imagePath = getRestaurantCategoryIcon(restaurant);
+-
++        renderableRestaurants.forEach(restaurant => {
++            let marker = markersRef.current.get(restaurant.id);
++            if (!marker) {
+                 const el = document.createElement('div');
+                 el.id = `marker-${restaurant.id}`;
+                 el.style.width = `32px`;
+                 el.style.height = `32px`;
+                 el.style.cursor = 'pointer';
+-                el.innerHTML = buildOverseasMarkerHtml({
+-                    imagePath,
+-                    name: restaurant.name,
+-                    popularityTier: restaurant.popularity_tier,
+-                });
+-
+-                el.addEventListener('click', (e) => {
+-                    e.stopPropagation();
+-                    onRestaurantSelect?.(restaurant);
+-                    onMarkerClick?.(restaurant);
+-                    moveToRestaurant(restaurant);
+-                });
+-
+-                const marker = new maplibregl.Marker({ element: el })
+-                    .setLngLat([Number(restaurant.lng), Number(restaurant.lat)])
+-                    .addTo(map.current!);
+-
++                marker = new maplibregl.Marker({ element: el });
+                 markersRef.current.set(restaurant.id, marker);
+-            } else {
+-                const marker = markersRef.current.get(restaurant.id)!;
+-                const element = marker.getElement();
+-                const tier = restaurant.popularity_tier ?? 'standard';
+-                if (element.querySelector('[data-popularity-tier]')?.getAttribute('data-popularity-tier') !== tier) {
+-                    element.innerHTML = buildOverseasMarkerHtml({ imagePath: getRestaurantCategoryIcon(restaurant), name: restaurant.name, popularityTier: tier });
+-                    const activeId = getOverseasMarkerActiveId({ searchedRestaurantId: searchedRestaurant?.id, selectedRestaurantId: selectedRestaurant?.id });
+-                    applyOverseasMarkerSelectedState({ container: element.querySelector('.marker-container'), isSelected: restaurant.id === activeId, markerElement: element });
+-                }
+             }
++            const element = marker.getElement();
++            const html = buildOverseasMarkerHtml({ imagePath: getRestaurantCategoryIcon(restaurant), name: restaurant.name, popularityTier: restaurant.popularity_tier });
++            if (markerHtmlRef.current.get(element) !== html) {
++                element.innerHTML = html;
++                markerHtmlRef.current.set(element, html);
++            }
++            // The retained SDK marker must use the current row and callbacks after a refresh.
++            element.onclick = (event) => {
++                event.stopPropagation();
++                onRestaurantSelect?.(restaurant);
++                onMarkerClick?.(restaurant);
++                moveToRestaurant(restaurant);
++            };
++            marker.setLngLat([Number(restaurant.lng), Number(restaurant.lat)]).addTo(map.current!);
++            const activeId = getOverseasMarkerActiveId({ searchedRestaurantId: searchedRestaurant?.id, selectedRestaurantId: selectedRestaurant?.id });
++            applyOverseasMarkerSelectedState({ container: element.querySelector('.marker-container'), isSelected: restaurant.id === activeId, markerElement: element });
+         });
+     }, [restaurantsToShow, isMapLoaded, moveToRestaurant, onRestaurantSelect, onMarkerClick, searchedRestaurant, selectedRestaurant]);
+ 
+diff --git a/apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx b/apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx
+index da26675d..29567edf 100644
+--- a/apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx
++++ b/apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx
+@@ -1,4 +1,7 @@
+-import { isLevel1SourceObserved, parseEvidenceFrame, unionApprovedEvidenceFrames } from "@/lib/evidence-engineering/frames";
++"use client";
++
++import { useState } from "react";
++import { isLevel1SourceObserved, parseEvidenceFrame, approvedEvidenceFramesOrEmpty } from "@/lib/evidence-engineering/frames";
+ import type { RestaurantEvidenceFrame } from "@/lib/evidence-engineering/types";
+ 
+ export function evidenceFrameEmbedRow(item: unknown): unknown {
+@@ -38,7 +41,7 @@ export function publicReviewedVideoFrames(groups: readonly unknown[][]): Restaur
+       return [];
+     }
+   }));
+-  return unionApprovedEvidenceFrames(parsed).filter(
++  return approvedEvidenceFramesOrEmpty(parsed).filter(
+     (frame) => frame.evidence_level === "SOURCE_OBSERVED",
+   );
+ }
+@@ -68,13 +71,25 @@ export function publicFramePresentation(frame: RestaurantEvidenceFrame): {
+   };
+ }
+ 
++function EvidenceFrameImage({ frame }: { frame: RestaurantEvidenceFrame }) {
++  const [failed, setFailed] = useState(false);
++  const presentation = publicFramePresentation(frame);
++  if (failed) return <span role="status" className="flex aspect-video items-center justify-center rounded-t-xl bg-muted px-3 text-center text-xs text-muted-foreground">장면 이미지를 불러오지 못했어요. 원본 영상에서 확인해 주세요.</span>;
++  return (
++    // eslint-disable-next-line @next/next/no-img-element -- Immutable reviewed frames use native lazy images.
++    <img src={publicEvidenceImageSource(frame)} alt={frame.detected_shop_name ?? frameLabel(frame)}
++      width={640} height={360} loading={presentation.loading} decoding="async" onError={() => setFailed(true)}
++      className="aspect-video w-full rounded-t-xl object-cover" />
++  );
++}
++
+ export function RestaurantEvidenceCarousel({ frames }: { frames: readonly RestaurantEvidenceFrame[][] }) {
+   const visible = publicReviewedVideoFrames(frames);
+   if (visible.length === 0) return null;
+   return (
+     <section className="py-2 pb-[env(safe-area-inset-bottom)]" aria-label="쯔양 영상 근거와 방문 장면">
+       <p className="text-2xs font-bold tracking-wide text-brand-garden-text">쯔양 영상 속 그 장면</p>
+-      <h3 className="mb-2 text-sm font-black tracking-tight">영상에서 확인한 간판·방문 장면 📸</h3>
++      <h3 className="mb-2 text-sm font-black tracking-tight">{visible.some(isLevel1SourceObserved) ? "영상에서 확인한 간판·방문 장면 📸" : "영상에서 확인한 방문·현장 장면 📸"}</h3>
+       {visible.some((frame) => !isLevel1SourceObserved(frame)) && (
+         <p className="mb-2 text-xs text-muted-foreground">현장 장면은 영상의 맥락을 보여주며, 매장 신원을 확인하는 간판·매장 안내와 구분해요.</p>
+       )}
+@@ -90,16 +105,7 @@ export function RestaurantEvidenceCarousel({ frames }: { frames: readonly Restau
+             className="block w-[min(68vw,18rem)] shrink-0 rounded-xl border border-border bg-card sm:w-64 lg:w-72"
+             aria-label={`${frameLabel(frame)} ${Math.floor(frame.timestamp_ms / 60000)}분 ${Math.floor(frame.timestamp_ms / 1000) % 60}초 영상 열기`}
+           >
+-              {/* eslint-disable-next-line @next/next/no-img-element -- Immutable reviewed frames use native lazy images. */}
+-              <img
+-                src={publicEvidenceImageSource(frame)}
+-                alt={frame.detected_shop_name ?? frameLabel(frame)}
+-                width={640}
+-                height={360}
+-                loading={presentation.loading}
+-                decoding="async"
+-                className="aspect-video w-full rounded-t-xl object-cover"
+-              />
++              <EvidenceFrameImage key={`${frame.storage_object_key}:${publicEvidenceImageSource(frame)}`} frame={frame} />
+               <span className="flex items-center justify-between gap-2 px-2 py-2 text-xs">
+                 <span>{frameLabel(frame)}</span>
+                 <span className="tabular-nums text-muted-foreground">{Math.floor(frame.timestamp_ms / 60000)}:{String(Math.floor(frame.timestamp_ms / 1000) % 60).padStart(2, "0")}</span>
+diff --git a/apps/web/lib/clustering.ts b/apps/web/lib/clustering.ts
+index 274d6d4c..c6dca94c 100644
+--- a/apps/web/lib/clustering.ts
++++ b/apps/web/lib/clustering.ts
+@@ -116,7 +116,18 @@ const geoJsonCache = new WeakMap<Restaurant[], RestaurantFeature[]>();
+ export const restaurantsToGeoJSON = (restaurants: Restaurant[]): RestaurantFeature[] => {
+     // 캐시 확인
+     const cached = geoJsonCache.get(restaurants);
+-    if (cached) {
++    let featureIndex = 0;
++    const current = cached && restaurants.every((restaurant) => {
++        if (restaurant.lat == null || restaurant.lng == null) return true;
++        const feature = cached[featureIndex++];
++        return feature?.properties.restaurantId === restaurant.id
++            && feature.properties.category === (Array.isArray(restaurant.categories) ? restaurant.categories[0] : restaurant.category || '기타')
++            && feature.properties.address === restaurant.address
++            && feature.properties.popularityTier === publicPopularityTier(restaurant.popularity_tier)
++            && Object.is(feature.geometry.coordinates[0], restaurant.lng)
++            && Object.is(feature.geometry.coordinates[1], restaurant.lat);
++    }) && featureIndex === cached.length;
++    if (current) {
+         return cached;
+     }
+ 
+@@ -442,6 +453,7 @@ type RestaurantClusterEntry = {
+     lng: Restaurant['lng'];
+     /** 이전 구현과 동일한 카테고리 값. 문자열이 아닐 수 있어 Map 키로 그대로 씁니다. */
+     categoryLabel: string;
++    popularityTier: "fire" | "ember" | "rainbow" | "standard";
+     hasCoordinates: boolean;
+     region?: string | null;
+     district?: string | null;
+@@ -467,6 +479,7 @@ const createClusterEntry = (restaurant: Restaurant): RestaurantClusterEntry => {
+         lat,
+         lng,
+         categoryLabel: clusterCategoryLabel(restaurant),
++        popularityTier: publicPopularityTier(restaurant.popularity_tier),
+         hasCoordinates: Boolean(lat) && Boolean(lng),
+     };
+ };
+@@ -476,7 +489,8 @@ const isClusterEntryCurrent = (restaurant: Restaurant, entry: RestaurantClusterE
+     && entry.address === clusterAddressOf(restaurant)
+     && Object.is(entry.lat, restaurant.lat)
+     && Object.is(entry.lng, restaurant.lng)
+-    && entry.categoryLabel === clusterCategoryLabel(restaurant);
++    && entry.categoryLabel === clusterCategoryLabel(restaurant)
++    && entry.popularityTier === publicPopularityTier(restaurant.popularity_tier);
+ 
+ /**
+  * 캐시된 항목 배열이 지금 목록과 같은지 확인합니다.
+diff --git a/apps/web/lib/evidence-engineering/frames.ts b/apps/web/lib/evidence-engineering/frames.ts
+index 47ffd798..a951f202 100644
+--- a/apps/web/lib/evidence-engineering/frames.ts
++++ b/apps/web/lib/evidence-engineering/frames.ts
+@@ -176,6 +176,16 @@ function sameIdentity(left: RestaurantEvidenceFrame, right: RestaurantEvidenceFr
+   );
+ }
+ 
++// Public detail rendering must fail closed without taking down the restaurant panel.
++export function approvedEvidenceFramesOrEmpty(groups: readonly RestaurantEvidenceFrame[][]): RestaurantEvidenceFrame[] {
++  try {
++    return unionApprovedEvidenceFrames(groups);
++  } catch (error) {
++    if (error instanceof EvidenceContractError) return [];
++    throw error;
++  }
++}
++
+ export function unionApprovedEvidenceFrames(groups: readonly RestaurantEvidenceFrame[][]): RestaurantEvidenceFrame[] {
+   const grouped = new Map<string, RestaurantEvidenceFrame[]>();
+   for (const group of groups) {
+diff --git a/apps/web/lib/restaurant-merged-media.ts b/apps/web/lib/restaurant-merged-media.ts
+index 1c782971..e85af772 100644
+--- a/apps/web/lib/restaurant-merged-media.ts
++++ b/apps/web/lib/restaurant-merged-media.ts
+@@ -1,5 +1,5 @@
+ import { evidenceFrameEmbedRow } from '@/components/restaurant/RestaurantEvidenceCarousel';
+-import { parseEvidenceFrame, unionApprovedEvidenceFrames } from '@/lib/evidence-engineering/frames';
++import { parseEvidenceFrame, approvedEvidenceFramesOrEmpty } from '@/lib/evidence-engineering/frames';
+ import { mergePopularityTierRecords } from '@/lib/evidence-engineering/records';
+ import type { PopularityTier, PopularityTierAssignment, RestaurantEvidenceFrame, ScoringCohortIdentity } from '@/lib/evidence-engineering/types';
+ import type { Restaurant, YoutubeMeta } from '@/types/restaurant';
+@@ -186,7 +186,7 @@ export const collectRestaurantMergedMedia = (restaurant: Restaurant | null | und
+         youtubeLinks,
+         tzuyangReviews,
+         youtubeMetas,
+-        evidenceFrames: evidenceGroups.length > 0 ? unionApprovedEvidenceFrames(evidenceGroups) : [],
++        evidenceFrames: approvedEvidenceFramesOrEmpty(evidenceGroups),
+         popularityCohort: popularity.cohort,
+         popularityTiers: popularity.tiers,
+         picksHighestTier: popularity.picksHighestTier,
+diff --git a/apps/web/scripts/build-public-popularity.ts b/apps/web/scripts/build-public-popularity.ts
+index 8991d58e..3f98fecb 100644
+--- a/apps/web/scripts/build-public-popularity.ts
++++ b/apps/web/scripts/build-public-popularity.ts
+@@ -13,7 +13,19 @@ export async function buildPublicPopularity(sourcePath: string, metricsPath: str
+   const source = JSON.parse(sourceBytes.toString()) as { rows: Array<Record<string, unknown>> };
+   const metrics = JSON.parse(metricBytes.toString()) as { rows: Array<{ video_id: string; view_count: number | string; fetched_at: string; bucket_started_at: string }> };
+   const byVideo = new Map(metrics.rows.map((r) => [r.video_id, r]));
+-  const rows = source.rows.map((r) => ({ ...r, approved_name: r.name })) as unknown as Tables<'restaurants'>[];
++  const rows = source.rows.map((r) => {
++    if (r.status !== 'approved') throw new Error('popularity_source_not_approved');
++    const validCoordinate = (value: unknown, limit: number) =>
++      (typeof value === 'number' || (typeof value === 'string' && value.trim() !== ''))
++      && Number.isFinite(Number(value)) && Math.abs(Number(value)) <= limit;
++    // Validate before mergeRestaurants can replace missing coordinates with zero.
++    if (!validCoordinate(r.lat, 90) || !validCoordinate(r.lng, 180) || (Number(r.lat) === 0 && Number(r.lng) === 0)) {
++      throw new Error('popularity_source_coordinates_invalid');
++    }
++    const name = r.approved_name ?? r.name;
++    if (typeof name !== 'string' || name.trim() === '') throw new Error('popularity_source_name_invalid');
++    return { ...r, name, approved_name: name, lat: Number(r.lat), lng: Number(r.lng) };
++  }) as unknown as Tables<'restaurants'>[];
+   const countries = [...new Set(Object.values(OVERSEAS_REGIONS).map((r) => r.country))];
+   const groups = mergeRestaurants(rows, () => 'standard').map((r) => {
+     const members = r.mergedRestaurants?.length ? r.mergedRestaurants : [r];
+@@ -23,7 +35,7 @@ export async function buildPublicPopularity(sourcePath: string, metricsPath: str
+       const metric = byVideo.get(id); const count = Number(metric?.view_count);
+       return metric && Number.isSafeInteger(count) && count > 0 ? [{ videoId: id, count, observedAt: metric.fetched_at || metric.bucket_started_at }] : [];
+     });
+-    const overseas = countries.some((country) => restaurantMatchesOverseasCountry(r, country)) || Number(r.lat) < 32 || Number(r.lat) > 40 || Number(r.lng) < 124 || Number(r.lng) > 132;
++    const overseas = countries.some((country) => restaurantMatchesOverseasCountry(r, country)) || Number(r.lat) < 33 || Number(r.lat) > 39 || Number(r.lng) < 124 || Number(r.lng) > 132;
+     return { restaurantId: ids[0], memberRestaurantIds: ids, name: r.name, cohort: overseas ? 'overseas' : 'domestic', viewCount: observed.length ? Math.max(...observed.map((m) => m.count)) : null, observed };
+   });
+   const thresholds = ['domestic', 'overseas'].map((cohort) => {
+@@ -38,7 +50,7 @@ export async function buildPublicPopularity(sourcePath: string, metricsPath: str
+   }).sort((a, b) => a.restaurantId.localeCompare(b.restaurantId));
+   const publication = parsePublicPopularityPublication({ schemaVersion: 2, publicationVersion: 'video-views-20261022-v1', sourceRevision: revision, entries });
+   const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
+-  return { publication, evidence: { policy: 'map-cohort-max-linked-video-views-nearest-rank-p95-p85-v1', definition: 'Most-viewed linked video per merged restaurant, ranked separately within domestic and overseas approved restaurant cohorts. This measures video reach, not food quality.', sourceSha256: sha(sourceBytes), metricsSha256: sha(metricBytes), thresholds, groups } };
++  return { publication, evidence: { policy: 'map-cohort-max-linked-video-views-nearest-rank-p98-p95-p85-v2', definition: 'Most-viewed linked video per merged restaurant, ranked separately within domestic and overseas approved restaurant cohorts. This measures video reach, not food quality.', sourceSha256: sha(sourceBytes), metricsSha256: sha(metricBytes), thresholds, groups } };
+ }
+ 
+ if (import.meta.main) {
+diff --git a/apps/web/tests-unit/clustering-region-district.test.ts b/apps/web/tests-unit/clustering-region-district.test.ts
+index 51c79304..d5af41ae 100644
+--- a/apps/web/tests-unit/clustering-region-district.test.ts
++++ b/apps/web/tests-unit/clustering-region-district.test.ts
+@@ -6,6 +6,7 @@ import {
+     getDistance,
+     getRegionalClusters,
+     getSeoulDistrictClusters,
++    restaurantsToGeoJSON,
+ } from '../lib/clustering';
+ import type { Restaurant } from '../types/restaurant';
+ 
+@@ -37,6 +38,24 @@ const makeSeoulRow = (id: string, district: string, overrides: Partial<Restauran
+     });
+ };
+ 
++test('tier-only mutations invalidate retained Seoul and GeoJSON caches without promoting unknown tiers', () => {
++    const rows = [makeSeoulRow('tier-a', '강남구', { popularity_tier: 'standard' }), makeSeoulRow('tier-b', '강남구')];
++    getRegionalClusters(rows);
++    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('standard');
++    const original = restaurantsToGeoJSON(rows);
++    rows[0].popularity_tier = 'fire';
++    getRegionalClusters(rows);
++    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('fire');
++    const changed = restaurantsToGeoJSON(rows);
++    expect(changed).not.toBe(original);
++    expect(changed[0].properties.popularityTier).toBe('fire');
++    expect(restaurantsToGeoJSON(rows)).toBe(changed);
++    rows[0].popularity_tier = 'unreviewed' as Restaurant['popularity_tier'];
++    getRegionalClusters(rows);
++    expect(getSeoulDistrictClusters(rows, 1).clusters[0].popularityTier).toBe('standard');
++    expect(restaurantsToGeoJSON(rows)[0].properties.popularityTier).toBe('standard');
++});
++
+ describe('getRegionalClusters', () => {
+     test('빈 목록은 빈 배열을 돌려준다', () => {
+         expect(getRegionalClusters([])).toEqual([]);
+diff --git a/apps/web/tests-unit/evidence-frame-conflict.test.ts b/apps/web/tests-unit/evidence-frame-conflict.test.ts
+new file mode 100644
+index 00000000..3034f96a
+--- /dev/null
++++ b/apps/web/tests-unit/evidence-frame-conflict.test.ts
+@@ -0,0 +1,24 @@
++import { expect, test } from 'bun:test';
++import { readFileSync } from 'node:fs';
++import { resolve } from 'node:path';
++import { buildEvidenceFrame, unionApprovedEvidenceFrames } from '../lib/evidence-engineering/frames';
++import { publicReviewedVideoFrames } from '../components/restaurant/RestaurantEvidenceCarousel';
++import { collectRestaurantMergedMedia } from '../lib/restaurant-merged-media';
++import type { Restaurant } from '../types/restaurant';
++const reviewed = JSON.parse(readFileSync(resolve(import.meta.dir, '../../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
++const frame = buildEvidenceFrame(reviewed.frames[0].frame);
++
++test('frame conflicts fail closed at both public read boundaries while strict publication validation still rejects', () => {
++  for (const other of [
++    buildEvidenceFrame({ ...frame, detected_shop_name: '충돌 이름' }),
++    buildEvidenceFrame({ ...frame, moderation_status: 'rejected' }),
++    buildEvidenceFrame({ ...frame, frame_id: 'same-key-different-frame' }),
++  ]) {
++    expect(() => unionApprovedEvidenceFrames([[frame], [other]])).toThrow();
++    expect(publicReviewedVideoFrames([[frame], [other]])).toEqual([]);
++    const media = collectRestaurantMergedMedia({ id: 'conflict-owner', name: '충돌 식당', youtube_link: frame.youtube_seek_url,
++      evidence_frames: [frame], mergedEvidenceFrames: [other] } as unknown as Restaurant);
++    expect(media.evidenceFrames).toEqual([]);
++    expect(media.youtubeLinks).toContain(frame.youtube_seek_url);
++  }
++});
+diff --git a/apps/web/tests-unit/evidence-frame-failure-browser.test.ts b/apps/web/tests-unit/evidence-frame-failure-browser.test.ts
+new file mode 100644
+index 00000000..b19ec324
+--- /dev/null
++++ b/apps/web/tests-unit/evidence-frame-failure-browser.test.ts
+@@ -0,0 +1,61 @@
++import { expect, test } from 'bun:test';
++import { existsSync, readFileSync } from 'node:fs';
++import { join, resolve } from 'node:path';
++import { chromium, expect as ui } from '@playwright/test';
++
++const appRoot = join(import.meta.dir, '..');
++const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
++const reviewed = JSON.parse(readFileSync(resolve(appRoot, '../../docs/evidence/marker-evidence-live-20261021-v1/reviewed-frames.json'), 'utf8'));
++const frame = reviewed.frames[0].frame;
++
++async function bundle() {
++  const entry = `import React, { useState } from 'react'; import { createRoot } from 'react-dom/client';
++    import { RestaurantEvidenceCarousel } from './components/restaurant/RestaurantEvidenceCarousel';
++    const frame = ${JSON.stringify(frame)};
++    function App() { const [path, setPath] = useState('valid.webp');
++      return <><button onClick={() => setPath('missing.webp')}>실패 재현</button>
++        <button onClick={() => setPath('restored.webp')}>새 이미지</button>
++        <RestaurantEvidenceCarousel frames={[[{ ...frame, image_url: 'https://frame-failure.test/' + path }]]} /></>; }
++    createRoot(document.body.appendChild(document.createElement('div'))).render(<App />);`;
++  const built = await Bun.build({ entrypoints: ['frame-failure-fixture'], target: 'browser', format: 'iife', write: false,
++    define: { 'process.env.NODE_ENV': '"test"' }, plugins: [{ name: 'frame-failure', setup(builder) {
++      builder.onResolve({ filter: /^frame-failure-fixture$/ }, () => ({ path: 'entry', namespace: 'fixture' }));
++      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: entry, loader: 'tsx', resolveDir: appRoot }));
++      builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync('./' + args.path.slice(2), appRoot) }));
++    }}] });
++  expect(built.success).toBe(true); return built.outputs[0].text();
++}
++
++(existsSync(chrome) ? test : test.skip)('context-only frames keep an honest heading and original video link after image failure, and recover for a new source', async () => {
++  const browser = await chromium.launch({ executablePath: chrome, headless: true });
++  try {
++    const script = await bundle();
++    const bytes = readFileSync(resolve(appRoot, 'public/evidence-frames', frame.storage_object_key));
++    for (const width of [390, 820, 1440]) {
++      const page = await browser.newPage({ viewport: { width, height: 950 } });
++      try {
++        const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
++        await page.route('**/*', route => {
++          const url = route.request().url();
++          if (url.endsWith('valid.webp') || url.endsWith('restored.webp')) return route.fulfill({ contentType: 'image/webp', body: bytes });
++          if (url.endsWith('missing.webp')) return route.fulfill({ status: 404, body: '' });
++          if (url === 'https://frame-failure.test/') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' });
++          return route.abort();
++        });
++        await page.goto('https://frame-failure.test/'); await page.addScriptTag({ content: script });
++        await ui(page.getByRole('heading', { name: '영상에서 확인한 방문·현장 장면 📸' })).toBeVisible();
++        await ui(page.locator('section img')).toBeVisible();
++        await ui.poll(() => page.locator('section img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(640);
++        await page.getByRole('button', { name: '실패 재현' }).click();
++        await ui(page.getByRole('status')).toContainText('원본 영상에서 확인');
++        await ui(page.locator('section img')).toHaveCount(0);
++        await ui(page.locator('section a')).toHaveAttribute('href', frame.youtube_seek_url);
++        await page.getByRole('button', { name: '새 이미지' }).click();
++        await ui(page.locator('section img')).toHaveAttribute('src', 'https://frame-failure.test/restored.webp');
++        await ui.poll(() => page.locator('section img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(640);
++        await ui(page.getByRole('status')).toHaveCount(0);
++        expect(errors).toEqual([]);
++      } finally { await page.close(); }
++    }
++  } finally { await browser.close(); }
++}, 60000);
+diff --git a/apps/web/tests-unit/overseas-marker-refresh-browser.test.ts b/apps/web/tests-unit/overseas-marker-refresh-browser.test.ts
+new file mode 100644
+index 00000000..782e7a13
+--- /dev/null
++++ b/apps/web/tests-unit/overseas-marker-refresh-browser.test.ts
+@@ -0,0 +1,101 @@
++import { expect, test } from 'bun:test';
++import { existsSync } from 'node:fs';
++import { join } from 'node:path';
++import { chromium, expect as ui } from '@playwright/test';
++
++const appRoot = join(import.meta.dir, '..');
++const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
++
++async function fixtureBundle() {
++  const entry = `
++    import React, { useState } from 'react';
++    import { createRoot } from 'react-dom/client';
++    import OverseasMap from './components/map/OverseasMap';
++    const initial = { id: 'refresh-marker', name: '처음 식당', lat: 35, lng: 139, categories: ['한식'], popularity_tier: 'fire' };
++    globalThis.__rows = [initial]; globalThis.__sdk = { creations: 0, jumps: [], clicks: [] };
++    function App() {
++      const [version, update] = useState(0);
++      globalThis.__refresh = patch => { globalThis.__rows = [{ ...globalThis.__rows[0], ...patch }]; update(v => v + 1); };
++      return <OverseasMap filters={{ categories: [], minRating: 0, minReviews: 0, minUserVisits: 0, minJjyangVisits: 0 }} selectedCountry={null} searchedRestaurant={null}
++        selectedRestaurant={globalThis.__rows[0]} refreshTrigger={version} mapFocusZoom={12 + version}
++        onRestaurantSelect={row => globalThis.__sdk.clicks.push({ kind: 'select', name: row.name, version })}
++        onMarkerClick={row => globalThis.__sdk.clicks.push({ kind: 'marker', name: row.name, version })} />;
++    }
++    createRoot(document.body.appendChild(document.createElement('div'))).render(<App />);
++  `;
++  const sdk = `
++    export const setWorkerUrl = () => {};
++    export class AttributionControl {}
++    export class Map {
++      constructor(options) { this.container = options.container; }
++      on(event, callback) { if (event === 'load') setTimeout(callback, 0); return this; }
++      addControl() {} resize() {} remove() {} getZoom() { return 5; }
++      jumpTo(value) { globalThis.__sdk.jumps.push(value); } easeTo() {}
++    }
++    export class Marker {
++      constructor({element}) { this.element = element; globalThis.__sdk.creations++; }
++      getElement() { return this.element; }
++      setLngLat(value) { this.element.dataset.coordinates = JSON.stringify(value); return this; }
++      addTo(map) { map.container.append(this.element); return this; }
++      remove() { this.element.remove(); }
++    }
++  `;
++  const result = await Bun.build({ entrypoints: ['overseas-refresh-fixture'], target: 'browser', format: 'iife', write: false,
++    define: { 'process.env.NODE_ENV': '"test"', 'process.env.NEXT_PUBLIC_MAPLIBRE_WORKER_URL': '""' }, plugins: [{ name: 'overseas-refresh', setup(builder) {
++      builder.onResolve({ filter: /^overseas-refresh-fixture$/ }, () => ({ path: 'entry', namespace: 'fixture' }));
++      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: entry, loader: 'tsx', resolveDir: appRoot }));
++      builder.onResolve({ filter: /^maplibre-gl$/ }, () => ({ path: 'sdk', namespace: 'stub' }));
++      builder.onResolve({ filter: /hooks\/use-restaurants$/ }, () => ({ path: 'rows', namespace: 'stub' }));
++      builder.onResolve({ filter: /\.css$/ }, () => ({ path: 'css', namespace: 'stub' }));
++      builder.onLoad({ filter: /.*/, namespace: 'stub' }, args => ({ loader: 'ts', contents: args.path === 'sdk' ? sdk
++        : args.path === 'rows' ? 'export const useRestaurants = () => ({ data: globalThis.__rows, isLoading: false });' : '' }));
++      builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync('./' + args.path.slice(2), appRoot) }));
++    }}] });
++  expect(result.success).toBe(true);
++  return result.outputs[0].text();
++}
++
++(existsSync(chrome) ? test : test.skip)('retained overseas markers refresh content, location and click data without recreating or losing selection', async () => {
++  const browser = await chromium.launch({ executablePath: chrome, headless: true });
++  try {
++    const script = await fixtureBundle();
++    for (const width of [390, 820, 1440]) {
++      const page = await browser.newPage({ viewport: { width, height: 950 } });
++      try {
++        const errors: string[] = [];
++        page.on('pageerror', error => errors.push(error.message));
++        await page.route('**/*', route => route.request().url().startsWith('https://marker-refresh.test/')
++          ? route.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' }) : route.abort());
++        await page.goto('https://marker-refresh.test/'); await page.addScriptTag({ content: script });
++        const marker = page.locator('#marker-refresh-marker');
++        try { await ui(marker.locator('img')).toHaveAttribute('alt', '처음 식당'); }
++        catch (error) { throw new Error(JSON.stringify({ errors, body: await page.locator('body').innerText() }), { cause: error }); }
++        await marker.evaluate(element => { (window as unknown as { __retained: Element }).__retained = element; });
++        await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({ name: '최신 식당', categories: ['고기'], lat: 36, lng: 140 }));
++        await ui(marker.locator('img')).toHaveAttribute('alt', '최신 식당');
++        await ui(marker.locator('img')).toHaveAttribute('src', /meat_bbq/);
++        await ui(marker).toHaveAttribute('data-coordinates', '[140,36]');
++        await ui(marker).toHaveClass(/selected/);
++        await marker.click();
++        expect(await page.evaluate(() => (window as unknown as { __sdk: unknown }).__sdk)).toMatchObject({
++          creations: 1, clicks: [{ kind: 'select', name: '최신 식당', version: 1 }, { kind: 'marker', name: '최신 식당', version: 1 }],
++        });
++        await marker.locator('img').evaluate(element => { (window as unknown as { __image: Element }).__image = element; });
++        await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({}));
++        await ui(marker).toHaveAttribute('data-coordinates', '[140,36]');
++        expect(await marker.locator('img').evaluate(element => element === (window as unknown as { __image: Element }).__image)).toBe(true);
++        await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({ popularity_tier: 'rainbow' }));
++        await ui(marker.locator('[data-popularity-tier]')).toHaveAttribute('data-popularity-tier', 'rainbow');
++        await ui(marker).toHaveClass(/selected/);
++        expect(await marker.evaluate(element => element === (window as unknown as { __retained: Element }).__retained)).toBe(true);
++        await marker.click();
++        const state = await page.evaluate(() => (window as unknown as { __sdk: { creations: number; clicks: unknown[]; jumps: { center: number[]; zoom: number }[] } }).__sdk);
++        expect(state.creations).toBe(1); expect(state.clicks).toHaveLength(4);
++        expect(state.jumps.at(-1)).toMatchObject({ center: [140, 36], zoom: 15 });
++        await page.evaluate(() => (window as unknown as { __refresh: (row: object) => void }).__refresh({ lat: 0, lng: 0 }));
++        await ui(marker).toHaveCount(0);
++        expect(errors).toEqual([]);
++      } finally { await page.close(); }
++    }
++  } finally { await browser.close(); }
++}, 60000);
+diff --git a/apps/web/tests-unit/popularity-input-boundary.test.ts b/apps/web/tests-unit/popularity-input-boundary.test.ts
+new file mode 100644
+index 00000000..f1c513df
+--- /dev/null
++++ b/apps/web/tests-unit/popularity-input-boundary.test.ts
+@@ -0,0 +1,58 @@
++import { afterEach, expect, test } from 'bun:test';
++import { mkdtemp, rm, writeFile } from 'node:fs/promises';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import { buildPublicPopularity } from '../scripts/build-public-popularity';
++
++const dirs: string[] = [];
++afterEach(async () => { for (const dir of dirs.splice(0)) await rm(dir, { recursive: true, force: true }); });
++
++async function build(patch: Record<string, unknown> = {}) {
++  const dir = await mkdtemp(join(tmpdir(), 'tzudong-popularity-boundary-')); dirs.push(dir);
++  const row = { id: 'approved-a', name: '한식당', approved_name: '승인 식당명', status: 'approved', lat: 37.5, lng: 127,
++    road_address: '서울특별시 강남구', categories: ['한식'], youtube_link: 'https://www.youtube.com/watch?v=abc123DEF45', ...patch };
++  await writeFile(join(dir, 'source.json'), JSON.stringify({ rows: [row] }));
++  await writeFile(join(dir, 'metrics.json'), JSON.stringify({ rows: [{ video_id: 'abc123DEF45', view_count: 123,
++    fetched_at: '2026-07-01T00:00:00Z', bucket_started_at: '2026-07-01T00:00:00Z' }] }));
++  return buildPublicPopularity(join(dir, 'source.json'), join(dir, 'metrics.json'), 'a'.repeat(40));
++}
++
++test('rejects unapproved source rows before merge rather than granting a public tier', async () => {
++  for (const status of ['pending', 'deleted', null]) {
++    await expect(build({ status })).rejects.toThrow('popularity_source_not_approved');
++  }
++});
++
++test('rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them', async () => {
++  for (const patch of [{ lat: null }, { lng: null }, { lat: '' }, { lng: ' ' }, { lat: 'NaN' }, { lat: 91 }, { lng: -181 }, { lat: 0, lng: 0 }]) {
++    await expect(build(patch)).rejects.toThrow('popularity_source_coordinates_invalid');
++  }
++});
++
++test('preserves approved names and records the actual P98/P95/P85 policy for valid inputs', async () => {
++  const result = await build();
++  expect(result.evidence.groups[0].name).toBe('승인 식당명');
++  expect(result.evidence.groups[0].cohort).toBe('domestic');
++  expect(result.evidence.policy).toBe('map-cohort-max-linked-video-views-nearest-rank-p98-p95-p85-v2');
++  // One known group reaches all three nearest-rank thresholds; this is not a fixed percentage quota.
++  expect(result.publication.entries[0].tier).toBe('fire');
++});
++
++test('uses the shared-map latitude boundary and rejects unnamed publication inputs', async () => {
++  for (const lat of [32.5, 39.5]) expect((await build({ lat })).evidence.groups[0].cohort).toBe('overseas');
++  await expect(build({ approved_name: '', name: '' })).rejects.toThrow('popularity_source_name_invalid');
++});
++
++test('nearest-rank has no ember at n=19 but separates P95 and P98 at n=20', async () => {
++  for (const size of [19, 20]) {
++    const dir = await mkdtemp(join(tmpdir(), 'tzudong-nearest-rank-')); dirs.push(dir);
++    const rows = Array.from({ length: size }, (_, index) => ({ id: `shop-${index}`, name: `식당 ${index}`, status: 'approved',
++      lat: 37.5, lng: 127, road_address: `서울특별시 강남구 테스트로 ${index}`, youtube_link: `https://www.youtube.com/watch?v=${String(index).padStart(11, '0')}` }));
++    const metrics = rows.map((_, index) => ({ video_id: String(index).padStart(11, '0'), view_count: index + 1, fetched_at: '2026-07-01T00:00:00Z' }));
++    await writeFile(join(dir, 'source.json'), JSON.stringify({ rows }));
++    await writeFile(join(dir, 'metrics.json'), JSON.stringify({ rows: metrics }));
++    const result = await buildPublicPopularity(join(dir, 'source.json'), join(dir, 'metrics.json'), 'a'.repeat(40));
++    expect(result.evidence.thresholds[0]).toMatchObject({ knownGroups: size, fireAt: size, emberAt: 19 });
++    expect(result.publication.entries.filter(entry => entry.tier === 'ember')).toHaveLength(size === 19 ? 0 : 1);
++  }
++});

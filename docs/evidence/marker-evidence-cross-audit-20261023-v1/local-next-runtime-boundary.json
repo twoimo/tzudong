@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-22T21:11:40.323842+00:00",
+  "next_version": "16.3.8",
+  "build": "Passed compile, TypeScript,56static routes and CSS boundaries",
+  "runtime": "Actual next start port18081; SSR shell and clienthydration render without observed hydration exceptions; hosted restaurants401 => detail frame realdata path is NOT localHOST_TESTED",
+  "observed": [
+    "Supabase restaurants401",
+    "Naver auth401",
+    "localVercelspeedinsights404"
+  ],
+  "cause": "Ignored .env.local and supported currentproductionenvpull both return a non-JWT/nonpublishable11character placeholder for the public client key. No key value logged, no hosted setting altered.",
+  "next_allowed": "Native component/data/SDK boundary fixtures already passed; preserve actual hosted data validation for protected preview/production environment and readback. Never replace anon with service-role key.",
+  "nightly": "Separate historicalfailure, not rerun"
+}

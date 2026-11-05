@@ -1,0 +1,85 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-formal/marker-state-model.test.mjs:
+FORMAL_BROWSER 156.0.8078.47
+156 | }
+157 | 
+158 | test('all 9,216 active/reacquired visual transitions show the current static marker and bubble', async () => {
+159 |   await withFixture(async page => {
+160 |     const result = await page.evaluate(() => window.__formal.visualPairs());
+161 |     expect(result).toEqual({ checked: 9216 });
+      ^
+error: expect(received).toEqual(expected)
+
+  {
+-   "checked": 9216,
++   "actual": {
++     "alt": "설명 0",
++     "bubbles": 1,
++     "currentReview": false,
++     "flames": 0,
++     "tier": "standard",
++     "visits": "1",
++   },
++   "after": {
++     "alt": 0,
++     "bubble": 2,
++     "tier": "standard",
++     "visits": 1,
++   },
++   "before": {
++     "alt": 0,
++     "bubble": 1,
++     "tier": "standard",
++     "visits": 1,
++   },
++   "checked": 202,
++   "expected": {
++     "alt": "설명 0",
++     "bubbles": 1,
++     "currentReview": true,
++     "flames": 0,
++     "tier": "standard",
++     "visits": "1",
++   },
++   "released": false,
++   "sameBubbleIdentity": true,
+  }
+
+- Expected  - 1
++ Received  + 31
+
+      at toEqual (unknown:1:1)
+      at <repo>/apps/web/tests-formal/marker-state-model.test.mjs:161:20
+      at withFixture (<repo>/apps/web/tests-formal/marker-state-model.test.mjs:154:11)
+      at <repo>/apps/web/tests-formal/marker-state-model.test.mjs:159:9
+      at processTicksAndRejections (unknown:7:39)
+(fail) all 9,216 active/reacquired visual transitions show the current static marker and bubble [1432.60ms]
+(pass) a review-only transition retains the image and avoids an SDK icon replacement [1602.21ms]
+FORMAL_OWNERSHIP_STEPS 18056
+(pass) every pool/click action sequence through depth four keeps current callback ownership [1514.41ms]
+
+tests-unit/visible-marker-review-bubbles.test.ts:
+20 |   test('in-place review field updates reach the wrapped HTML', () => {
+21 |     const bubble = { ...baseBubble, photoUrl: null as string | null };
+22 |     const marker = '<div data-testid="marker">식당</div>';
+23 |     expect(wrapNaverMarkerContentWithReviewBubble(marker, bubble, false)).toContain(bubble.content);
+24 |     bubble.content = '제자리에서 갱신한 리뷰';
+25 |     expect(wrapNaverMarkerContentWithReviewBubble(marker, bubble, false)).toContain(bubble.content);
+                                                                               ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "제자리에서 갱신한 리뷰"
+Received: "\n        <div\n          data-visible-marker-review-bubble-anchor=\"true\"\n          style=\"\n            position:relative;\n            width:32px;\n            height:32px;\n            overflow:visible;\n            pointer-events:auto;\n          \"\n        >\n          \n    <div\n      data-visible-marker-review-bubble=\"true\"\n      role=\"button\"\n      aria-label=\"리뷰어님의 최근 리뷰 보기\"\n      style=\"\n        position:absolute;\n        left:50%;\n        bottom:40px;\n        width:210px;\n        max-width:210px;\n        transform:translateX(-50%);\n        border-radius:16px;\n        background:rgba(255,255,255,0.96);\n        border:1px solid rgba(190,18,60,0.18);\n        padding:7px;\n        display:flex;\n        align-items:center;\n        gap:7px;\n        color:#111827;\n        pointer-events:auto;\n        user-select:none;\n        -webkit-tap-highlight-color:transparent;\n      \"\n    >\n      <span aria-hidden=\"true\" style=\"width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:#fee2e2;color:#b91c1c;font-size:15px;font-weight:900;flex:0 0 auto;\">리</span>\n      <span style=\"min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.2;\">\n        <strong style=\"display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:800;color:#991b1b;\">리뷰어</strong>\n        <span style=\"display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:650;color:#374151;\">국물이 진하고 만두가 푸짐해요.</span>\n      </span>\n      <span aria-hidden=\"true\" style=\"position:absolute;left:50%;bottom:-6px;width:12px;height:12px;transform:translateX(-50%) rotate(45deg);background:rgba(255,255,255,0.96);border-bottom:1px solid rgba(190,18,60,0.18);border-right:1px solid rgba(190,18,60,0.18);\"></span>\n    </div>\n  \n          <div data-testid=\"marker\">식당</div>\n        </div>\n    "
+
+      at <anonymous> (<repo>/apps/web/tests-unit/visible-marker-review-bubbles.test.ts:25:75)
+(fail) visible marker review bubble signatures > in-place review field updates reach the wrapped HTML [0.56ms]
+(pass) visible marker review bubble signatures > reuses the id signature for the same restaurant list [0.09ms]
+(pass) visible marker review bubble signatures > changes when rendered bubble content changes under the same review id [0.08ms]
+(pass) visible marker review bubble signatures > is stable regardless of record insertion order [0.03ms]
+(pass) visible marker review bubble signatures > reuses one bubble render token until its fields change [0.04ms]
+
+ 6 pass
+ 2 fail
+ 17 expect() calls
+Ran 8 tests across 2 files. [5.30s]

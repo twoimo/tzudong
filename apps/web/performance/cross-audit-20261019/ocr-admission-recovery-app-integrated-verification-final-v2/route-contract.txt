@@ -1,0 +1,26 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/zz-ocr-route-contract.test.ts:
+(pass) OCR extract route privacy and normalization contract > durable status readback is bounded, provider-free, and returns fixed failures [0.19ms]
+(pass) OCR extract route privacy and normalization contract > public, streaming, status, and admin callers bind one inference snapshot to cache and provider execution [0.20ms]
+(pass) OCR extract route privacy and normalization contract > stores only bounded count/status metadata and excludes raw receipt/provider/credential payloads [1.18ms]
+(pass) OCR extract route privacy and normalization contract > disables raw OCR log caching and persists fixed failure codes only [0.20ms]
+(pass) OCR extract route privacy and normalization contract > rejects unauthenticated and oversized OCR requests before reading image bytes [0.14ms]
+(pass) OCR extract route privacy and normalization contract > rejects cross-site OCR mutations before authentication or paid work [0.22ms]
+(pass) OCR extract route privacy and normalization contract > parses only bounded, unique OCR multipart fields [0.65ms]
+(pass) OCR extract route privacy and normalization contract > rejects malformed and chunked oversized OCR multipart bodies [3.78ms]
+(pass) OCR extract route privacy and normalization contract > keeps authenticated OCR reads and writes on the user-scoped client [0.18ms]
+(pass) OCR extract route privacy and normalization contract > force refresh rejection copy does not expose dev/admin internals [0.06ms]
+(pass) OCR extract route privacy and normalization contract > fails closed without exposing diagnostics when quota state is unavailable [0.21ms]
+(pass) OCR extract route privacy and normalization contract > passes the complete ordered model policy to both OCR provider entrypoints [0.07ms]
+(pass) OCR extract route privacy and normalization contract > uses an authenticated atomic OCR quota reservation instead of count-then-act [0.32ms]
+(pass) OCR extract route privacy and normalization contract > parses bounded OCR quota receipts and fails closed on malformed RPC data [0.25ms]
+(pass) OCR extract route privacy and normalization contract > admin OCR preflights resets, preserves dispatch retries, and isolates explicit indeterminate recovery [0.77ms]
+(pass) OCR extract route privacy and normalization contract > inline OCR rejects foreign, originless, and cross-site browser mutations [0.07ms]
+(pass) OCR extract route privacy and normalization contract > inline OCR blocks secret-bearing fixtures before persistence and never retains debug receipt artifacts [0.44ms]
+(pass) OCR extract route privacy and normalization contract > admin receipt image retrieval remains private, bounded, contained, and non-destructive [8.69ms]
+
+ 18 pass
+ 0 fail
+ 346 expect() calls
+Ran 18 tests across 1 file. [231.00ms]

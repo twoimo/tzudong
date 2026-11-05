@@ -1,0 +1,13 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/receipt-ocr-post105-sql-successor.test.ts:
+(pass) receipt OCR post-105 SQL successor > binds the immutable terminal-105 identity to one exact held 105-to-106 migration [622.74ms]
+(pass) receipt OCR post-105 SQL successor > builds exact prior and terminal fixtures and rejects a reused 105 terminal receipt [645.90ms]
+(pass) receipt OCR post-105 SQL successor > compiles the exact migration source into one outer transaction with terminal readback [675.66ms]
+(pass) receipt OCR post-105 SQL successor > state query requires exact count, root, migration vector, and stage [617.85ms]
+(pass) receipt OCR post-105 SQL successor > fails closed on migration source identity or target-root drift [1954.49ms]
+
+ 5 pass
+ 0 fail
+ 31 expect() calls
+Ran 5 tests across 1 file. [4.65s]

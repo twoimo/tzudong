@@ -20,6 +20,63 @@ set -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
+load_laaj_cache_settings() {
+    ENV_FILES=(
+    "$PROJECT_ROOT/.env"
+    "$PROJECT_ROOT/../.env"
+    )
+
+    if [ "${TZUDONG_PIPELINE_ISOLATED:-0}" != "1" ]; then
+    for env_file in "${ENV_FILES[@]}"; do
+        if [ -f "$env_file" ]; then
+            set -a
+            source "$env_file"
+            set +a
+            break
+        fi
+    done
+    fi
+
+    HAS_AGY_CLI=false
+    AGY_MODEL_LABEL="unavailable"
+    local bridge="$PROJECT_ROOT/backend/bin/run_agy_prompt.py"
+    if [ -f "$bridge" ] && "$PYTHON_EXE" "$bridge" --locate-only >/dev/null 2>&1; then
+        HAS_AGY_CLI=true
+        AGY_MODEL_LABEL=$("$PYTHON_EXE" "$bridge" --print-config-model 2>/dev/null || echo "Antigravity default model")
+    fi
+    export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.8-flash}"
+    export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.8-flash}"
+    source "$PROJECT_ROOT/backend/utils/gemini-model.sh" || exit 1
+    migrate_deprecated_gemini_model_vars PRIMARY_MODEL FALLBACK_MODEL
+    export CURRENT_MODEL="$PRIMARY_MODEL"
+    export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"
+    export LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-MEDIUM}"
+}
+
+laaj_cache_args() {
+    local crawl="$1" evaluation="$2" video="$3"
+    LAAJ_CACHE_ARGS=(--receipt "$evaluation/evaluation/laaj_results/.receipts/$video.json"
+        --pipeline-stage laaj --crawling-path "$crawl" --evaluation-path "$evaluation" --video-id "$video"
+        --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
+        --setting "$AGY_MODEL_LABEL" --output "$evaluation/evaluation/laaj_results/$video.jsonl")
+}
+
+# No credential repair, health call, output directory or provider initialization.
+if [ "${1:-}" = "--cache-check" ]; then
+    [ "$#" -eq 4 ] || exit 2
+    PYTHON_EXE="${PYTHON_CMD:-python3}"
+    load_laaj_cache_settings
+    laaj_cache_args "$2" "$3" "$4"
+    exec "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" check "${LAAJ_CACHE_ARGS[@]}"
+fi
+if [ "${1:-}" = "--cache-check-many" ]; then
+    [ "$#" -eq 3 ] || exit 2
+    PYTHON_EXE="${PYTHON_CMD:-python3}"
+    load_laaj_cache_settings
+    laaj_cache_args "$2" "$3" '{id}'
+    exec "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" check-many "${LAAJ_CACHE_ARGS[@]}"
+fi
+
 # OS 감지
 OS_TYPE="$(uname -s)"
 case "${OS_TYPE}" in
@@ -255,21 +312,7 @@ PROMPT_FILE="$SCRIPT_DIR/../prompts/evaluation_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_laaj_evaluation.py"
 AGY_BRIDGE_SCRIPT="$PROJECT_ROOT/backend/bin/run_agy_prompt.py"
 
-ENV_FILES=(
-    "$PROJECT_ROOT/.env"
-    "$PROJECT_ROOT/../.env"
-)
-
-if [ "${TZUDONG_PIPELINE_ISOLATED:-0}" != "1" ]; then
-    for env_file in "${ENV_FILES[@]}"; do
-        if [ -f "$env_file" ]; then
-            set -a
-            source "$env_file"
-            set +a
-            break
-        fi
-    done
-fi
+load_laaj_cache_settings
 
 # API Key 정리 (Windows 호환성)
 if [ -n "$GEMINI_API_KEY" ]; then
@@ -308,12 +351,7 @@ if [ "${TZUDONG_PIPELINE_ISOLATED:-0}" != "1" ] && grep -qi "microsoft\|wsl" /pr
 fi
 
 # OAuth CLI 확인 (LAAJ 평가는 텍스트 전용이므로 CLI/OAuth 가능)
-HAS_AGY_CLI=false
-AGY_MODEL_LABEL="unavailable"
-if [ -f "$AGY_BRIDGE_SCRIPT" ] && "$PYTHON_EXE" "$AGY_BRIDGE_SCRIPT" --locate-only >/dev/null 2>&1; then
-    HAS_AGY_CLI=true
-    AGY_MODEL_LABEL=$("$PYTHON_EXE" "$AGY_BRIDGE_SCRIPT" --print-config-model 2>/dev/null || echo "Antigravity default model")
-else
+if [ "$HAS_AGY_CLI" != true ]; then
     log_warning "Antigravity CLI(agy) 미설치/미감지 - Gemini CLI OAuth fallback만 사용합니다."
 fi
 
@@ -355,13 +393,6 @@ fi
 
 # Gemini API 키 및 모델 설정
 export GEMINI_API_KEY="${GEMINI_API_KEY:-$GEMINI_API_KEY_BYEON}"
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.8-flash}"
-export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.8-flash}"
-source "$PROJECT_ROOT/backend/utils/gemini-model.sh" || exit 1
-migrate_deprecated_gemini_model_vars PRIMARY_MODEL FALLBACK_MODEL
-export CURRENT_MODEL="$PRIMARY_MODEL"
-export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"
-export LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-MEDIUM}"
 export TZ="Asia/Seoul"
 
 # ================================
@@ -562,16 +593,8 @@ rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
 if [ -n "$VIDEO_ID_FILTER" ]; then
     VIDEO_IDS=("$VIDEO_ID_FILTER")
 else
-SCAN_CACHE_ARGS=(--receipt "$LAAJ_RESULTS_DIR/.receipts/{id}.json"
-    --input "$RULE_RESULTS_DIR/{id}.jsonl" --input "$TRANSCRIPT_DIR/{id}.jsonl"
-    --input "$RULE_RESULTS_DIR/.receipts/{id}.json"
-    --metadata "$META_DIR/{id}.jsonl" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
-    --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
-    --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
-    --asset "$PROJECT_ROOT/backend/utils/gemini-model.mjs" --asset "$PROJECT_ROOT/backend/utils/gemini-model.sh"
-    --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
-    --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
-    --setting "$AGY_MODEL_LABEL" --output "$LAAJ_RESULTS_DIR/{id}.jsonl")
+laaj_cache_args "$FULL_CRAWLING_PATH" "$FULL_EVALUATION_PATH" '{id}'
+SCAN_CACHE_ARGS=("${LAAJ_CACHE_ARGS[@]}")
 PENDING_IDS=$("$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" scan --scan-dir "$RULE_RESULTS_DIR" --scan-additional-dir "$LAAJ_RESULTS_DIR" "${SCAN_CACHE_ARGS[@]}") || exit 1
 VIDEO_IDS=()
 if [ -n "$PENDING_IDS" ]; then mapfile -t VIDEO_IDS <<< "$PENDING_IDS"; fi
@@ -621,15 +644,8 @@ for i in "${!VIDEO_IDS[@]}"; do
     
     META_FILE="$META_DIR/${VIDEO_ID}.jsonl"
     RECEIPT_FILE="$LAAJ_RESULTS_DIR/.receipts/${VIDEO_ID}.json"
-    CACHE_ARGS=(--receipt "$RECEIPT_FILE" --input "$RULE_FILE" --input "$TRANSCRIPT_FILE"
-        --input "$RULE_RESULTS_DIR/.receipts/${VIDEO_ID}.json"
-        --metadata "$META_FILE" --asset "$PROMPT_FILE" --asset "$PARSER_SCRIPT"
-        --asset "$SCRIPT_DIR/11-laaj-evaluation.sh" --asset "$GEMINI_API_SCRIPT"
-        --asset "$PROJECT_ROOT/backend/utils/gemini-client.mjs"
-        --asset "$PROJECT_ROOT/backend/utils/gemini-model.mjs" --asset "$PROJECT_ROOT/backend/utils/gemini-model.sh"
-        --asset "$PROJECT_ROOT/backend/utils/provider-budget.mjs" --asset "$PROJECT_ROOT/backend/utils/provider_budget.py"
-        --setting "$PRIMARY_MODEL" --setting "$FALLBACK_MODEL" --setting "$LAAJ_THINKING_LEVEL"
-        --setting "$AGY_MODEL_LABEL" --output "$OUTPUT_FILE")
+    laaj_cache_args "$FULL_CRAWLING_PATH" "$FULL_EVALUATION_PATH" "$VIDEO_ID"
+    CACHE_ARGS=("${LAAJ_CACHE_ARGS[@]}")
     if ! "$PYTHON_EXE" "$PROJECT_ROOT/backend/bin/stage_cache.py" certified --receipt "$RULE_RESULTS_DIR/.receipts/${VIDEO_ID}.json" --output "$RULE_FILE"; then
         log_error "RULE_RESULT_UNCERTIFIED"
         exit 1

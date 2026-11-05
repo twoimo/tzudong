@@ -1,0 +1,631 @@
+{
+  "schemaVersion": 2,
+  "sourceRevision": "6c81d79485af9c4c571ecf74ed1de428af10c0da",
+  "reviewedSourceRevision": "fe4b73dac510d4670517c7d3eca4f0c2470d4297",
+  "files": [
+    {
+      "path": ".agents/skills/tzudong-formal-map-check/SKILL.md",
+      "bytes": 5772,
+      "sha256": "7a315d454da4719ae64e7e548a65ba7ea35ce8a622ef117f1b2a4fce0e5f2f0c"
+    },
+    {
+      "path": ".agents/skills/tzudong-formal-map-check/agents/openai.yaml",
+      "bytes": 319,
+      "sha256": "27964b04ee8de55c52260d394b65bbb105cf2550caedf71d6c4aa20489bfa2cb"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 6636,
+      "sha256": "425b4bc0cd59bb6b92368a8ed4c4d29123b921207c8391dc11e24db661f4bafb"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/AUDIT.md",
+      "bytes": 11914,
+      "sha256": "a99ecdd19415611bd64f2f8fb9318a5f385a3171db1db6d32f732c2435aba383"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/actual-wrapper-counterexample.txt",
+      "bytes": 2717,
+      "sha256": "3ee08112c3eb54480b173f67259ee4516754281a39f19fb3c639d1c990113e8d"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/affected-regressions.txt",
+      "bytes": 10566,
+      "sha256": "2fcc009f3454d2eb0f2fc327467994f4be434ba7fca83409896c3022b8e8f0f3"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/boundary-counterexamples.txt",
+      "bytes": 3251,
+      "sha256": "34658edffd3b18a8faed0c2605ccf0ff348b113d2cef8079277caf1137d3de46"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/ci-publication-version-after.txt",
+      "bytes": 3164,
+      "sha256": "ef16d813127a9f239c6b526455217c0e61ff76e695f4ba1822bfa5f52c752540"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/ci-publication-version-before.txt",
+      "bytes": 1821,
+      "sha256": "5b4176b643c20fd7a94db3bde8594dcc24ef2266cc3371fe29e7979806a6ac19"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/ci-publication-version-followup.json",
+      "bytes": 3646,
+      "sha256": "a057f45dde6d805f541429d93220b651df34c87e321574ae4b018012427dc509"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/ci-publication-version-parity.txt",
+      "bytes": 428,
+      "sha256": "5e9d180726647fa910a7e1e3cc090589778499806f327f66698a633b30e367ec"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/completion-manifest.json",
+      "bytes": 4985,
+      "sha256": "dbf3898a2f3ffd1033deabe342adae88024863a3292ed3141d8136609514192b"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/delta-resolution.md",
+      "bytes": 13832,
+      "sha256": "98013e1c52924d315d6f4c7af4cfb31b41b1a1b9e1f769d92d5d81389086e9e9"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/external-review-checkpoint.json",
+      "bytes": 4316,
+      "sha256": "360538e04be76e92f138e7bee2815da30c07d0058920e6ceac3bdb4a3834bbdb"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-followup-artifact-receipt.json",
+      "bytes": 1064,
+      "sha256": "17661ed5999546671dc2aa4366de0b7e80b568e907df8e99db0a8952246f6465"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-followup-artifact-verification.json",
+      "bytes": 1090,
+      "sha256": "4ec4544a3c81f061061d1d946a56bdc5209853df4dc54c6ac38d03adcec4f73f"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-followup-brief.md",
+      "bytes": 2042,
+      "sha256": "96a37468a65b1626fd90aa7c8b2efaf3c074445409236acd4a3829a80d3defd2"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-followup-question.txt",
+      "bytes": 1769,
+      "sha256": "f44e65d0deafb430ebfa79b1df9322bab9a90cbd2045976f67df9751464eea89"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-followup-source-manifest.json",
+      "bytes": 1536,
+      "sha256": "bd8bb7d97892c9788950a27cd90d8bbbb041326710aecb54961ea2c749148b1e"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-pro-artifact-receipt.json",
+      "bytes": 1085,
+      "sha256": "239aff656a4bf6cbc01b3bf6f803c08a101853d7d27221b0837474ba247ad316"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-pro-artifact-verification.json",
+      "bytes": 1111,
+      "sha256": "90cc6aceddf6962f839530c12f1a61c2b897853315d6206a1a81300ed764fe20"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-reverse-question.txt",
+      "bytes": 1728,
+      "sha256": "73c06033d4857651190fa67bdeabf2581cd0150d319c6ebd1c914ca71dbf8b71"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal-reverse-source-manifest.json",
+      "bytes": 7103,
+      "sha256": "9897e987b1fc3b0b3cef84ee163b4a8f9dccff0ff809f77e4a6a2d1c2560aa04"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal_followup_source_evidence.txt",
+      "bytes": 114580,
+      "sha256": "fa286900e904a8bc2b14df0868acc09acde9a6e1e95cb861a30d5181046756b4"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/formal_reverse_source_bundle.txt",
+      "bytes": 461819,
+      "sha256": "f2e04bd7c76ed8f6aea4493f39bdf10d7f03761b570305b3c21d58865ead8ac2"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-delta-native-and-mutation-checks.json",
+      "bytes": 27154,
+      "sha256": "1e6ac2d876fd25782f73c4a661d17e82f8e71105f303ac1d31a6ebc1cd1be15e"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-finding-counterexamples.txt",
+      "bytes": 3528,
+      "sha256": "50061bd5634cca5635f1ff821c00434b16e7a5090deef42e61ffc837ac2843ed"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-findings-lint.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-findings-native.txt",
+      "bytes": 5260,
+      "sha256": "23d59840ab0431565701d84a92cff7f57da6858da7db8a8ade92b35f81cae09e"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-findings-parity.txt",
+      "bytes": 510,
+      "sha256": "ab4a45436855fdecad07b60bc57aa207f4d4491ba211a7f22709fcdea1de3554"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-formal-delta-artifact-receipt.json",
+      "bytes": 1151,
+      "sha256": "d38fe8525f167c2bb7ac5b1c4899cc40704f84f9da8d7ef26560c2a27f96bd79"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-formal-delta-artifact-verification.json",
+      "bytes": 1177,
+      "sha256": "0ff17431bcbeafee59846401a6349e658e537ad216f4b31a372de8e3452e8370"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini-formal-delta-receipt.json",
+      "bytes": 1629,
+      "sha256": "e5ebe15ec197b91af7f907eae53ca73955c9027b3dddbc257f91e15a3ea15c97"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gemini_4_argon_formal_delta_report.visible.txt",
+      "bytes": 22643,
+      "sha256": "6fa6553f61a67185aecad159dd1eb93f2ced17368c01b1f63468dae0d4902069"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gpt6_pro_formal_reverse_report.visible.txt",
+      "bytes": 12553,
+      "sha256": "9b607abdc958702fdb1207b75b845dc469873cf998918f1758f4591ff171aeac"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/gpt6_pro_formal_root_followup_report.visible.txt",
+      "bytes": 10773,
+      "sha256": "ffedf822efa3011b98f0343fa7735faee687d0945d15e55471fb81afed4f10d2"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/mutable-cache-counterexample.txt",
+      "bytes": 5287,
+      "sha256": "4f1c2f691b18c46d645827054e8a2dffcc4e3f36121fb90475150a0473df3c14"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/native-and-mutation-checks.json",
+      "bytes": 20130,
+      "sha256": "9d6fc4e45079c6f54e1721b3a70a9ef25503d7e100906c80c26831b21a3b3903"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/pstack-upstream-observation.json",
+      "bytes": 1111,
+      "sha256": "10c73d8b7fb5cf0590daab531d2bed697b0b920a5cb968e80118abb3940584d8"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/rank-enumeration.json",
+      "bytes": 378,
+      "sha256": "7168a1a744dd3e28ecb732de5ba6e1471c60f6366912eb39ddb39adf8428f92b"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/rev-f-01-boundaries.txt",
+      "bytes": 2549,
+      "sha256": "d154aff65dd923607ed1dfe33a572557b39c22a4ccd787b0c009f0e368acabb7"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/rev-f-01-counterexample.txt",
+      "bytes": 1311,
+      "sha256": "d8d8549c791151b152414eec5fe9dcc5aec53b95ea87069acb80fb826caaf10c"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/rev-f-01-lint.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/rev-f-01-native-and-mutation-checks.json",
+      "bytes": 30864,
+      "sha256": "757fd5ddb969fad6066a681a46a255000b91705b0d88d8355211d5560c4f84a2"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/rev-f-01-native.txt",
+      "bytes": 3184,
+      "sha256": "a93ddc06bae30f0eb7ac87efd9857d95e086ed1c0f80dff3b2622ea0363afe22"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/rev-f-01-parity.txt",
+      "bytes": 510,
+      "sha256": "056941773c55ff7da7d4a85dccda9228975cd8394a01eb9128fbd8b4f88956e1"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/review-input-manifest.json",
+      "bytes": 6302,
+      "sha256": "25afccbe2ba54cb0543570853d5fe4d90197b74abe0a2a47ea9d2e996e4f838c"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/review-question.txt",
+      "bytes": 1310,
+      "sha256": "7549fdaea4bb23290958732ca72a3d8682ce72f871d1bbd02a8d0493fbb99d08"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/scene-navigation-after.txt",
+      "bytes": 6426,
+      "sha256": "d4a21066f9be9819aa82b486be40039d42fe58fb7acf3b564cce29690a5fee66"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/scene-navigation-before.txt",
+      "bytes": 2313,
+      "sha256": "eaabbd45722a383b4e9779131455c60e808e8f02042388e6b57a7d6f6af0910f"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/scene-navigation-followup.json",
+      "bytes": 3017,
+      "sha256": "fd9a748630577c968614a6bef370f7628569a0284f49884772c7dda78c33aefa"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/scene-navigation-lint.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/scene-navigation-parity.txt",
+      "bytes": 510,
+      "sha256": "44476130b7876580f7395aba77cd43c63a22add832a4df4806e7308c4aad1b6d"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/sdk-loss-after-tests.txt",
+      "bytes": 1703,
+      "sha256": "01fbf99cbc8ad58f6f0c1551180c3229d1897244ea2b10fbc909c1622785f7fe"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/sdk-loss-followup.json",
+      "bytes": 1697,
+      "sha256": "a02f836d75c3989df322eb447ed97ce369325e593e98eaf9e1083a9dade9db02"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/security-zod-audits.json",
+      "bytes": 782,
+      "sha256": "229ba6a342936e990fcc89c3406036a33c3600ccc3d2e301f1f81ca5df9c80b2"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/security-zod-backend-after.txt",
+      "bytes": 1355,
+      "sha256": "bb122b10142c32bf7465bbc7abe7ed1010f2bf6d029054bb73153b2acb3a7311"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/security-zod-boundary-after.txt",
+      "bytes": 1623,
+      "sha256": "a5a9e25f215981b177920e22bcb768bae255d42dd7f632bed1ab9876cae25e23"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/security-zod-boundary-before.txt",
+      "bytes": 4868,
+      "sha256": "018a33ae2d03e1036842bc825b1681985d042df2f9740125e8b85d55fa23d28f"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/security-zod-browser-after.txt",
+      "bytes": 3491,
+      "sha256": "0f0074260d1d9623a50e7a7fc10957bb22d7994bc88b03923334e6339764b252"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/security-zod-followup.json",
+      "bytes": 4060,
+      "sha256": "d1ceebfd3e09a4125cf281d2a050712736dcdd2f455daa451b6587d11b645441"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/security-zod-parity.txt",
+      "bytes": 510,
+      "sha256": "37fb6ab3b4e890c48f4b453789414525dd0fd7adb18297f51d5e0a4b2efc7772"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/security-zod-record-readback-after.txt",
+      "bytes": 351,
+      "sha256": "51111e4c40444157a57c50387986423a2212061af93a2f5233684568648cae8c"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/source_bundle.txt",
+      "bytes": 374176,
+      "sha256": "c3fb6be051942230565e8e551f6f9988d6c0da2175c2a9df553a5398e6865f23"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/state-transitions.mmd",
+      "bytes": 1790,
+      "sha256": "5fc488c0a304aaf927a49845c696fbefa080193f3a7eb56ffa1af91181b7962f"
+    },
+    {
+      "path": "docs/evidence/formal-map-invariants-20261023-v1/verification.json",
+      "bytes": 1262,
+      "sha256": "2cdf058cf42b4745eaae400b810c5ef99bded33d1e4b4478952eaa644bd00023"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "apps/web/bun.lock",
+      "bytes": 248263,
+      "sha256": "73e0359f0c5527258e482fa407ca31d94fd44f3a34bb1b3a956bc28873af760f"
+    },
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "bytes": 172218,
+      "sha256": "da5dd1884a9fa027027711307477723352c25781fd696498d7915954140da5b3"
+    },
+    {
+      "path": "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+      "bytes": 5742,
+      "sha256": "c58ecf950b911ee600063b291329a406654c4d7846ea8da9502c98869779399e"
+    },
+    {
+      "path": "apps/web/constants/overseas-regions.ts",
+      "bytes": 3087,
+      "sha256": "4d986e8cb4b9166ec56ed9d12b3d8d32db2ed63b861a772888c7e8b319fde4af"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "bytes": 30154,
+      "sha256": "2313e3e7f76ad9e3137bd75aac525238809c3ffa120c36e55d856dddf396b1a7"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/constants.ts",
+      "bytes": 7408,
+      "sha256": "471834208104d092365b8203350e7b9c4aba6a716a602f2a29589361d8fc9a43"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/errors.ts",
+      "bytes": 2008,
+      "sha256": "02bda67b89fadf3d2f5aa27f6a146c0dc746a7de1f9a6cd91dc82cf177e901c9"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/frames.ts",
+      "bytes": 9618,
+      "sha256": "c2b9c3fb2fca0f6fa229aeb0c62a222f22b11441cefc40d35248e0f6ca6f3dc8"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/guards.ts",
+      "bytes": 7046,
+      "sha256": "5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/popularity-marker.ts",
+      "bytes": 2969,
+      "sha256": "65fd5cc14b916e92720dfdaf81f20545b8caf3d8b3e56d9c06a4e4a9baea49d6"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/published-popularity.ts",
+      "bytes": 5687,
+      "sha256": "84ee9979ace9756456178449f6d831fe796cee0d68d66e155fc127aaef4163f1"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/scoring.ts",
+      "bytes": 7062,
+      "sha256": "0e3f195bf06636d6a8718378ac7a93eccbd3f439ee5d6ab5eebedbbaa6d02276"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/storage-key.mjs",
+      "bytes": 226,
+      "sha256": "4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/types.ts",
+      "bytes": 3726,
+      "sha256": "9d64ad2c6e57bea45af5066d89a26535b616429c9032d16fccfefcdeb78bad6b"
+    },
+    {
+      "path": "apps/web/lib/home-map-keyboard-navigation.ts",
+      "bytes": 4019,
+      "sha256": "b1f9d240f88138920fcc87ed6487459c634b00982494ed0d1346c6f12d21cd8c"
+    },
+    {
+      "path": "apps/web/lib/marker-pool.ts",
+      "bytes": 14532,
+      "sha256": "7541c064ab4190abc0fc7500ee7d5f91ac862ca4e3429b56b8b9b59659c0db4e"
+    },
+    {
+      "path": "apps/web/lib/naver-map-cluster-visuals.ts",
+      "bytes": 5849,
+      "sha256": "e6827ce69615a202ca866aa5ced193b78d8b16c3ab9f44d3abb665e7b94f4d92"
+    },
+    {
+      "path": "apps/web/lib/naver-map-event-cleanup.ts",
+      "bytes": 1747,
+      "sha256": "ee4c8bef6103c98b75238cc45eb2f119b1f5eab01202fb44979b05007c3957d6"
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "bytes": 9365,
+      "sha256": "6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8"
+    },
+    {
+      "path": "apps/web/lib/overseas-region-matching.ts",
+      "bytes": 2650,
+      "sha256": "35333c22a6a6b677a7612ffe461774a54a84f9a8c6fa3e324885104a8d072c4f"
+    },
+    {
+      "path": "apps/web/lib/profile-avatar-url.ts",
+      "bytes": 9151,
+      "sha256": "cc3c22cea33d2e2ea89ab52e3264baac3b406956aac2dbc4b671a07fe219a039"
+    },
+    {
+      "path": "apps/web/lib/retained-marker-accessibility.ts",
+      "bytes": 3837,
+      "sha256": "a3833232541307a61e5a914ac0ad96d6c804ded7e086cf084339e68ddab76cc4"
+    },
+    {
+      "path": "apps/web/lib/review-photo-url.ts",
+      "bytes": 14933,
+      "sha256": "811a669cada5b4938afc012a2e0f26ca82e080522306cfd424c2892cb979187e"
+    },
+    {
+      "path": "apps/web/lib/visible-marker-review-bubbles.ts",
+      "bytes": 11862,
+      "sha256": "96ab311a5582f4498d13da0347973ba94cad2575418394f78036501b99218ddb"
+    },
+    {
+      "path": "apps/web/lib/youtube-url.ts",
+      "bytes": 3682,
+      "sha256": "2dfac7f47bd227540c89250229d1c9fc29eb2cdcdc0aad50e63144b783251faa"
+    },
+    {
+      "path": "apps/web/package-lock.json",
+      "bytes": 503832,
+      "sha256": "e161fb64f78d4105f5077bce74fb63c1651672cfa4923d79c11d19b06e52ae8d"
+    },
+    {
+      "path": "apps/web/package.json",
+      "bytes": 7264,
+      "sha256": "5fe39c74cda34f0a121a3a158625b02ef3de136c3628f96fee2cd0c6accffc19"
+    },
+    {
+      "path": "apps/web/scripts/build-public-popularity.ts",
+      "bytes": 5900,
+      "sha256": "566113925e5c6a8598b28be3bf84ef53e7e525c4d727977475d8693082bb7eeb"
+    },
+    {
+      "path": "apps/web/scripts/verify-marker-formal.mjs",
+      "bytes": 8356,
+      "sha256": "53c6676d8f9bbc357a6e1df273892cb7723aba9dcc1a218aeef0807fc8e202a9"
+    },
+    {
+      "path": "apps/web/tests-formal/marker-state-model.test.mjs",
+      "bytes": 14175,
+      "sha256": "160f8b703aa906a01e03008980429aea859b1b222c17003740d8658322f9cc47"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-detail-close-focus-browser.test.ts",
+      "bytes": 7881,
+      "sha256": "4874bd723e16b00dca0f3c5c86934ada90a35c4f67fb9db4270a596ec0660ca1"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-record-action-failure-once-browser.test.ts",
+      "bytes": 11064,
+      "sha256": "f9feb84f45694cbb058d3d83eccb036c32bdc17abc4ea16cfbf01cbc9f0bb783"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-storyboard-unknown-count-browser.test.ts",
+      "bytes": 4729,
+      "sha256": "2c87a824284f9cdfef872641fee05c6c46a75448603605a972015be6ae230a93"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-storyboard-worker-visible-status-browser.test.ts",
+      "bytes": 5624,
+      "sha256": "06ccb04bb53c241a6e5c2905f4558fcfb469db0ff32359df686ef3f93ff7b237"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-carousel-navigation-browser.test.ts",
+      "bytes": 7470,
+      "sha256": "e28e8aee88cad1bc15cb3e19b5601e45bb41f32b6e2171dec116e12502a5546b"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-cohort-shadow.test.ts",
+      "bytes": 1995,
+      "sha256": "abce3ecd887e5fbb89bbac7715a9ce71753935367a502e6ec96f464eee585dac"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-numeric-bounds.test.ts",
+      "bytes": 1575,
+      "sha256": "7bccbf8f20109bc5b87f1d77a6687167f12e988d0040523f6fe5a0c152298d02"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-publication-runtime.test.ts",
+      "bytes": 6657,
+      "sha256": "d9c475863c41902724e8309ea5893e3bfbd81109ba83470b13c44226adec4b01"
+    },
+    {
+      "path": "apps/web/tests-unit/local-storyboard-catalog-error-browser.test.ts",
+      "bytes": 7813,
+      "sha256": "474ef3f3afea7463743b5dcfc9d7000159b229a3f867ea2cae383de7d3c4d4cd"
+    },
+    {
+      "path": "apps/web/tests-unit/local-storyboard-control-focus-browser.test.ts",
+      "bytes": 6438,
+      "sha256": "659f0a00fd445121847756f03c768d1e0811025e84b2ff61c8915d1eede49428"
+    },
+    {
+      "path": "apps/web/tests-unit/local-storyboard-departure-browser.test.ts",
+      "bytes": 18016,
+      "sha256": "c1111a3e91f45c465ba3666ec5285384b59afde6395e318c45111b6eba317dda"
+    },
+    {
+      "path": "apps/web/tests-unit/local-storyboard-history-focus-browser.test.ts",
+      "bytes": 13440,
+      "sha256": "72843ddc04e3bd83aaa4a36ea706517ddf9175fdbb41e60f648339fe8ecd5d82"
+    },
+    {
+      "path": "apps/web/tests-unit/local-storyboard-project-refresh-focus-browser.test.ts",
+      "bytes": 8406,
+      "sha256": "b8b82b95111a7a6b28b003f448fc94e8be7e22e1f15df7c634ecf88f33ec685b"
+    },
+    {
+      "path": "apps/web/tests-unit/local-storyboard-worker-refresh-browser.test.ts",
+      "bytes": 5678,
+      "sha256": "55bd2fa6dcc2d0cf2b18576706354a9b2bdefdafd794fd7076ddcbc8423dd82b"
+    },
+    {
+      "path": "apps/web/tests-unit/marker-pool.test.ts",
+      "bytes": 17824,
+      "sha256": "68303094ee4dae127b3a0b9483169dccf02e5b4e17642f967830911c96400fa6"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-cluster-visuals.test.ts",
+      "bytes": 5142,
+      "sha256": "dee3a5c6fbeb08d7d527aec187b32ac81a115cf55e692a0fe3808363c27a82e2"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-sdk-loss.test.ts",
+      "bytes": 3271,
+      "sha256": "624f75931280b2c9daa5dcbcefe41e2024a7f725f37cb9adb257781f0c27d474"
+    },
+    {
+      "path": "apps/web/tests-unit/popularity-input-boundary.test.ts",
+      "bytes": 5525,
+      "sha256": "9b2b12533448cbb60b92adfaf27d6e559afb78868fc2d860a34a20c536c43d78"
+    },
+    {
+      "path": "apps/web/tests-unit/retained-marker-accessibility.test.ts",
+      "bytes": 8292,
+      "sha256": "e0b3266209b2943eccc7672b3597db10df4faf358b304e3f1440235ea74fd1e3"
+    },
+    {
+      "path": "apps/web/tests-unit/storyboard-project-library-browser.test.ts",
+      "bytes": 14700,
+      "sha256": "f3d073f6502f460fdbbad3e8aba703c3656696d29c9187d3773314c0ecc89676"
+    },
+    {
+      "path": "apps/web/tests-unit/visible-marker-review-bubbles.test.ts",
+      "bytes": 3456,
+      "sha256": "de9884b661b31e3b06274eb1c17fa5ea176b73d2f557a529d7e4333178b6391e"
+    },
+    {
+      "path": "apps/web/tests-unit/zod-collection-size-boundary.test.ts",
+      "bytes": 1864,
+      "sha256": "a54bcff00f2a4efd7e28504035ec5c70738a6cbbbce71a09b9095c6cd85285c2"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "bytes": 1368,
+      "sha256": "cdbd2b57d55c77ea1ef2b81124b7007fec7df15d55cc917c8c9eca5704234c49"
+    },
+    {
+      "path": "apps/web/types/restaurant.ts",
+      "bytes": 3942,
+      "sha256": "ef43ac1b93a751cb03fed1fcabecacf21d245e0b54f47a66dd67639c34ebd94b"
+    },
+    {
+      "path": "backend/bin/tests/node-dependency-compatibility.test.mjs",
+      "bytes": 9538,
+      "sha256": "d7932a181e050488286285b65f2e8875af9000db617b4caede0ae3c8d3c75080"
+    },
+    {
+      "path": "backend/package-lock.json",
+      "bytes": 89955,
+      "sha256": "b7838f95e50d29dfa929ddf6d6ee7eca3beaf710cdf0159b1c3d32b23bb8e14c"
+    },
+    {
+      "path": "backend/package.json",
+      "bytes": 591,
+      "sha256": "de686dcad2bd1fbeaf4cee88cef598d5c1e03980a98fbd88072635b74397dc7f"
+    }
+  ],
+  "scope": "Supplied-scope ordinary delta and native fixes complete at a1dd; routine CI expectation fix at ciTestRevision. New exact-head CI, hosted SDK/UI, protected release and Nightly remain separate.",
+  "selfReference": "artifact-map.json and its detached digest are intentionally excluded to avoid a circular or stale digest claim",
+  "ciTestRevision": "1c0461bb114e9f6085d33c85a0eb911d0a98cab9",
+  "formalRuntimeRevision": "a1dd40016ff7cf23055073c8637d5b3ee00d6781",
+  "priorDeliveryMapSha256": "b676fcd90f069892502e9b2c29579b33aa6f3a17717a897e20e85f1cd707ea23",
+  "securityRevision": "1ca3d984598e7caca575ceeca4118ee418da60cf",
+  "sceneNavigationRevision": "6c81d79485af9c4c571ecf74ed1de428af10c0da"
+}

@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+apps/web/tests-unit/receipt-ocr-recovery108-sql-successor.test.ts:
+(pass) held receipt OCR recovery 107 to 108 successor > binds exact migration, fixture, compiler, and statement vector source [535.88ms]
+(pass) held receipt OCR recovery 107 to 108 successor > compiles only the bound 108 transaction and keeps operating launch held [559.45ms]
+(pass) held receipt OCR recovery 107 to 108 successor > pins the discriminating processing, ack-loss, stale-snapshot and late-publish counterexamples [0.32ms]
+
+ 3 pass
+ 0 fail
+ 59 expect() calls
+Ran 3 tests across 1 file. [1278.00ms]

@@ -1,0 +1,18 @@
+{
+  "observedAt": "2026-10-20T19:56:13.740Z",
+  "browser": "153.0.8010.12",
+  "scope": "Actual built app; synthetic public city-centre position, local Naver/data fixtures; no real user GPS or browser permission grant",
+  "baseline": true,
+  "results": [
+    {
+      "width": 497,
+      "dialogs": 1,
+      "readinessCalls": 1,
+      "counts": {
+        "getCalls": 0,
+        "watchCalls": 0,
+        "clearCalls": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "tzudong-production-readback/v1",
+  "observedAt": "2026-10-18T11:50:47.647479+00:00",
+  "evidenceClass": "authenticated Vercel API readback only; no release performed",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "projectName": "tzudong",
+  "domain": "www.tzudong.app",
+  "deploymentId": "dpl_5MdWf1WjdpgsTGWzo7SV97u7nFcn",
+  "deploymentUrl": "tzudong-gfa0qdb3c-twoimos-projects.vercel.app",
+  "target": "production",
+  "readyState": "READY",
+  "gitBranch": "main",
+  "gitRepository": "twoimo/tzudong",
+  "commitSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "rollbackCandidateSha": "b4eb780c532c9ba02a1af456b17459debc59a757",
+  "limits": [
+    "Current state may change; re-read immediately before a later deployment.",
+    "PR3215 preview for457023a6 was CANCELED; successful Vercel status is not deployment evidence.",
+    "This does not prove authenticated admin flows or feature readiness."
+  ],
+  "adminUiLoadedWithExistingSession": true,
+  "adminUiObservationScope": "Restaurant admin navigation, header and current table loaded; no mutation or complete API authorization proof."
+}

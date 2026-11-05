@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "requestedModel": "google-antigravity/claude-opus-5-5",
+  "requestedEffort": "high",
+  "inputSha256": "c8c3af0605080ad72f9a1f1a0ba5ff99717a7e94f18ad52eda4ebc7574fd6360",
+  "inputBytes": 19380,
+  "reportSha256": "eb23386fa8f6b98c7b3a8c1c680c328f7e19326751559ce07918acb202e13b71",
+  "classifierSha256": "df28fd4b8cdc8f3a547620dc30bdfc3bc12da78ccc50092223d43c72f99f10d5",
+  "attempts": 1,
+  "elapsedSeconds": 48.992,
+  "reportedModel": "google-antigravity/claude-opus-5-5",
+  "finishReason": "length",
+  "usage": {
+    "prompt_tokens": 9141,
+    "completion_tokens": 4000,
+    "total_tokens": 13141,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  },
+  "completed": false
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "kind": "review-media-sql-retained-current-proof",
-  "proofPath": "pg17-review-fixes-20261014-v1.json",
-  "proofSha256": "23fb9b471a06dbd36aafab3a678152ca897893b3cdc968f2d623035d217b1e38"
+  "proofPath": "pg17-runtime-admission-20261015-v1.json",
+  "proofSha256": "6bd946be5b9e0a9a9ef1523112f535456955bc424eaf278c1e23812ce8efc75e"
 }

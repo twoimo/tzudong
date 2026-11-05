@@ -2,7 +2,7 @@ const DEFAULT_PRODUCTION_REDIRECT_ORIGIN = 'https://www.tzudong.app';
 
 type AuthCallbackOriginEnv = Partial<Pick<
   NodeJS.ProcessEnv,
-  'NEXT_PUBLIC_SITE_URL' | 'NODE_ENV' | 'VERCEL_ENV' | 'VERCEL_URL' | 'VERCEL_BRANCH_URL'
+  'NEXT_PUBLIC_SITE_URL' | 'NODE_ENV' | 'VERCEL_ENV' | 'VERCEL_URL' | 'VERCEL_BRANCH_URL' | 'NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME'
 >>;
 
 function isValidHostnameLabel(label: string) {
@@ -28,14 +28,18 @@ function parseVercelSystemHost(value: string | undefined) {
   return `https://${host.toLowerCase()}`;
 }
 
-function parseExactHttpsOrigin(value: string) {
+function parseExactHttpsOrigin(value: string, allowLocalTlsPort = false) {
   try {
     const url = new URL(value);
+    const port = Number(url.port);
+    const declaredLocalPort = allowLocalTlsPort && url.hostname === '127.0.0.1'
+      && url.port.length > 0 && Number.isSafeInteger(port) && port >= 1024 && port <= 65535
+      && (value === url.origin || value === `${url.origin}/`);
     if (
       url.protocol !== 'https:'
       || url.username
       || url.password
-      || url.port
+      || (url.port && !declaredLocalPort)
       || url.pathname !== '/'
       || url.search
       || url.hash
@@ -71,7 +75,8 @@ export function getTrustedAuthCallbackOrigin(
   const configuredSiteUrl = env.NEXT_PUBLIC_SITE_URL?.trim();
   if (configuredSiteUrl) {
     if (env.NODE_ENV === 'production' || env.VERCEL_ENV === 'production') {
-      return parseExactHttpsOrigin(configuredSiteUrl) ?? DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
+      return parseExactHttpsOrigin(configuredSiteUrl, env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1')
+        ?? DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
     }
     try {
       return new URL(configuredSiteUrl).origin;

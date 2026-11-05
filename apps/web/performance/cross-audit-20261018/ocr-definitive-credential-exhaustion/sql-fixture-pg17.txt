@@ -1,0 +1,157 @@
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+GRANT ROLE
+CREATE SCHEMA
+CREATE TABLE
+CREATE SCHEMA
+CREATE SCHEMA
+GRANT
+CREATE TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+CREATE SCHEMA
+SET
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+RESET
+REVOKE
+REVOKE
+BEGIN
+SET
+ pg_advisory_xact_lock 
+-----------------------
+ 
+(1 row)
+
+CREATE TABLE
+DO
+GRANT
+CREATE TABLE
+COMMENT
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+REVOKE
+CREATE FUNCTION
+REVOKE
+GRANT
+CREATE FUNCTION
+REVOKE
+GRANT
+SET
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+REVOKE
+GRANT
+INSERT 0 2
+INSERT 0 2
+CREATE FUNCTION
+REVOKE
+GRANT
+DO
+RESET
+DO
+ receipt_ocr_credential_release_assert 
+---------------------------------------
+ 
+(1 row)
+
+DO
+COMMIT
+BEGIN
+INSERT 0 1
+SET
+DO
+RESET
+INSERT 0 1
+SET
+DO
+RESET
+DO
+INSERT 0 1
+SET
+DO
+RESET
+DO
+SET
+DO
+RESET
+SET
+DO
+RESET
+DO
+INSERT 0 2
+INSERT 0 2
+SET
+DO
+RESET
+DO
+ROLLBACK
+CREATE EXTENSION
+BEGIN
+INSERT 0 1
+INSERT 0 1
+COMMIT
+ dblink_connect 
+----------------
+ OK
+(1 row)
+
+ dblink_connect 
+----------------
+ OK
+(1 row)
+
+ dblink_exec 
+-------------
+ BEGIN
+(1 row)
+
+                  id                  
+--------------------------------------
+ 91c10000-0000-4000-8000-000000000005
+(1 row)
+
+ dblink_send_query 
+-------------------
+                 1
+(1 row)
+
+ dblink_exec 
+-------------
+ COMMIT
+(1 row)
+
+DO
+ dblink_disconnect 
+-------------------
+ OK
+(1 row)
+
+ dblink_disconnect 
+-------------------
+ OK
+(1 row)
+
+DELETE 0
+DELETE 1
+PG17_SQL_FIXTURE=passed

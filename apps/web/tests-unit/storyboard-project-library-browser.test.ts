@@ -1,3 +1,4 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -5,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect as browserExpect, type Browser, type Page } from "@playwright/test";
 
-const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const chrome = chromium.executablePath();
 const browserTest = existsSync(chrome) ? test : test.skip;
 const root = join(import.meta.dir, "..");
 const A = "11111111-1111-4111-8111-111111111111";
@@ -16,7 +17,7 @@ let css: string;
 let temporary: string;
 
 type CatalogMode = "normal" | "failure" | "empty" | "pending";
-type Fixture = { mode: CatalogMode; allowDeparture: boolean; calls: string[]; confirmations: string[]; release: () => void };
+type Fixture = { mode: CatalogMode; readiness: "ready" | "held"; allowDeparture: boolean; calls: string[]; confirmations: string[]; release: () => void };
 declare global { interface Window { storyboardLibraryFixture: Fixture } }
 
 // The production component and its real CSS run in an isolated browser. All API
@@ -28,14 +29,18 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { LocalStoryboardWorkspace } from './components/admin/storyboard/LocalStoryboardWorkspace';
 import { STORYBOARD_WORKFLOW } from './lib/admin/storyboard/production-contract';
+import { storyboardGeminiDeclaredModels } from './lib/admin/storyboard/gemini-models';
 const now='2026-10-05T01:00:00.000Z', A='${A}', B='${B}';
+const FEATURE_DATABASE_READY=Object.freeze({schemaVersion:1,status:'ready',code:'FEATURE_DATABASE_READY'});
+const FEATURE_DATABASE_HELD=Object.freeze({schemaVersion:1,status:'held',code:'FEATURE_DATABASE_HELD'});
 const titles={ [A]:'서울 시장 먹방', [B]:'부산 골목의 오래된 가게에서 만난 따뜻한 국밥과 반찬을 소개하는 촬영 기획' };
 const scene=n=>({sceneNo:n,title:'장면 '+n,durationSec:10,description:'촬영 내용',visualDirection:'가게 전경',narration:'음식 소개',caption:'오늘의 맛집',productionNotes:['고정 카메라'],imagePrompt:'Food',sourceIds:[],revision:1,image:null,imageError:null});
 const summary=id=>({id,title:titles[id],revision:1,status:id===A?'partial':'failed',createdAt:now,updatedAt:id===A?'2026-10-04T01:00:00.000Z':now});
-const project=id=>({...summary(id),request:{workflow:STORYBOARD_WORKFLOW,requestId:id,prompt:'촬영 기획',sceneCount:5,retrieval:'none',sources:[],imageWidth:1024,imageHeight:576,providers:{externalAI:false,text:{id:'manual',model:''},image:{id:'manual',model:''}}},
+const project=id=>({...summary(id),request:{workflow:STORYBOARD_WORKFLOW,requestId:id,prompt:'촬영 기획',sceneCount:5,retrieval:'none',sources:[],imageWidth:1024,imageHeight:576,providers:{externalAI:true,text:{id:'gemini-api',model:'gemini-3.8-flash'},image:{id:'gemini-api',model:'gemini-3.1-flash-image'}}},
  document:{schema:STORYBOARD_WORKFLOW,projectId:id,revision:1,generatedAt:now,title:titles[id],logline:'저장된 기획',
- textProvenance:{providerId:'manual',model:'',verification:'user-import',generatedAt:now,requestId:id,responseId:null,responseModel:null,modelEvidence:'unverified'},scenes:Array.from({length:5},(_,i)=>scene(i+1))}});
-const fixture=window.storyboardLibraryFixture={mode:'normal',allowDeparture:false,calls:[],confirmations:[],release:()=>{}};
+ textProvenance:{providerId:'gemini-api',model:'gemini-3.8-flash',verification:'official-api',generatedAt:now,requestId:id,responseId:'fixture',responseModel:'gemini-3.8-flash',modelEvidence:'response'},scenes:Array.from({length:5},(_,i)=>scene(i+1))}});
+const workers=[{id:'fixture-gemini-worker',online:true,lastHeartbeat:now,models:storyboardGeminiDeclaredModels()}];
+const fixture=window.storyboardLibraryFixture={mode:'normal',readiness:'ready',allowDeparture:false,calls:[],confirmations:[],release:()=>{}};
 window.confirm=text=>{fixture.confirmations.push(text);return fixture.allowDeparture;};
 window.fetch=async(url,init={})=>{
  const method=init.method||'GET',path=new URL(url,location.href).pathname;
@@ -44,7 +49,7 @@ window.fetch=async(url,init={})=>{
  if(path==='/api/admin/storyboard/production'){
   if(fixture.mode==='pending')await new Promise(resolve=>{fixture.release=resolve;});
   if(fixture.mode==='failure')throw new TypeError('Fixture offline');
-  return new Response(JSON.stringify({ok:true,projects:fixture.mode==='empty'?[]:[summary(A),summary(B)],workers:[]}));
+  return new Response(JSON.stringify({ok:true,readiness:fixture.readiness==='ready'?FEATURE_DATABASE_READY:FEATURE_DATABASE_HELD,projects:fixture.mode==='empty'?[]:[summary(A),summary(B)],workers}));
  }
  const id=path.split('/').at(-1);
  if(id!==A&&id!==B)throw new Error('Unexpected fixture read');
@@ -54,7 +59,8 @@ createRoot(document.getElementById('root')).render(<LocalStoryboardWorkspace/>);
 `;
   const bundle = await Bun.build({
     entrypoints: ["storyboard-library-fixture"], target: "browser", format: "iife", write: false,
-    define: { "process.env.NODE_ENV": '"test"' },
+    // Isolated browser build: no Node process or operator environment is present.
+    define: { "process.env": "{}", "process.env.NODE_ENV": '"test"' },
     plugins: [{ name: "library-fixture", setup(builder) {
       builder.onResolve({ filter: /^storyboard-library-fixture$/ }, () => ({ path: "fixture.tsx", namespace: "fixture" }));
       builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: fixture, loader: "tsx", resolveDir: root }));
@@ -72,7 +78,7 @@ createRoot(document.getElementById('root')).render(<LocalStoryboardWorkspace/>);
   execFileSync(process.execPath, [join(root, "node_modules/@tailwindcss/cli/dist/index.mjs"),
     "-i", join(root, "tests/fixtures/local-storyboard-ui/input.css"), "-o", cssPath], { cwd: root, stdio: "pipe" });
   css = `${readFileSync(cssPath, "utf8")}\n${readFileSync(join(root, "styles/admin-ui.css"), "utf8")}`;
-  browser = await chromium.launch({ executablePath: chrome, headless: true });
+  browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
 }, 30_000);
 afterAll(async () => {
   await browser?.close();
@@ -125,14 +131,21 @@ browserTest("library filters, clears filters, sorts newest first and opens detai
   expect(await firstProject(page).getAttribute("aria-current")).toBe("true");
 }), 15_000);
 
-browserTest("library keeps loaded rows during refresh errors and exposes recovery and loading", () => run(async page => {
+browserTest("library keeps loaded rows during refresh errors and exposes recovery and loading", async () => {
+  const check = async (page: Page) => {
   await page.evaluate(() => { window.storyboardLibraryFixture.mode = "failure"; });
   await refresh(page).click();
   await page.getByRole("alert").waitFor();
   expect(await list(page).getByRole("button").count()).toBe(2);
   await page.evaluate(() => { window.storyboardLibraryFixture.mode = "pending"; });
   await refresh(page).click();
-  await page.getByText("프로젝트 목록 확인 중…", { exact: true }).waitFor();
+  await browserExpect(refresh(page)).toHaveAttribute("aria-busy", "true");
+  expect(await page.getByText("프로젝트 목록 확인 중…", { exact: true }).count()).toBe(0);
+  await page.getByText("목록을 다시 확인해 주세요.", { exact: true }).waitFor();
+  await page.getByRole("alert").waitFor();
+  expect(await refresh(page).evaluate(node => node === document.activeElement)).toBe(true);
+  expect(await refresh(page).getAttribute("disabled")).toBeNull();
+  expect(await refresh(page).getAttribute("aria-busy")).toBe("true");
   expect(await refresh(page).isDisabled()).toBe(true);
   await page.evaluate(() => { window.storyboardLibraryFixture.mode = "normal"; window.storyboardLibraryFixture.release(); });
   await browserExpect(refresh(page)).toBeEnabled();
@@ -141,6 +154,20 @@ browserTest("library keeps loaded rows during refresh errors and exposes recover
   await refresh(page).click();
   await page.getByRole("button", { name: "새 제작 요청 작성", exact: true }).click();
   await browserExpect(page.getByLabel("제작 요청", { exact: true })).toBeFocused();
+  };
+  for (const width of [1423, 390]) await run(check, width);
+}, 30_000);
+
+browserTest("held readiness preserves project reads while blocking create and edit mutations", () => run(async page => {
+  await page.evaluate(() => { window.storyboardLibraryFixture.readiness = "held"; });
+  await refresh(page).click();
+  await page.getByText("데이터베이스 전환이 완료될 때까지 새 생성과 변경은 보류됩니다. 저장된 프로젝트와 이력은 계속 확인할 수 있습니다.", { exact: true }).waitFor();
+  expect(await list(page).getByRole("button").count()).toBe(2);
+  expect(await page.getByLabel("제작 요청", { exact: true }).isDisabled()).toBe(true);
+  expect(await page.getByRole("button", { name: "프로젝트 만들기", exact: true }).isDisabled()).toBe(true);
+  await firstProject(page).click();
+  await page.getByRole("heading", { name: "서울 시장 먹방", exact: true }).waitFor();
+  expect(await page.getByRole("button", { name: "장면 1 편집", exact: true }).isDisabled()).toBe(true);
 }), 15_000);
 
 browserTest("choosing a library row retains unsaved edits until departure is explicitly confirmed", () => run(async page => {

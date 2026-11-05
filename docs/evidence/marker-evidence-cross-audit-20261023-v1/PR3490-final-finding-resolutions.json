@@ -1,0 +1,55 @@
+{
+  "status": "NATIVE_VERIFIED_DELIVERY_PENDING",
+  "findings": [
+    {
+      "id": "PR3490-LISTENERS",
+      "decision": "ACCEPT",
+      "fix": "Cancelable local click/interaction handlers become inert before SDK removal; viewport and wheel callbacks retain disposal/one-shot guards.",
+      "paths": [
+        "apps/web/components/map/NaverMapView.tsx",
+        "apps/web/lib/naver-map-event-cleanup.ts"
+      ],
+      "verification": "Retained old provider callback delivers no stale action; only current handler dispatches."
+    },
+    {
+      "id": "PR3490-LOCATION",
+      "decision": "ACCEPT",
+      "fix": "Always remove app-owned device location visual when location is cleared, even if SDK is unavailable. Retain failed marker handle, retry once after250ms and on unmount; cancel timer on state change/unmount.",
+      "paths": [
+        "apps/web/components/map/NaverMapView.tsx",
+        "apps/web/lib/device-location-map.ts",
+        "apps/web/lib/naver-map-event-cleanup.ts"
+      ],
+      "verification": "Synthetic failure retains handle with visual removed, next successful detach clears it. No actual device location requested/read/persisted."
+    },
+    {
+      "id": "PR3490-SWIPE",
+      "decision": "ACCEPT",
+      "fix": "Derive marker rows and onVisibleRestaurantsChange swipe candidates from the same renderable coordinate set.",
+      "paths": [
+        "apps/web/components/map/OverseasMap.tsx"
+      ],
+      "verification": "Invalid coordinates remove marker and visible/swipe candidate; external focus remains guarded."
+    },
+    {
+      "id": "PR3490-REATTACH",
+      "decision": "ACCEPT",
+      "fix": "Call addTo only for new MapLibre markers. Update retained position/HTML/click/selection without reattaching.",
+      "paths": [
+        "apps/web/components/map/OverseasMap.tsx"
+      ],
+      "verification": "Actual component fixture at390/820/1440 retains1creation/1addTo through metadata, position, tier and callback changes; current callback and selection retained.",
+      "source": "https://github.com/maplibre/maplibre-gl-js/blob/v6.11.2/src/ui/marker.ts"
+    }
+  ],
+  "native": "59 tests /8files /1332 assertions /0fail /0skip; native+compat typecheck parity and scoped lint passed",
+  "raw": [
+    "raw/final-review-findings.log",
+    "raw/final-review-types.log",
+    "raw/final-review-lint.log"
+  ],
+  "delivery": "Main promotion remains held for corrected final-source preview, CI and production readback. Nightly stays separate.",
+  "limits": [
+    "No actual device location accessed. Best-effort teardown and visual removal do not certify disposal of invalid SDK internal memory."
+  ]
+}

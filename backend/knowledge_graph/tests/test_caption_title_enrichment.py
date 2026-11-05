@@ -6,8 +6,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from backend.knowledge_graph import caption_title_enrichment as title
 from backend.knowledge_graph import caption_osk_adapter as caption
+from backend.knowledge_graph.tests.test_caption_osk_adapter import FakeEngine, Fixture, video_id
 from backend.knowledge_graph.tests.test_osk_publication import hub_fixture
 
 
@@ -27,6 +29,70 @@ class TitleFieldsTests(unittest.TestCase):
             with self.assertRaises(caption.PublicationError):title.title_fields(body,vid)
     def test_bounded_title_keeps_stage_separate(self):
         self.assertEqual(title.title_fields(self.body(self.receipt()),caption.IDS[0]),{'displayTitle':'검증된 제목','displayStage':'caption-first-pass'})
+
+
+class TitleSourceTests(unittest.TestCase):
+    def test_duplicate_title_key_is_rejected_before_index_comparison(self):
+        with tempfile.TemporaryDirectory(prefix='caption-title-duplicate-') as directory:
+            root=Path(directory);vid=video_id('V',1);fixture=Fixture(root,videos=[vid])
+            review_path=fixture.add_review(vid)
+            review=json.loads(review_path.read_text());review['title']='accepted-last'
+            encoded=json.dumps(review)
+            encoded=encoded.replace('"title": "accepted-last"','"title": "ambiguous-first", "title": "accepted-last"',1)
+            review_path.write_text(encoded)
+            index=fixture.channel/'source/corpus/video-index.json';index.parent.mkdir(parents=True,exist_ok=True)
+            index.write_text(json.dumps([{'id':vid,'title':'accepted-last'}]))
+            with self.assertRaisesRegex(caption.PublicationError,'CAPTION_TITLE_SOURCE_INVALID'):
+                title.source_title(fixture.channel,vid)
+
+    def test_title_hash_and_parse_share_the_captured_bytes(self):
+        with tempfile.TemporaryDirectory(prefix='caption-title-snapshot-') as directory:
+            root=Path(directory);vid=video_id('V',1);fixture=Fixture(root,videos=[vid])
+            review_path=fixture.add_review(vid)
+            original=json.loads(review_path.read_text());original['title']='captured-title'
+            original_bytes=json.dumps(original).encode();review_path.write_bytes(original_bytes)
+            index=fixture.channel/'source/corpus/video-index.json';index.parent.mkdir(parents=True,exist_ok=True)
+            index.write_text(json.dumps([{'id':vid,'title':'captured-title'}]))
+            file_snapshot=caption.file_snapshot
+            def mutate_after_capture(path, source_root):
+                binding,data=file_snapshot(path,source_root)
+                if path == f'source/analysis/{vid}/caption-review.json':
+                    changed=dict(original,title='later-title');review_path.write_text(json.dumps(changed))
+                return binding,data
+            with mock.patch.object(caption,'file_snapshot',side_effect=mutate_after_capture):
+                receipt,bindings=title.source_title(fixture.channel,vid)
+            self.assertEqual(receipt['displayTitle'],'captured-title')
+            self.assertEqual(bindings[0]['sha256'],caption.digest(original_bytes))
+            self.assertNotEqual(bindings[0]['sha256'],caption.digest(review_path.read_bytes()))
+
+    def test_apply_reports_captured_title_when_sources_change_at_update_entry(self):
+        with tempfile.TemporaryDirectory(prefix='caption-title-update-entry-') as directory:
+            root=Path(directory);vid=video_id('V',1);fixture=Fixture(root,videos=[vid])
+            review_path=fixture.add_review(vid)
+            index=fixture.channel/'source/corpus/video-index.json';index.parent.mkdir(parents=True,exist_ok=True)
+            index.write_text(json.dumps([{'id':vid,'title':'Synthetic title'}]))
+            engine=FakeEngine(root,[vid])
+            registration=caption.plan(engine,fixture.channel,fixture.memberships,1)['targets'][0]
+            node=engine.nodes[registration['name']];node['body']=registration['body'];node['hash']='sha256:'+caption.digest(node['body'].encode())
+            plan=title.make_plan([engine.read(registration['name'])],fixture.channel)
+            captured_sha=caption.digest(caption.canonical([
+                {'videoId':vid,'sourceFiles':plan['targets'][0]['sourceFiles']}
+            ]).encode())
+
+            def change_both_title_sources(_name):
+                review=json.loads(review_path.read_text());review['title']='later-title'
+                review_path.write_text(json.dumps(review))
+                index.write_text(json.dumps([{'id':vid,'title':'later-title'}]))
+
+            engine.api.before_update=change_both_title_sources
+            result=title.apply(engine,fixture.channel,plan)
+            self.assertEqual(result['schema'],'tzudong-caption-title-readback/v2')
+            self.assertEqual(result['sourceSnapshot']['status'],'captured')
+            self.assertEqual(result['sourceSnapshot']['sha256'],captured_sha)
+            self.assertFalse(result['sourceSnapshot']['currentMutableSourcesCheckedAfterCapture'])
+            self.assertEqual(title.title_fields(engine.read(registration['name'])['body'],vid)['displayTitle'],'Synthetic title')
+            self.assertEqual(json.loads(review_path.read_text())['title'],'later-title')
+            self.assertEqual(json.loads(index.read_text())[0]['title'],'later-title')
 
 
 class ActualTitleMigrationTests(unittest.TestCase):
@@ -54,9 +120,10 @@ def fixture(directory,engine_path):
         rows.append({'id':vid,'title':label})
     index=source/'source/corpus/video-index.json';index.write_text(json.dumps(rows))
     memberships={}
-    for tab,ids in [('videos',list(caption.IDS)),('streams',[])]:
+    for tab,ids in [('videos',list(caption.IDS)),('streams',[]),('shorts',[])]:
         f=root/(tab+'.json');f.write_text(json.dumps({'tab':tab,'channelId':'UCfpaSruWW3S4dibonKXENjA','rows':[{'id':vid} for vid in ids]}));memberships[tab]=f
-    engine=caption.Engine(vault,Path(engine_path));engine.overview();v1=caption.plan(engine,source,memberships);caption.apply(engine,source,v1)
+    checkpoints=root/'caption-checkpoints'
+    engine=caption.Engine(vault,Path(engine_path));engine.overview();v1=caption.plan(engine,source,memberships,len(caption.IDS));caption.apply(engine,source,memberships,v1,checkpoints,len(caption.IDS))
     before=[engine.read(t['name']) for t in v1['targets']];plan=title.make_plan(before,source);title.validate_plan(plan)
     check=unittest.TestCase()
     # Whole-set human preimage fence; zero first-node writes.
@@ -88,7 +155,7 @@ def fixture(directory,engine_path):
     # Saved v1 decoder still validates byte-exact original plan; after explicit
     # migration its old apply must fail closed rather than silently erase titles.
     caption.validate_plan(v1)
-    with check.assertRaises(caption.PublicationError):caption.apply(engine,source,v1)
+    with check.assertRaises(caption.PublicationError):caption.apply(engine,source,memberships,v1,checkpoints,len(caption.IDS))
     projection=title.projection.project_vault(vault,Path(engine_path))
     videos=[n for n in projection['nodes'] if n['kind']=='video']
     check.assertEqual(len(videos),9);check.assertTrue(all(n['displayTitle'].startswith('실제 출처 제목') for n in videos));check.assertEqual(projection['coverage']['analyzedCount'],0)

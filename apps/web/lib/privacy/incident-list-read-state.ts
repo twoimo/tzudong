@@ -7,6 +7,7 @@ export function nextIncidentListReadState(
 ): IncidentListReadState {
   if (event === 'success') return 'ready';
   if (event === 'start') {
+    if (current === 'failed') return 'failed';
     return current === 'ready' || current === 'refreshing' || current === 'stale'
       ? 'refreshing'
       : 'pending';

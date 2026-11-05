@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ReviewSaveOperation, type ReviewSaveDependencies, type ReviewSaveDraft, type SavedReviewReadback } from '../lib/reviews/review-save-operation';
+import { REVIEW_FOOD_PHOTO_MAX_COUNT, ReviewSaveOperation, type ReviewSaveDependencies, type ReviewSaveDraft, type SavedReviewReadback } from '../lib/reviews/review-save-operation';
 import { buildReviewPhotoObjectPath, cleanupCanonicalReviewPhotoObjects } from '../lib/review-photo-url';
 
 function deferred() {
@@ -219,9 +219,116 @@ describe('bounded review save operation (offline)', () => {
         expect(await f.operation.submit(f.draft)).toBe('blocked'); expect((await f.operation.cancel()).status).toBe('blocked');
         expect(f.counts.removes).toBe(0);
     });
-    test('no arbitrary photo cap is introduced', async () => {
-        const f = fixture(); f.draft.foodPhotos = Array.from({ length: 32 }, (_, i) => new File([String(i)], `${i}.jpg`));
-        expect(await f.operation.submit(f.draft)).toBe('saved'); expect(f.counts.uploads).toBe(33); expect(f.orphanCount()).toBe(0);
+    test('exactly 20 food photos retain the complete upload and insert path', async () => {
+        const f = fixture();
+        f.draft.foodPhotos = Array.from({ length: REVIEW_FOOD_PHOTO_MAX_COUNT }, (_, i) => new File([String(i)], `${i}.jpg`));
+        expect(await f.operation.submit(f.draft)).toBe('saved');
+        expect(f.counts.prepares).toBe(1); expect(f.counts.uploads).toBe(REVIEW_FOOD_PHOTO_MAX_COUNT + 1);
+        expect(f.counts.writes).toBe(1); expect(f.orphanCount()).toBe(0);
+    });
+    test.each(['photo-only', 'ai-bound'])('21 food photos reject %s before prepare, upload, or insert without changing the draft', async mode => {
+        const f = fixture();
+        const selected = Array.from({ length: REVIEW_FOOD_PHOTO_MAX_COUNT + 1 }, (_, i) => new File([String(i)], `${i}.jpg`));
+        f.draft.foodPhotos = selected;
+        if (mode === 'ai-bound') {
+            f.draft.ocrResultRef = '11111111-1111-4111-8111-111111111111';
+            f.draft.ocrResultRevision = '22222222-2222-4222-8222-222222222222';
+        }
+        expect(await f.operation.submit(f.draft)).toBe('failed');
+        expect(f.draft.foodPhotos).toEqual(selected);
+        expect(f.counts.ids).toBe(0); expect(f.counts.prepares).toBe(0);
+        expect(f.counts.uploads).toBe(0); expect(f.counts.writes).toBe(0); expect(f.counts.removes).toBe(0);
+        expect(f.objects.size).toBe(0); expect(f.rows.size).toBe(0);
+    });
+    test('a saved 20-photo operation reports saved-previous after the live draft grows to 21 without a new write', async () => {
+        const f = fixture();
+        f.draft.foodPhotos = Array.from({ length: REVIEW_FOOD_PHOTO_MAX_COUNT }, (_, i) => new File([String(i)], `${i}.jpg`));
+        expect(await f.operation.submit(f.draft)).toBe('saved');
+        const before = { uploads: f.counts.uploads, writes: f.counts.writes, prepares: f.counts.prepares };
+        const changed = { ...f.draft, foodPhotos: [...f.draft.foodPhotos, new File(['extra'], 'extra.jpg')] };
+        expect(await f.operation.submit(changed)).toBe('saved-previous');
+        expect({ uploads: f.counts.uploads, writes: f.counts.writes, prepares: f.counts.prepares }).toEqual(before);
+        expect(changed.foodPhotos).toHaveLength(REVIEW_FOOD_PHOTO_MAX_COUNT + 1);
+    });
+    test('an uncertain committed 20-photo operation is read back before rejecting a changed 21-photo live draft', async () => {
+        const f = fixture();
+        f.draft.foodPhotos = Array.from({ length: REVIEW_FOOD_PHOTO_MAX_COUNT }, (_, i) => new File([String(i)], `${i}.jpg`));
+        const insert = f.deps.insert;
+        const read = f.deps.read;
+        let readUnavailable = true;
+        f.deps.insert = async (...args) => {
+            await insert(...args);
+            return { error: { code: 'transport' } };
+        };
+        f.deps.read = async (...args) => readUnavailable ? { data: null, error: {} } : read(...args);
+        expect(await f.operation.submit(f.draft)).toBe('blocked');
+        expect(f.rows.size).toBe(1);
+        const before = { uploads: f.counts.uploads, writes: f.counts.writes, prepares: f.counts.prepares };
+        const changed = { ...f.draft, foodPhotos: [...f.draft.foodPhotos, new File(['extra'], 'extra.jpg')] };
+        readUnavailable = false;
+        expect(await f.operation.submit(changed)).toBe('saved-previous');
+        expect({ uploads: f.counts.uploads, writes: f.counts.writes, prepares: f.counts.prepares }).toEqual(before);
+        expect(changed.foodPhotos).toHaveLength(REVIEW_FOOD_PHOTO_MAX_COUNT + 1);
+    });
+    test('confirmPending reads only the original uncertain operation and blocks owner changes and duplicate checks', async () => {
+        const f = fixture();
+        f.draft.foodPhotos = Array.from({ length: REVIEW_FOOD_PHOTO_MAX_COUNT }, (_, i) => new File([String(i)], `${i}.jpg`));
+        const insert = f.deps.insert;
+        const read = f.deps.read;
+        let firstRead = true;
+        f.deps.insert = async (...args) => {
+            await insert(...args);
+            return { error: { code: 'transport' } };
+        };
+        f.deps.read = async (...args) => firstRead ? (firstRead = false, { data: null, error: {} }) : read(...args);
+        expect(await f.operation.submit(f.draft)).toBe('blocked');
+        const before = { uploads: f.counts.uploads, writes: f.counts.writes, prepares: f.counts.prepares };
+
+        f.setOwner('other-owner');
+        expect(await f.operation.confirmPending()).toEqual({ status: 'blocked' });
+        f.setOwner(f.draft.ownerId);
+
+        const entered = deferred();
+        const release = deferred();
+        f.deps.read = async (...args) => {
+            entered.resolve();
+            await release.promise;
+            return read(...args);
+        };
+        const confirmation = f.operation.confirmPending();
+        await entered.promise;
+        expect(await f.operation.confirmPending()).toEqual({ status: 'blocked' });
+        release.resolve();
+        expect(await confirmation).toEqual({ status: 'saved', draft: expect.any(Object) });
+        expect({ uploads: f.counts.uploads, writes: f.counts.writes, prepares: f.counts.prepares }).toEqual(before);
+        expect(f.rows.size).toBe(1);
+    });
+    test('an absent confirmation keeps the uncertain operation locked without cleanup or a replacement insert', async () => {
+        const f = fixture();
+        f.deps.insert = async () => { f.counts.writes++; return { error: { code: 'transport' } }; };
+        expect(await f.operation.submit(f.draft)).toBe('blocked');
+        const before = { ids: f.counts.ids, prepares: f.counts.prepares, uploads: f.counts.uploads, writes: f.counts.writes };
+        expect(await f.operation.confirmPending()).toEqual({ status: 'blocked' });
+        expect(await f.operation.submit({ ...f.draft, foodPhotos: [] })).toBe('blocked');
+        expect({ ids: f.counts.ids, prepares: f.counts.prepares, uploads: f.counts.uploads, writes: f.counts.writes }).toEqual(before);
+        expect(f.counts.removes).toBe(0); expect(f.rows.size).toBe(0);
+    });
+    test('confirmPending clears a completed blocked-cancel latch and recovers the original commit read-only', async () => {
+        const f = fixture();
+        const insert = f.deps.insert;
+        const read = f.deps.read;
+        let readsUnavailable = true;
+        f.deps.insert = async (...args) => {
+            await insert(...args);
+            return { error: { code: 'transport' } };
+        };
+        f.deps.read = async (...args) => readsUnavailable ? { data: null, error: {} } : read(...args);
+        expect(await f.operation.submit(f.draft)).toBe('blocked');
+        expect((await f.operation.cancel()).status).toBe('blocked');
+        const before = { uploads: f.counts.uploads, writes: f.counts.writes, prepares: f.counts.prepares };
+        readsUnavailable = false;
+        expect((await f.operation.confirmPending()).status).toBe('saved');
+        expect({ uploads: f.counts.uploads, writes: f.counts.writes, prepares: f.counts.prepares }).toEqual(before);
     });
     test('invalid ownership is rejected before any storage mutation', async () => {
         const f = fixture(); const prepare = f.deps.prepare;

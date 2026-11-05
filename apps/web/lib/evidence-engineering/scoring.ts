@@ -30,7 +30,11 @@ export function hyperbolicHalfLifeDays(lambda: number): number {
   if (lambda <= 0) {
     throw new EvidenceContractError(EvidenceContractCodes.invalidDecayParameters);
   }
-  return 1 / lambda;
+  const halfLife = 1 / lambda;
+  if (!Number.isFinite(halfLife)) {
+    throw new EvidenceContractError(EvidenceContractCodes.nonFinite);
+  }
+  return halfLife;
 }
 
 export function thesisHalfLifeClaimIsExact(): boolean {
@@ -45,7 +49,11 @@ export function visitsMultiplier(videoIds: readonly string[], gamma: number): nu
   for (const videoId of videoIds) {
     uniqueIds.add(requireYouTubeVideoId(videoId));
   }
-  return 1 + gamma * Math.log1p(Math.max(0, uniqueIds.size - 1));
+  const multiplier = 1 + gamma * Math.log1p(Math.max(0, uniqueIds.size - 1));
+  if (!Number.isFinite(multiplier)) {
+    throw new EvidenceContractError(EvidenceContractCodes.nonFinite);
+  }
+  return multiplier;
 }
 
 export function platformReviewSignal(reviewCount: unknown, maximum: number): number | null {
@@ -134,14 +142,12 @@ export function compareCohortShadow(members: readonly CohortShadowMember[]): {
     candidate_freshness: number | null;
     candidate_visit_multiplier: number | null;
     comparison_present: boolean;
-    differs: boolean;
+    differs: null;
   }>;
-  summary: { count: number; differ_count: number; live_write_allowed: boolean };
+  summary: { count: number; differ_count: null; live_write_allowed: false };
 } {
   if (members.length === 0) throw new Error("empty_cohort");
   const seen = new Set<string>();
-  let missing = 0;
-  let differCount = 0;
   const records = members.map((member) => {
     const identity = member.identity;
     if (typeof identity !== "string" || identity.trim() === "" || seen.has(identity)) {
@@ -154,36 +160,35 @@ export function compareCohortShadow(members: readonly CohortShadowMember[]): {
     }
     const signals = member.candidate_signals;
     if (signals === null) {
-      missing += 1;
       return {
         identity,
         operational_score: operational,
         candidate_freshness: null,
         candidate_visit_multiplier: null,
         comparison_present: false,
-        differs: false,
+        differs: null,
       };
     }
     if (!Number.isFinite(signals.freshness) || !Number.isFinite(signals.visit_multiplier)) {
       throw new Error("invalid_candidate_signals");
     }
-    const differs = operational !== null;
-    if (differs) differCount += 1;
+    // These two dimensionless signals have no approved scalar score mapping.
+    // Their presence cannot establish a difference from an operational score.
     return {
       identity,
       operational_score: operational,
       candidate_freshness: signals.freshness,
       candidate_visit_multiplier: signals.visit_multiplier,
-      comparison_present: true,
-      differs,
+      comparison_present: false,
+      differs: null,
     };
   });
   return {
     records,
     summary: {
       count: records.length,
-      differ_count: differCount,
-      live_write_allowed: missing === 0,
+      differ_count: null,
+      live_write_allowed: false,
     },
   };
 }

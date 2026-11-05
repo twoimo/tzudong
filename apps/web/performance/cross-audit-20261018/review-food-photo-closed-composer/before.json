@@ -1,0 +1,10 @@
+{
+  "phase": "counterexample before root guard correction",
+  "exitCode": 1,
+  "sourceSha256": {
+    "apps/web/components/reviews/ReviewModal.tsx": "09a6759c65f2e5c4295bd79395cdbe51c89d0867b1e674834cae0c12abd2e411",
+    "apps/web/tests-unit/review-save-submit.test.ts": "70c1c53f8fd41763ae0ad306d9c5d0b02e984dd1aa3643cd8dc0db6630a3414d"
+  },
+  "rawSha256": "002511f7e15aa7930967a63acdcfc140ee94ab78db26fe8162d201cc2f00642a",
+  "limitations": "Synthetic handler fixture only; no hosted requests."
+}

@@ -1,0 +1,11 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/durable-receipt-ocr.test.ts:
+(pass) durable receipt OCR execution > marks a no-payload mixed model result indeterminate without credential release [3.95ms]
+(pass) durable receipt OCR execution > preserves a verified payload after a mixed model force refresh without credential release [1.04ms]
+
+ 2 pass
+ 32 filtered out
+ 0 fail
+ 12 expect() calls
+Ran 2 tests across 1 file. [202.00ms]

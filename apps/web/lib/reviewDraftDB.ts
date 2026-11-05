@@ -1,3 +1,5 @@
+import { draftStorageOwnerKey, draftPublicOwnerId, legacyDraftStorageOwnerKeys } from '@/lib/privacy/draft-storage-owner';
+import { assertBrowserDraftWrite, beginBrowserDraftCleanup, captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from '@/lib/privacy/browser-draft-lifecycle';
 import { openDB, DBSchema, IDBPDatabase, IDBPObjectStore } from 'idb';
 
 const DB_NAME = 'tzudong-review-drafts';
@@ -11,6 +13,7 @@ const MAX_CONTENT_LENGTH = 4_000;
 const MAX_CATEGORY_LENGTH = 16;
 const MAX_CATEGORIES = 15;
 const MAX_RECORD_BYTES = 16 * 1024;
+const legacyRecoveryPositions = new WeakMap<BrowserDraftEpoch, { namespace: number; after?: [string, string] }>();
 const DRAFT_CATEGORIES = new Set([
     '치킨',
     '중식',
@@ -262,7 +265,7 @@ function createPersistedDraft(draft: ReviewDraftSaveInput, now: number): Persist
     if (!isValidDraftInput(draft)) return null;
 
     const persistedDraft: PersistedReviewDraft = {
-        userId: draft.userId,
+        userId: draftStorageOwnerKey(draft.userId),
         restaurantId: draft.restaurantId,
         currentStep: draft.currentStep ?? null,
         visitedDate: draft.visitedDate,
@@ -278,7 +281,7 @@ function createPersistedDraft(draft: ReviewDraftSaveInput, now: number): Persist
 
 function toPublicDraft(draft: PersistedReviewDraft): ReviewDraft {
     const publicDraft: ReviewDraft = {
-        userId: draft.userId,
+        userId: draftPublicOwnerId(draft.userId),
         restaurantId: draft.restaurantId,
         visitedDate: draft.visitedDate,
         visitedTime: draft.visitedTime,
@@ -293,7 +296,7 @@ function toPublicDraft(draft: PersistedReviewDraft): ReviewDraft {
 }
 
 function userDraftRange(userId: string): IDBKeyRange {
-    return IDBKeyRange.bound([userId, ''], [userId, '\uffff']);
+    return IDBKeyRange.bound([draftStorageOwnerKey(userId), ''], [draftStorageOwnerKey(userId), '\uffff']);
 }
 
 async function sweepExpiredOrInvalidDrafts(db: IDBPDatabase<ReviewDraftDB>): Promise<void> {
@@ -331,6 +334,7 @@ async function sweepExpiredOrInvalidDrafts(db: IDBPDatabase<ReviewDraftDB>): Pro
 async function enforceUserDraftLimit(
     store: IDBPObjectStore<ReviewDraftDB, ['review-drafts'], 'review-drafts', 'readwrite'>,
     userId: string,
+    epoch: BrowserDraftEpoch,
 ): Promise<void> {
     const index = store.index('by-user-saved-at');
     const range = userDraftRange(userId);
@@ -341,6 +345,7 @@ async function enforceUserDraftLimit(
     let cursor = await index.openCursor(range);
 
     while (cursor && draftCount > MAX_DRAFTS_PER_USER) {
+        assertBrowserDraftWrite(userId, epoch);
         await cursor.delete();
         draftCount -= 1;
         cursor = await cursor.continue();
@@ -353,15 +358,24 @@ export async function saveDraft(draft: ReviewDraftSaveInput): Promise<ReviewDraf
         throw new Error('임시 저장 데이터가 유효하지 않습니다.');
     }
 
+    const epoch = captureBrowserDraftEpoch(draft.userId);
+    assertBrowserDraftWrite(draft.userId, epoch);
+
     try {
         const db = await initDB();
         await sweepExpiredOrInvalidDrafts(db);
+        assertBrowserDraftWrite(draft.userId, epoch);
         const transaction = db.transaction(STORE_NAME, 'readwrite');
+        // Wait for this readwrite transaction to acquire its store before
+        // admitting the write. A pre-transaction localStorage check alone
+        // leaves a gap while another tab can finish a cleanup transaction.
+        await transaction.store.get([persistedDraft.userId, persistedDraft.restaurantId]);
+        assertBrowserDraftWrite(draft.userId, epoch);
         await transaction.store.put(persistedDraft);
-        await enforceUserDraftLimit(transaction.store, persistedDraft.userId);
+        await enforceUserDraftLimit(transaction.store, draft.userId, epoch);
         const committed = await transaction.store.get([persistedDraft.userId, persistedDraft.restaurantId]);
         await transaction.done;
-        return committed ? toPublicDraft(committed) : null;
+        return committed && isBrowserDraftEpochCurrent(draft.userId, epoch, true) ? toPublicDraft(committed) : null;
     } catch {
         console.error('Draft 저장 실패:');
         throw new Error('임시 저장에 실패했습니다.');
@@ -371,23 +385,31 @@ export async function saveDraft(draft: ReviewDraftSaveInput): Promise<ReviewDraf
 export async function getDraft(userId: string, restaurantId: string): Promise<ReviewDraftReadResult | null> {
     if (!isValidIdentifier(userId) || !isValidIdentifier(restaurantId)) return null;
 
+    const epoch = captureBrowserDraftEpoch(userId);
+    if (!isBrowserDraftEpochCurrent(userId, epoch, true)) throw new Error('DRAFT_READ_UNAVAILABLE');
+
+    let transactionDone: Promise<unknown> | undefined;
     try {
         const db = await initDB();
+        assertBrowserDraftWrite(userId, epoch);
         const transaction = db.transaction(STORE_NAME, 'readwrite');
-        await enforceUserDraftLimit(transaction.store, userId);
-        await transaction.done;
+        transactionDone = transaction.done;
+        await enforceUserDraftLimit(transaction.store, userId, epoch);
 
-        const key: DraftKey = [userId, restaurantId];
-        const storedDraft = await db.get(STORE_NAME, key);
+        const key: DraftKey = [draftStorageOwnerKey(userId), restaurantId];
+        const storedDraft = await transaction.store.get(key);
         const draft = readPersistedReviewDraft(storedDraft);
-        if (!draft || draft.userId !== userId || draft.restaurantId !== restaurantId) {
-            if (storedDraft) await db.delete(STORE_NAME, key);
+        if (!draft || draft.userId !== draftStorageOwnerKey(userId) || draft.restaurantId !== restaurantId) {
+            if (storedDraft) { assertBrowserDraftWrite(userId, epoch); await transaction.store.delete(key); }
+            await transaction.done;
             return null;
         }
-        return toPublicDraft(draft);
+        await transaction.done;
+        return isBrowserDraftEpochCurrent(userId, epoch, true) ? toPublicDraft(draft) : null;
     } catch {
-        console.error('Draft 불러오기 실패:');
-        return null;
+        await transactionDone?.catch(() => {});
+        if (!isBrowserDraftEpochCurrent(userId, epoch, true)) return null;
+        throw new Error('DRAFT_READ_UNAVAILABLE');
     }
 }
 
@@ -398,13 +420,36 @@ export async function hasDraft(userId: string, restaurantId: string): Promise<bo
 export async function deleteDraft(userId: string, restaurantId: string): Promise<void> {
     if (!isValidIdentifier(userId) || !isValidIdentifier(restaurantId)) return;
 
+    const epoch = captureBrowserDraftEpoch(userId);
+    let db: IDBPDatabase<ReviewDraftDB> | undefined;
     try {
-        const db = await initDB();
-        await db.delete(STORE_NAME, [userId, restaurantId]);
+        db = await initDB();
+        if (!isBrowserDraftEpochCurrent(userId, epoch)) return;
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const deletions: Promise<void>[] = [];
+        try {
+            // Acquire the transaction before checking the session, then remove both
+            // versions of this explicit discard atomically. Otherwise a later import
+            // could resurrect the old text.
+            await transaction.store.get([draftStorageOwnerKey(userId), restaurantId]);
+            if (isBrowserDraftEpochCurrent(userId, epoch)) {
+                deletions.push(transaction.store.delete([draftStorageOwnerKey(userId), restaurantId]));
+                for (const legacyOwner of legacyDraftStorageOwnerKeys(userId)) {
+                    deletions.push(transaction.store.delete([legacyOwner, restaurantId]));
+                }
+                await Promise.all(deletions);
+            }
+            await transaction.done;
+        } catch {
+            try { transaction.abort(); } catch { /* It may already have completed. */ }
+            await Promise.allSettled(deletions);
+            await transaction.done.catch(() => {});
+            throw new Error('DRAFT_DELETE_FAILED');
+        }
     } catch {
         console.error('Draft 삭제 실패:');
         throw new Error('임시 저장 데이터 삭제에 실패했습니다.');
-    }
+    } finally { db?.close(); }
 }
 
 // Capture only the bounded text revision this composer saved or restored. The returned
@@ -425,8 +470,11 @@ export async function prepareDraftDeletion(
     if (!owned) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
     if (owned.expiresAt <= Date.now()) return async () => true;
     if (!readPersistedReviewDraft(owned)) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
+    const epoch = captureBrowserDraftEpoch(userId);
     const expected = JSON.stringify(owned);
-    const key: DraftKey = [userId, restaurantId];
+    const key: DraftKey = [draftStorageOwnerKey(userId), restaurantId];
+    const legacyKeys: DraftKey[] = legacyDraftStorageOwnerKeys(userId).map(owner => [owner, restaurantId]);
+    const expectedLegacy = new Map<string, string>();
     let db: IDBPDatabase<ReviewDraftDB> | undefined;
     try {
         db = await initDB();
@@ -434,6 +482,13 @@ export async function prepareDraftDeletion(
         const snapshot = stored === undefined ? null : readPersistedReviewDraft(stored);
         if (stored !== undefined && !snapshot) throw new Error('REVIEW_DRAFT_CAPTURE_FAILED');
         if (JSON.stringify(snapshot) !== expected) return async () => true;
+        for (const legacyKey of legacyKeys) {
+            const legacy = readPersistedReviewDraft(await db.get(STORE_NAME, legacyKey));
+            if (legacy?.userId === legacyKey[0]
+                && JSON.stringify({ ...legacy, userId: draftStorageOwnerKey(userId) }) === expected) {
+                expectedLegacy.set(legacyKey[0], JSON.stringify(legacy));
+            }
+        }
     } catch {
         // No deletion authority was captured. The operation must retry this
         // read before it dispatches uploads/insert, rather than retaining a
@@ -445,25 +500,41 @@ export async function prepareDraftDeletion(
     return async () => {
         let cleanupDb: IDBPDatabase<ReviewDraftDB> | undefined;
         try {
+            if (!isBrowserDraftEpochCurrent(userId, epoch)) return true;
             cleanupDb = await initDB();
+            if (!isBrowserDraftEpochCurrent(userId, epoch)) return true;
             const transaction = cleanupDb.transaction(STORE_NAME, 'readwrite');
             const stored = await transaction.store.get(key);
-            if (stored === undefined) { await transaction.done; return true; }
-            const current = readPersistedReviewDraft(stored);
-            if (!current) {
+            const current = stored === undefined ? null : readPersistedReviewDraft(stored);
+            if (stored !== undefined && !current) {
                 await transaction.done;
                 return false;
             }
-            if (JSON.stringify(current) !== expected) {
-                // The submitted row has already been replaced. Its cleanup is
-                // complete; preserve the replacement instead of trapping the
-                // saved composer in an impossible deletion retry.
+            const currentMatches = stored !== undefined && JSON.stringify(current) === expected;
+            const legacyRows = await Promise.all(legacyKeys.map(legacyKey => transaction.store.get(legacyKey)));
+            if (!isBrowserDraftEpochCurrent(userId, epoch)) { await transaction.done; return true; }
+            const deletions: Promise<void>[] = [];
+            try {
+                // Submission owns only the captured revision in each namespace.
+                // Preserve edits made by another composer after capture.
+                // A replacement in the current namespace does not revoke the
+                // independently captured authority over matching legacy rows.
+                if (currentMatches) deletions.push(transaction.store.delete(key));
+                legacyKeys.forEach((legacyKey, index) => {
+                    const captured = expectedLegacy.get(legacyKey[0]);
+                    if (captured !== undefined && JSON.stringify(readPersistedReviewDraft(legacyRows[index])) === captured) {
+                        deletions.push(transaction.store.delete(legacyKey));
+                    }
+                });
+                await Promise.all(deletions);
                 await transaction.done;
                 return true;
+            } catch {
+                try { transaction.abort(); } catch { /* It may already have completed. */ }
+                await Promise.allSettled(deletions);
+                await transaction.done.catch(() => {});
+                return false;
             }
-            await transaction.store.delete(key);
-            await transaction.done;
-            return true;
         } catch {
             return false;
         } finally {
@@ -473,35 +544,44 @@ export async function prepareDraftDeletion(
 }
 
 // Delete every scoped row and read back from the same transaction before reporting success.
-export async function deleteAllDraftsByUser(userId: string): Promise<boolean> {
+export async function deleteAllDraftsByUser(userId: string, cleanupEpoch?: BrowserDraftEpoch): Promise<boolean> {
     if (!isValidIdentifier(userId)) return false;
-
+    const epoch = cleanupEpoch ?? beginBrowserDraftCleanup(userId);
     try {
         const db = await initDB();
+        if (!isBrowserDraftEpochCurrent(userId, epoch)) return false;
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const index = transaction.store.index('by-user');
-        let cursor = await index.openCursor(userId);
-        while (cursor) {
-            await cursor.delete();
-            cursor = await cursor.continue();
+        let remaining = 0;
+        for (const ownerKey of [draftStorageOwnerKey(userId), ...legacyDraftStorageOwnerKeys(userId)]) {
+            let cursor = await index.openCursor(ownerKey);
+            let deleted = 0;
+            while (cursor && deleted < 100) {
+                if (!isBrowserDraftEpochCurrent(userId, epoch)) { await transaction.done; return false; }
+                await cursor.delete();
+                deleted++;
+                cursor = await cursor.continue();
+            }
+            const count = readNonNegativeSafeInteger(await index.count(ownerKey));
+            if (count === null) { await transaction.done; return false; }
+            remaining += count;
         }
-
-        const remainingDrafts = await index.count(userId);
-        const remainingDraftCount = readNonNegativeSafeInteger(remainingDrafts);
         await transaction.done;
-        return remainingDraftCount === 0;
-    } catch {
-        return false;
-    }
+        return remaining === 0 && isBrowserDraftEpochCurrent(userId, epoch);
+    } catch { return false; }
 }
 
 export async function getAllDraftsByUser(userId: string): Promise<ReviewDraftReadResult[]> {
     if (!isValidIdentifier(userId)) return [];
 
+    const epoch = captureBrowserDraftEpoch(userId);
+    if (!isBrowserDraftEpochCurrent(userId, epoch, true)) return [];
+
     try {
         const db = await initDB();
+        assertBrowserDraftWrite(userId, epoch);
         const transaction = db.transaction(STORE_NAME, 'readwrite');
-        await enforceUserDraftLimit(transaction.store, userId);
+        await enforceUserDraftLimit(transaction.store, userId, epoch);
 
         const drafts: ReviewDraftReadResult[] = [];
         const index = transaction.store.index('by-user-saved-at');
@@ -510,9 +590,10 @@ export async function getAllDraftsByUser(userId: string): Promise<ReviewDraftRea
         const now = Date.now();
         while (cursor && scannedRows < MAX_DRAFTS_PER_USER) {
             const draft = readPersistedReviewDraft(cursor.value, now);
-            if (draft && draft.userId === userId) {
+            if (draft && draft.userId === draftStorageOwnerKey(userId)) {
                 drafts.push(toPublicDraft(draft));
             } else {
+                assertBrowserDraftWrite(userId, epoch);
                 await cursor.delete();
             }
             scannedRows += 1;
@@ -520,7 +601,7 @@ export async function getAllDraftsByUser(userId: string): Promise<ReviewDraftRea
         }
 
         await transaction.done;
-        return drafts;
+        return isBrowserDraftEpochCurrent(userId, epoch, true) ? drafts : [];
     } catch {
         console.error('Draft 목록 불러오기 실패:');
         return [];
@@ -534,4 +615,70 @@ export async function cleanupOldDrafts(): Promise<void> {
     } catch {
         console.error('오래된 Draft 정리 실패:');
     }
+}
+
+// Explicit, owner-scoped recovery preserves timestamps/expiry and never replaces
+// an existing current draft. Old clients may still write legacy rows afterward;
+// those rows never become an automatic restore source.
+export async function recoverLegacyDrafts(userId: string): Promise<number> {
+    if (!isValidIdentifier(userId)) return 0;
+    const epoch = captureBrowserDraftEpoch(userId);
+    assertBrowserDraftWrite(userId, epoch);
+    const db = await initDB();
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    try {
+        const index = transaction.store.index('by-user');
+        const existingCount = readNonNegativeSafeInteger(await index.count(draftStorageOwnerKey(userId)));
+        if (existingCount === null) throw new Error('DRAFT_RECOVERY_FAILED');
+        let count = existingCount;
+        let imported = 0;
+        let scanned = 0;
+        const legacyOwners = legacyDraftStorageOwnerKeys(userId);
+        const progress = legacyRecoveryPositions.get(epoch);
+        let namespace = progress?.namespace ?? 0;
+        let after = progress?.after;
+        for (; namespace < legacyOwners.length && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER; namespace++) {
+            const legacyOwner = legacyOwners[namespace];
+            // A closed upper endpoint cannot become an exclusive lower bound.
+            if (after && after[1] >= '\uffff') { after = undefined; continue; }
+            let cursor = await transaction.store.openCursor(IDBKeyRange.bound(
+                after ?? [legacyOwner, ''], [legacyOwner, '\uffff'], after !== undefined,
+            ));
+            after = undefined;
+            while (cursor && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER) {
+                const row = readPersistedReviewDraft(cursor.value);
+                const candidate = row && readPersistedReviewDraft({ ...row, userId: draftStorageOwnerKey(userId) });
+                if (candidate && row && row.userId === legacyOwner) {
+                    const key = [draftStorageOwnerKey(userId), row.restaurantId] as DraftKey;
+                    const existing = await transaction.store.get(key);
+                    assertBrowserDraftWrite(userId, epoch);
+                    if (existing === undefined) {
+                        await transaction.store.put(candidate);
+                        // Move only after the validated copy is admitted. Both operations
+                        // share this transaction; failure preserves the original.
+                        assertBrowserDraftWrite(userId, epoch);
+                        await cursor.delete();
+                        imported++;
+                        count++;
+                    }
+                }
+                scanned++;
+                after = cursor.primaryKey;
+                if (scanned >= MAX_DRAFTS_PER_USER || count >= MAX_DRAFTS_PER_USER) break;
+                cursor = await cursor.continue();
+            }
+            if (cursor) break;
+            after = undefined;
+        }
+        await transaction.done;
+        assertBrowserDraftWrite(userId, epoch);
+        // Commit progress with the copy, never with an aborted or stale session.
+        if (namespace < legacyOwners.length) legacyRecoveryPositions.set(epoch, { namespace, after });
+        else legacyRecoveryPositions.delete(epoch);
+        return imported;
+    } catch {
+        try { transaction.abort(); } catch { /* It may already have completed. */ }
+        await transaction.done.catch(() => {});
+        throw new Error('DRAFT_RECOVERY_FAILED');
+    } finally { db.close(); }
 }

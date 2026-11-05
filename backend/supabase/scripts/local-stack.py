@@ -639,8 +639,11 @@ def _env_values(root: Path, project: str, state: Path) -> dict[str, str]:
         "SMTP_ADMIN_EMAIL": "admin@local.invalid",
         "SMTP_HOST": "mail",
         "SMTP_PORT": "2500",
-        "SMTP_USER": "local",
-        "SMTP_PASS": secrets.token_urlsafe(20),
+        # The disposable Inbucket listener accepts local mail without AUTH.
+        # Supplying dummy credentials makes GoTrue require encrypted SMTP AUTH
+        # against this intentionally plain local capture service.
+        "SMTP_USER": "",
+        "SMTP_PASS": "",
         "SMTP_SENDER_NAME": "local",
         "ENABLE_ANONYMOUS_USERS": "false",
         "ENABLE_PHONE_SIGNUP": "false",
@@ -1585,12 +1588,23 @@ def _redact_model(value: Any, key: str = "") -> Any:
     return value
 
 
+def _validate_auth_public_urls(services: dict[str, Any], values: dict[str, str]) -> None:
+    environment = services.get("auth", {}).get("environment", {})
+    if (
+        not isinstance(environment, dict)
+        or environment.get("API_EXTERNAL_URL") != values.get("API_EXTERNAL_URL")
+        or environment.get("GOTRUE_SITE_URL") != values.get("SITE_URL")
+    ):
+        _fail("model_auth_url_binding")
+
+
 def _scan_model(model: dict[str, Any], project: str, state: Path, values: dict[str, str], input_manifest: dict[str, Any]) -> str:
     if model.get("name") != project:
         _fail("model_project")
     services = model.get("services")
     if not isinstance(services, dict) or set(services) != set(EXPECTED_SERVICES):
         _fail("model_services")
+    _validate_auth_public_urls(services, values)
     if model.get("configs") or model.get("secrets"):
         _fail("model_source")
     mount_records = input_manifest.get("mount_inventory")

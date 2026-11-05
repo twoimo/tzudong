@@ -1,5 +1,7 @@
 "use client";
 
+import { isSupersededLogout } from "@/lib/auth/logout-result";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
@@ -12,6 +14,7 @@ import {
   Loader2,
   LogOut,
   MessageSquare,
+  Map,
   PlusCircle,
   Tv,
   User,
@@ -22,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useHomeReturnHref } from "@/hooks/use-home-return-href";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import {
@@ -65,6 +69,7 @@ export function MyPageSidebar() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, signOut, profileNickname } = useAuth();
+  const homeReturnHref = useHomeReturnHref(user?.id ?? null);
   const { data: profile } = useUserProfile(user?.id ?? "");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [nicknameSaving, setNicknameSaving] = useState(false);
@@ -200,7 +205,8 @@ export function MyPageSidebar() {
       queryClient.clear();
       toast.success("로그아웃되었습니다");
       router.push("/");
-    } catch {
+    } catch (error) {
+      if (isSupersededLogout(error)) return;
       toast.error("로그아웃에 실패했습니다");
     }
   };
@@ -257,7 +263,7 @@ export function MyPageSidebar() {
 
   return (
     <aside
-      className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card md:flex"
+      className="hidden h-full min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-card md:flex"
       data-mypage-left-panel-expanded="true"
       data-layout-primitives="sidebar"
     >
@@ -480,6 +486,14 @@ export function MyPageSidebar() {
             />
           );
         })}
+      </div>
+      <div className="sticky bottom-0 mt-auto border-t border-border bg-card p-4">
+        <Button asChild variant="outline" className="min-h-11 w-full justify-center gap-2 rounded-xl">
+          <Link href={homeReturnHref} data-mypage-return-to-map="true">
+            <Map className="h-4 w-4" aria-hidden="true" />
+            지도로 돌아가기
+          </Link>
+        </Button>
       </div>
     </aside>
   );

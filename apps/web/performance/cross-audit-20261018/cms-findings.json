@@ -1,0 +1,200 @@
+{
+  "schemaVersion": "tzudong-cross-audit-cms-findings/v1",
+  "generatedAt": "2026-10-18T21:23:25+09:00",
+  "candidateHead": "457023a656c7d17671527870679f093ee01e5aeb",
+  "sourceReport": {
+    "path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+    "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82",
+    "edited": false
+  },
+  "decisionSemantics": {
+    "ACCEPT": "The report finding is supported by inspected source and executable counterexample or regression evidence.",
+    "CONDITIONAL": "The finding applies only when its listed precondition is true.",
+    "REJECT": "Executable or source evidence contradicts the finding.",
+    "DEFER": "Available evidence cannot decide the finding."
+  },
+  "findings": [
+    {
+      "id": "TZ-TH-004",
+      "decision": "ACCEPT",
+      "evidenceLevel": "SOURCE_AND_BOUNDARY_INTEGRATION_TESTED",
+      "implementationDefectFound": true,
+      "claim": "Readiness and queued autosave waits could let save-affecting inputs change after the click snapshot but before upload or insert.",
+      "adjudication": "The old source rechecked only OCR identity after readiness and built other draft fields from click-time closures. The submit path now owns one revisioned snapshot containing owner, restaurant id and name, visit date and time, categories, content, receipt and food files, verification mode, analysis state, OCR generation, and OCR result identity. It compares both revision and field equality after readiness and again after any queued autosave, before ReviewSaveOperation.submit can upload or insert. A change after dispatch retains the existing committed-previous-input recovery behavior.",
+      "counterEvidenceOrApplicability": "No counterevidence was found. The defect applies when a save-affecting value changes while readiness or autosave is pending. Changes after submit dispatch have a different contract because side effects may already have started; those edits remain in the composer and are covered separately.",
+      "changes": [
+        "Added ReviewSaveInputsSnapshot, monotonic save input revisions, full field equality, and pre-dispatch fences.",
+        "Updated OCR mode, receipt replacement, OCR generation, result, and completion paths to revise the same current snapshot synchronously.",
+        "Added deferred-readiness mutations for every snapshot field and asserted zero upload and zero insert.",
+        "Preserved the post-dispatch changed-input recovery path and updated the React+IndexedDB fixtures to execute the manual receipt path explicitly."
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/components/reviews/ReviewModal.tsx",
+          "lines": "432-468,543-596,1659-1776",
+          "fact": "The complete save snapshot, equality predicate, revision updates, and the post-readiness and post-autosave fences are in production source."
+        },
+        {
+          "path": "apps/web/tests-unit/review-save-submit.test.ts",
+          "lines": "690-741,769-785",
+          "fact": "Deferred readiness tests mutate every save-affecting field before release and prove no upload or insert; a separate post-dispatch case proves edit preservation."
+        },
+        {
+          "path": "apps/web/tests-unit/review-close-revision-browser.test.ts",
+          "fact": "The actual extracted submit and close handlers pass React plus IndexedDB ordering cases with the complete snapshot contract."
+        },
+        {
+          "path": "apps/web/tests-unit/review-draft-revision-browser.test.ts",
+          "fact": "The actual extracted submit handler retains draft revision and retry guarantees under real React rendering."
+        }
+      ],
+      "changedFiles": [
+        "apps/web/components/reviews/ReviewModal.tsx",
+        "apps/web/tests-unit/review-save-submit.test.ts",
+        "apps/web/tests-unit/review-modal-ocr-ux.test.ts",
+        "apps/web/tests-unit/review-close-revision-browser.test.ts",
+        "apps/web/tests-unit/review-draft-revision-browser.test.ts"
+      ],
+      "commands": [
+        "bun test tests-unit/review-save-submit.test.ts tests-unit/review-modal-ocr-ux.test.ts tests-unit/admin-moderation-inline-focus-browser.test.ts tests-unit/review-close-revision-browser.test.ts tests-unit/review-draft-revision-browser.test.ts tests-unit/review-draft-deletion-browser.test.ts tests-unit/admin-console-uiux-source.test.ts",
+        "bunx eslint components/reviews/ReviewModal.tsx components/admin/SubmissionListView.tsx tests-unit/review-save-submit.test.ts tests-unit/review-modal-ocr-ux.test.ts tests-unit/admin-console-uiux-source.test.ts tests-unit/admin-moderation-inline-focus-browser.test.ts tests-unit/review-close-revision-browser.test.ts tests-unit/review-draft-revision-browser.test.ts",
+        "npm run typecheck:parity"
+      ],
+      "rawResultPaths": [
+        "apps/web/performance/cross-audit-20261018/cms-native-results.txt"
+      ],
+      "remainingConditions": [
+        "The tests use local adapters and synthetic files; they do not claim a provider, hosted Storage, or hosted database write.",
+        "Once ReviewSaveOperation.submit starts, edit preservation rather than rollback is the intended behavior because an upload or insert may already have committed."
+      ]
+    },
+    {
+      "id": "TZ-TH-005",
+      "decision": "ACCEPT",
+      "evidenceLevel": "SOURCE_AND_BOUNDARY_TESTED",
+      "implementationDefectFound": true,
+      "claim": "Minimum length and persisted content used trimmed text, while the maximum and UI counter used raw text.",
+      "adjudication": "The mismatch was present. Submit validation, persisted content, form validity, step validity, validation copy, aria-invalid, and the visible counter now all use content.trim().length. A value with 4,000 normalized characters and surrounding spaces is accepted and stored as exactly 4,000 characters; 19 normalized characters with surrounding spaces is rejected before upload. Existing 4,001-character cases remain rejected.",
+      "counterEvidenceOrApplicability": "No counterevidence was found. The visible defect applies when leading or trailing whitespace makes raw length differ from normalized length near the 20 or 4,000 character boundaries.",
+      "changes": [
+        "Use one normalizedContent value in submit validation and persistence.",
+        "Use normalizedContentLength in form validity, step validity, error state, and counter copy.",
+        "Added padded normalized 4,000 acceptance and padded normalized 19 rejection boundaries."
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/components/reviews/ReviewModal.tsx",
+          "lines": "1684-1743,1870-1901,2286-2296",
+          "fact": "The same trimmed length controls submit, UI validity, accessibility state, and the displayed counter."
+        },
+        {
+          "path": "apps/web/tests-unit/review-save-submit.test.ts",
+          "lines": "565-585",
+          "fact": "Boundary tests accept normalized 4,000 and reject normalized 19 before any upload."
+        },
+        {
+          "path": "apps/web/tests-unit/review-modal-ocr-ux.test.ts",
+          "fact": "Source contract assertions bind the shared maximum and normalized counter behavior."
+        }
+      ],
+      "changedFiles": [
+        "apps/web/components/reviews/ReviewModal.tsx",
+        "apps/web/tests-unit/review-save-submit.test.ts",
+        "apps/web/tests-unit/review-modal-ocr-ux.test.ts"
+      ],
+      "commands": [
+        "bun test tests-unit/review-save-submit.test.ts tests-unit/review-modal-ocr-ux.test.ts tests-unit/admin-moderation-inline-focus-browser.test.ts tests-unit/review-close-revision-browser.test.ts tests-unit/review-draft-revision-browser.test.ts tests-unit/review-draft-deletion-browser.test.ts tests-unit/admin-console-uiux-source.test.ts",
+        "npm run typecheck:parity"
+      ],
+      "rawResultPaths": [
+        "apps/web/performance/cross-audit-20261018/cms-native-results.txt"
+      ],
+      "remainingConditions": [
+        "Whitespace normalization is limited to JavaScript trim semantics; no broader Unicode normalization was introduced or claimed."
+      ]
+    },
+    {
+      "id": "TZ-TH-006",
+      "decision": "ACCEPT",
+      "evidenceLevel": "SOURCE_AND_SYNTHETIC_REACT_CHROMIUM_TESTED",
+      "implementationDefectFound": true,
+      "claim": "Inline moderation inspector teardown did not have independent proof that focus returns to the row without stealing focus from a newly focused control.",
+      "adjudication": "Full source inspection found more than a missing proof: inline submission and review close controls bypassed the common focus restoration path, and the focus ownership helper recognized the Sheet drawer but not the inline inspector. Both inline close paths and review action teardown now use shared close helpers. Restoration runs on the next animation frame only for inline mode, only while focus is unowned or still belongs to a moderation inspector, and only when the row trigger remains connected and enabled. Sheet onCloseAutoFocus continues to use the same ownership predicate.",
+      "counterEvidenceOrApplicability": "The earlier synthetic 390px Enter, Escape, and Sheet focus checks do not prove inline behavior and were not used as inline evidence. This finding applies to inline inspectors. The new proof uses actual React rendering and the production ownership helper in a local synthetic Chromium page; source assertions separately verify that both inline close controls and action paths route through the shared teardown.",
+      "changes": [
+        "Added the inline inspector marker to the focus ownership predicate.",
+        "Routed submission close, review deselect, approve, reject, and delete teardown through shared focus-aware close helpers.",
+        "Added a React plus Chromium regression for Enter and Space open, normal close restoration, competing search focus, removed rows, disabled rows, page errors, and external requests.",
+        "Kept Sheet onCloseAutoFocus behavior and evidence separate from inline teardown evidence."
+      ],
+      "evidence": [
+        {
+          "path": "apps/web/components/admin/SubmissionListView.tsx",
+          "lines": "100-106,322-332,1453-1466,1824-1882,2085,2323,2549-2552,2659",
+          "fact": "Production source identifies both inspector owners, routes inline and action closes through shared restoration, and preserves Sheet onCloseAutoFocus."
+        },
+        {
+          "path": "apps/web/tests-unit/admin-moderation-inline-focus-browser.test.ts",
+          "lines": "18-145",
+          "fact": "The production helper is extracted into a real React Chromium fixture that verifies restoration and competing focus ownership without external requests."
+        },
+        {
+          "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+          "lines": "6398-6405",
+          "fact": "Source assertions require the inline marker, both closeInspector controls, scheduler, and row focus call."
+        }
+      ],
+      "changedFiles": [
+        "apps/web/components/admin/SubmissionListView.tsx",
+        "apps/web/tests-unit/admin-moderation-inline-focus-browser.test.ts",
+        "apps/web/tests-unit/admin-console-uiux-source.test.ts"
+      ],
+      "commands": [
+        "bun test tests-unit/review-save-submit.test.ts tests-unit/review-modal-ocr-ux.test.ts tests-unit/admin-moderation-inline-focus-browser.test.ts tests-unit/review-close-revision-browser.test.ts tests-unit/review-draft-revision-browser.test.ts tests-unit/review-draft-deletion-browser.test.ts tests-unit/admin-console-uiux-source.test.ts",
+        "bunx eslint components/reviews/ReviewModal.tsx components/admin/SubmissionListView.tsx tests-unit/review-save-submit.test.ts tests-unit/review-modal-ocr-ux.test.ts tests-unit/admin-console-uiux-source.test.ts tests-unit/admin-moderation-inline-focus-browser.test.ts tests-unit/review-close-revision-browser.test.ts tests-unit/review-draft-revision-browser.test.ts"
+      ],
+      "rawResultPaths": [
+        "apps/web/performance/cross-audit-20261018/cms-native-results.txt"
+      ],
+      "remainingConditions": [
+        "The new inline result is a local synthetic React and headless Chrome boundary test, not a capture from the stopped root-owned application server.",
+        "No claim is made about deployment or production browser state."
+      ]
+    }
+  ],
+  "verification": {
+    "tests": {
+      "passed": 131,
+      "failed": 0,
+      "expectCalls": 4033,
+      "files": 7
+    },
+    "eslint": {
+      "status": "passed",
+      "files": 8
+    },
+    "typecheckParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3350,
+      "logicalInputNamesSha256": "f1e3804a84543c735fd04e68236c8ea2896ba38152cc651bf69d2cd69cf6d6af",
+      "nonLibraryContentSha256": "42ae1ea0b8f88c64c5ae96d8284b3e5d9671dae1be68b24a22076f46cc68f35b"
+    },
+    "diffCheck": "passed"
+  },
+  "sourceIntegrity": {
+    "apps/web/components/reviews/ReviewModal.tsx": "887f51f55e5c4e0b3b6ac2c13aff38bab4f2daf6f248ee8cfca773483c7b749a",
+    "apps/web/components/admin/SubmissionListView.tsx": "cab43ce4b4ab31dd47c159dc46f3fa059658205a8d581974358ff2040e6eaade",
+    "apps/web/tests-unit/review-save-submit.test.ts": "f3a8a1ab323fdd16e7b216bcb5eb9eb28551e28b17c4b4a2c102df2f57f00089",
+    "apps/web/tests-unit/review-modal-ocr-ux.test.ts": "3b5918261d1aca85ae163dba5ee4ae8f38aad5ebd20c5daa8ddd667f5f0e31ef",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "9cf6eb79698ff79ec00615543bca65352492c51d41fa2c9588c0219cc7c4b8cc",
+    "apps/web/tests-unit/admin-moderation-inline-focus-browser.test.ts": "c24f86520307c6ff02623677a1fc57074c72c11df46dce318082544858cdbbc5",
+    "apps/web/tests-unit/review-close-revision-browser.test.ts": "633e39f4e0b50acb5d49fe9524449ec7e964108fa13cef3147e740ce616e4756",
+    "apps/web/tests-unit/review-draft-revision-browser.test.ts": "1805394e2516de2bbf16077598d4a168e908e535d78c1b99e171737ec2be046f"
+  },
+  "limits": [
+    "No external API, provider, hosted database, hosted Storage, deployment, or browser-server operation was performed.",
+    "The source report was read only and was not edited.",
+    "The earlier synthetic 390px Sheet result was not promoted into inline evidence."
+  ]
+}

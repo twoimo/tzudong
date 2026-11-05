@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--run-tests",
         action="store_true",
-        help="run the focused 22-module verification suite after static preflight",
+        help="run the focused required verification suite after static preflight",
     )
     parser.add_argument(
         "--timeout-seconds",

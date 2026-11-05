@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-taste-read-only-interaction-audit",
+  "scope": {
+    "origin": "http://127.0.0.1:18822",
+    "syntheticFixture": true,
+    "productionEvidence": false,
+    "taskSpeedEvidence": false,
+    "moduleCount": 15,
+    "mode": "focused-gaps",
+    "permittedMethods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  "environment": {
+    "node": "v26.3.0",
+    "playwright": "1.63",
+    "browser": "155.0.8059.40",
+    "browserContexts": [
+      "desktop-1440",
+      "error-held-834"
+    ]
+  },
+  "sourceSha256": {
+    "components/admin/AdminConsoleOverview.tsx": "35bfe60a0284d51ad78bb0c1ad8b1c86c86dbe13e0b1be51ff102d244965bc9c",
+    "components/admin/AdminUsersPanel.tsx": "776f4c78f5bca322c52735fc5c09dd6a842f200e786101312f8e29624ce5bc66",
+    "components/admin/SubmissionListView.tsx": "92398a36e8bc14b3dc83ef0d2ce68b5c8b258b6679a8e56d932e58d5aa5abb8f",
+    "components/admin/pipeline/AdminPipelineDashboard.tsx": "98c76b13f011af921ecb9ef341156fc9ab68a191ab7cf3aaa4c9e170c4a916fa",
+    "components/admin/AdminKnowledgeGraphPanel.tsx": "a6679a8ada20ca49482710824fdcaab4051905fa39f910e8ba89c92cfe00167a",
+    "components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx": "3d98dbfadd5dd6ba6726eb01bee625b5fed4da11e10ae044ddf2fdbaad2e40a2",
+    "styles/admin-ui.css": "0dbb37978d377f2b2e5b4c2c395940575d1ab9bea9fbe9cb6b7a6a6aeb8fd904",
+    "performance/admin-taste-20261015/taste-fixture.mjs": "369a6c60a8a11dd4ffe064a984a33aef67aade970b0fded75cb8dd4d3ea6ab35",
+    "performance/admin-taste-20261015/interaction-audit.mjs": "500d5f7f24ff6f8afb545cbe33dad32a916d04d4480a0aa77d5dad3dbf633cad"
+  },
+  "cases": [
+    {
+      "id": "synthetic-auth-loaded",
+      "passed": false,
+      "errorCode": "PLAYWRIGHT_ACTION_FAILED"
+    },
+    {
+      "id": "submissions-read-only-filter-inspector",
+      "passed": true,
+      "metrics": {
+        "image": "submissions-filter-inspector.png",
+        "searchApplied": true,
+        "visibleRows": 1,
+        "inspector": {
+          "x": 1060,
+          "y": 310,
+          "width": 352,
+          "height": 626
+        }
+      }
+    },
+    {
+      "id": "reviews-read-only-filter-inspector",
+      "passed": true,
+      "metrics": {
+        "image": "reviews-filter-inspector.png",
+        "searchApplied": true,
+        "visibleRows": 3,
+        "inspector": {
+          "x": 1060,
+          "y": 221,
+          "width": 352,
+          "height": 715
+        }
+      }
+    },
+    {
+      "id": "storyboard-explicit-held-state",
+      "passed": true,
+      "metrics": {
+        "image": "storyboard-explicit-held.png",
+        "heldNotices": 1,
+        "createDisabled": true,
+        "workspace": {
+          "x": 220,
+          "y": 12,
+          "width": 602,
+          "height": 1060.16
+        }
+      }
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "interaction-gap-audit/submissions-filter-inspector.png",
+      "sha256": "fe4b5f6bd2f6b5ed959c4b4c2c9a5f8f60a1c4a41469187a9e328f823a0418c5"
+    },
+    {
+      "file": "interaction-gap-audit/reviews-filter-inspector.png",
+      "sha256": "584afa135b2bec6fe40ec755087801719af42f6dbc797b0fd29eaa0e32dcfe3b"
+    },
+    {
+      "file": "interaction-gap-audit/storyboard-explicit-held.png",
+      "sha256": "838f420d8518bb8f89a99956d238745a26e132fac7d19062ec64c394842367aa"
+    }
+  ],
+  "network": {
+    "permittedRequests": 145,
+    "blockedExternalRequests": 0,
+    "blockedExternalWebSockets": 0,
+    "blockedNonReadMethodRequests": 4,
+    "sentNonReadMethodRequests": 0,
+    "syntheticPreflightResponses": 0,
+    "syntheticSessionGets": 2,
+    "syntheticReadRpcFulfillments": {
+      "POST /rest/v1/rpc/get_current_privacy_eligibility": 8,
+      "POST /rest/v1/rpc/read_public_profile_summaries": 8
+    },
+    "sanitizedSupabaseRequestCounts": {
+      "POST /rest/v1/rpc/get_current_privacy_eligibility": 8,
+      "POST /rest/v1/rpc/read_public_profile_summaries": 8,
+      "GET /rest/v1/user_roles": 8,
+      "GET /rest/v1/notifications": 3,
+      "GET /rest/v1/reviews": 5,
+      "GET /rest/v1/restaurants": 8,
+      "GET /rest/v1/restaurant_submissions": 2,
+      "GET /rest/v1/restaurant_requests": 5,
+      "GET /rest/v1/restaurant_submission_items": 2
+    },
+    "loopbackWebSocketsObserved": 13
+  },
+  "runtime": [
+    {
+      "contextId": "desktop-1440",
+      "pageErrors": 0,
+      "consoleErrors": 22,
+      "requestFailures": 8
+    },
+    {
+      "contextId": "error-held-834",
+      "pageErrors": 0,
+      "consoleErrors": 2,
+      "requestFailures": 2
+    }
+  ],
+  "summary": {
+    "passedCases": 3,
+    "failedCases": 1,
+    "screenshots": 3,
+    "runtimePageErrors": 0,
+    "passed": false
+  }
+}

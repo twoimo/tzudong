@@ -1,0 +1,29 @@
+{
+  "schema": "tzudong-recovery108-final-fixture-only-continuity/v1",
+  "observedAt": "2026-10-18T20:52:19.438807+00:00",
+  "priorAppVerificationSha256": "2ea02e4c46cdbe398a9135116e67ec9d5c7a20aadc40b0c4ecc060e61c375c31",
+  "fixtureBeforeSha256": "095128056aa744abec6daf42d062cc2d2026673f18f7efb88855f580b47a4940",
+  "fixtureAfterSha256": "26895e1c7fe159ad00b22e7c41ce08c9c8d45963aeb437666ae544ed65358b31",
+  "manifestBeforeSha256": "22b7f13a11800cffec67a96b834d10600f7b318c0c9e147e0cdbe5dc15b325a6",
+  "manifestAfterSha256": "c3537fd0049e127190115cb356f18132ad7847fcd92bc826ccf5678ce6df8627",
+  "exactFixtureChange": {
+    "count": 2,
+    "before": "'fixture', pg_catalog.clock_timestamp()",
+    "after": "'fixture content', pg_catalog.now()"
+  },
+  "exactManifestChange": "fixture.sha256 only",
+  "reverseTransformsMatchOriginalByteHashes": true,
+  "changedVerificationInputs": [
+    ".github/receipt-ocr-recovery108-sql-successor.v1.json",
+    "backend/supabase/tests/receipt_ocr_indeterminate_recovery.sql"
+  ],
+  "rawMigrationUnchanged": true,
+  "compilerUnchanged": true,
+  "appRuntimeAndTypeScriptUnchanged": true,
+  "provisionalBackupInsertAbsent": true,
+  "latestCompilerVerificationArtifactMap": "976fdbf0800873eddb2bcd51c65c365fbdaea9a9e0613738bed119bdb50c8b8c",
+  "limitations": [
+    "Prior app tests/build remain attributed to their original source snapshot. New fixture/compiler tests are separate.",
+    "PG15 source-only closure and actual PG17 behavior are separately bound receipts; this file alone proves neither hosted readiness nor operating execution."
+  ]
+}

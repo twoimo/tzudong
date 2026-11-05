@@ -1,0 +1,125 @@
+{
+  "observed_at": "2026-10-22T21:09:38.360326+00:00",
+  "accepted_fixes": [
+    {
+      "ids": [
+        "TH-M-02",
+        "GEM-M-01.refresh"
+      ],
+      "change": "Same SDK marker receives latest HTML only when changed, current onclick, coordinates and selection. Invalid/sentinel coordinates remove the marker.",
+      "path": "apps/web/components/map/OverseasMap.tsx",
+      "verification": "overseas-marker-refresh-browser.test.ts:390,820,1440; latest callback exactly once, marker reused"
+    },
+    {
+      "ids": [
+        "TH-M-03"
+      ],
+      "change": "GeoJSON field/tier freshness and Seoul regional entry tier invalidate in-place caches.",
+      "path": "apps/web/lib/clustering.ts",
+      "verification": "clustering-region-district.test.ts tier-only mutation and all23existing cases"
+    },
+    {
+      "ids": [
+        "TH-P-02",
+        "GEM-P-01.name",
+        "GEM-P-01.latitude"
+      ],
+      "change": "Fail entire publication on unapproved rows, missing/invalid/zero-sentinel coordinates BEFORE merge and empty names; preserve approved name, align33..39 latitude with share map. No posted JSON regenerated.",
+      "path": "apps/web/scripts/build-public-popularity.ts",
+      "verification": "Boundary tests red3fail before correction; all5pass; frozen735publication reproduced unchanged"
+    },
+    {
+      "ids": [
+        "TH-P-01.policy"
+      ],
+      "change": "New evidence policy records actual P98/P95/P85 v2, historical evidence retained.",
+      "path": "apps/web/scripts/build-public-popularity.ts"
+    },
+    {
+      "ids": [
+        "GEM-E-01.conflict"
+      ],
+      "change": "Strict union still throws; public read boundaries catch only EvidenceContractError and omit conflicting frame set while preserving other restaurant media.",
+      "paths": [
+        "apps/web/lib/evidence-engineering/frames.ts",
+        "apps/web/lib/restaurant-merged-media.ts",
+        "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx"
+      ],
+      "verification": "Three executable duplicate identity/moderation/storage-key conflicts, strict rejection plus both safe boundaries"
+    },
+    {
+      "ids": [
+        "TH-E-01.heading",
+        "TH-E-03.failure"
+      ],
+      "change": "Context-only title omits sign claim; failed image gives explicit original-video notice and keeps seek link; changed URL resets image failure state.",
+      "path": "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+      "verification": "Actual640x360WebP,404failure,newURLrecovery in390/820/1440 Chromium"
+    }
+  ],
+  "rejected_claims": [
+    {
+      "id": "GEM-E-01.image_url",
+      "decision": "REJECT",
+      "evidence": "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql has NO image_url column. Static immutable key is the intended DB read path and all12manifest frames have image_url:null. Adding proposed SELECT column would break deployed query; generic optional URL support is not a promised DB field."
+    },
+    {
+      "id": "GEM-S-01.escape",
+      "decision": "REJECT as demonstrated current escaping write; CONDITIONAL for hostile concurrent filesystem mutator",
+      "evidence": "formatStorageObjectKey is exactly videoId/leaf.webp with validated video ID, no deeper ancestor creation. Existing symlink-parent test confirms rejection before file write; source is hash verified and writes wx. Trusted owner-controlled staging root must have no concurrent untrusted writer. Multi-file atomicity not claimed."
+    },
+    {
+      "id": "GEM-P-01.null_patch",
+      "decision": "REJECT Gemini fallback-to-domestic proposal",
+      "evidence": "We do not guess unknown-coordinate cohort. Invalid input fails closed before merge; actual763approved rows have zero missingcoordinates and frozen735entries unchanged."
+    },
+    {
+      "id": "LOCAL-AUDIT-MATH-01",
+      "decision": "REJECT Gemini section3.2 n<=20 degeneracy claim at n=20",
+      "evidence": "ceil(.95*20)=19 !=20; ceil(.98*20)=20. Native19/20distinct-metric groups show0 vs1ember. Production nearest-rank code was correct and unchanged."
+    }
+  ],
+  "conditions": [
+    {
+      "id": "TH-M-01",
+      "decision": "CONDITIONAL",
+      "guard": "Existing DOM helper tier keys and source render guard native tests pass; actual provider/runtime source and production UI receipts must be linked. No physical performance claim."
+    },
+    {
+      "id": "TH-P-01.distribution",
+      "decision": "ACCEPT",
+      "evidence": "Frozen763approved rows and1098metrics reproduce all735published entries exactly; ties/finitecohorts not exactpercentagequotas."
+    },
+    {
+      "id": "TH-P-03",
+      "decision": "ACCEPT for historical label",
+      "evidence": "Raw1098metrics fetched range June18..July16UTC2026; no live foodquality orfreshness claim. Ember absent detail badge is existing explicit product choice, flames are on map."
+    },
+    {
+      "id": "TH-P-04",
+      "decision": "ACCEPT protections; REJECT arbitrarypromotion",
+      "evidence": "Native membership/conflict/readback tests; unknown member=>standard."
+    },
+    {
+      "id": "TH-E-02",
+      "decision": "ACCEPT for actual4restaurant/12context publication only",
+      "evidence": "Every local/live asset hash and approvedowner video relation in live-assets-readback.json; merged sibling context is intentional, not L1 proof or allrestaurant coverage."
+    },
+    {
+      "id": "TH-R-01",
+      "decision": "CONDITIONAL",
+      "guard": "Existing production ac80/dpl3FXDY remains independent from new unmerged corrections. Local native and future protected release/readback not implied by report."
+    },
+    {
+      "id": "TH-R-02",
+      "decision": "ACCEPT separation",
+      "guard": "Nightly39457197351 historical failure remains failed; not rerun or fixed by this audit. No current raw Nightly failure diagnosis is asserted."
+    }
+  ],
+  "id_drift": "TH-P IDs in thesis part1 vs part2/3 differ. Gemini section1.1 mapping is retained. Use TH-P-01@part1=>distribution and TH-P-02@part1=>ties, TH-P-04@part1=>classification; final fixes use @part2/3 plus explicit subclaim names. No earlier meaning overwritten.",
+  "limits": [
+    "Gemini complete report has explicit SOURCE_MISSING; reviewer claims of NaverMapView being in earlier60scope are not accepted. Deliver necessary actual integration source to Pro reverse in smaller nonoverlapping files, exclude generated types/publication from code-body bundle.",
+    "Native browser fixtures use actual components with SDK/data stubs: they do not prove physical/provider performance.",
+    "Local Next runtime atfirst failed401 due invalid verification-only public key; operational key/config untouched; readiness being reconciled."
+  ]
+}

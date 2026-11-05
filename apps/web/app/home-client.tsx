@@ -6,6 +6,7 @@ import { Maximize2, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContextBase";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useHomeViewportMode } from "@/hooks/useHomeViewportMode";
+import { useRememberHomeReturnHref } from "@/hooks/use-home-return-href";
 import { toast } from "@/lib/no-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { isPublicRestrictedMode } from "@/lib/site-config";
@@ -56,6 +57,8 @@ import {
   type HomeRestoreCompactRestaurant,
   type HomeRestoreSnapshotV1,
 } from "@/lib/home-detail-route-state";
+import { findOverseasRegionKeyForRestaurant } from "@/lib/overseas-region-matching";
+import { preloadNaverMap } from "@/lib/naver-map-loader";
 
 function HomeMapContainerPendingShell() {
   return (
@@ -118,6 +121,7 @@ const HomeClientSidePanels = dynamic(() => import("./home-client-sidepanels"), {
 const HomeClientEffects = dynamic(() => import("./home-client-effects"), {
   ssr: false,
 });
+import { useHomeMapResults } from "@/hooks/use-home-map-results";
 import { useHomeState } from "./hooks/useHomeState";
 import { useHomeHandlers } from "./hooks/useHomeHandlers";
 import { useRestaurantPopupListener } from "./hooks/useRestaurantPopupListener";
@@ -154,11 +158,6 @@ const DEVICE_LOCATION_TIMEOUT_TOAST = "현재 위치를 찾는 시간이 초과�
 const DEVICE_LOCATION_UNAVAILABLE_TOAST = "현재 위치를 확인할 수 없어요. 잠시 후 다시 시도해 주세요.";
 const DEVICE_LOCATION_READINESS_BLOCKED =
   "현재 위치를 지금 표시하지 못했어요. 잠시 후 다시 시도해 주세요.";
-
-const DEVICE_LOCATION_DISCLOSURE =
-  "현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다. 브라우저 위치 권한을 요청할까요?";
-const DEVICE_LOCATION_DISCLOSURE_CANCELLED =
-  "위치 권한을 요청하지 않았어요. 지도는 계속 이용할 수 있어요.";
 
 function describeDeviceLocationFailure(error: unknown) {
   const code = typeof error === "object" && error !== null && "code" in error
@@ -204,13 +203,19 @@ type HomeDetailOpenOptions = {
 };
 
 export default function HomeClient() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, isLoading: isAuthLoading } = useAuth();
   const { isSidebarOpen } = useLayout();
   const viewportMode = useHomeViewportMode();
   const isViewportResolved = viewportMode !== "pending";
   const isDesktop = viewportMode === "desktop";
   const isMobileOrTablet = viewportMode === "mobileOrTablet";
   const [mapMode, setMapMode] = useState<"domestic" | "overseas">("domestic");
+  useEffect(() => {
+    if (!isViewportResolved || mapMode !== "domestic") return;
+    // URL restoration may still be resolving the initial mode in this commit.
+    if (new URL(window.location.href).searchParams.get("mapMode") === "overseas") return;
+    preloadNaverMap();
+  }, [isViewportResolved, mapMode]);
   const [activePanel, setActivePanel] = useState<"map" | "detail" | "control">(
     "map",
   );
@@ -249,6 +254,7 @@ export default function HomeClient() {
     useState<HomeStartupIntent | null>(null);
   const [isDeviceLocationPending, setIsDeviceLocationPending] = useState(false);
   const [isDeviceHeadingMode, setIsDeviceHeadingMode] = useState(false);
+  const deviceLocationRequestRef = useRef({ id: 0, pending: false });
   const deviceLocationFocusRequestIdRef = useRef(0);
   const deviceLocationWatchIdRef = useRef<number | null>(null);
   const deviceOrientationCleanupRef = useRef<(() => void) | null>(null);
@@ -281,6 +287,10 @@ export default function HomeClient() {
   const [mapMountKey] = useState(() => Date.now());
 
   const state = useHomeState(mapMode);
+  const { summary: resultSummary } = useHomeMapResults({
+    mapMode, filters: state.filters, selectedRegion: state.selectedRegion,
+    selectedCountry: state.selectedCountry, showUserSubmittedMarkers,
+  });
   const {
     clearRestaurantDetailSelection,
     closeRestaurantDetailPanel,
@@ -299,6 +309,11 @@ export default function HomeClient() {
   const visibleDetailTitle = visibleDetailRestaurant
     ? buildBrowserTitle(visibleDetailRestaurant.name)
     : null;
+  useRememberHomeReturnHref(user?.id ?? null, {
+    restaurantId: visibleDetailRestaurant?.id ?? null,
+    mapMode,
+    focusZoom: mapFocusZoom,
+  });
   useDocumentTitle(visibleDetailTitle);
   const toCompactRestaurant = useCallback(
     (restaurant: Restaurant | null): HomeRestoreCompactRestaurant | null => {
@@ -357,14 +372,14 @@ export default function HomeClient() {
   }, [clearRestaurantDetailSelection]);
 
   const returnToRestaurantListPanel = useCallback(() => {
-    if (
-      typeof window !== "undefined" &&
-      isHomeDetailHistoryState(window.history.state)
-    ) {
-      const { snapshot } = readHomeRestoreSnapshot(window.history.state.restoreKey);
-      if (snapshot) {
-        window.history.back();
-        return;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("home:detail-user-closed"));
+      if (isHomeDetailHistoryState(window.history.state)) {
+        const { snapshot } = readHomeRestoreSnapshot(window.history.state.restoreKey);
+        if (snapshot) {
+          window.history.back();
+          return true;
+        }
       }
     }
 
@@ -373,6 +388,7 @@ export default function HomeClient() {
     setIsAnnouncementSheetOpen(false);
     setSelectedAnnouncement(null);
     clearAnnouncementPanelUrl();
+    return false;
   }, [closeRestaurantDetailPanel]);
 
   const createHomeRestoreSnapshot = useCallback(
@@ -613,6 +629,10 @@ export default function HomeClient() {
       }
 
       const detailMapMode = options?.mapMode ?? mapMode;
+      if (detailMapMode === "overseas") {
+        const regionKey = findOverseasRegionKeyForRestaurant(restaurant);
+        if (regionKey) setSelectedCountry(regionKey);
+      }
       if (typeof window !== "undefined") {
         const restoreKey =
           isHomeDetailHistoryState(window.history.state) &&
@@ -655,7 +675,7 @@ export default function HomeClient() {
         }
       }
     },
-    [createHomeRestoreSnapshot, mapMode, openRestaurantDetailSelection],
+    [createHomeRestoreSnapshot, mapMode, openRestaurantDetailSelection, setSelectedCountry],
   );
   useEffect(() => {
     openDetailPanelRef.current = openDetailPanel;
@@ -770,7 +790,7 @@ export default function HomeClient() {
 
   // [OPTIMIZATION] useCallback으로 메모이제이션
   const handleSubmissionButtonClick = useCallback(() => {
-    if (isPublicRestrictedMode) return;
+    if (isPublicRestrictedMode || isAuthLoading) return;
     if (!user) {
       toast.info("로그인하면 맛집 제보를 바로 이어서 할 수 있어요");
       requestAuthUi({
@@ -782,7 +802,7 @@ export default function HomeClient() {
       return;
     }
     setIsSubmissionModalOpen(true);
-  }, [user]);
+  }, [user, isAuthLoading]);
 
   const handleUserSubmittedMarkerToggle = useCallback(() => {
     const next = !showUserSubmittedMarkers;
@@ -906,6 +926,9 @@ export default function HomeClient() {
     stopDeviceHeadingWatchers();
   }, [stopDeviceHeadingWatchers]);
   const clearDeviceLocationState = useCallback(() => {
+    deviceLocationRequestRef.current.id += 1;
+    deviceLocationRequestRef.current.pending = false;
+    if (deviceLocationMountedRef.current) setIsDeviceLocationPending(false);
     const authorization = deviceLocationAuthorizationRef.current;
     const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
     if (expiryTimer !== null) {
@@ -1055,69 +1078,55 @@ export default function HomeClient() {
       return;
     }
 
-    const authorization = await acquireDeviceLocationUseAuthorization();
-    if (!authorization) {
-      clearDeviceLocationState();
-      toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
-      return;
-    }
-
-    if (
-      !deviceLocationMountedRef.current ||
-      (typeof document !== "undefined" &&
-        document.visibilityState === "hidden")
-    ) {
-      revokeDeviceLocationUseAuthorization(authorization);
-      clearDeviceLocationState();
-      return;
-    }
-
-    const previousAuthorization = deviceLocationAuthorizationRef.current;
-    const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
-    if (expiryTimer !== null) {
-      globalThis.clearTimeout(expiryTimer);
-      deviceLocationAuthorizationExpiryTimerRef.current = null;
-    }
-    revokeDeviceLocationUseAuthorization(previousAuthorization);
-    deviceLocationAuthorizationRef.current = authorization;
-    const expiresIn = authorization.expiresAt - authorization.grantedAt;
-    deviceLocationAuthorizationExpiryTimerRef.current = globalThis.setTimeout(() => {
-      if (deviceLocationAuthorizationRef.current === authorization) {
-        clearDeviceLocationState();
-      }
-    }, expiresIn);
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      clearDeviceLocationState();
-      toast.error(DEVICE_LOCATION_ENABLE_TOAST);
-      return;
-    }
-
-    try {
-      if (
-        typeof window === "undefined" ||
-        !window.confirm(DEVICE_LOCATION_DISCLOSURE)
-      ) {
-        clearDeviceLocationState();
-        toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
-        return;
-      }
-    } catch {
-      clearDeviceLocationState();
-      toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
-      return;
-    }
-
-    if (deviceLocationAuthorizationRef.current !== authorization) {
-      clearDeviceLocationState();
-      return;
-    }
-
-    const nextMode: "position" | "heading" = deviceLocation
-      ? "heading"
-      : "position";
+    if (deviceLocationRequestRef.current.pending) return;
+    const requestId = ++deviceLocationRequestRef.current.id;
+    deviceLocationRequestRef.current.pending = true;
     setIsDeviceLocationPending(true);
 
     try {
+      const authorization = await acquireDeviceLocationUseAuthorization();
+      if (
+        deviceLocationRequestRef.current.id !== requestId ||
+        !deviceLocationMountedRef.current ||
+        (typeof document !== "undefined" && document.visibilityState === "hidden")
+      ) {
+        revokeDeviceLocationUseAuthorization(authorization);
+        return;
+      }
+      if (!authorization) {
+        clearDeviceLocationState();
+        toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
+        return;
+      }
+
+      const previousAuthorization = deviceLocationAuthorizationRef.current;
+      const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+      if (expiryTimer !== null) {
+        globalThis.clearTimeout(expiryTimer);
+        deviceLocationAuthorizationExpiryTimerRef.current = null;
+      }
+      revokeDeviceLocationUseAuthorization(previousAuthorization);
+      deviceLocationAuthorizationRef.current = authorization;
+      const expiresIn = authorization.expiresAt - authorization.grantedAt;
+      deviceLocationAuthorizationExpiryTimerRef.current = globalThis.setTimeout(() => {
+        if (deviceLocationAuthorizationRef.current === authorization) {
+          clearDeviceLocationState();
+        }
+      }, expiresIn);
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        clearDeviceLocationState();
+        toast.error(DEVICE_LOCATION_ENABLE_TOAST);
+        return;
+      }
+
+      if (deviceLocationAuthorizationRef.current !== authorization) {
+        clearDeviceLocationState();
+        return;
+      }
+
+      const nextMode: "position" | "heading" = deviceLocation
+        ? "heading"
+        : "position";
       const position = await new Promise<GeolocationPosition>(
         (resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -1127,6 +1136,10 @@ export default function HomeClient() {
           });
         },
       );
+      if (
+        deviceLocationRequestRef.current.id !== requestId ||
+        deviceLocationAuthorizationRef.current !== authorization
+      ) return;
       if (
         !deviceLocationMountedRef.current ||
         (typeof document !== "undefined" &&
@@ -1140,6 +1153,7 @@ export default function HomeClient() {
         setIsDeviceHeadingMode(true);
         await startDeviceOrientationTracking();
 
+        if (deviceLocationRequestRef.current.id !== requestId) return;
         if (
           !deviceLocationMountedRef.current ||
           (typeof document !== "undefined" &&
@@ -1159,11 +1173,15 @@ export default function HomeClient() {
 
       applyDevicePosition(position, nextMode, { shouldFocus: true });
     } catch (error) {
+      if (deviceLocationRequestRef.current.id !== requestId) return;
       clearDeviceLocationState();
       toast.error(describeDeviceLocationFailure(error));
     } finally {
-      if (deviceLocationMountedRef.current) {
-        setIsDeviceLocationPending(false);
+      if (deviceLocationRequestRef.current.id === requestId) {
+        deviceLocationRequestRef.current.pending = false;
+        if (deviceLocationMountedRef.current) {
+          setIsDeviceLocationPending(false);
+        }
       }
     }
   }, [
@@ -1313,6 +1331,7 @@ export default function HomeClient() {
 
       {isViewportResolved && !(isMobileOrTablet && isMapFullscreen) && (
         <HomeControlPanel
+          resultSummary={resultSummary}
           viewportMode={viewportMode}
           mapMode={mapMode}
           selectedRegion={state.selectedRegion}
@@ -1345,6 +1364,7 @@ export default function HomeClient() {
             setMapMode(mode);
           }}
           user={isPublicRestrictedMode ? null : user}
+          isAuthLoading={isPublicRestrictedMode ? false : isAuthLoading}
           onSubmissionClick={isPublicRestrictedMode ? undefined : handleSubmissionButtonClick}
           onTopShellUserIconClick={isPublicRestrictedMode ? undefined : handleTopShellUserIconClick}
           onDeviceLocationClick={isPublicRestrictedMode ? undefined : handleDeviceLocationClick}
@@ -1371,6 +1391,7 @@ export default function HomeClient() {
           />
           <SubmissionFloatingButton
             onClick={handleSubmissionButtonClick}
+            isAuthLoading={isAuthLoading}
             isSidebarOpen={isSidebarOpen}
             onDeviceLocationClick={handleDeviceLocationClick}
             deviceLocation={deviceLocation}

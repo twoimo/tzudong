@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "tzudong-source-bound-runtime-resolution-v1",
+  "receiptId": "OCR-MULTI-MODEL-CREDENTIAL-CLASSIFICATION-RESOLUTION-20261019",
+  "recordedAt": "2026-10-18T18:27:13Z",
+  "baseHead": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "finding": {
+    "id": "OCR-MULTI-MODEL-CREDENTIAL-001",
+    "verdict": "ACCEPT_RESOLVED_IN_SOURCE",
+    "counterexample": "Within one credential operation, model A returns text that fails parsing and model B then returns a structured credential rejection. The old model-local response flag produced definitiveCredentialRejection=true and could admit durable claim release."
+  },
+  "before": {
+    "helperSha256": "341f17e62809b22746e2574d6bb2482fb849e53a7e86591236ec4aa350c44e6e",
+    "originalTestSha256": "b5281bbd5181bf244e9f302610cee80e53aa5a5d6ab2a6f53c2b419ae7000b7b",
+    "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/gemini-ocr.test.ts --timeout 30000 -t \"does not downgrade a prior model response\"",
+    "result": "0 pass, 1 fail; received GeminiOcrError did not match definitiveCredentialRejection=false",
+    "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/before-counterexample-bun.txt",
+    "rawSha256": "451aac22f14d5b94b1316b95e0a9ea3166849ba20634ca29aa6b07df3119be34"
+  },
+  "sourceHashes": {
+    "apps/web/lib/ocr/gemini.ts": "1131f039b2448970356e55a573265465f72c631fdc9b4ca3915ebd7fbb3e116f",
+    "apps/web/tests-unit/gemini-ocr.test.ts": "42b0e5d1caef145d4016304ff8bc37be117bdbf7e24021fed24f002f9bc012a8"
+  },
+  "implementation": [
+    {
+      "id": "OCR-MMC-001",
+      "status": "resolved",
+      "behavior": "callGeminiReceiptOcr records whether any non-credential outcome has occurred across the whole declared model operation. A later model credential rejection is definitive only when no earlier response, parse failure, unsupported-model response, transport uncertainty, timeout, or cancellation has already made the operation mixed or uncertain."
+    },
+    {
+      "id": "OCR-MMC-002",
+      "status": "preserved",
+      "behavior": "The existing model-local providerResponseReceived flag still controls whether another declared model is safe. Provider call ordering, credential ordering, model list, timeout, quota, and daily limits are unchanged."
+    },
+    {
+      "id": "OCR-MMC-003",
+      "status": "verified",
+      "behavior": "The response-then-credential test returns definitiveCredentialRejection=false after exactly the two declared models and never calls the second credential. The existing credential-only stale-to-healthy recovery still succeeds, and credential-then-transport uncertainty remains non-definitive with its prior attempts preserved."
+    }
+  ],
+  "verification": [
+    {
+      "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/gemini-ocr.test.ts --timeout 30000",
+      "result": "26 pass, 0 fail, 116 assertions",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/after-gemini-bun.txt",
+      "rawSha256": "3bcecb8dcb47b0d969df844ec00aa0cf5f282e91e28d4cc5ec9b2c5ecd007827"
+    },
+    {
+      "command": "node scripts/run-web-tool.mjs eslint lib/ocr/gemini.ts tests-unit/gemini-ocr.test.ts --max-warnings=0",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/targeted-eslint.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check -- apps/web/lib/ocr/gemini.ts apps/web/tests-unit/gemini-ocr.test.ts",
+      "result": "exit 0"
+    }
+  ],
+  "privacy": {
+    "realProviderCalls": 0,
+    "rawOcrPersisted": false,
+    "credentialsPersisted": false,
+    "fixtures": "non-credential synthetic markers only"
+  },
+  "unchanged": [
+    "provider call implementation and ordering",
+    "quota reservation and daily cap",
+    "configured model normalization and list",
+    "credential classifier status/reason rules",
+    "durable release implementation"
+  ],
+  "remainingGate": "Root owns integrated parity/build and final source binding because app source changed.",
+  "externalEffects": {
+    "providerCalls": 0,
+    "hostedDatabaseWrites": 0,
+    "storageCalls": 0,
+    "gitWrites": 0
+  }
+}

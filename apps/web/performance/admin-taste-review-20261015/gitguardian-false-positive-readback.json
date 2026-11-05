@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "kind": "gitguardian-false-positive-readback",
+  "cases": [
+    {
+      "incident": 38246983,
+      "occurrence": 304360849,
+      "detector": "Generic Password",
+      "initialStatus": "Triggered",
+      "action": "Ignore",
+      "disposition": "False positive",
+      "finalStatus": "Ignored",
+      "mutationPerformed": true,
+      "readbackVerified": true,
+      "privacyMode": "ON"
+    },
+    {
+      "incident": 38246985,
+      "occurrence": 304360848,
+      "detector": "Generic High Entropy Secret",
+      "initialStatus": "Triggered",
+      "action": "Ignore",
+      "disposition": "False positive",
+      "finalStatus": "Ignored",
+      "mutationPerformed": true,
+      "readbackVerified": true,
+      "privacyMode": "ON"
+    },
+    {
+      "incident": 38246984,
+      "occurrence": 304360851,
+      "detector": "Generic High Entropy Secret",
+      "initialStatus": "Triggered",
+      "action": "Ignore",
+      "disposition": "False positive",
+      "finalStatus": "Ignored",
+      "mutationPerformed": true,
+      "readbackVerified": true,
+      "privacyMode": "ON"
+    }
+  ]
+}

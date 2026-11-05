@@ -156,7 +156,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(tableSource).toContain("const mobileControls = (");
     expect(tableSource).toContain("const mobileCards = (");
     expect(tableSource).toMatch(/grid grid-cols-1 [^\"]*md:grid-cols-2 lg:hidden/);
-    expect(tableSource).toContain("hidden rounded-lg border lg:block");
+    expect(tableSource).toContain("admin-surface hidden min-h-0 flex-1 flex-col overflow-hidden lg:flex");
     expect(tableSource).toContain('aria-label="상호·영상 ID 검색"');
     expect(tableSource).toContain('aria-label="검색어 지우기"');
     expect(tableSource).toContain("필터 초기화");
@@ -350,12 +350,14 @@ describe("mobile and desktop parity source contracts", () => {
       "app/mypage/mypage-layout-content.tsx",
     );
 
+    const themeFiltersSource = source("components/home/HomeMapThemeFilters.tsx");
+    expect(mobileOverlaySource).toContain("<HomeMapThemeFilters");
+    expect(homeDesktopControlPanelSource).toContain("<HomeMapThemeFilters");
     expect(mobileOverlaySource).toContain("min-h-11");
     expect(mobileOverlaySource).toContain('aria-label="맛집 검색 열기"');
-    expect(mobileOverlaySource).toContain("aria-pressed={isSelected}");
-    expect(mobileOverlaySource).toContain(
-      "pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full",
-    );
+    expect(themeFiltersSource).toContain("aria-pressed={isSelected}");
+    expect(themeFiltersSource).toContain("min-h-8");
+    expect(themeFiltersSource).toContain("whitespace-normal");
     expect(mobileOverlaySource).toContain("text-xs font-medium");
     expect(mobileOverlaySource).toContain(
       "rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium",
@@ -363,8 +365,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeAppGlobalsSource).toContain(".home-map-floating-control-text");
     expect(homeAppGlobalsSource).toContain("font-size: 0.75rem");
     expect(homeAppGlobalsSource).toContain("line-height: 1rem");
-    expect(mobileOverlaySource.match(/home-map-floating-control-text/g)).toHaveLength(5);
-    expect(homeDesktopControlPanelSource.match(/home-map-floating-control-text/g)).toHaveLength(6);
+    expect(themeFiltersSource).toContain("home-map-floating-control-text");
     expect(mobileOverlaySource).not.toContain(
       "pointer-events-auto inline-flex h-11 min-h-11 snap-start shrink-0 items-center gap-1 rounded-full",
     );
@@ -375,9 +376,10 @@ describe("mobile and desktop parity source contracts", () => {
       "w-[clamp(84px,28vw,105px)] h-11 min-h-11 px-2",
     );
     expect(mobileOverlaySource).toContain("data-mobile-topic-slider");
-    expect(mobileOverlaySource).toContain("flex w-full max-w-full flex-nowrap snap-x gap-2 overflow-x-auto px-0.5");
+    expect(themeFiltersSource).toContain("flex-wrap");
+    expect(themeFiltersSource).not.toContain("overflow-x-auto");
     expect(mobileOverlaySource).not.toContain("mt-2 -mx-3 flex snap-x");
-    expect(mobileOverlaySource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
+    expect(themeFiltersSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
     expect(mobileOverlaySource).toContain("카테고리 필터 열기");
     expect(mobileOverlaySource).toContain('aria-expanded={false}');
     expect(mobileOverlaySource).toContain('data-mobile-map-sheet-trigger="region"');
@@ -520,7 +522,7 @@ describe("mobile and desktop parity source contracts", () => {
       "captureDetailReturnView(activeLeftPanelViewRef.current, {",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "if (pendingDetailReturnCaptureRef.current) return;",
+      "if (pendingDetailReturnCaptureRef.current || hasCapturedDetailReturnRef.current) return;",
     );
     expect(homeDesktopControlPanelSource).toContain(
       'captureDetailReturnView("map", { pendingDetailOpen: true })',
@@ -548,7 +550,7 @@ describe("mobile and desktop parity source contracts", () => {
       "const returnRoute = getDesktopLeftPanelRoute(",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "(onDetailPanelBack ?? onPanelClose)?.()",
+      "if (onDetailPanelBack?.() === true) return;\n    if (!onDetailPanelBack) onPanelClose?.();",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "router.replace(returnRoute, { scroll: false })",
@@ -556,7 +558,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "replaceBrowserHistoryRoute(returnRoute)",
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       'replaceBrowserHistoryRoute("/")',
     );
     expect(homeDesktopControlPanelSource).toContain(
@@ -599,10 +601,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full",
     );
-    expect(homeDesktopControlPanelSource).toContain("HOME_MAP_THEME_FILTERS.map");
-    expect(homeDesktopControlPanelSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
-    expect(mobileOverlaySource).toContain("<span>{theme.label}</span>");
-    expect(homeDesktopControlPanelSource).toContain("<span>{theme.label}</span>");
+    expect(themeFiltersSource).toContain("HOME_MAP_THEME_FILTERS.map");
+    expect(themeFiltersSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
+    expect(themeFiltersSource).toContain("{theme.label}</span>");
     expect(mobileOverlaySource).not.toContain("theme.shortLabel");
     expect(homeDesktopControlPanelSource).not.toContain("theme.shortLabel");
     expect(themeFilterIconSource).toContain('"hot-view": TrendingUp');
@@ -610,7 +611,8 @@ describe("mobile and desktop parity source contracts", () => {
     expect(themeFilterIconSource).toContain('"fresh-video": Clock3');
     expect(themeFilterIconSource).toContain('"repeat-video": Repeat2');
     expect(themeFilterIconSource).toContain('"fan-signal": Sparkles');
-    expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-0");
+    expect(homeDesktopControlPanelSource).toContain("<CategoryFilter");
+    expect(homeDesktopControlPanelSource).toContain("compactTrigger");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
@@ -698,15 +700,14 @@ describe("mobile and desktop parity source contracts", () => {
       "'이전 목록으로 돌아가기'",
     );
     expect(restaurantDetailPanelSource).toContain(
-      "{isAdmin && onEditRestaurant && viewMode === 'detail' && (",
+      "{isAdmin && onEditRestaurant ? (",
     );
+    expect(restaurantDetailPanelSource).toContain("{viewMode === 'detail' ? (");
     expect(restaurantDetailPanelSource).toContain(
-      "showDesktopBackButton && !isMobile",
+      "const showBackButton = isMobile || showDesktopBackButton;",
     );
     const sharedPanelHeaderSource = source("components/home/map-panel-chrome.tsx");
-    expect(sharedPanelHeaderSource.indexOf("{actions}")).toBeLessThan(
-      sharedPanelHeaderSource.indexOf("{onClose ?"),
-    );
+    // Header actions and close behavior are exercised in renewal-chrome-browser.test.ts.
     expect(restaurantDetailPanelSource).not.toContain(
       'className="mr-1 h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80"',
     );
@@ -828,7 +829,7 @@ describe("mobile and desktop parity source contracts", () => {
       "DESKTOP_MAP_MENU_ITEMS.map((item) =>",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "onClick={() => handleDesktopMapMenuItemSelect(item.id)}",
+      "onSelect={() => handleDesktopMapMenuItemSelect(item.id)}",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
       "const desktopMapMenuItems = useMemo",
@@ -877,7 +878,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-6 lg:col-span-2"',
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
@@ -1009,16 +1010,16 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(stampOverlaySource).toContain("const STAMP_PAGE_SIZE = 5");
     expect(stampOverlaySource).toContain(
-      "const skeletonCardCount = STAMP_PAGE_SIZE",
+      "const loadingCardCount = STAMP_PAGE_SIZE",
     );
-    expect(stampOverlaySource).toContain("count={skeletonCardCount}");
+    expect(stampOverlaySource).toContain("Array.from({ length: loadingCardCount }");
     expect(stampOverlaySource).toContain(
-      "const skeletonGridColumns = singleColumnCards",
+      "const loadingGridColumns = singleColumnCards",
     );
     expect(stampOverlaySource).toContain(
       "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4",
     );
-    expect(stampOverlaySource).toContain("columns={skeletonGridColumns}");
+    expect(stampOverlaySource).toContain('className={cn("grid gap-3", loadingGridColumns)}');
     expect(stampOverlaySource).toContain('? "grid grid-cols-1 gap-3 md:gap-3"');
     expect(stampOverlaySource).toContain(
       "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4",
@@ -1114,7 +1115,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-fixed-control-region="mobile-map-actions"',
     );
     expect(source("components/home/MobileControlOverlay.tsx")).toContain("event.stopPropagation();");
-    expect(source("components/home/MobileControlOverlay.tsx")).toContain("onDeviceLocationClick?.();");
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain("onConfirm={() => onDeviceLocationClick?.()}");
     expect(source("components/home/MobileControlOverlay.tsx")).toContain("activeSheet !== 'search'");
     expect(source("app/home-client.tsx")).not.toContain(
       "현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요",

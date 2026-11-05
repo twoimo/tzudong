@@ -18,6 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { config as loadEnv } from 'dotenv';
+import { assertHostedNightlyTargetAllowed } from './nightly-target-guard.mjs';
 import {
   completeNightlyCleanupTasks,
   preparePrivatePlaywrightReport,
@@ -178,6 +179,8 @@ const browserEnvironmentKeys = [
   'NIGHTLY_ENV_PROVENANCE_SHA256',
   'NIGHTLY_ENV_FILE',
   'NIGHTLY_BROWSER_RUNTIME',
+  // Preserve an explicitly selected task-owned Chrome for Testing cache.
+  'PLAYWRIGHT_BROWSERS_PATH',
   'NIGHTLY_ADMIN_EMAIL',
   'NIGHTLY_ADMIN_PASSWORD',
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -938,6 +941,7 @@ function validateHostedEnvironment(environment) {
     throw new Error('Hosted nightly Supabase project reference is invalid.');
   }
   const parsedUrl = new URL(environment.NEXT_PUBLIC_SUPABASE_URL.trim());
+  assertHostedNightlyTargetAllowed(projectRef, parsedUrl);
   const expectedHost = `${projectRef}.supabase.co`;
   if (
     parsedUrl.protocol !== 'https:'
@@ -1314,6 +1318,12 @@ function parseDockerServiceRows(stdout) {
   return services;
 }
 
+function migrationLedgerUnitCount() {
+  return readdirSync(path.join(repositoryRoot, 'backend', 'supabase', 'migrations'))
+    .filter((name) => /^\d{8,14}(?:_|\.)/.test(name) && name.toLowerCase().endsWith('.sql'))
+    .length;
+}
+
 function assertLocalMigrationReceiptEnvelope(receipt, stackReceipt) {
   if (
     !receipt
@@ -1323,7 +1333,7 @@ function assertLocalMigrationReceiptEnvelope(receipt, stackReceipt) {
     || receipt.serializer !== 'receipt-v1'
     || receipt.project_name !== localProjectName
     || !Array.isArray(receipt.ledger)
-    || receipt.ledger.length !== 140
+    || receipt.ledger.length !== migrationLedgerUnitCount()
     || !receipt.replay_proofs
     || typeof receipt.replay_proofs !== 'object'
     || Array.isArray(receipt.replay_proofs)
@@ -1960,6 +1970,7 @@ async function runBrowserRegression(environment, mode) {
         'test',
         ...curatedBrowserSpecs,
         '--project=chromium',
+        '--retries=0',
         '--reporter=line,json',
       ],
       {

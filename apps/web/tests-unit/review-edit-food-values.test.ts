@@ -1,3 +1,4 @@
+import { captureBrowserDraftEpoch, isBrowserDraftEpochCurrent } from '../lib/privacy/browser-draft-lifecycle';
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -29,18 +30,6 @@ function snippet(name: string): string {
     }
     visit(tree);
     if (!found) throw new Error('FIXTURE_NODE_MISSING');
-    return found;
-}
-
-function effect(marker: string): string {
-    let found: string | undefined;
-    function visit(node: ts.Node) {
-        if (ts.isCallExpression(node) && node.expression.getText(tree) === 'useEffect'
-            && node.arguments[0]?.getText(tree).includes(marker)) found = node.arguments[0].getText(tree);
-        if (!found) ts.forEachChild(node, visit);
-    }
-    visit(tree);
-    if (!found) throw new Error('FIXTURE_EFFECT_MISSING');
     return found;
 }
 
@@ -132,17 +121,13 @@ describe('authoritative food values in review editing', () => {
         expect(snippet('removeExistingFoodPhoto')).not.toMatch(/storage|\.remove\(/);
     });
 
-    test('actual autosave passes exact historical values and explicit removals to the existing draft boundary', async () => {
-        let scheduled: (() => Promise<void>) | undefined; let saved: Record<string, unknown> | undefined;
-        const autosave = evaluate<() => () => void>(effect('saveEditDraft'), {
-            isOpen: true, review: { id: ownership.reviewId, foodPhotos: originals }, user: { id: ownership.ownerId },
-            isSubmitting: false, isDeleting: false, mutationRef: { current: { pending: false } },
+    test('actual draft snapshot preserves historical values and explicit removals at the existing boundary', () => {
+        const saved = evaluate<Record<string, unknown>>(snippet('draftValue'), {
+            useMemo: (callback: () => unknown) => callback(),
+            review: { id: ownership.reviewId, foodPhotos: originals }, user: { id: ownership.ownerId },
             content: 'Synthetic text', categories: ['한식'], existingFoodPhotos: originals.slice(0, 4), removedPhotos: [opaque], foodPhotoOwnership: ownership,
-            setTimeout: (callback: () => Promise<void>) => { scheduled = callback; return 1; }, clearTimeout() {},
-            saveEditDraft: async (input: Record<string, unknown>) => { saved = input; }, setLastSavedAt() {},
         });
-        autosave(); await scheduled!();
-        expect(saved?.existingFoodPhotos).toEqual(originals.slice(0, 4)); expect(saved?.removedPhotos).toEqual([opaque]);
+        expect(saved.existingFoodPhotos).toEqual(originals.slice(0, 4)); expect(saved.removedPhotos).toEqual([opaque]);
     });
 
     test('actual async draft loading restores omitted originals and blocks pending-operation state changes', async () => {
@@ -154,7 +139,7 @@ describe('authoritative food values in review editing', () => {
             const load = evaluate<() => Promise<void>>(snippet('loadDraft'), {
                 isOpen: true, review: { id: ownership.reviewId, foodPhotos: originals }, user: { id: ownership.ownerId },
                 ownerRef: { current: ownership.ownerId }, mutationRef, foodPhotoOwnership: ownership, cancelled: false,
-                getEditDraft: () => draft, setLastSavedAt() {}, setContent() {}, setCategories() {}, setRemovedPhotos() {},
+                getEditDraft: () => draft, waitForDraftAutosave: async () => {}, draftScope: 'scope', currentDraftScope: { current: 'scope' }, setLoadedDraftScope() {}, setDraftLoadFailed() {}, setLastSavedAt() {}, setContent() {}, setCategories() {}, setRemovedPhotos() {},
                 setExistingFoodPhotos: (values: string[]) => { restored = values; },
             });
             const loading = load(); mutationRef.current.pending = pending;
@@ -170,12 +155,15 @@ describe('authoritative food values in review editing', () => {
         const submit = evaluate<(kind: string) => Promise<void>>(snippet('executeMutation'), {
             review: { id: ownership.reviewId, foodPhotos: originals, content: 'Original synthetic content', categories: ['한식'] },
             user: { id: ownership.ownerId }, foodPhotoOwnership: ownership, ownerRef: { current: ownership.ownerId },
+            captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, draftScope: 'scope', currentDraftScope: { current: 'scope' },
             content: 'Edited synthetic content', categories: ['한식'], existingFoodPhotos: [...remaining, 'injected value'], newFoodPhotos: [],
-            isSubmitting: false, isDeleting: false,
+            isSubmitting: false, isDeleting: false, draftLoaded: true,
+            draftAutosave: { cancel() {}, settle: async () => true, resume() {} },
             mutationRef: { current: { pendingKind: 'edit', canCancelConfirmedMissingUpload: false, run: async (input: typeof submitted) => {
                 submitted = input; return { committed: false, code: 'REVIEW_NOT_CONFIRMED' };
             } } },
             setIsSubmitting() {}, setIsDeleting() {}, setRetryKind() {}, setCanCancelMissingUpload() {}, setCleanupFailureMessage() {},
+            syncPendingRecovery: () => false,
             reviewMutationMessage: () => 'UNCONFIRMED', toast() {},
         });
         await submit('edit');

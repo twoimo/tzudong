@@ -1,0 +1,20 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/zod-collection-size-boundary.test.ts:
+(pass) collection size admission before element validation > array.max rejects oversize without visiting elements [1.52ms]
+(pass) collection size admission before element validation > array.max still parses a collection within its limit [0.18ms]
+(pass) collection size admission before element validation > array.length rejects oversize without visiting elements [0.19ms]
+(pass) collection size admission before element validation > array.length still parses a collection within its limit [0.04ms]
+(pass) collection size admission before element validation > set.max rejects oversize without visiting elements [0.23ms]
+(pass) collection size admission before element validation > set.max still parses a collection within its limit [0.08ms]
+(pass) collection size admission before element validation > set.size rejects oversize without visiting elements [0.09ms]
+(pass) collection size admission before element validation > set.size still parses a collection within its limit [0.07ms]
+(pass) collection size admission before element validation > map.max rejects oversize without visiting elements [0.29ms]
+(pass) collection size admission before element validation > map.max still parses a collection within its limit [0.15ms]
+(pass) collection size admission before element validation > map.size rejects oversize without visiting elements [0.13ms]
+(pass) collection size admission before element validation > map.size still parses a collection within its limit [0.04ms]
+
+ 12 pass
+ 0 fail
+ 30 expect() calls
+Ran 12 tests across 1 file. [61.00ms]

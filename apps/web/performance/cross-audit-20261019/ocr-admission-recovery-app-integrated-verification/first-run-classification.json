@@ -1,0 +1,65 @@
+{
+  "checks": {
+    "admin-processor": {
+      "assertions": 19,
+      "exitCode": 0,
+      "fail": 0,
+      "pass": 5
+    },
+    "admin-recovery": {
+      "exitCode": 1,
+      "fail": 1,
+      "pass": 0
+    },
+    "admin-workflow": {
+      "assertions": 121,
+      "exitCode": 0,
+      "fail": 0,
+      "pass": 18
+    },
+    "compiler-parity": {
+      "exitCode": 0
+    },
+    "held-routes": {
+      "assertions": 18,
+      "exitCode": 0,
+      "fail": 0,
+      "pass": 4
+    },
+    "helper-durable": {
+      "assertions": 328,
+      "exitCode": 0,
+      "fail": 0,
+      "pass": 61
+    },
+    "receipt-replacement": {
+      "assertions": 10,
+      "exitCode": 0,
+      "fail": 0,
+      "pass": 3
+    },
+    "route-contract": {
+      "assertions": 266,
+      "exitCode": 1,
+      "fail": 1,
+      "pass": 17
+    },
+    "worker-cli": {
+      "assertions": 82,
+      "exitCode": 0,
+      "fail": 0,
+      "pass": 12
+    }
+  },
+  "externalRuntimeProof": false,
+  "failures": {
+    "admin-recovery": "isolated test missing its own server-only test environment; no test body ran",
+    "route-contract": "stale literal source assertion for dynamic guarded action;17 cases passed and one failed"
+  },
+  "heldSqlCompiler": "not_run_pins_intentionally_pending",
+  "productionBuild": "not_run_after_failed_tests",
+  "runtimeDefectProvenByTheseTwoFailures": false,
+  "schemaVersion": 1,
+  "sourceIntegrityUnchanged": true,
+  "sourceReceiptSha256": "54cf79aacdbd3c94068ed00c5ef5525a28e6087598cc370cec6bcce095d7481a"
+}

@@ -1,0 +1,587 @@
+{
+  "schema": "tzudong.ocr-catalog-recovery-independent-source-review/v1",
+  "append_only": true,
+  "events": [
+    {
+      "event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-001",
+      "captured_at": "2026-10-19T01:07:45+0900",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "review_mode": "read_only_source_review",
+      "reported_anchors": {
+        "resolution": {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/resolution.json",
+          "sha256": "507029a10ebf649187c3a8be67fbf63c2657df5d415bcc3ace69734747be0314"
+        },
+        "migration": {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "sha256": "f6a56dd93c17487d91ea5fd59a7d6d929f9beac58d0564957900ceaae6746e35"
+        },
+        "durable_execution": {
+          "path": "apps/web/lib/ocr/durable-result.ts",
+          "sha256": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787"
+        }
+      },
+      "reviewed_source_hashes": {
+        ".github/receipt-ocr-post105-sql-successor.v1.json": "aaabf30561daf2d40c346d51a2a69c1bfd4fedff7885eefb1b52fe43686d6dec",
+        "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+        "apps/web/tests-unit/receipt-ocr-post105-sql-successor.test.ts": "6134b41c2bf0be61b203598c9bd22e7965b020bdf1a668afb69d492b2527dde0",
+        "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0",
+        "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql": "82a963e6cf164665b98a8de55e846b73fdd858653dbd4752b3e2e4e3b0647078"
+      },
+      "overall_verdict": "CONDITIONAL",
+      "decisions": [
+        {
+          "id": "OCR-CATALOG-INDEPENDENT-001",
+          "verdict": "ACCEPT",
+          "subject": "catalog seal and exact 106-ledger binding without source circularity",
+          "evidence": [
+            "The compiler verifies the migration file SHA, original 44-statement vector and predecessor 105 identity before compilation.",
+            "The migration installs an unsealed private catalog row containing four function-definition hashes but does not embed its own SHA, statement vector or terminal identity root.",
+            "The generated outer transaction inserts the exact migration ledger row first, then seals the catalog row only after recomputing and matching ledger count 106, the full ledger identity root, migration version/name/count and statement-vector SHA.",
+            "The capability recomputes the whole ledger root and the target row identity and compares both to the sealed values. A terminal ready readback follows the seal in the same outer transaction."
+          ],
+          "condition": "This is source-level acceptance. The held launch manifest still prevents treating it as an applied 106 catalog."
+        },
+        {
+          "id": "OCR-CATALOG-INDEPENDENT-002",
+          "verdict": "CONDITIONAL",
+          "subject": "definition, PK, RLS, policy, owner and ACL drift closure",
+          "accepted_scope": [
+            "All four public/private helper and wrapper definitions are rehashed from pg_get_functiondef and compared with the sealed function_contract; language and volatility are included in that contract.",
+            "Runtime readiness separately checks each function owner, SECURITY DEFINER, empty search_path, language, volatility and the intended service_role/anon/authenticated execution boundary.",
+            "Both tables require one exact primary key, enabled and forced RLS, and one exact postgres-only permissive policy with true USING and WITH CHECK expressions.",
+            "The runtime capability detects service_role table privilege drift; the compiler terminal query additionally requires postgres table ownership and rejects table privileges for anon, authenticated, service_role and privacy_workflow_owner."
+          ],
+          "counterexamples": [
+            {
+              "operation": "GRANT SELECT ON ocr_private.receipt_credential_rejection_releases TO authenticated",
+              "result": "The runtime capability checks table privileges only for service_role. PK, RLS, policy, function hashes and sealed ledger identity remain unchanged, so the capability can still return ready even though the table ACL changed. The postgres-only policy may still deny rows; the counterexample disproves exact ACL-drift detection rather than proving row disclosure."
+            },
+            {
+              "operation": "GRANT EXECUTE ON FUNCTION public.release_receipt_ocr_definitive_credential_rejection(uuid,uuid) TO a non-admitted third role",
+              "result": "Function definition hashes exclude ACLs and the readiness query probes only service_role, anon and authenticated. An additional direct grantee outside that finite set is not rejected by the runtime capability or compiler query."
+            },
+            {
+              "operation": "ALTER TABLE ocr_private.receipt_credential_rejection_releases OWNER TO another role",
+              "result": "The runtime capability does not inspect pg_class.relowner and can remain ready. The compiler terminal query detects this at apply-time, but a later operating owner drift is not held by the capability checked before OCR work."
+            }
+          ],
+          "static_check": {
+            "scope": "ocr_private.get_receipt_ocr_credential_release_capability() source block",
+            "result": {
+              "proacl_references": 0,
+              "relacl_references": 0,
+              "relowner_references": 0,
+              "has_table_privilege_references": 2,
+              "has_function_privilege_references": 3
+            }
+          },
+          "remaining_condition": "Before claiming exact ACL and owner drift closure, compare normalized expected pg_proc.proacl, pg_class.relacl and table owners in the runtime capability and terminal compiler query, then add adversarial owner, extra table-grantee and extra function-grantee mutations."
+        },
+        {
+          "id": "OCR-CATALOG-INDEPENDENT-003",
+          "verdict": "ACCEPT",
+          "subject": "typed capability hold before claim, quota and provider work",
+          "evidence": [
+            "createSupabaseDurableReceiptOcrStore converts thrown RPCs, RPC errors and every non-exact capability document to DurableReceiptOcrCapabilityHeldError.",
+            "executeDurableReceiptOcr awaits assertDefinitiveCredentialReleaseReady before store.claim, beforeProvider quota reservation, markDispatched and runProvider.",
+            "The bound direct regression records only get_receipt_ocr_credential_release_capability and zero claim, quota reservation and provider calls for a throwing capability RPC."
+          ],
+          "condition": "Local source and tests establish ordering only; they do not establish hosted catalog readiness."
+        }
+      ],
+      "evidence_classes": {
+        "pg17_11_minimal_harness": {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/sql-catalog-fixtures-pg17.11.txt",
+          "sha256": "40545820640120bebf8b198efb1c8cf7316b38e5a30d1e559aa2cf27445d7181",
+          "meaning": "Existing disposable PostgreSQL 17.11 synthetic minimal harness. It covers helper body, composite PK, RLS, policy, missing 106 row and statement-vector drift, but not the ACL/owner counterexamples above. It is not a full predecessor replay."
+        },
+        "pg17_6_full_105_integration": {
+          "path": "apps/web/performance/feature-sql-integration-20261013/pg17-evidence-prefixed-aggregate-compiled-20261018.json",
+          "sha256": "0efdf7f1c9c60feda3d14d9473c464fa8ce91a23d5f12d9427bfbac2d4ccc0c6",
+          "meaning": "Existing exact-image PostgreSQL 17.6 full integration terminates at ledger 105. It was not rerun and is not evidence that the 106 successor or catalog seal was applied."
+        },
+        "hosted": {
+          "status": "unverified_unapplied",
+          "meaning": "No hosted database call, apply, readback or deployment was performed."
+        }
+      },
+      "verification_performed": [
+        {
+          "kind": "hash_readback",
+          "result": "All reported resolution, migration, durable source, compiler, manifest, direct test and fixture hashes matched the reviewed bytes."
+        },
+        {
+          "kind": "bounded_static_counterexample_check",
+          "result": "The runtime capability contains no proacl, relacl or relowner comparison and only finite privilege probes; no database was started or mutated."
+        }
+      ],
+      "external_effects": {
+        "application_edits": 0,
+        "migration_edits": 0,
+        "compiler_edits": 0,
+        "database_calls": 0,
+        "provider_calls": 0,
+        "research_dispatches": 0,
+        "git_mutations": 0
+      }
+    },
+    {
+      "event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-002",
+      "captured_at": "2026-10-19T01:17:34+0900",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "review_mode": "read_only_followup_source_review",
+      "scope": "Re-evaluate only the three ACL and table-owner counterexamples in OCR-CATALOG-INDEPENDENT-002.",
+      "predecessor_event": {
+        "event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-001",
+        "receipt_sha256_before_append": "5bd7bcad51a43aea296b19b5ae04314898430df36a5b94f9aa3ea503f8e28fd1",
+        "decision_id": "OCR-CATALOG-INDEPENDENT-002",
+        "verdict": "CONDITIONAL"
+      },
+      "followup_anchors": {
+        "resolution": {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-acl-owner-followup/resolution.json",
+          "sha256": "90b931820d036e8298d38b4a2c3333f780538cfe9450112867753e3df1c5ae9e"
+        },
+        "migration": {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "sha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c"
+        },
+        "successor_manifest": {
+          "path": ".github/receipt-ocr-post105-sql-successor.v1.json",
+          "sha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81"
+        }
+      },
+      "decision": {
+        "id": "OCR-CATALOG-INDEPENDENT-002-FOLLOWUP",
+        "verdict": "ACCEPT_RESOLVED_IN_SOURCE_AND_PG17_11_MINIMAL_HARNESS",
+        "condition_status": "resolved_for_the_three_reported_counterexamples",
+        "evidence": [
+          "The sealed function_contract now records definition_sha256, language, volatility, owner and a deterministic aclexplode expansion of coalesce(proacl, acldefault) for all four required functions.",
+          "The runtime capability recomputes that complete function object and requires exact JSON equality, so any added EXECUTE grantee or function owner change alters the contract.",
+          "The sealed table_contract records owner plus the deterministic aclexplode expansion of coalesce(relacl, acldefault) for both private recovery tables.",
+          "The runtime capability recomputes both table entries and requires exact JSON equality before ready, while the pre-existing exact PK, forced RLS and single-policy checks remain in place.",
+          "The compiler source is byte-identical and still performs terminal readback through the exact runtime capability after the ledger insert and catalog seal. Application durable execution source is also byte-identical."
+        ],
+        "counterexample_readbacks": [
+          {
+            "prior_operation": "GRANT SELECT ON ocr_private.receipt_credential_rejection_releases TO authenticated",
+            "source_mechanism": "The releases table relacl expansion differs from the sealed table_contract.",
+            "pg17_11_result": "RECEIPT_OCR_TABLE_ACL_DRIFT=held"
+          },
+          {
+            "prior_operation": "GRANT EXECUTE ON FUNCTION public.release_receipt_ocr_definitive_credential_rejection(uuid,uuid) TO a non-admitted third role",
+            "source_mechanism": "The wrapper proacl expansion differs from the sealed function_contract.",
+            "pg17_11_result": "RECEIPT_OCR_WRAPPER_ACL_DRIFT=held using supabase_admin"
+          },
+          {
+            "prior_operation": "ALTER TABLE ocr_private.receipt_credential_rejection_releases OWNER TO another role",
+            "source_mechanism": "The releases table owner and effective normalized ACL differ from the sealed table_contract.",
+            "pg17_11_result": "RECEIPT_OCR_RELEASE_TABLE_OWNER_DRIFT=held using supabase_admin"
+          }
+        ],
+        "additional_same_scope_readback": "The catalog contract table owner mutation was also held: RECEIPT_OCR_CATALOG_TABLE_OWNER_DRIFT=held.",
+        "baseline_restoration": "Each mutation ran under a savepoint and rollback; the final capability baseline returned ready."
+      },
+      "source_hashes": {
+        "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+        "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0",
+        "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+        "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql": "3fb993b19e4972b4683be0493b21211ce4961583ff298811612af2a2f2972acd"
+      },
+      "catalog_identity": {
+        "migration_version": "20261018152032",
+        "statement_count": 44,
+        "statement_vector_sha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+        "migration_identity_root": "17dc235a7c78f273a2e4c1d9030995f712da1a2e42e8cca28c8c7b732b37e65a",
+        "operating_target_identity_root": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+        "successor_state": "held_unapplied"
+      },
+      "evidence_classes": {
+        "pg17_11": {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-acl-owner-followup/sql-catalog-fixtures-pg17.11.txt",
+          "sha256": "14936e8b15f1404c65c093961a569505ea76eff147d71f5175a1b3f8a4095292",
+          "meaning": "Actual PostgreSQL 17.11 execution of the three reported mutations plus the same-scope catalog-table owner mutation in a disposable synthetic minimal predecessor harness."
+        },
+        "pg17_6_full_105_integration": {
+          "status": "not_rerun_still_terminal_105",
+          "meaning": "The prior full PostgreSQL 17.6 integration remains predecessor-only evidence and does not prove a terminal-106 apply."
+        },
+        "hosted": {
+          "status": "unverified_unapplied",
+          "meaning": "No hosted apply, readback or deployment was performed."
+        }
+      },
+      "remaining_conditions": [
+        "The three concrete ACL/owner conditions from OCR-CATALOG-INDEPENDENT-002 are resolved locally.",
+        "The successor manifest remains held. A full PostgreSQL 17.6 terminal-106 integration and separately authorized hosted apply/readback remain outside this review and are still required for those evidence classes."
+      ],
+      "external_effects": {
+        "application_edits": 0,
+        "migration_edits": 0,
+        "compiler_edits": 0,
+        "database_calls_by_reviewer": 0,
+        "provider_calls": 0,
+        "research_dispatches": 0,
+        "git_mutations": 0
+      }
+    },
+    {
+      "event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-003",
+      "captured_at": "2026-10-19T01:53:48+0900",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "review_mode": "read_only_fixture_root_cause_followup",
+      "scope": "Reclassify OCR106-ACL-001, verify the corrected three ACL/owner mutations, and decide whether the frozen migration requires a source change.",
+      "predecessor_receipt": {
+        "sha256_before_append": "e0f793c01915e09249a0bcb07181272ad7d2f5c598dccffd796e9a25d9447138",
+        "last_event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-002"
+      },
+      "anchors": {
+        "integration_receipt": {
+          "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+          "sha256": "e0aeafb47d8df1dab8aa1929019cbc176b017131b4383f7e65ef625d656588bb",
+          "last_event_id": "OCR105-PG17-007"
+        },
+        "fixture_resolution": {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/resolution.json",
+          "sha256": "18f05ee00bffc333d256a9da01116980710e53757731f525705c0f9c8b5b8544"
+        },
+        "corrected_fixture": {
+          "path": "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql",
+          "sha256": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47"
+        }
+      },
+      "decision": {
+        "id": "OCR106-ACL-001-INDEPENDENT-FOLLOWUP",
+        "verdict": "ACCEPT_FIXTURE_CORRECTION_SOURCE_UNCHANGED",
+        "root_cause": "The rejected PG17.6 run did not mutate wrapper proacl. After RESET ROLE, NOSUPERUSER postgres had privacy_workflow_owner membership with ADMIN=true but INHERIT=false and SET=false. Its GRANT was not owner-authorized, produced no new explicit ACL item, and therefore could not make the snapshot differ.",
+        "source_assessment": "When privacy_workflow_owner actually adds an explicit supabase_admin EXECUTE aclitem and catalog readback proves that mutation, the existing sealed function_contract comparison returns held. Migration, compiler and successor manifest do not need a source change for OCR106-ACL-001.",
+        "fixture_assessment": "The corrected fixture creates a savepoint-scoped SET=true owner lease, switches to privacy_workflow_owner, performs the wrapper GRANT, proves the supabase_admin EXECUTE aclitem exists, and only then requires capability held. Rollback restores both ACL and membership.",
+        "owner_drift_assessment": "Both owner cases now prove relowner changed. The catalog-table case also grants postgres the minimum SELECT needed by the postgres SECURITY DEFINER helper, so the test distinguishes direct structured held from an incidental permission exception."
+      },
+      "counterexample_results": [
+        {
+          "case": "original wrapper fixture under NOSUPERUSER postgres",
+          "result": "invalid_mutation_probe",
+          "evidence": "Baseline and post-GRANT proacl were identical and PostgreSQL reported that no privileges were granted. Capability ready was therefore expected and did not prove a source defect."
+        },
+        {
+          "case": "owner-authorized explicit supabase_admin wrapper grant",
+          "result": "held",
+          "evidence": "The corrected fixture verifies the aclitem via aclexplode before the capability check."
+        },
+        {
+          "case": "release table owner drift",
+          "result": "held",
+          "evidence": "The corrected fixture verifies relowner changed before calling the capability."
+        },
+        {
+          "case": "catalog contract table owner drift",
+          "result": "held",
+          "evidence": "The corrected fixture verifies relowner changed and preserves postgres SELECT so the helper returns structured held instead of failing its initial contract read."
+        }
+      ],
+      "membership_restoration": {
+        "expected": {
+          "member": "postgres",
+          "role": "privacy_workflow_owner",
+          "grantor": "supabase_admin",
+          "admin": true,
+          "inherit": false,
+          "set": false
+        },
+        "pg17_11_readback": "RECEIPT_OCR_PRIVACY_OWNER_MEMBERSHIP=[{\"set\": false, \"admin\": true, \"grantor\": \"supabase_admin\", \"inherit\": false}]",
+        "restored": true
+      },
+      "source_identity": {
+        "migration_sha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+        "manifest_sha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+        "compiler_sha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+        "application_durable_sha256": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+        "source_change_required": false
+      },
+      "snapshot_equality_limit": {
+        "status": "not_the_observed_pg17_6_root_cause",
+        "condition": "Snapshot equality detects changes after seal but does not itself prove that the initial snapshot matches an independently defined privilege allowlist. A forbidden explicit grant already supplied by the object creator's default ACL could be sealed as baseline and a repeated GRANT would be a no-op.",
+        "observed_catalog": "Read-only PG17.6 metadata found no privacy_workflow_owner public-function default ACL and no privacy_workflow_owner membership for supabase_admin, so this condition did not explain OCR106-ACL-001.",
+        "contract_boundary": "The current source is accepted for exact post-seal drift detection. Any broader claim that installation rejects every pre-existing forbidden explicit ACL requires a separate canonical baseline allowlist assertion and is not established by snapshot equality alone."
+      },
+      "verification_evidence": [
+        {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/before-nonsuperuser-grant-probe-pg17.11.txt",
+          "sha256": "1ac4f5fa6ec7af006a657677d8835574d9550711e594ca631020a87823bf72d6",
+          "meaning": "Original non-owner grant leaves proacl unchanged and does not produce a valid drift."
+        },
+        {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/before-superuser-grant-probe-pg17.11.txt",
+          "sha256": "ba9c2fc8c44f0f822e249530787097381b4b2727ec18f3979b59a0a42e29a300",
+          "meaning": "An actual owner-authorized explicit supabase_admin aclitem is observed and held."
+        },
+        {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/final-nonsuperuser-pg17.11.txt",
+          "sha256": "79f636864c5d48e3f19c568f743dead99b9ee8af34c69b0e0e36a521000fd759",
+          "meaning": "Corrected catalog fixture passes with NOSUPERUSER postgres and restores the original SET=false membership."
+        }
+      ],
+      "remaining_conditions": [
+        "The corrected fixture and unchanged source require compiler readmission followed by a fresh PostgreSQL 17.6 full-catalog run; prior OCR105-PG17-005 remains rejected evidence and is not retroactively converted into a pass.",
+        "Terminal-106 hosted apply/readback remains outside this local review.",
+        "No application build or parity run was repeated because application TypeScript is unchanged."
+      ],
+      "reviewer_effects": {
+        "retained_fixture_queries": "read_only_role_membership_and_default_acl_selects_only",
+        "local_pg17_11_scratch_clusters_created": 4,
+        "local_pg17_11_scratch_clusters_removed": 4,
+        "application_edits": 0,
+        "migration_edits": 0,
+        "compiler_edits": 0,
+        "hosted_database_writes": 0,
+        "other_owner_database_writes": 0,
+        "provider_calls": 0,
+        "git_mutations": 0
+      }
+    },
+    {
+      "event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-004",
+      "captured_at": "2026-10-19T02:09:05+0900",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "review_mode": "read_only_durable_cleanup_boundary_review",
+      "scope": "Review only the Event008 post-race cleanup failure and the corrected disposable-target teardown handoff.",
+      "predecessor_receipt": {
+        "sha256_before_append": "fe1b122d75001c651bd6274c1aaa524350e936ca7f2c8299352f13c92ea6eca5",
+        "last_event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-003"
+      },
+      "anchors": {
+        "pg17_6_event008": {
+          "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+          "sha256": "d1b90ec2a4620d5a8b554313a2b1930c306c3f66b1ff527c5cc7b0a7104e9ae4",
+          "event_id": "OCR105-PG17-008"
+        },
+        "cleanup_resolution": {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/durable-cleanup-resolution.json",
+          "sha256": "533b5e633ffab3cac1513875c7ef781e334ac4bdfa31a6fbc6987fd95285ba82"
+        },
+        "corrected_durable_fixture": {
+          "path": "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql",
+          "sha256": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07"
+        }
+      },
+      "decision": {
+        "id": "OCR106-DURABLE-CLEANUP-INDEPENDENT-001",
+        "verdict": "ACCEPT_FIXTURE_HANDOFF_CONDITIONAL_ON_EXACT_TARGET_TEARDOWN",
+        "failure_classification": "Event008 completed the durable functional assertions, inter-session race assertion and both dblink disconnects. The later DELETE FROM auth.users crossed the broader privacy-consent boundary and failed during synthetic cleanup only.",
+        "preferred_cleanup": "Do not widen production table ACLs and do not add a production SECURITY DEFINER cleanup helper. Retain the exact bounded synthetic residual state and delegate its removal to destruction of the task-owned disposable database/container.",
+        "narrow_cleanup_assessment": "Deleting only OCR-private rows would still leave the synthetic auth user, while deleting that user exercises protected Auth/privacy triggers. Extending a temporary superuser lease through cleanup would add unnecessary authority and side effects. Exact disposable-target teardown is narrower and complete."
+      },
+      "security_coverage": {
+        "preserved_assertions": [
+          "capability ready and exact response shape",
+          "deleted and restored release semantics and idempotency",
+          "wrong-token and invalid-state rejection",
+          "privilege boundary readback",
+          "inter-session losing release cannot overwrite indeterminate/uncertain state",
+          "absence of a release receipt for the losing race",
+          "both dblink sessions disconnect before handoff"
+        ],
+        "new_handoff_assertions": [
+          "the exact synthetic auth user remains",
+          "the exact race result remains indeterminate with uncertain dispatch and no claim token",
+          "no credential-rejection release receipt exists for that result",
+          "RECEIPT_OCR_DISPOSABLE_TEARDOWN_HANDOFF=verified is emitted only after those checks"
+        ],
+        "authorization_guard": "The fixture rejects execution before any synthetic insert unless tzudong.receipt_ocr_disposable_fixture equals authorized-v1.",
+        "guard_limit": "The custom GUC is an explicit caller marker, not cryptographic authorization or proof of target ownership. Any session able to execute the fixture can set it, so the external harness must independently establish disposability before setting it."
+      },
+      "required_harness_evidence": [
+        "Create a fresh target with a unique task token and exact owner label, retain both container name and immutable container ID, and prove neither matches the retained105 fixture or protected source container.",
+        "Bind the corrected fixture SHA before execution and set the disposable GUC only after the exact label/token and target identity checks pass.",
+        "Require the durable fixture handoff marker and record the bounded residual-state result before teardown.",
+        "Record the target database/container mounts before execution. Remove the exact recorded container ID and every task-owned volume if present; require subsequent inspect of that ID to fail and the exact owner-label/token queries for containers and volumes to return zero. If no named volume is used, preserve that empty-mount/volume readback explicitly.",
+        "Hash the retained105 fixture and protected source catalog before and after both constituent and aggregate runs; require byte-identical normalized dumps.",
+        "Record terminal ledger 106, capability/seal identity and role restoration before teardown. A removed target alone does not replace those functional readbacks.",
+        "Keep constituent and aggregate targets separate and tear down each exact target even on failure."
+      ],
+      "verification_evidence": [
+        {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/durable-cleanup-guard-without-authorization-pg17.11.txt",
+          "sha256": "aa3382ade1f415f1c57ad7ce764b47c7e35a313f091120d38d06f66fa1d2a71f",
+          "meaning": "Without the caller marker the fixture stops before synthetic durable inserts with RECEIPT_OCR_DISPOSABLE_TARGET_REQUIRED."
+        },
+        {
+          "path": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-default-acl-followup/durable-cleanup-handoff-authorized-pg17.11.txt",
+          "sha256": "c1b4bdc945b8500c7a680373f6735c0cb8511a1d122fccc8a93598be165a27ee",
+          "meaning": "Authorized disposable PG17.11 run preserves core assertions, disconnects both sessions, verifies the residual handoff, and records exact target teardown."
+        }
+      ],
+      "source_continuity": {
+        "migration_sha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+        "manifest_sha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+        "compiler_sha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+        "application_durable_sha256": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+        "production_acl_change_required": false
+      },
+      "evidence_classes": {
+        "pg17_6_event008": "Constituent terminal and corrected catalog fixture passed, but the old durable fixture failed in teardown and aggregate was not run.",
+        "pg17_11_cleanup_followup": "Synthetic local proof of the new guard and teardown handoff contract; not full-catalog completion.",
+        "hosted": "No hosted execution or cleanup evidence."
+      },
+      "remaining_conditions": [
+        "The PG17.6 integration harness must be readmitted with fixture SHA c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07 and must implement the exact ownership, handoff and teardown evidence above.",
+        "Both fresh constituent and aggregate paths remain required. Event008 does not prove aggregate execution or durable fixture completion.",
+        "No application build or parity run is needed because application TypeScript is unchanged."
+      ],
+      "reviewer_effects": {
+        "application_edits": 0,
+        "migration_edits": 0,
+        "compiler_edits": 0,
+        "database_calls": 0,
+        "provider_calls": 0,
+        "git_mutations": 0
+      }
+    },
+    {
+      "event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-005",
+      "captured_at": "2026-10-19T02:28:27+0900",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "review_mode": "read_only_pg17_6_operating_role_qualification_review",
+      "scope": "Review Event010 and Event011 byte binding, execution role, rollback, preservation and teardown evidence without repeating database execution.",
+      "predecessor_receipt": {
+        "sha256_before_append": "806e7c7b212e7094de4c17dff52a8a2ea414e52d4996a36222c46860d027ff85",
+        "last_event_id": "OCR-CATALOG-INDEPENDENT-REVIEW-20261019-004"
+      },
+      "anchors": {
+        "pg17_6_integration_receipt": {
+          "path": "apps/web/performance/feature-completion-20261013/receipt-ocr-post105-pg17-integration-20261019.json",
+          "sha256": "9a0639afa3b1da37ed118c85a0f132d667cf96fec6a085ef526b1cd5bb6b009d",
+          "last_event_id": "OCR105-PG17-011"
+        },
+        "durable_fixture": {
+          "path": "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql",
+          "sha256": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+          "bytes": 20361,
+          "lines": 585
+        },
+        "canonical_execution_harness": {
+          "path": "/tmp/execute-ocr106-nonrace-nosuperuser-canonical-pg17.mjs",
+          "sha256": "c9c8fecfdd109719a8a72ea39bff8b67318505db0bff8ce80366d46bbc3e8c83",
+          "mode": "0700",
+          "contains_postgres_superuser_escalation": false,
+          "contains_dblink_execution": false
+        },
+        "canonical_private_proof": {
+          "path": "/tmp/ocr106-nonrace-nosuperuser-canonical-pg17-proof.json",
+          "sha256": "ac3500ba6b6a2c49f49349907ea87970126b7b702d1e7af0dee4a0ae9a0daa88",
+          "bytes": 10005,
+          "mode": "0600",
+          "stderr_bytes": 0,
+          "result": "passed"
+        }
+      },
+      "decision": {
+        "id": "OCR106-DURABLE-ROLE-QUALIFICATION-INDEPENDENT-001",
+        "verdict": "ACCEPT_CANONICAL_NONRACE_NOSUPERUSER_AND_RETAIN_PRIVILEGED_RACE_CLASSIFICATION",
+        "nonrace_core": "Event011 is sufficient local PostgreSQL 17.6 operating-role evidence for the canonical non-dblink durable core.",
+        "dblink_race": "Event009 remains privileged local concurrency evidence only because the full durable fixture, including its dblink race, ran inside a temporary postgres SUPERUSER lease and declared operatingRoleEvidence=false.",
+        "hosted": "unverified"
+      },
+      "canonical_prefix": {
+        "source_lines": "1-444",
+        "bytes": 15387,
+        "sha256": "7c2c382282682bee0437b9f6352e6e26f0d60525fc406837c920b22479a6965b",
+        "ends_with_rollback": true,
+        "race_marker_absent": true,
+        "dblink_execution_absent": true,
+        "classification": "canonical frozen non-race source binding"
+      },
+      "historical_event010": {
+        "preserved": true,
+        "bytes": 15388,
+        "sha256": "ad5d76381894763ef2ba6db292a2c6f55e8ecf73439af0547a22c46c42cf0a30",
+        "included_blank_line_445": true,
+        "sql_semantics_equal_to_event011_prefix": true,
+        "classification": "historical noncanonical pre-anchor slice; superseded by Event011 only for exact canonical source-byte binding"
+      },
+      "operating_role_evidence": {
+        "engine": "PostgreSQL 17.6",
+        "target_name": "tzudong-ocr106-constituent-82096-6a40a2d9bfa0",
+        "target_container_id": "370a9a140b538bbcf8d13c7aa364391ec59f12a2473e2ce806013444a53f3ca7",
+        "postgres_rolsuper_at_image_start": false,
+        "postgres_superuser_lease_used": false,
+        "postgres_rolsuper_before": false,
+        "postgres_rolsuper_after": false,
+        "membership_before_and_after": {
+          "member": "postgres",
+          "role": "privacy_workflow_owner",
+          "grantor": "supabase_admin",
+          "admin": true,
+          "inherit": false,
+          "set": false,
+          "row_count": 1
+        },
+        "membership_restored_exactly": true
+      },
+      "transition_and_rollback": {
+        "predecessor_ledger_count": 105,
+        "predecessor_ledger_identity_root": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+        "terminal_ledger_count": 106,
+        "terminal_ledger_identity_root": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+        "capability": "ready",
+        "catalog_seal_matched": true,
+        "migration_statement_vector_sha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+        "synthetic_residual_before": {
+          "auth_users": 0,
+          "receipt_results": 0,
+          "release_rows": 0
+        },
+        "synthetic_residual_after": {
+          "auth_users": 0,
+          "receipt_results": 0,
+          "release_rows": 0
+        },
+        "dump_sha256_before": "5f6ed6f91b5162384053b333b3ee7265d11968d2f6d94f3da5d0169834014560",
+        "dump_sha256_after": "5f6ed6f91b5162384053b333b3ee7265d11968d2f6d94f3da5d0169834014560",
+        "data_rollback_verified": true
+      },
+      "target_teardown_and_preservation": {
+        "identity_separated_before_marker": true,
+        "target_name_absent_before_create": true,
+        "marker_set_after_exact_target_readback": true,
+        "marker_authority": false,
+        "exact_container_removed": true,
+        "container_inspect_failed_after_teardown": true,
+        "owner_token_residual_count": 0,
+        "marker_session_residual_count": 0,
+        "mounts_before_teardown": [],
+        "volumes_before_teardown": [],
+        "source_catalog_dump_sha256_before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "source_catalog_dump_sha256_after": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+        "retained_fixture_dump_sha256_before": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "retained_fixture_dump_sha256_after": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+        "source_and_retained_fixture_unchanged": true,
+        "all_owned_targets_removed": true,
+        "pg17_11_cluster_touched": false
+      },
+      "evidence_classes": {
+        "event011": "Canonical local PostgreSQL 17.6 non-dblink core proof under postgres NOSUPERUSER with rollback and exact teardown.",
+        "event010": "Preserved historical local proof with the same SQL semantics but a noncanonical extra blank-line byte.",
+        "event009_race": "Local inter-session concurrency proof under a temporary postgres SUPERUSER lease; not operating-role evidence.",
+        "hosted": "No hosted execution, deployment or production readback evidence."
+      },
+      "remaining_conditions": [
+        "Hosted OCR106 apply, capability readback and release behavior remain unverified.",
+        "The dblink race has not been established under postgres NOSUPERUSER; any operating-role claim for that race needs a separate proof, while the existing Event009 race remains valid only as privileged local concurrency evidence.",
+        "This review does not convert local PG17.6 constituent evidence into deployment or production readiness."
+      ],
+      "reviewer_effects": {
+        "application_edits": 0,
+        "migration_edits": 0,
+        "compiler_edits": 0,
+        "fixture_edits": 0,
+        "database_calls": 0,
+        "test_repetitions": 0,
+        "provider_calls": 0,
+        "git_mutations": 0
+      }
+    }
+  ]
+}

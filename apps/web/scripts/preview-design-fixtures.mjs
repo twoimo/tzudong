@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 const upstream = 'http://127.0.0.1:18792';
 const origin = 'http://127.0.0.1:18794';
 const stamp = '2026-10-03T00:00:00.000Z';
+const receiptOcrRecoveryFixture = process.env.TZUDONG_RECEIPT_OCR_RECOVERY_FIXTURE === '1';
 const storyboardProjects = ['gemini-api','manual'].map((provider,index) => {
   const id=`00000000-0000-4000-b100-${String(index+1).padStart(12,'0')}`;
   const textModel=provider==='gemini-api'?'gemini-3.8-flash':'manual';
@@ -12,7 +13,7 @@ const storyboardProjects = ['gemini-api','manual'].map((provider,index) => {
   return {id,revision:0,status:'partial',createdAt:stamp,updatedAt:stamp,
     request:{workflow:'storyboard-mlx-v1',requestId:id,prompt:'합성 검증용 맛집 촬영안',sceneCount:5,
       providers:{externalAI:provider==='gemini-api',text:{id:provider,model:textModel},image:{id:provider,model:imageModel}},retrieval:'none',sources:[],imageWidth:1024,imageHeight:576},
-    document:{schema:'storyboard-mlx-v1',projectId:id,revision:0,generatedAt:stamp,title:provider==='gemini-api'?'Gemini 합성 프로젝트':'수동 합성 프로젝트',logline:'실제 모델 호출 없이 입력 경로를 검증합니다.',
+    document:{schema:'storyboard-mlx-v1',projectId:id,revision:0,generatedAt:stamp,title:provider==='gemini-api'?'Gemini 합성 프로젝트':'이전 기록 프로젝트',logline:'실제 모델 호출 없이 입력 경로를 검증합니다.',
       textProvenance:{providerId:provider,model:textModel,verification:'user-import',generatedAt:stamp,requestId:id,responseId:null,responseModel:null,modelEvidence:'unverified'},
       scenes:Array.from({length:5},(_,scene)=>({sceneNo:scene+1,title:`검증 장면 ${scene+1}`,durationSec:10,description:'합성 식당 장면',visualDirection:'정면 촬영',narration:'',caption:'',productionNotes:['합성 검증용'],imagePrompt:'합성 식당',sourceIds:[],revision:0,image:null,imageError:null}))}};
 });
@@ -57,7 +58,12 @@ const fixtureReviews = restaurants.flatMap((restaurant, i) => fixtureProfiles.ma
   title:`검증 리뷰 ${j+1}`,content:`검증용 리뷰 ${j+1}. 음식과 공간의 분위기를 확인하는 합성 데이터입니다.`,visited_at:stamp,created_at:stamp,
   verification_photo:'',updated_at:stamp,is_duplicate:false,receipt_data:null,ocr_processed_at:null,food_photos:[],categories:['한식'],is_verified:true,is_pinned:false,is_edited_by_admin:false,admin_note:null,like_count:j+1,
 })));
-const pendingReviews = fixtureReviews.slice(0,3).map((row,i)=>({...row,id:`00000000-0000-4000-a400-${String(i+1).padStart(12,'0')}`,is_verified:false}));
+const pendingReviews = fixtureReviews.slice(0,3).map((row,i)=>{
+  const id=`00000000-0000-4000-a400-${String(i+1).padStart(12,'0')}`;
+  return {...row,id,is_verified:false,verification_photo:receiptOcrRecoveryFixture
+    ? `${row.user_id}/reviews/${id}/verification/fixture-receipt.webp`
+    : row.verification_photo};
+});
 function filteredRows(req,rows) {
   const query=new URL(req.url,origin).searchParams;
   let selected=rows;

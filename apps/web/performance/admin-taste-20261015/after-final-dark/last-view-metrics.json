@@ -1,0 +1,33 @@
+{
+  "module": "storyboard",
+  "width": 390,
+  "visibleHeaders": 1,
+  "resolvedTheme": "dark",
+  "title": "스토리보드 생성",
+  "header": {
+    "x": 10,
+    "y": 66,
+    "width": 370,
+    "height": 61
+  },
+  "titleStyle": {
+    "size": "18px",
+    "weight": "650",
+    "lineHeight": "24px"
+  },
+  "documentOverflow": 0,
+  "canvasRect": {
+    "x": 0,
+    "y": 56,
+    "width": 390,
+    "height": 788
+  },
+  "mainLandmarks": 1,
+  "canvasOverflow": 0,
+  "tableRows": 0,
+  "visibleTableRows": 0,
+  "rowHeight": null,
+  "navigationTargets": 0,
+  "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+  "renderedPath": "/admin"
+}

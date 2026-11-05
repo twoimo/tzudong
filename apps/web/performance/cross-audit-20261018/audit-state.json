@@ -1,0 +1,59 @@
+{
+  "schema": "tzudong-cross-audit-state/v1",
+  "phase": "thesis_complete_antithesis_queued",
+  "owner": "01a14e99-c202-7fa1-90c1-2e9cb7da815f",
+  "job": "tzudong-ea08db3a-bd8f5668-thesis-r01-r04",
+  "requestId": "ae9c0b982327c36c94829f75",
+  "sourceBundleSha256": "bd8f5668b7a00d48a623471183863cda1ae9eb48c14a0d1dc569508e0f2058c3",
+  "masterPlanSha256": "fbf4cd47c1bed3d7042ca7860050d640b72e25a5c798d1898790ba0f5ef0c0a9",
+  "uploads": 2,
+  "dispatches": 1,
+  "chatgpt": {
+    "accountAlias": "primary",
+    "modelLabel": "GPT-6",
+    "reasoningLabel": "Pro",
+    "researchLabel": "심층 리서치",
+    "combinedUiObserved": true,
+    "backendIdentity": "UNVERIFIED",
+    "conversationUrl": "https://chatgpt.com/c/6ad4b1ad-fc10-83ec-bbd0-abd1dec881c4",
+    "status": "completed_released",
+    "startedAt": "2026-10-18T11:48:52.020485+00:00",
+    "uiEvidence": "Nested research card states 리서치 중 and exposes 리서치 중지; outer chat reply completion is not research completion.",
+    "attachmentDisplayNames": [
+      "master-plan(2).md",
+      "source_bundle(3).txt"
+    ],
+    "nextOwner": "01a14e99-241b-7730-b4a5-cfb54370a619"
+  },
+  "gemini": {
+    "status": "queued_shared_service_busy",
+    "exactCombinedModeObservedInThisTask": false,
+    "backendIdentity": "UNVERIFIED",
+    "conversationUrl": null,
+    "job": "tzudong-b5d62c34-10fc28e7-antithesis-r01-r06",
+    "requestId": "b0b3b8780cd9dd5b3ffc4875",
+    "sourceBundleSha256": "10fc28e7d72ed4fbb6e7b6206acbd31143528d0831d9f836ff41c47ace018bc7",
+    "uploads": 0,
+    "dispatches": 0
+  },
+  "externalReports": [
+    {
+      "provider": "chatgpt",
+      "model_label": "GPT-6",
+      "reasoning_label": "Pro",
+      "research_mode": "심층 리서치",
+      "conversation_url": "https://chatgpt.com/c/6ad4b1ad-fc10-83ec-bbd0-abd1dec881c4",
+      "report_path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+      "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82",
+      "bytes": 43130,
+      "completed_at": "2026-10-18T11:59:14.430564+00:00",
+      "source_revision": "b5d62c34f4a2e854ab10fd9f6741597b6081c43b",
+      "source_bundle_sha256": "bd8f5668b7a00d48a623471183863cda1ae9eb48c14a0d1dc569508e0f2058c3",
+      "completion_evidence": "UI: research complete9m,5sources,99searches; full Markdown exported by UI.",
+      "backend_identity": "UNVERIFIED",
+      "interpretation": "Report original preserved verbatim; claims require local adjudication and Gemini antithesis."
+    }
+  ],
+  "decisionMatrix": "master-plan.md#로컬-판단표--외부-합의가-아님",
+  "guard": "No upload/dispatch before reserved; held launch policy and live-readiness guards unchanged."
+}

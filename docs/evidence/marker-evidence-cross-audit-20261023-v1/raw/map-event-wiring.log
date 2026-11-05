@@ -1,0 +1,35 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/mobile-home-map-regressions.test.ts:
+(pass) mobile home map regression guards > search-selected restaurant can still swipe to a different visible restaurant [0.06ms]
+(pass) mobile home map regression guards > marker render is not skipped when another marker takes over after a search selection [0.21ms]
+(pass) mobile home map regression guards > marker render is not skipped when the sheet closes and a new marker opens with cleared search state [0.02ms]
+(pass) mobile home map regression guards > single-visible post-search swipe falls back to the nearest restaurant [0.20ms]
+(pass) mobile home map regression guards > search ownership release keeps the current detail selection active [0.04ms]
+(pass) mobile home map regression guards > peek-state downward sheet gesture dismisses only after intentional distance or speed [0.02ms]
+(pass) mobile home map regression guards > blank map taps collapse the sheet, enter fullscreen map, then restore the peek sheet [0.02ms]
+(pass) mobile home map regression guards > blank map fullscreen toggle is inactive outside a mobile restaurant panel [0.01ms]
+(pass) mobile home map regression guards > cluster marker zoom jumps immediately without Naver morph animation [0.36ms]
+(pass) mobile home map regression guards > mobile restaurant detail sheet peeks on map interaction without skipping fullscreen tap sequence [0.60ms]
+(pass) mobile home map regression guards > mobile visible marker sheet receives map interaction epoch before requesting peek height [0.21ms]
+(pass) mobile home map regression guards > G002 mobile category sheet commits immediately without delayed apply affordance [0.19ms]
+(pass) mobile home map regression guards > G012 mobile sheets and details own fixed map-control safe area [0.12ms]
+(pass) mobile home map regression guards > home detail route history uses app-owned list/detail states and browser back restoration contracts [0.11ms]
+
+tests-unit/naver-map-event-cleanup.test.ts:
+(pass) listener removal preserves the provider receiver and handle [0.05ms]
+(pass) absent provider or listener is safe during partial initialization [0.02ms]
+(pass) one failed provider removal does not prevent the next teardown [0.07ms]
+(pass) a retained idle handler becomes inert before callback and cannot repeat a stale correction [0.04ms]
+(pass) cleanup cancels a still-pending idle correction even if the provider retains its handler
+(pass) canceled provider callbacks cannot dispatch stale props after failed listener removal [0.03ms]
+(pass) clearing location removes its visual and retains a failed SDK handle until retry succeeds [0.12ms]
+
+tests-unit/naver-map-event-wiring.test.ts:
+(pass) actual Naver blank-click registration dispatches the current handlers and cancels retained callbacks [50.33ms]
+(pass) actual drag/pinch registration releases search ownership and becomes inert after cleanup [5.64ms]
+
+ 23 pass
+ 0 fail
+ 120 expect() calls
+Ran 23 tests across 3 files. [316.00ms]

@@ -1,0 +1,102 @@
+{
+  "schema_version": "tzudong.cms-final-diff-resolution.v1",
+  "captured_at": "2026-10-18T22:36:47+0900",
+  "repository_head": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "based_on": {
+    "path": "apps/web/performance/cross-audit-20261018/admin-users-banners-final-diff-findings.json",
+    "sha256": "3a9b0d8a8b8d4b1b1d432cb7ffbb9204d77e74d4701ba1924acf5bbdb20c25ed"
+  },
+  "mode": "local source repair and synthetic counterexample verification",
+  "operations_not_performed": [
+    "browser actions",
+    "hosted database reads or writes",
+    "storage reads or writes",
+    "external service calls",
+    "deployment",
+    "git commit or push"
+  ],
+  "revision_contract": {
+    "local_baseline_evidence": [
+      "backend/supabase/baselines/pre-20260214-public-schema.sql:3756",
+      "backend/supabase/baselines/pre-20260214-public-schema.sql:5477"
+    ],
+    "meaning": "The local baseline defines update_ad_banners_updated_at() and trigger_ad_banners_updated_at so successful updates advance updated_at.",
+    "hosted_trigger_state": "unverified"
+  },
+  "findings": [
+    {
+      "id": "CMS-FINAL-001",
+      "verdict": "ACCEPT",
+      "reason": "The update caller observed updated_at but the prior mutation filtered only by id, allowing a stale complete form to overwrite a newer row.",
+      "resolution": "PATCH now requires id plus expectedUpdatedAt, filters on both id and updated_at, and returns banner_revision_conflict with the authoritative latest row on a CAS miss. The editor preserves stale input and blocks another save until explicit latest reopen."
+    },
+    {
+      "id": "CMS-FINAL-002",
+      "verdict": "ACCEPT",
+      "reason": "The prior delete filtered only by id and cleaned media from the stale client row.",
+      "resolution": "DELETE now requires the observed updated_at and returns the actual deleted row. Media cleanup uses only deletedBanner.image_url and deletedBanner.video_url; a conflict performs neither deletion nor cleanup."
+    },
+    {
+      "id": "CMS-FINAL-003",
+      "verdict": "ACCEPT",
+      "reason": "A valid saved mismatch or residual row after delete kept pendingReadback forever.",
+      "resolution": "A valid latest row is opened and the pending lock is cleared; an authoritative missing row closes the editor. Only unreadable or failed readback remains pending for retry."
+    },
+    {
+      "id": "CMS-FINAL-004",
+      "verdict": "ACCEPT",
+      "reason": "A valid exact user readback that differed from the requested state created an indefinite lock with no acceptance path.",
+      "resolution": "The authoritative exact row is retained as an explicit readback conflict. The operator can accept that latest state, which clears the lock without issuing another PATCH or other mutation."
+    }
+  ],
+  "additional_ui_repairs": [
+    "User detail and pagination controls use h-11 on mobile and md:h-8 from tablet width.",
+    "The 390px user header places title plus refresh on row one and the three metrics on row two through a users-only shared-header override.",
+    "The user GET 500 response preserves Cache-Control: no-store."
+  ],
+  "verification": {
+    "core": {
+      "command": "bun test tests-unit/admin-users-mutation-scope.test.ts tests-unit/admin-users-pagination-contract.test.ts tests-unit/admin-banners-functional-contract.test.ts tests-unit/admin-user-management-source.test.ts tests-unit/admin-exact-readback-api.test.ts tests-unit/ad-banner-url-security.test.ts",
+      "result": "41 pass, 0 fail, 467 expect calls"
+    },
+    "supplementary": [
+      {
+        "command": "bun test tests-unit/mobile-desktop-parity-source.test.ts --test-name-pattern 'banner admin uses one responsive'",
+        "result": "1 pass, 0 fail"
+      },
+      {
+        "command": "bun test tests-unit/admin-console-uiux-source.test.ts --test-name-pattern 'keeps admin pages dense'",
+        "result": "1 pass, 0 fail"
+      },
+      {
+        "command": "bun test tests-unit/admin-route-auth-contract.test.ts --test-name-pattern 'admin'",
+        "result": "4 pass, 0 fail"
+      },
+      {
+        "command": "bun test tests-unit/admin-mutation-request-security.test.ts --test-name-pattern 'uses the shared bounded reader'",
+        "result": "1 pass, 0 fail"
+      },
+      {
+        "command": "bun test tests-unit/admin-user-management-source.test.ts",
+        "result": "9 pass, 0 fail after user GET no-store assertion"
+      }
+    ],
+    "typecheck": "npm run typecheck:native: passed",
+    "lint": "targeted ESLint: passed",
+    "diff_check": "passed",
+    "raw_result_path": "apps/web/performance/cross-audit-20261018/admin-users-banners-fix-results.txt"
+  },
+  "source_freeze_sha256": {
+    "apps/web/app/admin/banners/page.tsx": "7ea65f864dd14d36e8fec935843964e7f836ebe1f050f002ec53b313f41563fb",
+    "apps/web/app/api/admin/banners/route.ts": "5c2bb24c1f0b4c1e6cbff87bd12fd7e5ebb3716668933ed82990e27cd8bbf54e",
+    "apps/web/hooks/use-ad-banners.tsx": "b314ab92baf377b648e5ad80b9d6a6cd49579ea1e781b1a192b820e53b74f86f",
+    "apps/web/components/admin/AdminUsersPanel.tsx": "5685300df4b5d42f2bbf897c022ddf1e4032c114e1bfdb321050ad2976e21a7e",
+    "apps/web/styles/admin-ui.css": "936bbf3a6177fadc5bf063bb3a09c91e668786533cd29f7f8677f55be153c999",
+    "apps/web/app/api/admin/users/route.ts": "d5c7cd52e71968f8ffb03b2cb296b0f94620c0dc5991e93b1031b9170cc86da9",
+    "apps/web/tests-unit/admin-banners-functional-contract.test.ts": "244d696df6ef90aede9147150cd28e8d8cf26ffc63e6462e802928708db06070",
+    "apps/web/tests-unit/ad-banner-url-security.test.ts": "09a0935b913536aaa17250825413efd231f901e1f6369683d5d92f5daa31bbec",
+    "apps/web/tests-unit/admin-users-mutation-scope.test.ts": "d504bbb8c0f29629371da1adecfe37d1fe1b8f438fcacede848c43c8963ee309",
+    "apps/web/tests-unit/admin-user-management-source.test.ts": "1e287ffe7210d3c7f97543d62c0bb55d51a70ef16327758c167ed94ff04e8c19",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "9c0c97aece2729716f9d0e22034ac99cbeaa81b977fadccfcdb60ebca0e7b834"
+  }
+}

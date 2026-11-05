@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "kind": "catalog-clean-replay-ci-recovery-followup",
+  "recordedAt": "2026-10-18T18:21:25.630467Z",
+  "status": "passed_with_replay_a_exact_id_teardown_limitation",
+  "sourceGitOid": "14a8f5da4268df890c7adf10bf89e99ce071f6f5",
+  "evidenceScope": {
+    "sourceOnly": true,
+    "description": "Two local PG15 clean source-only reconstruction candidates and one isolated PG15 adapter admission-negative run.",
+    "operatingRuntimeOrReadinessEvidence": false,
+    "hostedOrDeploymentEvidence": false
+  },
+  "inputArtifacts": {
+    "summary": {
+      "name": "summary.json",
+      "bytes": 6917,
+      "rawBytesSha256": "7446890ee5ce0c88dc22464db1597a7a89123413d2c39fb7ef9bd780bf5443c8"
+    },
+    "comparison": {
+      "name": "g024-dual-clean-replay.json",
+      "bytes": 6135,
+      "rawBytesSha256": "b6046e48805e6bc6fe8a107ca69a61861b023beb1eb94d630bd81fb2b953cd10"
+    },
+    "adapterPrefixNegative": {
+      "name": "adapter-prefix-negative-pg15.json",
+      "bytes": 1910,
+      "rawBytesSha256": "334169b1d0ec5d0c6dffe69536b25c0291978c73204fe6c29b81655377d11ab9"
+    }
+  },
+  "changedSourceBindings": {
+    ".github/workflows/g014-catalog-contract-baseline.yml": "94bf423463f4e6028578815ae0eadd27c5142cd5f59b18f6f48a6ea736a2d82f",
+    "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh": "50048b19b29f47f8de32d57af1b1f37544fcc9b3e6f28a533a893f787a558834",
+    "backend/supabase/scripts/transform_receipt_ocr_credential_release_pg15_replay.py": "d047596d26c76574e515406388d9a22a1bb482eed65add8f8956f475abc19b1b",
+    "backend/supabase/tests/test_receipt_ocr_credential_release_pg15_replay.py": "d68f89b6ae7833eb90a655d862db313fb5700668837676fc4f3efef4efac4542"
+  },
+  "pinnedInputs": {
+    "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "backend/supabase/scripts/compare_g024_clean_replays.py": "8663f7caf1ef8008d7c6bc7ff6555180ff2267dc03193f7c7b4fcad488ae6694"
+  },
+  "adapterBinding": {
+    "prefixBytes": 3177,
+    "prefixSha256": "5e8bb77009cfc8991a1bef30872783d0886b0a8cf27ece87e9e46de277dbb068",
+    "transformedSqlSha256": "79a4549e458bc4ef4bd1ec6675917c27fa8c3551481ef37a3d01d8c8e29648cc",
+    "rawMigrationRestoredByAdapter": true
+  },
+  "candidateVerification": {
+    "expectedRowCount": 1960,
+    "comparedHashCount": 58,
+    "comparedHashesSha256": "727f8d1538d91a9d7bfc66f7936675dc8dd260c28e2173589cad37da93226f18",
+    "allComparedFilesPresent": true,
+    "candidateByteMismatches": 0,
+    "sha256sumsEntryCountPerCandidate": 57,
+    "sha256sumsMissingEntries": 0,
+    "sha256sumsMismatches": 0,
+    "replayA": {
+      "validationArtifactSha256": "050d290589c05500b52a30d991b91252cd95f9277c416b8a89306a7746a0cd8a",
+      "candidateValidated": true,
+      "rowCount": 1960,
+      "metadataSha256": "2ea12b0c08f8c4bff34b7c8d5522a3f3e2acc3557aaf4684e02a2e8a940f276c",
+      "migrationChainSha256": "2f6664da49894228da9a2bec6e1a2214c3a40eac0005a294b4d5aabf57c62781",
+      "sha256sumsSha256": "bb655d2bf637f95eed0f163bafc1a8611597e67203fdc0e33549f02367b48051",
+      "artifactManifestSha256": "ec7f3771722786fa0e8bb93e1cf7a00239dbf0477ee184d989eba53ffad3bc42"
+    },
+    "replayB": {
+      "validationArtifactSha256": "050d290589c05500b52a30d991b91252cd95f9277c416b8a89306a7746a0cd8a",
+      "candidateValidated": true,
+      "rowCount": 1960,
+      "metadataSha256": "2ea12b0c08f8c4bff34b7c8d5522a3f3e2acc3557aaf4684e02a2e8a940f276c",
+      "migrationChainSha256": "2f6664da49894228da9a2bec6e1a2214c3a40eac0005a294b4d5aabf57c62781",
+      "sha256sumsSha256": "bb655d2bf637f95eed0f163bafc1a8611597e67203fdc0e33549f02367b48051",
+      "artifactManifestSha256": "ec7f3771722786fa0e8bb93e1cf7a00239dbf0477ee184d989eba53ffad3bc42"
+    }
+  },
+  "credentialReleaseHashChain": {
+    "presentInBothCandidates": true,
+    "stepsAreConsecutive": true,
+    "independentlyRecomputed": true,
+    "adapter": {
+      "label": "receipt-ocr-credential-release-pg15-replay-transformer",
+      "sourceSha256": "d047596d26c76574e515406388d9a22a1bb482eed65add8f8956f475abc19b1b",
+      "chainSha256": "210789993a3c4792e932ed20b3cfa532adda7c1635ab7c5c190ccd57700da2f1"
+    },
+    "transformedSql": {
+      "label": "receipt-ocr-credential-release-pg15-replay:20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+      "sourceSha256": "79a4549e458bc4ef4bd1ec6675917c27fa8c3551481ef37a3d01d8c8e29648cc",
+      "chainSha256": "cc4857f52d96222d2425555b8d17a96f7d97f49dfc8569a9edd1b15d9fd1346e"
+    }
+  },
+  "negativeVerification": {
+    "status": "passed",
+    "fixedErrorCode": "RECEIPT_OCR_SOURCE_REPLAY_LEDGER_FIXTURE_DENIED",
+    "existingSchemaOnlyPreserved": true,
+    "oneSyntheticLedgerRowPreserved": true,
+    "syntheticRowCountAfter": 1,
+    "teardownPassed": true
+  },
+  "executionVerificationAndTeardown": {
+    "replayA": {
+      "atomicCandidatePresent": true,
+      "generatorExitCodeCaptured": false,
+      "wrapperDiagnostic": "WRAPPER_RESERVED_VARIABLE_ABORTED_AFTER_GENERATOR",
+      "exactIdTeardownVerified": false,
+      "initialProjectLabelReadbackMatched": false,
+      "namedResourcesAbsent": true,
+      "nameAndLabelFilteredResidualCounts": {
+        "containers": 0,
+        "networks": 0,
+        "volumes": 0
+      },
+      "classification": "candidate_validated_named_resource_absence_only"
+    },
+    "replayB": {
+      "atomicCandidatePresent": true,
+      "generatorExitCode": 0,
+      "exactIdTeardownVerified": true,
+      "exactResourceInspectFailuresAfterTeardown": true,
+      "residualCounts": {
+        "containers": 0,
+        "networks": 0,
+        "volumes": 0
+      }
+    },
+    "preservation": {
+      "sourceNormalizedDumpSha256BeforeAndAfter": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+      "retainedNormalizedDumpSha256BeforeAndAfter": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+      "sourceUnchanged": true,
+      "retainedUnchanged": true,
+      "allTaskOwnedResidualCounts": {
+        "containers": 0,
+        "networks": 0,
+        "volumes": 0
+      }
+    }
+  },
+  "unitTestObservation": {
+    "command": "python3 -m unittest backend.supabase.tests.test_g014_catalog_baseline_generator backend.supabase.tests.test_receipt_ocr_credential_release_pg15_replay",
+    "observedResult": "9 tests; OK",
+    "storedOutputArtifact": null,
+    "storedReceiptArtifact": null,
+    "evidenceClass": "unsaved_console_observation"
+  },
+  "privacy": {
+    "rawSqlIncluded": false,
+    "rawLogsIncluded": false,
+    "rawOwnerMarkerOrTokenIncluded": false,
+    "accountOrCredentialDataIncluded": false,
+    "privateContainerIdentifiersIncluded": false
+  },
+  "limitations": [
+    "Replay A has no captured exact resource IDs. Only named-resource absence and zero name/label-filtered residual counts are retained; exact-ID teardown is not claimed.",
+    "Replay A did not capture a generator exit code because its wrapper aborted after candidate generation. Its candidate validation and byte comparison passed independently.",
+    "The nine unit tests are an unsaved console observation with no output or receipt file hash.",
+    "This receipt covers local PG15 source-only reconstruction and adapter admission behavior only. It does not establish hosted state, deployment, historical application, or operating readiness."
+  ]
+}

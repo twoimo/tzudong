@@ -1,6 +1,10 @@
 # Gemini 검수 판단 계약
 
-`run_restaurant_review_automation.py`는 기존 재검수 1회 호출에 5개 LAAJ 평가와 `approve | hold | recheck` 추천을 함께 요청한다. `review_decision_gemini.mjs`는 정확한 `gemini-3.8-flash`만 사용하며 기존 funded 환경 키 선택과 프로젝트 공동 RPM/동시성 lease를 재사용한다. `LAAJ_THINKING_LEVEL`을 보존하고 미설정이면 기존 기본값 `MEDIUM`을 사용한다. 출력 한도 4096, 단일 SDK 시도, 추가 모델·fallback·별도 판단 호출은 없다. `review_rule_evaluation.py`는 공유 rule 평가의 해외 위치 Gemini CLI fallback을 이 worker 경로에서만 비활성화하며 위치를 미확인 보류로 남긴다. 공유 rule 원본과 다른 실행 경로는 변경하지 않는다. 기존 hosted runner의 `--recheck-limit 1`, 일일 처리 슬롯 1개 예약, 후속 `--recheck-limit 0`은 그대로다.
+`run_restaurant_review_automation.py`는 기존 재검수 1회 호출에 5개 LAAJ 평가와 `approve | hold | recheck` 추천을 함께 요청한다. `review_decision_gemini.mjs`는 정확한 `gemini-3.8-flash`만 사용하며 기존 funded 환경 키 선택과 프로젝트 공동 RPM/동시성 lease를 재사용한다. `LAAJ_THINKING_LEVEL`을 보존하고 미설정이면 기존 기본값 `MEDIUM`을 사용한다. 출력 한도 8192, 단일 SDK 시도, 추가 모델·fallback·별도 판단 호출은 없다. `review_rule_evaluation.py`는 공유 rule 평가의 해외 위치 Gemini CLI fallback을 이 worker 경로에서만 비활성화하며 위치를 미확인 보류로 남긴다. 공유 rule 원본과 다른 실행 경로는 변경하지 않는다. 기존 hosted runner의 `--recheck-limit 1`, 일일 처리 슬롯 1개 예약, 후속 `--recheck-limit 0`은 그대로다.
+
+2026-11-04 세 번째 돈 & 까의 실제 단일 검수에서 `output_budget_exhausted`가 확인되어 출력 상한을 4096에서 8192로 조정했다. 앞선 두 `gemini_decision_incomplete`의 세부 원인은 미확정이며 기존 uncertain 작업은 재호출하지 않는다. 변경 후 실제 모델 완료 여부는 아직 검증하지 않았다.
+
+8192는 보존된 모델 메타데이터의 출력 상한 65536 이내다. 토큰 수는 UTF-8 바이트 수가 아니므로 완료나 결과 64KiB 내 수용을 보장하지 않는다. 기존 결과 크기 및 개인정보 검증은 그대로 거절 경계로 유지한다.
 
 새 migration은 기존 자동 승인 후보를 `queued / gemini_decision_required`로 전환한다. 완료 저장 시 Gemini 추천과 모든 기존 서버 검증이 동시에 충족되어야 승인한다. 관리자/사용자 작성 보호, 원본 fingerprint, 정책 버전, stop, 중복, 식당 identity, 좌표, 7개 평가와 독립 위치 근거, 카테고리, 일일 승인 한도를 서버가 다시 검사한다. Gemini 추천만으로 서버 제약을 우회할 수 없다. 기존 preview의 `approve` 수는 결정론적 자격 후보 수이며 아직 모델 추천을 받은 승인 수가 아니다.
 
@@ -36,7 +40,7 @@ items[].geminiDecision?: null | {
 };
 ```
 
-## 적용 경계와 검증
+## 당시 적용 경계와 로컬 검증 기록
 
 `20261004120000_restaurant_review_gemini_decision.sql`은 **미적용** 신규 migration이다. 기존 automation → manual guards → claim progress → identity → category 계약 뒤에 적용한다. 기존 migration은 변경하지 않았다. 운영 적용 시 기존 자동 운영을 중지한 상태에서 SQL을 먼저 적용하고 새 worker와 read 모델을 배포·확인한 다음 승인된 재개 절차를 따른다. 구 worker의 추천 없는 완료는 신규 SQL에서 거절된다. SQL 적용 전에는 구 tick의 즉시 승인 동작이 남아 있으므로 새 코드만으로 운영 반영을 주장하지 않는다.
 

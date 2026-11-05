@@ -1,11 +1,13 @@
 "use client";
 
+import { EvaluationEvidenceRecovery } from '@/components/admin/EvaluationEvidenceRecovery';
+
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
 import { createPortal } from 'react-dom';
 import { useRestaurantManagementHeader } from '@/components/admin/RestaurantManagementWorkspace';
-import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense, type FocusEvent } from 'react';
 import { isEvaluationRecordStatus, isRecord, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { fetchAdminEvaluationPage, isEvaluationCursorStale, type EvaluationWarnings } from '@/lib/admin/evaluation-page-client';
 import { filterEvaluationRecords } from '@/lib/admin/evaluation-query';
@@ -35,19 +37,21 @@ import { ClipboardCheck, Loader2, LayoutList, MonitorPlay, RotateCcw, Search, Se
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { RECORD_CATEGORIES } from '@/lib/admin/record-action-contract';
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingSurface } from '@/components/ui/loading-surface';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { getAdminEvaluationDisplayName, matchesAdminEvaluationSearch } from '@/lib/admin-evaluation-name';
 import { getAddressConsistencyStatus, hasUnconfirmedPublicMapLocation } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import { useRecordAction } from '@/lib/admin/use-record-action';
-import { isRecordActionCancelled, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from '@/lib/admin/record-action-client';
+import { shouldNotifyRecordActionError, recordActionErrorMessage, recordActionMediaNotice, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from '@/lib/admin/record-action-client';
 import { submissionApprovalInput, submissionEditInput } from '@/lib/admin/evaluation-record-actions';
 import type { RecordActionReceipt } from '@/lib/admin/record-action-contract';
 import { fetchAdminProfileSummariesLookup, resolveAdminReviewerDisplay } from '@/lib/admin/profile-summaries';
+import { adminQueryLastReadFailed } from '@/lib/admin/query-read-state';
 import {
   compareAdminEvaluationsByLatestDesc,
   isAdminEvaluationRecordMissing,
@@ -62,11 +66,6 @@ import {
   normalizeAdminPendingCountsResponse,
   type AdminPendingCountsResponse,
 } from '@/lib/admin/pending-counts';
-import {
-  MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
-  getMissingEvaluationAutoDeleteReason,
-  shouldAutoDeleteMissingEvaluationRecord,
-} from '@/lib/admin-auto-delete-missing-evaluation';
 import {
   findSameVideoDuplicateWarningCandidates,
   formatSameVideoDuplicateWarning,
@@ -159,67 +158,6 @@ const EVALUATION_FILTER_KEYS = [
   'category_TF',
   'status',
 ] as const;
-const ADMIN_SUBMISSION_SELECT = [
-  'id',
-  'user_id',
-  'submission_type',
-  'status',
-  'restaurant_name',
-  'restaurant_address',
-  'restaurant_phone',
-  'restaurant_categories',
-  'admin_notes',
-  'rejection_reason',
-  'resolved_by_admin_id',
-  'reviewed_at',
-  'created_at',
-  'updated_at',
-].join(', ');
-const ADMIN_SUBMISSION_ITEM_SELECT = [
-  'id',
-  'submission_id',
-  'youtube_link',
-  'tzuyang_review',
-  'target_restaurant_id',
-  'item_status',
-  'rejection_reason',
-  'created_at',
-].join(', ');
-const ADMIN_RESTAURANT_REQUEST_SELECT = [
-  'id',
-  'user_id',
-  'restaurant_name',
-  'origin_address',
-  'road_address',
-  'jibun_address',
-  'english_address',
-  'phone',
-  'categories',
-  'recommendation_reason',
-  'youtube_link',
-  'status',
-  'reviewed_by_admin_id',
-  'reviewed_at',
-  'admin_note',
-  'rejection_reason',
-  'review_audit_id',
-  'created_at',
-  'updated_at',
-].join(', ');
-const ADMIN_RESTAURANT_REQUEST_LEGACY_SELECT = [
-  'id',
-  'user_id',
-  'restaurant_name',
-  'origin_address',
-  'road_address',
-  'jibun_address',
-  'english_address',
-  'phone',
-  'categories',
-  'recommendation_reason',
-  'youtube_link',
-  'created_at',
-].join(', ');
 const ADMIN_REVIEW_SELECT = [
   'id',
   'user_id',
@@ -558,14 +496,6 @@ function parseReview(value: unknown): Omit<Review, 'profiles' | 'restaurants'> |
   };
 }
 
-type SupabaseQueryError = {
-  code?: string;
-};
-
-function isMissingRestaurantRequestLifecycleError(error: SupabaseQueryError | null | undefined) {
-  return error?.code === '42703';
-}
-
 type SubmissionOriginalRestaurantData = NonNullable<SubmissionRecord['original_restaurant_data']>;
 
 interface RestaurantLookupRow {
@@ -707,23 +637,57 @@ function AdminEvaluationStaticMobileLoadingControls() {
 
 function AdminEvaluationStaticCardSkeleton({ count }: { count: number }) {
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-      {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" />
-              <div className="grid grid-cols-3 gap-1.5">
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-              </div>
-            </div>
-          </div>
+    <div className="min-h-0 flex-1 lg:hidden" aria-hidden="true">
+
+      <LoadingSurface label="검수 카드 로딩 중" className="col-span-full">
+
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+
+          {
+            Array.from({ length: count }, (_, index) => (
+              <article key={index} className="rounded-md border border-border/70 bg-card p-3">
+
+                <div className="flex items-center gap-2">
+
+                  <svg
+                    viewBox="0 0 64 48"
+                    role="img"
+                    aria-label="맛집 사진"
+                    className="h-12 w-16 shrink-0 rounded-md border"
+                  >
+
+                    <rect width="64" height="48" fill="currentColor" opacity="0.1" />
+
+                  </svg>
+
+                  <div className="min-w-0 flex-1 space-y-1.5">
+
+                    <h3 className="text-sm font-semibold">맛집 검수 항목</h3>
+
+                    <p className="text-xs">영상과 맛집 정보</p>
+
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+
+                      <span>검수</span>
+
+                      <span>위치</span>
+
+                      <span>분류</span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </article>
+            ))
+          }
+
         </div>
-      ))}
+
+      </LoadingSurface>
+
     </div>
   );
 }
@@ -752,64 +716,144 @@ function AdminEvaluationRouteSkeleton() {
       aria-label="관리자 데이터 검수 화면 로딩 중"
       className="flex h-full min-h-0 flex-col overflow-hidden"
     >
+
       <span className="sr-only">관리자 데이터 검수 화면의 필터, 테이블 행, 액션 영역을 불러오는 중입니다.</span>
+
       <div className="border-b border-border bg-card px-3 py-2.5">
+
         <div className="flex min-h-10 items-start justify-between gap-2.5 lg:items-center">
+
           <div className="min-w-0 flex-1">
+
             <div className="flex items-center gap-2">
+
               <AdminEvaluationTitleIcon embedded />
+
               <h1 className="truncate text-base font-semibold leading-6">관리자 데이터 검수</h1>
+
             </div>
+
             <div className="mt-0.5 truncate text-xs text-muted-foreground">
               필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
             </div>
+
           </div>
-          <div className="flex shrink-0 items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
-            <Button type="button" variant="secondary" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="리스트 뷰" aria-pressed="true">
+
+          <div
+            className="flex shrink-0 items-center justify-end gap-1.5"
+            data-admin-evaluation-view-actions="top-right"
+          >
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled
+              className="h-8 w-8 p-0 disabled:opacity-100"
+              aria-label="리스트 뷰"
+              aria-pressed="true"
+            >
+
               <LayoutList className="h-4 w-4" aria-hidden="true" />
+
               <span className="sr-only">리스트</span>
+
             </Button>
-            <Button type="button" variant="ghost" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="슬라이드 뷰" aria-pressed="false">
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled
+              className="h-8 w-8 p-0 disabled:opacity-100"
+              aria-label="슬라이드 뷰"
+              aria-pressed="false"
+            >
+
               <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+
               <span className="sr-only">슬라이드</span>
+
             </Button>
+
           </div>
+
         </div>
+
       </div>
+
       <div ref={mobileCardsRef} className="flex min-h-0 flex-1 flex-col gap-3 p-2">
+
         <AdminEvaluationStaticMobileLoadingControls />
+
         <AdminEvaluationStaticCardSkeleton count={mobileCardsCount} />
-        <div ref={frameRef} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
-          <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <div key={index} className="px-2 py-2">
-                <Skeleton className={index === 1 ? "h-3 w-24 rounded-full motion-reduce:animate-none" : "mx-auto h-3 w-12 rounded-full motion-reduce:animate-none"} />
-              </div>
-            ))}
-          </div>
-          <div className="divide-y divide-border">
-            {Array.from({ length: rowCount }).map((_, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
-              >
-                <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                <div className="flex min-w-0 items-center gap-2">
-                  <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                    <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
+
+        <div
+          ref={frameRef}
+          className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex"
+        >
+
+          <LoadingSurface label="검수 목록 로딩 중">
+
+            <div
+              className="grid bg-muted/35 px-2 py-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+            >
+
+              {
+                ["선택", "검수 항목", "평가", "분류", "상태", "주소", "영상", "기록", "작업"].map(label => (
+                  <span key={label}>
+
+                    {label}
+
+                  </span>
+                ))
+              }
+
+            </div>
+
+            <div className="divide-y divide-border">
+
+              {
+                Array.from({ length: rowCount }, (_, index) => (
+                  <div
+                    key={index}
+                    className="grid min-h-16 items-center gap-2 p-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+                  >
+
+                    <span>선택</span>
+
+                    <div>
+
+                      <p className="text-sm font-semibold">맛집 검수 항목</p>
+
+                      <p className="mt-1">영상과 맛집 정보</p>
+
+                    </div>
+
+                    {
+                      ["평가", "분류", "상태", "주소", "영상", "기록"].map(label => (
+                        <span key={label}>
+
+                          {label}
+
+                        </span>
+                      ))
+                    }
+
+                    <span>상세 보기</span>
+
                   </div>
-                </div>
-                {Array.from({ length: 6 }).map((__, cellIndex) => (
-                  <Skeleton key={cellIndex} className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                ))}
-                <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            ))}
-          </div>
+                ))
+              }
+
+            </div>
+
+          </LoadingSurface>
+
         </div>
+
       </div>
+
     </div>
   );
 }
@@ -860,6 +904,9 @@ function AdminEvaluationPage({
   const legacyEvaluationLoad = isLegacyBrowserAdminMutationEnabled();
   const [serverFilteredTotal, setServerFilteredTotal] = useState(0);
   const [pageReadError, setPageReadError] = useState(false);
+  const statusAlertHadFocusRef = useRef(false);
+  const recordViewsRetryRef = useRef<HTMLButtonElement>(null);
+  const moduleContentRef = useRef<HTMLDivElement>(null);
   const [recordViewsInvalidated, setRecordViewsInvalidated] = useState(false);
   const [recordViewsRefreshing, setRecordViewsRefreshing] = useState(false);
   const recordViewsEpochRef = useRef(0);
@@ -885,12 +932,13 @@ function AdminEvaluationPage({
   const [selectedConflictRecord, setSelectedConflictRecord] = useState<EvaluationRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [createRestaurantOpen, setCreateRestaurantOpen] = useState(false);
+  const [recoveryRecord, setRecoveryRecord] = useState<EvaluationRecord | null>(null);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
 
   const detailRequestsRef = useRef(new Map<string, { promise: Promise<EvaluationRecord | null>; token: symbol; epoch: number }>());
   const ensureEvaluationDetails = useCallback(async (record: EvaluationRecord): Promise<EvaluationRecord | null> => {
     if (recordViewsFenceRef.current || (!legacyEvaluationLoad && (pageReadError || pageRevisionRef.current === null))) return null;
-    if (!record.read_summary) return record;
+    if (!record.read_summary && record.approval_eligibility && record.approval_eligibility.state !== 'unknown') return record;
     const existing = detailRequestsRef.current.get(record.id);
     if (existing?.epoch === pageEpochRef.current) return existing.promise;
     const epoch = pageEpochRef.current;
@@ -965,6 +1013,16 @@ function AdminEvaluationPage({
 
   // 사용자 제보 검수 상태 (URL 쿼리 파라미터로 초기화)
   const [showSubmissionView, setShowSubmissionView] = useState(false);
+  const showPageReadError = !recordViewsInvalidated && !legacyEvaluationLoad && pageReadError && !showSubmissionView;
+  useLayoutEffect(() => {
+    if (showPageReadError || recordViewsInvalidated || !statusAlertHadFocusRef.current) return;
+    statusAlertHadFocusRef.current = false;
+    if (document.activeElement === document.body) moduleContentRef.current?.focus();
+  }, [showPageReadError, recordViewsInvalidated]);
+  const trackStatusAlertFocus = {
+    onFocus: () => { statusAlertHadFocusRef.current = true; },
+    onBlur: (event: FocusEvent<HTMLDivElement>) => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) statusAlertHadFocusRef.current = false; },
+  };
   const [submissionInitialTab, setSubmissionInitialTab] = useState<'new' | 'edit' | 'recommend' | 'reviews'>('new');
 
   // Deep-link 필터 (운영지표/이슈보드 -> 검수 화면 이동)
@@ -1318,7 +1376,6 @@ function AdminEvaluationPage({
       nextCursorRef.current = null;
       pageRevisionRef.current = null;
       detailRequestsRef.current.clear();
-      setPageReadError(false);
       setAllRecords([]);
       setDisplayedRecords([]);
       setPageWarnings({});
@@ -1330,6 +1387,7 @@ function AdminEvaluationPage({
       try {
         const page = await fetchAdminEvaluationPage(evaluationPageQuery, null, pageAbortRef.current.signal);
         if (epoch !== pageEpochRef.current) return;
+        setPageReadError(false);
         setAllRecords(page.records.map(normalizeEvaluationRecord).filter((record): record is EvaluationRecord => record !== null).map(withAdminEvaluationDisplayName));
         setPageWarnings(page.warnings);
         pageRevisionRef.current = page.revision;
@@ -1347,7 +1405,6 @@ function AdminEvaluationPage({
         pageRevisionRef.current = null;
         nextCursorRef.current = null;
         hasMoreRef.current = false;
-        toast({ variant: 'destructive', title: '데이터 로드 실패', description: '검수 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.' });
       } finally { if (epoch === pageEpochRef.current) setLoading(false); }
       return;
     }
@@ -1377,49 +1434,12 @@ function AdminEvaluationPage({
         return;
       }
 
-      let typedRecords = data
+      const typedRecords = data
         .map(normalizeEvaluationRecord)
         .filter((record): record is EvaluationRecord => record !== null)
         .map(withAdminEvaluationDisplayName);
-      const autoDeleteTargets = typedRecords.filter(shouldAutoDeleteMissingEvaluationRecord);
-
-      if (autoDeleteTargets.length > 0 && user?.id && isLegacyBrowserAdminMutationEnabled()) {
-        const updatedAt = new Date().toISOString();
-        const autoDeleteIds = autoDeleteTargets.map((record) => record.id);
-
-        const { error: autoDeleteError } = await supabase
-          .from('restaurants')
-          .update({
-            status: 'deleted',
-            db_error_message: MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
-            updated_by_admin_id: user.id,
-            updated_at: updatedAt,
-          })
-          .in('id', autoDeleteIds);
-
-        if (autoDeleteError) throw autoDeleteError;
-
-        const autoDeleteIdSet = new Set(autoDeleteIds);
-        typedRecords = typedRecords.map((record) => (
-          autoDeleteIdSet.has(record.id)
-            ? {
-                ...record,
-                status: 'deleted',
-                db_error_message: MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
-                updated_by_admin_id: user.id,
-                updated_at: updatedAt,
-              }
-            : record
-        ));
-
-        const reasonSummary = [...new Set(autoDeleteTargets
-          .map(getMissingEvaluationAutoDeleteReason)
-          .filter(Boolean))].join(' · ');
-        toast({
-          title: '미발견 맛집 자동 삭제',
-          description: `${autoDeleteTargets.length}건을 삭제 상태로 전환했습니다.${reasonSummary ? ` (${reasonSummary})` : ''}`,
-        });
-      }
+      // Loading an incomplete source never authorizes a write. Evidence recovery
+      // and cleanup use separate reviewed, source-bound server operations.
 
       setAllRecords(typedRecords);
 
@@ -1464,7 +1484,7 @@ function AdminEvaluationPage({
     } finally {
       setLoading(false);
     }
-  }, [toast, user?.id, legacyEvaluationLoad, evaluationPageQuery]);
+  }, [toast, legacyEvaluationLoad, evaluationPageQuery]);
   useEffect(() => { reloadPagesRef.current = async () => { if (!recordViewsFenceRef.current) await loadAllRecords(); }; }, [loadAllRecords]);
 
   // 초기 데이터 로드
@@ -1523,6 +1543,18 @@ function AdminEvaluationPage({
     const full = await ensureEvaluationDetails(record);
     if (!full) return;
     record = full;
+    // The DTO is computed before lossy normalization. It is advisory; the
+    // guarded action still performs the authoritative current-row SQL checks.
+    if (record.approval_eligibility?.state !== 'local_checks_passed') {
+      toast({
+        variant: 'destructive',
+        title: '승인 사전검사 확인 필요',
+        description: record.approval_eligibility?.state === 'blocked'
+          ? '이 항목의 승인 불가 사유를 확인하고 근거를 보완해 주세요.'
+          : '상세 정보를 다시 확인한 뒤 승인해 주세요.',
+      });
+      return;
+    }
     if (needsEvaluationRerun(record)) {
       toast({
         variant: 'destructive',
@@ -1594,8 +1626,8 @@ function AdminEvaluationPage({
       if (duplicateCheck.isDuplicate) {
 
         // 🔥 수정: 유튜브 링크 비교 로직 개선
-        const currentYoutubeLink = youtubeLink?.trim() || null;
-        const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
+        const currentYoutubeLink = normalizeCanonicalYouTubeWatchUrl(youtubeLink);
+        const matchedYoutubeLink = normalizeCanonicalYouTubeWatchUrl(duplicateCheck.matchedRestaurant?.youtube_link);
 
 
         // 유튜브 링크가 다른 경우: 확인 모달 표시
@@ -1666,6 +1698,11 @@ function AdminEvaluationPage({
     setConflictPanelOpen(true);
   };
 
+  const handleEvidenceRecovery = async (record: EvaluationRecord) => {
+    const full = await ensureEvaluationDetails(record);
+    if (full) setRecoveryRecord(full);
+  };
+
   const handleEdit = async (record: EvaluationRecord) => {
     const full = await ensureEvaluationDetails(record);
     if (!full) return;
@@ -1689,33 +1726,21 @@ function AdminEvaluationPage({
     queryFn: async () => {
       if (!user || !isAdmin) return [];
 
-      // 1. submissions 조회 (pending 및 partially_approved)
-      const { data: submissionsData, error: submissionsError } = await supabase
-        .from('restaurant_submissions')
-        .select(ADMIN_SUBMISSION_SELECT)
-        .in('status', ['pending', 'partially_approved'])
-        .order('created_at', { ascending: false })
-        .overrideTypes<Record<string, unknown>[], { merge: false }>();
-
-
-      if (submissionsError) throw submissionsError;
-      const typedSubmissions = parseValidatedRows(submissionsData ?? [], isSubmissionRow);
+      const response = await fetch('/api/admin/submissions', {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('admin-submissions-failed');
+      const payload = await response.json().catch(() => null) as { submissions?: unknown; items?: unknown } | null;
+      if (!payload || !Array.isArray(payload.submissions) || !Array.isArray(payload.items)) {
+        throw new Error('admin-submissions-invalid');
+      }
+      const typedSubmissions = parseValidatedRows(payload.submissions, isSubmissionRow);
       if (!typedSubmissions.length) return [];
-      const submissionIds = typedSubmissions.map(s => s.id);
       const userIds = [...new Set(typedSubmissions.map(s => s.user_id))];
 
-      // 2. items / profile summaries 병렬 조회
-      const [{ data: itemsData }, profilesLookup] = await Promise.all([
-        supabase
-          .from('restaurant_submission_items')
-          .select(ADMIN_SUBMISSION_ITEM_SELECT)
-          .in('submission_id', submissionIds)
-          .order('created_at', { ascending: true })
-          .overrideTypes<Record<string, unknown>[], { merge: false }>(),
-        fetchAdminProfileSummariesLookup(userIds),
-      ]);
-
-      const typedItemsData = parseValidatedRows(itemsData ?? [], isSubmissionItem);
+      const typedItemsData = parseValidatedRows(payload.items, isSubmissionItem);
+      const profilesLookup = await fetchAdminProfileSummariesLookup(userIds);
 
       const itemsMap = new Map<string, SubmissionItem[]>();
       typedItemsData.forEach((item) => {
@@ -1822,27 +1847,14 @@ function AdminEvaluationPage({
     queryFn: async () => {
       if (!user || !isAdmin) return [];
 
-      const { data: requestsData, error: requestsError } = await supabase
-        .from('restaurant_requests')
-        .select(ADMIN_RESTAURANT_REQUEST_SELECT)
-        .in('status', ['pending', 'approved', 'rejected'])
-        .order('created_at', { ascending: false })
-        .overrideTypes<Record<string, unknown>[], { merge: false }>();
-
-      let rawRequests = parseValidatedRows(requestsData ?? [], isRestaurantRequestListRow);
-
-      if (requestsError) {
-        if (!isMissingRestaurantRequestLifecycleError(requestsError)) throw requestsError;
-
-        const { data: legacyRequestsData, error: legacyRequestsError } = await supabase
-          .from('restaurant_requests')
-          .select(ADMIN_RESTAURANT_REQUEST_LEGACY_SELECT)
-          .order('created_at', { ascending: false })
-          .overrideTypes<Record<string, unknown>[], { merge: false }>();
-
-        if (legacyRequestsError) throw legacyRequestsError;
-        rawRequests = parseValidatedRows(legacyRequestsData ?? [], isRestaurantRequestListRow);
-      }
+      const response = await fetch('/api/admin/restaurant-requests', {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('admin-restaurant-requests-failed');
+      const payload = await response.json().catch(() => null) as { requests?: unknown } | null;
+      if (!payload || !Array.isArray(payload.requests)) throw new Error('admin-restaurant-requests-invalid');
+      const rawRequests = parseValidatedRows(payload.requests, isRestaurantRequestListRow);
 
       if (!rawRequests.length) return [];
 
@@ -1889,6 +1901,8 @@ function AdminEvaluationPage({
     refetchOnWindowFocus: true,
   });
   const { data: recommendationRequestsData = [], isLoading: recommendationRequestsLoading } = recommendationRequestsQuery;
+  const submissionsReadFailed = adminQueryLastReadFailed(submissionsQuery);
+  const recommendationsReadFailed = adminQueryLastReadFailed(recommendationRequestsQuery);
 
   const allSubmissionRecords = useMemo(
     () => [...submissionsData, ...recommendationRequestsData],
@@ -1908,15 +1922,15 @@ function AdminEvaluationPage({
         .order('created_at', { ascending: false })
         .overrideTypes<Record<string, unknown>[], { merge: false }>();
 
-      if (reviewsError) throw reviewsError;
-      const typedReviewsData = (reviewsData ?? [])
+      if (reviewsError || !Array.isArray(reviewsData)) throw new Error('admin-review-read-failed');
+      const typedReviewsData = reviewsData
         .map(parseReview)
         .filter((review): review is Omit<Review, 'profiles' | 'restaurants'> => review !== null);
       if (!typedReviewsData.length) return [];
       const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
       const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-      const [profilesLookup, { data: restaurantsData }] = await Promise.all([
+      const [profilesLookup, restaurantsResult] = await Promise.all([
         fetchAdminProfileSummariesLookup(userIds),
         supabase
           .from('restaurants')
@@ -1925,7 +1939,8 @@ function AdminEvaluationPage({
           .overrideTypes<Record<string, unknown>[], { merge: false }>(),
       ]);
 
-      const typedRestaurantsData = parseValidatedRows(restaurantsData ?? [], isReviewRestaurantRow);
+      if (restaurantsResult.error || !Array.isArray(restaurantsResult.data)) throw new Error('admin-review-read-failed');
+      const typedRestaurantsData = parseValidatedRows(restaurantsResult.data, isReviewRestaurantRow);
 
       const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.approved_name || '이름 없음', address: r.road_address || r.jibun_address || '' }]));
 
@@ -1938,6 +1953,7 @@ function AdminEvaluationPage({
     enabled: !!user && isAdmin && !recordViewsInvalidated,
     refetchInterval: recordViewsInvalidated ? false : 30000,
   });
+  const reviewsReadFailed = adminQueryLastReadFailed(reviewsQuery);
   const { data: reviewsData = [], isLoading: reviewsLoading } = reviewsQuery;
 
   const pendingCountsQuery = useQuery({
@@ -1980,8 +1996,19 @@ function AdminEvaluationPage({
 
   // 전체 대기 건수 (제보 + 리뷰)
   const totalPendingCount = getAdminPendingCountsTotal(pendingCounts);
+  const pendingCountsReadFailed = adminQueryLastReadFailed(pendingCountsQuery);
+  const pendingQueueCountsUnknown = !canonicalPendingCounts && (
+    pendingCountsReadFailed || submissionsReadFailed || recommendationsReadFailed || reviewsReadFailed
+  );
+  const pendingQueueCountsLoading = !canonicalPendingCounts && !pendingQueueCountsUnknown && (
+    pendingCountsQuery.isLoading || submissionsQuery.isLoading || recommendationRequestsQuery.isLoading || reviewsQuery.isLoading
+  );
   const pendingQueueSummaryText = showSubmissionView
-    ? `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
+    ? pendingQueueCountsUnknown
+      ? '제보/리뷰 대기: 미확인'
+      : pendingQueueCountsLoading
+        ? '제보/리뷰 대기: 확인 중'
+        : `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
     : `필터링: ${legacyEvaluationLoad ? filteredRecords.length : serverFilteredTotal}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
   const isInitialEvaluationDataLoading = !showSubmissionView && loading && allRecords.length === 0;
   const pendingQueueSummaryContent = recordViewsInvalidated ? '새 조회 필요' : !showSubmissionView && !legacyEvaluationLoad && pageReadError ? '검수 목록 조회 실패' : showSubmissionView || !isInitialEvaluationDataLoading
@@ -2045,14 +2072,14 @@ function AdminEvaluationPage({
   }, [invalidateRecordViews, refreshRecordViews, createRestaurantOpen]);
 
   const notifyRecordActionError = (error: unknown) => {
-    if (!isRecordActionCancelled(error)) toast({ variant: 'destructive', title: '변경 확인 필요', description: recordActionErrorMessage(error) });
+    if (shouldNotifyRecordActionError(error)) toast({ variant: 'destructive', title: '변경 확인 필요', description: recordActionErrorMessage(error) });
   };
   const onRecordApplied = async (receipt: RecordActionReceipt) => {
     toast({ title: '변경 확인 완료', description: [recordActionMediaNotice(receipt), `감사 ID: ${receipt.auditId}`].filter(Boolean).join(' ') });
     await Promise.all([refreshRecordViews(), invalidateRestaurantDiscoveryQueries(queryClient)]);
     invalidateAdminPendingCounts();
   };
-  const recordActions = useRecordAction(receipt => { void onRecordApplied(receipt); }, { recover: true });
+  const recordActions = useRecordAction(receipt => { void onRecordApplied(receipt); }, { recover: true, returnFocus: () => recordViewsRetryRef.current ?? moduleContentRef.current });
   const notifyTransactionalResult = (work: Promise<unknown>) => {
     void work.catch(() => toast({ title: '변경은 확인됐습니다', description: '작성자 알림 결과는 확인하지 못했습니다. 자동으로 다시 보내지 않습니다.' }));
   };
@@ -2313,12 +2340,17 @@ function AdminEvaluationPage({
         controlsTarget={compactReviewHeader ? managementHeader.automation : undefined}
         onApplied={() => { invalidateRecordViews(); void refreshRecordViews(); void invalidateRestaurantDiscoveryQueries(queryClient); }}
       />}
-      {recordViewsInvalidated && <div role="alert" data-admin-record-views-invalidated className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 text-xs text-destructive"><span>변경 후 최신 정보를 다시 확인해야 합니다.</span><Button size="sm" variant="outline" disabled={recordActions.busy || recordViewsRefreshing} onClick={() => void refreshRecordViews()}>{recordViewsRefreshing ? '조회 중…' : '새로 조회'}</Button></div>}
-      <div className="flex-1 min-h-0 flex flex-col" data-admin-module-content={embedded ? "bounded" : undefined}>
-        {!recordViewsInvalidated && !legacyEvaluationLoad && pageReadError && !showSubmissionView ? <div role="alert" data-admin-evaluation-page-error="true" className="flex shrink-0 items-center gap-2 border-b px-3 py-2 text-xs text-destructive"><span>검수 목록 조회 실패</span><Button size="sm" variant="outline" disabled={loading} onClick={() => void loadAllRecords()}>다시 조회</Button></div> : null}
-        {showSubmissionView && submissionInitialTab !== 'reviews' && <div className="admin-cms-toolbar">
-          <Button variant="outline" size="sm" disabled={recordActions.busy || recordViewsInvalidated || submissionsLoading || submissionsData.length === 0} onClick={() => setSubmissionEditorOpen(true)}>제보 수정</Button>
-        </div>}
+      {recordViewsInvalidated && <div role="alert" data-admin-record-views-invalidated className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 text-xs text-destructive" {...trackStatusAlertFocus}>
+        <span>변경 후 최신 정보를 다시 확인해야 합니다.</span>
+        <Button ref={recordViewsRetryRef} size="sm" variant="outline" aria-disabled={recordActions.busy || recordViewsRefreshing} aria-busy={recordViewsRefreshing}
+          onClick={() => { if (!recordActions.busy && !recordViewsRefreshing) void refreshRecordViews(); }}>{recordViewsRefreshing ? '조회 중…' : '새로 조회'}</Button>
+      </div>}
+      <div ref={moduleContentRef} tabIndex={-1} className="flex-1 min-h-0 flex flex-col focus-visible:outline-none" data-admin-module-content={embedded ? "bounded" : undefined}>
+        {showPageReadError ? <div role="alert" data-admin-evaluation-page-error="true" className="flex shrink-0 items-center gap-2 border-b px-3 py-2 text-xs text-destructive"
+          {...trackStatusAlertFocus}>
+          <span>검수 목록 조회 실패</span>
+          <Button size="sm" variant="outline" aria-disabled={loading} aria-busy={loading} onClick={() => { if (!loading) void loadAllRecords(); }}>{loading ? '조회 중…' : '다시 조회'}</Button>
+        </div> : null}
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
@@ -2331,13 +2363,24 @@ function AdminEvaluationPage({
               queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
               invalidateAdminPendingCounts();
             }}
-            loading={submissionsLoading || recommendationRequestsLoading || recordActions.busy || recordViewsInvalidated}
-            reviews={recordViewsInvalidated ? [] : reviewsData}
+            loading={submissionsLoading || recommendationRequestsLoading || (submissionsReadFailed && submissionsQuery.isFetching) || (recommendationsReadFailed && recommendationRequestsQuery.isFetching) || recordActions.busy || recordViewsInvalidated}
+            submissionsError={!recordViewsInvalidated && submissionsReadFailed}
+            recommendationsError={!recordViewsInvalidated && recommendationsReadFailed}
+            onRetrySubmissions={() => {
+              if (submissionsReadFailed) void submissionsQuery.refetch();
+              if (recommendationsReadFailed) void recommendationRequestsQuery.refetch();
+            }}
+            reviews={recordViewsInvalidated || reviewsReadFailed ? [] : reviewsData}
             onApproveReview={handleApproveReview}
             onRejectReview={handleRejectReview}
             onDeleteReview={handleDeleteReview}
-            reviewsLoading={reviewsLoading || recordActions.busy || recordViewsInvalidated}
+            reviewsLoading={reviewsLoading || (reviewsReadFailed && reviewsQuery.isFetching) || recordActions.busy || recordViewsInvalidated}
+            reviewsError={!recordViewsInvalidated && reviewsReadFailed}
+            onRetryReviews={() => void reviewsQuery.refetch()}
             initialTab={submissionInitialTab}
+            toolbarTrailingAction={submissionInitialTab !== 'reviews' ? (
+              <Button variant="outline" size="sm" disabled={recordActions.busy || recordViewsInvalidated || submissionsLoading || submissionsData.length === 0} onClick={() => setSubmissionEditorOpen(true)}>제보 수정</Button>
+            ) : undefined}
           />
         ) : isAlternateView ? (
           <EvaluationSlideView
@@ -2350,7 +2393,10 @@ function AdminEvaluationPage({
             onRegisterMissing={handleRegisterMissing}
             onResolveConflict={handleResolveConflict}
             onEdit={handleEdit}
+            onRecover={handleEvidenceRecovery}
+            onRequestDetails={async record => Boolean(await ensureEvaluationDetails(record))}
             loading={loading || recordViewsInvalidated}
+            readFailed={showPageReadError}
           />
         ) : (
           /* 테이블 영역 (무한 스크롤) */
@@ -2363,7 +2409,9 @@ function AdminEvaluationPage({
               onRegisterMissing={handleRegisterMissing}
               onResolveConflict={handleResolveConflict}
               onEdit={handleEdit}
+              onRecover={handleEvidenceRecovery}
               loading={loading || recordViewsInvalidated}
+              readFailed={showPageReadError}
               evalFilters={evalFilters}
               isDeletedFilterActive={evalFilters.status === 'deleted'}
               searchQuery={searchQuery}
@@ -2379,24 +2427,13 @@ function AdminEvaluationPage({
               onLoadMore={loadMoreRecords}
               hasMore={hasMore}
               isLoadingMore={loadingMore}
+              totalCount={legacyEvaluationLoad ? filteredRecords.length : serverFilteredTotal}
             />
-
-            {/* 로딩 인디케이터 */}
-            {loadingMore && (
-              <div className="flex justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground motion-reduce:animate-none" />
-              </div>
-            )}
-
-            {/* 모든 데이터 로드 완료 메시지 */}
-            {!hasMore && displayedRecords.length > 0 && (
-              <div className="text-center py-4 text-muted-foreground text-sm">
-                모든 레코드를 불러왔습니다 ({visibleDisplayedRecords.length}개 / 전체 {legacyEvaluationLoad ? filteredRecords.length : serverFilteredTotal}개)
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      <EvaluationEvidenceRecovery record={recoveryRecord} onClose={() => setRecoveryRecord(null)} />
 
       <AdminRestaurantModal
         isOpen={createRestaurantOpen}

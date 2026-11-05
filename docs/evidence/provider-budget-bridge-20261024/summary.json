@@ -1,0 +1,38 @@
+{
+  "baseRevision": "174c6526",
+  "kind": "isolated-actual-postgresql-regression",
+  "version": "postgres (PostgreSQL) 17.11 (Homebrew)",
+  "testMethods": 16,
+  "passed": 16,
+  "failed": 0,
+  "beforeExpectedHealthyCallSqlstate": "42501",
+  "beforeCounterFirstCallSqlstate": "42883",
+  "sameOperationCalls": 16,
+  "sameOperationDecisions": 1,
+  "uniqueOperationCalls": 40,
+  "allowedAtActorCeiling": 20,
+  "deniedAtActorCeiling": 20,
+  "negativeControls": 2,
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "sourceSha256": {
+    "backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql": "05864ef9f088b51f4df7b504ad09a02f29303d9bf43350a4e0845b42afec2200",
+    "backend/supabase/candidates/20261024_provider_budget_private_bridge.sql": "7f6847fa83f7e1f87ce8ff289623796182a323a245a3308007fd689aa6ff3c24",
+    "backend/supabase/tests/test_provider_budget_bridge_pg17.py": "dd06abeabed73172783132e196d44190557b1587f0ba5814d0adc02178efbac2"
+  },
+  "limits": "Owned PG17 regression for the G014 provider-budget execution boundary.\n\nReal SQL/roles/RLS; synthetic auth rows. This is not full G014, hosted PG17.6,\nPostgREST, provider quota, release-admission or a proof over all schedules.\n",
+  "artifacts": {
+    "after-receipt.json": {
+      "sha256": "392fa25524bbccc94f64f53c4ef6a866a142933a563f5e8a0487cc9f0b5d2312",
+      "bytes": 2786
+    },
+    "before-healthy-receipt.json": {
+      "sha256": "f41cc6ceb12f1d54d275d63823b4d15a3836bcdc1fd35e149167e1f201b7da36",
+      "bytes": 1435
+    },
+    "pre-explicit-columns-receipt.json": {
+      "sha256": "731438029cc8d8cfa98a167b9dec7e4179f4b808ca168c5b9599515a48c23a0d",
+      "bytes": 2786
+    }
+  }
+}

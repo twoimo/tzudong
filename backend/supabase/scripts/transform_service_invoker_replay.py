@@ -13,11 +13,15 @@ BUNDLE_SHA256 = '15c849887cf3cd9641181545146bbf1226b3c0a2dc45f84d892022dd9041f5a
 
 
 def transform(source, bundle):
-    if hashlib.sha256(source).hexdigest() not in (SOURCE_SHA256, MANUAL_SOURCE_SHA256, PAGE_SOURCE_SHA256, WARNING_SOURCE_SHA256):
-        raise ValueError('service_invoker_replay_source_drift')
     if hashlib.sha256(bundle).hexdigest() != BUNDLE_SHA256:
         raise ValueError('service_invoker_replay_bundle_drift')
-    window = json.loads(bundle)['replayMembershipWindows']
+    return transform_window(source, json.loads(bundle)['replayMembershipWindows'])
+
+
+def transform_window(source, window):
+    """Use a window already validated by the canonical G026 verifier."""
+    if hashlib.sha256(source).hexdigest() not in (SOURCE_SHA256, MANUAL_SOURCE_SHA256, PAGE_SOURCE_SHA256, WARNING_SOURCE_SHA256):
+        raise ValueError('service_invoker_replay_source_drift')
     begin = b'BEGIN;\n'
     commit = b'COMMIT;\n'
     if source.count(begin) != 1 or source.count(commit) != 1:

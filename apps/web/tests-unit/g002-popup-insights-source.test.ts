@@ -63,14 +63,17 @@ describe('G002 popup and insights hardening contracts', () => {
     expect(dailyPopupSource).toContain('const shouldShowPopup = isHomePage;');
   });
 
-  test('insights treemap exposes dense context legend and small-cell guidance', () => {
+  test('insights treemap keeps guidance in an operable popover and chart description', () => {
     const insightsSource = source('app/insights/insights-client.tsx');
 
-    expect(insightsSource).toContain('data-insights-treemap-context="true"');
-    expect(insightsSource).toContain('트리맵 기준: ${metricLabel} · ${periodLabel} · ${selectedCount.toLocaleString()}개 영상 · ${modeLabel} · ${clusterContextText}');
-    expect(insightsSource).toContain('색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.');
-    expect(insightsSource).toContain('색상 범례: ${periodLabel} 대비 ${metricLabel} 증감률이 높을수록 밝은 초록색입니다.');
-    expect(insightsSource).toContain('작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고');
-    expect(insightsSource).toContain('aria-describedby="insights-treemap-context insights-treemap-small-cell-guidance"');
+    expect(insightsSource).toContain('aria-label="트리맵 읽는 법"');
+    expect(insightsSource).toContain('<PopoverTrigger asChild>');
+    expect(insightsSource).toContain('<PopoverContent aria-label="트리맵 읽는 법" side="bottom"');
+    expect(insightsSource).toContain('<p>{treemapLegendText}</p>');
+    expect(insightsSource).toContain('onOpenAutoFocus={(event) => event.preventDefault()}');
+    expect(insightsSource).toContain('id="insights-treemap-legend"');
+    expect(insightsSource).toContain('id="insights-treemap-small-cell-guidance"');
+    expect(insightsSource).toContain('aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance"');
+    expect(insightsSource).not.toContain('data-insights-treemap-context="true"');
   });
 });

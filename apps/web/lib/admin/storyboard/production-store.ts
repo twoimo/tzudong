@@ -1,18 +1,17 @@
-import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createSupabaseStorageServerClient } from '@/lib/supabase/storage-server';
 import {
-  MAX_STORYBOARD_DOCUMENT_BYTES, MAX_STORYBOARD_IMAGE_BYTES, STORYBOARD_WORKFLOW,
-  StoryboardProductionError, assertGeminiStoryboardExecutionPolicy, isStoryboardUserImportProviderId, parseStoryboardDraft,
-  storyboardDraftSceneSchema, storyboardDraftSchema, storyboardProductionDocumentSchema,
-  storyboardProductionRequestSchema, storyboardProvenanceSchema,
+  MAX_STORYBOARD_DOCUMENT_BYTES, MAX_STORYBOARD_IMAGE_BYTES,
+  StoryboardProductionError, assertExecutableStoryboardRequest, assertGeminiStoryboardExecutionPolicy, parseStoryboardDraft,
+  storyboardDraftSceneSchema, storyboardGeminiProductionDocumentSchema, storyboardProductionDocumentSchema,
+  storyboardProductionRequestSchema, storyboardProvenanceSchema, storyboardStoredProductionRequestSchema,
   type StoryboardProductionAsset, type StoryboardProductionDocument, type StoryboardProductionProvenance,
-  type StoryboardProductionRequest, type StoryboardProvider,
+  type StoryboardProductionRequest,
 } from './production-contract';
 import { prepareStoryboardAsset, STORYBOARD_ASSET_BUCKET, storyboardHash, trustedStoryboardAsset } from './production-assets';
 import {
-  productionModelsSchema, productionUuid, workerFailureSchema, workerOperationSchema,
+  productionModelsSchema, productionUuid, storyboardGeminiHeartbeatModelsSchema, workerFailureSchema, workerOperationSchema,
   type ProductionModel, type ProductionWorkerIdentity,
 } from './production-worker-auth';
 
@@ -28,6 +27,7 @@ export const PRODUCTION_FAILURE_STATUSES: Readonly<Record<string, number>> = {
   unauthorized: 401, worker_unauthorized: 401, owner_forbidden: 403, origin_forbidden: 403,
   project_not_found: 404, asset_not_found: 404, revision_conflict: 409, worker_lease_lost: 409,
   request_conflict: 409, project_busy: 409, nothing_to_retry: 409,
+  archived_project_read_only: 409, feature_database_held: 409,
   persistence_unavailable: 503, persistence_invalid_data: 502, storage_unavailable: 503,
   external_ai_disabled: 400, model_not_selected: 400, provider_not_configured: 503,
   model_not_installed: 409, model_capability_mismatch: 409, model_identity_mismatch: 409,
@@ -39,7 +39,7 @@ const knownErrors = new Set([...Object.keys(PRODUCTION_FAILURE_STATUSES), ...wor
 const timestamp = z.iso.datetime({ offset: true });
 export const productionProjectSchema = z.object({
   id: productionUuid, revision: z.number().int().nonnegative(),
-  request: storyboardProductionRequestSchema, document: storyboardProductionDocumentSchema.nullable(),
+  request: storyboardStoredProductionRequestSchema, document: storyboardProductionDocumentSchema.nullable(),
   status: z.enum(['waiting_worker', 'generating', 'awaiting_import', 'partial', 'ready', 'failed', 'cancelled']),
   createdAt: timestamp, updatedAt: timestamp,
 }).strict();
@@ -66,7 +66,7 @@ const checkSchema = snapshotSchema.extend({ kind: z.enum(['generate', 'scene']),
 const claimSchema = z.object({ ok: z.literal(true), job: z.object({
   id: productionUuid, projectId: productionUuid, revision: z.number().int().nonnegative(), kind: z.enum(['generate', 'scene']),
   sceneNo: z.number().int().min(1).max(12).nullable(), request: storyboardProductionRequestSchema,
-  document: storyboardProductionDocumentSchema.nullable(), leaseToken: productionUuid,
+  document: storyboardGeminiProductionDocumentSchema.nullable(), leaseToken: productionUuid,
 }).strict().nullable() }).strict();
 const okSchema = z.object({ ok: z.literal(true) }).strict();
 const heartbeatSchema = okSchema.extend({ leaseValid: z.boolean() });
@@ -88,8 +88,6 @@ export const productionActionSchema = z.discriminatedUnion('action', [
     sceneNo: z.number().int().min(1).max(12), requestId: productionUuid }).strict(),
   z.object({ action: z.literal('retry'), revision: z.number().int().nonnegative(), requestId: productionUuid }).strict(),
   z.object({ action: z.literal('cancel'), revision: z.number().int().nonnegative(), jobId: productionUuid }).strict(),
-  z.object({ action: z.literal('import-text'), revision: z.number().int().nonnegative(), projectId: productionUuid,
-    schema: z.literal(STORYBOARD_WORKFLOW), draft: storyboardDraftSchema }).strict(),
   z.object({ action: z.literal('restore'), revision: z.number().int().nonnegative(),
     targetRevision: z.number().int().nonnegative(), requestId: productionUuid,
     sceneNo: z.number().int().min(1).max(12).optional() }).strict(),
@@ -169,43 +167,20 @@ export function assertProductionDocumentSize(value: unknown): void {
     throw new StoryboardProductionError('document_too_large');
   }
 }
-export function isManualStoryboardProvider(provider: StoryboardProvider): boolean {
-  return isStoryboardUserImportProviderId(provider.id);
-}
-export function manualStoryboardProvenance(provider: StoryboardProvider): StoryboardProductionProvenance {
-  if (!isManualStoryboardProvider(provider)) throw new StoryboardProductionError('invalid_request');
-  return { providerId: provider.id, model: provider.model, verification: 'user-import', generatedAt: new Date().toISOString(),
-    requestId: randomUUID(), responseId: null, responseModel: null, modelEvidence: 'unverified' };
-}
-export function validateLocalStoryboardProvenance(
+export function validateGeminiStoryboardProvenance(
   value: unknown, request: StoryboardProductionRequest, models: ProductionModel[], modality: 'text' | 'image',
 ): StoryboardProductionProvenance {
   const result = storyboardProvenanceSchema.safeParse(value);
   if (!result.success) throw new StoryboardProductionError('invalid_provenance');
   const proof = result.data;
   const provider = request.providers[modality];
-  if (provider.id === 'gemini-api') {
-    if (proof.providerId !== 'gemini-api' || proof.verification !== 'official-api' || proof.model !== provider.model
-      || proof.modelEvidence !== 'response' || !proof.responseModel
-      || (proof.responseModel !== provider.model && !new RegExp(`^${provider.model.replaceAll('.', '\\.')}-(?:\\d{3}|\\d{2}-\\d{2})$`).test(proof.responseModel))) {
-      throw new StoryboardProductionError('model_identity_mismatch');
-    }
-    const registered = models.find((model) => model.id === provider.model && model.owned_by === 'gemini-api');
-    if (!registered || !registered.capabilities.includes(modality === 'text' ? 'chat' : 'image')) throw new StoryboardProductionError('model_capability_mismatch');
-    return proof;
-  }
-  if (provider.id !== 'local-mlx' || proof.providerId !== 'local-mlx' || proof.verification !== 'local-worker'
-    || proof.model !== provider.model || (proof.responseModel !== null && proof.responseModel !== provider.model)
-    || proof.modelEvidence === 'unverified'
-    || (proof.modelEvidence === 'response' && proof.responseModel !== provider.model)
-    || (proof.modelEvidence === 'installed-catalog-and-request' && proof.responseModel !== null)) {
+  if (proof.providerId !== 'gemini-api' || proof.verification !== 'official-api' || proof.model !== provider.model
+    || proof.modelEvidence !== 'response' || !proof.responseModel
+    || (proof.responseModel !== provider.model && !new RegExp(`^${provider.model.replaceAll('.', '\\.')}-(?:\\d{3}|\\d{2}-\\d{2})$`).test(proof.responseModel))) {
     throw new StoryboardProductionError('model_identity_mismatch');
   }
-  const model = models.find((entry) => entry.id === provider.model && entry.bytes_on_disk > 0);
-  if (!model) throw new StoryboardProductionError('model_not_installed');
-  if (!model.capabilities.includes(modality === 'text' ? 'chat' : 'image')) {
-    throw new StoryboardProductionError('model_capability_mismatch');
-  }
+  const registered = models.find((model) => model.id === provider.model && model.owned_by === 'gemini-api');
+  if (!registered || !registered.capabilities.includes(modality === 'text' ? 'chat' : 'image')) throw new StoryboardProductionError('model_capability_mismatch');
   return proof;
 }
 
@@ -274,18 +249,16 @@ export class StoryboardProductionStore {
   async create(ownerId: string, value: unknown) {
     const request = input(storyboardProductionRequestSchema, value);
     assertGeminiStoryboardExecutionPolicy(request.providers);
-    if ([request.providers.text, request.providers.image].some((provider) => ['openai-api', 'xai-api'].includes(provider.id))) {
-      throw new StoryboardProductionError('provider_not_configured');
-    }
     if (Buffer.byteLength(JSON.stringify(request), 'utf8') > 60 * 1024) throw new StoryboardProductionError('request_too_large');
     return decode(snapshotSchema, await this.admin(ownerId, 'create', null, null, request));
   }
   async apply(ownerId: string, projectId: string, value: unknown) {
     const change = input(productionActionSchema, value);
+    const before = await this.get(ownerId, projectId);
+    assertExecutableStoryboardRequest(before.project.request);
     // Restore CAS, busy checks and request replay are serialized together by the DB.
     // A pre-read revision check would reject a successful request retried after a lost response.
     if (change.action === 'restore') {
-      const before = await this.get(ownerId, projectId);
       if (before.project.revision === change.revision && !['queued', 'claimed'].includes(before.job?.status ?? '')) {
         const { preview } = await this.versions(ownerId, projectId, change.targetRevision);
         if (!preview) throw new StoryboardProductionError('version_not_found');
@@ -315,25 +288,17 @@ export class StoryboardProductionStore {
         }
       }
     }
-    if (change.action === 'edit' || change.action === 'import-text') {
-      const before = await this.get(ownerId, projectId);
+    if (change.action === 'edit') {
       assertEditable(before, change.revision);
-      if (change.action === 'edit') {
-        const existing = requireScene(before.project, change.sceneNo);
-        if (change.scene.sceneNo !== change.sceneNo
-          || change.scene.sourceIds.some((id) => !before.project.request.sources.some((source) => source.id === id))) {
-          throw new StoryboardProductionError('invalid_scene');
-        }
-        assertProductionDocumentSize({ ...before.project.document,
-          scenes: before.project.document!.scenes.map((scene) => scene.sceneNo === change.sceneNo ? {
-            ...change.scene, image: existing.image, imageError: existing.imageError, revision: existing.revision + 1,
-          } : scene) });
-      } else {
-        if (change.projectId !== projectId || before.project.document !== null
-          || !isManualStoryboardProvider(before.project.request.providers.text)) throw new StoryboardProductionError('invalid_request');
-        parseStoryboardDraft(change.draft, before.project.request);
-        assertProductionDocumentSize(change.draft);
+      const existing = requireScene(before.project, change.sceneNo);
+      if (change.scene.sceneNo !== change.sceneNo
+        || change.scene.sourceIds.some((id) => !before.project.request.sources.some((source) => source.id === id))) {
+        throw new StoryboardProductionError('invalid_scene');
       }
+      assertProductionDocumentSize({ ...before.project.document,
+        scenes: before.project.document!.scenes.map((scene) => scene.sceneNo === change.sceneNo ? {
+          ...change.scene, image: existing.image, imageError: existing.imageError, revision: existing.revision + 1,
+        } : scene) });
     }
     const { action, revision, ...payload } = change;
     return decode(snapshotSchema, await this.admin(ownerId, action, projectId, revision, payload));
@@ -341,6 +306,10 @@ export class StoryboardProductionStore {
 
   async workerOperation(identity: ProductionWorkerIdentity, value: unknown) {
     const operation = input(workerOperationSchema, value);
+    if (operation.action === 'readiness') throw new StoryboardProductionError('invalid_request');
+    // Heartbeat is the only operation allowed to replace a legacy catalog. Claim and
+    // checkpoint traffic must already carry the exact Gemini descriptor set.
+    if (operation.action !== 'heartbeat') input(storyboardGeminiHeartbeatModelsSchema, identity.models);
     if (operation.action === 'claim') return decode(claimSchema, await this.worker(identity.id, 'claim'));
     if (operation.action === 'heartbeat') return decode(heartbeatSchema, await this.worker(identity.id, 'heartbeat',
       operation.jobId ?? null, operation.leaseToken ?? null, { models: operation.models }));
@@ -348,7 +317,8 @@ export class StoryboardProductionStore {
     if (action === 'draft') {
       const check = decode(checkSchema, await this.worker(identity.id, 'check', jobId, leaseToken));
       const draft = parseStoryboardDraft(operation.draft, check.project.request);
-      const provenance = validateLocalStoryboardProvenance(operation.provenance, check.project.request, check.models, 'text');
+      assertExecutableStoryboardRequest(check.project.request);
+      const provenance = validateGeminiStoryboardProvenance(operation.provenance, check.project.request, check.models, 'text');
       assertProductionDocumentSize({ ...draft, textProvenance: provenance });
       return decode(okSchema, await this.worker(identity.id, action, jobId, leaseToken, { draft, provenance }));
     }
@@ -398,26 +368,12 @@ export class StoryboardProductionStore {
     }
   }
 
-  async importImage(ownerId: string, projectId: string, revision: number, sceneNo: number, bytes: Buffer, mime: string) {
-    const before = await this.get(ownerId, projectId);
-    assertEditable(before, input(z.number().int().nonnegative(), revision));
-    const scene = requireScene(before.project, input(z.number().int().min(1).max(12), sceneNo));
-    const proof = manualStoryboardProvenance(before.project.request.providers.image);
-    const prepared = await prepareStoryboardAsset(bytes, projectId, proof);
-    if (prepared.asset.original.mime !== mime) throw new StoryboardProductionError('invalid_image');
-    previewImageCheckpoint(before.project, sceneNo, prepared.asset);
-    await this.uploadAndCheckpoint(ownerId, projectId, prepared, async () => decode(snapshotSchema,
-      await this.admin(ownerId, 'import-image', projectId, revision,
-        { sceneNo, sceneRevision: scene.revision, asset: prepared.asset })));
-    const after = await this.get(ownerId, projectId);
-    return { ok: true as const, project: after.project, job: after.job };
-  }
-
   async workerImage(identity: ProductionWorkerIdentity, jobId: string, leaseToken: string, sceneNo: number,
     value: unknown, bytes: Buffer, mime: string) {
     input(z.number().int().min(1).max(12), sceneNo);
     const check = decode(checkSchema, await this.worker(identity.id, 'check', jobId, leaseToken, { sceneNo }));
-    const proof = validateLocalStoryboardProvenance(value, check.project.request, check.models, 'image');
+    assertExecutableStoryboardRequest(check.project.request);
+    const proof = validateGeminiStoryboardProvenance(value, check.project.request, check.models, 'image');
     const prepared = await prepareStoryboardAsset(bytes, check.project.id, proof);
     if (prepared.asset.original.mime !== mime) throw new StoryboardProductionError('invalid_image');
     previewImageCheckpoint(check.project, sceneNo, prepared.asset);

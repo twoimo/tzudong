@@ -1,0 +1,5 @@
+Removed from backend/supabase/tests/receipt_ocr_indeterminate_recovery.sql only:
+  INSERT INTO public.restaurants_backup (id, name)
+  VALUES ('a8110000-0000-4000-8000-000000000001', 'recovery-108-fixture');
+Retained: two content='fixture content' values and two visited_at=pg_catalog.now() values.
+Updated only manifest.fixture.sha256 to bind the resulting fixture bytes.

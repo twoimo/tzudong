@@ -1,0 +1,25 @@
+{
+  "started": "2026-10-24T05:24:07.256Z",
+  "finished": "2026-10-24T05:32:00.015Z",
+  "exitCode": 1,
+  "signal": null,
+  "errorCode": null,
+  "totals": [
+    {
+      "pass": 4129,
+      "skip": 4,
+      "fail": 1,
+      "assertions": 95224
+    }
+  ],
+  "failures": [
+    "(fail) knowledge counts distinguish visible results, totals and a pending search [60000.16ms]",
+    "(fail) knowledge counts distinguish visible results, totals and a pending search [60000.16ms]"
+  ],
+  "sourceBefore": {},
+  "sourceAfter": {},
+  "command": "Node24 scripts/run-unit-tests.mjs (canonical Bun inventory)",
+  "rawLogsRetained": false,
+  "sourceBinding": "Unavailable: app-relative Git paths were filtered using repository-relative prefix; empty source snapshots do not prove stability.",
+  "sourceStable": null
+}

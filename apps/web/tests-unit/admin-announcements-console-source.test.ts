@@ -51,8 +51,8 @@ describe('admin announcements console integration source contract', () => {
     expect(announcementPanelSource).toContain("onClose={!hideCloseButton ? (viewMode === 'list' ? onClose : handleCancel) : undefined}");
     expect(announcementPanelSource).toContain("closeLabel={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}");
     expect(announcementPanelSource).toContain('group w-full rounded-xl border border-border/70 bg-card px-3 py-3 text-left');
-    expect(announcementPanelSource).toContain('aria-label="공지사항 목록 로딩 중"');
-    expect(announcementPanelSource).toContain('<AnnouncementListItemSkeleton key={index} index={index} />');
+    expect(announcementPanelSource).toContain('label="공지사항 목록 로딩 중"');
+    expect(announcementPanelSource).toContain('<AnnouncementListItemPreview key={index} index={index} />');
     expect(announcementPanelSource).not.toContain('공지사항을 불러오는 중입니다');
     expect(announcementPanelSource).not.toContain('line-clamp-2 break-words');
     expect(announcementPanelSource).not.toContain('우선순위:');

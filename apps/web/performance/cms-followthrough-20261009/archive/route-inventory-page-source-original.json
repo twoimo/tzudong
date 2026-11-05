@@ -1,0 +1,168 @@
+{
+  "public_or_account_pages": [
+    {
+      "route": "/auth/required",
+      "source": "app/auth/required/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/auth/reset-password",
+      "source": "app/auth/reset-password/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/data-deletion",
+      "source": "app/data-deletion/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/feed",
+      "source": "app/feed/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/global-map",
+      "source": "app/global-map/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/home-frame",
+      "source": "app/home-frame/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/insights",
+      "source": "app/insights/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/leaderboard",
+      "source": "app/leaderboard/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/mypage/bookmarks",
+      "source": "app/mypage/bookmarks/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/mypage",
+      "source": "app/mypage/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/mypage/profile",
+      "source": "app/mypage/profile/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/mypage/reviews",
+      "source": "app/mypage/reviews/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/mypage/submissions/edit",
+      "source": "app/mypage/submissions/edit/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/mypage/submissions/new",
+      "source": "app/mypage/submissions/new/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/mypage/submissions/recommend",
+      "source": "app/mypage/submissions/recommend/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/",
+      "source": "app/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/privacy/onboarding",
+      "source": "app/privacy/onboarding/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/privacy",
+      "source": "app/privacy/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/s/[code]",
+      "source": "app/s/[code]/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/stamp",
+      "source": "app/stamp/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/submissions",
+      "source": "app/submissions/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/user/[userId]",
+      "source": "app/user/[userId]/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    }
+  ],
+  "admin_legacy_or_canonical_pages": [
+    {
+      "route": "/admin/banners",
+      "source": "app/admin/banners/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/admin/evaluations",
+      "source": "app/admin/evaluations/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/admin",
+      "source": "app/admin/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/admin/privacy-incidents",
+      "source": "app/admin/privacy-incidents/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    },
+    {
+      "route": "/admin/submissions",
+      "source": "app/admin/submissions/page.tsx",
+      "evidence": "source-present",
+      "current_browser_evidence": false
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import {
     AD_BANNER_URL_VALIDATION_ERROR,
     resolveAdBannerMediaUrl,
+    resolveAdBannerDestinationUrl,
     resolveAdBannerPersistenceUrls,
 } from '@/lib/ad-banner-url';
 
@@ -52,8 +53,6 @@ type AdBannerPersistenceInput = {
     link_url?: unknown;
 };
 
-
-type AdBannerUpdate = Partial<Omit<AdBannerDatabaseRow, 'id' | 'created_at' | 'updated_at' | 'created_by'>>;
 
 function resolvePersistedBannerUrls(data: AdBannerPersistenceInput) {
     const resolvedUrls = resolveAdBannerPersistenceUrls({
@@ -116,28 +115,85 @@ function requireAdBannerRow(value: unknown): AdBanner {
     return banner;
 }
 
+function coerceStoredBannerMedia(value: unknown): unknown {
+    if (!isAdBannerRow(value)) return value;
+    if (value.media_type === 'none' && value.image_url && !value.video_url) {
+        return { ...value, media_type: 'image' };
+    }
+    if (value.media_type === 'none' && value.video_url && !value.image_url) {
+        return { ...value, media_type: 'video' };
+    }
+    return value;
+}
+
 function mapAdBannerRows(rows: readonly unknown[] | null): AdBanner[] {
     if (!rows) return [];
-    return rows.map(requireAdBannerRow);
+    return rows.map((row) => requireAdBannerRow(coerceStoredBannerMedia(row)));
 }
 
+export function readStoredAdBannerRows(rows: readonly unknown[] | null): AdBanner[] {
+    return mapAdBannerRows(rows);
+}
 
-function createAdBannerUpdate(
-    data: Partial<AdBannerFormData>,
-    persistedUrls: AdBannerPersistenceRow,
-): AdBannerUpdate {
-    const resolvedUrls = resolvePersistedBannerUrls({
-        image_url: data.image_url === undefined ? persistedUrls.image_url : data.image_url,
-        video_url: data.video_url === undefined ? persistedUrls.video_url : data.video_url,
-        media_type: data.media_type === undefined ? persistedUrls.media_type : data.media_type,
-        link_url: data.link_url === undefined ? persistedUrls.link_url : data.link_url,
+function isOperatorVisibleDestination(value: unknown): value is string {
+    if (typeof value !== 'string' || !value || value !== value.trim()) return false;
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && !url.username && !url.password;
+    } catch {
+        return false;
+    }
+}
+
+function mapAdminBannerRow(value: unknown): AdBanner | null {
+    if (!isAdBannerRow(value)) return null;
+    const coerced = coerceStoredBannerMedia(value);
+    if (!isAdBannerRow(coerced)) return null;
+    const trustedDestination = resolveAdBannerDestinationUrl(coerced.link_url);
+    const destination = trustedDestination
+        ?? (isOperatorVisibleDestination(coerced.link_url) ? coerced.link_url : null);
+    if ((coerced.link_url != null && coerced.link_url !== '') && !destination) return null;
+
+    const media = resolveAdBannerPersistenceUrls({
+        image_url: coerced.image_url,
+        video_url: coerced.video_url,
+        media_type: coerced.media_type,
+        link_url: trustedDestination,
     });
+    if (!media) return null;
+
+    const parsed = AdBannerSchema.safeParse({
+        ...coerced,
+        link_url: destination,
+    });
+    if (!parsed.success) return null;
 
     return {
-        ...data,
-        ...resolvedUrls,
+        id: parsed.data.id,
+        title: parsed.data.title,
+        description: parsed.data.description,
+        image_url: media.image_url,
+        video_url: media.video_url,
+        media_type: media.media_type,
+        link_url: destination,
+        is_active: parsed.data.is_active,
+        priority: parsed.data.priority,
+        display_target: [...parsed.data.display_target],
+        created_at: parsed.data.created_at,
+        updated_at: parsed.data.updated_at,
+        created_by: parsed.data.created_by,
     };
 }
+
+export function readAdminBannerRows(rows: readonly unknown[] | null): AdBanner[] {
+    if (!rows) return [];
+    return rows.map((row) => {
+        const banner = mapAdminBannerRow(row);
+        if (!banner) throw new Error(AD_BANNER_URL_VALIDATION_ERROR);
+        return banner;
+    });
+}
+
 
 async function getPersistedBannerUrls(id: string): Promise<AdBannerPersistenceRow> {
     const { data, error } = await supabase
@@ -152,6 +208,79 @@ async function getPersistedBannerUrls(id: string): Promise<AdBannerPersistenceRo
     }
 
     return resolvePersistedBannerUrls(data);
+}
+
+export type AdminBannerMutationErrorCode =
+    | 'banner_revision_conflict'
+    | 'banner_not_found'
+    | 'banner_mutation_forbidden'
+    | 'banner_mutation_invalid'
+    | 'banner_readback_failed'
+    | 'banner_update_failed'
+    | 'banner_delete_failed'
+    | 'banner_invalid_response';
+
+export class AdminBannerMutationError extends Error {
+    constructor(
+        public readonly code: AdminBannerMutationErrorCode,
+        public readonly latest: AdBanner | null = null,
+        public readonly status: number | null = null,
+    ) {
+        super(code);
+        this.name = 'AdminBannerMutationError';
+    }
+}
+
+function isAdminBannerMutationErrorCode(value: unknown): value is AdminBannerMutationErrorCode {
+    return typeof value === 'string' && [
+        'banner_revision_conflict',
+        'banner_not_found',
+        'banner_mutation_forbidden',
+        'banner_mutation_invalid',
+        'banner_readback_failed',
+        'banner_update_failed',
+        'banner_delete_failed',
+    ].includes(value);
+}
+
+function getAdminBannerMutationErrorCode(
+    status: number,
+    value: unknown,
+): AdminBannerMutationErrorCode {
+    if (!isAdminBannerMutationErrorCode(value)) return 'banner_invalid_response';
+    if ((status === 400 && value === 'banner_mutation_invalid')
+        || (status === 403 && value === 'banner_mutation_forbidden')
+        || (status === 404 && value === 'banner_not_found')
+        || (status === 409 && value === 'banner_revision_conflict')
+        || (status === 500 && (
+            value === 'banner_readback_failed'
+            || value === 'banner_update_failed'
+            || value === 'banner_delete_failed'
+        ))) {
+        return value;
+    }
+    return 'banner_invalid_response';
+}
+
+async function requestAdminBannerMutation(
+    method: 'PATCH' | 'DELETE',
+    body: Record<string, unknown>,
+) {
+    const response = await fetch('/api/admin/banners', {
+        method,
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => null) as { banner?: unknown; deletedBanner?: unknown; code?: unknown } | null;
+    if (!response.ok) {
+        const code = getAdminBannerMutationErrorCode(response.status, payload?.code);
+        const latest = code === 'banner_revision_conflict' ? mapAdBannerRow(payload?.banner) : null;
+        if (code === 'banner_revision_conflict' && !latest) {
+            throw new AdminBannerMutationError('banner_invalid_response', null, response.status);
+        }
+        throw new AdminBannerMutationError(code, latest, response.status);
+    }
+    return payload;
 }
 
 /**
@@ -172,12 +301,11 @@ export function useAdBannersAdmin(enabled = true) {
                 throw new Error('admin-banners-failed');
             }
 
-            const payload = await response.json() as { banners?: unknown };
-            const rows = Array.isArray(payload.banners) ? payload.banners : [];
-            return rows.flatMap((row) => {
-                const banner = mapAdBannerRow(row);
-                return banner ? [banner] : [];
-            });
+            const payload = await response.json().catch(() => null) as { banners?: unknown } | null;
+            if (!payload || !Array.isArray(payload.banners)) {
+                throw new Error('admin-banners-invalid-response');
+            }
+            return readAdminBannerRows(payload.banners);
         },
         enabled: isAdmin && enabled,
         staleTime: 5 * 60 * 1000, // 5분
@@ -289,18 +417,6 @@ export function useCreateAdBanner() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: AD_BANNERS_QUERY_KEY });
-            toast({
-                title: '배너 생성 완료',
-                description: '새 광고 배너가 생성되었습니다.',
-            });
-        },
-        onError: () => {
-            console.error('배너 생성 실패:');
-            toast({
-                title: '배너 생성 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
         },
     });
 }
@@ -312,36 +428,12 @@ export function useUpdateAdBanner() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ id, data }: { id: string; data: Partial<AdBannerFormData> }): Promise<AdBanner> => {
-            const persistedUrls = await getPersistedBannerUrls(id);
-            const { data: result, error } = await supabase
-                .from('ad_banners')
-                .update(createAdBannerUpdate(data, persistedUrls))
-                .eq('id', id)
-                .select(AD_BANNER_SELECT)
-                .single()
-                .overrideTypes<AdBannerDatabaseRow, { merge: false }>();
-
-            if (error) {
-                throw error;
-            }
-
-            return requireAdBannerRow(result);
+        mutationFn: async ({ id, expectedUpdatedAt, data }: { id: string; expectedUpdatedAt: string; data: AdBannerFormData }): Promise<AdBanner> => {
+            const payload = await requestAdminBannerMutation('PATCH', { id, expectedUpdatedAt, data });
+            return requireAdBannerRow(payload?.banner);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: AD_BANNERS_QUERY_KEY });
-            toast({
-                title: '배너 수정 완료',
-                description: '광고 배너가 수정되었습니다.',
-            });
-        },
-        onError: () => {
-            console.error('배너 수정 실패:');
-            toast({
-                title: '배너 수정 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
         },
     });
 }
@@ -353,30 +445,12 @@ export function useDeleteAdBanner() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (id: string): Promise<void> => {
-            const { error } = await supabase
-                .from('ad_banners')
-                .delete()
-                .eq('id', id);
-
-            if (error) {
-                throw error;
-            }
+        mutationFn: async ({ id, expectedUpdatedAt }: { id: string; expectedUpdatedAt: string }): Promise<AdBanner> => {
+            const payload = await requestAdminBannerMutation('DELETE', { id, expectedUpdatedAt });
+            return requireAdBannerRow(payload?.deletedBanner);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: AD_BANNERS_QUERY_KEY });
-            toast({
-                title: '배너 삭제 완료',
-                description: '광고 배너가 삭제되었습니다.',
-            });
-        },
-        onError: () => {
-            console.error('배너 삭제 실패:');
-            toast({
-                title: '배너 삭제 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
         },
     });
 }
@@ -484,14 +558,6 @@ export function useUploadBannerImage() {
                 path: data.path,
             };
         },
-        onError: () => {
-            console.error('이미지 업로드 실패:');
-            toast({
-                title: '이미지 업로드 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
-        },
     });
 }
 
@@ -508,14 +574,6 @@ export function useDeleteBannerImage() {
             if (error) {
                 throw error;
             }
-        },
-        onError: () => {
-            console.error('이미지 삭제 실패:');
-            toast({
-                title: '이미지 삭제 실패',
-                description: '처리 결과를 확인할 수 없습니다. 목록을 새로고침해 확인해 주세요.',
-                variant: 'destructive',
-            });
         },
     });
 }

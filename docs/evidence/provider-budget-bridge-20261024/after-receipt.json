@@ -1,0 +1,85 @@
+{
+  "version": "postgres (PostgreSQL) 17.11 (Homebrew)",
+  "sourceBefore": {
+    "backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql": "05864ef9f088b51f4df7b504ad09a02f29303d9bf43350a4e0845b42afec2200",
+    "backend/supabase/candidates/20261024_provider_budget_private_bridge.sql": "7f6847fa83f7e1f87ce8ff289623796182a323a245a3308007fd689aa6ff3c24",
+    "backend/supabase/tests/test_provider_budget_bridge_pg17.py": "dd06abeabed73172783132e196d44190557b1587f0ba5814d0adc02178efbac2"
+  },
+  "sourceAfter": {
+    "backend/supabase/migrations/20260713000300_g013_admin_provider_budgets.sql": "05864ef9f088b51f4df7b504ad09a02f29303d9bf43350a4e0845b42afec2200",
+    "backend/supabase/candidates/20261024_provider_budget_private_bridge.sql": "7f6847fa83f7e1f87ce8ff289623796182a323a245a3308007fd689aa6ff3c24",
+    "backend/supabase/tests/test_provider_budget_bridge_pg17.py": "dd06abeabed73172783132e196d44190557b1587f0ba5814d0adc02178efbac2"
+  },
+  "sourceStable": true,
+  "cases": {
+    "healthy": {
+      "allowed": true,
+      "publicMetadataAndExistingAclRlsRolesUnchanged": true,
+      "directionsCeilings": [
+        20,
+        200,
+        10000
+      ],
+      "otherLlmPoliciesAdded": 0
+    },
+    "authorization": {
+      "deniedCases": 6,
+      "newDecisions": 0
+    },
+    "globalCeilings": {
+      "minute": 200,
+      "day": 10000,
+      "overCeilingDenied": 2
+    },
+    "originalFailures": {
+      "publicOwnerSqlstate": "42501",
+      "firstCounterCallSqlstate": "42883",
+      "directionsPolicyAbsent": true
+    },
+    "sameOperationConcurrency": {
+      "calls": 16,
+      "decisions": 1,
+      "counterValues": [
+        1,
+        1,
+        1
+      ]
+    },
+    "actorCeilingConcurrency": {
+      "calls": 40,
+      "allowed": 20,
+      "denied": 20
+    },
+    "privateBoundary": {
+      "tableReadersAdded": 0,
+      "browserOrServiceCoreExecute": 0,
+      "workflowSchemaCreate": false
+    },
+    "counterNegativeControl": {
+      "restoredQualifiedSyntaxSqlstate": "42883",
+      "mutatedFiles": 0
+    },
+    "claimGuardNegativeControl": {
+      "removedGuardAdmittedNullClaim": true,
+      "mutatedFiles": 0
+    },
+    "replay": {
+      "extraCounterIncrement": 0,
+      "crossActorProviderDenied": 2
+    },
+    "atomicRollback": {
+      "rehearsalAndLateFailureUnchanged": true,
+      "policies": 3
+    }
+  },
+  "cleanup": {
+    "ownedPid": 56029,
+    "statusExit": 3,
+    "pidFileAbsent": true,
+    "socketAbsent": true,
+    "tcpClosed": true
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "limits": "Owned PG17 regression for the G014 provider-budget execution boundary.\n\nReal SQL/roles/RLS; synthetic auth rows. This is not full G014, hosted PG17.6,\nPostgREST, provider quota, release-admission or a proof over all schedules.\n"
+}

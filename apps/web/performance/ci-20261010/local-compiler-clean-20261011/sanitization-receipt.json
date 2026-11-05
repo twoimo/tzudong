@@ -1,0 +1,48 @@
+{
+  "canonicalProof": {
+    "privatePathsRemainingInPublicEvidence": 0,
+    "publicConfigurationCanonicalSha256": "320b640467be72fa14e8f37f2af4db43235cdb6f7055be3a924cbbc8c1d8da93",
+    "publicRawCanonicalSha256": "c396f059821cf3288d4057c5242ec144b64955b6b271c01acc84cbfa1f9e0221",
+    "reportBytesUnchanged": false,
+    "reportEditorialClarificationOnly": true,
+    "sanitizedPrivateConfigurationSha256": "320b640467be72fa14e8f37f2af4db43235cdb6f7055be3a924cbbc8c1d8da93",
+    "sanitizedPrivateRawSha256": "c396f059821cf3288d4057c5242ec144b64955b6b271c01acc84cbfa1f9e0221",
+    "summaryBytesUnchanged": true
+  },
+  "editorialTransforms": {
+    "report.md": [
+      "added the aggregate-means reduction estimator",
+      "distinguished it from the mean within-pair relative reduction",
+      "repeated that neither estimator is admitted after the A/A noise failure"
+    ]
+  },
+  "hashes": {
+    "privateConfigurationSha256": "6ba6e7d6a4e5b9d028453afdbab51f826242143321e159bd13f3b80759ab0c4f",
+    "privateRawSha256": "d01bc29fbb97859dd5961c1d5d44369d4c79a2c4a08cbd162750869c8e45fe20",
+    "privateReportSha256": "bf8a78ba26d740d61196c488b9ae14cee2c26e165a4fdf239fc4b70af2503b93",
+    "privateSummarySha256": "9558ffce8a71a1023bc5fe0a87881b96440112dd78c996fdb2cc3878bf359f7f",
+    "publicConfigurationSha256": "320b640467be72fa14e8f37f2af4db43235cdb6f7055be3a924cbbc8c1d8da93",
+    "publicRawSha256": "c396f059821cf3288d4057c5242ec144b64955b6b271c01acc84cbfa1f9e0221",
+    "publicReportSha256": "5746765e3152f8d8272076faf93408b70dbf9adaa1955d2b4dffd9de3705ad64",
+    "publicSummarySha256": "9558ffce8a71a1023bc5fe0a87881b96440112dd78c996fdb2cc3878bf359f7f",
+    "sanitizerScriptSha256": "dffc220f7fba563a45057bd53e3facfcf69cf09341cc7aa7a26e7ef5563a0056"
+  },
+  "placeholder": "<shared-node-modules-root>",
+  "preservedFields": [
+    "source and dependency content hashes",
+    "Git head and apps/web tree hash",
+    "predeclared budgets and bootstrap settings",
+    "all measured timings, CPU, RSS, statuses, and output hashes"
+  ],
+  "privateOriginalsRetained": true,
+  "redactedJsonPointers": {
+    "configuration.json": [
+      "/expectedNodeModulesTarget"
+    ],
+    "raw.json": [
+      "/metadata/experimentConfig/expectedNodeModulesTarget",
+      "/metadata/nodeModulesTarget"
+    ]
+  },
+  "schema": "tzudong-ci-performance/v1/path-sanitization-receipt"
+}

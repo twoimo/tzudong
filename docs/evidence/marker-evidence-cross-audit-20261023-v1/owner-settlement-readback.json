@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-22T21:11:40.323544+00:00",
+  "approved_requests": "Already queued to exact owners; no retry or force release",
+  "telegram_cancelled": true,
+  "pstack_still_registered": true,
+  "other_operations_preserved": true,
+  "provider_pauses": {},
+  "local_chatgpt_admission": {
+    "provider": "chatgpt",
+    "mode": "fifo",
+    "local_max_active": 1,
+    "active_count": 2,
+    "free_slots": 0,
+    "dispatch_pending": false,
+    "next_owner": "ETrJ35NDvs3zArCH",
+    "next_request_id": "199ec064b4c926625b36491a",
+    "eligible_accounts": [],
+    "urgent_accounts": [],
+    "five_hour_limited_accounts": [],
+    "vendor_concurrency_limit": null
+  },
+  "user_override": "Current direct user permits Tzudong-only localFIFO/slot override; no service quota bypass"
+}

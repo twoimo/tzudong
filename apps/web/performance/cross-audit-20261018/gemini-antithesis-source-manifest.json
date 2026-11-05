@@ -1,0 +1,88 @@
+{
+  "schema": "tzudong-antithesis-source/v1",
+  "sourceRevision": "b5d62c34f4a2e854ab10fd9f6741597b6081c43b",
+  "sourceBundleSha256": "10fc28e7d72ed4fbb6e7b6206acbd31143528d0831d9f836ff41c47ace018bc7",
+  "bytes": 660903,
+  "originalThesisBundleSha256": "bd8f5668b7a00d48a623471183863cda1ae9eb48c14a0d1dc569508e0f2058c3",
+  "thesisReportSha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82",
+  "sources": [
+    {
+      "path": "backend/utils/provider-budget.mjs",
+      "kind": "full",
+      "bytes": 6175,
+      "sha256": "156ea50a8ef4ead49f545c2be513df1389ce31144f4e3d05a632d5a610cab968"
+    },
+    {
+      "path": "backend/utils/provider_budget.py",
+      "kind": "full",
+      "bytes": 9626,
+      "sha256": "79cfb4e2b7cf047414ced105ff40dfd5c26d2b9bd6e41af9baf683e35507e6ca"
+    },
+    {
+      "path": "backend/utils/tests/provider-budget-js.test.mjs",
+      "kind": "full",
+      "bytes": 7946,
+      "sha256": "b91f9299baa3f7ffcfd373e93f43ef2d67a9a3b1e0d964b21b17ac6edd4456b1"
+    },
+    {
+      "path": "apps/web/components/admin/SubmissionListView.tsx",
+      "kind": "full",
+      "bytes": 140506,
+      "sha256": "fcfc187f26c9e0a334bb0aba2a183787033d076785e73895f7065469208def89"
+    },
+    {
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "kind": "full",
+      "bytes": 218166,
+      "sha256": "bf326190c050c282593e332a4e868ad50b3dd026f52add200a12b9805067ea8d"
+    },
+    {
+      "path": "apps/web/lib/admin/storyboard/runtime-source-binding.ts",
+      "kind": "full",
+      "bytes": 5161,
+      "sha256": "b14a2ff8c3ca951212d713c3d16aad9369f568bdfafb2090c6fa55551ef7f3a8"
+    },
+    {
+      "path": "backend/knowledge_graph/caption_osk_adapter.py",
+      "kind": "full",
+      "bytes": 49195,
+      "sha256": "2263613f9c4e9a493fd47cd3865c331b2edcbe0d49811b6ffdd02e62d0864ddf"
+    },
+    {
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "kind": "full",
+      "bytes": 121928,
+      "sha256": "2e38a3e59c8a154c2b8495fccd82fb26fa0f3df4f4040b49e69058601522af5d"
+    },
+    {
+      "path": "backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql",
+      "kind": "full",
+      "bytes": 19008,
+      "sha256": "469dbea773cc838feecb4519ca1b5c03e9ea2fab32462007f7769c5ed1b7fed9"
+    },
+    {
+      "path": "apps/web/tests-unit/review-verification-runtime-readiness.test.ts",
+      "kind": "full",
+      "bytes": 3190,
+      "sha256": "fc2d8e56e36c6af6c36cb4b0573f340e93ef993d7b773aaa88015ebac0092695"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+      "kind": "full_evidence",
+      "bytes": 43130,
+      "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json",
+      "kind": "full_evidence",
+      "bytes": 30495,
+      "sha256": "9ce142b2de2a9e3980afbe85981a2a6cc29d9705a63fb1cb8d1ced46141af29d"
+    },
+    {
+      "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-closure-20261016.json",
+      "kind": "full_evidence",
+      "bytes": 3485,
+      "sha256": "5f319733eb1953be23c278b722688019b53a164b9fd88e3afda9002d25a681b2"
+    }
+  ]
+}

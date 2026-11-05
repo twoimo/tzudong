@@ -1,0 +1,82 @@
+{
+  "schema": "thumbnail-local-owner-operating-path-v1",
+  "observedAt": "2026-10-24T12:00:21.048180+00:00",
+  "sourceBase": "fb557c7648164de6d713e022328e5e8926d9fc77",
+  "sources": {
+    "apps/web/scripts/thumbnail-production-successor.mjs": "ba165e0da35e88ddc41969e2b4951d1e1b10097ca153df2d78fabec08b926475",
+    "apps/web/scripts/thumbnail-operating-collector.mjs": "044ab341deb437439327d4c9ae1a0cdab3035f9623e1bd87d5629fd36654d4b2",
+    "apps/web/scripts/thumbnail-local-owner.mjs": "1a6e45cd3af10084799f5c5b0824abc99057ecd8fa6484da5282d105bc73afca",
+    "apps/web/tests-unit/thumbnail-production-successor.test.ts": "0bea3a9e119d80aeb96ece9c84796a68979caf7499b0b3b4e13df661444475ec",
+    "apps/web/tests-unit/thumbnail-operating-collector.test.ts": "367f8836fdaa0d4573ecfb7a880bad42bf2fb7a691610264c1c9e0d80c2ffc1c",
+    "apps/web/tests-unit/thumbnail-local-owner.test.ts": "d9c46765a0875e52140f63ce2a6766e4f1ea002afcf35847b9655a954cefcace",
+    ".github/workflows/thumbnail-production-successor.yml": "7ab50d22bc059ab512462a8de9f0104f7f6e9bb3ef93061a661763f52e7a7792"
+  },
+  "sourceStable": true,
+  "authority": "authenticated-repository-owner-local-cli",
+  "releaseAdmissionPath": ".github/thumbnail-production-successor.v2.json",
+  "releaseAdmissionSha256": "381465961c5820d7074e8a318db6b5129a3ae81aa868da9254af26748d67d849",
+  "releaseFileCreated": false,
+  "historicalDraftChanged": false,
+  "ownerObservation": {
+    "actualDefaultGhGetCount": 3,
+    "existingOwnerIdentityMatched": true,
+    "actualProtectedMain": true,
+    "observedProtectedMainSha": "1b5230ac93021c72499f4950bff6cda24e2515e5",
+    "observedAt": "2026-10-24T11:54:35.996Z",
+    "moduleSha256": "1a6e45cd3af10084799f5c5b0824abc99057ecd8fa6484da5282d105bc73afca",
+    "rawLoginOrIdPersisted": false,
+    "newAuthentication": false,
+    "permissionChanges": 0,
+    "databaseCalls": 0,
+    "scope": "Read-only readiness observation, not a current operating admission or authority to fabricate a workflow run."
+  },
+  "custody": {
+    "homeAuthority": "native-os-account via userInfo",
+    "environmentHomeMustMatch": true,
+    "authConfigOverridesRejected": 6,
+    "actualOperatingPathAbsent": true,
+    "oldAdmissionOrJournalRewritten": false,
+    "historicalRecovery": "Original operation/source/fence/journal binding stays fixed; authenticate current owner independently when main advances.",
+    "trustAssumption": "Trusted owner preserves the original host/account/custody and related privileged-writer control; no hardware or global exactly-once claim."
+  },
+  "checks": {
+    "tests": 51,
+    "failed": 0,
+    "assertions": 687,
+    "node": "24.22.0",
+    "bun": "1.4.0",
+    "eslintErrors": 0,
+    "eslintWarnings": 0,
+    "appParityInputs": 3427,
+    "appParityDiagnostics": 0,
+    "syntaxModules": 3,
+    "inspectHeld": true,
+    "statementCount": 43,
+    "scope": "Real parser/compiler/durable files and local-owner validation, with substituted DB/identity observations in unit tests; actual gh GETs separately scoped above."
+  },
+  "workflow": {
+    "onlyInspection": true,
+    "yamlParsed": true,
+    "steps": 6,
+    "bashBlocks": 4,
+    "databaseSecretReferences": 0,
+    "selfHostedRunnerReferences": 0,
+    "actualGithubActionsExecution": false
+  },
+  "privateProofSha256": {
+    "checks": "dddf95382778cdebebe72f4902e6fa381d76638479621998097d7c1d6bc870f9",
+    "nativeOwnerReadback": "7f71183bd1cd16b6495b6b1025072439adb49ccbf69ccc46f7b0f3fec16bd041"
+  },
+  "remaining": [
+    "Separate v2 release admission and actual protected source promotion",
+    "Fresh operating prior and owner custody, single application and independent readback",
+    "Existing external Pro to Gemini to Pro review stages remain incomplete",
+    "Worker provisioning and hosted generation/Storage/UI verification"
+  ],
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "runnerRegistrations": 0,
+  "operatingJournalCreated": false,
+  "operatingApplied": false,
+  "confidenceInterval": "Not applicable to deterministic scoped checks. No operating success-rate, performance, token or cost-saving claim."
+}

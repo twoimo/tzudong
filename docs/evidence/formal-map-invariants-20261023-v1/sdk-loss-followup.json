@@ -1,0 +1,38 @@
+{
+  "finding": "SDK-F-01",
+  "runtimeRevision": "a62683bae44ce8d2036e7352f9ea7d40d8efd0e5",
+  "previousRuntimeRevision": "a1dd40016ff7cf23055073c8637d5b3ee00d6781",
+  "previewSource": "e725f566d05b584f952b7ccab4cc576f7dca1b8b",
+  "previewDeployment": "dpl_6SPqpsk1B7kyySPcQm5NYNBRRr78",
+  "previewState": "READY",
+  "observedFailureAt": "2026-10-23T22:57:16Z",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "observedFailure": "TypeError: Cannot read properties of null (reading Event), actual centering effect; root error boundary reached",
+  "cause": "A retained map object outlived the SDK maps namespace; selection effect treated map presence as SDK readiness.",
+  "before": {
+    "tests": 4,
+    "passed": 1,
+    "failed": 3,
+    "nullCase": "TypeError: null is not an object (evaluating naver.maps.Event)"
+  },
+  "change": "Require current Event/LatLng/Point capabilities before selection bookkeeping or SDK calls; use captured maps namespace for resize dispatch.",
+  "after": {
+    "tests": 15,
+    "files": 4,
+    "assertions": 45,
+    "failed": 0,
+    "raw": "sdk-loss-after-tests.txt",
+    "lint": "PASS",
+    "parityDiagnostics": 0,
+    "logicalInputs": 3382
+  },
+  "contractScope": "Routine host failure guard; MarkerPool, its rendering/callback ownership and evidence arithmetic unchanged. Prior bounded proof remains bound to its recorded source.",
+  "externalReview": "Existing completed ordinary reviews preserved; no duplicate dispatch for this localized host guard.",
+  "hostReverification": "PENDING_NEW_EXACT_SOURCE_PREVIEW",
+  "productionDeployment": "NOT_PERFORMED",
+  "overallComplete": false,
+  "nightly": "SEPARATE_HISTORICAL_FAILURE_39457197351_NO_RERUN"
+}

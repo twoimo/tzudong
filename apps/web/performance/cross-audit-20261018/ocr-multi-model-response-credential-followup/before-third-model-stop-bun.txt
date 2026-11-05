@@ -1,0 +1,22 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/gemini-ocr.test.ts:
+349 |         ],
+350 |         imageBase64: 'AA==',
+351 |         mimeType: 'image/png',
+352 |         prompt: 'synthetic receipt',
+353 |         env: { GEMINI_OCR_MODEL: 'response-model,credential-model,third-model' } as NodeJS.ProcessEnv,
+354 |       })).rejects.toMatchObject({
+                        ^
+error: expect(received).rejects.toMatchObject(expected)
+
+Expected promise that rejects
+Received promise that resolved: Promise { <resolved> }
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/feature-completion-20261013/tzudong/apps/web/tests-unit/gemini-ocr.test.ts:354:19)
+(fail) gemini receipt ocr helper > does not downgrade a prior model response to a definitive credential-only rejection [4.78ms]
+
+ 0 pass
+ 25 filtered out
+ 1 fail
+Ran 1 test across 1 file. [420.00ms]

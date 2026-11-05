@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "kind": "feature-successor-toolchain-integration",
+  "observedAt": "2026-10-14T06:21:35Z",
+  "baseRevision": "2bf10754d02728b5e9869e8630fb7789fcb7321e",
+  "candidateWorkingTree": true,
+  "failureReproduction": {
+    "command": "/Users/twoimo/.bun/bin/bun test tests-unit/review-media-feature-sql-successor.test.ts",
+    "expectedControllerSha256": "96439683cd6e1d8c9922f9ab6fc46ebe0566674df5051a8e1ce9f3547cd4c96e",
+    "actualControllerSha256": "4f3dacb6f51a669bf64209b380b19e8274d2703101fc50f815153237f4a99d93",
+    "code": "FEATURE_SUCCESSOR_SOURCE_DRIFT",
+    "pass": 0,
+    "fail": 1
+  },
+  "binding": {
+    "manifestSha256": "87bb27af128b2c4d23c433a442598a1e83536fe1dd32d0ff783e2a554b42968c",
+    "predecessorManifestSha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6",
+    "featureControllerSha256": "089ce227a95142deca4ca4d782a51f348ac2278659ebc10bd1d54cbcacd69d4b",
+    "parentControllerSha256": "4f3dacb6f51a669bf64209b380b19e8274d2703101fc50f815153237f4a99d93",
+    "featureTestSha256": "cd37f2345b31ac465aa2686e7db9f1bd2fc272cf4d800e847ca146442154eaa9",
+    "toolchainEntries": 6,
+    "toolchainMismatches": 0,
+    "predecessorManifestMismatch": false,
+    "addedBindings": [
+      ".github/review-media-sql-successor.v1.json",
+      "apps/web/scripts/vercel-rollback-readback.mjs"
+    ]
+  },
+  "invariants": {
+    "launchPolicy": "held",
+    "evidenceWindowMinutes": 15,
+    "writerFences": 7,
+    "ledgerTransition": "97->101",
+    "migrationCount": 4,
+    "migrationSourceChanges": 0,
+    "temporarySupabaseStatePreserved": true
+  },
+  "verification": {
+    "targeted": {
+      "files": 1,
+      "pass": 11,
+      "fail": 0,
+      "skip": 0,
+      "assertions": 67
+    },
+    "combined": {
+      "files": 8,
+      "pass": 167,
+      "fail": 0,
+      "skip": 0,
+      "assertions": 1075,
+      "elapsedSeconds": 51.58
+    },
+    "typescriptParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3152,
+      "logicalInputNamesSha256": "6f31ab038b5cc3dcd37443fa62aaa0bf4cbcdbebe1ef23c1016961dd1ec44d95",
+      "nonLibraryContentSha256": "5edfbcd238268d7b08e75bce4a7eb88a98b2b744b334da04b826db88607a079f"
+    },
+    "targetedEslint": {
+      "status": "passed",
+      "files": 2,
+      "errors": 0
+    }
+  },
+  "statistics": {
+    "sampleCount": 1,
+    "confidenceInterval95": null,
+    "reason": "deterministic source/hash and contract verification; not a performance sample"
+  },
+  "externalEffects": {
+    "databaseCalls": 0,
+    "providerCalls": 0,
+    "deployments": 0,
+    "remoteMutations": 0
+  },
+  "limits": [
+    "Local source and injected-fixture verification does not prove hosted database application.",
+    "No production runtime, Vercel alias, Gemini provider, or Supabase write was exercised.",
+    "The held policy remains intentionally unchanged."
+  ]
+}

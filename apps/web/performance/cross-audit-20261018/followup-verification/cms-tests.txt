@@ -1,0 +1,59 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-exact-readback-api.test.ts:
+(pass) actor-authenticated exact GET reads stay bounded, ignore list filters, and find candidates outside newest100 [82.50ms]
+
+tests-unit/admin-users-pagination-contract.test.ts:
+(pass) admin users route connects bounded pages, global scanned filters, sort, and totals [40.46ms]
+
+tests-unit/admin-banners-functional-contract.test.ts:
+(pass) banner refresh rebases clean detail and preserves dirty conflicts [0.22ms]
+(pass) deferred refetch observes live editor revision instead of the pre-await closure [0.26ms]
+(pass) confirmed refresh conflicts block save and delete until explicit re-open [0.19ms]
+(pass) pending readback accepts authoritative divergence instead of locking forever [0.14ms]
+(pass) banner callers send observed revisions and clean media from the authoritative deleted row [0.16ms]
+(pass) admin banner query rejects malformed payloads and rows instead of hiding them [0.06ms]
+(pass) admin banner GET is admin-first and private no-store on every result [90.75ms]
+(pass) banner PATCH and DELETE reject stale revisions and return authoritative rows [34.04ms]
+
+tests-unit/admin-user-management-source.test.ts:
+(pass) admin user-management source contract > embeds user management as a URL-backed admin console module [1.42ms]
+(pass) admin user-management source contract > keeps user-management UI Korean, guarded, and accessible [0.64ms]
+(pass) admin user-management source contract > keeps admin user details explicit-selection only [0.34ms]
+(pass) admin user-management source contract > connects the bounded server page contract to dense user controls [0.50ms]
+(pass) admin user-management source contract > keeps admin user APIs server-only and service-role contained [1.36ms]
+(pass) admin user-management source contract > does not keep ad-hoc service-role helper scripts in the web package root [0.18ms]
+(pass) admin user-management source contract > adds an admin audit trail migration with RLS read access for admins [0.64ms]
+(pass) admin user-management source contract > persists per-admin sidebar ordering with RLS and explicit Data API grants [0.50ms]
+(pass) admin user-management source contract > does not add a separate global shortcut outside the admin console [0.58ms]
+
+tests-unit/admin-users-mutation-scope.test.ts:
+(pass) admin users mutation result scope contract > scopes mutation results by action and selected target [0.35ms]
+(pass) admin users mutation result scope contract > renders the nested audit receipt returned by the mutation route [0.44ms]
+(pass) admin users mutation result scope contract > preserves audit/readback metadata in scoped action messages [0.23ms]
+(pass) admin users mutation result scope contract > binds each admin user mutation callsite to its isolated action [0.18ms]
+(pass) dirty filter, sort, search, reset and page intents do not change query state before confirmation [0.26ms]
+(pass) mutation and pending readback block query controls while explicit readback refresh remains available [0.10ms]
+(pass) admin users expected mutation readback > does not confirm a present user whose profile remains old or only partly changed [0.14ms]
+(pass) admin users expected mutation readback > requires the requested role and account status, including reversed changes [0.05ms]
+(pass) admin users expected mutation readback > keeps uncertain results locked independently of selection and checks immediate and later readbacks [0.15ms]
+(pass) profile renamed outside active search confirms only the authenticated exact target and preserves filtered list [0.90ms]
+(pass) exact success updates the visible row even when the following list request fails [0.28ms]
+(pass) missing and wrong exact results stay locked while a valid mismatch can accept latest without another mutation [0.34ms]
+(pass) aborted earlier exact read cannot confirm mutation or clear a newer request loading state [0.27ms]
+
+tests-unit/ad-banner-url-security.test.ts:
+(pass) ad banner URL trust boundary > resolves only canonical application paths and YouTube destinations [0.59ms]
+(pass) ad banner URL trust boundary > accepts only the configured Supabase public-object URL for banner media [0.18ms]
+(pass) ad banner URL trust boundary > validates complete persisted media, media type, and destination tuples [0.15ms]
+(pass) ad banner URL trust boundary > resolves admin previews and validates writes before Supabase mutations [0.27ms]
+(pass) ad banner URL trust boundary > drops untrusted media and removes invalid destinations before the popup renders [0.21ms]
+(pass) ad banner URL trust boundary > keeps invalid destinations out of clickable and focusable popup elements [0.21ms]
+(pass) banner pending readback reconciliation > blocks transitions during readback, then accepts an authoritative newer saved row without another write [0.89ms]
+(pass) banner pending readback reconciliation > keeps unreadable deletion pending but reopens an authoritative residual row and confirms absence [0.18ms]
+(pass) banner pending readback reconciliation > keeps dirty editor open until discard confirmation closes it without writing [0.02ms]
+
+ 41 pass
+ 0 fail
+ 468 expect() calls
+Ran 41 tests across 6 files. [326.00ms]

@@ -1,0 +1,564 @@
+Tzudong Formal Follow-up — REV-F-01 및 EVIDENCE-01 최종 역검증
+
+현재 소스: a1dd40016ff7cf23055073c8637d5b3ee00d6781
+이전 검토: e2f60f7ea944776c81d538b5b042ed28ac9b04ae
+검토 방식: GPT-6 일반 추론, Deep Research 미사용, 읽기 전용
+
+1. 최종 판정
+
+안정 ID
+
+	
+
+Severity
+
+	
+
+판정
+
+	
+
+증거 등급 · 환경
+
+
+
+
+REV-F-01
+
+	
+
+MEDIUM
+
+	
+
+ACCEPT — 제시된 비동기 루트 반례 수정 확인
+
+	
+
+SOURCE_OBSERVED + BOUNDARY_INTEGRATION_TESTED, lab
+
+
+
+
+EVIDENCE-01
+
+	
+
+MEDIUM
+
+	
+
+ACCEPT — 06d 불변 스냅샷의 증거 맵 정정 확인
+
+	
+
+SOURCE_OBSERVED + 저장된 로컬 무결성 검증 영수증
+
+
+
+
+REV-F-01-SDK
+
+	
+
+MEDIUM
+
+	
+
+DEFER — 실제 Naver SDK 동작
+
+	
+
+UNVERIFIED, physical/field 미검증
+
+
+
+
+EVIDENCE-01-RELEASE
+
+	
+
+HIGH
+
+	
+
+DEFER — 현재 소스의 배포 증명
+
+	
+
+UNVERIFIED
+
+이전 보고서에서 REV-F-01은 재현 조건만 확인한 CONDITIONAL이었다. 이번에는 수정 전 실제 합성 브라우저 반례, 최종 코드, 수정 후 실행 기록이 함께 제공되어 해당 경계의 판정을 갱신할 수 있다.
+
+반면 이전 보고서의 EVIDENCE-01은 mutation oracle을 잘못 지칭했다. 원래 대상은 분리된 artifact-map digest의 stale 상태다. 이번에는 두 증거를 분리한다. 
+gpt6_pro_formal_reverse_report.visible.txt
+ 
+formal-pro-artifact-receipt.json
+ 
+formal_followup_source_evidence.txt
+
+2. REV-F-01 — 실제 반례와 수정 코드
+2.1 수정 전 반례
+
+rev-f-01-counterexample.txt의 Chromium 156 실행 기록은 지연 루트 교체 뒤 다음 상태를 보였다.
+
+JSON
+{
+  "connected": true,
+  "hidden": null,
+  "owner": null
+}
+
+기대값은 hidden: "true", owner: "true"였다. 테스트는 0 pass / 1 fail로 종료됐다.
+
+형식적으로 숨김 대상 마커 
+𝑚
+m에 대해 요구하는 불변식은 다음과 같다.
+
+𝐻
+(
+𝑚
+)
+∧
+𝐶
+(
+𝑅
+𝑚
+)
+⇒
+ariaHidden
+⁡
+(
+𝑅
+𝑚
+)
+=
+true
+H(m)∧C(R
+m
+	​
+
+)⇒ariaHidden(R
+m
+	​
+
+)=true
+
+여기서 
+𝐻
+H는 retained-hidden 상태, 
+𝐶
+C는 현재 루트의 DOM 연결 상태다.
+
+기존 구현은 setIcon이 이전 루트를 제거한 뒤에도 getElement()가 그 루트를 반환하는 상황에서 새 루트의 숨김 상태를 놓쳤다.
+
+2.2 현재 코드의 실제 수정
+
+apps/web/lib/marker-pool.ts의 applyIcon:
+
+TypeScript
+const wasHidden = Boolean(marker.__tzudongRetainedMarkerAriaHidden);
+const rootReadyTarget = element?.parentElement;
+
+if (!wasHidden) syncRetainedMarkerAccessibility(marker, true);
+
+marker.setIcon(icon);
+
+if (wasHidden) {
+    syncRetainedMarkerAccessibility(marker, false, rootReadyTarget);
+}
+
+핵심은 기존에 숨겨져 있던 마커를 아이콘 교체 전에 무조건 visible로 전환하지 않는 것이다. rootReadyTarget도 루트 제거 전에 확보한다.
+
+apps/web/lib/retained-marker-accessibility.ts에는 다음 분기가 추가됐다.
+
+TypeScript
+if (!root || root.isConnected === false) {
+    marker.__tzudongRetainedMarkerAriaHidden = hidden;
+    const target = rootTargets.get(marker);
+    if (hidden && target) watchPendingRoot(marker, target);
+    return;
+}
+
+따라서 연결이 끊긴 과거 루트를 현재 유효한 루트로 간주하지 않고, 보존한 부모에 MutationObserver를 등록해 교체를 기다린다.
+
+watchPendingRoot는 같은 target의 여러 마커에 대해 observer를 공유하고, cancelPendingRoot는 더 이상 대기 마커가 없으면 observer를 해제한다.
+
+판정: 수정이 제시된 반례를 직접 차단한다.
+
+2.3 수정 후 원시 결과
+
+검증
+
+	
+
+저장된 결과
+
+	
+
+의미
+
+
+
+
+수정 전 Chromium 반례
+
+	
+
+0 pass / 1 fail
+
+	
+
+실제 실패 재현
+
+
+
+
+수정 후 formal + unit
+
+	
+
+29 pass / 0 fail / 1,162 assertions
+
+	
+
+지연 교체·pool 수명주기
+
+
+
+
+추가 observer 취소 검사
+
+	
+
+24 pass / 0 fail / 1,163 assertions
+
+	
+
+disconnected root 및 release 취소
+
+
+
+
+Typecheck parity
+
+	
+
+0 diagnostics / 3,382 logical inputs
+
+	
+
+타입 검사
+
+
+
+
+Mutation baseline
+
+	
+
+23 pass / 0 fail
+
+	
+
+기준 테스트 성공
+
+
+
+
+Mutation
+
+	
+
+12/12 detected
+
+	
+
+지정한 결함 주입 탐지
+
+
+
+
+Restored
+
+	
+
+9 pass / 0 fail
+
+	
+
+원본 복구 후 검사
+
+29개와 24개 테스트는 중복 실행 범위가 있으므로 53개의 독립 테스트라고 합산하지 않는다.
+
+rev-f-01-native-and-mutation-checks.json은 deferred-sdk-root mutant의 다음 실제 실패를 기록한다.
+
+JSON
+{
+  "connected": true,
+  "hidden": null,
+  "owner": null
+}
+
+해당 mutant는 root.isConnected === false 검사를 제거한 것이다. 따라서 새 검사가 단순히 코드에 존재하는 데 그치지 않고 이 테스트 오라클에서 결과를 바꾸는 조건임을 확인할 수 있다.
+
+기준 실행은 9,216개 시각 전이와 18,056개 ownership step을 기록한다. 원본 파일 해시 비교와 restored 검사도 성공으로 기록돼 있다.
+
+이는 제출된 로컬 실행 증거다. 감사자가 직접 테스트를 실행한 것은 아니다.
+
+3. REV-F-01의 남은 조건
+
+현재 소스와 fixture가 입증하는 범위는 다음과 같다.
+
+제거된 과거 루트가 반환돼도 이를 ready 상태로 오인하지 않는다.
+
+다음 microtask에서 연결된 새 루트에 앱 소유 aria-hidden을 적용한다.
+
+release 또는 visible 전환 시 pending observer를 취소한다.
+
+기존에 다른 주체가 설정한 aria-hidden을 임의로 제거하지 않는다.
+
+기존 리뷰 버블만 교체할 때는 루트의 숨김 상태를 유지한다.
+
+그러나 MutationObserver 콜백의 실행은 실제 SDK의 DOM 삽입 방식과 타이밍에 의존한다.
+
+추가 결함으로 확정하지 않는 조건: SDK가 새 루트를 다른 부모에 삽입하거나, DOM을 다시 교체하거나, 루트 삽입과 페인트 사이에 다른 작업을 수행하는 경우다. 현재 fixture가 해당 실제 동작을 입증하지 않는다.
+
+필수 호스트 검증은 실제 Naver SDK에서 숨김 마커의 setIcon → 루트 교체 → aria-hidden 적용 순서를 관찰하고, 지도 이동·확대·release·unmount 이후 접근성 트리와 observer 정리를 확인하는 것이다.
+
+새로운 최소 diff를 추가할 근거는 현재 없다. 따라서 REV-F-01 수정은 ACCEPT, 실제 SDK 일반화는 DEFER다.
+
+4. EVIDENCE-01 — 정정된 artifact-map digest
+4.1 이전 보고서의 대상 오류
+
+이전 GPT-6 보고서는 EVIDENCE-01을 mutation oracle의 검증 범위로 설명했다.
+
+이는 원래 지적 대상과 다르다.
+
+실제 EVIDENCE-01은 이전 detached artifact-map digest가 오래된 맵 본문을 가리킨다는 증거 무결성 문제였다.
+
+Mutation oracle의 유효성은 별도 검증 항목으로 유지해야 하며, 이 ID의 결론을 대체하지 않는다.
+
+4.2 정정된 불변 스냅샷
+
+첨부에는 다음 세 요소가 함께 제공됐다.
+
+항목
+
+	
+
+확인된 값
+
+
+
+
+불변 스냅샷
+
+	
+
+06d5d37e0e792dfd64e96389cd70e3ca8d1323e7
+
+
+
+
+artifact-map.json SHA-256
+
+	
+
+66f6c1c0a17e99922fc489c369073a9d4c9bdc4397bbeb9cf41cbd0605e292ab
+
+
+
+
+검증 결과
+
+	
+
+detachedDigestMatches: true
+
+
+
+
+맵 파일 항목
+
+	
+
+32개 검증
+
+
+
+
+제품 소스 항목
+
+	
+
+35개 검증
+
+
+
+
+자체 참조 또는 digest 항목
+
+	
+
+selfOrDigestListed: false
+
+맵의 sourceRevision은 e2f60f7ea944776c81d538b5b042ed28ac9b04ae이며, reviewedSourceRevision은 fe4b73dac510d4670517c7d3eca4f0c2470d4297이다.
+
+이 구조는 맵 자체와 그 detached digest를 맵의 항목으로 다시 포함하지 않는다.
+
+즉, 다음과 같은 순환 의존을 피한다.
+
+𝐻
+(
+𝑀
+)
+=
+𝑑
+,
+𝑀
+⊉
+(
+𝑀
+,
+𝑑
+)
+H(M)=d,M
+
+⊇(M,d)
+
+판정: 06d 스냅샷에 한정하여 ACCEPT.
+
+이전 9a digest의 역사적 불일치는 그대로 남지만, 정정된 06d 맵까지 무효화하지 않는다.
+
+4.3 스냅샷과 최신 소스의 분리
+
+현재 제품 소스는 a1dd400...이다. 06d 맵은 그보다 앞선 e2f60f...를 대상으로 한다.
+
+따라서 현재 marker-pool.ts의 해시가 06d 맵의 해시와 다른 것은 예상된 결과다. 이를 맵 무결성 실패로 판정하면 스냅샷 경계를 잘못 비교한 것이다.
+
+반대로 06d 맵이 올바르다고 해서 최신 a1dd400...의 전체 소스나 배포 상태가 인증되는 것도 아니다.
+
+정확한 판정은 다음과 같다.
+
+06d 불변 스냅샷의 detached digest: ACCEPT
+
+최신 소스 a1dd400...의 새 manifest: 별도 생성·검증 필요
+
+보호 브랜치·CI·배포·alias·운영 readback: DEFER
+
+5. Mutation oracle 증거의 독립 판정
+
+verify-marker-formal.mjs는 12개 mutant를 격리된 임시 복사본에서 실행하고, 예상 테스트 이름이 실제 실패했는지 확인한다.
+
+이번에는 이전에 없던 원시 JSON이 제공됐으므로 12/12 탐지 성공을 저장된 로컬 실행 결과로 인정할 수 있다.
+
+대표적으로 다음을 확인했다.
+
+static-content-guard: alt 변경이 누락되어 실패
+
+released-callback: release 이후 이전 콜백이 호출되어 실패
+
+retained-review-mask: 숨김 속성 소실로 실패
+
+cloned-icon-descriptor: 리뷰 복귀 상태가 틀려 실패
+
+review-viewport-clamp: 23px clamp가 사라져 실패
+
+deferred-sdk-root: 교체 루트의 숨김 속성이 없어 실패
+
+half-life-overflow: Infinity 반환으로 실패
+
+sampling-window-overflow: unsafe timestamp가 통과해 실패
+
+모든 mutant가 detected: true이며, 기준 테스트 exitCode: 0, 복원 테스트 exitCode: 0이다.
+
+증거 등급은 SYNTHETIC_MOCK_TESTED 및 지정 모듈의 BOUNDARY_INTEGRATION_TESTED, 환경은 lab이다. 전체 앱에 대한 형식 증명이나 실제 Naver SDK 검증으로 승격하지 않는다.
+
+6. 최종 판정과 릴리스 경계
+
+항목
+
+	
+
+최종 상태
+
+
+
+
+REV-F-01 실제 합성 반례
+
+	
+
+ACCEPT — 수정 후 해당 경계 통과
+
+
+
+
+EVIDENCE-01 06d digest 정정
+
+	
+
+ACCEPT — 해당 불변 스냅샷에서 검증됨
+
+
+
+
+12-mutant 검증
+
+	
+
+저장된 로컬 실행 결과 수용
+
+
+
+
+실제 Naver SDK 루트 교체
+
+	
+
+DEFER
+
+
+
+
+픽셀·플리커·프레임 성능
+
+	
+
+UNVERIFIED
+
+
+
+
+최신 후보의 보호 CI·호스팅 preview
+
+	
+
+DEFER
+
+
+
+
+최신 후보의 배포·alias·readback
+
+	
+
+DEFER
+
+
+
+
+Nightly 39457197351
+
+	
+
+과거 실패 유지, 이번 검토에서 변경 없음
+
+최종 기술 판정: CONDITIONAL ACCEPT.
+
+REV-F-01은 실제 실패 재현과 최소 수정, 수정 후 네이티브 합성 브라우저 검증까지 연결됐다. EVIDENCE-01도 정확한 불변 스냅샷의 맵과 detached digest로 폐쇄됐다.
+
+그러나 이는 로컬 검증과 특정 스냅샷 무결성의 폐쇄다. 실제 Naver SDK의 동작, 호스팅 픽셀·성능, 보호된 배포, 운영 승인까지 폐쇄한 것은 아니다.
+
+이번 검토에서 외부 서비스·배포·게시·권한·계정·비용을 변경하지 않았다.

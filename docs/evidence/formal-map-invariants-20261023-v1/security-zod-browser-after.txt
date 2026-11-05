@@ -1,0 +1,55 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/local-storyboard-departure-browser.test.ts:
+(pass) project/new/sidebar/Escape guards preserve the draft; accepted discard works [732.22ms]
+(pass) unchanged editor closes without confirmation; browser back cancellation retains B and its URL [696.11ms]
+(pass) in-flight save blocks departure, then a matching response/readback permits clean navigation [632.64ms]
+(pass) lost save response plus failed GET retains draft and uncertainty; only explicit retry writes [773.26ms]
+(pass) a committed save with lost POST response is confirmed by GET without a duplicate write [542.62ms]
+(pass) a structurally valid wrong POST view cannot clear the edit or claim it saved [591.45ms]
+(pass) an unrelated newer revision preserves the uncertain draft and blocks stale retry [577.15ms]
+(pass) later readback of an earlier save rebases without dropping newer local edits [654.10ms]
+
+tests-unit/local-storyboard-catalog-error-browser.test.ts:
+(pass) failed catalog read is not reported as a database hold on the new-project screen (1280px) [606.96ms]
+(pass) failed catalog read is not reported as a database hold on the new-project screen (390px) [556.07ms]
+(pass) failed catalog read keeps an open project locked with a reload path instead of a hold notice [594.15ms]
+(pass) a genuine database hold is still reported as a hold [585.73ms]
+
+tests-unit/admin-detail-close-focus-browser.test.ts:
+(pass) admin operations and sentry details return focus without losing it to the page [2700.19ms]
+
+tests-unit/local-storyboard-worker-refresh-browser.test.ts:
+(pass) an active storyboard job refreshes worker connection without a manual catalog reload [6626.69ms]
+
+tests-unit/local-storyboard-project-refresh-focus-browser.test.ts:
+(pass) storyboard project refresh keeps keyboard focus while the saved project reloads [979.09ms]
+(pass) a failed storyboard project read stays unread while refreshing [889.23ms]
+
+tests-unit/storyboard-project-library-browser.test.ts:
+(pass) library filters, clears filters, sorts newest first and opens detail with the keyboard [582.15ms]
+(pass) library keeps loaded rows during refresh errors and exposes recovery and loading [1302.06ms]
+(pass) held readiness preserves project reads while blocking create and edit mutations [560.10ms]
+(pass) choosing a library row retains unsaved edits until departure is explicitly confirmed [817.22ms]
+(pass) library and selected detail fit 390px with real CSS [535.26ms]
+(pass) library and selected detail fit 834px with real CSS [519.85ms]
+(pass) library and selected detail fit 1423px with real CSS [530.55ms]
+
+tests-unit/local-storyboard-history-focus-browser.test.ts:
+(pass) version history keeps keyboard focus when picking, failing a preview and restoring [1391.94ms]
+(pass) failed version history stays visible while the list refresh is in flight [1406.53ms]
+(pass) visible version history keeps its status while the list is read again [1161.93ms]
+
+tests-unit/admin-storyboard-worker-visible-status-browser.test.ts:
+(pass) a visible storyboard worker keeps its connection status while the list is read again [2015.45ms]
+
+tests-unit/admin-storyboard-unknown-count-browser.test.ts:
+(pass) a failed storyboard catalog does not show zero saved projects [1708.89ms]
+
+tests-unit/local-storyboard-control-focus-browser.test.ts:
+(pass) storyboard cancel, new project and a failed library pick keep a keyboard target [1192.29ms]
+
+ 29 pass
+ 0 fail
+ 182 expect() calls
+Ran 29 tests across 10 files. [38.79s]

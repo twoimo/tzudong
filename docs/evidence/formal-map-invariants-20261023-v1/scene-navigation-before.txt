@@ -1,0 +1,50 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/scene-navigation-original-source-probe.test.ts:
+84 |       const count = () => page.evaluate(() => (window as unknown as {sceneFixture:{count():number}}).sceneFixture.count());
+85 |       const starts = () => page.evaluate(() => (window as unknown as {sceneFixture:{starts():number}}).sceneFixture.starts());
+86 |       const reset = () => page.evaluate(() => (window as unknown as {sceneFixture:{reset():void}}).sceneFixture.reset());
+87 |       if (width === 1440) {
+88 |         await scroller.focus(); await page.keyboard.press('ArrowRight');
+89 |         expect(await count()).toBe(0);
+                                   ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/scene-navigation-original-source-probe.test.ts:89:31)
+(fail) scene navigation keeps the restaurant selected at 1440px [1164.82ms]
+103 |           await page.waitForTimeout(20);
+104 |         }
+105 |         await session.send('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+106 |       }
+107 |       await swipe('[aria-label="영상 장면 가로 스크롤"]');
+108 |       expect(await starts()).toBe(0);
+                                   ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/scene-navigation-original-source-probe.test.ts:108:30)
+(fail) scene navigation keeps the restaurant selected at 390px [1373.73ms]
+103 |           await page.waitForTimeout(20);
+104 |         }
+105 |         await session.send('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+106 |       }
+107 |       await swipe('[aria-label="영상 장면 가로 스크롤"]');
+108 |       expect(await starts()).toBe(0);
+                                   ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/scene-navigation-original-source-probe.test.ts:108:30)
+(fail) scene navigation keeps the restaurant selected at 820px [1375.01ms]
+
+ 0 pass
+ 3 fail
+ 15 expect() calls
+Ran 3 tests across 1 file. [4.21s]

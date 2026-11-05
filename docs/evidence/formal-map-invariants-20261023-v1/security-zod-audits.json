@@ -1,0 +1,44 @@
+{
+  "web": {
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 401,
+        "dev": 421,
+        "optional": 175,
+        "peer": 26,
+        "peerOptional": 0,
+        "total": 920
+      }
+    },
+    "vulnerabilities": {}
+  },
+  "backend": {
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 204,
+        "dev": 0,
+        "optional": 2,
+        "peer": 4,
+        "peerOptional": 0,
+        "total": 209
+      }
+    },
+    "vulnerabilities": {}
+  }
+}

@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "kind": "durable-receipt-ocr-pg17.6-verification-v5",
+  "status": "passed",
+  "recordedAtUTC": "2026-10-13T11:11:54.460Z",
+  "sourceHead": "683f8975069ebd6d366112e6a1816959e751eb19",
+  "sourceHashes": {
+    "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql": "1ebc4f512612053b62febe41f2a3aef948c93d6d45f69f9328d43db5bd46bca4",
+    "apps/web/lib/ocr/durable-result.ts": "234c0c57b4ed446a53d0b2df08f45aad89da566c1690adf8c5516ae5a705343c",
+    "apps/web/lib/ocr/review-storage-verification.ts": "c29d934e448872e375dd03e4830359284bc692c92c317bcb17dcbe04b384d80d",
+    "apps/web/lib/ocr/review-verification-contract.ts": "e12681bc1219e842ec12bdb529f1ee1da1d62211036ce5b3e8460a6e013e35eb",
+    "apps/web/lib/ocr/receipt-upload-preparation.ts": "97524edda3bec24e887156e0822193b4491a2a63c372bfba83ebea8a3b9ebbbc",
+    "backend/supabase/migrations/20261008200719_review_verification_private.sql": "92b469ab0ed1a23bf91c1ab5a3f8e92d45cf0f4e06e5fa602d6a34ad0497a51b",
+    "apps/web/lib/review-photo-url.ts": "811a669cada5b4938afc012a2e0f26ca82e080522306cfd424c2892cb979187e",
+    "apps/web/app/api/ocr/extract/route.ts": "93fc6ebdb6a69f246e9da101b4117af89d5e6aa17a702cb9a454113b49522978",
+    "apps/web/app/api/ocr/extract/stream/route.ts": "54bb4782fa03751824f5336a7c7bca868adf3a0a1858e5b5a0d630b4658787c7",
+    "apps/web/app/api/ocr/reviews/save/route.ts": "2888d350887d1428e493671ba7dafcb565a6dce5d9fb0ebc670bc2557d9bd832",
+    "apps/web/app/api/admin/ocr-receipts/process/route.ts": "e9fcfaaf7b8ba87ae4281e033ed90bd53e8d69cfd7771711c5247cef97717436",
+    "apps/web/components/reviews/ReviewModal.tsx": "bbd4e37f9a752fac136500bb0976b97f92c4c063e47f9ce9d54404df556c1593",
+    "apps/web/lib/reviews/review-save-operation.ts": "73e902d4337ebb36740b06bde80d10d0d199e4f62b0d85f7b8e4a516b1b189c1",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "132eb7bd4d391035de20e70f9eeee75167d6f81f29429bac430c77a0ac453f72",
+    "apps/web/tests-unit/review-storage-verification.test.ts": "c67dacd51befcc979ccf89494e8cf51bfb38e407bd4e3069e10ad11d5efcf563",
+    "apps/web/tests-unit/review-save-submit.test.ts": "8f42141b044edaeea33424697b059cf3858f0afea1d29e18d926d23bac6b971f",
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": "e3bea3851a70a0e5bff7d289b8fe25af68fe6efc37859931c2106caf384ef18c",
+    "apps/web/performance/review-db-rehearsal-20261012/verify-review-media-sql-rehearsal.mjs": "f7321f607a5bf3a24ba099d51abc67254db52fcc385945692426d1b2dfa6e431"
+  },
+  "runtime": {
+    "dockerContext": "colima-tzudong-catalog-20261007",
+    "sourceContainer": "tzudong-ranking-clone-20261008",
+    "sourceImage": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "sourceImageId": "sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "sourceEngine": "17.6",
+    "targetEngine": "17.6"
+  },
+  "fixture": {
+    "sourceSnapshotSha256Before": "ad75b8ce62973ada70fa77a2c5ac270720e1e43661000d75ce85e7d616a8dcbd",
+    "sourceSnapshotSha256After": "ad75b8ce62973ada70fa77a2c5ac270720e1e43661000d75ce85e7d616a8dcbd",
+    "dumpSha256": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "sourceLogicalCounts": {
+      "authUsers": 0,
+      "restaurants": 0,
+      "reviews": 0,
+      "migrations": 0,
+      "verificationBucketLimit": null
+    },
+    "sourceReadOnly": true
+  },
+  "measuredChecks": {
+    "sourceUnitTests": {
+      "files": 4,
+      "tests": 72,
+      "assertions": 819,
+      "failures": 0
+    },
+    "sourceTypechecks": {
+      "native": "passed",
+      "compatibility": "passed"
+    },
+    "sourceLint": {
+      "targetedFiles": 13,
+      "status": "passed"
+    },
+    "sql": {
+      "migrationApplied": true,
+      "migrationSecurity": {
+        "rls": true,
+        "force_rls": true,
+        "policy_count": 0,
+        "table_exists": true,
+        "service_claim_execute": true,
+        "service_dispatch_execute": true,
+        "authenticated_table_select": false,
+        "authenticated_claim_execute": false,
+        "service_storage_snapshot_execute": true,
+        "authenticated_storage_snapshot_execute": false
+      },
+      "bucketSourceContract": {
+        "private": true,
+        "maxBytes": 5242880,
+        "ownerInsert": true,
+        "ownerUpdateAbsent": true
+      },
+      "bucketRuntimeContract": {
+        "private": true,
+        "max_bytes": 5242880,
+        "mime_types": [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/avif"
+        ],
+        "authenticated_owner_update_policies": 0
+      },
+      "payloadValidator": {
+        "validAllowed": true,
+        "rawOrUnknownFieldRejected": true,
+        "nonStringModelRejected": true
+      },
+      "claimRace": {
+        "connections": 2,
+        "outcomes": [
+          "claimed",
+          "processing"
+        ],
+        "resultRows": 1
+      },
+      "reuse": {
+        "cacheStatus": "cached",
+        "sameResultRef": true,
+        "noProviderCallRequired": true
+      },
+      "binding": {
+        "crossOwnerIndependent": true,
+        "imageHashIndependent": true,
+        "promptVersionIndependent": true,
+        "completionVersionMismatchRejected": {
+          "rejected": true,
+          "sqlstate": "42501"
+        }
+      },
+      "uncertainty": {
+        "firstAttemptStatus": "indeterminate",
+        "repeatStatus": "indeterminate",
+        "automaticRetryAllowed": false
+      },
+      "recovery": {
+        "undispatchedReservationRecoveredByExplicitForce": true,
+        "staleClaimDispatchRejected": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "possiblyDispatchedBecameIndeterminate": true,
+        "uncertainForceReplayBlocked": true
+      },
+      "refreshFailure": {
+        "indeterminateRestoredPriorResult": true,
+        "uncertainRefreshReplayBlocked": true,
+        "preProviderReleaseRestoredPriorResult": true
+      },
+      "canonicalMedia": {
+        "generatedBySharedHelper": true,
+        "verificationPrefixValid": true,
+        "foodPrefixValid": true,
+        "storageSnapshots": {
+          "verification": 2,
+          "food": 1
+        },
+        "verificationHashesMatched": true
+      },
+      "reviewSaveRace": {
+        "count": 2,
+        "hashes": 1,
+        "processed": 2,
+        "duplicates": 1,
+        "server_refs": 2,
+        "duplicate_links": 1
+      },
+      "twoTabRevision": {
+        "sameResultReference": true,
+        "revisionRotated": true,
+        "staleSave": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "currentSaveStoredRevision": true,
+        "currentSaveStoredPayloadB": true
+      },
+      "tampering": {
+        "crossOwnerResultReference": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "protectedCorrectionField": {
+          "rejected": true,
+          "sqlstate": "22023"
+        },
+        "storedObjectHashMismatch": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "nonexistentStoredObject": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "nullStoredObjectHash": {
+          "rejected": true,
+          "sqlstate": "22023"
+        },
+        "nullCorrections": {
+          "rejected": true,
+          "sqlstate": "22023"
+        }
+      },
+      "roleAccess": {
+        "authenticatedFunctionDenied": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "authenticatedStorageSnapshotDenied": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "authenticatedTableDenied": {
+          "rejected": true,
+          "sqlstate": "42501"
+        },
+        "serviceRoleClaimAndRelease": true
+      }
+    }
+  },
+  "measuredCallCounts": {
+    "sqlRpcAttempts": {
+      "claim": 20,
+      "markDispatched": 8,
+      "complete": 5,
+      "markIndeterminate": 2,
+      "release": 3,
+      "storageSnapshot": 3,
+      "createReview": 10
+    },
+    "concurrentSqlConnections": 4,
+    "providerCalls": 0,
+    "paidProviderCalls": 0,
+    "hostedDatabaseCalls": 0,
+    "hostedStorageCalls": 0
+  },
+  "cleanup": {
+    "ownedTargetContainerRemoved": true,
+    "sourceContainerMutationObserved": false
+  },
+  "actions": {
+    "hostedDatabaseWrites": 0,
+    "hostedStorageWrites": 0,
+    "providerCalls": 0,
+    "paidCalls": 0,
+    "deployments": 0,
+    "commits": 0,
+    "pushes": 0
+  },
+  "priorEvidenceLimits": [
+    {
+      "path": "apps/web/performance/readiness-ocr-followup-20261011/durable-receipt-ocr-pg17-6-verification-20261013.json",
+      "sha256": "e5636a95112f7e97eb9a2311ef6d6413e901cc4d62281afba7bdd1b9a4802a1a",
+      "immutable": true,
+      "engine": "17.6",
+      "limits": [
+        "pre_fix_noncanonical_review_media_paths",
+        "pre_fix_no_storage_owner_existence_or_byte_hash_binding",
+        "pre_fix_no_durable_provider_dispatch_stage"
+      ]
+    },
+    {
+      "path": null,
+      "immutable": true,
+      "engine": "17.11",
+      "priorStatus": "passed",
+      "retainedAsSeparateEnvironment": true,
+      "limits": [
+        "pre_fix_source_snapshot",
+        "no_retained_machine_readable_receipt"
+      ]
+    },
+    {
+      "path": "apps/web/performance/readiness-ocr-followup-20261011/durable-receipt-ocr-pg17-6-verification-20261013-v2.json",
+      "sha256": "1da9402a1e610712e2cb81dcc382e2ed7e0450ce60a515764aafcfaded9df9e8",
+      "immutable": true,
+      "engine": "17.6",
+      "limits": [
+        "pre_final_null_input_guards"
+      ]
+    },
+    {
+      "path": "apps/web/performance/readiness-ocr-followup-20261011/durable-receipt-ocr-pg17-6-verification-20261013-v3.json",
+      "sha256": "b8b719ec774259a8a8ed4fe04458e7d7f38486326ee023b8edf959a452ed62ff",
+      "immutable": true,
+      "engine": "17.6",
+      "limits": [
+        "pre_fix_no_result_revision_binding_for_stale_tabs",
+        "pre_fix_oversize_compression_failure_could_reach_provider_before_storage_rejection"
+      ]
+    },
+    {
+      "path": "apps/web/performance/readiness-ocr-followup-20261011/durable-receipt-ocr-pg17-6-verification-20261013-v4.json",
+      "sha256": "4fb3f29c2d91387e6dea8fd5e8cc8c3e9d2b79d0022a2f290fc31ebb7b373ee4",
+      "immutable": true,
+      "engine": "17.6",
+      "limits": [
+        "pre_final_ocr_result_row_lock_for_refresh_save_serialization"
+      ]
+    }
+  ],
+  "operationalPrerequisites": {
+    "storageMetadataRevision": "version_and_updated_at_change_atomically_with_object_bytes",
+    "verificationKeyImmutability": [
+      "browser_upload_uses_upsert_false",
+      "authenticated_update_policy_remains_absent",
+      "no_direct_s3_overwrite"
+    ],
+    "sqlLockScope": "storage_metadata_row_only_not_remote_object_bytes",
+    "exactSourceFixtureLimit": "source_clone_has_no_review_verifications_bucket; disposable_target_fixture_applied_the_source_defined_5MiB_contract"
+  },
+  "preProviderPreparation": {
+    "inputRange": "5MiB_to_8MiB",
+    "resizeFailure": "rejected",
+    "finalOversize": "rejected",
+    "quotaReservations": 0,
+    "providerCalls": 0,
+    "evidence": "offline_unit_test"
+  },
+  "expiryBehavior": {
+    "automaticExpiry": false,
+    "accountDeletion": "cascade",
+    "uncertainResult": "blocked_until_explicit_force_refresh"
+  }
+}

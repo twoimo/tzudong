@@ -1,0 +1,15 @@
+{
+  "kind": "existing_compiler_boundary_probe",
+  "node": "24.22.0",
+  "compilerSha256": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26",
+  "queueSha256": "24fbdb8d1c99b0666de4b4f5c1b33896f6c7fa4ea20af4ad6ebd491722d4945a",
+  "registrationSha256": "c61ceaa8fb071a1cb59f9e85cfd931ed1b4075b5be825cb96f794cec5379716a",
+  "originalStatements": 38,
+  "executionStatements": 36,
+  "queueEnvelopeRemoved": true,
+  "naiveConcatenationRejected": "MIGRATION_TRANSACTION_CONTROL_DENIED",
+  "initialDefaultRuntimeRejected": "Node26_not_project_Node24_before_probe",
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "scope": "Pure existing compiler probe with synthetic ledger path. Not an installer, actual migration admission, PostgreSQL execution or ledger proof."
+}

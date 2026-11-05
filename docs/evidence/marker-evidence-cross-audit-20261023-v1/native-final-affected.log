@@ -1,0 +1,113 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-map-cluster-visuals.test.ts:
+(pass) naver map cluster visuals > hashes string keys deterministically [0.19ms]
+(pass) naver map cluster visuals > builds cluster feature with lng/lat coordinates [0.05ms]
+(pass) naver map cluster visuals > builds cluster marker html content [0.17ms]
+(pass) naver map cluster visuals > returns naver cluster marker visual payload [0.13ms]
+(pass) naver map cluster visuals > builds cluster marker render plan from position and current animation index [0.06ms]
+(pass) naver map cluster visuals > builds animation icon plan from key and injected index resolver [0.07ms]
+(pass) naver map cluster visuals > skips a marker icon write when the content and anchor are unchanged [0.02ms]
+
+tests-unit/evidence-frame-failure-browser.test.ts:
+(pass) context-only frames keep an honest heading and original video link after image failure, and recover for a new source [6409.81ms]
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > refreshes both cached selection states when the public popularity tier changes in place [0.33ms]
+(pass) naver map marker visuals > keeps shared visual cache entries distinct across refreshed rows and overlay markers [0.12ms]
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.03ms]
+(pass) naver map marker visuals > returns selected marker payload [0.02ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.02ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.03ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.02ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.03ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.04ms]
+
+tests-unit/clustering-region-district.test.ts:
+(pass) tier-only mutations invalidate retained Seoul and GeoJSON caches without promoting unknown tiers [0.42ms]
+(pass) getRegionalClusters > 빈 목록은 빈 배열을 돌려준다
+(pass) getRegionalClusters > 행정구역 키 순서대로 돌려주고 중심은 고정 중심 좌표를 쓴다 [0.03ms]
+(pass) getRegionalClusters > 주소에 정식 명칭이 있으면 그 행정구역으로 묶는다 [0.01ms]
+(pass) getRegionalClusters > 주소가 약어로 시작하면 정식 명칭으로 바꾼다 [0.02ms]
+(pass) getRegionalClusters > 주소에서 행정구역을 못 찾으면 좌표상 가장 가까운 중심으로 묶는다 [0.04ms]
+(pass) getRegionalClusters > 좌표가 없는 행정구역은 클러스터에서 빠진다 [0.02ms]
+(pass) getRegionalClusters > restaurantIds 는 입력 순서를 유지한다 [0.02ms]
+(pass) getRegionalClusters > 카테고리는 빈도 내림차순 상위 3개이고 동률은 먼저 나온 순서를 따른다 [0.03ms]
+(pass) getRegionalClusters > 행정구역 클러스터는 묶인 맛집 중 가장 높은 불꽃 등급을 남긴다 [0.02ms]
+(pass) getSeoulDistrictClusters > 빈 목록은 빈 결과를 돌려준다 [0.03ms]
+(pass) getSeoulDistrictClusters > 자치구 키 순서대로 돌려주고 중심은 소속 맛집들의 평균 좌표다 [0.04ms]
+(pass) getSeoulDistrictClusters > 주소에 서울이 없으면 자치구 클러스터에서 빠진다 [0.01ms]
+(pass) getSeoulDistrictClusters > 주소가 비어 있으면 자치구 클러스터에서 빠진다 [0.01ms]
+(pass) getSeoulDistrictClusters > 주소에 구 이름이 없으면 좌표상 가장 가까운 구로 묶는다 [0.03ms]
+(pass) getSeoulDistrictClusters > 좌표가 없는 맛집은 빠진다 [0.02ms]
+(pass) getSeoulDistrictClusters > minClusterSize=1 은 맛집이 있는 구를 모두 클러스터로 돌려준다 [0.02ms]
+(pass) getSeoulDistrictClusters > minClusterSize=3 은 3개 미만 구를 개별 마커로 내보낸다 [0.03ms]
+(pass) clustering 캐시 동작 > 같은 목록을 다시 넘기면 같은 결과를 돌려준다 [0.05ms]
+(pass) clustering 캐시 동작 > 맛집 필드를 제자리에서 바꾸면 결과가 따라 바뀐다 [0.03ms]
+(pass) clustering 캐시 동작 > 목록에 항목을 추가하거나 제거하면 결과가 따라 바뀐다 [0.05ms]
+(pass) clustering 캐시 동작 > 돌려준 restaurantIds 를 수정해도 다음 호출 결과가 오염되지 않는다 [0.04ms]
+(pass) getDistance > 같은 좌표는 0 이고 3-4-5 삼각형을 따른다 [0.02ms]
+
+tests-unit/evidence-frame-conflict.test.ts:
+(pass) frame conflicts fail closed at both public read boundaries while strict publication validation still rejects [1.40ms]
+
+tests-unit/public-popularity-publication.test.ts:
+(pass) operator-published public popularity > rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts [0.07ms]
+(pass) operator-published public popularity > bounds entry count and serialized bytes and freezes independent copies [3.67ms]
+(pass) operator-published public popularity > list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it [0.55ms]
+(pass) operator-published public popularity > merged representatives use their published identity and do not inherit a child grade [0.17ms]
+(pass) operator-published public popularity > explicit canonical membership keeps compact, full, partial, and direct-detail grades identical [0.13ms]
+(pass) operator-published public popularity > new members or conflicting cohorts fail closed for either display representative [0.11ms]
+(pass) operator-published public popularity > rejects ambiguous/incomplete canonical membership and bounds the whole member index [2.83ms]
+(pass) operator-published public popularity > published membership overrides a stale caller tier and the detail panel does not mention flame counts [0.50ms]
+(pass) operator-published public popularity > published endpoint returns the reviewed public snapshot and stable ETag without raw scores [378.33ms]
+(pass) public tier reaches the outer Naver render guard > same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip [0.29ms]
+(pass) public tier reaches the outer Naver render guard > retained selection/search grades also invalidate the unchanged-query guard [0.02ms]
+
+tests-unit/evidence-engineering-remaining.test.ts:
+(pass) evidence engineering remaining tasks > uploads only the immutable webp key and refuses collisions [0.33ms]
+(pass) evidence engineering remaining tasks > moderation requires preview, confirm, apply, and readback before an audit record [0.39ms]
+(pass) evidence engineering remaining tasks > public carousel keeps approved sign evidence and its seek url [0.31ms]
+(pass) evidence engineering remaining tasks > operational caution ignores a plain search miss and does not use device coordinates [0.04ms]
+(pass) evidence engineering remaining tasks > marker wrapper stays on transform and opacity [0.21ms]
+(pass) evidence engineering remaining tasks > merged media unions approved frames and does not promote a higher tier [0.23ms]
+(pass) evidence engineering remaining tasks > missing evidence embed falls back without dropping restaurants [0.38ms]
+(pass) evidence engineering remaining tasks > badge viewer stays closed until experimental mode is opened and can close again [0.10ms]
+(pass) evidence engineering remaining tasks > open cross-check clauses stay locked without new formulas [0.69ms]
+(pass) evidence engineering remaining tasks > render summary records percentiles without a 60fps gate [0.06ms]
+
+tests-unit/evidence-publication-runtime.test.ts:
+(pass) reviewed evidence publication > publishes hash-verified WebP idempotently and refuses a wrong confirmation or immutable collision [3.54ms]
+(pass) reviewed evidence publication > rejects unreviewed frames, altered bytes, source traversal and mismatched restaurant videos [1.79ms]
+(pass) reviewed evidence publication > refuses publication through an output symlink [1.50ms]
+(pass) actual public popularity cohort > reproduces every published member from the frozen public business rows and observed video metrics [14.75ms]
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [1.62ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [3.27ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [0.57ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [1.33ms]
+(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [1.81ms]
+
+tests-unit/restaurant-merged-media.test.ts:
+(pass) restaurant merged media helpers > collects every youtube video and tzuyang review from merged restaurant records [0.19ms]
+(pass) restaurant merged media helpers > feeds merged media counts into natural detail copy [0.12ms]
+(pass) restaurant merged media helpers > keeps distinct youtube metadata when different videos share the same title [0.12ms]
+(pass) restaurant merged media helpers > hydrates a fetched single detail row with the selected merge context [0.22ms]
+(pass) restaurant merged media helpers > keeps a known tzuyang review when the fetched row has an empty review [0.06ms]
+(pass) restaurant merged media helpers > collects tzuyang reviews stored as arrays or review objects [0.03ms]
+(pass) restaurant merged media helpers > pairs each tzuyang review with its video title and publish date [0.08ms]
+
+tests-unit/overseas-map-marker-helpers.test.ts:
+(pass) overseas map marker helpers > builds class-only marker HTML with valid local and HTTPS images [0.12ms]
+(pass) overseas map marker helpers > fails closed for unsafe marker image values and escapes alt text [0.08ms]
+(pass) overseas map marker helpers > prefers selected restaurant id over searched id [0.02ms]
+(pass) overseas map marker helpers > toggles only fixed size and selected classes without style mutation [0.09ms]
+
+tests-unit/overseas-marker-refresh-browser.test.ts:
+(pass) retained overseas markers refresh content, location and click data without recreating or losing selection [1869.84ms]
+
+ 83 pass
+ 0 fail
+ 1252 expect() calls
+Ran 83 tests across 12 files. [9.06s]

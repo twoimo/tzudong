@@ -1,0 +1,1 @@
+reviews content/title/visited_at/user_id/restaurant_id and default consistency prerequisites: source-aligned

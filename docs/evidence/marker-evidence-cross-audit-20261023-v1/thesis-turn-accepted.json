@@ -1,0 +1,12 @@
+{
+  "meter_key": "chatgpt:primary:gpt-6-pro",
+  "event_id": "5a27c60b-1d2a-44f8-9bcd-444212c8605e",
+  "owner": "01a14e99-77bf-7531-b29e-a612bd99b540",
+  "url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "model": "GPT-6 / Pro",
+  "reservation": "eafa9bdb2f4d10f162bbc75e",
+  "status": "accepted",
+  "evidence": "One actual accepted GPT6/Pro ordinary user turn with source+brief; original UI and API user turn association. No numeric quota claim.",
+  "occurred_at": "2026-10-22T20:19:05.648156+00:00",
+  "updated_at": "2026-10-22T20:19:05.648156+00:00"
+}

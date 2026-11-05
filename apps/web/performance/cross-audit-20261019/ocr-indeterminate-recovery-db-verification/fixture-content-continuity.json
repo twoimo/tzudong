@@ -1,0 +1,24 @@
+{
+  "schema": "tzudong-recovery108-fixture-only-continuity/v1",
+  "observedAt": "2026-10-18T20:36:03.779192+00:00",
+  "fixtureBeforeSha256": "095128056aa744abec6daf42d062cc2d2026673f18f7efb88855f580b47a4940",
+  "fixtureAfterSha256": "27921380af4f850bcfc5127f81f862f4d7555b82dde58ebe009315b76eba3389",
+  "exactFixtureChanges": 2,
+  "change": "synthetic reviews.content 'fixture' -> 'fixture content'",
+  "manifestBeforeSha256": "22b7f13a11800cffec67a96b834d10600f7b318c0c9e147e0cdbe5dc15b325a6",
+  "manifestAfterSha256": "a2acfb69ebe46c4cb5cb05f3194950a4aece9506afced432d510d394c7bbee20",
+  "exactManifestChanges": 1,
+  "manifestChange": "fixture.sha256 only",
+  "priorAppVerificationSha256": "2ea02e4c46cdbe398a9135116e67ec9d5c7a20aadc40b0c4ecc060e61c375c31",
+  "changedVerificationInputs": [
+    ".github/receipt-ocr-recovery108-sql-successor.v1.json",
+    "backend/supabase/tests/receipt_ocr_indeterminate_recovery.sql"
+  ],
+  "rawMigrationUnchanged": true,
+  "compilerUnchanged": true,
+  "appRuntimeAndTypeScriptUnchanged": true,
+  "limitations": [
+    "Prior app tests/build remain at their exact source hash scope; updated compiler/fixture tests are a separate proof.",
+    "New main fixture actual DB behavior and current hosted state remain unverified at this checkpoint."
+  ]
+}

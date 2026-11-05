@@ -1,0 +1,37 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/evidence-publication-runtime.test.ts:
+(pass) reviewed evidence publication > publishes hash-verified WebP idempotently and refuses a wrong confirmation or immutable collision [8.74ms]
+(pass) reviewed evidence publication > rejects unreviewed frames, altered bytes, source traversal and mismatched restaurant videos [5.54ms]
+(pass) reviewed evidence publication > refuses publication through an output symlink [2.87ms]
+67 | 
+68 | describe('actual public popularity cohort', () => {
+69 |   test('reproduces every published member from the frozen public business rows and observed video metrics', async () => {
+70 |     const evidence = resolve(import.meta.dir, '../../../docs/evidence/marker-evidence-live-20261021-v1');
+71 |     const result = await buildPublicPopularity(join(evidence, 'approved-source-rows.json'), join(evidence, 'video-metrics-source.json'), publication.sourceRevision!);
+72 |     expect(result.publication).toEqual(publication);
+                                    ^
+error: expect(received).toEqual(expected)
+
+@@ -5172,9 +5172,9 @@
+        ],
+        "restaurantId": "ff57bed3-f7c7-4244-98c8-dc28814fd826",
+        "tier": "rainbow",
+      },
+    ],
+-   "publicationVersion": "video-views-20261022-v1",
++   "publicationVersion": "video-views-20261023-v2",
+    "schemaVersion": 2,
+    "sourceRevision": "13ded67a820549ae51f5b966104bf900c22aeb1a",
+  }
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/evidence-publication-runtime.test.ts:72:32)
+(fail) actual public popularity cohort > reproduces every published member from the frozen public business rows and observed video metrics [25.33ms]
+
+ 3 pass
+ 1 fail
+ 9 expect() calls
+Ran 4 tests across 1 file. [115.00ms]

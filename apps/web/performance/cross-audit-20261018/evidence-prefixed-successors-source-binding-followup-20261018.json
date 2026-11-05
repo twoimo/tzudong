@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "kind": "evidence-prefixed-successors-source-binding-followup",
+  "status": "clarified",
+  "priorConstituentSnapshot": {
+    "controller": {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+      "bytes": 27131,
+      "sha256": "bdb9a30dca157e3c55bc639dc64d983c597f586130be0a5a0a90641cb6e29654"
+    },
+    "predecessorManifestSha256": "dbec21b6a2d7b26a2c4a40da189347facd3fd255ac19e3301737c2d683aa92b5",
+    "featureManifestSha256": "b8a8f7c3495ceea1c57e687d8e1fda7266bb88077bebba30d35b863ae7a33cd8",
+    "proof": {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-evidence-prefixed-successors-20261018.json",
+      "sha256": "88d1fd0d382ebdfbfe84828b7abe6864e29a6160538d57a65bedaff3e5bb2e9e",
+      "classification": "constituent migration replay bound to the prior source snapshot"
+    },
+    "readinessReceipt": {
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-local-readiness-20261018.json",
+      "sha256": "7e9a89ddd73b2b73f5ee67267b5924ad055f508e3545ea0306024f5e74466650",
+      "classification": "historical readiness for the prior source snapshot; retained unchanged"
+    }
+  },
+  "currentAggregateSnapshot": {
+    "controller": {
+      "path": "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+      "bytes": 27403,
+      "sha256": "d76e45f0d3284d47a32231495409843b640f8107969ebf23814498f277827d3d"
+    },
+    "predecessorManifestSha256": "a48f4d883db91a2b4f44869476c9fe9e4f329468c1e406e3703823ffef1d6f92",
+    "featureManifestSha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+    "proof": {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-evidence-prefixed-aggregate-compiled-20261018.json",
+      "sha256": "0efdf7f1c9c60feda3d14d9473c464fa8ce91a23d5f12d9427bfbac2d4ccc0c6",
+      "classification": "compiler-produced aggregate SQL execution bound to the current source snapshot"
+    },
+    "readinessReceipt": {
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-aggregate-execution-20261018.json",
+      "sha256": "dedd656403e1f2577c75eab435ea27acf7adcdb57cd3b34b244f0849f5e5ca2b",
+      "classification": "latest local readiness; explicitly binds the current controller and manifest hashes"
+    }
+  },
+  "exactChange": {
+    "controller": [
+      "Extracted the shared compileEvidencePrefixedPlan(record, stageStates, mode) helper from the operating-only compile path.",
+      "Kept compileEvidencePrefixedApplyPlan on mode=operating with the same admission validation and bundle compiler.",
+      "Added compileEvidencePrefixedRehearsalAggregatePlan on mode=rehearsal so the compiler-produced aggregate SQL can execute against a synthetic local baseline without substituting hosted roots.",
+      "Added identityMode to compiled plan metadata so receipts distinguish operating and rehearsal identity modes."
+    ],
+    "manifest": "Only the controller toolchain SHA entry changed from bdb9a30d... to d76e45f0.... Replacing that single current hash with the prior value reproduces predecessor manifest dbec21b6... and feature manifest b8a8f7c3... exactly; transition, identity roots, evidence pins, target binding and held policy did not change.",
+    "test": "Added a regression that compiles both phases in rehearsal identity mode and proves their prefix roots differ from the hosted operating roots."
+  },
+  "evidenceBoundary": [
+    "The prior constituent proof remains valid only for bdb9a30d.../dbec21b6.../b8a8f7c3.... It is not presented as evidence for the current aggregate compiler source.",
+    "The current aggregate proof and latest readiness receipt bind d76e45f0.../a48f4d88.../45b7f146....",
+    "The two proof files are append-only, separate evidence classes; neither replaces or rewrites the other."
+  ],
+  "limitations": [
+    "Metadata clarification only; no SQL, PostgreSQL, Docker, hosted service, deployment or Git operation was executed."
+  ]
+}

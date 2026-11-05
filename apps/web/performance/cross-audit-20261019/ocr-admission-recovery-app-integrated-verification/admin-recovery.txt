@@ -1,0 +1,17 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-receipt-recovery.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+1 | throw new Error(
+              ^
+error: This module cannot be imported from a Client Component module. It should only be used from a Server Component.
+[REDACTED:phone]
+-------------------------------
+
+
+ 0 pass
+ 1 fail
+ 1 error
+Ran 1 test across 1 file. [77.00ms]

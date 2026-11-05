@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { createRecordActionClient, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT } from './record-action-client';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createRecordActionClient, RECORD_VIEWS_INVALIDATED_EVENT, RECORD_ACTION_APPLIED_EVENT, type RecordActionInput } from './record-action-client';
 import { RECORD_ACTION_CONFIRMATION, type RecordActionReceipt } from './record-action-contract';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ const labels: Record<string, string> = {
   youtube_link: '영상 링크', tzuyang_review: '영상 리뷰', road_address: '도로명 주소', jibun_address: '지번 주소', english_address: '영문 주소', restaurant_address: '주소',
   address_elements: '주소 정보', lat: '위도', lng: '경도', geocoding_success: '주소 확인', youtube_meta: '영상 정보', title: '영상 제목',
   published_at: '게시일', duration: '길이(초)', is_shorts: '쇼츠', is_ads: '광고', what_ads: '광고 내용',
+  sponsorship_confirmation: '광고 판정 직접 확정', detected: '광고 있음', confirmed_none: '광고 아님',
 };
 function ProposedValue({ value }: { value: unknown }) {
   if (value === null) return <span>비움</span>;
@@ -28,7 +29,7 @@ function ProposedValue({ value }: { value: unknown }) {
   return <span>{typeof value === 'string' ? labels[value] ?? value : String(value)}</span>;
 }
 
-export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => void, options: { recover?: boolean } = {}) {
+export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => void, options: { recover?: boolean; returnFocus?: () => HTMLElement | null } = {}) {
   const { user, isAdmin } = useAuth();
   const [binding, setBinding] = useState<string | null>(null);
   const [client] = useState(() => createRecordActionClient({
@@ -44,6 +45,21 @@ export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => v
   useEffect(() => { client.setOnRecovered(onRecovered); }, [client, onRecovered]);
   const state = useSyncExternalStore(client.subscribe, client.getSnapshot, client.getSnapshot);
   const [confirmation, setConfirmation] = useState('');
+  const openerRef = useRef<HTMLElement | null>(null);
+  const returnFocusRef = useRef(options.returnFocus);
+  useEffect(() => { returnFocusRef.current = options.returnFocus; });
+  const run = useCallback((input: RecordActionInput) => {
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return client.run(input);
+  }, [client]);
+  // The dialog has no Radix trigger, so its default close focus is document.body.
+  const restoreFocus = (event: Event) => {
+    event.preventDefault();
+    const opener = openerRef.current;
+    openerRef.current = null;
+    if (opener?.isConnected && !opener.matches(':disabled')) opener.focus();
+    if (document.activeElement === document.body) returnFocusRef.current?.()?.focus();
+  };
   useEffect(() => {
     let current = true;
     client.setActor(null); setBinding(null);
@@ -62,10 +78,10 @@ export function useRecordAction(onRecovered: (receipt: RecordActionReceipt) => v
   const parts = (state.request?.action ?? state.receipt?.action ?? '').split('.');
   const canCancel = client.canCancel() && !['checking', 'applying'].includes(state.phase);
   return {
-    run: client.run,
+    run,
     busy: state.phase !== 'idle',
     dialog: <Dialog open={state.phase !== 'idle'} onOpenChange={open => { if (!open && canCancel) client.cancel(); }}>
-      <DialogContent className={`flex max-h-[90dvh] max-w-xl flex-col overflow-hidden ${canCancel ? '' : '[&>button:last-child]:hidden'}`} onEscapeKeyDown={event => { if (!canCancel) event.preventDefault(); }} onInteractOutside={event => event.preventDefault()} aria-busy={['previewing', 'applying', 'checking'].includes(state.phase)}>
+      <DialogContent className={`flex max-h-[90dvh] max-w-xl flex-col overflow-hidden ${canCancel ? '' : '[&>button:last-child]:hidden'}`} onEscapeKeyDown={event => { if (!canCancel) event.preventDefault(); }} onInteractOutside={event => event.preventDefault()} onCloseAutoFocus={restoreFocus} aria-busy={['previewing', 'applying', 'checking'].includes(state.phase)}>
         <DialogHeader><DialogTitle className="text-base font-semibold leading-6">{parts.map(part => labels[part] ?? part).join(' ') || '이전 작업'} 확인</DialogTitle>
           <DialogDescription>현재 상태와 변경 내용을 확인한 뒤 “{RECORD_ACTION_CONFIRMATION}”을 입력하세요.</DialogDescription></DialogHeader>
         <div className="min-h-0 space-y-3 overflow-y-auto text-sm" data-record-action-preview>

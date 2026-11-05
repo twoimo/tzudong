@@ -74,6 +74,10 @@ export function generateWithProjectBudget(ai, request, timeoutMs = 300000) {
         config: {
             ...omitUnsupportedGeminiSampling(model, request.config),
             abortSignal: signal,
+            automaticContinuation: false,
+            // One budget admission is exactly one paid SDK attempt (backend/bin/REVIEW_GEMINI_DECISION.md).
+            // js-genai >= 2.30 enables automatic continuation by default, which would issue
+            // follow-up requests behind a single admission, so pin it off explicitly.
             httpOptions: { ...request.config?.httpOptions, timeout: timeoutMs, retryOptions: { attempts: 1 } },
         },
     }), timeoutMs, request.config?.abortSignal), request.config?.abortSignal ? { acquireTimeoutMs: timeoutMs } : undefined);

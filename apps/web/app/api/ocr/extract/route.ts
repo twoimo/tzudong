@@ -4,18 +4,32 @@ import crypto from 'crypto';
 import sharp from 'sharp';
 import { debugLog } from '@/lib/debug-log';
 import { assertPrivacySafe } from '@/lib/privacy/sanitize';
-import { callGeminiReceiptOcr, GEMINI_OCR_FALLBACK_MODEL, GeminiOcrError } from '@/lib/ocr/gemini';
+import {
+    callGeminiReceiptOcrWithCredentialFallback,
+    GEMINI_OCR_FALLBACK_MODEL,
+    GeminiOcrError,
+    getGeminiOcrInferenceConfigSnapshot,
+} from '@/lib/ocr/gemini';
 import {
     RECEIPT_OCR_EXTRACTION_PROMPT,
     RECEIPT_OCR_PREPROCESS_VERSION,
     RECEIPT_OCR_PROMPT_VERSION,
 } from '@/lib/ocr/receipt-prompt';
-import { resolveOcrAiRuntimeConfig, type OcrAiRuntimeConfigCandidate } from '@/lib/ocr/runtime-config';
+import { getOcrModelPolicy, resolveOcrAiRuntimeConfig } from '@/lib/ocr/runtime-config';
 import {
     buildReceiptOcrEnvelope,
-    flattenReceiptOcrEnvelope,
     RECEIPT_OCR_NORMALIZATION_VERSION,
 } from '@/lib/ocr/receipt-normalization';
+import {
+    DurableReceiptOcrCapabilityHeldError,
+    DurableReceiptOcrPendingError,
+    buildDurableReceiptOcrPayload,
+    buildOcrInputContextHash,
+    createSupabaseDurableReceiptOcrStore,
+    executeDurableReceiptOcr,
+    RECEIPT_OCR_DEFAULT_GENERATION,
+    toPublicReceiptOcrResponse,
+} from '@/lib/ocr/durable-result';
 import { findOcrRestaurantMatches } from '@/lib/ocr/restaurant-matching';
 import {
     buildOcrSuccessLogMetadata,
@@ -38,6 +52,9 @@ import {
     readBoundedOcrFormData,
 } from '@/lib/ocr/request-security';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { FEATURE_DATABASE_HELD_CODE, FEATURE_DATABASE_HELD_MESSAGE } from '@/lib/runtime-feature-readiness-contract';
+import { readFeatureDatabaseReadiness } from '@/lib/server/runtime-feature-readiness';
 
 // --- 설정 ---
 
@@ -81,6 +98,13 @@ async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savin
 
 const OCR_PROMPT = RECEIPT_OCR_EXTRACTION_PROMPT;
 
+class OcrHttpError extends Error {
+    constructor(public readonly status: number, public readonly publicMessage: string) {
+        super(publicMessage);
+        this.name = 'OcrHttpError';
+    }
+}
+
 
 
 
@@ -108,6 +132,12 @@ export async function POST(req: Request) {
         }
         const { supabase, user } = auth;
         authenticatedUserId = user.id;
+        if ((await readFeatureDatabaseReadiness({ ownerId: user.id })).status !== 'ready') {
+            return NextResponse.json(
+                { code: FEATURE_DATABASE_HELD_CODE, error: FEATURE_DATABASE_HELD_MESSAGE },
+                { status: 409, headers: { 'Cache-Control': 'no-store' } },
+            );
+        }
 
         const multipart = await readBoundedOcrFormData(req);
         if (!multipart.ok) {
@@ -125,14 +155,12 @@ export async function POST(req: Request) {
         const providerCandidates = [aiRuntime, ...aiRuntime.fallbackCandidates];
         const runnableCandidates = providerCandidates.filter(candidate => hasRunnableOcrCredentials([candidate]));
         const effectiveCandidates = runnableCandidates.length ? runnableCandidates : providerCandidates;
-        failureModel = `${effectiveCandidates[0]?.model || effectiveCandidates[0]?.models[0] || GEMINI_OCR_FALLBACK_MODEL}:fail`;
-        failureProvider = effectiveCandidates[0]?.provider ?? 'unknown';
-        if (!hasRunnableOcrCredentials(runnableCandidates)) {
-            return NextResponse.json(
-                { error: 'Gemini OCR API 키가 설정되지 않았습니다.' },
-                { status: 500 }
-            );
-        }
+        const candidate = effectiveCandidates[0];
+        const modelPolicy = candidate ? getOcrModelPolicy(candidate) : [GEMINI_OCR_FALLBACK_MODEL];
+        const inferenceConfig = getGeminiOcrInferenceConfigSnapshot();
+        const model = modelPolicy[0];
+        failureModel = `${model}:fail`;
+        failureProvider = candidate?.provider ?? 'unknown';
 
         if (!file) {
             return NextResponse.json({ error: '이미지가 제공되지 않았습니다' }, { status: 400 });
@@ -159,105 +187,129 @@ export async function POST(req: Request) {
             );
         }
 
-        // 공급자 호출 전에 DB 원자 예약으로 동시 요청도 일일 한도를 넘지 못하게 한다.
-        try {
-            const quota = await checkOcrDailyQuota({
-                quotaClient: ocrSupabase as never,
-                operationId: crypto.randomUUID(),
-            });
-
-            if (quota.exceeded) {
-                return NextResponse.json(
-                    { error: `일일 무료 분석 한도(${OCR_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.` },
-                    { status: 429 }
-                );
-            }
-        } catch {
-            return NextResponse.json(
-                { error: 'OCR 사용 한도를 확인할 수 없습니다.' },
-                { status: 503, headers: { 'Cache-Control': 'no-store' } },
-            );
-        }
-
-        // [비용 절감] 5. 이미지 압축
-        const { optimized, savings } = await optimizeImage(buffer);
-        const base64Image = optimized.toString('base64');
-
-        let ocrResult: Awaited<ReturnType<typeof callGeminiReceiptOcr>> | null = null;
-        let usedCandidate: OcrAiRuntimeConfigCandidate | null = null;
-        let failedAttemptCount = 0;
-        for (const candidate of effectiveCandidates) {
-            req.signal.throwIfAborted();
-            const credentials = getRunnableCredentials({ candidate, routingMode: aiRuntime.routingMode });
-            for (const credential of credentials) {
-                req.signal.throwIfAborted();
+        if (!candidate) throw new OcrHttpError(503, 'OCR 실행 구성을 확인할 수 없습니다.');
+        const credentials = getRunnableCredentials({ candidate, routingMode: aiRuntime.routingMode });
+        const freshArtifacts: { current: {
+            optimized: Buffer;
+            savings: string;
+            ocrResult: Awaited<ReturnType<typeof callGeminiReceiptOcrWithCredentialFallback>>;
+            envelope: ReturnType<typeof buildReceiptOcrEnvelope>;
+            restaurantMatches: Awaited<ReturnType<typeof findOcrRestaurantMatches>>;
+        } | null } = { current: null };
+        const durable = await executeDurableReceiptOcr({
+            store: createSupabaseDurableReceiptOcrStore(createSupabaseServiceRoleClient() as never),
+            binding: {
+                userId: user.id,
+                imageHash,
+                inputContextHash: buildOcrInputContextHash(imageHash, selectedRestaurantContext, inferenceConfig),
+                provider: candidate.provider,
+                modelPolicy,
+                generation: RECEIPT_OCR_DEFAULT_GENERATION,
+                promptVersion: RECEIPT_OCR_PROMPT_VERSION,
+                preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
+                normalizationVersion: RECEIPT_OCR_NORMALIZATION_VERSION,
+            },
+            operationId: crypto.randomUUID(),
+            forceRefresh,
+            beforeProvider: async () => {
+                if (!credentials[0]) throw new OcrHttpError(500, 'Gemini OCR API 키가 설정되지 않았습니다.');
+                let quota: Awaited<ReturnType<typeof checkOcrDailyQuota>>;
                 try {
-                    ocrResult = await callGeminiReceiptOcr({
-                        apiKey: credential.apiKey,
-                        imageBase64: base64Image,
-                        mimeType: 'image/jpeg',
-                        prompt: OCR_PROMPT,
-                        env: { ...process.env, GEMINI_OCR_MODEL: candidate.models.join(',') },
-                        signal: req.signal,
+                    quota = await checkOcrDailyQuota({
+                        quotaClient: ocrSupabase as never,
+                        operationId: crypto.randomUUID(),
                     });
-                    usedCandidate = candidate;
-                    break;
                 } catch {
-                    req.signal.throwIfAborted();
-                    failedAttemptCount += 1;
-                    if (aiRuntime.routingMode === 'manual') {
-                        throw new Error('OCR_MANUAL_PROVIDER_FAILED');
-                    }
+                    throw new OcrHttpError(503, 'OCR 사용 한도를 확인할 수 없습니다.');
                 }
-            }
-            if (ocrResult) break;
-        }
-        if (!ocrResult || !usedCandidate) {
-            throw new Error('OCR_PROVIDERS_FAILED');
-        }
-        const restaurantMatches = await findOcrRestaurantMatches({
-            receiptStoreName: ocrResult.data.store_name,
-            selectedRestaurant: selectedRestaurantContext,
-            ...createRestaurantLookupCallbacks(ocrSupabase as never),
+                if (quota.exceeded) {
+                    throw new OcrHttpError(429, `일일 무료 분석 한도(${OCR_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.`);
+                }
+            },
+            runProvider: async () => {
+                req.signal.throwIfAborted();
+                const { optimized, savings } = await optimizeImage(buffer!);
+                const ocrResult = await callGeminiReceiptOcrWithCredentialFallback({
+                    credentials,
+                    imageBase64: optimized.toString('base64'),
+                    mimeType: 'image/jpeg',
+                    prompt: OCR_PROMPT,
+                    env: { ...process.env, GEMINI_OCR_MODEL: modelPolicy.join(',') },
+                    inferenceConfig,
+                    signal: req.signal,
+                });
+                const restaurantMatches = await findOcrRestaurantMatches({
+                    receiptStoreName: ocrResult.data.store_name,
+                    selectedRestaurant: selectedRestaurantContext,
+                    ...createRestaurantLookupCallbacks(ocrSupabase as never),
+                });
+                const envelope = buildReceiptOcrEnvelope({
+                    provider: candidate.provider,
+                    model: ocrResult.model,
+                    attempts: ocrResult.attempts,
+                    data: ocrResult.data,
+                    matchedRestaurantCandidates: restaurantMatches.candidates,
+                });
+                freshArtifacts.current = { optimized, savings, ocrResult, envelope, restaurantMatches };
+                const payload = buildDurableReceiptOcrPayload({ provider: candidate.provider, model: ocrResult.model, envelope });
+                assertPrivacySafe(payload);
+                return payload;
+            },
         });
-        const envelope = buildReceiptOcrEnvelope({
-            provider: usedCandidate.provider,
-            model: ocrResult.model,
-            attempts: ocrResult.attempts,
-            data: ocrResult.data,
-            matchedRestaurantCandidates: restaurantMatches.candidates,
-        });
-        const responsePayload = flattenReceiptOcrEnvelope(envelope);
+        const responsePayload = toPublicReceiptOcrResponse(durable);
 
         // 성공 감사 로그에는 원본 OCR, 보정 결과, 자격 증명 출처를 저장하지 않습니다.
-        const successLogMetadata = buildOcrSuccessLogMetadata({
+        if (freshArtifacts.current) {
+          const fresh = freshArtifacts.current;
+          const successLogMetadata = buildOcrSuccessLogMetadata({
             fileSize: file.size,
-            compressedSize: optimized.length,
-            savings,
-            provider: usedCandidate.provider,
-            model: ocrResult.model,
+            compressedSize: fresh.optimized.length,
+            savings: fresh.savings,
+            provider: candidate.provider,
+            model: fresh.ocrResult.model,
             promptVersion: RECEIPT_OCR_PROMPT_VERSION,
             preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
             routingMode: aiRuntime.routingMode,
             normalizationVersion: RECEIPT_OCR_NORMALIZATION_VERSION,
-            fallbackUsed: usedCandidate.provider !== aiRuntime.provider || failedAttemptCount > 0,
+            fallbackUsed: candidate.provider !== aiRuntime.provider,
             forceRefresh,
-            envelope,
-            restaurantLookupStats: restaurantMatches.stats,
+            envelope: fresh.envelope,
+            restaurantLookupStats: fresh.restaurantMatches.stats,
         });
         assertPrivacySafe(successLogMetadata);
         const { error: logError } = await ocrLogsTable.insert({
             user_id: user.id,
             image_hash: imageHash,
-            model_used: ocrResult.model,
+            model_used: fresh.ocrResult.model,
             success: true,
             metadata: successLogMetadata,
         } as never);
         if (logError) console.error('OCR Log Insert Error:');
+        }
 
-        return NextResponse.json(responsePayload);
+        return NextResponse.json(responsePayload, { headers: { 'Cache-Control': 'no-store' } });
 
     } catch (error: unknown) {
+        if (error instanceof DurableReceiptOcrCapabilityHeldError) {
+            return NextResponse.json(
+                { code: FEATURE_DATABASE_HELD_CODE, error: FEATURE_DATABASE_HELD_MESSAGE },
+                { status: 503, headers: { 'Cache-Control': 'no-store' } },
+            );
+        }
+        if (error instanceof OcrHttpError) {
+            return NextResponse.json({ error: error.publicMessage }, {
+                status: error.status,
+                headers: { 'Cache-Control': 'no-store' },
+            });
+        }
+        if (error instanceof DurableReceiptOcrPendingError) {
+            return NextResponse.json({
+                code: error.state === 'processing' ? 'OCR_RESULT_PROCESSING' : 'OCR_RESULT_INDETERMINATE',
+                error: error.state === 'processing'
+                    ? '같은 영수증 분석이 진행 중입니다. 잠시 후 다시 확인해주세요.'
+                    : '이전 분석 결과를 확인할 수 없어 자동 재호출하지 않았습니다. 관리자에게 다시 분석을 요청해주세요.',
+            }, { status: 409, headers: { 'Cache-Control': 'no-store' } });
+        }
         const failureCode = error instanceof GeminiOcrError
             ? 'GEMINI_OCR_FAILED'
             : 'OCR_PROCESSING_FAILED';

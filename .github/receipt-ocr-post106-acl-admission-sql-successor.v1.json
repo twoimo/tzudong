@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "id": "receipt_ocr_post106_acl_admission_sql_successor_v1",
+  "purpose": "receipt-ocr-credential-release-acl-admission-post106",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "serverMajor": 17,
+  "databaseName": "postgres",
+  "executorRole": "postgres",
+  "advisoryLockKey": 7311754282260314,
+  "launchPolicy": {
+    "state": "held",
+    "code": "RECEIPT_OCR_POST106_ACL_LAUNCH_HELD",
+    "reason": "source-only-contract-pending-exact-pg17-default-acl-negative-and-aggregate-evidence"
+  },
+  "protectedSource": {
+    "remote": "origin",
+    "ref": "refs/heads/main",
+    "repositoryUrl": "https://github.com/twoimo/tzudong.git"
+  },
+  "stateRootAlgorithm": "review-media-ledger-identity/v1",
+  "operatingTransition": {
+    "before": 105,
+    "intermediate": 106,
+    "after": 107
+  },
+  "predecessor": {
+    "manifestPath": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
+    "manifestSha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+    "ledgerCount": 105,
+    "terminalIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c"
+  },
+  "baseSuccessor": {
+    "state": "held_unapplied",
+    "manifestPath": ".github/receipt-ocr-post105-sql-successor.v1.json",
+    "manifestSha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "compilerPath": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
+    "compilerSha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+    "operatingTargetIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+    "rehearsalTargetIdentityRoot": "b6184e8b14977dcba0d66959d1ef266b29268f5420b86451a7d213b81d5c6e24"
+  },
+  "rehearsalFixture": {
+    "path": "apps/web/performance/feature-sql-integration-20261013/pg17-evidence-prefixed-aggregate-compiled-20261018.json",
+    "receiptSha256": "0efdf7f1c9c60feda3d14d9473c464fa8ce91a23d5f12d9427bfbac2d4ccc0c6",
+    "ledgerCount": 105,
+    "terminalIdentityRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+    "stage106IdentityRoot": "b6184e8b14977dcba0d66959d1ef266b29268f5420b86451a7d213b81d5c6e24",
+    "targetIdentityRoot": "1b869222e1efc419e744eeabda52fd1d1900a6a71308a7227a583859136706f7"
+  },
+  "migration": {
+    "id": "receipt_ocr_credential_release_acl_admission_v2",
+    "version": "20261019120000",
+    "name": "receipt_ocr_credential_release_acl_admission_v2",
+    "path": "backend/supabase/migrations/20261019120000_receipt_ocr_credential_release_acl_admission_v2.sql",
+    "sha256": "512f778b71a196e28f092266782fe5938b7d15ec72b61bf05978f3b1696faec9",
+    "statementCount": 27,
+    "statementVectorSha256": "37decc48cfcd3cbb9e40afd6511929262da2400264aa1f18e51317a01d92e9bf"
+  },
+  "operatingIdentity": {
+    "stage106IdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+    "migrationIdentityRoot": "54d0570e259be8f6435da9ab655424d98a0566e36809ce37d52c631ebad2f696",
+    "suffixRoot": "d473f460ed45863ce606769339c7929e7735675159c3da1a11653bcbca16a664",
+    "targetIdentityRoot": "cd04aebfc1efcc5588486adf3b7ba47fc5b5b76e39a9c23e316768f2919d9d9e"
+  },
+  "requiredWriterFences": {
+    "adminRecordMutationsHold": "active",
+    "g037WriteFreeze": "active",
+    "automaticReviewer": "stopped",
+    "browserRpc": "stopped",
+    "directSql": "stopped",
+    "dashboard": "stopped",
+    "providerIngress": "stopped"
+  },
+  "toolchain": [
+    {
+      "path": "apps/web/scripts/receipt-ocr-post106-acl-admission-sql-successor.mjs",
+      "sha256": "5dd0c66725e14ee9584dd162dccda4419c304ddbda6f3f28b1e645b7aa686b21"
+    }
+  ]
+}

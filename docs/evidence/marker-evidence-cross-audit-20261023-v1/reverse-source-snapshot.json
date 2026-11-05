@@ -1,0 +1,319 @@
+{
+  "repository": "https://github.com/twoimo/tzudong",
+  "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+  "base": "ac80e35da566db242420a62bbf3e3320b5c00e76",
+  "files": [
+    {
+      "path": "apps/web/components/map/OverseasMap.tsx",
+      "bytes": 18977,
+      "sha256": "d72384160575bf47536dc785a7e20a6530add2a98c87ea6c6ef12541867af901",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+      "bytes": 5696,
+      "sha256": "b14790b6f9ce8333e39fdb0dd67d2a086c0a008b951b41e00134f1035b5917dc",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/frames.ts",
+      "bytes": 9579,
+      "sha256": "5527116d2bc4551c135c3061bbe2eedc3ccdd6c882fa3967e8596542df76e40d",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/guards.ts",
+      "bytes": 7046,
+      "sha256": "5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/types.ts",
+      "bytes": 3726,
+      "sha256": "9d64ad2c6e57bea45af5066d89a26535b616429c9032d16fccfefcdeb78bad6b",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/constants.ts",
+      "bytes": 7408,
+      "sha256": "471834208104d092365b8203350e7b9c4aba6a716a602f2a29589361d8fc9a43",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/errors.ts",
+      "bytes": 2008,
+      "sha256": "02bda67b89fadf3d2f5aa27f6a146c0dc746a7de1f9a6cd91dc82cf177e901c9",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/storage-key.mjs",
+      "bytes": 226,
+      "sha256": "4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/overseas-map-marker-helpers.ts",
+      "bytes": 1989,
+      "sha256": "0d6235f99fa1f23c8e4b7df435628e321698b0a646214984c655c26a184c2605",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/overseas-map-helpers.ts",
+      "bytes": 3355,
+      "sha256": "087b639dadb31c999af39f546d1ae7779836d956efe022f48cbab152da5f1097",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/html-escape.ts",
+      "bytes": 3845,
+      "sha256": "80483bd4443ee0d48e9162919cc050434f8e8251c19e7c68326fac07540b1d8e",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/popularity-marker.ts",
+      "bytes": 2969,
+      "sha256": "65fd5cc14b916e92720dfdaf81f20545b8caf3d8b3e56d9c06a4e4a9baea49d6",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-a.txt"
+    },
+    {
+      "path": "apps/web/lib/clustering.ts",
+      "bytes": 34849,
+      "sha256": "948e4ce00b3cd243c3230e1f43b87b431413cb8bf88dac55811f13a520a08cee",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/lib/restaurant-merged-media.ts",
+      "bytes": 11160,
+      "sha256": "c21e28124f56e02f919d504d1115b49b1da57f98d1fc452150b038e45513c93c",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/scripts/build-public-popularity.ts",
+      "bytes": 5238,
+      "sha256": "128bc03f61ade99632efd4a2f8b70d62527b24211f9d5bb5258d2ec442bc4b7b",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/published-popularity.ts",
+      "bytes": 5687,
+      "sha256": "84ee9979ace9756456178449f6d831fe796cee0d68d66e155fc127aaef4163f1",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/scripts/publish-evidence-frames.ts",
+      "bytes": 5449,
+      "sha256": "296ac93773968dda8b5daa8a8166ff234e782acbc31f8a9b178910221babee99",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/upload-evidence-frame.ts",
+      "bytes": 2259,
+      "sha256": "d1ce82e82f186752229832b21adc33298e07626a76f6661b883fa2e1125e48e7",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurant-detail.tsx",
+      "bytes": 3820,
+      "sha256": "6adc4c1c2391ba3ad47dd6c9637672c3d350099a0b46421b3676320ec03e8377",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/lib/overseas-region-matching.ts",
+      "bytes": 2650,
+      "sha256": "35333c22a6a6b677a7612ffe461774a54a84f9a8c6fa3e324885104a8d072c4f",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/components/map/naver-map-sidepanels.tsx",
+      "bytes": 4602,
+      "sha256": "3f11a9177cfac99ad3b8e7b6598b583ead7bd918e64c74ac44d9e7ac8d5eb4f4",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql",
+      "bytes": 2416,
+      "sha256": "d254fe76eb8c74587183bc89372891cd08a6a1cf92a99b8aa041497fa6ca7733",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-runtime-b.txt"
+    },
+    {
+      "path": "apps/web/tests-unit/clustering-region-district.test.ts",
+      "bytes": 13771,
+      "sha256": "69baa5893e494d7026cb047b4d1b12c2bc4d2e74e7d8a81cbc925dc549db6974",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-frame-conflict.test.ts",
+      "bytes": 1536,
+      "sha256": "70c6ab7c5275579d061b63705f9b2efaa7f1f60978b53981a6ec0c3fc81041b5",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-frame-failure-browser.test.ts",
+      "bytes": 4281,
+      "sha256": "2b61e2c6ddb2272adb46c47a24850b0be6eff70fc07414bb0a95b22874bb7207",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/tests-unit/overseas-marker-refresh-browser.test.ts",
+      "bytes": 7165,
+      "sha256": "842c2e9076aa17b2a1803bf8d3a2be580f65d0cc43dd20731baadf54b6e39edf",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/tests-unit/popularity-input-boundary.test.ts",
+      "bytes": 3850,
+      "sha256": "882b02a0e7f4073b9edaa4769cd921dbdbcd20380a2e88e551be689b20e21813",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/tests-unit/public-popularity-publication.test.ts",
+      "bytes": 12531,
+      "sha256": "6c552c1224825bb577e2d862acb4be325426064793e616e3981f19157c3933bb",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-publication-runtime.test.ts",
+      "bytes": 6477,
+      "sha256": "f6b6692b887d5cffd5b33f128a6fd2218fae4513dd6d9dee12b998a8fc161cd9",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/lib/restaurant-marker-kind.ts",
+      "bytes": 2454,
+      "sha256": "9b24ad33c226721584205536961a0285177ea9e515a6c9c5e0a06e6abaf9e90d",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/lib/naver-map-view-helpers.ts",
+      "bytes": 2816,
+      "sha256": "4da2b00df772267fbfebe32b7dfd13653aa600c8c94224b5d8c7981f038edff0",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "bytes": 9365,
+      "sha256": "6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/lib/naver-map-cluster-visuals.ts",
+      "bytes": 5849,
+      "sha256": "e6827ce69615a202ca866aa5ced193b78d8b16c3ab9f44d3abb665e7b94f4d92",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-native-tests.txt"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "bytes": 30154,
+      "sha256": "2313e3e7f76ad9e3137bd75aac525238809c3ffa120c36e55d856dddf396b1a7",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-domestic-integration.txt"
+    },
+    {
+      "path": "apps/web/types/restaurant.ts",
+      "bytes": 3942,
+      "sha256": "ef43ac1b93a751cb03fed1fcabecacf21d245e0b54f47a66dd67639c34ebd94b",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-domestic-integration.txt"
+    },
+    {
+      "path": "apps/web/components/map/NaverMapView.tsx",
+      "bytes": 172777,
+      "sha256": "37af27e8e7cbdbf25a64e97d1b7bcc6003fbcb12dd959a0bd09a5f4d8cdb90d2",
+      "commit": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+      "dirty": false,
+      "part": "reverse-domestic-integration.txt"
+    }
+  ],
+  "parts": [
+    {
+      "path": "reverse-runtime-a.txt",
+      "bytes": 69535,
+      "sha256": "6b1a9a5208d04b2016364be50e5a8f9d511e2d04489b48e88ce92376ab58187f"
+    },
+    {
+      "path": "reverse-runtime-b.txt",
+      "bytes": 80450,
+      "sha256": "5b119a1f48c3b9856873ddefcee40844f5f9f65b04cf5c0ab0eaf6147811654c"
+    },
+    {
+      "path": "reverse-native-tests.txt",
+      "bytes": 72658,
+      "sha256": "c94ce1448123ecb8a2dd3b73320afaac57c8388c65f1643baf80a9f939a50e53"
+    },
+    {
+      "path": "reverse-domestic-integration.txt",
+      "bytes": 207642,
+      "sha256": "29f9d2a738ba531b8f11ceddd0f7782bc7f4b483433f1de8551a14ea09e862d3"
+    }
+  ],
+  "bundle_sha256": "518e75cc2d05ed2dc3dedfdd7e27a3c5d41dd053e460ab3897768f96f7b106b2",
+  "construction": "Exact4nonoverlapping part bytes concatenated in listed order"
+}

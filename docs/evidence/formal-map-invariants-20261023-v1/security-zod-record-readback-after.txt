@@ -1,0 +1,10 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-record-action-failure-once-browser.test.ts:
+(pass) a record action failure shown in its dialog is not repeated as a toast [2759.14ms]
+(pass) after a confirmed apply removes the row, keyboard focus returns to the list area [2108.40ms]
+
+ 2 pass
+ 0 fail
+ 10 expect() calls
+Ran 2 tests across 1 file. [5.18s]

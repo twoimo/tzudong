@@ -1,0 +1,47 @@
+TZUDONG CMS CROSS-AUDIT NATIVE RESULTS
+generatedAt=2026-10-18T21:23:25+09:00
+candidateHead=457023a656c7d17671527870679f093ee01e5aeb
+scope=local source, unit, React+IndexedDB, and synthetic Chromium verification only
+
+COMMAND 1
+bun test tests-unit/review-save-submit.test.ts tests-unit/review-modal-ocr-ux.test.ts tests-unit/admin-moderation-inline-focus-browser.test.ts tests-unit/review-close-revision-browser.test.ts tests-unit/review-draft-revision-browser.test.ts tests-unit/review-draft-deletion-browser.test.ts tests-unit/admin-console-uiux-source.test.ts
+exit=0
+raw-summary:
+bun test v1.4.0 (34cbb9a40)
+131 pass
+0 fail
+4033 expect() calls
+Ran 131 tests across 7 files. [8.16s]
+
+Relevant browser results from the same command:
+(pass) captured draft deletion is atomic, scoped, retryable and protects replacement rows [919.34ms]
+(pass) inline moderation teardown restores only unclaimed connected row focus [1116.63ms]
+(pass) real React and IDB composer revision orderings [987.49ms]
+(pass) real React and IDB composer revision orderings [965.65ms]
+
+COMMAND 2
+bunx eslint components/reviews/ReviewModal.tsx components/admin/SubmissionListView.tsx tests-unit/review-save-submit.test.ts tests-unit/review-modal-ocr-ux.test.ts tests-unit/admin-console-uiux-source.test.ts tests-unit/admin-moderation-inline-focus-browser.test.ts tests-unit/review-close-revision-browser.test.ts tests-unit/review-draft-revision-browser.test.ts
+exit=0
+raw-output=<empty>
+
+COMMAND 3
+npm run typecheck:parity
+exit=0
+raw-output:
+> web@1.2.4 typecheck:parity
+> node scripts/run-typecheck.mjs --compiler parity
+{"status":"passed","diagnostics":0,"logicalInputs":3350,"logicalInputNamesSha256":"f1e3804a84543c735fd04e68236c8ea2896ba38152cc651bf69d2cd69cf6d6af","nonLibraryContentSha256":"42ae1ea0b8f88c64c5ae96d8284b3e5d9671dae1be68b24a22076f46cc68f35b","standardLibraryContentSha256":{"native":"d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64","compat":"82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"}}
+
+COMMAND 4
+git diff --check -- apps/web/components/reviews/ReviewModal.tsx apps/web/components/admin/SubmissionListView.tsx apps/web/tests-unit/review-save-submit.test.ts apps/web/tests-unit/review-modal-ocr-ux.test.ts apps/web/tests-unit/admin-console-uiux-source.test.ts apps/web/tests-unit/admin-moderation-inline-focus-browser.test.ts apps/web/tests-unit/review-close-revision-browser.test.ts apps/web/tests-unit/review-draft-revision-browser.test.ts
+exit=0
+raw-output=<empty>
+
+BOUNDARIES
+externalRequestsDuringInlineChromiumFixture=0
+providerCalls=0
+hostedDatabaseCalls=0
+storageCalls=0
+deploymentWrites=0
+sourceReportEdited=false
+priorSynthetic390SheetEvidenceUsedForInlineDecision=false

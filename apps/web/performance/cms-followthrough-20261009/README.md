@@ -17,11 +17,13 @@ These are bounded behavior fixes, not evidence that every CMS function, public r
 | Operations request cancellation | Owner abort remains cancellation; timeout and forbidden responses remain bounded | Five new behavioral unit cases plus existing read-model contracts | Real operator session and hosted outages are not exercised |
 | Operations inspector | Desktop Escape closes and returns focus; mobile Sheet retained | Browser results below; only synthetic read responses | Hosted user flow not exercised |
 | Admin navigation | 15 modules listed by the actual sidebar ID contract | Prior hydration target list omitted three modules; updated spec passed all 15 modules and one legacy alias below | Shell/header checks do not prove successful data or mutation workflows |
-| Public/account pages | 22 page.tsx route sources exist | Source inventory only in this helper run | Public route functional and visual validation remains required |
+| Public/account surfaces | 21 page.tsx sources plus 1 GET route handler exist | Source inventory only in this helper run | Public route functional and visual validation remains required |
 | Legacy/admin pages | 5 page.tsx route sources exist | Source inventory; canonical module checks distinct | Authenticated legacy redirect/content paths remain unverified |
 | Existing design contracts | Admin two-pane grammar and shared shell asserted | Four targeted test files: 28 pass, 0 fail; ESLint passes; typecheck parity 0 diagnostics | Source assertions are not rendered visual evidence |
 
 ## Route inventory
+
+이 호환 inventory는 논리 표면 27개를 유지한다. 실제 `page.tsx`는 공개·계정 21개와 관리자 5개로 26개이며, `/s/[code]`는 `app/s/[code]/route.ts`의 GET HTTP handler 1개다. 아래 표의 `This run`은 원래 측정 범위를 그대로 보존하며 현재 브라우저·인증·운영 검증을 뜻하지 않는다. 잘못된 이전 `page.tsx` 바인딩 원문은 `archive/route-inventory-page-source-original.json`에 보존했다.
 
 | Route | Source | This run |
 | --- | --- | --- |
@@ -43,7 +45,7 @@ These are bounded behavior fixes, not evidence that every CMS function, public r
 | `/` | `app/page.tsx` | Source only |
 | `/privacy/onboarding` | `app/privacy/onboarding/page.tsx` | Source only |
 | `/privacy` | `app/privacy/page.tsx` | Source only |
-| `/s/[code]` | `app/s/[code]/page.tsx` | Source only |
+| `/s/[code]` | `app/s/[code]/route.ts` (GET HTTP handler) | Source only |
 | `/stamp` | `app/stamp/page.tsx` | Source only |
 | `/submissions` | `app/submissions/page.tsx` | Source only |
 | `/user/[userId]` | `app/user/[userId]/page.tsx` | Source only |

@@ -1,11 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, realpathSync } from "node:fs";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
 const source = (file: string) => readFileSync(resolve(root, file), "utf8");
 const parseBunLock = () => JSON.parse(source("bun.lock").replace(/,\s*([}\]])/g, "$1"));
+const repositoryCompilerIsAdmitted = () => {
+  try {
+    const compiler = realpathSync(resolve(root, "node_modules/@typescript/native/bin/tsc"));
+    const repository = realpathSync(root);
+    const pathFromRepository = relative(repository, compiler);
+    return pathFromRepository === ""
+      || (!pathFromRepository.startsWith(`..${sep}`)
+        && pathFromRepository !== ".."
+        && !isAbsolute(pathFromRepository));
+  } catch {
+    return false;
+  }
+};
 
 describe("Pin_Contract verifier source contract (design C2 / requirement 5)", () => {
   const verifier = source("scripts/verify-pin-contract.mjs");
@@ -91,9 +104,9 @@ describe("Pin_Contract verifier runtime behavior", () => {
       shell: false,
     });
 
-  test("rejects an absent repository compiler or emits a per-item installed-compiler receipt", () => {
+  test("rejects an absent or outside-root repository compiler or emits a per-item installed-compiler receipt", () => {
     const result = runVerifier();
-    if (!existsSync(resolve(root, 'node_modules/@typescript/native/bin/tsc'))) {
+    if (!repositoryCompilerIsAdmitted()) {
       expect(result.status).toBe(1);
       expect(result.stdout).toBe('');
       expect(result.stderr).toContain('global_compiler_not_admitted');

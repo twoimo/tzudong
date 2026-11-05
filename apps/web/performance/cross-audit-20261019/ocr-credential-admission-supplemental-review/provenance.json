@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "scope": "supplemental two-decision frozen-source review; not Gemini antithesis or final reverse audit",
+  "conversationUrl": "https://chatgpt.com/c/6ad50f71-6e94-83ee-bdf1-851a80101df8",
+  "sourceRevision": "14a8f5da4268df890c7adf10bf89e99ce071f6f5",
+  "sourceBundleSha256": "90c4e3f0540c90d4be1f9ea1439538e73feddaf79790e0cdb90ebcd179921866",
+  "planSha256": "b46b396329f7958305cb121e9c6db7772b49204a4085093a6af6f5709a85ac2b",
+  "promptSha256": "ec67bfc899572610b6bae7c17b548d1ea8333758ae62cf884d5505468e0fc901",
+  "observedModel": "GPT-6 checked / Pro5of5",
+  "backendModelIdentity": "unverified",
+  "researchMode": "Deep Research chip, accepted plan and actual researching/stop UI, completed card and Markdown export",
+  "reportedUiStatistics": {
+    "durationLabel": "6m",
+    "sourceCount": 5,
+    "searchCount": 53,
+    "countsIndependentlyVerified": false
+  },
+  "fullReport": {
+    "path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/chatgpt-full-report.md",
+    "bytes": 38673,
+    "sha256": "117b7a0f220af81c5283b385a1b5f46b440c628521fc5ca3522f3a5e7517a215",
+    "verbatimByteCopy": true
+  },
+  "completedReportCardTitle": "OCR credential-release 및 operating admission 독립 검토 보고서",
+  "savedAt": "2026-10-18T18:36:34.206269+00:00",
+  "adjudicationComplete": false,
+  "hostedOrDeploymentEvidence": false,
+  "quotaSavingsClaimed": false
+}

@@ -45,9 +45,15 @@ class SegmentExecutionTests(unittest.TestCase):
             kwargs["observe"]({**observed, "httpOutcome": "transport_uncertain", "responseId": None})
             raise m.adapter.AdapterError("WATCH_TRANSPORT_UNCERTAIN")
         kwargs["observe"](observed)
+        if self.scenario == "pending":
+            raise m.adapter.AdapterError("WATCH_RESPONSE_NOT_COMPLETED")
         value = self.answer(kwargs["start"], kwargs["end"])
         if self.scenario == "invalid":
             value["summary"][0]["evidence"][0]["startSeconds"] = "00:01"
+        if self.scenario == "partial":
+            value["coverage"]["complete"] = False
+            value["coverage"]["limitations"] = ["private raw limitation marker"]
+            value["summary"][0]["text"] = "private raw summary marker"
         return {"text": json.dumps(value), "observation": observed, "responseSha256": m.digest(value)}
 
     def execute(self, *, config=None, limits=None, batch_id=None, rows=None):
@@ -148,6 +154,7 @@ class SegmentExecutionTests(unittest.TestCase):
         receipt = m.checked_document(active_segment_receipt)
         receipt["identity"] = contract["receiptIdentity"]
         receipt["observationSha256"] = m.digest(observation)
+        receipt.update(state="uncertain", code="WATCH_RESPONSE_NOT_COMPLETED")
         _, predecessor_segment_receipt, predecessor_segment_evidence = m._exact_paths(
             self.state, span, self.config, config_identity)
         predecessor_observation = predecessor_segment_receipt.with_name(
@@ -158,6 +165,8 @@ class SegmentExecutionTests(unittest.TestCase):
         _, active_root_receipt, _ = m.paths(self.state, row, self.config)
         root = m.checked_document(active_root_receipt)
         root["identity"] = m.identity(row, self.config, config_identity=config_identity)
+        root.update(state="segmented", code="SEGMENTS_PENDING")
+        root.pop("blockedSegment", None)
         _, predecessor_root_receipt, predecessor_root_evidence = m._exact_paths(
             self.state, row, self.config, config_identity)
         m.atomic_document(predecessor_root_receipt, root)
@@ -569,19 +578,57 @@ class SegmentExecutionTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 1)
         self.assertEqual(m.readback([self.row], self.state, self.config)["unresolved"], 1)
 
+    def test_partial_rejection_records_only_bounded_reason_and_blocks_every_restart_path(self):
+        self.scenario = "partial"
+        result = self.execute()
+        span = m.segment_rows(self.row, self.config)[0]
+        _, segment_path, evidence_path = m.paths(self.state, span, self.config)
+        _, parent_path, _ = m.paths(self.state, self.row, self.config)
+        segment = m.checked_document(segment_path)
+        parent = m.checked_document(parent_path)
+        expected = {"schemaVersion": 1, "reason": "COVERAGE_INCOMPLETE", "segmentIndex": 0,
+                    "startSeconds": 0, "endSeconds": 30, "reportedStartSeconds": 0,
+                    "reportedEndSeconds": 30, "reportedComplete": False, "limitationsCount": 1,
+                    "summaryCount": 2, "summaryEvidenceCount": 2}
+        self.assertEqual((segment["state"], segment["code"], segment["validationFailure"]),
+                         ("rejected", "ANALYSIS_PARTIAL", expected))
+        self.assertEqual((parent["state"], parent["code"], parent["validationFailure"]),
+                         ("rejected", "ANALYSIS_PARTIAL", expected))
+        self.assertEqual(parent["blockedSegment"], {
+            "segmentIndex": 0, "startSeconds": 0, "endSeconds": 30,
+            "receiptSha256": m.digest(segment), "observationSha256": segment["observationSha256"]})
+        self.assertEqual(m.segment_outcome(segment, span)["state"], "rejected")
+        self.assertFalse(evidence_path.exists())
+        serialized = "\n".join(path.read_text() for path in self.state.rglob("*.json"))
+        self.assertNotIn("private raw limitation marker", serialized)
+        self.assertNotIn("private raw summary marker", serialized)
+        before = {path: path.read_bytes() for path in self.state.rglob("*.json")}
+        calls = len(self.calls)
+        self.execute(batch_id="partial-restart")
+        with patch.object(m.adapter, "invoke", side_effect=AssertionError("partial rejection cannot GET")):
+            readback = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+        self.assertEqual((result["code"], readback["unresolved"], readback["readbackCalls"]),
+                         ("READBACK_REQUIRED", 1, 0))
+        self.assertEqual(len(self.calls), calls)
+        self.assertEqual({path: path.read_bytes() for path in self.state.rglob("*.json")}, before)
+
     def test_transport_uncertainty_without_id_is_blocked_even_on_provider_readback(self):
         self.scenario = "timeout"
         self.execute()
         _, path, _ = m.paths(self.state, m.segment_rows(self.row, self.config)[0], self.config)
-        self.assertEqual(m.checked_document(path)["state"], "uncertain")
+        segment = m.checked_document(path)
+        _, parent_path, _ = m.paths(self.state, self.row, self.config)
+        parent = m.checked_document(parent_path)
+        self.assertEqual((segment["state"], parent["state"]), ("uncertain", "uncertain"))
+        self.assertEqual(m.segment_outcome(segment, m.segment_rows(self.row, self.config)[0])["state"], "uncertain")
         with patch.object(m.adapter, "invoke", side_effect=AssertionError("must not resend")):
             result = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
         self.assertEqual((result["unresolved"], result["readbackCalls"]), (1, 0))
         self.execute(batch_id="new-batch")
         self.assertEqual(len(self.calls), 1)
 
-    def test_explicit_readback_uses_original_id_then_only_new_segments_may_execute(self):
-        self.scenario = "invalid"
+    def test_explicit_readback_uses_uncertain_original_id_then_only_new_segments_may_execute(self):
+        self.scenario = "pending"
         self.execute()
         self.scenario = "valid"
         with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), patch.object(m, "verify_checkout"), \
@@ -590,9 +637,102 @@ class SegmentExecutionTests(unittest.TestCase):
         self.assertEqual((result["unresolved"], result["readbackCalls"]), (1, 1))  # The second segment has not run.
         self.assertEqual(self.calls[-1]["response_id"], "v1_fixture_0")
         self.assertEqual(self.calls[-1]["request_digest"], "e" * 64)
+        first = m.segment_rows(self.row, self.config)[0]
+        _, receipt_path, _ = m.paths(self.state, first, self.config)
+        observation_path = receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".observation.json"))
+        receipt, observation = m.checked_document(receipt_path), m.checked_document(observation_path)
+        self.assertEqual(receipt["observationSha256"], m.digest(observation))
+        self.assertFalse(m._readback_binding_path(receipt_path).exists())
         finished = self.execute(batch_id="after-readback")
         self.assertEqual(finished["succeeded"], 1)
         self.assertEqual([call["start"] for call in self.calls], [0, 0, 30])
+
+    def test_confirmed_rejection_is_not_provider_readback_eligible(self):
+        self.scenario = "invalid"
+        self.execute()
+        with patch.object(m.adapter, "invoke", side_effect=AssertionError("confirmed rejection cannot GET")):
+            result = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+        self.assertEqual(result, {"phase": "readback", "recovered": 0, "unresolved": 1, "readbackCalls": 0})
+        first = m.segment_rows(self.row, self.config)[0]
+        _, receipt_path, evidence_path = m.paths(self.state, first, self.config)
+        observation_path = receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".observation.json"))
+        receipt, observation = m.checked_document(receipt_path), m.checked_document(observation_path)
+        self.assertEqual((receipt["state"], receipt["code"]),
+                         ("rejected", "ANALYSIS_EVIDENCE_INVALID"))
+        self.assertEqual((observation["operation"], receipt["observationSha256"]),
+                         ("generate", m.digest(observation)))
+        self.assertFalse(evidence_path.exists())
+        self.assertFalse(m._readback_binding_path(receipt_path).exists())
+
+    def test_active_readback_pair_recovers_each_interrupted_commit_boundary_without_get(self):
+        original_state = self.state
+        for interrupted_name in ("binding", "observation", "receipt"):
+            with self.subTest(interrupted_name=interrupted_name), tempfile.TemporaryDirectory() as temporary:
+                self.state = Path(temporary) / "state"
+                self.scenario = "pending"
+                self.execute()
+                self.scenario = "valid"
+                first = m.segment_rows(self.row, self.config)[0]
+                _, receipt_path, _ = m.paths(self.state, first, self.config)
+                observation_path = receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".observation.json"))
+                binding_path = m._readback_binding_path(receipt_path)
+                targets = {"binding": binding_path, "observation": observation_path, "receipt": receipt_path}
+                original_atomic = m.atomic_document
+                armed = False
+                interrupted = False
+
+                def invoke(**kwargs):
+                    nonlocal armed
+                    armed = True
+                    return self.invoke(**kwargs)
+
+                def atomic(path, payload):
+                    nonlocal interrupted
+                    original_atomic(path, payload)
+                    if armed and not interrupted and path == targets[interrupted_name]:
+                        interrupted = True
+                        raise KeyboardInterrupt()
+
+                with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), \
+                        patch.object(m, "verify_checkout"), \
+                        patch.object(m, "project_budget", return_value=self.budget), \
+                        patch.object(m.adapter, "invoke", side_effect=invoke), \
+                        patch.object(m, "atomic_document", side_effect=atomic), \
+                        self.assertRaises(KeyboardInterrupt):
+                    m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+
+                with patch.object(m.adapter, "invoke", side_effect=AssertionError("restart recovery must not call provider")):
+                    recovered = m.readback([self.row], self.state, self.config)
+                self.assertEqual(recovered, {"phase": "readback", "recovered": 0,
+                                             "unresolved": 1, "readbackCalls": 0})
+                receipt, observation = m.checked_document(receipt_path), m.checked_document(observation_path)
+                self.assertEqual(receipt["observationSha256"], m.digest(observation))
+                self.assertFalse(binding_path.exists())
+        self.state = original_state
+
+    def test_active_readback_not_sent_does_not_replace_durable_generation_observation(self):
+        self.scenario = "pending"
+        self.execute()
+        first = m.segment_rows(self.row, self.config)[0]
+        _, receipt_path, _ = m.paths(self.state, first, self.config)
+        observation_path = receipt_path.with_name(receipt_path.name.replace(".receipt.json", ".observation.json"))
+        before = observation_path.read_bytes()
+
+        def not_sent(**kwargs):
+            previous = m.checked_document(observation_path)
+            kwargs["observe"]({**previous, "operation": "readback", "httpOutcome": "not_sent",
+                               "usage": m.adapter.usage(None)})
+            raise m.adapter.AdapterError("WATCH_TRANSPORT_UNCERTAIN")
+
+        with patch.dict(m.os.environ, {"GEMINI_API_KEY": "synthetic-key"}), patch.object(m, "verify_checkout"), \
+                patch.object(m, "project_budget", return_value=self.budget), \
+                patch.object(m.adapter, "invoke", side_effect=not_sent):
+            result = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+        self.assertEqual(result, {"phase": "readback", "recovered": 0, "unresolved": 1, "readbackCalls": 1})
+        self.assertEqual(observation_path.read_bytes(), before)
+        receipt, observation = m.checked_document(receipt_path), m.checked_document(observation_path)
+        self.assertEqual(receipt["observationSha256"], m.digest(observation))
+        self.assertFalse(m._readback_binding_path(receipt_path).exists())
 
     def test_missing_or_corrupt_segment_receipt_cannot_support_full_coverage(self):
         self.execute()
@@ -682,6 +822,193 @@ class SegmentExecutionTests(unittest.TestCase):
             result = m.execute([self.row], self.info, self.state, self.config, self.limits)
         self.assertEqual((result["reused"], result["attempted"]), (1, 0))
         self.assertEqual({p: p.read_bytes() for p in self.state.rglob("*.json")}, before)
+
+    def test_observability_predecessor_success_is_reused_without_rewrite_or_provider(self):
+        predecessor = m.observability_predecessor_config(self.config)
+        with patch.object(m.AnalysisConfig, "identity", new=property(lambda _: predecessor)):
+            self.execute(batch_id="pre-diagnostics")
+        before = {path: path.read_bytes() for path in self.state.rglob("*.json")}
+        calls = len(self.calls)
+        with patch.object(m.adapter, "invoke", side_effect=AssertionError("compatible success cannot call provider")):
+            plan = m.make_plan([self.row], self.info, self.state, self.config)
+            executed = m.execute([self.row], self.info, self.state, self.config, self.limits,
+                                 batch_id="post-diagnostics")
+            readback = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+        self.assertEqual(plan["cache"], {"reusable": 1, "new": 0, "terminal_rejected": 0,
+                                         "readback_required": 0, "corrupt": 0})
+        self.assertEqual((executed["reused"], executed["attempted"]), (1, 0))
+        self.assertEqual(readback, {"phase": "readback", "recovered": 0, "unresolved": 0, "readbackCalls": 0})
+        self.assertEqual(len(self.calls), calls)
+        self.assertEqual({path: path.read_bytes() for path in self.state.rglob("*.json")}, before)
+
+    def test_observability_predecessor_partial_without_details_stays_unknown_and_unresolved(self):
+        predecessor = m.observability_predecessor_config(self.config)
+        self.scenario = "partial"
+        with patch.object(m.AnalysisConfig, "identity", new=property(lambda _: predecessor)):
+            self.execute(batch_id="pre-diagnostics-partial")
+        span = m.segment_rows(self.row, self.config)[0]
+        _, segment_path, _ = m._exact_paths(self.state, span, self.config, predecessor)
+        _, parent_path, _ = m._exact_paths(self.state, self.row, self.config, predecessor)
+        segment = m.checked_document(segment_path)
+        segment.pop("validationFailure")
+        m.atomic_document(segment_path, segment)
+        parent = m.checked_document(parent_path)
+        parent.update(state="segmented", code="SEGMENTS_PENDING")
+        parent.pop("validationFailure", None)
+        parent.pop("blockedSegment", None)
+        m.atomic_document(parent_path, parent)
+        outcome = m.segment_outcome(segment, span)
+        self.assertEqual((outcome["state"], outcome["validationFailure"]["reason"]), ("rejected", "UNKNOWN"))
+        before = {path: path.read_bytes() for path in self.state.rglob("*.json")}
+        calls = len(self.calls)
+        with patch.object(m.adapter, "invoke", side_effect=AssertionError("legacy rejection cannot call provider")):
+            plan = m.make_plan([self.row], self.info, self.state, self.config)
+            executed = m.execute([self.row], self.info, self.state, self.config, self.limits,
+                                 batch_id="post-diagnostics-partial")
+            readback = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+        self.assertEqual(plan["cache"], {"reusable": 0, "new": 0, "terminal_rejected": 1,
+                                         "readback_required": 0, "corrupt": 0})
+        self.assertEqual(plan["classificationDenominator"], {
+            "total": 1, "reusable": 0, "new": 0, "partial": 1, "failed": 0,
+            "uncertain": 0, "corrupt": 0, "providerGetEligible": 0,
+            "automaticProviderCalls": 0, "uncertaintyReasons": {}})
+        self.assertEqual((executed["blocked"], executed["attempted"]), (1, 0))
+        self.assertEqual(readback, {"phase": "readback", "recovered": 0, "unresolved": 1, "readbackCalls": 0})
+        self.assertEqual(len(self.calls), calls)
+        self.assertEqual({path: path.read_bytes() for path in self.state.rglob("*.json")}, before)
+
+    def test_observability_predecessor_binding_mismatch_stays_uncertain_and_get_ineligible(self):
+        predecessor = m.observability_predecessor_config(self.config)
+        self.scenario = "invalid"
+        with patch.object(m.AnalysisConfig, "identity", new=property(lambda _: predecessor)):
+            self.execute(batch_id="pre-diagnostics-binding-mismatch")
+        span = m.segment_rows(self.row, self.config)[0]
+        _, segment_path, _ = m._exact_paths(self.state, span, self.config, predecessor)
+        _, parent_path, _ = m._exact_paths(self.state, self.row, self.config, predecessor)
+        observation_path = segment_path.with_name(segment_path.name.replace(".receipt.json", ".observation.json"))
+        observation = m.checked_document(observation_path)
+        observation["operation"] = "readback"
+        m.atomic_document(observation_path, observation)
+        parent = m.checked_document(parent_path)
+        parent.update(state="segmented", code="SEGMENTS_PENDING")
+        parent.pop("blockedSegment", None)
+        m.atomic_document(parent_path, parent)
+        before = {path: path.read_bytes() for path in self.state.rglob("*.json")}
+        calls = len(self.calls)
+        with patch.object(m.adapter, "invoke", side_effect=AssertionError("mismatched binding cannot GET")):
+            plan = m.make_plan([self.row], self.info, self.state, self.config)
+            executed = m.execute([self.row], self.info, self.state, self.config, self.limits,
+                                 batch_id="post-diagnostics-binding-mismatch")
+            readback = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+        self.assertEqual(plan["cache"], {"reusable": 0, "new": 0, "terminal_rejected": 0,
+                                         "readback_required": 1, "corrupt": 0})
+        self.assertEqual(plan["classificationDenominator"], {
+            "total": 1, "reusable": 0, "new": 0, "partial": 0, "failed": 0,
+            "uncertain": 1, "corrupt": 0, "providerGetEligible": 0,
+            "automaticProviderCalls": 0,
+            "uncertaintyReasons": {"REQUEST_OBSERVATION_BINDING_MISMATCH": 1}})
+        self.assertEqual((executed["blocked"], executed["attempted"]), (1, 0))
+        self.assertEqual(readback, {"phase": "readback", "recovered": 0, "unresolved": 1, "readbackCalls": 0})
+        self.assertEqual(len(self.calls), calls)
+        self.assertEqual({path: path.read_bytes() for path in self.state.rglob("*.json")}, before)
+
+    def test_hash_bound_uncertain_response_id_is_get_eligible_only_for_provider_operations(self):
+        self.scenario = "pending"
+        self.execute(batch_id="pending-provider-result")
+        span = m.segment_rows(self.row, self.config)[0]
+        _, receipt_path, _ = m.paths(self.state, span, self.config)
+        observation_path = receipt_path.with_name(
+            receipt_path.name.replace(".receipt.json", ".observation.json")
+        )
+        receipt = m.checked_document(receipt_path)
+        observation = m.checked_document(observation_path)
+        self.assertEqual((receipt["state"], observation["operation"]), ("uncertain", "generate"))
+        self.assertIsNotNone(observation["responseId"])
+        self.assertEqual(receipt["requestSha256"], observation["requestSha256"])
+        self.assertEqual(receipt["responseId"], observation["responseId"])
+
+        for operation, eligible in (("generate", 1), ("readback", 1), ("count", 0)):
+            with self.subTest(operation=operation):
+                observation["operation"] = operation
+                m.atomic_document(observation_path, observation)
+                receipt["observationSha256"] = m.digest(observation)
+                m.atomic_document(receipt_path, receipt)
+                before = {path: path.read_bytes() for path in self.state.rglob("*.json")}
+                with patch.object(m.adapter, "invoke", side_effect=AssertionError("plan cannot call provider")):
+                    plan = m.make_plan([self.row], self.info, self.state, self.config)
+                self.assertEqual(plan["cache"]["readback_required"], 1)
+                self.assertEqual(plan["classificationDenominator"]["providerGetEligible"], eligible)
+                self.assertEqual(plan["classificationDenominator"]["automaticProviderCalls"], 0)
+                self.assertEqual({path: path.read_bytes() for path in self.state.rglob("*.json")}, before)
+
+    def test_cross_swapped_response_id_is_not_get_eligible_or_sent(self):
+        self.scenario = "pending"
+        self.execute(batch_id="originating-request-a")
+        span = m.segment_rows(self.row, self.config)[0]
+        _, receipt_path, _ = m.paths(self.state, span, self.config)
+        observation_path = receipt_path.with_name(
+            receipt_path.name.replace(".receipt.json", ".observation.json")
+        )
+        receipt = m.checked_document(receipt_path)
+        originating = m.checked_document(observation_path)
+        swapped = {**originating, "responseId": "v1_fixture_request_b",
+                   "requestSha256": originating["requestSha256"]}
+        m.atomic_document(observation_path, swapped)
+        receipt["observationSha256"] = m.digest(swapped)
+        m.atomic_document(receipt_path, receipt)
+
+        with patch.object(m.adapter, "invoke", side_effect=AssertionError("mismatched request must not GET")):
+            plan = m.make_plan([self.row], self.info, self.state, self.config)
+            readback = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+
+        self.assertEqual(plan["cache"]["readback_required"], 1)
+        self.assertEqual(plan["classificationDenominator"]["providerGetEligible"], 0)
+        self.assertEqual(plan["classificationDenominator"]["uncertaintyReasons"], {
+            "REQUEST_OBSERVATION_BINDING_MISMATCH": 1,
+        })
+        self.assertEqual(readback, {"phase": "readback", "recovered": 0,
+                                    "unresolved": 1, "readbackCalls": 0})
+
+    def test_pre_lineage_success_and_uncertainty_remain_byte_identical_provider_holds(self):
+        original_state = self.state
+        for scenario, expected_cache in (("valid", "corrupt"), ("pending", "readback_required")):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                self.state = Path(temporary) / "state"
+                self.scenario = scenario
+                self.execute(batch_id=f"pre-lineage-{scenario}")
+                span = m.segment_rows(self.row, self.config)[0]
+                _, segment_path, _ = m.paths(self.state, span, self.config)
+                _, root_path, root_evidence_path = m.paths(self.state, self.row, self.config)
+                segment = m.checked_document(segment_path)
+                segment.pop("requestSha256")
+                segment.pop("responseId")
+                m.atomic_document(segment_path, segment)
+                root = m.checked_document(root_path)
+                if scenario == "valid":
+                    evidence = m.checked_document(root_evidence_path)
+                    evidence["segments"][0]["receiptSha256"] = m.digest(segment)
+                    m.atomic_document(root_evidence_path, evidence)
+                    root["evidenceSha256"] = m.digest(evidence)
+                else:
+                    root["blockedSegment"]["receiptSha256"] = m.digest(segment)
+                m.atomic_document(root_path, root)
+                before = self.video_snapshot()
+                calls = len(self.calls)
+
+                with patch.object(m.adapter, "invoke", side_effect=AssertionError("pre-lineage hold cannot call provider")):
+                    plan = m.make_plan([self.row], self.info, self.state, self.config)
+                    executed = m.execute([self.row], self.info, self.state, self.config, self.limits,
+                                         batch_id=f"post-lineage-{scenario}")
+                    readback = m.readback([self.row], self.state, self.config, provider=True, max_calls=1)
+
+                self.assertEqual(plan["cache"][expected_cache], 1)
+                self.assertEqual(plan["classificationDenominator"]["providerGetEligible"], 0)
+                self.assertEqual((executed["blocked"], executed["attempted"]), (1, 0))
+                self.assertEqual(readback, {"phase": "readback", "recovered": 0,
+                                            "unresolved": 1, "readbackCalls": 0})
+                self.assertEqual(len(self.calls), calls)
+                self.assertEqual(self.video_snapshot(), before)
+        self.state = original_state
 
     def test_config_hash_binds_schema_segment_and_adapter_changes(self):
         original = m.digest(self.config.identity)

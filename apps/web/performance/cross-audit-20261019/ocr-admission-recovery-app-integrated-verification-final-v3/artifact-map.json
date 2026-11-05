@@ -1,0 +1,80 @@
+{
+  "schema": "tzudong-final-app-verification-artifact-map/v2",
+  "baseHead": "cfba8fbbf532c0337c8443c719e5b0d7bf9baf48",
+  "verification": {
+    "path": "apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification-final-v3/verification.json",
+    "sha256": "2ea02e4c46cdbe398a9135116e67ec9d5c7a20aadc40b0c4ecc060e61c375c31"
+  },
+  "testGroups": {
+    "helper-durable": {
+      "tests": 61,
+      "assertions": 328
+    },
+    "admin-recovery": {
+      "tests": 8,
+      "assertions": 35
+    },
+    "admin-workflow": {
+      "tests": 18,
+      "assertions": 121
+    },
+    "admin-processor": {
+      "tests": 5,
+      "assertions": 19
+    },
+    "held-routes": {
+      "tests": 4,
+      "assertions": 18
+    },
+    "held-107-108-compilers": {
+      "tests": 11,
+      "assertions": 111
+    },
+    "route-contract": {
+      "tests": 18,
+      "assertions": 346
+    },
+    "worker-cli": {
+      "tests": 12,
+      "assertions": 82
+    },
+    "receipt-replacement": {
+      "tests": 3,
+      "assertions": 10
+    }
+  },
+  "tests": 140,
+  "assertions": 1070,
+  "allCheckExitZero": true,
+  "sourceIntegrityUnchanged": true,
+  "sourceIntegrityMatchedAtCuration": true,
+  "taskTsconfigIncludesRestored": true,
+  "compilerParity": {
+    "logicalInputs": 3356,
+    "diagnostics": 0
+  },
+  "productionBuildPages": 54,
+  "boundRawMigrationSha256": "d3258b679cbf42ecd97edeab941a5bbaf30fa7b15d968081b60b8b600a3ecd1a",
+  "boundCompilerSha256": "5a9154f51cfe19f25007ce1737eee969faa32c166698b977884218c370ad20f8",
+  "artifacts": {
+    "admin-processor.txt": "21da2ab149c0752151a594e23d55f986f8070f1d6d0a029e280161c952ed5274",
+    "admin-recovery.txt": "4eff70e6955e3cbca39d2c1a63ef04a0d0736649fb57adc99aafb6ee0a7d1f26",
+    "admin-workflow.txt": "7dd45f90e517b2205b681b2394b29ad8881fbdd4831d9bf246d1b224a1be38c3",
+    "compiler-parity.txt": "4687f98cb8c74400d9c5c61b86425e14629cc46946aaf12987f11ff8bcc827c2",
+    "held-107-108-compilers.txt": "22a648b23b99dd033c4ff0dc4ddf624bb1d980c58cdc40e03c5dbb60a4bb0e5e",
+    "held-routes.txt": "5c0c1619d52e3fc09741cd14b7b363d616e05612c4d4aeb96d8190ea76f4e64a",
+    "helper-durable.txt": "d9bfb9651b947745632c7d2df4c750866ef491eed3b49db85506af3ca663f665",
+    "production-build.txt": "9de17875d0733be67c8b7fc9211ec07df7d43290cd331d970471fa13f8e872af",
+    "receipt-replacement.txt": "d3ad97823b90debad6860e1890c9cbd56fc372567f4a14e9282be0eaec089692",
+    "route-contract.txt": "e1c44145378080dfe54956cf8ee8da3cbf4ac2cd2beab59e964a8ad033cfdacf",
+    "scoped-eslint.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verification.json": "2ea02e4c46cdbe398a9135116e67ec9d5c7a20aadc40b0c4ecc060e61c375c31",
+    "verification.json.sha256": "00e0d3395e54c88547a76bef28e262440892b54fef820afe71402c8946efdac7",
+    "worker-cli.txt": "3df356da35e664af334f49c68b655045fabeac5b9d34017e0e3e59254089953a"
+  },
+  "boundaries": [
+    "Only this execution counts; historical overlapping suites and browser assertions are separate.",
+    "Real SQL parsing, permissions, concurrency, hosted operation, provider requests and deployment require their own proof.",
+    "No operational latency, throughput or cost improvement was measured; a confidence interval is not applicable to these deterministic assertions."
+  ]
+}

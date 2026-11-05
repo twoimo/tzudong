@@ -1,18 +1,38 @@
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { assertPrivacySafe } from '@/lib/privacy/sanitize';
-import { callGeminiReceiptOcr, GEMINI_OCR_FALLBACK_MODEL, GeminiOcrError } from '@/lib/ocr/gemini';
+import {
+  callGeminiReceiptOcrWithCredentialFallback,
+  GEMINI_OCR_FALLBACK_MODEL,
+  GeminiOcrError,
+  getGeminiOcrInferenceConfigSnapshot,
+  type GeminiOcrInferenceConfigSnapshot,
+} from '@/lib/ocr/gemini';
 import {
   RECEIPT_OCR_EXTRACTION_PROMPT,
   RECEIPT_OCR_PREPROCESS_VERSION,
   RECEIPT_OCR_PROMPT_VERSION,
 } from '@/lib/ocr/receipt-prompt';
-import { resolveOcrAiRuntimeConfig, type OcrAiRuntimeConfigCandidate } from '@/lib/ocr/runtime-config';
+import {
+  getOcrModelPolicy,
+  resolveOcrAiRuntimeConfig,
+  type OcrAiRuntimeConfigCandidate,
+  type OcrCredentialCandidate,
+} from '@/lib/ocr/runtime-config';
 import {
     buildReceiptOcrEnvelope,
-    flattenReceiptOcrEnvelope,
     RECEIPT_OCR_NORMALIZATION_VERSION,
 } from '@/lib/ocr/receipt-normalization';
+import {
+    DurableReceiptOcrCapabilityHeldError,
+    DurableReceiptOcrPendingError,
+    buildDurableReceiptOcrPayload,
+    buildOcrInputContextHash,
+    createSupabaseDurableReceiptOcrStore,
+    executeDurableReceiptOcr,
+    RECEIPT_OCR_DEFAULT_GENERATION,
+    toPublicReceiptOcrResponse,
+} from '@/lib/ocr/durable-result';
 import { findOcrRestaurantMatches } from '@/lib/ocr/restaurant-matching';
 import {
     buildOcrSuccessLogMetadata,
@@ -35,6 +55,9 @@ import {
   readBoundedOcrFormData,
 } from '@/lib/ocr/request-security';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { FEATURE_DATABASE_HELD_CODE, FEATURE_DATABASE_HELD_MESSAGE } from '@/lib/runtime-feature-readiness-contract';
+import { readFeatureDatabaseReadiness } from '@/lib/server/runtime-feature-readiness';
 
 export const runtime = 'nodejs';
 
@@ -98,19 +121,23 @@ async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savin
 
 async function runStreamingOcrCandidate(input: {
   candidate: OcrAiRuntimeConfigCandidate;
+  credentials: OcrCredentialCandidate[];
   imageBase64: string;
+  inferenceConfig: GeminiOcrInferenceConfigSnapshot;
   signal: AbortSignal;
   send: (event: string, payload: Record<string, unknown>) => void;
 }) {
-  const { candidate, imageBase64, signal, send } = input;
-  if (!candidate.apiKey) throw new Error(`${candidate.provider} OCR API 키가 설정되지 않았습니다.`);
+  const { candidate, credentials, imageBase64, inferenceConfig, signal, send } = input;
+  if (!credentials[0]) throw new Error(`${candidate.provider} OCR API 키가 설정되지 않았습니다.`);
+  const modelPolicy = getOcrModelPolicy(candidate);
 
-  const geminiResult = await callGeminiReceiptOcr({
-    apiKey: candidate.apiKey,
+  const geminiResult = await callGeminiReceiptOcrWithCredentialFallback({
+    credentials,
     imageBase64,
     mimeType: 'image/jpeg',
     prompt: RECEIPT_OCR_EXTRACTION_PROMPT,
-    env: { ...process.env, GEMINI_OCR_MODEL: candidate.models.join(',') },
+    env: { ...process.env, GEMINI_OCR_MODEL: modelPolicy.join(',') },
+    inferenceConfig,
     signal,
   });
   send('model_attempt', { attempt: geminiResult.attempts.at(-1) });
@@ -140,6 +167,12 @@ export async function POST(req: Request) {
     });
   }
   const { supabase, user } = auth;
+  if ((await readFeatureDatabaseReadiness({ ownerId: user.id })).status !== 'ready') {
+    return new Response(JSON.stringify({ code: FEATURE_DATABASE_HELD_CODE, error: FEATURE_DATABASE_HELD_MESSAGE }), {
+      status: 409,
+      headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },
+    });
+  }
 
   const multipart = await readBoundedOcrFormData(req);
   if (!multipart.ok) {
@@ -157,12 +190,10 @@ export async function POST(req: Request) {
   const providerCandidates = [aiRuntime, ...aiRuntime.fallbackCandidates];
   const runnableCandidates = providerCandidates.filter(candidate => hasRunnableOcrCredentials([candidate]));
   const effectiveCandidates = runnableCandidates.length ? runnableCandidates : providerCandidates;
-  if (!hasRunnableOcrCredentials(runnableCandidates)) {
-    return new Response(JSON.stringify({ error: 'Gemini OCR API 키가 설정되지 않았습니다.' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const candidate = effectiveCandidates[0];
+  const modelPolicy = candidate ? getOcrModelPolicy(candidate) : [GEMINI_OCR_FALLBACK_MODEL];
+  const inferenceConfig = getGeminiOcrInferenceConfigSnapshot();
+  const model = modelPolicy[0];
   if (!file) {
     return new Response(JSON.stringify({ error: '이미지가 제공되지 않았습니다' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
@@ -191,43 +222,59 @@ export async function POST(req: Request) {
     });
   }
 
-  try {
-    const quota = await checkOcrDailyQuota({
-      quotaClient: ocrSupabase as never,
-      operationId: crypto.randomUUID(),
-    });
-
-    if (quota.exceeded) {
-      return new Response(JSON.stringify({ error: `일일 무료 분석 한도(${OCR_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.` }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  } catch {
-    return new Response(JSON.stringify({ error: 'OCR 사용 한도를 확인할 수 없습니다.' }), {
-      status: 503,
-      headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },
-    });
-  }
-
   return createSseResponse(async (send) => {
-    let failedAttemptCount = 0;
+    let providerStarted = false;
     let lastFailedProvider = aiRuntime.provider;
-    let lastFailedModel = aiRuntime.model || aiRuntime.models[0] || GEMINI_OCR_FALLBACK_MODEL;
+    let lastFailedModel = model;
     try {
-      send('progress', { message: '영수증 이미지를 읽기 좋게 압축하고 있어요.', stage: 'preprocess' });
-      const { optimized, savings } = await optimizeImage(buffer);
-      send('progress', { message: 'AI 모델이 영수증을 분석하기 시작했어요.', stage: 'model_start', savings });
-
-      for (const candidate of effectiveCandidates) {
-        if (req.signal.aborted) return;
-        const credentials = getRunnableCredentials({ candidate, routingMode: aiRuntime.routingMode });
-        for (const credential of credentials) {
-        if (req.signal.aborted) return;
-        try {
+      if (!candidate) throw new Error('OCR_CONFIG_UNAVAILABLE');
+      const credentials = getRunnableCredentials({ candidate, routingMode: aiRuntime.routingMode });
+      const freshArtifacts: { current: {
+        optimized: Buffer;
+        savings: string;
+        result: Awaited<ReturnType<typeof callGeminiReceiptOcrWithCredentialFallback>>;
+        envelope: ReturnType<typeof buildReceiptOcrEnvelope>;
+        restaurantMatches: Awaited<ReturnType<typeof findOcrRestaurantMatches>>;
+      } | null } = { current: null };
+      const durable = await executeDurableReceiptOcr({
+        store: createSupabaseDurableReceiptOcrStore(createSupabaseServiceRoleClient() as never),
+        binding: {
+          userId: user.id,
+          imageHash,
+          inputContextHash: buildOcrInputContextHash(imageHash, selectedRestaurantContext, inferenceConfig),
+          provider: candidate.provider,
+          modelPolicy,
+          generation: RECEIPT_OCR_DEFAULT_GENERATION,
+          promptVersion: RECEIPT_OCR_PROMPT_VERSION,
+          preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
+          normalizationVersion: RECEIPT_OCR_NORMALIZATION_VERSION,
+        },
+        operationId: crypto.randomUUID(),
+        forceRefresh,
+        beforeProvider: async () => {
+          if (!credentials[0]) throw new Error('OCR_CREDENTIAL_UNAVAILABLE');
+          let quota: Awaited<ReturnType<typeof checkOcrDailyQuota>>;
+          try {
+            quota = await checkOcrDailyQuota({
+              quotaClient: ocrSupabase as never,
+              operationId: crypto.randomUUID(),
+            });
+          } catch {
+            throw new Error('OCR_QUOTA_UNAVAILABLE');
+          }
+          if (quota.exceeded) throw new Error('OCR_QUOTA_EXCEEDED');
+        },
+        runProvider: async () => {
+          if (req.signal.aborted) throw new DOMException('aborted', 'AbortError');
+          send('progress', { message: '영수증 이미지를 읽기 좋게 압축하고 있어요.', stage: 'preprocess' });
+          const { optimized, savings } = await optimizeImage(buffer);
+          send('progress', { message: 'AI 모델이 영수증을 분석하기 시작했어요.', stage: 'model_start', savings });
+          providerStarted = true;
           const result = await runStreamingOcrCandidate({
-            candidate: { ...candidate, apiKey: credential.apiKey },
+            candidate,
+            credentials,
             imageBase64: optimized.toString('base64'),
+            inferenceConfig,
             signal: req.signal,
             send,
           });
@@ -243,51 +290,74 @@ export async function POST(req: Request) {
             data: result.data,
             matchedRestaurantCandidates: restaurantMatches.candidates,
           });
-          const responsePayload = flattenReceiptOcrEnvelope(envelope);
-          send('field_patch', { data: responsePayload, model: result.model, final: true });
+          freshArtifacts.current = { optimized, savings, result, envelope, restaurantMatches };
+          const payload = buildDurableReceiptOcrPayload({ provider: candidate.provider, model: result.model, envelope });
+          assertPrivacySafe(payload);
+          return payload;
+        },
+      });
+      const responsePayload = toPublicReceiptOcrResponse(durable);
+      send('field_patch', { data: responsePayload, model: durable.payload.model, final: true });
 
+      if (freshArtifacts.current) {
+          const fresh = freshArtifacts.current;
           const successLogMetadata = buildOcrSuccessLogMetadata({
             fileSize: file.size,
-            compressedSize: optimized.length,
-            savings,
+            compressedSize: fresh.optimized.length,
+            savings: fresh.savings,
             provider: candidate.provider,
-            model: result.model,
+            model: fresh.result.model,
             promptVersion: RECEIPT_OCR_PROMPT_VERSION,
             preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
             routingMode: aiRuntime.routingMode,
             normalizationVersion: RECEIPT_OCR_NORMALIZATION_VERSION,
-            fallbackUsed: candidate.provider !== aiRuntime.provider || failedAttemptCount > 0,
+            fallbackUsed: candidate.provider !== aiRuntime.provider,
             forceRefresh,
-            envelope,
-            restaurantLookupStats: restaurantMatches.stats,
+            envelope: fresh.envelope,
+            restaurantLookupStats: fresh.restaurantMatches.stats,
           });
           assertPrivacySafe(successLogMetadata);
           const { error: logError } = await ocrLogsTable.insert({
             user_id: user.id,
             image_hash: imageHash,
-            model_used: result.model,
+            model_used: fresh.result.model,
             success: true,
             metadata: successLogMetadata,
           } as never);
           if (logError) {
             send('progress', { message: '분석은 완료됐지만 분석 로그 저장은 실패했어요.', stage: 'log_warning' });
           }
-          send('done', { data: responsePayload, model: result.model, attempts: result.attempts });
-          return;
-        } catch {
-          failedAttemptCount += 1;
-          lastFailedProvider = candidate.provider;
-          lastFailedModel = candidate.models[0] ?? candidate.model ?? GEMINI_OCR_FALLBACK_MODEL;
-          if (aiRuntime.routingMode === 'manual') {
-            throw new Error('OCR_MANUAL_PROVIDER_FAILED');
-          }
-          send('model_attempt', { attempt: { model: candidate.model, ok: false, elapsedMs: 0, error: 'provider fallback' } });
-        }
-        }
       }
-
-      throw new Error('OCR_PROVIDERS_FAILED');
+      send('done', { data: responsePayload, model: durable.payload.model, attempts: freshArtifacts.current?.result.attempts ?? [] });
     } catch (error) {
+      if (error instanceof DurableReceiptOcrCapabilityHeldError) {
+        send('error', {
+          code: FEATURE_DATABASE_HELD_CODE,
+          message: FEATURE_DATABASE_HELD_MESSAGE,
+          terminal: true,
+          status: 503,
+        });
+        return;
+      }
+      if (error instanceof DurableReceiptOcrPendingError) {
+        send('error', {
+          code: error.state === 'processing' ? 'OCR_RESULT_PROCESSING' : 'OCR_RESULT_INDETERMINATE',
+          message: error.state === 'processing'
+            ? '같은 영수증 분석이 진행 중입니다. 잠시 후 다시 확인해주세요.'
+            : '이전 분석 결과를 확인할 수 없어 자동 재호출하지 않았습니다. 관리자에게 다시 분석을 요청해주세요.',
+          terminal: true,
+          status: 409,
+        });
+        return;
+      }
+      if (error instanceof Error && ['OCR_CREDENTIAL_UNAVAILABLE', 'OCR_QUOTA_UNAVAILABLE', 'OCR_QUOTA_EXCEEDED'].includes(error.message)) {
+        const status = error.message === 'OCR_QUOTA_EXCEEDED' ? 429 : error.message === 'OCR_QUOTA_UNAVAILABLE' ? 503 : 500;
+        const message = error.message === 'OCR_QUOTA_EXCEEDED'
+          ? `일일 무료 분석 한도(${OCR_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.`
+          : error.message === 'OCR_QUOTA_UNAVAILABLE' ? 'OCR 사용 한도를 확인할 수 없습니다.' : 'Gemini OCR API 키가 설정되지 않았습니다.';
+        send('error', { message, terminal: true, status });
+        return;
+      }
       const failureCode = error instanceof GeminiOcrError
         ? 'GEMINI_OCR_FAILED'
         : 'OCR_PROCESSING_FAILED';
@@ -295,7 +365,7 @@ export async function POST(req: Request) {
         const failureMetadata = {
           error_code: failureCode,
           provider: lastFailedProvider,
-          attempt_count: failedAttemptCount,
+          attempt_count: providerStarted ? 1 : 0,
         };
         assertPrivacySafe(failureMetadata);
         await ocrLogsTable.insert({

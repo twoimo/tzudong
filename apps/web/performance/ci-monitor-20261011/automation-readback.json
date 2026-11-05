@@ -1,0 +1,12 @@
+{
+  "schema": "tzudong-ci-monitor-automation-readback/v1",
+  "id": "tzudong-github-ci",
+  "kind": "heartbeat",
+  "status": "ACTIVE",
+  "targetThreadId": "01a0f860-10d0-71b0-bb2a-95c2b52e025e",
+  "intervalHours": 6,
+  "createdAtUnixMilliseconds": 1791705521043,
+  "promptSha256": "f801175c3b10296619f0b6beb4887bd4287d86f31742dcb236d07e0bfd1f0a91",
+  "scheduledExecutionVerified": false,
+  "manualTickVerified": true
+}

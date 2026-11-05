@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 
 const appRoot = join(import.meta.dir, '..');
+const repoRoot = join(appRoot, '..', '..');
 const source = (relativePath: string) => readFileSync(join(appRoot, relativePath), 'utf8');
 const packagePath = (name: string) => new RegExp(`(?:^|/)node_modules/${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
 
@@ -58,6 +60,29 @@ describe('dependency modernization release authority', () => {
       "'tests/dependency-modernization.spec.ts', '--project=chromium'",
     ]) expect(runner).toContain(token);
   });
+
+  test('the install job delegates its package and build proof to the pinned browser runner once', () => {
+    const workflow = readFileSync(join(repoRoot, '.github', 'workflows', 'web-admin-ci.yml'), 'utf8').replace(/\r\n/g, '\n');
+    const start = workflow.indexOf('  dependency-modernization-proof:\n');
+    const end = workflow.indexOf('\n  ubuntu-npm-authority:\n', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const installJob = workflow.slice(start, end);
+
+    expect(installJob.match(/npm run test:dependency-modernization:browser/g)).toHaveLength(1);
+    expect(installJob).not.toMatch(/^\s*npm run test:dependency-modernization\s*$/m);
+    expect(installJob).not.toMatch(/^\s*npm run build\s*$/m);
+    for (const token of [
+      'npm ci',
+      'sha256sum package-lock.json bun.lock',
+      'npx playwright install --with-deps chromium',
+      'TZUDONG_DEPENDENCY_PROOF_ROOT="$root"',
+      'TZUDONG_NODE24_EXECUTABLE="$node_bin"',
+      'TZUDONG_NPM_11_EXECUTABLE="$npm_bin"',
+      'PLAYWRIGHT_WEB_SERVER_COMMAND="npm run start:playwright"',
+    ]) expect(installJob).toContain(token);
+  });
+
   test('the built server, health probe, and isolated browser share the admitted origin', () => {
     const runner = source('scripts/run-dependency-modernization-browser.mjs');
     const browser = source('tests/dependency-modernization.spec.ts');
@@ -101,5 +126,26 @@ describe('dependency modernization release authority', () => {
       'error.message',
       'stderr ||',
     ]) expect(runner).not.toContain(unsafeSink);
+  });
+
+  test.skipIf(process.platform === 'win32')('a failed install reports its fixed phase without forwarding child diagnostics', () => {
+    // Controlled executable seams exercise the real runner. They do not prove
+    // an actual Node/npm version or a real dependency install.
+    const directory = mkdtempSync(join(tmpdir(), 'dependency-phase-'));
+    try {
+      const node = join(directory, 'node-fixture');
+      const npm = join(directory, 'npm-fixture');
+      writeFileSync(node, '#!/bin/sh\nprintf "v24.0.0\\n"\n', { mode: 0o700 });
+      writeFileSync(npm, '#!/bin/sh\nif [ "$1" = "--version" ]; then printf "11.6.2\\n"; exit 0; fi\nprintf "fixture-diagnostic-invisible\\n" >&2\nexit 42\n', { mode: 0o700 });
+      const result = spawnSync(process.execPath, ['scripts/run-dependency-modernization-browser.mjs', '--package-only'], {
+        cwd: appRoot,
+        env: { ...process.env, TZUDONG_NODE24_EXECUTABLE: node, TZUDONG_NPM_11_EXECUTABLE: npm },
+        encoding: 'utf8', timeout: 10_000,
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('DEPENDENCY_MODERNIZATION_INSTALL_FAILED');
+      expect(result.stderr).not.toContain('fixture-diagnostic-invisible');
+      expect(result.stdout).toBe('');
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });

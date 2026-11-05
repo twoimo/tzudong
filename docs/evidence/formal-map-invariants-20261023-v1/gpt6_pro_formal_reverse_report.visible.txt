@@ -1,0 +1,631 @@
+Tzudong Formal Delta — 독립 역검증 보고서
+
+검토 대상: e2f60f7ea944776c81d538b5b042ed28ac9b04ae
+Gemini 검토 기준: fe4b73dac510d4670517c7d3eca4f0c2470d4297
+방식: GPT-6 일반 추론, Deep Research 미사용
+범위: GEM-F-01~05, EVIDENCE-01, 관련 FORMAL 불변식 및 신규 반례
+
+1. 증거 접근 및 판정 기준
+
+Gemini 보고서의 제목은 Tzudong Formal Invariant & Pro Thesis Delta — Adversarial Review다. 공식 Copy 실패 후 저장한 전체 렌더링 텍스트이며, 영수증에는 22,643바이트, SHA-256 6fa6553f61a67185aecad159dd1eb93f2ced17368c01b1f63468dae0d4902069가 기록되어 있다. 이를 원본 복사 성공이나 실행 모델의 독립 확인으로 바꾸지 않는다. 
+gemini_4_argon_formal_delta_report.visible.txt
+ 
+gemini-formal-delta-artifact-receipt.json
+
+현재 소스에서 확인한 핵심 표본은 다음과 같다.
+
+파일·함수
+
+	
+
+실제 코드 내용
+
+	
+
+의미
+
+
+
+
+marker-pool.ts / applyIcon
+
+	
+
+this.renderedIcons.get(marker) ?? marker.getIcon()
+
+	
+
+SDK 반환 객체와 별도의 렌더 스냅샷 사용
+
+
+
+
+marker-pool.ts / patchStableMarkerReviewBubble
+
+	
+
+nextBubbles[0].style.marginLeft = currentBubbles[0].style.marginLeft
+
+	
+
+리뷰 버블 교체 시 기존 clamp 유지
+
+
+
+
+retained-marker-accessibility.ts
+
+	
+
+OWNER_ATTRIBUTE, rootTargets, pendingRoots, MutationObserver
+
+	
+
+숨김 소유권과 지연된 SDK 루트 삽입 처리
+
+
+
+
+build-public-popularity.ts
+
+	
+
+extractCanonicalYouTubeVideoId(row.video_id)
+
+	
+
+메트릭 영상 ID 정규화
+
+
+
+
+같은 함수
+
+	
+
+조회수 또는 관측 시각 충돌 시 popularity_metrics_video_conflict
+
+	
+
+중복 입력의 순서 의존성 차단
+
+
+
+
+같은 함수
+
+	
+
+publicationVersion: 'video-views-20261023-v2'
+
+	
+
+변경된 게시 생성 규칙의 버전 분리
+
+
+
+
+marker-state-model.test.mjs
+
+	
+
+cloneIcons, reviewBoundaries, clusterReacquisition
+
+	
+
+Gemini가 요구한 주요 반례를 테스트 입력으로 확장
+
+
+
+
+verify-marker-formal.mjs
+
+	
+
+11개 mutant, 원본 해시 전후 비교, restored baseline
+
+	
+
+한정된 테스트 민감도 검사
+
+이는 첨부 소스의 SOURCE_OBSERVED 증거다. 테스트 함수가 존재한다는 사실과 해당 테스트의 실행 성공은 구분한다. 
+formal_reverse_source_bundle.txt
+
+SOURCE_MISSING: 실제 Naver Maps SDK 구현·네트워크 동작, 비포함 전이 의존성, 호스팅 픽셀·프레임 타이밍 원시 결과, 운영 데이터 입력 및 배포 readback은 이 소스 묶음으로 확인할 수 없다.
+
+2. Gemini 지적별 역검증
+
+ID
+
+	
+
+Severity
+
+	
+
+최종 판정
+
+	
+
+현재 수정과 남은 경계
+
+
+
+
+GEM-F-01
+
+	
+
+MEDIUM
+
+	
+
+CONDITIONAL
+
+	
+
+클러스터 srcset 직접 비동기 변경 제거 방향 수용. 모든 호출자가 동기식 pool writer를 사용하는지 및 실제 SDK 갱신 순서 검증 필요
+
+
+
+
+GEM-F-02
+
+	
+
+MEDIUM
+
+	
+
+CONDITIONAL
+
+	
+
+리뷰 전용 patch에서는 숨김 해제하지 않음. SDK 루트 교체 직후 접근성 상태는 통합 검증 필요
+
+
+
+
+GEM-F-03
+
+	
+
+MEDIUM
+
+	
+
+CONDITIONAL
+
+	
+
+pool 소유 스냅샷과 clamp 보존 코드 확인. clone descriptor fixture는 실제 SDK 계약의 대체 증거가 아님
+
+
+
+
+GEM-F-04
+
+	
+
+MEDIUM
+
+	
+
+ACCEPT
+
+	
+
+canonical ID, 관측 시각 충돌, 게시 버전 수정 확인
+
+
+
+
+GEM-F-05
+
+	
+
+LOW
+
+	
+
+ACCEPT
+
+	
+
+사진 URL, anchor 변경, detach 실패 테스트 추가 확인. 실행 범위는 bounded fixture
+
+
+
+
+EVIDENCE-01
+
+	
+
+MEDIUM
+
+	
+
+CONDITIONAL
+
+	
+
+mutation oracle 확장과 수학적 경계는 타당. 전체 애플리케이션 검증으로 일반화 불가
+
+GEM-F-01 — 클러스터 아이콘의 단일 작성자
+
+이전 구현의 문제는 다음 상태 불일치였다.
+
+𝐷
+𝑡
+=
+실제 DOM srcset
+,
+𝑆
+𝑡
+=
+pool/SDK icon.content
+D
+t
+	​
+
+=실제 DOM srcset,S
+t
+	​
+
+=pool/SDK icon.content
+
+비동기 이미지 로드 콜백이 DOM만 수정하면 
+𝐷
+𝑡
+≠
+𝑆
+𝑡
+D
+t
+	​
+
+
+=S
+t
+	​
+
+가 가능하다. 이후 동일한 icon.content 비교가 실제 DOM 갱신을 생략할 수 있다.
+
+현재 수정의 의도는 클러스터 아이콘 변경을 동기식 pool 갱신 경로로 통일하는 것이다. 이는 비동기 콜백이 늦게 도착해 최신 클러스터 상태를 덮어쓰는 위험을 제거하는 방향이다.
+
+그러나 동기식 변경이 더 빠르거나 깜빡임이 적다는 결론은 성립하지 않는다. 실제 이미지 디코딩과 SDK DOM 교체가 한 프레임 안에 완료된다는 보장이 없기 때문이다.
+
+필수 검증은 클러스터 프레임·등급·개수 변경을 교차시키고, 실제 Naver SDK에서 픽셀 차이, 빈 프레임, 이미지 디코딩 시점 및 프레임 타이밍을 수집하는 것이다.
+
+GEM-F-02 — 숨김 루트의 소유권
+
+현재 applyIcon은 리뷰 버블만 패치하는 경우 기존 루트를 보존한다.
+
+TypeScript
+if (!patched) {
+    const wasHidden = Boolean(marker.__tzudongRetainedMarkerAriaHidden);
+    syncRetainedMarkerAccessibility(marker, true);
+    marker.setIcon(icon);
+    if (wasHidden) syncRetainedMarkerAccessibility(marker, false);
+}
+
+이로써 이전의 패치 전에 무조건 숨김을 해제하는 결함은 제거된다.
+
+다만 marker.setIcon이 실제 DOM 루트를 지연 생성한다면 숨김 재적용 시점에 루트가 없을 수 있다. watchPendingRoot는 이를 MutationObserver로 보완한다.
+
+관찰할 불변식은 다음과 같다.
+
+retainedHidden
+∧
+rootAttached
+⇒
+aria-hidden(root)
+=
+true
+retainedHidden∧rootAttached⇒aria-hidden(root)=true
+
+소스는 이 불변식을 유지하려는 경로를 제공하지만, 실제 SDK가 루트를 언제 교체하고 observer 콜백이 언제 실행되는지는 별도 검증 대상이다.
+
+GEM-F-03 — pool 스냅샷과 SDK descriptor
+
+기존 구현은 marker.getIcon()의 반환 객체를 직접 수정했다. SDK가 복제 객체를 반환하면 수정이 내부 상태에 반영되지 않는 문제가 있었다.
+
+현재 구현은 WeakMap<PooledMarker, MarkerIconLike>를 사용하고 acquire와 update가 동일한 applyIcon을 거친다.
+
+따라서 clone descriptor에 의존하던 비교 결함은 코드 수준에서 해소됐다.
+
+release 시 스냅샷을 삭제하지 않는 것은 그 자체로 결함이 아니다. 같은 물리 마커를 재사용할 때 마지막 렌더 내용을 비교하기 위한 상태이기 때문이다.
+
+또한 버블 교체 시 marginLeft를 복사해 다음 clamp 계산 전까지 기존 위치를 유지한다. 다만 뷰포트 자체가 변경됐을 때 기존 clamp가 새로운 최적 위치라는 뜻은 아니다.
+
+GEM-F-04 — 메트릭 중복과 게시 버전
+
+현재 코드의 충돌 조건은 다음과 같다.
+
+conflict
+=
+(
+𝑐
+1
+≠
+𝑐
+2
+)
+∨
+(
+𝑡
+1
+≠
+𝑡
+2
+)
+conflict=(c
+1
+	​
+
+
+=c
+2
+	​
+
+)∨(t
+1
+	​
+
+
+=t
+2
+	​
+
+)
+
+여기서 
+𝑐
+c는 safeCount 결과이고, 
+𝑡
+t는 fetched_at || bucket_started_at이다.
+
+동일 영상 ID가 URL과 원시 ID로 혼합되어도 canonical ID로 정규화한다. 서로 다른 조회수 또는 채택 관측 시각을 가진 중복은 거부한다.
+
+판정: ACCEPT. Gemini의 두 반례를 직접 겨냥한 수정이다.
+
+다만 동일한 채택 시각·조회수에 서로 다른 보조 bucket_started_at이 있으면 허용될 수 있다. 현재 공개 증거에서 그 보조 필드의 완전한 동일성까지 계약으로 요구한다는 근거는 부족하다. 이를 새 결함으로 확정하지 않는다.
+
+GEM-F-05 — 모델 오라클 확장
+
+새 fixture에는 다음 조건이 포함된다.
+
+photoUrl이 실제 HTTPS 이미지인 리뷰
+
+anchor 변경
+
+getIcon()이 clone descriptor를 반환하는 SDK 모형
+
+setMap(null) 실패 후 pool에서 폐기
+
+리뷰 버블 교체와 clamp 유지
+
+클러스터 아이콘 재획득
+
+이는 이전 모델보다 넓은 상태 공간이다.
+
+그러나 상태 공간의 크기가 커졌다는 사실만으로 테스트 오라클이 올바르거나 모든 실행 경로를 포괄한다는 뜻은 아니다.
+
+3. 수학 및 상태 공간 검증
+
+48개 시각 상태에서 양방향 전이와 두 개의 추가 모드를 조합하면:
+
+48
+2
+×
+2
+×
+2
+=
+9
+,
+216
+48
+2
+×2×2=9,216
+
+8개 행동을 길이 0~4까지 나열한 trace 수는:
+
+∑
+𝑘
+=
+0
+4
+8
+𝑘
+=
+4
+,
+681
+k=0
+∑
+4
+	​
+
+8
+k
+=4,681
+
+실행 단계의 총합은:
+
+∑
+𝑘
+=
+1
+4
+𝑘
+8
+𝑘
+=
+18
+,
+056
+k=1
+∑
+4
+	​
+
+k8
+k
+=18,056
+
+계산은 맞다.
+
+다만 visualPairs()는 9,216개 조합을 검사하더라도 cloneIcons의 모든 상태, 실제 SDK 이벤트 순서, 비동기 루트 교체, 전체 지도 렌더링을 함께 열거하지 않는다.
+
+또한 ownershipTraces()의 click:a는 이전 A 핸들이 B에 재사용됐다면 현재 물리 핸들의 소유자 B를 기준으로 판정한다. 이는 물리 핸들 재사용 모델의 계약이지 과거 A의 논리적 클릭을 B 클릭으로 해석해도 된다는 일반적인 UI 계약은 아니다.
+
+4. 추가로 확인된 위험
+REV-F-01 — 루트 교체와 숨김 재적용 사이의 비동기 경계
+
+Severity MEDIUM · CONDITIONAL · SOURCE_OBSERVED
+
+applyIcon의 setIcon 이후 숨김 재적용은 SDK의 실제 DOM 생성 시점에 의존한다.
+
+재현 조건은 다음과 같다.
+
+숨김 상태의 retained marker가 존재한다.
+
+setIcon이 기존 루트를 제거한다.
+
+새 루트 삽입을 다음 작업으로 지연한다.
+
+숨김 재적용 시 getElement()가 이전 루트 또는 비어 있는 루트를 반환한다.
+
+새 루트가 삽입된 뒤 observer가 실제 새 루트를 숨기는지 검사한다.
+
+현재 observer 구현은 이 경계를 방어하려 하지만 실제 SDK 지연 삽입 시나리오의 실행 증거는 없다.
+
+최소 검증: 지연 DOM 교체 SDK fixture에서 aria-hidden, owner attribute, observer 해제 및 unmount 이후 콜백 부재를 검사한다. 현재 증거로 즉시 코드 변경이 필요하다고 확정하지 않는다.
+
+5. EVIDENCE-01 — 검증 도구의 증거 범위
+
+verify-marker-formal.mjs는 11개 mutant를 격리된 복사본에서 실행하도록 작성됐다.
+
+각 mutant에 대해 단순 비정상 종료가 아니라 예상 테스트 실패 문자열을 확인하고, 브라우저 누락·모듈 로드 실패를 탐지 성공으로 인정하지 않는다.
+
+이 검증 설계는 적절하다. 하지만 이번 대화에서 실제 mutation 실행 로그는 확인되지 않았으므로 11개 mutant가 모두 탐지됐다고 판정하지 않는다.
+
+또한 baseline과 restored 검증이 성공하더라도 이는 지정된 테스트·복사본·실행 환경의 일관성을 뜻한다. 전체 애플리케이션, 실제 SDK, 운영 성능의 인증이 아니다.
+
+6. 필수 검증 및 릴리스 게이트
+
+게이트
+
+	
+
+필수 증거
+
+	
+
+현재 상태
+
+
+
+
+G1 — Formal baseline
+
+	
+
+9,216 전이, 18,056 단계의 원시 성공 로그
+
+	
+
+UNVERIFIED
+
+
+
+
+G2 — Mutation
+
+	
+
+11개 mutant 각각 예상 실패, 원본 해시 보존, restored 성공
+
+	
+
+UNVERIFIED
+
+
+
+
+G3 — SDK boundary
+
+	
+
+실제 Naver SDK의 clone descriptor, root replacement, click ownership
+
+	
+
+UNVERIFIED
+
+
+
+
+G4 — Visual
+
+	
+
+이미지 교체 시 픽셀·flicker·프레임 타이밍 비교
+
+	
+
+UNVERIFIED
+
+
+
+
+G5 — Publication
+
+	
+
+canonical ID·중복 관측·게시 버전과 기존 공개 데이터 비교
+
+	
+
+소스 확인, 실행 미검증
+
+
+
+
+G6 — CI
+
+	
+
+후보 SHA의 필수 테스트·타입 검사·빌드
+
+	
+
+UNVERIFIED
+
+
+
+
+G7 — Release
+
+	
+
+보호 브랜치·READY·alias·실제 URL readback
+
+	
+
+UNVERIFIED
+
+기존 프로덕션 배포와 역사적 Nightly 39457197351 실패는 별도로 유지한다. 새 후보의 테스트나 코드 수정으로 Nightly가 해결됐다고 주장하지 않는다.
+
+7. 최종 판정
+
+CONDITIONAL ACCEPT — 소스 수준의 주요 반례 대응은 수용하되, 실제 SDK·호스팅 검증과 릴리스 승인은 보류한다.
+
+GEM-F-01~05에 대응하는 수정 방향은 소스에서 확인된다. 특히 pool 소유 렌더 스냅샷, clone descriptor 대응, 버블 clamp 보존, 메트릭 canonical ID 및 중복 충돌 처리는 이전 반례를 직접 겨냥한다.
+
+다만 단일 동기식 pool writer의 성능 우위, 실제 SDK 루트 교체의 접근성 안전성, 전체 지도 수명주기, 운영 배포 상태는 확인되지 않았다.
+
+최종 릴리스 판정: DEFER. CI, 실제 SDK 통합, 호스팅 preview, 보호 배포, 픽셀·프레임 검증 및 운영 readback이 필요하다.
+
+이 보고서는 읽기 전용 기술 검토 증거이며 외부 서비스·배포·게시·권한·계정·비용 변경을 승인하지 않는다.

@@ -7,8 +7,10 @@ import { fileURLToPath } from 'node:url'
 import {
     GATEWAY_ORIGIN,
     NEXT_PORT,
+    SUPABASE_ORIGIN,
     buildFixtureUpstreamOptions,
     fixtureRequestBoundary,
+    fixtureResponseHeaders,
 } from './loopback-transport.mjs'
 import {
     BYPASS_SOURCE_PATH,
@@ -164,6 +166,70 @@ for (const name of [
     assert.equal(options.headers[name], undefined)
 }
 
+const syntheticSessionCookie = 'sb-127-auth-token=base64-fixture-session'
+const sessionOptions = buildFixtureUpstreamOptions(
+    request({
+        headers: {
+            host: '127.0.0.1:18822',
+            origin: GATEWAY_ORIGIN,
+            cookie: `unrelated=ignored; ${syntheticSessionCookie}`,
+        },
+    }),
+    GATEWAY_ORIGIN,
+    NEXT_PORT,
+    bypass,
+    false,
+    syntheticSessionCookie,
+)
+assert.equal(sessionOptions.headers.cookie, syntheticSessionCookie)
+const unmatchedSessionOptions = buildFixtureUpstreamOptions(
+    request({
+        headers: {
+            host: '127.0.0.1:18822',
+            origin: GATEWAY_ORIGIN,
+            cookie: 'sb-127-auth-token=base64-unmatched-session',
+        },
+    }),
+    GATEWAY_ORIGIN,
+    NEXT_PORT,
+    bypass,
+    false,
+    syntheticSessionCookie,
+)
+assert.equal(unmatchedSessionOptions.headers.cookie, undefined)
+assert.throws(
+    () =>
+        buildFixtureUpstreamOptions(
+            request(),
+            GATEWAY_ORIGIN,
+            NEXT_PORT,
+            bypass,
+            false,
+            'arbitrary-cookie=not-admitted',
+        ),
+    /FIXTURE_SESSION_CONTRACT_INVALID/,
+)
+
+const responseHeaders = fixtureResponseHeaders({
+    'content-security-policy': "default-src 'self'; connect-src 'self' https://api.openai.com; object-src 'none'",
+    'set-cookie': 'must-not-forward=1',
+})
+assert.match(responseHeaders['content-security-policy'], new RegExp(`connect-src[^;]*${SUPABASE_ORIGIN.replaceAll('.', '\\.')}`))
+assert.doesNotMatch(responseHeaders['content-security-policy'], /attacker\.test/)
+assert.equal(responseHeaders['set-cookie'], undefined)
+assert.equal(
+    fixtureResponseHeaders({ 'content-security-policy': "default-src 'self'; object-src 'none'" })[
+        'content-security-policy'
+    ],
+    "default-src 'self'; object-src 'none'",
+)
+assert.equal(
+    fixtureResponseHeaders({ 'content-security-policy': "default-src 'self'; connect-src 'none'" })[
+        'content-security-policy'
+    ],
+    "default-src 'self'; connect-src 'none'",
+)
+
 const headOptions = buildFixtureUpstreamOptions(
     request({ method: 'HEAD' }),
     GATEWAY_ORIGIN,
@@ -301,7 +367,9 @@ const receipt = {
         fixedDestination: true,
         hostAndOriginBoundary: true,
         getAndHeadForwardingOnly: true,
-        incomingCredentialHeadersDropped: true,
+        incomingCredentialHeadersDroppedExceptExactSyntheticSession: true,
+        syntheticSessionCookieReconstructed: true,
+        fixtureCspMockOriginOnly: true,
         websocketPathAndHeadersBounded: true,
         e2eConstantsReadFromApplicationSource: true,
         developmentAndProductionLaunchArgumentsBounded: true,

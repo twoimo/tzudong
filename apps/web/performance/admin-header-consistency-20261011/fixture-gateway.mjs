@@ -46,6 +46,9 @@ const bypass = Object.freeze({
 const browserOrigins = new Set([GATEWAY_ORIGIN])
 const logo = readFileSync(join(WEB_ROOT, 'public/logo.webp'))
 const knowledgeGraphPath = join(WEB_ROOT, 'data/knowledge-graph/tzudong.json')
+const fixtureSessionCookie = `sb-127-auth-token=base64-${Buffer.from(
+    JSON.stringify(fixtureSession()),
+).toString('base64url')}`
 
 function jsonResponse(req, res, value, status = 200, extraHeaders = {}) {
     const body = Buffer.from(JSON.stringify(value))
@@ -551,9 +554,8 @@ const preview = http.createServer((req, res) => {
         return fixtureError(req, res, 'FIXTURE_METHOD_NOT_ALLOWED', 405)
     }
     if (url.pathname === '/__fixture/session') {
-        const cookie = `base64-${Buffer.from(JSON.stringify(fixtureSession())).toString('base64url')}`
         res.writeHead(303, {
-            'Set-Cookie': `sb-127-auth-token=${cookie}; Path=/; SameSite=Lax; Max-Age=86400`,
+            'Set-Cookie': `${fixtureSessionCookie}; Path=/; SameSite=Lax; Max-Age=86400`,
             Location: '/mypage/profile',
             'Cache-Control': 'no-store',
         })
@@ -623,7 +625,14 @@ document.getElementById('open-admin').addEventListener('click',function(){
         return req.method === 'HEAD' ? res.end() : res.end(logo)
     }
     try {
-        return forwardFixtureRead(req, res, GATEWAY_ORIGIN, NEXT_PORT, bypass)
+        return forwardFixtureRead(
+            req,
+            res,
+            GATEWAY_ORIGIN,
+            NEXT_PORT,
+            bypass,
+            fixtureSessionCookie,
+        )
     } catch {
         return fixtureError(req, res, 'FIXTURE_INPUT_INVALID', 400)
     }

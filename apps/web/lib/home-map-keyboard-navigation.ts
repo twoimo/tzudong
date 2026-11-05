@@ -26,7 +26,7 @@ type ArrowNavigationGuardInput = {
     swipeableCount: number;
 };
 
-const KEYBOARD_NAV_INTERACTIVE_SELECTOR = 'button, a, [role="button"], [role="link"]';
+const KEYBOARD_NAV_INTERACTIVE_SELECTOR = 'button, a, [role="button"], [role="link"], [aria-roledescription="carousel"]';
 const KEYBOARD_NAV_MAP_CONTROL_SELECTOR = '[data-testid="map-container"] button';
 const EDITABLE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 

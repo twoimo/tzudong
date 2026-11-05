@@ -1,0 +1,51 @@
+{
+  "bindings": {
+    "compiler": {
+      "path": "apps/web/scripts/receipt-ocr-post106-acl-admission-sql-successor.mjs",
+      "sha256": "5dd0c66725e14ee9584dd162dccda4419c304ddbda6f3f28b1e645b7aa686b21"
+    },
+    "manifest": {
+      "path": ".github/receipt-ocr-post106-acl-admission-sql-successor.v1.json",
+      "sha256": "58adb514cbdf4221952b9bddfc75dead6a91f74d6fedc0d39445983c542e9b5a"
+    },
+    "migration": {
+      "path": "backend/supabase/migrations/20261019120000_receipt_ocr_credential_release_acl_admission_v2.sql",
+      "sha256": "512f778b71a196e28f092266782fe5938b7d15ec72b61bf05978f3b1696faec9"
+    },
+    "pg15": {
+      "path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/acl107-pg15-dual-clean-followup.json",
+      "sha256": "45446ddbf9702e5c60ea5f7bf88506ee3f6818aacae3844c23515201657d2b12"
+    },
+    "pg17": {
+      "path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/acl107-pg17-independent-followup.json",
+      "sha256": "b6bb79b0ca9088f26987b74e8d850ec2993daaa2d47b3281d6fa1e89f9e3b206"
+    }
+  },
+  "currentDecision": "CONDITIONAL local forward107 candidate resolves the demonstrated source defect; release validation remains incomplete",
+  "evidence": [
+    "PG15 two clean catalog replays;1960 rows per replay;58 comparator hashes match",
+    "PG17 four cases pass: function defaults rejected, table defaults rejected, aggregate rollback105, canonicalready107 and sealed drift rejection",
+    "PG17 NOSUPERUSER postgres and privacy_workflow_owner;SET/INHERIT options restored exactly"
+  ],
+  "externalValidationSubstitution": false,
+  "implemented": [
+    "v2-only app capability parsing",
+    "independent exact owner/grantor/grantee/privilege/grant-option comparison in addition to seal equality",
+    "atomic105→106→107 source compiler",
+    "narrow owner-role lease with exact full membership restoration"
+  ],
+  "kind": "supplemental-frozen14A-finding-local107-adjudication-followup",
+  "operating106State": "held_unapplied",
+  "operating107State": "held_unapplied",
+  "originalDecision": "REJECT initial ACL equality as independent canonical admission",
+  "originalReportSha256": "117b7a0f220af81c5283b385a1b5f46b440c628521fc5ca3522f3a5e7517a215",
+  "performanceOrCostGainMeasured": false,
+  "remaining": [
+    "Repository PG17 fixture explicit-grantor continuity is a separate correction",
+    "108 execution/deletion race SQL and compiler validation remain separate",
+    "Current final-source bundle is not frozen",
+    "Gemini adversarial Deep Research and ChatGPT reverse verification remain incomplete",
+    "Operating SQL/merge/protected promotion/deployment/authenticated production menu verification remain incomplete"
+  ],
+  "schemaVersion": 1
+}

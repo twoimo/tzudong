@@ -1,0 +1,13 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [3.16ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [3.84ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [1.57ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [1.83ms]
+(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [3.06ms]
+
+ 5 pass
+ 0 fail
+ 22 expect() calls
+Ran 5 tests across 1 file. [136.00ms]

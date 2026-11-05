@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "kind": "goal-followthrough-root-readback",
+  "observedAt": "2026-10-15T05:42:09.590390+00:00",
+  "candidateRevision": "609b2287",
+  "sourceBindings": [
+    {
+      "path": "backend/knowledge_graph/longform_inventory.py",
+      "bytes": 21052,
+      "sha256": "4cfda64a4ef31403b28c668536628563f179d7ffd8b0fa7fd56787d92176f9d2"
+    },
+    {
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "bytes": 100618,
+      "sha256": "7bb3c87273ac7e8a3f89e097106d1214da1d57fa03ce869f0d623ab1ee20548f"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_inventory.py",
+      "bytes": 14775,
+      "sha256": "0859047f1ef9b61dad423ce8373ac49af215c9131d066ad80046270db6cbaa3d"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_analysis.py",
+      "bytes": 35879,
+      "sha256": "388bbb2f393330a661af2b6d67f547500fdbed11eca0150952bf96e7eb3ec2d4"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_rejected_repair.py",
+      "bytes": 18319,
+      "sha256": "a091a1bbfb9bec8ca155fd4cac352664a16bda33ca5e91385df3a2af4498ff4d"
+    }
+  ],
+  "inventory": {
+    "bytes": 356918,
+    "sha256": "c94fcf5236af9388ad47ce984f993f42c157c5633417743f8d9b64d1a73cbd73",
+    "referenceByteEquality": true,
+    "videos": 1053,
+    "completedStreams": 18,
+    "shortsExcluded": 81,
+    "eligibleLongform": 1071,
+    "inventoryRows": 1152,
+    "secondExecutionReused": true,
+    "providerCalls": 0,
+    "sharedWrites": 0,
+    "semanticAnalysisCompleted": 0
+  },
+  "billing": {
+    "schemaVersion": 1,
+    "kind": "sanitized-current-gemini-billing-readback",
+    "observedAt": "2026-10-15T05:41:16.566787+00:00",
+    "surface": "Google AI Studio authenticated billing UI",
+    "expectedRedeemAccountMatched": true,
+    "existingBillingAccountLabel": "내 지도 결제 계정 2",
+    "project": "tzudong-free-zero",
+    "linkedProjectCount": 1,
+    "gcpCreditBalanceDisplay": "₩6.71만",
+    "gcpCreditBalanceExact": null,
+    "prepayBalanceKRW": 10000,
+    "prepayAddedDateDisplay": "10월 2일",
+    "autoRechargeEnabled": false,
+    "newChargesByThisTurn": 0,
+    "providerInferenceCallsByThisTurn": 0,
+    "usageChart": {
+      "displayedPeriod": "October 1 - 14, 2026",
+      "costDisplay": "₩28K",
+      "savingsDisplay": "₩28K",
+      "netCostDisplay": "₩0.00",
+      "aggregationDelayMayExceedHours": 24,
+      "perRequestReconciliationComplete": false
+    },
+    "limits": [
+      "Displayed rounded GCP balance is not exact credit consumption.",
+      "Aggregate billing chart does not identify individual OCR/storyboard/longform requests.",
+      "No new purchase, auto-charge, quota or model change was performed."
+    ]
+  },
+  "billingPrivateReceiptSha256": "c6190b10d9fe046851c696881f429fdbbb0e77316ffc43a8b836a3d7b03eade9",
+  "cardRemoval": {
+    "target": "Lotte ending 0488",
+    "completed": false,
+    "providerRequiresNewValidPaymentMethod": true,
+    "otherCardInvalid": true,
+    "linkedService": "Google Cloud",
+    "replacementCardAdded": false,
+    "billingAccountClosed": false,
+    "newPaymentOrRecharge": false
+  },
+  "verification": {
+    "delegatedKnowledgeGraphSuite": {
+      "pass": 146,
+      "skip": 4,
+      "source": "longform_inventory_materializer agent report"
+    },
+    "rootMaterializerCliExecutions": 2,
+    "rootReadbackExecuted": true,
+    "rootInputByteEquality": true
+  },
+  "statistics": {
+    "confidenceInterval95": null,
+    "reason": "Complete deterministic inventory and configuration readback; no sampled performance effect."
+  },
+  "limits": [
+    "Current billing UI confirms displayed balance and linkage, not per-request billing attribution.",
+    "Card removal remains blocked by the provider requirement for a valid replacement.",
+    "Longform inventory construction is not semantic video analysis.",
+    "No hosted database application, deployment, provider inference or operating graph materialization is proved."
+  ]
+}

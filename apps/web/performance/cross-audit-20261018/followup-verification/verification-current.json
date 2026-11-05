@@ -1,0 +1,133 @@
+{
+  "schema": "tzudong-followup-final-source-verification/v1",
+  "startedAt": "2026-10-18T13:58:55.443497+00:00",
+  "sourceRevision": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "sourceState": "hash-bound uncommitted followups",
+  "environment": {
+    "node": "v24.22.0",
+    "npmReleaseAuthority": "11.6.2",
+    "dotenvAutoLoad": false,
+    "buildPublicConfiguration": "existing canonical public Supabase origin, no credentials, not an operating runtime verification",
+    "hostedProviderRequests": 0
+  },
+  "sourceIntegrity": {
+    ".github/review-media-evidence-prefixed-feature-successor.v1.json": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867",
+    ".github/review-media-evidence-prefixed-predecessor-successor.v1.json": "a48f4d883db91a2b4f44869476c9fe9e4f329468c1e406e3703823ffef1d6f92",
+    "apps/web/app/admin/banners/page.tsx": "b0b100c854b619e75c3db5535c7208f2322587f4a66ce1aba2a19ebc022c0235",
+    "apps/web/app/api/admin/banners/route.ts": "5c2bb24c1f0b4c1e6cbff87bd12fd7e5ebb3716668933ed82990e27cd8bbf54e",
+    "apps/web/app/api/admin/users/route.ts": "d5c7cd52e71968f8ffb03b2cb296b0f94620c0dc5991e93b1031b9170cc86da9",
+    "apps/web/app/api/ocr/extract/route.ts": "9ef49e254a75942d20418502127649d934d5433a60d494da6533b95da2760aa5",
+    "apps/web/app/api/ocr/extract/stream/route.ts": "a7b2def343dfe88be312a9e9162573b18509bf2d19d19f555247fbcd1d4e82e8",
+    "apps/web/components/admin/AdminUsersPanel.tsx": "671b8a93ca3c663827166001a1ba36591b05a8bae7cc1a12ebebeb38c96e2a3d",
+    "apps/web/hooks/use-ad-banners.tsx": "b314ab92baf377b648e5ad80b9d6a6cd49579ea1e781b1a192b820e53b74f86f",
+    "apps/web/lib/ocr/admin-receipt-processor.ts": "462eae8188af7c26493ee85b3d4957f17a95ede67830d5e3bc9e7a4609e2f5be",
+    "apps/web/lib/ocr/gemini.ts": "341f17e62809b22746e2574d6bb2482fb849e53a7e86591236ec4aa350c44e6e",
+    "apps/web/scripts/review-media-evidence-prefixed-feature-sql-successor.mjs": "1abc26c0bc4a2546f0e8930067a2d0e089d156b37ed5d160eee6a3e53e5ef618",
+    "apps/web/scripts/review-media-evidence-prefixed-predecessor-sql-successor.mjs": "54d5a66695938c66b75c2c89b456dbfae9e876592fcbe3d5f9310ffc7cf2a07f",
+    "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs": "d76e45f0d3284d47a32231495409843b640f8107969ebf23814498f277827d3d",
+    "apps/web/styles/admin-ui.css": "54ba62adad95ebb3aac23e472786e818e607d8ada6bbd610efbc31f7ddc0755a",
+    "apps/web/tests-unit/ad-banner-url-security.test.ts": "09a0935b913536aaa17250825413efd231f901e1f6369683d5d92f5daa31bbec",
+    "apps/web/tests-unit/admin-banners-functional-contract.test.ts": "244d696df6ef90aede9147150cd28e8d8cf26ffc63e6462e802928708db06070",
+    "apps/web/tests-unit/admin-console-uiux-source.test.ts": "9c0c97aece2729716f9d0e22034ac99cbeaa81b977fadccfcdb60ebca0e7b834",
+    "apps/web/tests-unit/admin-user-management-source.test.ts": "e062014256da90bbaa1eb424f62953b76f573c77e6b20fdff30917055f477ed1",
+    "apps/web/tests-unit/admin-users-mutation-scope.test.ts": "d504bbb8c0f29629371da1adecfe37d1fe1b8f438fcacede848c43c8963ee309",
+    "apps/web/tests-unit/admin-users-pagination-contract.test.ts": "4797cf2abaea7a4154279800495869ef7fc458fd019362be0fae0f6881c5ff6c",
+    "apps/web/tests-unit/gemini-ocr.test.ts": "b5281bbd5181bf244e9f302610cee80e53aa5a5d6ab2a6f53c2b419ae7000b7b",
+    "apps/web/tests-unit/review-media-evidence-prefixed-sql-successors.test.ts": "94225e1111c33db554a34e24bef3d6ac2e47eaa80a7a1367b2d408dba7c83581",
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": "c058770baaa294e5a045be2b7c37886872755e3f9e299bbc8368c54c4bd92edc"
+  },
+  "checks": {
+    "cms-tests": {
+      "command": [
+        "bun",
+        "--no-env-file",
+        "test",
+        "tests-unit/admin-users-mutation-scope.test.ts",
+        "tests-unit/admin-users-pagination-contract.test.ts",
+        "tests-unit/admin-banners-functional-contract.test.ts",
+        "tests-unit/admin-user-management-source.test.ts",
+        "tests-unit/admin-exact-readback-api.test.ts",
+        "tests-unit/ad-banner-url-security.test.ts"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.336,
+      "passed": 41,
+      "failed": 0,
+      "assertions": 468
+    },
+    "root-visual-eslint": {
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "scripts/run-web-tool.mjs",
+        "eslint",
+        "app/admin/banners/page.tsx",
+        "components/admin/AdminUsersPanel.tsx",
+        "tests-unit/admin-user-management-source.test.ts",
+        "--max-warnings=0"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 3.772
+    },
+    "typecheck-parity": {
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "scripts/run-typecheck.mjs",
+        "--compiler",
+        "parity"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 28.962,
+      "result": {
+        "status": "passed",
+        "diagnostics": 0,
+        "logicalInputs": 3350,
+        "logicalInputNamesSha256": "e94a1b97bc68dbab10fb0acb523e012791e2967aa0818beb0d4bb7103dcd7167",
+        "nonLibraryContentSha256": "362c9bfb3ee96c2ce8017c84d6108cdb402e579c7eca21868a856e49b99cc879",
+        "standardLibraryContentSha256": {
+          "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+          "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+        }
+      }
+    },
+    "web-build": {
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/npx",
+        "--yes",
+        "--package",
+        "npm@11.6.2",
+        "npm",
+        "run",
+        "build"
+      ],
+      "startedAt": "2026-10-18T14:02:11.336758+00:00",
+      "exitCode": 0,
+      "elapsedSeconds": 93.365,
+      "configurationCorrection": "Removed invalid synthetic loopback image origin and synthetic credentials; used the existing canonical public project origin without credentials. No source guard was changed.",
+      "dotenvAutoLoad": false,
+      "credentialsPresent": false,
+      "staticPages": 54,
+      "cssBoundaryLine": "▲ Next.js 16.3.8 (webpack) ✓ Running next.config.mjs took 838ms - Experiments (use with caution):   · clientTraceMetadata   · optimizePackageImports   · staleTimes    Creating an optimized production build ... ✓ Compiled successfully in 39.2s   Running TypeScript ...    We detected TypeScript in your project and reconfigured your tsconfig.json file for you.   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:     - include was updated to add '.next-feature-audit-[REDACTED:phone]/types/**/*.ts'    - include was updated to add '.next-feature-audit-[REDACTED:phone]/dev/types/**/*.ts'    Finished TypeScript in 26.4s ...   Collecting page data using 17 workers ...   Generating static pages using 17 workers (0/54) ...   Generating static pages using 17 workers (13/54)     Generating static pages using 17 workers (26/54)     Generating static pages using 17 workers (40/54)   ✓ Generating static pages using 17 workers (54/54) in 1548ms   Finalizing page optimization ...   Collecting build traces ...  [REDACTED:bounded] ○  (Static)   prerendered as static content ƒ  (Dynamic)  server-rendered on demand  Verified route CSS boundaries: home 195887 bytes; general app 329148 bytes; admin 349615 bytes; deferred 195887 bytes."
+    }
+  },
+  "rawArtifacts": {
+    "apps/web/performance/cross-audit-20261018/followup-verification/cms-tests.txt": "364caa263780df76bfbe50edc2a8b2ef35ce7bc0710240576a9d066fd8f650bc",
+    "apps/web/performance/cross-audit-20261018/followup-verification/root-visual-eslint.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "apps/web/performance/cross-audit-20261018/followup-verification/typecheck-parity.txt": "59a6eb691d17d3d1c2ef762415d6612ecb6fa8f7b7178bb6e7483f6d3e75389d",
+    "apps/web/performance/cross-audit-20261018/followup-verification/web-build.txt": "7d7ee1bc2b15d13e777a219607cffdd95f04f3bbbb498ffb25a068157ea03416",
+    "apps/web/performance/cross-audit-20261018/followup-verification/web-build-canonical-origin.txt": "7ad4ee821f3f80cab8b1b92a8326df49a82344981c2bba5f0a3d417c34393f9f"
+  },
+  "limitations": [
+    "Local source, tests, compiler and production-mode build under synthetic public configuration only.",
+    "No operating deployment, hosted apply, provider inference or billing observation.",
+    "Durations are single uncontrolled observations and not performance comparisons.",
+    "Logs are line-wise privacy-sanitized; source digests and structured result counts remain separate."
+  ],
+  "status": "passed",
+  "sourceIntegrityUnchanged": true,
+  "finishedAt": "2026-10-18T14:03:44.732822+00:00",
+  "priorAttempt": {
+    "path": "apps/web/performance/cross-audit-20261018/followup-verification/verification.json",
+    "sha256": "d938f2a2e7839682cd358ccb24b5d5c5724f73c91f1337a29f0c5181045aea55",
+    "status": "failed_invalid_local_build_configuration"
+  }
+}

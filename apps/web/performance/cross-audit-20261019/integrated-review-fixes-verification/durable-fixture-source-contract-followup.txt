@@ -1,0 +1,10 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/durable-receipt-ocr.test.ts:
+(pass) durable receipt OCR execution > adds a post-held-105 credential recovery capability without rewriting the OCR predecessor [1.30ms]
+
+ 1 pass
+ 31 filtered out
+ 0 fail
+ 18 expect() calls
+Ran 1 test across 1 file. [124.00ms]

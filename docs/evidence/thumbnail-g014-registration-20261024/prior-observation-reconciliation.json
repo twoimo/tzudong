@@ -1,0 +1,105 @@
+{
+  "schema": "thumbnail-prior-observation-reconciliation-v1",
+  "status": "fixed-and-locally-verified",
+  "sourceBase": "eb42cec0cb3175df356c947805b3da7cc9d45ee3",
+  "observedAt": "2026-10-24T11:05:40.005256+00:00",
+  "bug": {
+    "before": "THUMBNAIL_NOT_APPLIED from a prior snapshot after uncertain transport; no proof that original transaction ended.",
+    "after": "prior_observed + THUMBNAIL_OUTCOME_UNCONFIRMED; same journal permits read-only recovery only; no automatic resend or writer resume."
+  },
+  "pg176Counterexample": {
+    "server": {
+      "version": 170006,
+      "superuser": "off",
+      "systemMods": "off"
+    },
+    "runner": {
+      "bytes": 12349,
+      "sha256": "c254c34f27de7716520934ca637fd2b607ad81b44b44c70960eff74396c7612c"
+    },
+    "witness": {
+      "active": 1,
+      "sleeping": 1,
+      "writerLocks": 1
+    },
+    "originalCommitStillActiveAfterSenderLoss": {
+      "active": 1,
+      "sleeping": 1
+    },
+    "senderTerminatedBeforePriorRead": true,
+    "deferredCommitBarrierFixture": true,
+    "priorObservedAfterSenderLoss": {
+      "rows": 0
+    },
+    "senderExitCode": 137,
+    "laterDurableState": {
+      "rows": 1
+    },
+    "unsafeInferenceRefuted": "An independent prior snapshot does not establish original rollback or terminality.",
+    "sourceDatabaseUnchanged": true,
+    "hostedWrites": 0,
+    "providerCalls": 0,
+    "productionUserRowsCopied": 0,
+    "limits": [
+      "Owned PostgreSQL17.6 commit-visibility projection with a test-only deferred trigger and actual termination of the exclusively owned psql sender.",
+      "Not the complete43-statement installer, WAN fault injection or an implementation refinement proof.",
+      "Backend COMMIT remains active after sender loss, independent prior read and later durable commit are directly observed; no original operation is restarted."
+    ]
+  },
+  "callerChecks": {
+    "sources": {
+      "apps/web/scripts/thumbnail-production-successor.mjs": "3d2cba2d4b28904cae03d4d72fcc4c1d549ccc43997133603e1dca910af5dce1",
+      "apps/web/tests-unit/thumbnail-production-successor.test.ts": "4757d745b07bc5174f839138518acb8c7e2a96faa87b72d219e12063c62eea0e"
+    },
+    "sourceStable": true,
+    "unitTests": 21,
+    "assertions": 165,
+    "failed": 0,
+    "node": "24.22.0",
+    "bun": "1.4.0",
+    "eslint": 0,
+    "parityInputs": 3427,
+    "parityDiagnostics": 0,
+    "inspectHeld": true,
+    "scope": "Pinned actual source and compiler with substituted transport; not a hosted end-to-end transport proof."
+  },
+  "negativeControl": {
+    "mutation": "prior_observed classified as THUMBNAIL_NOT_APPLIED",
+    "testsPassed": 19,
+    "expectedFailures": 2,
+    "sourceStable": true,
+    "ownedCopiesRemoved": true,
+    "mutantSha256": "4cddd311920e34f90dc4f49edc2be671900198ce51621958eafd7f75bb93908c"
+  },
+  "browserFixtureRepair": {
+    "scanner": "CodeQL js/bad-code-sanitization alert98",
+    "sourcePath": "apps/web/tests-unit/fixtures/thumbnail-editor-browser.ts",
+    "sourceSha256": "1f2b4134b7a8238fc69c8fe281f32df34084868844f016a6ea76473342315a41",
+    "behavior": "Static auth seam; synthetic owner transferred through Playwright structured addInitScript argument, never source interpolation.",
+    "browser": "156.0.8078.47",
+    "widths": [
+      1440,
+      768,
+      390
+    ],
+    "sourcePaths": 13,
+    "sourceStable": true,
+    "totalEnqueuePosts": 5,
+    "chatPosts": 5,
+    "externalRequests": 0,
+    "providerCalls": 0,
+    "syntheticAuthAndApi": true,
+    "hostedAdminProof": false,
+    "remoteCodeqlResolution": "pending next head analysis; no dismissal performed"
+  },
+  "privateProofSha256": {
+    "postgres": "34787ee8e1b833860013a770ad3e049178be320b2c3801af6c543996f69b882b",
+    "mutation": "628e1d6012dd20ea14b1284d643b6af6392137c32c3414ad02456cc2d661f96a",
+    "callerChecks": "cd23f4bd29ea2f64b4cdeeca716d4c4c04e01d43747b712516f0b6925ffa834a",
+    "browser": "2569f0eda533d17542ef1f4e3327df27bcf092f01ea816315902f8a801d59bef"
+  },
+  "operatingApplied": false,
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "confidenceInterval": "Not applicable to these deterministic scoped checks; no performance or operating success-rate claim."
+}

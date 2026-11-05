@@ -81,12 +81,13 @@ async function fetchApprovedCandidatesByRestaurantNames(restaurants: Restaurant[
 
     if (approvedNames.length === 0) return [];
 
-    const { data } = await supabase
+    const { data, error } = await supabase
         .from('restaurants')
         .select(BOOKMARK_RESTAURANT_SELECT)
         .eq('status', 'approved')
         .in('approved_name', approvedNames);
 
+    if (error) throw new Error('BOOKMARK_RESTAURANTS_UNAVAILABLE');
     return ((data ?? []) as Restaurant[]).map((restaurant) => ({
         ...restaurant,
         name: restaurant.approved_name || restaurant.name,

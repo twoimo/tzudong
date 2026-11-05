@@ -1,0 +1,33 @@
+{
+  "schema": "tzudong-release-readback.v1",
+  "scope": "#3412 popularity markers and evidence frames, #3416 Tzuyang family brand language",
+  "promotion": {
+    "develop": [
+      {"pr": 3412, "mergeCommit": "1dbfe1b831b1a4dbe6615842ac9c8553ccba3968"},
+      {"pr": 3416, "mergeCommit": "f3d514ec036e5d41ca3a74e4e4ab20a48d92329b"}
+    ],
+    "data": {"pr": 3419, "mergeCommit": "f4643ed90c506231b075e320f5001c336903ad7a"},
+    "main": {"pr": 3422, "mergeCommit": "888e26aa9e6fde5ba6c44a0ad79ed14a7499cb81", "mergedAt": "2026-10-21T06:19:48Z"}
+  },
+  "rollbackTarget": {
+    "deploymentId": "dpl_F4B32cdZTJP31KBAh4eAQ857g2em",
+    "sha": "e2d1c94a1ad5d04eeaafb55320d942bf4f1bbe82",
+    "readBefore": "2026-10-21T06:19:00Z"
+  },
+  "vercelProject": {"id": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl", "name": "tzudong"},
+  "authorization": "TZUDONG_APPROVED_PRODUCTION_SHA set to 888e26aa9e6fde5ba6c44a0ad79ed14a7499cb81 in Vercel production env and the GitHub repository variable after the Git-triggered build dpl_3JF5Xkoh37ZHY4k3C5VgkAtFCBT1 was skipped by the ignore-build gate",
+  "deployment": {
+    "id": "dpl_FCfBBsKa8aKRfpCrzqqJZeQvNR5J",
+    "redeployOf": "dpl_3JF5Xkoh37ZHY4k3C5VgkAtFCBT1",
+    "target": "production",
+    "readyState": "READY",
+    "gitSha": "888e26aa9e6fde5ba6c44a0ad79ed14a7499cb81"
+  },
+  "liveReadback": {
+    "observedAt": "2026-10-21T06:34:00Z",
+    "https://www.tzudong.app/api/health": {"gitSha": "888e26aa9e6fde5ba6c44a0ad79ed14a7499cb81", "deploymentId": "dpl_FCfBBsKa8aKRfpCrzqqJZeQvNR5J"},
+    "https://tzudong.app/api/health": "301 to https://www.tzudong.app/api/health",
+    "renderedChecks": "Playwright on https://www.tzudong.app at 1440x900, 820x1180 and 390x844 across home, stamp, leaderboard, feed and three restaurant deep links (21 renders): --primary 0 0% 11%, 3 decoded evidence frames on each detail link, 1 fire flame and the popularity badge on the domestic and overseas fire links, 0 page errors, no error boundary, no horizontal overflow"
+  },
+  "nightly": "Recorded separately in nightly-status-separate.json; not part of this release result."
+}

@@ -23,6 +23,51 @@ import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('OCR extract route privacy and normalization contract', () => {
+  test('durable status readback is bounded, provider-free, and returns fixed failures', () => {
+    const statusRoute = source('app/api/ocr/results/status/route.ts');
+    expect(statusRoute.indexOf('authenticateOcrRequest(request)')).toBeLessThan(
+      statusRoute.indexOf('readBoundedOcrFormData(request)'),
+    );
+    expect(statusRoute.indexOf('readFeatureDatabaseReadiness')).toBeLessThan(
+      statusRoute.indexOf('readBoundedOcrFormData(request)'),
+    );
+    expect(statusRoute).toContain('pollDurableReceiptOcrResult({');
+    expect(statusRoute).toContain('const READ_ATTEMPTS = 4;');
+    expect(statusRoute).toContain("code: aborted ? 'OCR_STATUS_CANCELLED' : 'OCR_STATUS_UNAVAILABLE'");
+    expect(statusRoute).toContain("{ status: aborted ? 408 : 503, headers }");
+    expect(statusRoute).not.toContain('callGeminiReceiptOcr');
+    expect(statusRoute).not.toContain('executeDurableReceiptOcr');
+    expect(statusRoute).not.toContain("rpc('claim_receipt_ocr_result'");
+  });
+
+  test('public, streaming, status, and admin callers bind one inference snapshot to cache and provider execution', () => {
+    const publicRoute = source('app/api/ocr/extract/route.ts');
+    const streamRoute = source('app/api/ocr/extract/stream/route.ts');
+    const statusRoute = source('app/api/ocr/results/status/route.ts');
+    const adminProcessor = source('lib/ocr/admin-receipt-processor.ts');
+
+    for (const routeSource of [publicRoute, streamRoute, statusRoute]) {
+      expect(routeSource).toContain('const inferenceConfig = getGeminiOcrInferenceConfigSnapshot();');
+      expect(routeSource).toContain('inferenceConfig');
+    }
+    expect(adminProcessor).toContain('getGeminiOcrInferenceConfigSnapshot()');
+    expect(adminProcessor).toContain('inferenceConfig');
+    expect(publicRoute).toContain(
+      'buildOcrInputContextHash(imageHash, selectedRestaurantContext, inferenceConfig)',
+    );
+    expect(streamRoute).toContain(
+      'buildOcrInputContextHash(imageHash, selectedRestaurantContext, inferenceConfig)',
+    );
+    expect(statusRoute).toContain('parseSelectedRestaurantContext(multipart.formData),\n        inferenceConfig,');
+    expect(adminProcessor).toContain('buildOcrInputContextHash(imageHash, null, inferenceConfig)');
+    for (const providerRoute of [publicRoute, streamRoute, adminProcessor]) {
+      expect(providerRoute).toContain('inferenceConfig,');
+      expect(providerRoute).toContain('callGeminiReceiptOcrWithCredentialFallback');
+      expect(providerRoute).not.toContain('await callGeminiReceiptOcr({');
+    }
+    expect(statusRoute).not.toContain('callGeminiReceiptOcr');
+  });
+
   test('stores only bounded count/status metadata and excludes raw receipt/provider/credential payloads', () => {
     const envelope = buildReceiptOcrEnvelope({
       provider: 'gemini',
@@ -106,7 +151,7 @@ describe('OCR extract route privacy and normalization contract', () => {
     }
     expect(routeSource).toContain("const failureMetadata = { error_code: failureCode, provider: failureProvider }");
     expect(streamRouteSource).toContain('error_code: failureCode');
-    expect(streamRouteSource).toContain('attempt_count: failedAttemptCount');
+    expect(streamRouteSource).toContain('attempt_count: providerStarted ? 1 : 0');
     expect(geminiSource).toContain("'provider_request_failed'");
     expect(geminiSource).not.toContain('error.message : String(error)');
   });
@@ -200,7 +245,7 @@ describe('OCR extract route privacy and normalization contract', () => {
         'await checkOcrDailyQuota({',
         ocrRouteSource === streamRouteSource
           ? 'await runStreamingOcrCandidate({'
-          : 'await callGeminiReceiptOcr({',
+          : 'await callGeminiReceiptOcrWithCredentialFallback({',
       ]) {
         expect(trustBoundaryIndex).toBeLessThan(postSource.indexOf(paidWorkBoundary));
       }
@@ -292,13 +337,24 @@ describe('OCR extract route privacy and normalization contract', () => {
 
     for (const ocrRouteSource of [routeSource, streamRouteSource]) {
       expect(ocrRouteSource).toContain('OCR 사용 한도를 확인할 수 없습니다.');
-      expect(ocrRouteSource).toContain('status: 503');
+      expect(ocrRouteSource).toMatch(/OCR_QUOTA_UNAVAILABLE|OcrHttpError\(503/);
       expect(ocrRouteSource).not.toContain('쿼터 확인 실패:');
     }
     expect(quotaRouteSource).toContain("'OCR_QUOTA_UNAVAILABLE'");
     expect(quotaRouteSource).toContain("'Cache-Control': 'no-store'");
     expect(quotaRouteSource).not.toContain('error.message');
     expect(quotaRouteSource).not.toContain('console.error');
+  });
+
+  test('passes the complete ordered model policy to both OCR provider entrypoints', () => {
+    const routeSource = source('app/api/ocr/extract/route.ts');
+    const streamRouteSource = source('app/api/ocr/extract/stream/route.ts');
+
+    for (const ocrRouteSource of [routeSource, streamRouteSource]) {
+      expect(ocrRouteSource).toContain('const modelPolicy = candidate ? getOcrModelPolicy(candidate)');
+      expect(ocrRouteSource).toContain("GEMINI_OCR_MODEL: modelPolicy.join(',')");
+      expect(ocrRouteSource).toContain('modelPolicy,');
+    }
   });
 
   test('uses an authenticated atomic OCR quota reservation instead of count-then-act', () => {
@@ -385,11 +441,13 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(checkOcrDailyQuota({ quotaClient: failedClient, operationId })).rejects.toThrow('OCR_QUOTA_UNAVAILABLE');
   });
 
-  test('admin OCR rerun preflights workflow before destructive reset and rolls back dispatch failures', () => {
+  test('admin OCR preflights resets, preserves dispatch retries, and isolates explicit indeterminate recovery', () => {
     const rerunRouteSource = source('app/api/admin/ocr-receipts/rerun/route.ts');
     const dispatchRouteSource = source('app/api/admin/ocr-receipts/route.ts');
     const resetAllRouteSource = source('app/api/admin/ocr-receipts/reset-all/route.ts');
     const processRouteSource = source('app/api/admin/ocr-receipts/process/route.ts');
+    const processCoreSource = source('lib/ocr/admin-receipt-processor.ts');
+    const resetCoreSource = source('lib/ocr/admin-receipt-reset.ts');
     const submissionListViewSource = source('components/admin/SubmissionListView.tsx');
 
     expect(rerunRouteSource).toContain('workflowPreflightResponse');
@@ -398,12 +456,20 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(rerunRouteSource).toContain("ocr_processed_at: review.ocr_processed_at");
     expect(rerunRouteSource).toContain("receipt_data: review.receipt_data");
     expect(rerunRouteSource.indexOf('workflowPreflightResponse')).toBeLessThan(
-      rerunRouteSource.indexOf("const previousOcrState"),
+      rerunRouteSource.indexOf('applyReceiptOcrIndeterminateRecovery(supabase'),
     );
-    expect(rerunRouteSource.indexOf("const previousOcrState")).toBeLessThan(
-      rerunRouteSource.indexOf(".update({"),
+    expect(rerunRouteSource.indexOf('workflowPreflightResponse')).toBeLessThan(
+      rerunRouteSource.indexOf('resetReceiptOcrRowWithCas(supabase'),
     );
-    expect(rerunRouteSource).toContain('resetRolledBack: !rollbackError');
+    expect(rerunRouteSource).toContain('resetAlreadyPending = isResetReceiptOcrState({ id: reviewId, ...previousOcrState })');
+    expect(rerunRouteSource).toContain('resetPreserved: true');
+    expect(rerunRouteSource).not.toContain('rollbackReadback');
+    expect(rerunRouteSource).toContain('resetReceiptOcrRowWithCas(');
+    expect(rerunRouteSource).toContain("body.action === RECOVERY_ACTION && !resetAlreadyPending");
+    expect(rerunRouteSource).toContain("else if (!resetAlreadyPending)");
+    expect(rerunRouteSource).toContain('applyReceiptOcrIndeterminateRecovery(supabase');
+    expect(resetCoreSource).toContain("query.eq('receipt_data', JSON.stringify(snapshot.receipt_data))");
+    expect(resetCoreSource).toContain('resetReceiptOcrRowsWithCas(');
     expect(rerunRouteSource).toContain("step: 'workflow-dispatch'");
 
     expect(dispatchRouteSource).toContain("buildGuardedMutationRequiredResponse('ocr_receipt', 'dispatch_workflow')");
@@ -413,17 +479,30 @@ describe('OCR extract route privacy and normalization contract', () => {
       dispatchRouteSource.indexOf('if (!GITHUB_TOKEN'),
     );
     expect(dispatchRouteSource.indexOf('if (!hasGuardedMutationConfirmation')).toBeLessThan(
-      dispatchRouteSource.indexOf("method: 'POST'"),
+      dispatchRouteSource.indexOf('dispatchReceiptOcrWorkflow({'),
     );
 
-    expect(rerunRouteSource).toContain("buildGuardedMutationRequiredResponse('ocr_receipt', 'rerun')");
+    expect(rerunRouteSource).toContain("buildGuardedMutationRequiredResponse(");
+    expect(rerunRouteSource).toContain(
+      "body.action === RECOVERY_ACTION ? 'recover_provider_indeterminate' : 'rerun'",
+    );
     expect(rerunRouteSource).toContain("guardedMutation");
-    expect(rerunRouteSource.indexOf('if (!hasGuardedMutationConfirmation')).toBeLessThan(
-      rerunRouteSource.indexOf("const supabase = createSupabaseServiceRoleClient()"),
+    const rerunConfirmationIndex = rerunRouteSource.indexOf('if (!hasGuardedMutationConfirmation');
+    expect(rerunConfirmationIndex).toBeGreaterThanOrEqual(0);
+    expect(rerunConfirmationIndex).toBeLessThan(
+      rerunRouteSource.indexOf('applyReceiptOcrIndeterminateRecovery(supabase'),
+    );
+    expect(rerunConfirmationIndex).toBeLessThan(
+      rerunRouteSource.indexOf('resetReceiptOcrRowWithCas(supabase'),
     );
 
     expect(resetAllRouteSource).toContain("buildGuardedMutationRequiredResponse('ocr_receipt', 'reset_all')");
     expect(resetAllRouteSource).toContain("readbackRequired: true");
+    expect(resetAllRouteSource).toContain('resetReadbackVerified: true');
+    expect(resetAllRouteSource).toContain('MAX_OCR_RESET_BATCH = 50');
+    expect(resetAllRouteSource).toContain('resetReceiptOcrRowsWithCas(');
+    expect(resetAllRouteSource).toContain('buildReceiptOcrWorkflowInputs(targetReviewIds)');
+    expect(resetAllRouteSource).toContain('resetPreserved: true');
     expect(resetAllRouteSource).toContain("guardedMutation");
     expect(resetAllRouteSource.indexOf('if (!hasGuardedMutationConfirmation')).toBeLessThan(
       resetAllRouteSource.indexOf('if (body.confirmation !== OCR_RESET_ALL_CONFIRMATION)'),
@@ -447,55 +526,73 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(processRouteSource).not.toContain('x-admin-guarded-mutation-confirmation');
     expect(processRouteSource).toContain('function noStoreJson');
     expect(processRouteSource).toContain("response.headers.set('Cache-Control', 'no-store')");
-    expect(processRouteSource).toContain("import { callGeminiReceiptOcr } from '@/lib/ocr/gemini'");
-    expect(processRouteSource).toContain("import {\n    PRIVACY_UNSAFE_VALUE_REASON,\n    PrivacyUnsafeValueError,\n    assertPrivacySafe,\n} from '@/lib/privacy/sanitize';");
-    expect(processRouteSource).toContain('assertOcrInputSafe(ocrData);');
-    expect(processRouteSource).toContain('const receiptData = buildReceiptPersistenceData(ocrData);');
-    expect(processRouteSource).toContain('buildReceiptFailureData(');
-    expect(processRouteSource).toContain('failure_code: errorCode');
-    expect(processRouteSource).toContain('assertPrivacySafe(update);');
-    expect(processRouteSource).toContain('hasExpectedReviewReadback(readback, reviewId, update)');
-    expect(processRouteSource).toContain(".select('id, receipt_hash, receipt_data, is_duplicate, ocr_processed_at')");
-    expect(processRouteSource).not.toContain('uploadToStorage');
-    expect(processRouteSource).not.toContain('ocr-debug/');
-    expect(processRouteSource).toContain('const storage = storageAdmin.from(REVIEW_VERIFICATION_BUCKET)');
-    expect(processRouteSource).not.toContain("supabase.storage.from('review-photos')");
-    expect(processRouteSource).toContain('storage.upload(newObjectPath, canonicalImage');
-    expect(processRouteSource).not.toContain('raw: ocrData');
-    expect(processRouteSource).not.toContain('receipt_data: { ...ocrData');
-    expect(processRouteSource).toContain('errorName: getGuardedMutationErrorName(error)');
-    expect(processRouteSource).not.toContain('error.message');
+    expect(processCoreSource).toContain(
+      "import { callGeminiReceiptOcrWithCredentialFallback, getGeminiOcrInferenceConfigSnapshot } from '@/lib/ocr/gemini'",
+    );
+    expect(processCoreSource).toContain("import {\n    PRIVACY_UNSAFE_VALUE_REASON,\n    PrivacyUnsafeValueError,\n    assertPrivacySafe,\n} from '@/lib/privacy/sanitize';");
+    expect(processCoreSource).toContain('assertOcrInputSafe(ocrData);');
+    expect(processCoreSource).toContain('const receiptData = buildReceiptPersistenceData(ocrData);');
+    expect(processCoreSource).toContain('buildReceiptFailureData(');
+    expect(processCoreSource).toContain('failure_code: errorCode');
+    expect(processCoreSource).toContain('assertPrivacySafe(update);');
+    expect(processCoreSource).toContain('publishReviewReceiptOcrResult(supabase as never');
+    expect(processCoreSource).toContain('hasExpectedReviewReadback(readback, reviewId, update)');
+    expect(processCoreSource).not.toContain(".update(update)");
+    expect(processCoreSource).not.toContain('uploadToStorage');
+    expect(processCoreSource).not.toContain('ocr-debug/');
+    expect(processCoreSource).toContain('const storage = storageAdmin.from(REVIEW_VERIFICATION_BUCKET)');
+    expect(processCoreSource).not.toContain("supabase.storage.from('review-photos')");
+    expect(processCoreSource).toContain('storage.upload(newObjectPath, canonicalImage');
+    expect(processCoreSource).not.toContain('raw: ocrData');
+    expect(processCoreSource).not.toContain('receipt_data: { ...ocrData');
+    expect(processCoreSource).toContain('errorName: getGuardedMutationErrorName(error)');
+    expect(processCoreSource).not.toContain('error.message');
+    expect(processRouteSource).not.toContain('callGeminiReceiptOcr');
+    expect(processRouteSource).not.toContain('createSupabaseServiceRoleClient');
+    expect(processCoreSource).not.toContain('requireAdmin');
+    expect(processCoreSource).not.toContain('isTrustedSameOriginMutation');
+    expect(processCoreSource).not.toContain('readBoundedJsonRequest');
 
     const postSource = processRouteSource.slice(processRouteSource.indexOf('export async function POST'));
     const inlineAuthIndex = postSource.indexOf('const auth = await requireAdmin();');
+    const inlineReadinessIndex = postSource.indexOf('readFeatureDatabaseReadiness({ ownerId: auth.userId })');
     const inlineOriginIndex = postSource.indexOf('if (!isTrustedSameOriginMutation(request))');
     const inlineFeatureEnabledIndex = postSource.indexOf('if (!isInlineOcrProcessEnabled())');
     const inlineReaderIndex = postSource.indexOf('readBoundedJsonRequest(request, MAX_REQUEST_BYTES)');
     const inlineSchemaIndex = postSource.indexOf('const body = parseInlineOcrProcessBody(parsedBody.value);');
     const inlineConfirmIndex = postSource.indexOf('if (!hasGuardedMutationConfirmation(body))');
-    const inlineProviderPreflightIndex = postSource.indexOf("if (!GEMINI_API_KEY?.trim())", inlineConfirmIndex);
-    const inlineSupabaseIndex = postSource.indexOf('const supabase = getSupabaseAdmin()', inlineConfirmIndex);
-    const inlineOcrCallIndex = postSource.indexOf('await callGeminiReceiptOcr({', inlineConfirmIndex);
-    const inlineOcrResultIndex = postSource.indexOf('const ocrData = ocrResult.data;', inlineOcrCallIndex);
-    const inlinePrivacyBoundaryIndex = postSource.indexOf('assertOcrInputSafe(ocrData);', inlineOcrResultIndex);
-    const inlinePersistenceIndex = postSource.indexOf(
-      'await persistOcrResult(supabase, body.reviewId, {',
-      inlineOcrResultIndex,
+    const inlineDelegateIndex = postSource.indexOf('return processAdminReceiptOcr({ reviewId: body.reviewId, signal: request.signal });');
+    const coreFunctionSource = processCoreSource.slice(processCoreSource.indexOf('export async function processAdminReceiptOcr'));
+    const coreReviewFetchIndex = coreFunctionSource.indexOf(".from('reviews')");
+    const coreOwnerReadinessIndex = coreFunctionSource.indexOf('readFeatureDatabaseReadiness({ ownerId: review.user_id })');
+    const coreStorageReadIndex = coreFunctionSource.indexOf('downloadReviewVerification(storageAdmin, receiptObjectPath)');
+    const coreDurableClaimIndex = coreFunctionSource.indexOf('await executeDurableReceiptOcr({');
+    const coreProviderPreflightIndex = coreFunctionSource.indexOf('if (!credentials[0])', coreDurableClaimIndex);
+    const coreOcrCallIndex = coreFunctionSource.indexOf('await callGeminiReceiptOcrWithCredentialFallback({', coreProviderPreflightIndex);
+    const coreOcrResultIndex = coreFunctionSource.indexOf('const ocrData: ReceiptOcrData = {', coreOcrCallIndex);
+    const corePrivacyBoundaryIndex = coreFunctionSource.indexOf('assertOcrInputSafe(ocrData);', coreOcrResultIndex);
+    const corePersistenceIndex = coreFunctionSource.indexOf(
+      'await persistOcrResult(\n                supabase,\n                body.reviewId,',
+      coreOcrResultIndex,
     );
     expect(inlineAuthIndex).toBeGreaterThanOrEqual(0);
-    expect(inlineOriginIndex).toBeGreaterThan(inlineAuthIndex);
+    expect(inlineReadinessIndex).toBeGreaterThan(inlineAuthIndex);
+    expect(inlineOriginIndex).toBeGreaterThan(inlineReadinessIndex);
     expect(inlineFeatureEnabledIndex).toBeGreaterThan(inlineOriginIndex);
     expect(inlineReaderIndex).toBeGreaterThan(inlineFeatureEnabledIndex);
     expect(inlineSchemaIndex).toBeGreaterThan(inlineReaderIndex);
     expect(inlineConfirmIndex).toBeGreaterThan(inlineSchemaIndex);
-    expect(inlineProviderPreflightIndex).toBeGreaterThan(inlineConfirmIndex);
-    expect(inlineSupabaseIndex).toBeGreaterThan(inlineProviderPreflightIndex);
-    expect(inlineOcrCallIndex).toBeGreaterThan(inlineSupabaseIndex);
-    expect(inlineOcrResultIndex).toBeGreaterThan(inlineOcrCallIndex);
-    expect(inlinePrivacyBoundaryIndex).toBeGreaterThan(inlineOcrResultIndex);
-    expect(inlinePersistenceIndex).toBeGreaterThan(inlinePrivacyBoundaryIndex);
+    expect(inlineDelegateIndex).toBeGreaterThan(inlineConfirmIndex);
     expect(postSource.slice(inlineFeatureEnabledIndex, inlineReaderIndex)).toContain('return noStoreJson');
-    expect(postSource.slice(inlineConfirmIndex, inlineProviderPreflightIndex)).toContain('return noStoreJson');
+    expect(coreReviewFetchIndex).toBeGreaterThanOrEqual(0);
+    expect(coreOwnerReadinessIndex).toBeGreaterThan(coreReviewFetchIndex);
+    expect(coreStorageReadIndex).toBeGreaterThan(coreOwnerReadinessIndex);
+    expect(coreDurableClaimIndex).toBeGreaterThan(coreStorageReadIndex);
+    expect(coreProviderPreflightIndex).toBeGreaterThan(coreDurableClaimIndex);
+    expect(coreOcrCallIndex).toBeGreaterThan(coreProviderPreflightIndex);
+    expect(coreOcrResultIndex).toBeGreaterThan(coreOcrCallIndex);
+    expect(corePrivacyBoundaryIndex).toBeGreaterThan(coreOcrResultIndex);
+    expect(corePersistenceIndex).toBeGreaterThan(corePrivacyBoundaryIndex);
     expect(submissionListViewSource).toContain("GUARDED_MUTATION_CONFIRMATION");
     expect(submissionListViewSource).toContain("confirmGuardedOcrMutation");
     expect(submissionListViewSource).toContain("guardedMutationConfirmation: GUARDED_MUTATION_CONFIRMATION");
@@ -569,7 +666,7 @@ describe('OCR extract route privacy and normalization contract', () => {
     ];
     const phoneLikeReceiptName = '010-1234-5678';
     const oversizedChunkedBody = new Uint8Array(4 * 1024 + 1);
-    const processRouteSource = source('app/api/admin/ocr-receipts/process/route.ts');
+    const processCoreSource = source('lib/ocr/admin-receipt-processor.ts');
     const receiptImageSecuritySource = source('lib/ocr/admin-receipt-image-security.ts');
 
     for (const value of unsafeOcrFixtures) {
@@ -581,21 +678,21 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(oversizedChunkedBody.byteLength).toBeGreaterThan(4 * 1024);
     expect(phoneLikeReceiptName).toMatch(/01[0-9]-\d{3,4}-\d{4}/);
 
-    expect(processRouteSource).toContain('PHONE_LIKE_PATTERN');
-    expect(processRouteSource).toContain('SAFE_OCR_FAILURE_CODES');
-    expect(processRouteSource).toContain("return errorResponse(PRIVACY_UNSAFE_VALUE_REASON, 422);");
-    expect(processRouteSource).toContain('downloadReviewVerification(storageAdmin, receiptObjectPath)');
-    expect(processRouteSource).toContain(".eq('verification_photo', oldStoredValue)");
-    expect(processRouteSource).toContain('the authoritative review-media UPDATE');
-    expect(processRouteSource).not.toContain('removeOriginalReceiptObject');
-    expect(processRouteSource).not.toContain('getPublicUrl');
-    expect(processRouteSource).not.toContain('publicUrl');
-    expect(processRouteSource).not.toContain('fetch(');
+    expect(processCoreSource).toContain('PHONE_LIKE_PATTERN');
+    expect(processCoreSource).toContain('SAFE_OCR_FAILURE_CODES');
+    expect(processCoreSource).toContain("return errorResponse(PRIVACY_UNSAFE_VALUE_REASON, 422);");
+    expect(processCoreSource).toContain('downloadReviewVerification(storageAdmin, receiptObjectPath)');
+    expect(processCoreSource).toContain(".eq('verification_photo', oldStoredValue)");
+    expect(processCoreSource).toContain('the authoritative review-media UPDATE');
+    expect(processCoreSource).not.toContain('removeOriginalReceiptObject');
+    expect(processCoreSource).not.toContain('getPublicUrl');
+    expect(processCoreSource).not.toContain('publicUrl');
+    expect(processCoreSource).not.toContain('fetch(');
     expect(receiptImageSecuritySource).toContain('ADMIN_RECEIPT_DOWNLOAD_DEADLINE_MS = 15_000');
     expect(receiptImageSecuritySource).toContain('totalBytes > ADMIN_RECEIPT_MAX_SOURCE_BYTES');
     expect(receiptImageSecuritySource).toContain('limitInputPixels: ADMIN_RECEIPT_MAX_INPUT_PIXELS');
     expect(receiptImageSecuritySource).toContain('metadata.pages !== undefined && metadata.pages !== 1');
-    expect(processRouteSource).toContain('readbackVerified: true');
+    expect(processCoreSource).toContain('readbackVerified: true');
   });
   test('admin receipt image retrieval remains private, bounded, contained, and non-destructive', async () => {
     const jpegSignature = new Uint8Array([0xff, 0xd8, 0xff]);
@@ -654,9 +751,9 @@ describe('OCR extract route privacy and normalization contract', () => {
       cleanupAdminReceiptTempRun(tempRun);
     }
 
-    const processRouteSource = source('app/api/admin/ocr-receipts/process/route.ts');
-    const replacementSource = processRouteSource.slice(
-      processRouteSource.indexOf('async function replaceReceiptWithCompressedObject'),
+    const processCoreSource = source('lib/ocr/admin-receipt-processor.ts');
+    const replacementSource = processCoreSource.slice(
+      processCoreSource.indexOf('async function replaceReceiptWithCompressedObject'),
     );
     const uploadIndex = replacementSource.indexOf('storage.upload(newObjectPath, canonicalImage');
     const verifyIndex = replacementSource.indexOf(
@@ -664,12 +761,12 @@ describe('OCR extract route privacy and normalization contract', () => {
     );
     const conditionalUpdateIndex = replacementSource.indexOf(".eq('verification_photo', oldStoredValue)");
 
-    expect(processRouteSource).toContain('canonicalStorageImage.bytes.byteLength < downloadedImage.bytes.byteLength');
-    expect(processRouteSource).toContain('receiptDownload.bucket === LEGACY_REVIEW_VERIFICATION_BUCKET');
+    expect(processCoreSource).toContain('canonicalStorageImage.bytes.byteLength < downloadedImage.bytes.byteLength');
+    expect(processCoreSource).toContain('receiptDownload.bucket === LEGACY_REVIEW_VERIFICATION_BUCKET');
     expect(replacementSource.indexOf('uploadStagedAdminVerificationImage(')).toBeLessThan(uploadIndex);
-    expect(processRouteSource).toContain('assertSafeReceiptObjectPath(receiptObjectPath)');
-    expect(processRouteSource).not.toContain('getPublicUrl');
-    expect(processRouteSource).not.toContain('publicUrl');
+    expect(processCoreSource).toContain('assertSafeReceiptObjectPath(receiptObjectPath)');
+    expect(processCoreSource).not.toContain('getPublicUrl');
+    expect(processCoreSource).not.toContain('publicUrl');
     expect(uploadIndex).toBeGreaterThanOrEqual(0);
     expect(verifyIndex).toBeGreaterThan(uploadIndex);
     expect(conditionalUpdateIndex).toBeGreaterThan(verifyIndex);

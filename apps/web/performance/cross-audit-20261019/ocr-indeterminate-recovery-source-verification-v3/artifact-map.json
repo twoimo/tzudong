@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "scope": "receipt-ocr-recovery108-source-candidate",
+  "artifacts": [
+    {
+      "path": "compiler-check.json",
+      "sha256": "de9e1c971e02d152aea46fd5dab4b9948a3fcf999b04fe3616386e2764a41572",
+      "bytes": 421
+    },
+    {
+      "path": "compiler-unit.txt",
+      "sha256": "dc8c28adf6a2b3875107ec37c79a82c297a71879bc5d715df8202f8efe5761d9",
+      "bytes": 606
+    },
+    {
+      "path": "diff-check.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "eslint.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "node-check.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "source-hashes.txt",
+      "sha256": "1ac3e75306504f58a7aa36a5de9aa358ba9a68de91cd80ea6e33610a9f292bbc",
+      "bytes": 974
+    },
+    {
+      "path": "untracked-whitespace-check.txt",
+      "sha256": "6bdb87985ec7d08b2f4e0aa5ec9126ae4036d9d7f40d5a276b4166968b233332",
+      "bytes": 34
+    }
+  ]
+}

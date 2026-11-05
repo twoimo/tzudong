@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "repository": "https://github.com/supabase/supabase",
+    "commit": "205cbe7d26d330dc8972b30d0dc855f0086baad2",
+    "sourcePath": "docker/volumes/db",
+    "postgresImage": "supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b"
+  },
+  "files": {
+    "_supabase.sql": "9dce462adc04137d6afabcf28efa60a6c355270a4b32d7af58891ac4eb964c5f",
+    "jwt.sql": "1cc94a4f16f6e2932b383cd68e211a96bcae298437ca4120d8a5106396c58465",
+    "logs.sql": "f0463ce5030907acef49326d2bffd36002df0718035071be7c99bd7fc897c63d",
+    "pooler.sql": "df97ebe148d94cfb92a5e37ebf972dfd496be195f0915ecf14396b2cf50efecb",
+    "realtime.sql": "7e9e442e7fc4dae05544c07b67bede37a00d84644304dfce4d937134cb4c8f88",
+    "roles.sql": "3ad717b225daa38aa982da26750f35641eb404e1eb5e69a763c22236ab96c1b2",
+    "webhooks.sql": "b584aaaa0c393f27218f81e01e76e1d07d42f947083249adcd6097ad471cde62"
+  },
+  "platformAuthBootstrap": {
+    "schemaVersion": 1,
+    "kind": "supabase-postgres-platform-auth-bootstrap-source-inventory",
+    "purpose": "Generator-only immutable upstream source inventory for the native Postgres auth bootstrap; it is not database input and contains no runtime-derived rows.",
+    "repository": "https://github.com/supabase/postgres",
+    "sourceCommit": "b2c91b0a29332cec79473ee8a6dfa0e205cd0aaa",
+    "sourceTree": "178647188a66c1549f97f55fa1052eb583d0912c",
+    "ociImage": "docker.io/supabase/postgres:15.8.1.085",
+    "ociIndexDigest": "sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b",
+    "ociAmd64ManifestDigest": "sha256:caae3d066f437332d593011e3e7ecf78ab005ce9b89378efd53f97f0410563ad",
+    "execution": {
+      "dockerfile15GitBlobSha1": "42ffc858cd51209fe0f986ceda265fecc34d9955",
+      "migrateScriptGitBlobSha1": "0a84d1e6c462231fd3f2844ec37e49a92d9f5e9d"
+    },
+    "source": {
+      "path": "migrations/db/init-scripts/00000000000001-auth-schema.sql",
+      "gitBlobSha1": "ad47aadd9c2acf3cdb78ec569860ca695bea4152",
+      "byteLength": 4547,
+      "sha256": "65a4a55ba3248716eb4946a8677be41c94bc90eafaa22c0eb95b09908f96fa4f"
+    },
+    "records": [
+      {"version": "20171026211738"},
+      {"version": "20171026211808"},
+      {"version": "20171026211834"},
+      {"version": "20180103212743"},
+      {"version": "20180108183307"},
+      {"version": "20180119214651"},
+      {"version": "20180125194653"}
+    ]
+  }
+}

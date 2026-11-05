@@ -1,0 +1,436 @@
+{
+  "schemaVersion": 1,
+  "passed": true,
+  "failureCode": null,
+  "kind": "actual-admin-ui-with-loopback-synthetic-ocr-endpoints",
+  "story": "pending review OCR recovery button -> preview -> explicit confirmation -> guarded recovery request -> rendered success/refusal/conflict state",
+  "sourceHead": "cfba8fbbf532c0337c8443c719e5b0d7bf9baf48",
+  "sourceStart": [
+    {
+      "path": "components/admin/SubmissionListView.tsx",
+      "bytes": 147579,
+      "sha256": "ed727f0701963ee40ac96caa2530ec1326f731f3c59d85b54a3a5a3835290619"
+    },
+    {
+      "path": "lib/admin/ocr-recovery-confirmation.ts",
+      "bytes": 563,
+      "sha256": "4c37ff1aa59ac23bc7df4022a3c907784fb6cbe971ac44c0d15778aeaa643b18"
+    },
+    {
+      "path": "app/api/admin/ocr-receipts/rerun/route.ts",
+      "bytes": 19828,
+      "sha256": "4426abc96721bb401f1debc71559e3368d97d85dee95ccf5ea78211cfe656f62"
+    },
+    {
+      "path": "lib/ocr/admin-receipt-recovery.ts",
+      "bytes": 12116,
+      "sha256": "8f4d8eb1cc47c40df4be41c3772681f16d2e690aeccff825bb4a34744bd0ac07"
+    },
+    {
+      "path": "lib/runtime-feature-readiness-contract.ts",
+      "bytes": 2169,
+      "sha256": "83761d3ae754f4ebfc7b2be23b4bdf0788f3b7dd3f1bfac03f3801859e0b3bba"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "bytes": 24268,
+      "sha256": "9c124f7118651b4e15089a73c994ae2163f0f1a301e152c5c790459157ca9e0a"
+    },
+    {
+      "path": "scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "bytes": 22673,
+      "sha256": "0c1b05c53baae1eb4f7f60b024b6258e1d21def00f2c517114edd38366639cbd"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/SubmissionListView.tsx",
+      "bytes": 147579,
+      "sha256": "ed727f0701963ee40ac96caa2530ec1326f731f3c59d85b54a3a5a3835290619"
+    },
+    {
+      "path": "lib/admin/ocr-recovery-confirmation.ts",
+      "bytes": 563,
+      "sha256": "4c37ff1aa59ac23bc7df4022a3c907784fb6cbe971ac44c0d15778aeaa643b18"
+    },
+    {
+      "path": "app/api/admin/ocr-receipts/rerun/route.ts",
+      "bytes": 19828,
+      "sha256": "4426abc96721bb401f1debc71559e3368d97d85dee95ccf5ea78211cfe656f62"
+    },
+    {
+      "path": "lib/ocr/admin-receipt-recovery.ts",
+      "bytes": 12116,
+      "sha256": "8f4d8eb1cc47c40df4be41c3772681f16d2e690aeccff825bb4a34744bd0ac07"
+    },
+    {
+      "path": "lib/runtime-feature-readiness-contract.ts",
+      "bytes": 2169,
+      "sha256": "83761d3ae754f4ebfc7b2be23b4bdf0788f3b7dd3f1bfac03f3801859e0b3bba"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "bytes": 24268,
+      "sha256": "9c124f7118651b4e15089a73c994ae2163f0f1a301e152c5c790459157ca9e0a"
+    },
+    {
+      "path": "scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "bytes": 22673,
+      "sha256": "0c1b05c53baae1eb4f7f60b024b6258e1d21def00f2c517114edd38366639cbd"
+    }
+  ],
+  "environment": {
+    "origin": "http://127.0.0.1:18794",
+    "fakeSupabaseOrigin": "http://127.0.0.1:18793",
+    "browser": "155.0.8059.82",
+    "node": "v26.3.0",
+    "viewport": {
+      "width": 1423,
+      "height": 954
+    },
+    "loopbackOnly": true
+  },
+  "counts": {
+    "assertions": 33,
+    "previews": 7,
+    "applies": 4,
+    "confirmations": 3,
+    "externalBlocked": 0,
+    "unexpectedMutationsBlocked": 0,
+    "expectedAckLossNetworkFailures": 1,
+    "unexpectedLocalNetworkFailures": 0,
+    "pageErrorCount": 0,
+    "unexpectedConsoleErrors": 0,
+    "expectedFixtureRealtimeConsoleErrors": 10,
+    "expectedModuleSwitchAborts": 6,
+    "expectedStaleConflictConsoleErrors": 1,
+    "forwardedExternalRequests": 0,
+    "realProviderCalls": 0,
+    "hostedDatabaseCalls": 0,
+    "hostedMutations": 0
+  },
+  "geometry": {
+    "recoveryButton": {
+      "x": 1276.5,
+      "y": 634.65625,
+      "width": 90.5,
+      "height": 28
+    },
+    "reviewPanel": {
+      "x": 1043,
+      "y": 173,
+      "width": 352,
+      "height": 757
+    }
+  },
+  "assertions": [
+    {
+      "name": "synthetic-session-cookie-created",
+      "passed": true
+    },
+    {
+      "name": "pending-review-renders-explicit-recovery-label",
+      "passed": true
+    },
+    {
+      "name": "recovery-button-has-visible-geometry",
+      "passed": true
+    },
+    {
+      "name": "review-panel-has-visible-geometry",
+      "passed": true
+    },
+    {
+      "name": "cancel-dialog-includes-additional-api-use-warning",
+      "passed": true
+    },
+    {
+      "name": "cancel-dialog-includes-guarded-contract",
+      "passed": true
+    },
+    {
+      "name": "cancel-sends-no-apply-or-rotation",
+      "passed": true
+    },
+    {
+      "name": "confirmed-dialog-repeats-cost-warning",
+      "passed": true
+    },
+    {
+      "name": "first-apply-has-exact-review-id",
+      "passed": true
+    },
+    {
+      "name": "first-apply-has-recovery-action",
+      "passed": true
+    },
+    {
+      "name": "first-apply-has-guarded-confirmation",
+      "passed": true
+    },
+    {
+      "name": "first-apply-has-preview-generation",
+      "passed": true
+    },
+    {
+      "name": "first-apply-has-preview-snapshot",
+      "passed": true
+    },
+    {
+      "name": "first-apply-has-uuid-operation",
+      "passed": true
+    },
+    {
+      "name": "ack-loss-retry-reuses-operation-id",
+      "passed": true
+    },
+    {
+      "name": "ack-loss-retry-does-not-reconfirm-paid-operation",
+      "passed": true
+    },
+    {
+      "name": "reload-restores-db-operation-id",
+      "passed": true
+    },
+    {
+      "name": "reload-restores-db-generation",
+      "passed": true
+    },
+    {
+      "name": "reload-restores-db-snapshot",
+      "passed": true
+    },
+    {
+      "name": "recovery-in-progress-reload-does-not-reconfirm",
+      "passed": true
+    },
+    {
+      "name": "processing-refusal-sends-no-apply",
+      "passed": true
+    },
+    {
+      "name": "preview-conflict-sends-no-apply",
+      "passed": true
+    },
+    {
+      "name": "stale-apply-keeps-explicit-confirmation",
+      "passed": true
+    },
+    {
+      "name": "stale-apply-dispatches-once",
+      "passed": true
+    },
+    {
+      "name": "stale-apply-does-not-auto-retry",
+      "passed": true
+    },
+    {
+      "name": "ack-loss-produces-one-expected-local-network-failure",
+      "passed": true
+    },
+    {
+      "name": "no-unexpected-local-network-failures",
+      "passed": true
+    },
+    {
+      "name": "no-unexpected-browser-page-errors",
+      "passed": true
+    },
+    {
+      "name": "no-unexpected-console-errors",
+      "passed": true
+    },
+    {
+      "name": "no-unexpected-mutations-forwarded",
+      "passed": true
+    },
+    {
+      "name": "all-preview-bodies-are-minimal",
+      "passed": true
+    },
+    {
+      "name": "all-apply-bodies-match-guarded-shape",
+      "passed": true
+    },
+    {
+      "name": "source-stable-during-browser-run",
+      "passed": true
+    }
+  ],
+  "confirmationMessages": [
+    {
+      "phase": "cancelled-confirmation",
+      "message": "이전 분석 결과는 확정되지 않았으며 추가 API 사용이 발생할 수 있습니다.\n\n이 OCR 작업은 Preview -> Confirm -> Apply -> Readback -> Audit 보호 절차로 실행됩니다. 계속하시겠습니까?",
+      "accepted": false
+    },
+    {
+      "phase": "ack-loss-first",
+      "message": "이전 분석 결과는 확정되지 않았으며 추가 API 사용이 발생할 수 있습니다.\n\n이 OCR 작업은 Preview -> Confirm -> Apply -> Readback -> Audit 보호 절차로 실행됩니다. 계속하시겠습니까?",
+      "accepted": true
+    },
+    {
+      "phase": "apply-stale-conflict",
+      "message": "이전 분석 결과는 확정되지 않았으며 추가 API 사용이 발생할 수 있습니다.\n\n이 OCR 작업은 Preview -> Confirm -> Apply -> Readback -> Audit 보호 절차로 실행됩니다. 계속하시겠습니까?",
+      "accepted": true
+    }
+  ],
+  "recoveryRequests": [
+    {
+      "phase": "cancelled-confirmation",
+      "kind": "preview",
+      "body": {
+        "action": "preview_provider_indeterminate",
+        "reviewId": "00000000-0000-4000-a400-000000000001"
+      },
+      "outcome": "eligible"
+    },
+    {
+      "phase": "ack-loss-first",
+      "kind": "preview",
+      "body": {
+        "action": "preview_provider_indeterminate",
+        "reviewId": "00000000-0000-4000-a400-000000000001"
+      },
+      "outcome": "eligible"
+    },
+    {
+      "phase": "ack-loss-first",
+      "kind": "apply",
+      "body": {
+        "action": "recover_provider_indeterminate",
+        "recoveryOperationId": "0bbd96b7-c369-447d-a7a2-e41f3a8e6dae",
+        "expectedGeneration": "11111111-1111-4111-8111-111111111111",
+        "inputSnapshotHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "reviewId": "00000000-0000-4000-a400-000000000001",
+        "guardedMutationConfirmation": "Preview -> Confirm -> Apply -> Readback -> Audit"
+      },
+      "outcome": "response_lost_after_synthetic_commit"
+    },
+    {
+      "phase": "ack-loss-retry",
+      "kind": "preview",
+      "body": {
+        "action": "preview_provider_indeterminate",
+        "reviewId": "00000000-0000-4000-a400-000000000001"
+      },
+      "outcome": "eligible"
+    },
+    {
+      "phase": "ack-loss-retry",
+      "kind": "apply",
+      "body": {
+        "action": "recover_provider_indeterminate",
+        "recoveryOperationId": "0bbd96b7-c369-447d-a7a2-e41f3a8e6dae",
+        "expectedGeneration": "11111111-1111-4111-8111-111111111111",
+        "inputSnapshotHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "reviewId": "00000000-0000-4000-a400-000000000001",
+        "guardedMutationConfirmation": "Preview -> Confirm -> Apply -> Readback -> Audit"
+      },
+      "outcome": "accepted"
+    },
+    {
+      "phase": "recovery-in-progress-reload",
+      "kind": "preview",
+      "body": {
+        "action": "preview_provider_indeterminate",
+        "reviewId": "00000000-0000-4000-a400-000000000001"
+      },
+      "outcome": "recovery_in_progress"
+    },
+    {
+      "phase": "recovery-in-progress-reload",
+      "kind": "apply",
+      "body": {
+        "action": "recover_provider_indeterminate",
+        "recoveryOperationId": "22222222-2222-4222-8222-222222222222",
+        "expectedGeneration": "11111111-1111-4111-8111-111111111111",
+        "inputSnapshotHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "reviewId": "00000000-0000-4000-a400-000000000001",
+        "guardedMutationConfirmation": "Preview -> Confirm -> Apply -> Readback -> Audit"
+      },
+      "outcome": "accepted"
+    },
+    {
+      "phase": "processing-refusal",
+      "kind": "preview",
+      "body": {
+        "action": "preview_provider_indeterminate",
+        "reviewId": "00000000-0000-4000-a400-000000000001"
+      },
+      "outcome": "processing"
+    },
+    {
+      "phase": "preview-conflict",
+      "kind": "preview",
+      "body": {
+        "action": "preview_provider_indeterminate",
+        "reviewId": "00000000-0000-4000-a400-000000000001"
+      },
+      "outcome": "conflict"
+    },
+    {
+      "phase": "apply-stale-conflict",
+      "kind": "preview",
+      "body": {
+        "action": "preview_provider_indeterminate",
+        "reviewId": "00000000-0000-4000-a400-000000000001"
+      },
+      "outcome": "eligible"
+    },
+    {
+      "phase": "apply-stale-conflict",
+      "kind": "apply",
+      "body": {
+        "action": "recover_provider_indeterminate",
+        "recoveryOperationId": "e75b9bc5-5b48-40ca-ba64-bb1b59241ca3",
+        "expectedGeneration": "11111111-1111-4111-8111-111111111111",
+        "inputSnapshotHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "reviewId": "00000000-0000-4000-a400-000000000001",
+        "guardedMutationConfirmation": "Preview -> Confirm -> Apply -> Readback -> Audit"
+      },
+      "outcome": "stale_conflict"
+    }
+  ],
+  "localNetworkFailureDetails": [],
+  "consoleErrorDetails": [],
+  "screenshots": [
+    {
+      "phase": "cancelled-confirmation",
+      "path": "performance/cross-audit-20261019/ocr-recovery-ui-browser-verification/final-source-ready-retry-v4/01-cancelled-confirmation.png",
+      "sha256": "8de075e2bbd5f8b3ba9af64ffee5118e982ccc9cab6b8415df02e5664dfdf8d3"
+    },
+    {
+      "phase": "ack-loss-first",
+      "path": "performance/cross-audit-20261019/ocr-recovery-ui-browser-verification/final-source-ready-retry-v4/02-ack-loss-preserves-retry.png",
+      "sha256": "4740be9e1b890eda8c6f881c49df9721aa71fb70786810a01e990a02ecffca4e"
+    },
+    {
+      "phase": "recovery-in-progress-reload",
+      "path": "performance/cross-audit-20261019/ocr-recovery-ui-browser-verification/final-source-ready-retry-v4/03-recovery-in-progress-reload.png",
+      "sha256": "194cdeee350aef6ed3cb92b6350cd80c633c54c60b4691e6932abd03f92c393c"
+    },
+    {
+      "phase": "processing-refusal",
+      "path": "performance/cross-audit-20261019/ocr-recovery-ui-browser-verification/final-source-ready-retry-v4/04-processing-refusal.png",
+      "sha256": "110562ac9bed6ac4320bb9f793bb1a1706b5553610e73700756b41dabc144fc5"
+    },
+    {
+      "phase": "preview-conflict",
+      "path": "performance/cross-audit-20261019/ocr-recovery-ui-browser-verification/final-source-ready-retry-v4/05-preview-conflict.png",
+      "sha256": "637052e91144effb4cbf7d00b863abe1c7f6c931de75cd81ec350ba58bf16512"
+    },
+    {
+      "phase": "apply-stale-conflict",
+      "path": "performance/cross-audit-20261019/ocr-recovery-ui-browser-verification/final-source-ready-retry-v4/06-apply-stale-conflict.png",
+      "sha256": "7002efe843d4541ffb54cd40ce067493d25040e43aae962357bc330fca30b6fc"
+    }
+  ],
+  "limitations": {
+    "browserUiAndRequestContractOnly": true,
+    "realRouteHandlerExecution": false,
+    "sqlRpcExecution": false,
+    "githubWorkflowDispatch": false,
+    "providerAccuracyEvaluated": false,
+    "hostedDeploymentEvaluated": false
+  }
+}

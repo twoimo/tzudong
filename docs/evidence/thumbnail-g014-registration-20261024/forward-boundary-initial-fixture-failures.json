@@ -1,0 +1,54 @@
+{
+  "version": "postgres (PostgreSQL) 17.11 (Homebrew)",
+  "sourceBefore": {
+    "backend/supabase/tests/test_thumbnail_install_boundary_pg17.py": "b53a865efdd8e412dd7977c5cb896a50717c8cc169b2cb7303290bcfb97e137f",
+    "backend/supabase/candidates/20261024071000_thumbnail_production_install.sql": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "backend/supabase/tests/fixtures/thumbnail-install-hosted-storage-20261024.json": "00072e1f2ecb6807a3ea5379a3b3d2472893b096a1b6a96cc9744408f6f9e369",
+    "backend/supabase/tests/test_thumbnail_g014_contract_pg17.py": "02d901cd42e61b2d6cc189569306534e84bc891e4d98363bd929a74ad89f4887"
+  },
+  "sourceAfter": {
+    "backend/supabase/tests/test_thumbnail_install_boundary_pg17.py": "b53a865efdd8e412dd7977c5cb896a50717c8cc169b2cb7303290bcfb97e137f",
+    "backend/supabase/candidates/20261024071000_thumbnail_production_install.sql": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "backend/supabase/tests/fixtures/thumbnail-install-hosted-storage-20261024.json": "00072e1f2ecb6807a3ea5379a3b3d2472893b096a1b6a96cc9744408f6f9e369",
+    "backend/supabase/tests/test_thumbnail_g014_contract_pg17.py": "02d901cd42e61b2d6cc189569306534e84bc891e4d98363bd929a74ad89f4887"
+  },
+  "sourceStable": true,
+  "cases": {
+    "test_browser_bypass_and_superuser_are_denied": {
+      "reason": "thumbnail_install_storage_browser_boundary_denied",
+      "sqlstate": "42501",
+      "preserved": true
+    },
+    "test_browser_effective_owner_or_set_membership_is_denied": {
+      "reason": "thumbnail_install_storage_browser_boundary_denied",
+      "sqlstate": "42501",
+      "preserved": true
+    },
+    "test_existing_select_insert_without_lock_privilege_is_denied": {
+      "reason": "thumbnail_install_storage_lock_denied",
+      "sqlstate": "42501",
+      "preserved": true
+    },
+    "test_policy_digest_is_independent_of_incoming_search_path": {
+      "incomingPaths": 4,
+      "restored": true
+    },
+    "test_whole_source_autocommit_rejects_before_persistent_changes": {
+      "exit": 3,
+      "reason": "thumbnail_install_outer_transaction_required",
+      "preserved": true,
+      "wholeSourceSubmitted": true,
+      "fullInstallationExecuted": false
+    }
+  },
+  "cleanup": {
+    "ownedPid": 79391,
+    "statusExit": 3,
+    "pidFileAbsent": true,
+    "socketAbsent": true,
+    "tcpClosed": true
+  },
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "limits": "Actual PG17.11 entry/Storage component checks, not full installation proof.\n\nReuse the owned G014 fixture's cluster lifecycle, without running its test suite.\nThe Storage fixture models the observed table columns, owners, browser/server\nprivileges and exact ten policy expressions. It does not emulate Storage HTTP,\nmanaged triggers, the complete G014 graph or hosted PG17.6. No provider calls.\n"
+}

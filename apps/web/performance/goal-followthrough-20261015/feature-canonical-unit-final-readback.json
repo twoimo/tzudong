@@ -1,0 +1,60 @@
+{
+  "assertions": 91942,
+  "command": "node scripts/run-unit-tests.mjs",
+  "counts": {
+    "fail": 0,
+    "pass": 3749,
+    "skip": 11
+  },
+  "elapsedSeconds": 255.53787837503478,
+  "endedAt": "2026-10-15T07:08:36.092101+00:00",
+  "eslint": {
+    "exitCode": 0,
+    "files": [
+      "tests-unit/admin-route-auth-contract.test.ts",
+      "tests-unit/nightly-playwright-failure-evidence.test.ts",
+      "tests-unit/route-census.test.ts"
+    ]
+  },
+  "exitCode": 0,
+  "fileExecutions": 461,
+  "groups": 20,
+  "kind": "feature-canonical-unit-root-verification",
+  "logSha256": "97165ee7eabfb616cf3edef0417cbafd1e2027e10ced79b99e13cc93b725958e",
+  "node": "24.21.0",
+  "priorFailuresPreserved": [
+    {
+      "fail": 1,
+      "logSha256": "23e249b85294f24f88d8242045ad56ae99a281bde9ec497becb090ac17aa7b82",
+      "pass": 3529,
+      "skip": 3,
+      "sourceDriftFileCount": 1
+    },
+    {
+      "fail": 3,
+      "logSha256": "d0a9110548ca5c129de829d0a85ac6676ac9b9c97b7625973d46e34ebfa4cbca",
+      "pass": 3528,
+      "skip": 3,
+      "sourceDriftFileCount": 0
+    }
+  ],
+  "provesHostedOperation": false,
+  "python": "3.14.8",
+  "schemaVersion": 1,
+  "sourceDriftFiles": [],
+  "sourceInputAfterSha256": "ffbcc48673f227a09e9e317532f5f0bf3bd52f5f2a1ab4216ae137cabfa4a712",
+  "sourceInputBeforeSha256": "ffbcc48673f227a09e9e317532f5f0bf3bd52f5f2a1ab4216ae137cabfa4a712",
+  "sourceInputCount": 1516,
+  "sourceRevision": "d5889fa4ef0105ce98efe138796c4f0cdf06b3c0",
+  "sourceSelection": "web/backend-utils/knowledge-graph code plus successor workflow/base manifest; excludes retained performance artifacts; not a whole runtime closure",
+  "startedAt": "2026-10-15T07:04:20.630550+00:00",
+  "typescriptParity": {
+    "compatVersion": "6.0.2",
+    "diagnostics": 0,
+    "logicalInputNamesSha256": "245bfa2f783055580dfebd60afcc3f956175780c92f4c6fa1f811f0a227e5ffd",
+    "logicalInputs": 3161,
+    "nativeVersion": "7.0.2",
+    "nonLibraryContentSha256": "afd34ff4b074e356b0e8b7c534f7b1ae1ef962dc170ff4ff2ba06c8008d36863",
+    "passed": true
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "capturedAtUtc": "2026-10-24T07:59:40.062817+00:00",
+  "head": {
+    "headRefOid": "818b615a39dbe318eed3c23f395e6cbc45591b09",
+    "isDraft": true,
+    "mergeStateStatus": "BLOCKED"
+  },
+  "checks": [
+    {
+      "link": "https://github.com/twoimo/tzudong/runs/120811715671",
+      "name": "CodeQL",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073454637/job/120811668818",
+      "name": "Promotion Path",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://vercel.com/github",
+      "name": "Vercel Preview Comments",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415241/job/120811544130",
+      "name": "Ubuntu npm",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415260/job/120811544368",
+      "name": "secret-pattern-scan",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415254/job/120811544024",
+      "name": "Release",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415260/job/120811544125",
+      "name": "npm-audit",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415241/job/120811544413",
+      "name": "Install",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415260/job/120811544342",
+      "name": "sbom",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415241/job/120811544364",
+      "name": "Admin",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415241/job/120811544383",
+      "name": "Windows Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415260/job/120811544284",
+      "name": "rust-recovery",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415241/job/120811544419",
+      "name": "Windows npm",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415260/job/120811544309",
+      "name": "pip-audit",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415241/job/120811544343",
+      "name": "Ubuntu Bun",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415260/job/120811544306",
+      "name": "orchestration-readiness",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073412501/job/120811537703",
+      "name": "Analyze (swift)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073412501/job/120811537720",
+      "name": "Analyze (rust)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073412501/job/120811537748",
+      "name": "Analyze (python)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073412501/job/120811537532",
+      "name": "Analyze (javascript-typescript)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073412501/job/120811537771",
+      "name": "Analyze (actions)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073412501/job/120811537749",
+      "name": "Analyze (go)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/twoimo/tzudong/actions/runs/40073415261/job/120811545199",
+      "name": "Freshness",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://dashboard.gitguardian.com",
+      "name": "GitGuardian Security Checks",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://vercel.com/twoimos-projects/tzudong/5yZ5ruGCA5mN2aDaJsYmJvzyRsmY",
+      "name": "Vercel",
+      "state": "SUCCESS"
+    }
+  ],
+  "scope": "CI for this exact parent head only; no evidence for the new dirty forward candidate."
+}

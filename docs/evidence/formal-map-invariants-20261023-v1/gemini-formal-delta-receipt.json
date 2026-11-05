@@ -1,0 +1,29 @@
+{
+  "observedAt": "2026-10-23T08:48:06.231883+00:00",
+  "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "userTurn": "b237ceaa27f11c3b",
+  "sourceRevision": "fe4b73dac510d4670517c7d3eca4f0c2470d4297",
+  "bundleSha256": "c3fb6be051942230565e8e551f6f9988d6c0da2175c2a9df553a5398e6865f23",
+  "model": "Gemini 4 Argon / 높음 (highest displayed)",
+  "research": "off",
+  "reportPath": "/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/docs/evidence/formal-map-invariants-20261023-v1/gemini_4_argon_formal_delta_report.visible.txt",
+  "bytes": 22643,
+  "sha256": "6fa6553f61a67185aecad159dd1eb93f2ced17368c01b1f63468dae0d4902069",
+  "artifactReceipt": "/Users/twoimo/.local/state/tzudong-formal-resume-20261023/gemini-formal-delta-artifact-receipt.json",
+  "releaseReceipt": "/Users/twoimo/.local/state/tzudong-formal-resume-20261023/gemini-formal-delta-release-result.json",
+  "findings": [
+    "GEM-F-01",
+    "GEM-F-02",
+    "GEM-F-03",
+    "GEM-F-04",
+    "GEM-F-05"
+  ],
+  "status": "REPORT_SAVED_VERIFIED_OWNER_RELEASED_FINDINGS_PENDING",
+  "extraction": "Complete rendered innerText without editing; raw HTML retained; official Copy unavailable",
+  "coverageBoundary": "31 supplied source bodies; report miscounts21 and explicitly declares missing transitive imports/raw artifacts. Matched samples do not establish whole dependency coverage.",
+  "renderedBackup": {
+    "path": "/Users/twoimo/.local/state/tzudong-formal-resume-20261023/gemini_4_argon_formal_delta_report.rendered.html",
+    "bytes": 202453,
+    "sha256": "ca9618041a5c620e88b05bdcf5e4df94cbd9f4df616dbacf30c5d73d2315d73f"
+  }
+}

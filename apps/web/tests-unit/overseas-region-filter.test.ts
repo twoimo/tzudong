@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
     buildOverseasCountryAddressOrFilter,
+    findOverseasRegionKeyForRestaurant,
     sanitizePostgrestOrTerm,
 } from '../lib/overseas-region-matching';
 
@@ -32,6 +33,24 @@ describe('overseas country PostgREST filter', () => {
         expect(buildOverseasCountryAddressOrFilter('')).toBeNull();
         expect(buildOverseasCountryAddressOrFilter(12 as unknown as string)).toBeNull();
         expect(buildOverseasCountryAddressOrFilter('서울),id.eq.secret')).toBeNull();
+    });
+
+    test('resolves a restaurant to its city region instead of the first region of the same country', () => {
+        expect(findOverseasRegionKeyForRestaurant({
+            road_address: '1250 Broadway, New York, NY 10001 미국',
+            jibun_address: null,
+            english_address: null,
+        })).toBe('미국(뉴욕)');
+        expect(findOverseasRegionKeyForRestaurant({
+            road_address: null,
+            jibun_address: null,
+            english_address: '1-2 Namba, Osaka, Japan',
+        })).toBe('일본(오사카)');
+        expect(findOverseasRegionKeyForRestaurant({
+            road_address: '서울특별시 동대문구 장한로24길 7',
+            jibun_address: null,
+            english_address: null,
+        })).toBeNull();
     });
 
     test('escapes like wildcards and drops or() separators', () => {

@@ -1,0 +1,25 @@
+{
+  "observedAt": "2026-10-20T19:47:17.411145+00:00",
+  "servers": [
+    {
+      "port": 18924,
+      "ownedPid": 86109,
+      "cwdVerified": true,
+      "signal": "SIGTERM",
+      "listenerStopped": true
+    },
+    {
+      "port": 18925,
+      "ownedPid": 57566,
+      "cwdVerified": true,
+      "signal": "SIGTERM",
+      "listenerStopped": true
+    }
+  ],
+  "userTab": {
+    "networkDiagnosticDisabled": true,
+    "originalDomesticSelectionRestored": true,
+    "readback": "aria-pressed=true"
+  },
+  "otherProcessesTargeted": false
+}

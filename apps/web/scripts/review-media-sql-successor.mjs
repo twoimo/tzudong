@@ -50,6 +50,7 @@ export const SUCCESSOR_PRE_COMMIT_EXPIRY_MARKER = '-- successor-pre-commit-expir
 const HEX_SHA256 = /^[0-9a-f]{64}$/;
 const REVISION = /^[0-9a-f]{40}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const DECIMAL_ID = /^[1-9][0-9]*$/;
 const PROJECT_REF = 'aqlcofblfxdrjhhdmarw';
 const PURPOSE = 'review-media-current-state-eleven-stage';
 const ADMISSION_MAX_AGE_MS = 15 * 60 * 1000;
@@ -57,6 +58,11 @@ const PREFLIGHT_TIMEOUT_MS = 30_000;
 const PSQL_MAX_TIMEOUT_MS = ADMISSION_MAX_AGE_MS + 30_000;
 const GIT_REMOTE_READ_TIMEOUT_MS = 15_000;
 const PRIVATE_RECEIPT_FILES = Object.freeze({
+  applyEvidenceMap: 'apply-operating-evidence-map.json',
+  applyMachine: 'apply-machine-operating-observations.json',
+  applyQuiescence: 'apply-quiescence-readback.json',
+  attestation: 'operator-custody-attestation.json',
+  bundle: 'vercel-operating-bundle.json',
   protectedMain: 'protected-main-receipt.json',
   rehearsal: 'rehearsal-receipt.json',
   rehearsalAdmission: 'rehearsal-admission.json',
@@ -64,6 +70,19 @@ const PRIVATE_RECEIPT_FILES = Object.freeze({
   rollback: 'rollback-readback-receipt.json',
   source: 'source-receipt.json',
 });
+const OPERATOR_CUSTODY_FENCES = Object.freeze([
+  'browserRpc', 'dashboard', 'directSql', 'providerIngress',
+]);
+const PHASE_STABLE_FENCES = Object.freeze([
+  'adminRecordMutationsHold', ...OPERATOR_CUSTODY_FENCES,
+]);
+const QUIESCENCE_RELATIONS = Object.freeze([
+  'pipeline_control.admin_record_media_cleanup',
+  'pipeline_control.admin_record_operations',
+  'public.reviews',
+  'storage.objects',
+]);
+const applyWriterFenceFile = fence => `apply-writer-fence-${fence}.json`;
 const FIXED_CONTROLLER_CODES = new Set([
   'MIGRATION_BUNDLE_OUTCOME_UNCONFIRMED',
   'MIGRATION_BUNDLE_READBACK_INVALID',
@@ -658,6 +677,224 @@ function assertPriorReceiptWindow(receipt, expiresAt, nowMs) {
     || nowMs >= receiptExpiresAt) fail('SUCCESSOR_ADMISSION_INVALID');
 }
 
+function validateApplyOperatingEvidence(admission, manifestRecord, {
+  createdAt,
+  expiresAt,
+  minimumObservedAt,
+  nowMs,
+  receiptDirectory,
+}) {
+  const { manifest, manifestSha256 } = manifestRecord;
+  const map = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.applyEvidenceMap,
+    admission.applyEvidenceMapSha256,
+  );
+  exactKeys(map, [
+    'attestationSha256', 'bundleSha256', 'kind', 'machineSha256', 'quiescenceSha256',
+    'receiptProvenance', 'schemaVersion', 'sourceRevision',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  if (map.schemaVersion !== 1
+    || map.kind !== 'review-media-successor-apply-operating-evidence-map'
+    || map.sourceRevision !== admission.sourceRevision
+    || map.quiescenceSha256 !== admission.applyQuiescenceReadbackSha256) {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+
+  const attestation = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.attestation,
+    map.attestationSha256,
+  );
+  exactKeys(attestation, [
+    'assertedAt', 'authority', 'basis', 'event', 'fences', 'kind', 'noticeState',
+    'operatorRole', 'repository', 'runAttempt', 'runId', 'schemaVersion', 'scope',
+    'sourceRevision', 'workflowRef',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(attestation.fences, OPERATOR_CUSTODY_FENCES, 'SUCCESSOR_ADMISSION_INVALID');
+  if (attestation.schemaVersion !== 1
+    || attestation.kind !== 'review-media-successor-operator-custody-attestation'
+    || attestation.authority !== 'authenticated-repository-owner-workflow-dispatch'
+    || attestation.basis !== 'standing-custody-confirmation-bound-by-owner-dispatch'
+    || attestation.event !== 'workflow_dispatch'
+    || attestation.noticeState !== 'not-issued'
+    || attestation.operatorRole !== 'repository-owner'
+    || attestation.repository !== TZUDONG_GITHUB_REPOSITORY
+    || !DECIMAL_ID.test(attestation.runAttempt ?? '')
+    || !DECIMAL_ID.test(attestation.runId ?? '')
+    || attestation.scope !== 'stopped-until-application-result'
+    || attestation.sourceRevision !== admission.sourceRevision
+    || typeof attestation.workflowRef !== 'string'
+    || !attestation.workflowRef.startsWith(`${TZUDONG_GITHUB_REPOSITORY}/.github/workflows/`)
+    || !attestation.workflowRef.endsWith('@refs/heads/main')
+    || Object.values(attestation.fences).some(state => state !== 'stopped')) {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+
+  const bundle = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.bundle,
+    map.bundleSha256,
+  );
+  exactKeys(bundle, [
+    'adminRecordMutationsHold', 'createdAt', 'expiresAt', 'kind', 'manifestSha256',
+    'protectedMain', 'rollbackPolicy', 'rollbackReadback', 'schemaVersion',
+    'sourceRevision', 'sourceRoot', 'storyboardPolicy',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(bundle.storyboardPolicy, [
+    'deployment', 'policy', 'schemaVersion',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(bundle.storyboardPolicy.deployment, [
+    'branch', 'deploymentId', 'sourceCommit',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(bundle.storyboardPolicy.policy, [
+    'canonicalPolicySha256',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  if (bundle.schemaVersion !== 1
+    || bundle.kind !== 'review-media-successor-vercel-operating-bundle'
+    || bundle.manifestSha256 !== manifestSha256
+    || bundle.sourceRevision !== admission.sourceRevision
+    || bundle.sourceRoot !== manifest.sourceRoot
+    || bundle.createdAt !== admission.createdAt
+    || bundle.expiresAt !== admission.expiresAt
+    || bundle.adminRecordMutationsHold?.holdActive !== true
+    || bundle.adminRecordMutationsHold?.deploymentId !== admission.rollback.deploymentId
+    || bundle.adminRecordMutationsHold?.commit !== admission.sourceRevision
+    || bundle.rollbackReadback?.deploymentId !== admission.rollback.deploymentId
+    || bundle.rollbackReadback?.gitSha !== admission.rollback.deploymentSha
+    || bundle.storyboardPolicy.schemaVersion !== 1
+    || bundle.storyboardPolicy.deployment.branch !== 'main'
+    || bundle.storyboardPolicy.deployment.deploymentId !== admission.rollback.deploymentId
+    || bundle.storyboardPolicy.deployment.sourceCommit !== admission.sourceRevision
+    || !HEX_SHA256.test(bundle.storyboardPolicy.policy.canonicalPolicySha256 ?? '')) {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+
+  const machine = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.applyMachine,
+    map.machineSha256,
+  );
+  exactKeys(machine, [
+    'adminRuntimeHold', 'automaticReviewer', 'g037WriteFreeze', 'inFlightQuiescence',
+    'kind', 'schemaVersion', 'sourceRevision',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(machine.adminRuntimeHold, ['deploymentId', 'holdActive', 'observedAt'], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(machine.automaticReviewer, ['observedAt', 'state'], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(machine.g037WriteFreeze, ['observedAt', 'state'], 'SUCCESSOR_ADMISSION_INVALID');
+  exactKeys(machine.inFlightQuiescence, [
+    'coverage', 'inFlightWriters', 'lockMode', 'observedAt',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  if (machine.schemaVersion !== 1
+    || machine.kind !== 'review-media-successor-machine-operating-observations'
+    || machine.sourceRevision !== admission.sourceRevision
+    || machine.adminRuntimeHold.holdActive !== true
+    || machine.adminRuntimeHold.deploymentId !== admission.rollback.deploymentId
+    || machine.adminRuntimeHold.observedAt !== bundle.adminRecordMutationsHold.observedAt
+    || machine.automaticReviewer.state !== 'stopped'
+    || machine.g037WriteFreeze.state !== 'active'
+    || !equal(machine.inFlightQuiescence.coverage, QUIESCENCE_RELATIONS)
+    || machine.inFlightQuiescence.inFlightWriters !== 0
+    || machine.inFlightQuiescence.lockMode !== 'SHARE') {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+
+  const quiescence = readPrivateCanonicalReceipt(
+    receiptDirectory,
+    PRIVATE_RECEIPT_FILES.applyQuiescence,
+    admission.applyQuiescenceReadbackSha256,
+  );
+  exactKeys(quiescence, [
+    'coverage', 'expiresAt', 'id', 'inFlightWriters', 'kind', 'lockMode',
+    'manifestSha256', 'observedAt', 'projectRef', 'purpose', 'schemaVersion',
+    'sourceRevision',
+  ], 'SUCCESSOR_ADMISSION_INVALID');
+  if (quiescence.schemaVersion !== 1
+    || quiescence.kind !== 'apply-in-flight-quiescence-readback'
+    || quiescence.id !== manifest.id
+    || quiescence.projectRef !== manifest.projectRef
+    || quiescence.purpose !== manifest.purpose
+    || quiescence.manifestSha256 !== manifestSha256
+    || quiescence.sourceRevision !== admission.sourceRevision
+    || !equal(quiescence.coverage, QUIESCENCE_RELATIONS)
+    || quiescence.inFlightWriters !== 0
+    || quiescence.lockMode !== 'SHARE'
+    || !equal(quiescence.coverage, machine.inFlightQuiescence.coverage)
+    || quiescence.inFlightWriters !== machine.inFlightQuiescence.inFlightWriters
+    || quiescence.lockMode !== machine.inFlightQuiescence.lockMode
+    || quiescence.observedAt !== machine.inFlightQuiescence.observedAt) {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+  assertReceiptWindow(quiescence, admission, createdAt, expiresAt, nowMs);
+
+  const freshTimes = [
+    machine.automaticReviewer.observedAt,
+    machine.g037WriteFreeze.observedAt,
+    machine.inFlightQuiescence.observedAt,
+  ].map(value => Date.parse(value));
+  if (freshTimes.some(value => !Number.isFinite(value)
+    || value < minimumObservedAt
+    || value >= expiresAt
+    || value > nowMs + 30_000)) {
+    fail('SUCCESSOR_ADMISSION_INVALID');
+  }
+
+  const fenceKeys = Object.keys(manifest.requiredWriterFences).sort();
+  exactKeys(map.receiptProvenance, fenceKeys, 'SUCCESSOR_ADMISSION_INVALID');
+  for (const key of fenceKeys) {
+    const fence = readPrivateCanonicalReceipt(
+      receiptDirectory,
+      applyWriterFenceFile(key),
+      admission.writerFences[key].evidenceSha256,
+    );
+    exactKeys(fence, [
+      'expiresAt', 'fence', 'id', 'kind', 'manifestSha256', 'observedAt', 'projectRef',
+      'purpose', 'schemaVersion', 'sourceRevision', 'state',
+    ], 'SUCCESSOR_ADMISSION_INVALID');
+    exactKeys(map.receiptProvenance[key], [
+      'evidenceSha256', 'provenance', 'receiptSha256',
+    ], 'SUCCESSOR_ADMISSION_INVALID');
+    const operator = OPERATOR_CUSTODY_FENCES.includes(key);
+    const expectedProvenance = operator
+      ? 'authenticated-owner-custody-commitment'
+      : key === 'adminRecordMutationsHold'
+        ? 'immutable-deployment-machine-observation'
+        : 'fresh-machine-observation';
+    const expectedEvidenceSha256 = operator
+      ? map.attestationSha256
+      : key === 'adminRecordMutationsHold'
+        ? map.bundleSha256
+        : map.machineSha256;
+    const expectedObservedAt = operator
+      ? attestation.assertedAt
+      : key === 'adminRecordMutationsHold'
+        ? bundle.adminRecordMutationsHold.observedAt
+        : key === 'automaticReviewer'
+          ? machine.automaticReviewer.observedAt
+          : machine.g037WriteFreeze.observedAt;
+    if (fence.schemaVersion !== 1
+      || fence.id !== manifest.id
+      || fence.projectRef !== manifest.projectRef
+      || fence.purpose !== manifest.purpose
+      || fence.manifestSha256 !== manifestSha256
+      || fence.sourceRevision !== admission.sourceRevision
+      || fence.kind !== 'writer-fence-readback-receipt'
+      || fence.fence !== key
+      || fence.state !== manifest.requiredWriterFences[key]
+      || fence.observedAt !== expectedObservedAt
+      || map.receiptProvenance[key].provenance !== expectedProvenance
+      || map.receiptProvenance[key].evidenceSha256 !== expectedEvidenceSha256
+      || map.receiptProvenance[key].receiptSha256 !== admission.writerFences[key].evidenceSha256) {
+      fail('SUCCESSOR_ADMISSION_INVALID');
+    }
+    assertReceiptWindow(fence, admission, createdAt, expiresAt, nowMs);
+    if (['automaticReviewer', 'g037WriteFreeze'].includes(key)
+      && Date.parse(fence.observedAt) < minimumObservedAt) {
+      fail('SUCCESSOR_ADMISSION_INVALID');
+    }
+  }
+}
+
 function validatePrivateReceipts(admission, manifestRecord, {
   createdAt,
   expiresAt,
@@ -666,6 +903,7 @@ function validatePrivateReceipts(admission, manifestRecord, {
   receiptDirectory,
 }) {
   const { manifest, manifestSha256 } = manifestRecord;
+  let rehearsalPublishedAt;
   const common = receipt => receipt.schemaVersion === 1
     && receipt.id === manifest.id
     && receipt.projectRef === manifest.projectRef
@@ -719,7 +957,13 @@ function validatePrivateReceipts(admission, manifestRecord, {
       || rehearsalAdmission.sourceReceiptSha256 !== admission.sourceReceiptSha256
       || rehearsalAdmission.protectedMainReceiptSha256 !== admission.protectedMainReceiptSha256
       || !equal(rehearsalAdmission.rollback, admission.rollback)
-      || !equal(rehearsalAdmission.writerFences, admission.writerFences)
+      || Object.keys(manifest.requiredWriterFences).some(key => (
+        rehearsalAdmission.writerFences[key].state !== admission.writerFences[key].state
+      ))
+      || PHASE_STABLE_FENCES.some(key => (
+        rehearsalAdmission.writerFences[key].evidenceSha256
+          !== admission.writerFences[key].evidenceSha256
+      ))
       || rehearsalAdmission.journalPathSha256 !== sha256(Buffer.from(resolve(
         receiptDirectory, PRIVATE_RECEIPT_FILES.rehearsalJournal,
       )))
@@ -783,6 +1027,7 @@ function validatePrivateReceipts(admission, manifestRecord, {
     const startedAt = Date.parse(started.startedAt);
     const verifiedAt = Date.parse(verification.verifiedAt);
     const publishedAt = Date.parse(publication.publishedAt);
+    rehearsalPublishedAt = publishedAt;
     const observedAt = Date.parse(rehearsal.observedAt);
     const rehearsalLeaseStartedAt = rehearsalWindow.createdAt;
     if (started.event !== 'started'
@@ -849,6 +1094,16 @@ function validatePrivateReceipts(admission, manifestRecord, {
     || rollback.teamId !== admission.rollback.teamId) fail('SUCCESSOR_ADMISSION_INVALID');
   assertReceiptWindow(rollback, admission, createdAt, expiresAt, nowMs);
 
+  if (includeRehearsal) {
+    validateApplyOperatingEvidence(admission, manifestRecord, {
+      createdAt,
+      expiresAt,
+      minimumObservedAt: rehearsalPublishedAt,
+      nowMs,
+      receiptDirectory,
+    });
+    return;
+  }
   for (const key of Object.keys(manifest.requiredWriterFences).sort()) {
     const fence = readPrivateCanonicalReceipt(
       receiptDirectory,
@@ -945,6 +1200,8 @@ export function validateSuccessorAdmission(admission, manifestRecord, {
 } = {}) {
   const { manifest } = manifestRecord;
   exactKeys(admission, [
+    'applyEvidenceMapSha256',
+    'applyQuiescenceReadbackSha256',
     'attemptId',
     'createdAt',
     'expiresAt',
@@ -965,6 +1222,8 @@ export function validateSuccessorAdmission(admission, manifestRecord, {
     'stageStates',
     'writerFences',
   ], 'SUCCESSOR_ADMISSION_INVALID');
+  assertHex(admission.applyEvidenceMapSha256, 'SUCCESSOR_ADMISSION_INVALID');
+  assertHex(admission.applyQuiescenceReadbackSha256, 'SUCCESSOR_ADMISSION_INVALID');
   const envelope = validateAdmissionEnvelope(admission, manifestRecord, {
     includeRehearsal: true,
     now,

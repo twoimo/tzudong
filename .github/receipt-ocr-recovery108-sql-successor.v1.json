@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "receipt_ocr_recovery108_sql_successor_v1",
+  "purpose": "receipt-ocr-provider-indeterminate-recovery",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "serverMajor": 17,
+  "databaseName": "postgres",
+  "executorRole": "postgres",
+  "advisoryLockKey": 7311754282260318,
+  "launchPolicy": {
+    "state": "held",
+    "code": "RECEIPT_OCR_RECOVERY108_LAUNCH_HELD",
+    "reason": "source-ready-held-no-operating-executor-or-hosted-authorization"
+  },
+  "protectedSource": {
+    "remote": "origin",
+    "ref": "refs/heads/main",
+    "repositoryUrl": "https://github.com/twoimo/tzudong.git"
+  },
+  "stateRootAlgorithm": "review-media-ledger-identity/v1",
+  "operatingTransition": {
+    "before": 107,
+    "after": 108
+  },
+  "predecessor": {
+    "state": "source_ready",
+    "manifestPath": ".github/receipt-ocr-post106-acl-admission-sql-successor.v1.json",
+    "manifestSha256": "58adb514cbdf4221952b9bddfc75dead6a91f74d6fedc0d39445983c542e9b5a",
+    "ledgerCount": 107,
+    "terminalIdentityRoot": "cd04aebfc1efcc5588486adf3b7ba47fc5b5b76e39a9c23e316768f2919d9d9e"
+  },
+  "migration": {
+    "id": "receipt_ocr_indeterminate_recovery",
+    "version": "20261019130000",
+    "name": "receipt_ocr_indeterminate_recovery",
+    "path": "backend/supabase/migrations/20261019130000_receipt_ocr_indeterminate_recovery.sql",
+    "sha256": "d3258b679cbf42ecd97edeab941a5bbaf30fa7b15d968081b60b8b600a3ecd1a",
+    "statementCount": 83,
+    "statementVectorSha256": "3d0bfeb1229b194f818b95a1b4b1ba50609770a93afd8e3c67daabd513c0bd56"
+  },
+  "operatingIdentity": {
+    "migrationIdentityRoot": "0f6f764cb097b9ae1e5387a395411ea6fcd98cd5286bace4542901a1c08f3f6e",
+    "predecessorIdentityRoot": "cd04aebfc1efcc5588486adf3b7ba47fc5b5b76e39a9c23e316768f2919d9d9e",
+    "targetIdentityRoot": "2c7b7fff113a68ad4b73a8ebb005296ddd1344de5fa09fcf828b905e4517bb1d"
+  },
+  "fixture": {
+    "path": "backend/supabase/tests/receipt_ocr_indeterminate_recovery.sql",
+    "sha256": "01766da42c73195925c4fdcf3dbbdcf1efb651b947e3087481306f86179e76c2"
+  },
+  "aclInitialDefaultFixture": {
+    "path": "backend/supabase/tests/receipt_ocr_indeterminate_recovery_acl_initial_default.sql",
+    "sha256": "01a712df0fa0de40c3b0760f52d51c8238bc0f4ecb5ebb8f53160eb1fa5a9e20"
+  },
+  "aclAdmissionFixture": {
+    "path": "backend/supabase/tests/receipt_ocr_indeterminate_recovery_acl_admission.sql",
+    "sha256": "76317420f3be8199fccfbf716ad024573dad324d6f906c3a811c70e4e28df66e"
+  },
+  "toolchain": [
+    {
+      "path": "apps/web/scripts/receipt-ocr-recovery108-sql-successor.mjs",
+      "sha256": "5a9154f51cfe19f25007ce1737eee969faa32c166698b977884218c370ad20f8"
+    }
+  ],
+  "requiredWriterFences": {
+    "adminRecordMutationsHold": "active",
+    "g037WriteFreeze": "active",
+    "automaticReviewer": "stopped",
+    "browserRpc": "stopped",
+    "directSql": "stopped",
+    "dashboard": "stopped",
+    "providerIngress": "stopped"
+  }
+}

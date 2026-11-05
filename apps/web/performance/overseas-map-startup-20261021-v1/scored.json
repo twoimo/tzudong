@@ -1,0 +1,27 @@
+{
+  "sourceHashesVerified": true,
+  "initialRun": {
+    "candidateCasesPassed": 13,
+    "baselineObserverFailures": 1
+  },
+  "focusedFollowupCasesPassed": 2,
+  "fullApplicationHomeCasesPassed": 2,
+  "absoluteBudgetMs": 5000,
+  "absoluteBudgetAllTenSamplesPassed": true,
+  "absoluteNoiseFloorMs": 250,
+  "mobile497": {
+    "samples": 5,
+    "medianMs": 1599,
+    "minMs": 1571,
+    "maxMs": 2107,
+    "madMs": 28
+  },
+  "allViewportRangeMs": [
+    1511,
+    2107
+  ],
+  "relativeImprovement": null,
+  "reason": "Baseline did not reach readiness; no percentage or production/field speedup claim is supported.",
+  "externalCrossAuditComplete": false,
+  "deployed": false
+}

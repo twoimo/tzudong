@@ -1,0 +1,36 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-formal/marker-state-model.test.mjs:
+FORMAL_BROWSER 156.0.8078.47
+249 |   });
+250 | }, 60000);
+251 | 
+252 | test('a deferred SDK root receives the retained mask after disconnected-root replacement', async () => {
+253 |   await withFixture(async page => {
+254 |     expect(await page.evaluate(() => window.__formal.delayedRootMask())).toEqual({connected: true, hidden: 'true', owner: 'true'});
+      ^
+error: expect(received).toEqual(expected)
+
+  {
+    "connected": true,
+-   "hidden": "true",
+-   "owner": "true",
++   "hidden": null,
++   "owner": null,
+  }
+
+- Expected  - 2
++ Received  + 2
+
+      at toEqual (unknown:1:1)
+      at /Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:254:74
+      at withFixture (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:209:11)
+      at /Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:253:9
+      at processTicksAndRejections (unknown:7:39)
+(fail) a deferred SDK root receives the retained mask after disconnected-root replacement [2271.02ms]
+
+ 0 pass
+ 5 filtered out
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [2.73s]

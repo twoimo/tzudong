@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "kind": "hosted-ledger-local86-identity-comparison",
+  "status": "classified_with_one_historical_applied_variant",
+  "inputs": {
+    "hostedMapping": {
+      "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+      "sha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a",
+      "observedAt": "2026-10-18T12:33:26.361806+00:00",
+      "rowCount": 86
+    },
+    "retainedHostedSnapshot": {
+      "path": "apps/web/performance/rollout-preflight/hosted-migration-ledger-20261004.json",
+      "sha256": "21c8b9c7e5c92d9e6f143cd4095e75ff37384fcf5e8d56ac26c53a97bb14ce8f",
+      "observedAt": "2026-10-04T11:40:34Z",
+      "rowCount": 62
+    },
+    "historicalPg17Receipt": {
+      "path": "apps/web/performance/review-db-successor-20261012/pg17-current-review-fixes-20261014-v2.json",
+      "sha256": "5a1aa0fb9f45ad4510377455b82b6940f18fa43b25123a4fbafcdb8fcf235ee6",
+      "stage0PrefixRoot": "c975c881e8eb3af88c4b0fc87f1109ac4e1507258f29363de88760f20713dba2"
+    },
+    "historicalPg17Harness": {
+      "path": "apps/web/performance/review-db-successor-20261012/verify-review-media-sql-successor.mjs",
+      "sha256": "7e750e9d0126f6f10afe9056d747a2ea854d462161ea4e8f0168e2751d554c0a"
+    },
+    "canonicalStatementParser": {
+      "path": "backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd",
+      "upstreamVersion": "v2.109.1",
+      "upstreamCommit": "6d4c19870ed213ba7f682f117d0345c8a40bfa94"
+    }
+  },
+  "method": {
+    "rowShape": [
+      "version",
+      "name",
+      "statement_count",
+      "statement_vector_sha256"
+    ],
+    "canonicalJson": "Recursively sort object keys, preserve array order, serialize compact JSON, then SHA-256 UTF-8 bytes.",
+    "sourceVector": "Use the pinned g037 Supabase SplitAndTrim parser through readOriginalStatementVector; never split or truncate SQL text ad hoc.",
+    "sourceSelection": "Require exact version/name filenames for matches. Applied-only owner-recovery rows use their immutable applied-receipt SQL files."
+  },
+  "comparison": {
+    "hosted86": {
+      "rowCount": 86,
+      "canonicalRowIdentitySha256": "d0b53928a5f3c40f467091b598cd93ca227d744c4ab120b9117a14ef4be6e7d8",
+      "controllerRawStatementMaterialRoot": "f2791773560e1404f5e88a51d314d925c38814066f517f72a6195853a900a5bf"
+    },
+    "retainedHosted62": {
+      "rowCount": 62,
+      "canonicalRowIdentitySha256": "4f6c413afa25e555cc43edc8b0d4d02b2dfb5898cd8272cf0d22840e333d5e77",
+      "exactHosted86Matches": 62,
+      "differences": 0
+    },
+    "postSnapshot24": {
+      "rowCount": 24,
+      "exactCanonicalSourceOrReceiptMatches": 23,
+      "migrationSourceMatches": 21,
+      "immutableAppliedReceiptMatches": 2,
+      "exactMatchKeyShape": [
+        "version",
+        "name"
+      ],
+      "exactMatchKeysSha256": "3e6683d9a9d9db174e0c67bc7e56a8c8cdb82b403a1550f6b4d9ac29a92ef9d8",
+      "sourceBindingShape": [
+        "version",
+        "name",
+        "path",
+        "sourceSha256",
+        "statementCount",
+        "statementVectorSha256"
+      ],
+      "sourceBindingsSha256": "2df5ccf5b5b46966ed6b3faceadbb2164bf952ee8e81e4f8f31e50139da3986e",
+      "unmatched": [
+        {
+          "classification": "historical_applied_variant",
+          "hosted": {
+            "version": "20261008124858",
+            "name": "public_profile_leaderboard_read_boundary",
+            "statementCount": 1,
+            "statementVectorSha256": "8bab7119608afa8cf4fec529fb5cab6546fbd0c9326e08b56c9a053daa21b360"
+          },
+          "currentSourceCandidate": {
+            "path": "backend/supabase/migrations/20261008084856_public_profile_leaderboard_read_boundary.sql",
+            "sourceSha256": "15615ff122f66aeca8ad95de7d16535267d4ff7c818a268c23cea5484cb5aaa7",
+            "version": "20261008084856",
+            "name": "public_profile_leaderboard_read_boundary",
+            "statementCount": 13,
+            "statementVectorSha256": "d4149c58dd18e1b5efe3ef4e8261589b3e9d31561861c4bdaf31a128dc7da450"
+          },
+          "matchingLocalSourceOrReceiptFound": false,
+          "requiredDisposition": "Preserve and pin the hosted row as immutable predecessor identity. Do not substitute, relabel or reapply the current source candidate."
+        }
+      ]
+    },
+    "historicalPg17Stage0": {
+      "classification": "synthetic_ledger_fixture",
+      "databaseLedgerCountBeforeFixture": 0,
+      "fixtureRows": 86,
+      "fixtureVersionRange": [
+        "00000000000001",
+        "00000000000086"
+      ],
+      "fixtureNamePattern": "local_predecessor_<1..86>",
+      "fixtureStatement": "local schema-only predecessor fixture",
+      "hostedVersionNameOverlap": 0,
+      "conclusion": "The c975c881... stage-0 root is valid for the historical rehearsal fixture only. It is not a retained canonical local copy of the hosted 86-row ledger and is not authority for a new hosted admission."
+    }
+  },
+  "successorConditions": [
+    "Keep the existing 86->97 and 97->102 manifests and retained receipts unchanged.",
+    "The new 89->100 operating preflight must bind the hosted mapping receipt, require ledger=89, all eleven predecessor rows absent, all five feature rows absent, the exact retained 86-row identity projection, and the three exact evidence rows.",
+    "The new contract must distinguish the operating baseline identity from the local rehearsal fixture identity. It must not require c975c881... to equal the hosted raw-statement root f2791773... or silently replace one with the other.",
+    "The operating transaction must preserve every non-target ledger identity, including historical row 20261008124858, and insert only the eleven existing predecessor vectors before terminal readback at ledger=100.",
+    "A fresh isolated PG17 rehearsal must install the three evidence migrations before the eleven predecessor migrations and cover apply, fail-closed drift, idempotency, rollback and terminal readback. Catalog and evidence objects must remain unchanged except for the intended predecessor effects.",
+    "The separate 100->105 feature successor must require the exact completed 89->100 predecessor identity, retain the three evidence identities, require all five feature rows absent, apply only the existing five sources, and verify exact runtime function, trigger, ACL, hash and capability readiness.",
+    "Do not call either successor admissible until a protected-source admission binds its own fresh rehearsal and operating readbacks."
+  ],
+  "limitations": [
+    "Local read-only comparison only; no hosted query, DDL, Docker, deployment or admission was executed.",
+    "The hosted Q3 result contains no SQL statement bodies. The historical applied variant is therefore classified by exact hosted ledger identity and absence of a matching retained local source, not by reconstructed body equivalence.",
+    "Canonical source-vector comparison does not prove current hosted catalog semantics; catalog and runtime readbacks remain separate gates."
+  ]
+}

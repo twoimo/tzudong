@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "kind": "supabase-storage-tenant-migration-source-inventory",
+  "purpose": "Generator-only source-reconstruction inventory for validating native container tenant migration contents against immutable upstream metadata; it contains no SQL content and is not database input.",
+  "repository": "https://github.com/supabase/storage",
+  "sourceCommit": "cce047b6dca69c987a16976af739175365b1edd5",
+  "sourceRef": "v1.33.0",
+  "sourcePath": "migrations/tenant",
+  "ociImage": "docker.io/supabase/storage-api:v1.33.0",
+  "ociIndexDigest": "sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177",
+  "ociAmd64ManifestDigest": "sha256:4d9064756e9fb18784c8f7158873bf53fed5058463a3a62a4da3907d73eebe89",
+  "dbInstallRoles": false,
+  "records": [
+    {
+      "filename": "0001-initialmigration.sql",
+      "gitBlobSha1": "6bb32b4a8190a761bfcd15280914407c78d45bb0",
+      "sha256": "822ae07d4783158bc1912bb623e5107cc9002d519e1143a9c200ed6ee18b6d0f",
+      "byteLength": 8
+    },
+    {
+      "filename": "0002-storage-schema.sql",
+      "gitBlobSha1": "d91586fea7b23c3a1a76b897bd000588fcd09477",
+      "sha256": "2d7087b9a391d195c5705d27fad68886a61e24e302c620b939bb73b11b696c12",
+      "byteLength": 6425
+    },
+    {
+      "filename": "0003-pathtoken-column.sql",
+      "gitBlobSha1": "4468ff92396fa6380e575133625532d8e76ffc4b",
+      "sha256": "db57ad79bd7ecf1ea6a8099b38bf376886d6b2181ba65b9e9c0556ed245dea8b",
+      "byteLength": 1019
+    },
+    {
+      "filename": "0004-add-migrations-rls.sql",
+      "gitBlobSha1": "695ec3648b4ad04c35f5f89edb4bcb604a83f6dd",
+      "sha256": "05b32aad858e4644202e6ac43413cfee30e61d7e9ad51c42b082cfb21235c7bd",
+      "byteLength": 57
+    },
+    {
+      "filename": "0005-add-size-functions.sql",
+      "gitBlobSha1": "178413a5e86de4f8ca2c0c6c9137f08b2e835b99",
+      "sha256": "ce7f8b2e360f49df2a0f7d8ed0fd4bc63c6907f2890e84cfc377d9050118fb06",
+      "byteLength": 367
+    },
+    {
+      "filename": "0006-change-column-name-in-get-size.sql",
+      "gitBlobSha1": "f459cc1bcaec329fb1462d32516e1b44dbb3158b",
+      "sha256": "228d7ec4e3d2fa51e49e951a2c1e991d8f5f633233c81617aaf9dabf55f12756",
+      "byteLength": 366
+    },
+    {
+      "filename": "0007-add-rls-to-buckets.sql",
+      "gitBlobSha1": "a2140f35acf20575e9e911546d288ccffff1cea3",
+      "sha256": "c87aa8ea3c6509171728880538cc26e7233896a8f927af3bc5b351a1706610e3",
+      "byteLength": 54
+    },
+    {
+      "filename": "0008-add-public-to-buckets.sql",
+      "gitBlobSha1": "13b1f49f4ae8f5f35ef0ddd6576dd2557844bb33",
+      "sha256": "1d881092aea62e83493f1a9c4cb4f101f3035a08d62be84a7e7970ee0c6f0f48",
+      "byteLength": 84
+    },
+    {
+      "filename": "0009-fix-search-function.sql",
+      "gitBlobSha1": "3d6fadc1de7c7e9d4d975781352940be784dda2a",
+      "sha256": "d83ecba3d488b0526004cf5c154804bc58187f7708ff35e54d7fb41f8a3acba6",
+      "byteLength": 895
+    },
+    {
+      "filename": "00010-search-files-search-function.sql",
+      "gitBlobSha1": "ea61e67f5d771f4ba53d22d52224cba5773e9109",
+      "sha256": "e67cbc799bbdbcebd33a60e90e684ac43032db032b9bb34f25438577b259b0ac",
+      "byteLength": 2129
+    },
+    {
+      "filename": "0011-add-trigger-to-auto-update-updated_at-column.sql",
+      "gitBlobSha1": "9aa77236e619c3e172dd8f50d8ba574160861eb7",
+      "sha256": "922302d623209192a5a85c6bdd0bf21b64cc3bded6e1d048c66d98c7dfdd83eb",
+      "byteLength": 355
+    },
+    {
+      "filename": "0012-add-automatic-avif-detection-flag.sql",
+      "gitBlobSha1": "d04abd59c733cb1f63b837fd6b3dfa31166efda6",
+      "sha256": "55ba2318864bfc0cc1f4db871d0874c70d445fa8f2b12e4543960403bd88ee9a",
+      "byteLength": 92
+    },
+    {
+      "filename": "0013-add-bucket-custom-limits.sql",
+      "gitBlobSha1": "9ade83678f8d5f31dfbccfa07a8866997c1c1bb1",
+      "sha256": "07d0b1e8299b70eeeda0841969772aecdbd0788eda9dbada7806afdc8ed9d06e",
+      "byteLength": 180
+    },
+    {
+      "filename": "0014-use-bytes-for-max-size.sql",
+      "gitBlobSha1": "a975d964cba5c1487e7bfd823549def6a7e3d02c",
+      "sha256": "9e34ab4fc380e1cdd4748bcac368cd628c247962bdd58f8311a44f1b29e918ec",
+      "byteLength": 567
+    },
+    {
+      "filename": "0015-add-can-insert-object-function.sql",
+      "gitBlobSha1": "35aa6fef531932415b5d484ffe51918b4c19182e",
+      "sha256": "572c4c802fce193ed5d63eba166922b5469d863d1eae460dd06cdcb1594bab9a",
+      "byteLength": 415
+    },
+    {
+      "filename": "0016-add-version.sql",
+      "gitBlobSha1": "336731188e3ab321aefee5438d8fffa0c88eab78",
+      "sha256": "a4c7a068bb3212a015879859f3c7b8e1ed92998a671fbf3a9bdfd827cf5e0e67",
+      "byteLength": 80
+    },
+    {
+      "filename": "0017-drop-owner-foreign-key.sql",
+      "gitBlobSha1": "4de2228ba5720d6f0fd76a138cd1ee23a0f02fc7",
+      "sha256": "00edfd4aefba445959c977fd1a510bd7900dcf9679bbc24615d43ad9768dd0da",
+      "byteLength": 77
+    },
+    {
+      "filename": "0018-add_owner_id_column_deprecate_owner.sql",
+      "gitBlobSha1": "1c492de9c39143e4cd20a89c8a6363093466a007",
+      "sha256": "c895bce18e7900b793a61a8bac57e02d18a51ac3683ddcf6e169919164025c8f",
+      "byteLength": 418
+    },
+    {
+      "filename": "0019-alter-default-value-objects-id.sql",
+      "gitBlobSha1": "cae125d3a774a3cf6a1a8760b8540fb1fb10b45e",
+      "sha256": "97345b8589da8fc5af940ffc6675b8616d21431f7e8bc5a9287d861e8b51e526",
+      "byteLength": 74
+    },
+    {
+      "filename": "0020-list-objects-with-delimiter.sql",
+      "gitBlobSha1": "bd24c297bb1d8baead81dc55db9c42aeb3a77e22",
+      "sha256": "aaab6b1331cd5a0a9172982dfc7c4951a4e7a2b5b063417c4ab8d67d0ff1d0fe",
+      "byteLength": 1859
+    },
+    {
+      "filename": "0021-s3-multipart-uploads.sql",
+      "gitBlobSha1": "8b6f614e69fdff594e8fef4fcf012de6be5731cb",
+      "sha256": "d8f5094ea9696065da7764479ff5cee29a8575404a05f31342495f98d1685319",
+      "byteLength": 3921
+    },
+    {
+      "filename": "0022-s3-multipart-uploads-big-ints.sql",
+      "gitBlobSha1": "86a765f8e37dbda82312d16ef965e0109641b9fc",
+      "sha256": "700352759f3d889c23046b7bba351138d6e10bd8791768c504f68c7ffd98d8f4",
+      "byteLength": 161
+    },
+    {
+      "filename": "0023-optimize-search-function.sql",
+      "gitBlobSha1": "7721d46fa9f82ca99b105b9aa39d8f66a100cc06",
+      "sha256": "d7ac7494c872ebecb7fa23f28519e4d39f12a078589bea279baec3c1b5b2625e",
+      "byteLength": 2051
+    },
+    {
+      "filename": "0024-operation-function.sql",
+      "gitBlobSha1": "e098225c28f194af5eed52d141bc2fb5a57a14f2",
+      "sha256": "698fe461ed74e3aad76cbde00cfaad164d8e42ee3a09b3ae78206383131e4be7",
+      "byteLength": 163
+    },
+    {
+      "filename": "0025-custom-metadata.sql",
+      "gitBlobSha1": "a379a5f8697dd81db6d79ac78cbe23c7942726e0",
+      "sha256": "76fd2bf4d248c2fb0de10d37e0053416cb0ff4527eceed7e517768895a8eb78e",
+      "byteLength": 170
+    },
+    {
+      "filename": "0026-objects-prefixes.sql",
+      "gitBlobSha1": "c71caf9cc3479af085ede73ea4e674c50639a4fe",
+      "sha256": "072a26a4ade17a6830064ae1238c927e6c0c30f68a3fcabc4289f63ba07aa8a3",
+      "byteLength": 5334
+    },
+    {
+      "filename": "0027-search-v2.sql",
+      "gitBlobSha1": "a0521bdd14f704964cd1ae7716b74c995cda59fc",
+      "sha256": "a0b89b73ff3f23fdaf5f641a997119faa1f0f8eb043ced8dabd11d483b577342",
+      "byteLength": 1613
+    },
+    {
+      "filename": "0028-object-bucket-name-sorting.sql",
+      "gitBlobSha1": "2cc0e86a1c7b770fda91996ae4d3daf33302e3d9",
+      "sha256": "7bed7e29a62ae2b9a0ffd78a51fabefa6c88828bbf3528065eebc7339c477807",
+      "byteLength": 176
+    },
+    {
+      "filename": "0029-create-prefixes.sql",
+      "gitBlobSha1": "09380c49f275c18b677948435596fd0e0cbda16d",
+      "sha256": "9cd771959b9e99a681b59e705ecaffe889168ec497a9ed169d398f8ce7b33a6d",
+      "byteLength": 3591
+    },
+    {
+      "filename": "0030-update-object-levels.sql",
+      "gitBlobSha1": "49d83dbf5a17842f476cb6b6f0c6111a436d826d",
+      "sha256": "11d4ad595e3fc367770674d2eb8df3410df6275d2f79407c11d729f71d0b5a40",
+      "byteLength": 3418
+    },
+    {
+      "filename": "0031-objects-level-index.sql",
+      "gitBlobSha1": "8650e58ff1558011bc0dc77ef5f72f790d04e835",
+      "sha256": "3715d308b688336171d476171d046610c5ff0d80cd1be296cc6919ae0ba8f257",
+      "byteLength": 189
+    },
+    {
+      "filename": "0032-backward-compatible-index-on-objects.sql",
+      "gitBlobSha1": "00989a16066a45568a025b829ce1877888603444",
+      "sha256": "f008c76233f71489a69bae9051e36620faf97388cd92ac8865d9f8e850ce5536",
+      "byteLength": 197
+    },
+    {
+      "filename": "0033-backward-compatible-index-on-prefixes.sql",
+      "gitBlobSha1": "f9cd624fed6eb80350bcb4f37e4fd476079c4885",
+      "sha256": "0ce6dc9508f5e78b22bb4346c2c1f98678fe498806ef18e2afea7f7db926edc9",
+      "byteLength": 216
+    },
+    {
+      "filename": "0034-optimize-search-function-v1.sql",
+      "gitBlobSha1": "9b66465907ee8aeb240d46705af338294e2c2bad",
+      "sha256": "08babc35ccdd594f86c798841f7223afa7d3ed59367c62e172bed4bd2247e193",
+      "byteLength": 5358
+    },
+    {
+      "filename": "0035-add-insert-trigger-prefixes.sql",
+      "gitBlobSha1": "5f573effb13563a86833db450f598922abac4dc4",
+      "sha256": "27bbacdbafda96f0d37db21e7356070ed70b830bc8a92049bcc9da597af32335",
+      "byteLength": 310
+    },
+    {
+      "filename": "0036-optimise-existing-functions.sql",
+      "gitBlobSha1": "8eb9d0ac8fb1839705c793a68a94729a67238e8b",
+      "sha256": "5bb632fa3e91943277d825e7a60f0bf50f7483810f9147a3f345e51a7c905ace",
+      "byteLength": 4135
+    },
+    {
+      "filename": "0037-add-bucket-name-length-trigger.sql",
+      "gitBlobSha1": "95e1cc08b2451becf089d8001003a4a270cc03a5",
+      "sha256": "87302c6579e5d6fca31e665ba1496471e2b9b61bc76dd95979ec57d1fa1bf58f",
+      "byteLength": 541
+    },
+    {
+      "filename": "0038-iceberg-catalog-flag-on-buckets.sql",
+      "gitBlobSha1": "c21598aeab2cbcbe48730339ee81c8e442821ca9",
+      "sha256": "4b11b925c07cfa0d4e3235deb9892b7b6ef3aa248a03db4ea7a47e69edb943d5",
+      "byteLength": 3494
+    },
+    {
+      "filename": "0039-add-search-v2-sort-support.sql",
+      "gitBlobSha1": "84168ed59a3b7598afe4acd12b0c85bbecdc4620",
+      "sha256": "bd43581606938bc25b631a62b210004a2550510c5191c870bff6f4581d039837",
+      "byteLength": 3254
+    },
+    {
+      "filename": "0040-fix-prefix-race-conditions-optimized.sql",
+      "gitBlobSha1": "21aefcd41129a47302e5f00f000fe51210fdc433",
+      "sha256": "635b93245fbc220d0b9a60888829a1218a97c54a31c07ba08e2c232e20b92a67",
+      "byteLength": 8808
+    },
+    {
+      "filename": "0041-add-object-level-update-trigger.sql",
+      "gitBlobSha1": "20318de156365fe4bff89faf41428776e90d4485",
+      "sha256": "6ea7e03eccd4cf572bbfe91ef23a32fdef2ba230a443864d3c4e2e476c717a68",
+      "byteLength": 2519
+    },
+    {
+      "filename": "0042-rollback-prefix-triggers.sql",
+      "gitBlobSha1": "ce4fa5688fb45e11f5d38e75265b5bb42714f27f",
+      "sha256": "2aeeaec20dcf44a07daf094578bcea1df30c2d6dc1376b0e4517643616c220ae",
+      "byteLength": 1299
+    },
+    {
+      "filename": "0043-fix-object-level.sql",
+      "gitBlobSha1": "066b24c3fb61199c8054d1ec0cc7a39400641175",
+      "sha256": "f9fa438c60b017154e05aec50b495b53f2edc42f930cfbd19ac9d20808750760",
+      "byteLength": 414
+    },
+    {
+      "filename": "0044-vector-bucket-type.sql",
+      "gitBlobSha1": "6ba4ec587c7382a0d8616bd75e4eabfc0e4fc61c",
+      "sha256": "a6d094603db7e2c7403b7af40356cbf8559842566d9fbdd78befa7c152633d3f",
+      "byteLength": 354
+    },
+    {
+      "filename": "0045-vector-buckets.sql",
+      "gitBlobSha1": "23152dfd0721ead898a25526c3bd96d46adc9981",
+      "sha256": "e0c697bd27b5362d0cca5140b195253f1e683aa1975f67261d43988fc2b89b44",
+      "byteLength": 1896
+    },
+    {
+      "filename": "0046-buckets-objects-grants.sql",
+      "gitBlobSha1": "45c3a621f36e588fca12dfff76b776fdee0e543e",
+      "sha256": "17cb1614d8028d3a17b234ca50e0677f2c0d094706f9e16e9a3d25ba74b4ac2c",
+      "byteLength": 659
+    },
+    {
+      "filename": "0047-iceberg-table-metadata.sql",
+      "gitBlobSha1": "e37d877421f1daca30e329e0b89bdc8ab64ad4ce",
+      "sha256": "0d13ec23e5e11b9a5d916129e6d40cf1b043a742f49147fd507f5b7b8e2945cf",
+      "byteLength": 559
+    },
+    {
+      "filename": "0048-iceberg-catalog-ids.sql",
+      "gitBlobSha1": "a6490776d216ff6893ef464f491ec9771e49653f",
+      "sha256": "0d667960b9ad10793b70bfa4006aeba67124d8a8fc5ba8d4d0c182630846354c",
+      "byteLength": 4029
+    },
+    {
+      "filename": "0049-buckets-objects-grants-postgres.sql",
+      "gitBlobSha1": "e81a70da621065ac0c819ca6fc74e43b285c11a9",
+      "sha256": "6491c61da34e9d37b06b9a48849cec131720b363ba10aed47d4c6e7caa25a136",
+      "byteLength": 178
+    }
+  ],
+  "count": 49
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": "tzudong.review-food-photo-limit-source-receipt.v1",
+  "captured_at": "2026-10-18T23:26:53+0900",
+  "base_head": "17eec51ae1f487d6e4445368cc2a7fead0dc8911",
+  "review_finding": {
+    "url": "https://github.com/twoimo/tzudong/pull/3215#discussion_r4307049747",
+    "verdict": "ACCEPT",
+    "counterexample": "ReviewModal and ReviewSaveOperation accepted 21 or more food photos. The client compressed and uploaded them before the AI-bound route rejected more than 20, while the photo-only insert path accepted the same draft."
+  },
+  "implemented_contract": {
+    "maximum_food_photos": 20,
+    "shared_source": "apps/web/lib/reviews/review-save-operation.ts::REVIEW_FOOD_PHOTO_MAX_COUNT",
+    "selection": "File selection and drag/drop reject the whole over-limit addition, preserve existing files, and show a Korean error.",
+    "ui": "The counter displays current/max, restored over-limit drafts show an alert, step and submit validity fail above 20.",
+    "submit": "ReviewModal rejects 21 before readiness, compression, upload, insert, or draft deletion capture.",
+    "operation": "Only a newly created operation is subject to the maximum. Existing unknown/saved operations complete readback, cleanup, and saved-previous recovery before any new draft validation.",
+    "paths": "The operation boundary applies equally to photo-only direct insert and AI-bound route insert; the server parser imports the same maximum."
+  },
+  "counterexample_results": [
+    {
+      "case": "exactly 20 photos",
+      "result": "accepted; 1 receipt plus 20 food uploads and one insert"
+    },
+    {
+      "case": "21 photos, photo-only and AI-bound, no prior operation",
+      "result": "failed before prepare; uploads=0, inserts=0, cleanup=0; input array preserved"
+    },
+    {
+      "case": "valid 20-photo operation already saved, live draft changed to 21",
+      "result": "saved-previous; additional prepares=0, uploads=0, inserts=0"
+    },
+    {
+      "case": "valid 20-photo operation committed with uncertain reply, live draft changed to 21",
+      "result": "original readback recovered saved-previous; additional prepares=0, uploads=0, inserts=0"
+    }
+  ],
+  "verification": {
+    "primary": {
+      "command": "bun test tests-unit/review-save-operation.test.ts tests-unit/review-save-submit.test.ts tests-unit/review-upload-uncertainty.test.ts",
+      "result": "161 pass, 0 fail, 1962 expect calls"
+    },
+    "ocr_binding": {
+      "command": "bun test tests-unit/durable-receipt-ocr.test.ts --test-name-pattern 'review save sends only an OCR result reference'",
+      "result": "1 pass, 0 fail, 8 expect calls"
+    },
+    "lint": {
+      "command": "node scripts/run-web-tool.mjs eslint components/reviews/ReviewModal.tsx lib/reviews/review-save-operation.ts app/api/ocr/reviews/save/route.ts tests-unit/review-save-operation.test.ts tests-unit/review-save-submit.test.ts tests-unit/review-upload-uncertainty.test.ts --max-warnings=0",
+      "result": "passed"
+    },
+    "typecheck": {
+      "command": "npm run typecheck:native",
+      "result": "passed"
+    },
+    "diff_check": "passed"
+  },
+  "source_sha256": {
+    "apps/web/components/reviews/ReviewModal.tsx": "5f3a8d01974db645edf9ff6c413a6c877991925c35ed6719a6b6044f2cacf050",
+    "apps/web/lib/reviews/review-save-operation.ts": "8c3d5e85e7068f2295ba2fb4c957676e5aff341562f9c686eb12ef7cefb920ad",
+    "apps/web/app/api/ocr/reviews/save/route.ts": "a1ee27c435f4d6e6edc37758a2c846d8b7bfb713c915c51e3a5bfef623b32e11",
+    "apps/web/tests-unit/review-save-operation.test.ts": "037f2d2edc4d5d4fce96bb719d770a3b25278d401d1ad40adf7affc1e0f8fc3b",
+    "apps/web/tests-unit/review-save-submit.test.ts": "92e84d24d46c323a7b4bf178e28d67f9b7c9832623cb63011a02ca12a9a8635a",
+    "apps/web/tests-unit/review-upload-uncertainty.test.ts": "569edc7db091e94a872cb12079c62553972564c4b94dc9400c0de0e2c80c9584"
+  },
+  "boundaries": {
+    "hosted_database_reads": 0,
+    "hosted_database_writes": 0,
+    "storage_calls": 0,
+    "provider_calls": 0,
+    "application_server_runs": 0,
+    "deployment_writes": 0,
+    "git_mutations": 0,
+    "sealed_bundle_edits": 0
+  }
+}

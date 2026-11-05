@@ -5,6 +5,8 @@
 @source "../components/reviews";
 @source "../components/auth";
 @source "../components/ui";
+/* Detail sheets render this shared header after the home utility stylesheet. */
+@source "../components/home/map-panel-chrome.tsx";
 @source not "../**/*.test.*";
 @source not "../tests-unit";
 

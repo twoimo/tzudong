@@ -89,6 +89,26 @@ class ParseResultRegressionTests(unittest.TestCase):
         ok = parse_result.validate_restaurant_data({"restaurants": []})
         self.assertFalse(ok)
 
+    def test_absence_requires_nonblank_string_reason(self):
+        for reason in [True, 12, {}, [], " ", "\ufeff"]:
+            with self.subTest(reason=reason):
+                self.assertFalse(parse_result.validate_restaurant_data({
+                    "restaurants": [], "no_restaurant_reason": reason,
+                }))
+
+    def test_explicit_absence_survives_actual_parse_and_save(self):
+        response = self.root / 'response.json'
+        output = self.root / 'crawling.jsonl'
+        response.write_text(json.dumps({'restaurants': [], 'no_restaurant_reason': 'home meal'}))
+        args = argparse.Namespace(youtube_url=self.url, response_file=str(response),
+            output_file=str(output), meta_id=1, trans_id=2, channel=self.channel)
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            parse_result.parse_result(args)
+        record = json.loads(output.read_text().strip())
+        self.assertEqual(record['no_restaurant_reason'], 'home meal')
+        self.assertEqual(record['restaurants'], [])
+        self.assertEqual(record['recollect_version'], {'meta': 1, 'transcript': 2})
+
     def test_validate_rejects_keyword_only_restaurant_identity_inference(self):
         ok = parse_result.validate_restaurant_data({
             "restaurants": [{

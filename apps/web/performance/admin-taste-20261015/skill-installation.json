@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/Leonxlnx/taste-skill",
+  "commit": "f624f37a8c650b9cc550253104925efe4c8de246",
+  "installedPath": "/Users/twoimo/.codex/skills/taste-skill",
+  "files": {
+    "SKILL.md": "ee847084e58f5a81a46120912be9cd15f083570a6ca8f3d1a30372a720633043",
+    "scripts/draw.mjs": "1e680f8dc80341541afd3830a4598c574311415a1ffef6a3311f591bb6eb968d",
+    "scripts/lint.mjs": "8480ff2104f4b8f864678395d50ecefb8b2d353a48f96d72b950b6f82020c49e",
+    "scripts/lib/probe.mjs": "5c5148893414ce7eeca4aaa0c476cf196cd8c22cfc514b737c2a614fac77fc1c",
+    "scripts/lib/rules.mjs": "71435cdac327b71f2ff8b79b8bbb26ff6023c40fb21eab8cce2ef71af4a3812a"
+  },
+  "applied": "taste-skill",
+  "excludedDesignAuthorities": [
+    "frontend-design",
+    "redesign-skill"
+  ]
+}

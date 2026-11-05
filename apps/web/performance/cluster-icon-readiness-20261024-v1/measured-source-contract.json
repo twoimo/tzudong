@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "cluster-icon-readiness.measured-source.v1",
+  "sourceRevision": "0b0ef0f8c6a6d0adf9eb92713e4dccf1b8fa60f2",
+  "rawSha256": "f04f0cfc1d4056f628aabe7d00dc1b5bbf511820d6ab7ea6e23713bed7826ce6",
+  "scope": "Frozen exact source for the retained36-trial local fixture; not the later integrated SDK/preview/production source.",
+  "files": [
+    {
+      "sourcePath": "lib/cluster-marker.ts",
+      "snapshotPath": "measured-source/lib/cluster-marker.ts.txt",
+      "bytes": 10108,
+      "sha256": "6b944f97088a79aaf3510dc1625a7209d407f1e6cb2af4c9fbdf0dca01b63b91"
+    },
+    {
+      "sourcePath": "lib/category-marker-image-primer.ts",
+      "snapshotPath": "measured-source/lib/category-marker-image-primer.ts.txt",
+      "bytes": 1514,
+      "sha256": "f9848b75cfdbb1cef0b0124c352c96388fbc7b089ea1bc0e51b6988f0939855b"
+    },
+    {
+      "sourcePath": "components/map/NaverMapView.tsx",
+      "snapshotPath": "measured-source/components/map/NaverMapView.tsx.base64",
+      "bytes": 172360,
+      "sha256": "4ebfb5b8d7ae928cf0fe33aee21a447be6ed7c2ed726df7b6766e0910a3de3e7",
+      "encoding": "base64"
+    },
+    {
+      "sourcePath": "performance/cluster-icon-readiness-20261024-v1/fixture.mjs",
+      "snapshotPath": "measured-source/performance/cluster-icon-readiness-20261024-v1/fixture.mjs.txt",
+      "bytes": 3878,
+      "sha256": "a1ff661d2cefc651df612a237d7f66fa376b2310abf30f81f457b1f2986ffc55"
+    },
+    {
+      "sourcePath": "performance/cluster-icon-readiness-20261024-v1/run-fixture.mjs",
+      "snapshotPath": "measured-source/performance/cluster-icon-readiness-20261024-v1/run-fixture.mjs.txt",
+      "bytes": 5590,
+      "sha256": "425d541dcd5dc60733f51ff6beb48fc428cd378738bb51ce175680e000257931"
+    }
+  ]
+}

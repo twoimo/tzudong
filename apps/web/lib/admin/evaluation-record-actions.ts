@@ -1,3 +1,4 @@
+import { youtubeMetadataChanges } from '@/lib/sponsorship-state';
 import type { ApprovalData, ItemDecision, SubmissionRecord } from '@/components/admin/SubmissionDetailView';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { RecordActionClientError, type RecordActionInput } from './record-action-client';
@@ -27,8 +28,7 @@ export function submissionApprovalInput({ submission, approvalData, itemDecision
       tzuyang_review: decision.tzuyang_review, youtube_link: youtube,
       jibun_address: approvalData.jibun_address, road_address: approvalData.road_address, english_address: approvalData.english_address || null,
       address_elements: approvalData.address_elements ?? {}, lat: Number(approvalData.lat), lng: Number(approvalData.lng), geocoding_success: true,
-      youtube_meta: { title: meta.title, published_at: meta.publishedAt, duration: meta.duration, is_shorts: meta.is_shorts,
-        is_ads: meta.ads_info?.is_ads ?? false, what_ads: Array.isArray(meta.ads_info?.what_ads) ? meta.ads_info.what_ads : typeof meta.ads_info?.what_ads === 'string' ? [meta.ads_info.what_ads] : null },
+      youtube_meta: youtubeMetadataChanges(meta),
     } };
   });
   const note = [adminNote?.trim(), forceApprove && !adminNote?.includes('forceApprove=true') ? 'forceApprove=true' : ''].filter(Boolean).join('\n');

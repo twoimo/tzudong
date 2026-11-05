@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "phase": "post-review stable product source",
+  "baseCommit": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "createdAt": "2026-10-15T14:39:59.757297+00:00",
+  "files": {
+    "apps/web/components/reviews/ReviewModal.tsx": {
+      "bytes": 213974,
+      "sha256": "7fb9932ddeb4ab1d7b7d3b28dece717dded733768a2bda595e7c6d1cd2c8802d"
+    },
+    "apps/web/lib/admin/storyboard/outbound-worker.ts": {
+      "bytes": 22630,
+      "sha256": "9110e912fd54094d6cd2323ce6044d8ca0028c250e2c7778409ad74b272fda9a"
+    },
+    "apps/web/lib/ocr/latest-selection.ts": {
+      "bytes": 1288,
+      "sha256": "109fc4dc6ba16a24433fa698c7497ac9968dfb2cb003cbe799cdf79663825179"
+    },
+    "apps/web/lib/ocr/receipt-upload-preparation.ts": {
+      "bytes": 1996,
+      "sha256": "14a011d50aa019157770bca7705bf9582a6b1a48a48e334acd8e19ba0b4bc7cd"
+    },
+    "apps/web/lib/ocr/review-modal-ocr-ux.ts": {
+      "bytes": 4115,
+      "sha256": "285a0019e50cd6d73bfeb667143a0168f2f08abe36a38cb63b9c660b8372db72"
+    },
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": {
+      "bytes": 33984,
+      "sha256": "1e422d7e70b4dd69449dcc5ed59e45a5763d8b6da08bd3675b288179a8fb442c"
+    },
+    "apps/web/tests-unit/latest-selection.test.ts": {
+      "bytes": 2157,
+      "sha256": "5a0e9d17ca5565ef7c6d695a21ea86f20719d5c4f01e1cf442e3f4c4f644ac7d"
+    },
+    "apps/web/tests-unit/review-modal-ocr-ux.test.ts": {
+      "bytes": 8704,
+      "sha256": "a43facf284aff89b01076297f092e89a11b38d0da9c85bbb3b68bfc10b3bbb1c"
+    },
+    "apps/web/tests-unit/review-save-submit.test.ts": {
+      "bytes": 45423,
+      "sha256": "08634d8e1493683725d9f981599c681848122e1496da4b6b570386326fc711e3"
+    },
+    "apps/web/tests-unit/review-storage-verification.test.ts": {
+      "bytes": 9647,
+      "sha256": "a3a4e112186824193a1598faa82320da7c33c5fd074908266fdf68baca47f355"
+    },
+    "apps/web/tests-unit/storyboard-outbound-worker.test.ts": {
+      "bytes": 37285,
+      "sha256": "ceadf815ee3cc389d10eb802bcbc4417eb5e6ae0467659a00e887d09e56146dd"
+    },
+    "apps/web/tests-unit/zz-ocr-route-contract.test.ts": {
+      "bytes": 40290,
+      "sha256": "91c5cd26b9184e10c405b4154c9c4ffa7c4d363a761124d59bd8f7fe822d8814"
+    }
+  },
+  "scope": "Current tracked product/test diff only. Previously published style evidence remains immutable and scoped to a616."
+}

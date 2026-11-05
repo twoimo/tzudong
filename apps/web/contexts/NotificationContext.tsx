@@ -1071,11 +1071,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
     };
 
+    const retryNotifications = useCallback(() => (
+        loadNotifications(ownerScopeRef.current, { retainNotificationsOnFailure: true })
+    ), [loadNotifications]);
+
     const value: NotificationContextType = {
         notifications,
         unreadCount,
         isLoading,
         isError,
+        retryNotifications,
         markAsRead,
         markAllAsRead,
         addNotification,

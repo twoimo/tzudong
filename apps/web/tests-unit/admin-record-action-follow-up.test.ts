@@ -14,6 +14,7 @@ function render(phase: RecordActionClientState['phase'], nextAction: RecordActio
   const wrapper = ({ children }: { children?: React.ReactNode }) => React.createElement('div', null, children);
   const deps = { useAuth: () => ({ user: null, isAdmin: false }), React, RECORD_ACTION_CONFIRMATION, RECORD_VIEWS_INVALIDATED_EVENT: 'invalidated', RECORD_ACTION_APPLIED_EVENT: 'applied',
     useState: (value: unknown) => [typeof value === 'function' ? value() : value, () => {}], useEffect: () => {},
+    useRef: (current: unknown) => ({ current }), useCallback: (callback: unknown) => callback,
     useSyncExternalStore: (_subscribe: unknown, get: () => unknown) => get(), createRecordActionClient: () => client,
     Dialog: wrapper, DialogContent: wrapper, DialogHeader: wrapper, DialogTitle: wrapper, DialogDescription: wrapper, DialogFooter: wrapper, Input: wrapper,
     Button: ({ children, asChild }: { children?: React.ReactNode; asChild?: boolean }) => asChild ? children : React.createElement('button', null, children),

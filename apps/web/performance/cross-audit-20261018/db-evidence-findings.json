@@ -1,0 +1,218 @@
+{
+  "schema": "tzudong-cross-audit-db-evidence-findings/v1",
+  "generatedAt": "2026-10-18T21:07:04+09:00",
+  "amendedAt": "2026-10-18T21:23:46+09:00",
+  "scope": {
+    "mode": "read-only source and retained-artifact adjudication",
+    "reportEdited": false,
+    "colimaStarted": false,
+    "localDatabaseStarted": false,
+    "hostedDatabaseCalled": false,
+    "providerCalled": false,
+    "storageCalled": false,
+    "vercelCalled": false,
+    "decision": "The retained PG17.6 receipt is byte-bound to the current migration, manifest, and harness and is sufficient to verify the local replay. A later fixed hosted catalog SELECT establishes postgres.rolsuper=false in the identified hosted project, refuting the report's superuser precondition there. The five feature migrations and target helpers/triggers are not installed, so hosted install-time effective ACL and future runtime readiness remain unverified. The receipt's absence from the reviewer's initial ten-source bundle is a separate evidence-packaging gap."
+  },
+  "verdictSemantics": {
+    "ACCEPT": "The report finding is supported as written by the inspected repository evidence.",
+    "CONDITIONAL": "The report finding applies only under the listed unresolved condition.",
+    "REJECT": "The report finding, as a database validation or release-blocking claim, is contradicted by inspected repository evidence.",
+    "DEFER": "The inspected evidence cannot decide the finding."
+  },
+  "decisionHistory": [
+    {
+      "recordedAt": "2026-10-18T21:07:04+09:00",
+      "id": "TZ-TH-007",
+      "verdict": "REJECT",
+      "reason": "The first pass treated the exact-hash local PG17.6 replay with postgres NOSUPERUSER as a complete rebuttal. This was too broad because the report finding was expressly conditional on the target role being a superuser and no hosted role-attribute readback exists."
+    },
+    {
+      "recordedAt": "2026-10-18T21:07:04+09:00",
+      "id": "TZ-TH-008",
+      "verdict": "REJECT",
+      "reason": "The first pass treated the repository-resident replay receipt as a complete rebuttal. This conflated underlying executable evidence with the report's narrower statement that the reviewer did not receive that raw receipt in the initial ten-source evidence bundle."
+    },
+    {
+      "recordedAt": "2026-10-18T21:10:12+09:00",
+      "id": "TZ-TH-007",
+      "verdict": "CONDITIONAL",
+      "reason": "The second pass correctly limited the local NOSUPERUSER replay to local evidence but had no hosted role readback. A later fixed hosted query now refutes the superuser precondition for the observed project while leaving future post-install ACL and readiness unverified because the feature objects are absent."
+    }
+  ],
+  "inputs": [
+    {
+      "path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+      "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82",
+      "role": "unaltered report under adjudication"
+    },
+    {
+      "path": "backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql",
+      "sha256": "469dbea773cc838feecb4519ca1b5c03e9ea2fab32462007f7769c5ed1b7fed9",
+      "role": "readiness migration"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+      "sha256": "647188179cf3456f22b65ac25fcb0d183e6d432fb2711c5694f42172fbb19866",
+      "role": "PG17 replay harness"
+    },
+    {
+      "path": ".github/review-media-feature-sql-successor.v1.json",
+      "sha256": "360e5b56fd2214523ee5738eec94e1d77f9050f899dd243136abff3b6b1cb3df",
+      "role": "97-to-102 admission manifest"
+    },
+    {
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json",
+      "sha256": "9ce142b2de2a9e3980afbe85981a2a6cc29d9705a63fb1cb8d1ced46141af29d",
+      "role": "retained exact-version replay receipt"
+    },
+    {
+      "path": "apps/web/performance/cross-audit-20261018/hosted-catalog-metadata-20261018.json",
+      "sha256": "40aae58d1e548e6129b64e0bdbc73729cacc8dbded75b20125444c6f9244cbee",
+      "role": "fixed read-only hosted role, ledger, helper, and trigger metadata for project_ref aqlcofblfxdrjhhdmarw"
+    }
+  ],
+  "findings": [
+    {
+      "id": "TZ-TH-007",
+      "verdict": "CONDITIONAL",
+      "findingClass": "future hosted install-time ACL/readiness condition",
+      "implementationDefectFound": false,
+      "conditionStatus": {
+        "observedHostedSuperuserConflict": "REJECTED",
+        "futurePostInstallEffectiveAcl": "UNVERIFIED",
+        "futurePostInstallRuntimeReadiness": "UNVERIFIED"
+      },
+      "reportClaim": "Including postgres in a negative effective EXECUTE predicate may make readiness permanently held if postgres is a superuser.",
+      "adjudication": "The report's superuser premise is valid in PostgreSQL generally, but it is now refuted for the observed hosted project. The fixed read-only catalog result for project_ref aqlcofblfxdrjhhdmarw records PostgreSQL 17.6 and postgres.superuser=false. The retained local replay independently uses postgres NOSUPERUSER and reaches runtimePredicateReady=true and featureRuntimeReady=true. However, the hosted ledger has 89 rows, feature_count=0, and the target helper functions and triggers are absent. That preinstall state cannot expose the post-install proacl or per-role has_function_privilege matrix and cannot demonstrate future runtime readiness. The balanced verdict therefore remains CONDITIONAL: no current hosted superuser collision or implementation defect was found, while hosted post-install ACL/readiness is still unverified.",
+      "evidence": [
+        {
+          "path": "backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql",
+          "lines": "336-350,382-396",
+          "fact": "Both trigger-helper predicates include postgres in the roles that must not have effective EXECUTE."
+        },
+        {
+          "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+          "lines": "2031-2046",
+          "fact": "The disposable database is recreated while postgres is temporarily SUPERUSER, then postgres is set NOSUPERUSER before any successor or feature migration is applied."
+        },
+        {
+          "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json",
+          "jsonPointers": [
+            "/environment/engine",
+            "/status",
+            "/findings",
+            "/semanticResults/featureSuccessorControllerState/state/currentUser",
+            "/semanticResults/featureSuccessorControllerState/state/sessionUser",
+            "/semanticResults/featureSuccessorControllerState/state/runtimePredicateReady",
+            "/semanticResults/featureSuccessorControllerState/state/featureRuntimeReady",
+            "/sources/harness/sha256",
+            "/sources/featureMigrations/4/sha256"
+          ],
+          "fact": "The PG17.6 receipt is source-bound to the exact harness and migration and admits the runtime predicate under the postgres session."
+        },
+        {
+          "path": "apps/web/performance/cross-audit-20261018/hosted-catalog-metadata-20261018.json",
+          "jsonPointers": [
+            "/project_ref",
+            "/result/server_version_num",
+            "/result/roles/2/superuser",
+            "/result/ledger/count",
+            "/result/ledger/feature_count",
+            "/result/ledger/upstream_evidence_count",
+            "/result/helpers",
+            "/result/triggers",
+            "/limitations"
+          ],
+          "fact": "The identified hosted project reports PostgreSQL 17.6, postgres.superuser=false, ledger count 89, zero installed feature migrations, three upstream evidence migrations, and no target helpers or triggers."
+        },
+        {
+          "url": "https://www.postgresql.org/docs/17/role-attributes.html",
+          "fact": "PostgreSQL 17 documents that a superuser bypasses permission checks; this makes rolsuper a necessary condition for the report's hypothetical conflict."
+        },
+        {
+          "url": "https://www.postgresql.org/docs/17/functions-info.html",
+          "fact": "has_function_privilege reports effective EXECUTE privilege for a function."
+        }
+      ],
+      "residualConditions": [
+        "The observed hosted postgres role is not a superuser, so the report's specific superuser collision does not apply to the current hosted metadata snapshot.",
+        "The hosted feature_count is zero and the target helpers and triggers are absent. Their future proacl, expanded ACL, role inheritance, has_function_privilege matrix, and runtime capability cannot be read before installation.",
+        "A future authorized installation requires post-apply readback before claiming hosted readiness. If the role attributes or effective ACL matrix drift during installation, readiness may still be held for a different concrete reason."
+      ]
+    },
+    {
+      "id": "TZ-TH-008",
+      "verdict": "ACCEPT",
+      "findingClass": "evidence-packaging",
+      "implementationDefectFound": false,
+      "reportClaim": "The initial ten-source review bundle omitted the raw PG17 replay receipt, so this reviewer could not independently reauthenticate the reported 97-to-102 catalog result from its supplied evidence.",
+      "adjudication": "This evidence-packaging finding is correct. The repository does contain a strong executable receipt: the canonical master plan identifies it by SHA-256, and the retained bytes record an exact PG17.6 local clone replay, 97 prior ledger rows, 5 feature migrations, 102 terminal rows, passed status, empty findings, rollback-exact results for all five feature migrations, readiness idempotency, a substring-preserving capability-body drift rejection, and thirteen catalog drift held-to-ready restorations. Its migration, manifest, and harness hashes match the current tracked files. However, that raw receipt was not included in the reviewer's initial ten-source bundle, so the reviewer correctly declined to promote the plan's summary into an independently reauthenticated result. This is not an implementation defect or proof that executable PG evidence is absent from the repository. The root remediation is to include the existing exact-hash receipt bytes in gemini-antithesis-source_bundle.txt and bind them in its source manifest.",
+      "evidence": [
+        {
+          "path": "apps/web/performance/cross-audit-20261018/master-plan.md",
+          "lines": "33-37,58",
+          "fact": "The plan requires exact PG17.6 replay evidence and names the passed receipt SHA-256 9ce142b2de2a9e3980afbe85981a2a6cc29d9705a63fb1cb8d1ced46141af29d."
+        },
+        {
+          "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json",
+          "jsonPointers": [
+            "/environment/engine",
+            "/cleanup",
+            "/replay/predecessorLedgerRows",
+            "/replay/featureMigrationCount",
+            "/replay/terminalLedgerRows",
+            "/replay/sourceCatalogSha256Before",
+            "/replay/sourceCatalogSha256After",
+            "/semanticResults/migrationRollbackExact",
+            "/semanticResults/runtimeCapabilityStages",
+            "/semanticResults/runtimeReadinessSuccessorIdempotency",
+            "/semanticResults/featureSuccessorCapabilityIdentity",
+            "/semanticResults/runtimeCapabilityCatalogDrift",
+            "/sources",
+            "/status",
+            "/findings"
+          ],
+          "fact": "The executable receipt covers the requested 97-to-102 path and preserves source, cleanup, rollback, idempotency, and catalog-drift results."
+        },
+        {
+          "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+          "lines": "903-1077,1080-1145,1148-1165,2075-2104,2265-2326",
+          "fact": "The source-bound harness performs catalog drift, idempotency, capability identity, rollback, controller-state, and receipt assembly checks rather than source-text containment only."
+        }
+      ],
+      "residualConditions": [
+        "The report's statement that the replay artifact was absent from its ten-source bundle remains factually true. Independent reauthentication within the next audit package requires the existing exact-hash receipt to be included verbatim and listed in that package's manifest.",
+        "The root agent is adding the existing receipt to apps/web/performance/cross-audit-20261018/gemini-antithesis-source_bundle.txt; that separate bundle mutation and its final hash/readback are outside this adjudication file.",
+        "The retained drift matrix covers columns, indexes, trigger enabled state, trigger definitions, and function bodies. It does not preserve separate negative mutations for owner, search_path, or prohibited EXECUTE grants as named receipt cases, even though baseline readiness evaluates those predicates.",
+        "The receipt is local exact-version evidence only. It does not prove hosted database state, provider or Storage bytes, production deployment, or launch readiness."
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "command": "shasum -a 256 apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql .github/review-media-feature-sql-successor.v1.json",
+      "purpose": "bind the adjudication to exact local bytes"
+    },
+    {
+      "command": "git show HEAD:backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql | shasum -a 256; git show HEAD:apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs | shasum -a 256; git show HEAD:.github/review-media-feature-sql-successor.v1.json | shasum -a 256",
+      "purpose": "confirm retained receipt source hashes match tracked HEAD bytes"
+    },
+    {
+      "command": "python3 -c 'import json; json.load(open(\"apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json\"))'",
+      "purpose": "parse the retained receipt before evaluating its structured fields"
+    }
+  ],
+  "recommendedDirectReadback": {
+    "status": "The fixed hosted preinstall metadata query was executed upstream and is preserved as hosted-catalog-metadata-20261018.json. The terminal role/ACL/capability portion remains pending because the feature migrations, helpers, and triggers are not installed.",
+    "coordination": "If a future audit requires one self-contained role/ACL receipt, start tzudong-catalog-20261007 only after shared-profile coordination, use a disposable harness-owned target, query after feature102, remove the target, verify the source dump hash is unchanged, and restore the profile to Stopped.",
+    "query": "WITH targets(signature) AS (VALUES ('review_media_private.reject_verification_object_update()'),('review_media_private.guard_verification_object_delete()')), roles(role_name) AS (VALUES ('anon'),('authenticated'),('service_role'),('supabase_storage_admin'),('postgres')), functions AS (SELECT targets.signature, p.oid, p.proowner, p.proacl FROM targets JOIN pg_catalog.pg_proc p ON p.oid=pg_catalog.to_regprocedure(targets.signature)) SELECT pg_catalog.jsonb_build_object('sessionUser',session_user,'currentUser',current_user,'roles',(SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('name',r.rolname,'superuser',r.rolsuper,'inherit',r.rolinherit,'bypassRls',r.rolbypassrls) ORDER BY r.rolname) FROM pg_catalog.pg_roles r WHERE r.rolname IN (SELECT role_name FROM roles)),'functions',(SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('signature',f.signature,'owner',pg_catalog.pg_get_userbyid(f.proowner),'proacl',f.proacl::text,'expandedAcl',coalesce((SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('grantor',pg_catalog.pg_get_userbyid(x.grantor),'grantee',CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_catalog.pg_get_userbyid(x.grantee) END,'privilege',x.privilege_type,'grantable',x.is_grantable) ORDER BY x.grantee,x.privilege_type) FROM pg_catalog.aclexplode(coalesce(f.proacl,pg_catalog.acldefault('f',f.proowner))) x),'[]'::jsonb),'effectiveExecute',(SELECT pg_catalog.jsonb_object_agg(role_name,pg_catalog.has_function_privilege(role_name,f.oid,'EXECUTE') ORDER BY role_name) FROM roles)) ORDER BY f.signature) FROM functions f),'runtimeCapability',public.get_feature_runtime_capability((SELECT id FROM auth.users ORDER BY id LIMIT 1)));",
+    "requiredAssertions": [
+      "postgres.superuser is false in the replay target",
+      "effectiveExecute is false for anon, authenticated, service_role, supabase_storage_admin, and postgres on both trigger functions",
+      "runtimeCapability.status is ready",
+      "the target is disposable and removed",
+      "the source catalog SHA-256 before and after is identical",
+      "the Colima profile is restored to Stopped"
+    ]
+  }
+}

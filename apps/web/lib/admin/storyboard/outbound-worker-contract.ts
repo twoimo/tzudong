@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import {
   StoryboardProductionError,
-  storyboardProductionDocumentSchema,
+  storyboardGeminiProductionDocumentSchema,
   storyboardProductionRequestSchema,
 } from './production-contract.ts';
 
@@ -12,11 +12,11 @@ export const claimedStoryboardJobSchema = z.object({
   kind: z.enum(['generate', 'scene']),
   sceneNo: z.number().int().min(1).max(12).nullable(),
   request: storyboardProductionRequestSchema,
-  document: storyboardProductionDocumentSchema.nullable(),
+  document: storyboardGeminiProductionDocumentSchema.nullable(),
   leaseToken: z.uuid(),
 });
 export type ClaimedStoryboardJob = z.infer<typeof claimedStoryboardJobSchema>;
-export type WorkerResult = 'idle' | 'completed' | 'failed' | 'lease_lost';
+export type WorkerResult = 'held' | 'idle' | 'completed' | 'failed' | 'lease_lost';
 export type WorkerDestination = {
   protocol: 'http:' | 'https:';
   host: string;

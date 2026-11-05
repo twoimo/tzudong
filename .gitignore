@@ -97,7 +97,7 @@ apps/web/tests/temp-*.spec.ts
 .codex/
 .agent/
 .agents/
-# Share only the project instruction-audit skill; keep other local agent state ignored.
+# Share reviewed project audit/verification skills; keep other local agent state ignored.
 !/.agents/
 /.agents/*
 !/.agents/skills/
@@ -105,6 +105,12 @@ apps/web/tests/temp-*.spec.ts
 !/.agents/skills/tzudong-guidance-audit/
 /.agents/skills/tzudong-guidance-audit/*
 !/.agents/skills/tzudong-guidance-audit/SKILL.md
+!/.agents/skills/tzudong-formal-map-check/
+/.agents/skills/tzudong-formal-map-check/*
+!/.agents/skills/tzudong-formal-map-check/SKILL.md
+!/.agents/skills/tzudong-formal-map-check/agents/
+/.agents/skills/tzudong-formal-map-check/agents/*
+!/.agents/skills/tzudong-formal-map-check/agents/openai.yaml
 .gemini/
 AGENTS.md
 !/AGENTS.md
@@ -197,3 +203,6 @@ backend/restaurant-evaluation-test/
 **/cookies.json.bak
 **/gemini_cookies.json
 **/.gemini/
+
+# Immutable dependency assets generated from the pinned MapLibre package.
+/apps/web/public/scripts/maplibre/

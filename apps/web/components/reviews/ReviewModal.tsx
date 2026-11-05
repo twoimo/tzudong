@@ -1,3 +1,6 @@
+import { enqueueDraftWrite, waitForDraftAutosave, blockDraftUnload } from '@/lib/draft-write-queue';
+import { DraftLoadError } from '@/components/ui/draft-load-error';
+import { captureBrowserDraftEpoch, assertBrowserDraftWrite, isBrowserDraftEpochCurrent } from '@/lib/privacy/browser-draft-lifecycle';
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
 import useSWR from "swr";
@@ -15,7 +18,16 @@ import {
     cleanupCanonicalReviewPhotoObjects,
     normalizeReviewPhotoFilename,
 } from "@/lib/review-photo-url";
-import { ReviewSaveOperation, type ReviewSaveDraft, type ReviewSaveUpload } from "@/lib/reviews/review-save-operation";
+import {
+    REVIEW_FOOD_PHOTO_MAX_COUNT,
+    ReviewSaveOperation,
+    type ReviewSaveDraft,
+    type ReviewSaveUpload,
+} from "@/lib/reviews/review-save-operation";
+import {
+    FEATURE_DATABASE_HELD_MESSAGE,
+    fetchFeatureDatabaseReadiness,
+} from "@/lib/runtime-feature-readiness-contract";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
@@ -23,11 +35,17 @@ import {
     OCR_PROGRESS_STEPS,
     addAiFilledField,
     getOcrProgressRank,
+    reconcileInterruptedOcrReadback,
     shouldSuppressOcrAutoNavigation,
     canReplaceSelectedRestaurantFromOcr,
     type OcrProgressStage,
     type ReviewOcrFieldKey,
 } from "@/lib/ocr/review-modal-ocr-ux";
+import {
+    prepareVerificationUploadFile,
+    ReceiptUploadPreparationError,
+} from "@/lib/ocr/receipt-upload-preparation";
+import { createLatestSelection } from "@/lib/ocr/latest-selection";
 
 // 음식 사진용 압축 옵션 (스토리지 최적화)
 const FOOD_PHOTO_OPTIONS = {
@@ -43,6 +61,7 @@ const SUPPORTED_RECEIPT_MIME_TYPES = new Set([
     "image/webp",
 ]);
 const RECEIPT_IMAGE_ACCEPT = "image/avif,image/jpeg,image/png,image/webp";
+const REVIEW_CONTENT_MAX_LENGTH = 4_000;
 const isSupportedReceiptImage = (file: File): boolean => SUPPORTED_RECEIPT_MIME_TYPES.has(file.type);
 
 // 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
@@ -50,33 +69,6 @@ const generateSafeFilename = (extension: string = ".webp"): string => {
     const randomString = Math.random().toString(36).substring(2, 15);
     const timestamp = Date.now();
     return `${timestamp}_${randomString}${extension}`;
-};
-
-// 영수증 이미지 준비 (OCR 정확도 유지, 너무 큰 파일만 리사이즈)
-// OCR 후 서버에서 WebP로 압축됨
-const prepareReceiptImage = async (file: File): Promise<File> => {
-    if (!isSupportedReceiptImage(file)) throw new Error('REVIEW_VERIFICATION_FORMAT_UNSUPPORTED');
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const safeFileName = generateSafeFilename(`.${ext}`);
-
-    // 5MB 초과 시에만 리사이즈 (품질 손실 최소화)
-    if (file.size > 5 * 1024 * 1024) {
-        try {
-            const resizedBlob = await imageCompression(file, {
-                maxSizeMB: 5,
-                maxWidthOrHeight: 3000,  // 고해상도 유지
-                fileType: file.type as "image/jpeg" | "image/png" | "image/webp",
-                initialQuality: 1.0,     // 품질 손실 없음
-                useWebWorker: true,
-            });
-            return new File([resizedBlob], safeFileName, { type: file.type });
-        } catch (error) {
-            console.warn("영수증 리사이즈 실패, 원본 사용:");
-        }
-    }
-
-    // 5MB 이하는 원본 그대로
-    return new File([file], safeFileName, { type: file.type });
 };
 
 // 음식 사진 압축 (WebP - 스토리지 최적화)
@@ -103,10 +95,8 @@ function createReviewSaveOperation(
             return reviewId;
         },
         prepare: async (draft, reviewId) => {
-            const [receipt, ...food] = await Promise.all([
-                prepareReceiptImage(draft.verificationPhoto),
-                ...draft.foodPhotos.map(compressFoodImage),
-            ]);
+            const receipt = draft.verificationPhoto;
+            const food = await Promise.all(draft.foodPhotos.map(compressFoodImage));
             const uploadTimestamp = Date.now();
             const verificationPhotoPath = buildReviewPhotoObjectPath(
                 { ownerId: draft.ownerId, reviewId, purpose: 'verification' },
@@ -132,20 +122,55 @@ function createReviewSaveOperation(
             return !error && data !== null && data.size === file.size
                 && (!file.type || data.contentType === file.type);
         },
-        insert: (draft, reviewId, uploads) => supabase.from('reviews').insert({
-            id: reviewId,
-            user_id: draft.ownerId,
-            restaurant_id: draft.restaurantId,
-            title: draft.title,
-            content: draft.content,
-            visited_at: draft.visitedAt,
-            verification_photo: uploads.find(upload => upload.purpose === 'verification')!.path,
-            food_photos: uploads.filter(upload => upload.purpose === 'food').map(upload => upload.path),
-            categories: draft.categories,
-            is_verified: false,
-        }),
+        insert: async (draft, reviewId, uploads) => {
+            const verificationPhoto = uploads.find(upload => upload.purpose === 'verification')!.path;
+            const foodPhotos = uploads.filter(upload => upload.purpose === 'food').map(upload => upload.path);
+            if (!draft.ocrResultRef && !draft.ocrResultRevision) {
+                return supabase.from('reviews').insert({
+                    id: reviewId,
+                    user_id: draft.ownerId,
+                    restaurant_id: draft.restaurantId,
+                    title: draft.title,
+                    content: draft.content,
+                    visited_at: draft.visitedAt,
+                    verification_photo: verificationPhoto,
+                    food_photos: foodPhotos,
+                    categories: draft.categories,
+                    is_verified: false,
+                });
+            }
+            if (!draft.ocrResultRef || !draft.ocrResultRevision) {
+                return { error: { code: '42501', status: 422 } };
+            }
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch('/api/ocr/reviews/save', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                },
+                body: JSON.stringify({
+                    reviewId,
+                    restaurantId: draft.restaurantId,
+                    title: draft.title,
+                    content: draft.content,
+                    visitedAt: draft.visitedAt,
+                    verificationPhoto,
+                    foodPhotos,
+                    categories: draft.categories,
+                    ocrResultRef: draft.ocrResultRef,
+                    ocrResultRevision: draft.ocrResultRevision,
+                }),
+            });
+            if (response.ok) return { error: null };
+            const code = response.status === 409
+                ? '23505'
+                : [400, 401, 403, 413, 422].includes(response.status) ? '42501' : 'transport';
+            return { error: { code, status: response.status } };
+        },
         read: (ownerId, reviewId) => supabase.from('reviews')
-            .select('id, user_id, restaurant_id, verification_photo, food_photos')
+            .select('id, user_id, restaurant_id, verification_photo, food_photos, receipt_data, ocr_processed_at')
             .eq('id', reviewId).eq('user_id', ownerId).maybeSingle(),
         cleanup: async (ownerId, reviewId, uploads) => {
             const results = await Promise.all((['verification', 'food'] as const).map(purpose => (
@@ -268,6 +293,9 @@ export interface OCRResult {
     confidence?: number;
     field_trust?: OcrFieldTrustPayload[];
     needs_review?: string[];
+    ocr_result_ref?: string;
+    ocr_result_revision?: string;
+    cache_reused?: boolean;
 }
 
 type OcrProgressState = {
@@ -279,6 +307,7 @@ type OcrProgressState = {
 };
 
 type OcrStreamPayload = {
+    code?: string;
     message?: string;
     model?: string;
     stage?: OcrProgressStage;
@@ -291,18 +320,20 @@ type OcrStreamPayload = {
 };
 
 type OcrFallbackNotice = {
-    type: 'fallback' | 'error';
+    type: 'fallback' | 'error' | 'pending';
     message: string;
     detail?: string;
 };
 
 class OcrStreamHttpError extends Error {
     status: number;
+    code?: string;
 
-    constructor(message: string, status: number) {
+    constructor(message: string, status: number, code?: string) {
         super(message);
         this.name = 'OcrStreamHttpError';
         this.status = status;
+        this.code = code;
     }
 }
 
@@ -406,6 +437,44 @@ type VerificationInputMode = "ai" | "manual";
 type ReviewFormStep = 1 | 2 | 3;
 type OcrFocusTarget = "restaurant" | "date" | "time" | "category" | "review";
 
+type ReviewSaveInputsSnapshot = {
+    revision: number;
+    ownerId: string | undefined;
+    restaurantId: string | undefined;
+    restaurantName: string | undefined;
+    visitedDate: string;
+    visitedTime: string;
+    categories: Category[];
+    content: string;
+    verificationPhoto: File | null;
+    foodPhotos: File[];
+    verificationInputMode: VerificationInputMode;
+    isAnalyzing: boolean;
+    ocrRunGeneration: number;
+    ocrResultRef: string | null;
+    ocrResultRevision: string | null;
+};
+
+function sameReviewSaveInputsSnapshot(a: ReviewSaveInputsSnapshot, b: ReviewSaveInputsSnapshot): boolean {
+    return a.revision === b.revision
+        && a.ownerId === b.ownerId
+        && a.restaurantId === b.restaurantId
+        && a.restaurantName === b.restaurantName
+        && a.visitedDate === b.visitedDate
+        && a.visitedTime === b.visitedTime
+        && a.categories.length === b.categories.length
+        && a.categories.every((value, index) => value === b.categories[index])
+        && a.content === b.content
+        && a.verificationPhoto === b.verificationPhoto
+        && a.foodPhotos.length === b.foodPhotos.length
+        && a.foodPhotos.every((file, index) => file === b.foodPhotos[index])
+        && a.verificationInputMode === b.verificationInputMode
+        && a.isAnalyzing === b.isAnalyzing
+        && a.ocrRunGeneration === b.ocrRunGeneration
+        && a.ocrResultRef === b.ocrResultRef
+        && a.ocrResultRevision === b.ocrResultRevision;
+}
+
 const REVIEW_FORM_STEPS: Array<{ id: ReviewFormStep; label: string }> = [
     { id: 1, label: "인증" },
     { id: 2, label: "방문 정보" },
@@ -434,7 +503,7 @@ export function ReviewModal(props: ReviewModalProps) {
     const { user } = useAuth();
     // Owner transitions discard the previous composer's inputs and controller.
     // This is a memory boundary, not durable idempotency across remounts.
-    return <ReviewComposer key={user?.id ?? 'signed-out'} {...props} />;
+    return <ReviewComposer key={`${user?.id ?? 'signed-out'}:${captureBrowserDraftEpoch(user?.id ?? '').generation}:${props.restaurant?.id ?? 'choose'}`} {...props} />;
 }
 
 function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false, presentation = 'auto' }: ReviewModalProps) {
@@ -446,9 +515,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
+    const foodPhotosRef = useRef<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [saveRecovery, setSaveRecovery] = useState<'edit' | 'draft-cleanup' | null>(null);
+    const [saveRecovery, setSaveRecovery] = useState<'result-check' | 'edit' | 'draft-cleanup' | null>(null);
     const autoSaveInFlightRef = useRef<Promise<void> | null>(null);
     const consumerNotifiedRef = useRef(false);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -461,6 +531,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const [ocrFocusTarget, setOcrFocusTarget] = useState<OcrFocusTarget | null>(null);
     const [aiFilledFields, setAiFilledFields] = useState<Set<ReviewOcrFieldKey>>(() => new Set());
     const [ocrFallbackNotice, setOcrFallbackNotice] = useState<OcrFallbackNotice | null>(null);
+    const [ocrResultRef, setOcrResultRef] = useState<string | null>(null);
+    const [ocrResultRevision, setOcrResultRevision] = useState<string | null>(null);
     const [currentStep, setCurrentStep] = useState<ReviewFormStep>(1);
 
     // 맛집 검색 상태
@@ -472,28 +544,82 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     // One bounded text revision, obtained only from our committed save or load.
     // Scope object identity also fences asynchronous completions across A -> B -> A.
     const draftScopeRef = useRef({ ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null as ReviewDraft | null });
+    const draftLoadKey = `${user?.id ?? ''}:${reviewTargetRestaurant?.id ?? ''}:${isOpen}`;
+    const [loadedDraftKey, setLoadedDraftKey] = useState<string | null>(null);
+    const [draftLoadFailed, setDraftLoadFailed] = useState(false);
     const saveOwnerRef = useRef(user?.id);
     const saveOperationRef = useRef<ReviewSaveOperation | null>(null);
     const submitInFlightRef = useRef(false);
     const closeRequestedRef = useRef(false);
     const composerOpenRef = useRef(isOpen);
-    const latestSaveInputsRef = useRef({ visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant?.id });
+    const ocrRunGenerationRef = useRef(0);
+    const saveInputRevisionRef = useRef(0);
+    const verificationInputModeRef = useRef<VerificationInputMode>("ai");
+    const latestSaveInputsRef = useRef<ReviewSaveInputsSnapshot>({
+        revision: 0,
+        ownerId: user?.id,
+        restaurantId: reviewTargetRestaurant?.id,
+        restaurantName: reviewTargetRestaurant?.name,
+        visitedDate,
+        visitedTime,
+        categories,
+        content,
+        verificationPhoto,
+        foodPhotos,
+        verificationInputMode,
+        isAnalyzing,
+        ocrRunGeneration: 0,
+        ocrResultRef,
+        ocrResultRevision,
+    });
+    const reviseLatestSaveInputs = useCallback((patch: Partial<Omit<ReviewSaveInputsSnapshot, 'revision'>>) => {
+        const revision = saveInputRevisionRef.current + 1;
+        saveInputRevisionRef.current = revision;
+        latestSaveInputsRef.current = { ...latestSaveInputsRef.current, ...patch, revision };
+    }, []);
+    const ocrAbortControllerRef = useRef<AbortController | null>(null);
+    const ocrRecoveryContextRef = useRef<{ file: File; restaurant: OcrRestaurantContextSource | null } | null>(null);
+    const verificationSelectionRef = useRef(createLatestSelection());
+    const receiptOcrPreparationRef = useRef(createLatestSelection());
+
     useLayoutEffect(() => {
         if (draftScopeRef.current.ownerId !== user?.id || draftScopeRef.current.restaurantId !== reviewTargetRestaurant?.id || !isOpen) {
             draftScopeRef.current = { ownerId: user?.id, restaurantId: reviewTargetRestaurant?.id, revision: null };
+            closeRequestedRef.current = false;
+            setLoadedDraftKey(null);
         }
         saveOwnerRef.current = user?.id;
         composerOpenRef.current = isOpen;
-        latestSaveInputsRef.current = { visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, restaurantId: reviewTargetRestaurant?.id };
+        reviseLatestSaveInputs({
+            ownerId: user?.id,
+            restaurantId: reviewTargetRestaurant?.id,
+            restaurantName: reviewTargetRestaurant?.name,
+            visitedDate,
+            visitedTime,
+            categories,
+            content,
+            verificationPhoto,
+            foodPhotos,
+            verificationInputMode,
+            isAnalyzing,
+            ocrRunGeneration: ocrRunGenerationRef.current,
+            ocrResultRef,
+            ocrResultRevision,
+        });
         saveOperationRef.current ??= createReviewSaveOperation(() => saveOwnerRef.current, () => draftScopeRef.current.revision);
-    }, [user?.id, isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, reviewTargetRestaurant?.id]);
+    }, [user?.id, isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, reviewTargetRestaurant?.id, reviewTargetRestaurant?.name, verificationInputMode, isAnalyzing, ocrResultRef, ocrResultRevision, reviseLatestSaveInputs]);
 
     useLayoutEffect(() => {
         const operation = saveOperationRef.current!;
+        const verificationSelection = verificationSelectionRef.current;
+        const receiptOcrPreparation = receiptOcrPreparationRef.current;
         if (isOpen) {
             closeRequestedRef.current = false;
             consumerNotifiedRef.current = false;
-        } else void operation.cancel();
+        } else {
+            verificationSelection.invalidate();
+            void operation.cancel();
+        }
         return () => {
             composerOpenRef.current = false;
             saveOwnerRef.current = undefined;
@@ -502,6 +628,12 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             // for it and preserves objects whenever its outcome stays unknown.
             operation.requestCancel();
             void operation.cancel();
+            verificationSelection.invalidate();
+            receiptOcrPreparation.invalidate();
+            ocrRunGenerationRef.current += 1;
+            ocrAbortControllerRef.current?.abort();
+            ocrAbortControllerRef.current = null;
+            ocrRecoveryContextRef.current = null;
         };
     }, [isOpen, user?.id]);
 
@@ -512,11 +644,40 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const verificationFileInputRef = useRef<HTMLInputElement>(null);
     const foodPhotosFileInputRef = useRef<HTMLInputElement>(null);
     const verificationPhotoUrlRef = useRef<string | null>(null);
-    const ocrAbortControllerRef = useRef<AbortController | null>(null);
     const lastOcrRevealSignatureRef = useRef<string | null>(null);
     const lastManualOcrInteractionAtRef = useRef(0);
     const userStepOverrideDuringOcrRef = useRef(false);
     const manuallyEditedOcrFieldsRef = useRef<Set<ReviewOcrFieldKey>>(new Set());
+
+    const setReceiptVerificationInputMode = useCallback((mode: VerificationInputMode) => {
+        verificationInputModeRef.current = mode;
+        setVerificationInputMode(mode);
+        if (mode !== "manual") {
+            reviseLatestSaveInputs({ verificationInputMode: mode });
+            return;
+        }
+
+        // Keep the selected photo/preparation alive, but revoke every AI start or
+        // readback lease so a late compressor/status result cannot change the form.
+        receiptOcrPreparationRef.current.invalidate();
+        const ocrRunGeneration = ocrRunGenerationRef.current + 1;
+        ocrRunGenerationRef.current = ocrRunGeneration;
+        ocrAbortControllerRef.current?.abort();
+        ocrAbortControllerRef.current = null;
+        userStepOverrideDuringOcrRef.current = true;
+        setOcrResultRef(null);
+        setOcrResultRevision(null);
+        reviseLatestSaveInputs({
+            verificationInputMode: mode,
+            isAnalyzing: false,
+            ocrRunGeneration,
+            ocrResultRef: null,
+            ocrResultRevision: null,
+        });
+        setIsAnalyzing(false);
+        setOcrProgress(null);
+        setOcrFallbackNotice(null);
+    }, [reviseLatestSaveInputs]);
     const mobileFrameRef = useRef<HTMLDivElement>(null);
     const mobileScrollRef = useRef<HTMLDivElement>(null);
     const desktopReviewMapPanelRef = useRef<HTMLElement>(null);
@@ -548,7 +709,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         if (!shouldRenderMapPanel || event.button !== 0) return;
 
         const target = event.target;
-        if (target instanceof HTMLElement && target.closest('button, input, textarea, select, a, [role="button"]')) return;
+        if (target instanceof Element && target.closest('button, input, textarea, select, a, [role="button"]')) return;
 
         const panel = desktopReviewMapPanelRef.current;
         if (!panel) return;
@@ -755,7 +916,20 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
     // 인증 사진 미리보기 URL은 렌더 중 생성하지 않고 이벤트에서 동기 갱신해
     // 모바일 파일 선택기 복귀 직후 바텀시트가 재계산되며 깜빡이는 일을 줄인다.
-    const replaceVerificationPhoto = useCallback((file: File | null) => {
+    const replaceVerificationPhoto = useCallback((file: File | null, expectedGeneration?: number) => {
+        if (expectedGeneration === undefined) {
+            verificationSelectionRef.current.invalidate();
+            receiptOcrPreparationRef.current.invalidate();
+        } else if (!verificationSelectionRef.current.isCurrent(expectedGeneration)) {
+            return false;
+        }
+        const ocrRunGeneration = ocrRunGenerationRef.current + 1;
+        ocrRunGenerationRef.current = ocrRunGeneration;
+        ocrAbortControllerRef.current?.abort();
+        ocrAbortControllerRef.current = null;
+        ocrRecoveryContextRef.current = null;
+        setIsAnalyzing(false);
+        setOcrProgress(null);
         if (verificationPhotoUrlRef.current) {
             URL.revokeObjectURL(verificationPhotoUrlRef.current);
         }
@@ -764,7 +938,17 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         verificationPhotoUrlRef.current = nextUrl;
         setVerificationPhotoUrl(nextUrl);
         setVerificationPhoto(file);
-    }, []);
+        setOcrResultRef(null);
+        setOcrResultRevision(null);
+        reviseLatestSaveInputs({
+            verificationPhoto: file,
+            isAnalyzing: false,
+            ocrRunGeneration,
+            ocrResultRef: null,
+            ocrResultRevision: null,
+        });
+        return true;
+    }, [reviseLatestSaveInputs]);
 
     const foodPhotoUrls = useMemo(() => {
         return foodPhotos.map(photo => URL.createObjectURL(photo));
@@ -787,49 +971,103 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     }, [foodPhotoUrls]);
 
     // 메모이제이션된 이벤트 핸들러들
-    const handleVerificationPhotoSelected = (file: File) => {
-        if (!isSupportedReceiptImage(file)) {
+    const handleVerificationPhotoSelected = async (file: File) => {
+        const selection = verificationSelectionRef.current.begin();
+        const selectionGeneration = selection.generation;
+        const ocrPreparation = verificationInputModeRef.current === "ai"
+            ? receiptOcrPreparationRef.current.begin()
+            : null;
+        const ocrRunGeneration = ocrRunGenerationRef.current + 1;
+        ocrRunGenerationRef.current = ocrRunGeneration;
+        reviseLatestSaveInputs({ isAnalyzing: false, ocrRunGeneration });
+        ocrAbortControllerRef.current?.abort();
+        ocrAbortControllerRef.current = null;
+        setIsAnalyzing(false);
+        setOcrProgress(null);
+        try {
+            if (featureHeld) {
+                toast({ title: "리뷰 기능 준비 중", description: FEATURE_DATABASE_HELD_MESSAGE });
+                return;
+            }
+            if (!isSupportedReceiptImage(file)) {
+                toast({
+                    title: "지원하지 않는 영수증 형식",
+                    description: "JPG, PNG, WebP 또는 AVIF 이미지를 선택해 주세요.",
+                    variant: "destructive",
+                });
+                return;
+            }
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+            const preparedFile = await prepareVerificationUploadFile({
+                file,
+                filename: generateSafeFilename(`.${ext}`),
+                compress: imageCompression,
+                signal: selection.signal,
+            });
+            if (!selection.isCurrent() || !replaceVerificationPhoto(preparedFile, selectionGeneration)) return;
+            verificationFileInputRef.current?.blur();
+            if (ocrPreparation?.isCurrent() && verificationInputModeRef.current === "ai") {
+                // Android 파일 선택기 복귀 직후 requestAnimationFrame이 누락되는 케이스가 있어
+                // macrotask로 OCR을 시작한다. 상태 업데이트는 이미 큐에 들어가므로 미리보기가 먼저 그려진다.
+                window.setTimeout(() => {
+                    if (verificationSelectionRef.current.isCurrent(selectionGeneration)
+                        && ocrPreparation.isCurrent()
+                        && verificationInputModeRef.current === "ai") {
+                        void analyzeReceipt(preparedFile, selectionGeneration);
+                    }
+                }, 0);
+            }
+        } catch (error) {
+            if (!selection.isCurrent() || selection.signal.aborted) return;
             toast({
-                title: "지원하지 않는 영수증 형식",
-                description: "JPG, PNG, WebP 또는 AVIF 이미지를 선택해 주세요.",
+                title: "영수증 사진을 준비하지 못했습니다",
+                description: error instanceof ReceiptUploadPreparationError && error.code === 'too_large'
+                    ? "5MB 이하 이미지로 다시 선택해 주세요. 분석 요청은 전송되지 않았습니다."
+                    : "JPG, PNG, WebP 또는 AVIF 이미지를 선택해 주세요.",
                 variant: "destructive",
             });
-            return;
-        }
-        replaceVerificationPhoto(file);
-        verificationFileInputRef.current?.blur();
-        if (verificationInputMode === "ai") {
-            // Android 파일 선택기 복귀 직후 requestAnimationFrame이 누락되는 케이스가 있어
-            // macrotask로 OCR을 시작한다. 상태 업데이트는 이미 큐에 들어가므로 미리보기가 먼저 그려진다.
-            window.setTimeout(() => {
-                void analyzeReceipt(file);
-            }, 0);
+        } finally {
+            selection.complete();
+            ocrPreparation?.complete();
         }
     };
 
     const handleVerificationPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            handleVerificationPhotoSelected(file);
+            void handleVerificationPhotoSelected(file);
         }
         e.target.value = '';
     };
 
-    const handleFoodPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
+    const appendFoodPhotos = useCallback((files: File[]) => {
         if (files.length === 0) return;
+        const current = foodPhotosRef.current;
+        const requestedCount = current.length + files.length;
+        if (requestedCount > REVIEW_FOOD_PHOTO_MAX_COUNT) {
+            toast({
+                title: "음식 사진이 너무 많습니다",
+                description: `음식 사진은 최대 ${REVIEW_FOOD_PHOTO_MAX_COUNT}장까지 등록할 수 있습니다. 현재 ${current.length}장을 유지했으니 사진을 제거한 뒤 다시 선택해 주세요.`,
+                variant: "destructive",
+            });
+            return;
+        }
+        const next = [...current, ...files];
+        foodPhotosRef.current = next;
+        setFoodPhotos(next);
+    }, []);
 
-        // requestAnimationFrame을 사용하여 UI 블로킹 방지
-        requestAnimationFrame(() => {
-            setFoodPhotos(prev => [...prev, ...files]);
-        });
+    const handleFoodPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        appendFoodPhotos(Array.from(e.target.files || []));
 
         // input 초기화 (같은 파일 재선택 가능하도록)
         e.target.value = '';
-    }, []);
+    }, [appendFoodPhotos]);
 
     const removeFoodPhoto = useCallback((index: number) => {
-        setFoodPhotos(prev => prev.filter((_, i) => i !== index));
+        const next = foodPhotosRef.current.filter((_, i) => i !== index);
+        foodPhotosRef.current = next;
+        setFoodPhotos(next);
     }, []);
 
     // 드래그 앤 드롭 핸들러 (useCallback으로 메모이제이션)
@@ -859,7 +1097,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         const imageFiles = files.filter(isSupportedReceiptImage);
 
         if (imageFiles.length > 0) {
-            handleVerificationPhotoSelected(imageFiles[0]);
+            void handleVerificationPhotoSelected(imageFiles[0]);
         }
     };
 
@@ -883,10 +1121,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         const files = Array.from(e.dataTransfer.files);
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
-        if (imageFiles.length > 0) {
-            setFoodPhotos(prev => [...prev, ...imageFiles]);
-        }
-    }, []);
+        appendFoodPhotos(imageFiles);
+    }, [appendFoodPhotos]);
 
     // 파일 선택기 열기 함수들 (useCallback으로 메모이제이션)
     const openVerificationFileDialog = useCallback(() => {
@@ -1096,17 +1332,27 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
     const isTerminalOcrStreamError = useCallback((error: unknown) => (
         error instanceof OcrStreamHttpError
-        && [400, 401, 403, 413, 415, 422, 429].includes(error.status)
+        && ([400, 401, 403, 413, 415, 422, 429].includes(error.status)
+            || ['FEATURE_DATABASE_HELD', 'OCR_RESULT_PROCESSING', 'OCR_RESULT_INDETERMINATE'].includes(error.code ?? ''))
+    ), []);
+
+    const isPendingOcrStreamError = useCallback((error: unknown) => (
+        error instanceof OcrStreamHttpError
+        && ['OCR_RESULT_PROCESSING', 'OCR_RESULT_INDETERMINATE'].includes(error.code ?? '')
     ), []);
 
     const analyzeReceiptWithStream = useCallback(async (file: File, token: string, signal: AbortSignal, forceRefresh: boolean): Promise<OCRResult> => {
         const formData = new FormData();
         formData.append('image', file);
-        appendSelectedRestaurantOcrContext(formData, selectedRestaurant || restaurant);
+        const context: OcrRestaurantContextSource | null | undefined = selectedRestaurant || restaurant;
+        const recoveryContext = context ? { ...context, categories: context.categories?.slice() } : null;
+        ocrRecoveryContextRef.current = { file, restaurant: recoveryContext };
+        appendSelectedRestaurantOcrContext(formData, recoveryContext);
         if (forceRefresh) {
             formData.append('force', '1');
         }
 
+        signal.throwIfAborted();
         const response = await fetch('/api/ocr/extract/stream', {
             method: 'POST',
             body: formData,
@@ -1115,9 +1361,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             credentials: 'include',
         });
 
+        signal.throwIfAborted();
         if (!response.ok || !response.body) {
             const errorData = await response.json().catch(() => ({}));
-            throw new OcrStreamHttpError(errorData.error || 'OCR 스트리밍 분석 실패', response.status);
+            throw new OcrStreamHttpError(errorData.error || 'OCR 스트리밍 분석 실패', response.status, errorData.code);
         }
 
         const reader = response.body.getReader();
@@ -1127,6 +1374,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
         while (true) {
             const { done, value } = await reader.read();
+            signal.throwIfAborted();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
             const frames = buffer.split(/\r?\n\r?\n/);
@@ -1138,7 +1386,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 if (parsed.event === 'error') {
                     const streamErrorMessage = parsed.payload.detail || parsed.payload.message || 'OCR 스트리밍 분석 실패';
                     if (parsed.payload.terminal) {
-                        throw new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422);
+                        throw new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422, parsed.payload.code);
                     }
                     throw new Error(streamErrorMessage);
                 }
@@ -1149,12 +1397,13 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             }
         }
 
+        signal.throwIfAborted();
         const parsed = parseOcrStreamFrame(buffer + decoder.decode());
         if (parsed) {
             if (parsed.event === 'error') {
                 const streamErrorMessage = parsed.payload.detail || parsed.payload.message || 'OCR 스트리밍 분석 실패';
                 if (parsed.payload.terminal) {
-                    throw new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422);
+                    throw new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422, parsed.payload.code);
                 }
                 throw new Error(streamErrorMessage);
             }
@@ -1168,33 +1417,61 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         return finalData;
     }, [handleOcrStreamEvent, parseOcrStreamFrame, restaurant, selectedRestaurant]);
 
+    const readReceiptOcrStatus = useCallback(async (file: File, token: string, signal: AbortSignal): Promise<OCRResult> => {
+        const formData = new FormData();
+        formData.append('image', file);
+        const recovery = ocrRecoveryContextRef.current;
+        appendSelectedRestaurantOcrContext(formData,
+            recovery?.file === file ? recovery.restaurant : selectedRestaurant || restaurant);
+        const response = await fetch('/api/ocr/results/status', {
+            method: 'POST',
+            body: formData,
+            signal,
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include',
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status !== 200) {
+            throw new OcrStreamHttpError(payload.error || 'OCR 결과 확인 실패', response.status, payload.code);
+        }
+        return payload as OCRResult;
+    }, [restaurant, selectedRestaurant]);
+
     // OCR 분석 실행 (모달 내부에서 처리)
-    async function analyzeReceipt(file: File) {
+    async function analyzeReceipt(
+        file: File,
+        expectedSelectionGeneration?: number,
+        statusOnly = false,
+    ) {
+        if (expectedSelectionGeneration !== undefined
+            && !verificationSelectionRef.current.isCurrent(expectedSelectionGeneration)) return;
+        if (featureHeld) {
+            setOcrFallbackNotice({ type: 'error', message: FEATURE_DATABASE_HELD_MESSAGE });
+            return;
+        }
         // OCR 결과 캐시는 provider/model/prompt/preprocess-aware server cache만 사용한다.
         // file metadata 기반 sessionStorage cache는 provider 전환 실험을 오염시킬 수 있어 사용하지 않는다.
         setIsAnalyzing(true);
-        setOcrProgress({ message: '영수증 사진을 준비하고 있어요.', stage: 'prepare', fields: [] });
+        setOcrProgress({ message: statusOnly ? '저장된 분석 결과를 확인하고 있어요.' : '영수증 사진을 준비하고 있어요.', stage: 'prepare', fields: [] });
         setOcrFallbackNotice(null);
-        setAiFilledFields(new Set());
-        lastOcrRevealSignatureRef.current = null;
-        lastManualOcrInteractionAtRef.current = 0;
-        userStepOverrideDuringOcrRef.current = false;
-        manuallyEditedOcrFieldsRef.current = new Set();
+        if (!statusOnly) {
+            setAiFilledFields(new Set());
+            lastOcrRevealSignatureRef.current = null;
+            lastManualOcrInteractionAtRef.current = 0;
+            userStepOverrideDuringOcrRef.current = false;
+            manuallyEditedOcrFieldsRef.current = new Set();
+        }
         ocrAbortControllerRef.current?.abort();
+        const ocrRunGeneration = ocrRunGenerationRef.current + 1;
+        ocrRunGenerationRef.current = ocrRunGeneration;
+        reviseLatestSaveInputs({ isAnalyzing: true, ocrRunGeneration });
         const abortController = new AbortController();
         ocrAbortControllerRef.current = abortController;
         const shouldForceOcrRefresh = canForceOcrRefresh && forceOcrRefresh;
+        const isCurrentOcrRun = () => !abortController.signal.aborted
+            && ocrRunGenerationRef.current === ocrRunGeneration;
         try {
             let data: OCRResult;
-
-            // 2. provider-aware server cache is handled inside the OCR API route.
-            // 3. 캐시가 없으면 API 호출
-            const formData = new FormData();
-            formData.append('image', file);
-            appendSelectedRestaurantOcrContext(formData, selectedRestaurant || restaurant);
-            if (shouldForceOcrRefresh) {
-                formData.append('force', '1');
-            }
 
             if (!user) {
                 throw new Error('로그인이 필요한 서비스입니다');
@@ -1203,50 +1480,50 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             // [보안] 3. 토큰 직접 조회 (쿠키 전송 실패 대비)
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
+            if (!isCurrentOcrRun()) return;
 
             if (!token) {
                 throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
             }
 
             try {
-                data = await analyzeReceiptWithStream(file, token, abortController.signal, shouldForceOcrRefresh);
+                data = statusOnly
+                    ? await readReceiptOcrStatus(file, token, abortController.signal)
+                    : await analyzeReceiptWithStream(file, token, abortController.signal, shouldForceOcrRefresh);
             } catch (streamError) {
-                if (isAbortError(streamError)) return;
-                if (isTerminalOcrStreamError(streamError)) {
+                if (!isCurrentOcrRun() || isAbortError(streamError)) return;
+                if (statusOnly) throw streamError;
+                if (isTerminalOcrStreamError(streamError) && !isPendingOcrStreamError(streamError)) {
                     if (streamError instanceof OcrStreamHttpError && streamError.status === 429) {
                         mutateQuota();
                     }
                     throw streamError;
                 }
                 setOcrFallbackNotice({
-                    type: 'fallback',
-                    message: '실시간 스트리밍이 불안정해 일반 분석으로 자동 전환했어요.',
-                    detail: '첨부한 영수증과 이미 입력한 값은 그대로 유지됩니다.',
+                    type: 'pending',
+                    message: '분석 연결이 끊겨 저장된 결과를 확인하고 있어요.',
+                    detail: '같은 사진을 AI에 다시 보내지 않습니다.',
                 });
-                setOcrProgress({ message: '스트리밍 연결이 불안정해 일반 분석으로 전환했어요.', stage: 'fallback', fields: [], fallbackUsed: true });
-                const response = await fetch('/api/ocr/extract', {
-                    method: 'POST',
-                    body: formData,
+                data = await reconcileInterruptedOcrReadback({
                     signal: abortController.signal,
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    credentials: 'include',
+                    readStatus: () => readReceiptOcrStatus(file, token, abortController.signal),
+                    isProcessingError: error => error instanceof OcrStreamHttpError
+                        && error.code === 'OCR_RESULT_PROCESSING',
                 });
-
-                if (!response.ok) {
-                    // 429: 일일 한도 초과 (백엔드에서 메시지 전달)
-                    if (response.status === 429) {
-                        const errorData = await response.json();
-                        mutateQuota(); // 쿼터 정보 갱신하여 UI에 한도 초과 반영
-                        throw new Error(errorData.error || "일일 무료 분석 한도를 초과했습니다.");
-                    }
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'OCR 분석 실패');
-                }
-
-                data = await response.json();
             }
+
+            if (!isCurrentOcrRun()) return;
+            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            if (!data.ocr_result_ref || !uuidPattern.test(data.ocr_result_ref)
+                || !data.ocr_result_revision || !uuidPattern.test(data.ocr_result_revision)) {
+                throw new Error('OCR 검증 결과를 확인할 수 없습니다.');
+            }
+            setOcrResultRef(data.ocr_result_ref);
+            setOcrResultRevision(data.ocr_result_revision);
+            reviseLatestSaveInputs({
+                ocrResultRef: data.ocr_result_ref,
+                ocrResultRevision: data.ocr_result_revision,
+            });
 
             // 4. provider/model/prompt/preprocess-aware server cache에만 저장한다.
             // 클라이언트 sessionStorage cache는 Track 1 정확도 실험 동안 사용하지 않는다.
@@ -1269,6 +1546,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
             if (data.store_name && !restaurant && canApplyOcrRestaurant) {
                 const matchedRestaurant = await findRestaurantFromReceiptName(data.store_name);
+                if (!isCurrentOcrRun()) return;
 
                 if (matchedRestaurant) {
                     setSelectedRestaurant(matchedRestaurant);
@@ -1351,7 +1629,15 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             mutateQuota();
 
         } catch (error) {
-            if (isAbortError(error)) return;
+            if (!isCurrentOcrRun() || isAbortError(error)) return;
+            if (isPendingOcrStreamError(error)) {
+                setOcrFallbackNotice({
+                    type: 'pending',
+                    message: '분석 결과를 확인하고 있어요.',
+                    detail: '같은 사진을 다시 보내지 않았습니다. 직접 입력을 계속할 수 있어요.',
+                });
+                return;
+            }
             setOcrFallbackNotice({
                 type: 'error',
                 message: 'AI 분석에 실패했어요. 사진은 유지되니 직접 입력하거나 다시 시도할 수 있어요.',
@@ -1366,8 +1652,11 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             if (ocrAbortControllerRef.current === abortController) {
                 ocrAbortControllerRef.current = null;
             }
-            setIsAnalyzing(false);
-            setOcrProgress(null);
+            if (ocrRunGenerationRef.current === ocrRunGeneration) {
+                reviseLatestSaveInputs({ isAnalyzing: false, ocrRunGeneration });
+                setIsAnalyzing(false);
+                setOcrProgress(null);
+            }
         }
     }
     // Use the scoped pre-write snapshot; a newer composer may already have saved
@@ -1393,9 +1682,41 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     }, [onSuccess]);
 
     const handleSubmit = async () => {
-        const targetRestaurant = selectedRestaurant || restaurant;
+        const submittedInputs = latestSaveInputsRef.current;
+        const saveInputsStillCurrent = () => sameReviewSaveInputsSnapshot(
+            submittedInputs,
+            latestSaveInputsRef.current,
+        )
+            && saveOwnerRef.current === submittedInputs.ownerId
+            && verificationInputModeRef.current === submittedInputs.verificationInputMode
+            && ocrRunGenerationRef.current === submittedInputs.ocrRunGeneration;
+        const notifyInputsChanged = () => toast({
+            title: "입력 내용이 변경되었습니다",
+            description: "현재 내용을 확인한 뒤 다시 등록해주세요.",
+        });
+        if (submittedInputs.foodPhotos.length > REVIEW_FOOD_PHOTO_MAX_COUNT) {
+            toast({
+                title: "음식 사진이 너무 많습니다",
+                description: `음식 사진은 최대 ${REVIEW_FOOD_PHOTO_MAX_COUNT}장까지 등록할 수 있습니다. 현재 ${submittedInputs.foodPhotos.length}장에서 초과한 사진을 직접 제거해 주세요.`,
+                variant: "destructive",
+            });
+            return;
+        }
+        const liveReadiness = await fetchFeatureDatabaseReadiness();
+        void mutateFeatureReadiness(liveReadiness, { revalidate: false });
+        if (liveReadiness.status !== 'ready') {
+            toast({ title: "리뷰 기능 준비 중", description: FEATURE_DATABASE_HELD_MESSAGE });
+            return;
+        }
+        if (!saveInputsStillCurrent()) {
+            notifyInputsChanged();
+            return;
+        }
+        const normalizedContent = submittedInputs.content.trim();
         // 필수 항목 검증
-        if (!visitedDate || !visitedTime || !targetRestaurant?.id || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
+        if (!submittedInputs.visitedDate || !submittedInputs.visitedTime || !submittedInputs.restaurantId
+            || !submittedInputs.restaurantName || submittedInputs.categories.length === 0 || !normalizedContent
+            || !submittedInputs.verificationPhoto || submittedInputs.foodPhotos.length === 0) {
             toast({
                 title: "필수 항목 누락",
                 description: "모든 필수 항목을 입력해주세요",
@@ -1405,16 +1726,36 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         }
 
         // 리뷰 내용 길이 검증 (최소 20자)
-        if (content.trim().length < 20) {
+        if (normalizedContent.length < 20) {
             toast({
                 title: "리뷰 내용이 너무 짧습니다",
-                description: "최소 20자 이상 작성해주세요 (현재 " + content.trim().length + "자)",
+                description: "최소 20자 이상 작성해주세요 (현재 " + normalizedContent.length + "자)",
+                variant: "destructive",
+            });
+            return;
+        }
+        if (normalizedContent.length > REVIEW_CONTENT_MAX_LENGTH) {
+            toast({
+                title: "리뷰 내용이 너무 깁니다",
+                description: `리뷰 내용은 최대 ${REVIEW_CONTENT_MAX_LENGTH.toLocaleString()}자까지 작성할 수 있습니다.`,
                 variant: "destructive",
             });
             return;
         }
 
-        if (!user) {
+        const submissionMode = submittedInputs.verificationInputMode;
+        if (submissionMode === "ai"
+            && (submittedInputs.isAnalyzing
+                || !submittedInputs.ocrResultRef || !submittedInputs.ocrResultRevision
+                || ocrRunGenerationRef.current !== submittedInputs.ocrRunGeneration)) {
+            toast({
+                title: "영수증 분석을 확인해주세요",
+                description: "AI 분석이 끝난 뒤 등록하거나 사진만 첨부를 선택해주세요.",
+            });
+            return;
+        }
+
+        if (!submittedInputs.ownerId) {
             toast({
                 title: "로그인 필요",
                 description: "리뷰를 작성하려면 로그인이 필요합니다",
@@ -1423,39 +1764,39 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             return;
         }
 
-        if (!targetRestaurant) {
-            toast({
-                title: "맛집 정보 오류",
-                description: "맛집을 선택해주세요.",
-                variant: "destructive",
-            });
-            return;
-        }
-
         if (submitInFlightRef.current || closeRequestedRef.current) return;
-        const submittedInputs = latestSaveInputsRef.current;
-        const timeWithSeconds = visitedTime.split(':').length === 2 ? `${visitedTime}:00` : visitedTime;
-        const visitedAt = `${visitedDate}T${timeWithSeconds}`;
+        const timeWithSeconds = submittedInputs.visitedTime.split(':').length === 2
+            ? `${submittedInputs.visitedTime}:00`
+            : submittedInputs.visitedTime;
+        const visitedAt = `${submittedInputs.visitedDate}T${timeWithSeconds}`;
         if (Number.isNaN(new Date(visitedAt).getTime())) {
             toast({ title: "방문 일시 확인", description: "올바른 방문 날짜와 시간을 입력해주세요.", variant: "destructive" });
             return;
         }
         const draft: ReviewSaveDraft = {
-            ownerId: user.id, restaurantId: targetRestaurant.id,
-            title: `${targetRestaurant.name} 방문 후기`, content: content.trim(), visitedAt,
-            categories, verificationPhoto, foodPhotos,
+            ownerId: submittedInputs.ownerId,
+            restaurantId: submittedInputs.restaurantId,
+            title: `${submittedInputs.restaurantName} 방문 후기`,
+            content: normalizedContent,
+            visitedAt,
+            categories: submittedInputs.categories,
+            verificationPhoto: submittedInputs.verificationPhoto,
+            foodPhotos: submittedInputs.foodPhotos,
+            ocrResultRef: submissionMode === "manual" ? null : submittedInputs.ocrResultRef,
+            ocrResultRevision: submissionMode === "manual" ? null : submittedInputs.ocrResultRevision,
         };
         submitInFlightRef.current = true;
         setIsSubmitting(true);
         try {
             await autoSaveInFlightRef.current;
-            if (closeRequestedRef.current || saveOwnerRef.current !== user.id) return;
+            if (!saveInputsStillCurrent()) {
+                notifyInputsChanged();
+                return;
+            }
+            if (closeRequestedRef.current) return;
             const result = await saveOperationRef.current!.submit(draft);
-            const latest = latestSaveInputsRef.current;
-            const changedDuringSave = Object.keys(submittedInputs).some(key => (
-                submittedInputs[key as keyof typeof submittedInputs] !== latest[key as keyof typeof latest]
-            ));
-            if (saveOwnerRef.current !== user.id) {
+            const changedDuringSave = !saveInputsStillCurrent();
+            if (saveOwnerRef.current !== submittedInputs.ownerId) {
                 // A known commit survives unmount/auth changes. Finish only the
                 // captured local draft cleanup; do not notify a different owner
                 // or update an unmounted form, and never remove saved photos.
@@ -1490,6 +1831,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 notifySavedReview();
                 await handleClose();
             } else if (result !== 'cancelled') {
+                if (result === 'blocked' && saveOperationRef.current!.hasPendingConfirmation()) {
+                    setSaveRecovery('result-check');
+                }
                 toast({
                     title: result === 'blocked' ? "저장 상태 확인 필요" : "리뷰 등록 실패",
                     description: result === 'blocked'
@@ -1502,20 +1846,103 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             toast({ title: "등록 후 화면 갱신 실패", description: "내 리뷰에서 등록 결과를 확인해주세요.", variant: "destructive" });
         } finally {
             submitInFlightRef.current = false;
-            if (saveOwnerRef.current === user.id) setIsSubmitting(false);
+            if (saveOwnerRef.current === submittedInputs.ownerId) setIsSubmitting(false);
+        }
+    };
+
+    const handleConfirmSaveResult = async () => {
+        const ownerAtStart = saveOwnerRef.current;
+        if (!ownerAtStart || submitInFlightRef.current || closeRequestedRef.current) return;
+        submitInFlightRef.current = true;
+        setIsSubmitting(true);
+        try {
+            const confirmation = await saveOperationRef.current!.confirmPending();
+            if (confirmation.status !== 'saved') {
+                if (saveOwnerRef.current === ownerAtStart && composerOpenRef.current && !closeRequestedRef.current) {
+                    setSaveRecovery('result-check');
+                    toast({
+                        title: "저장 결과를 아직 확인하지 못했습니다",
+                        description: "기존 저장 요청은 그대로 보존했습니다. 새 리뷰를 등록하지 않았으며 잠시 후 다시 확인해 주세요.",
+                        variant: "destructive",
+                    });
+                }
+                return;
+            }
+            if (saveOwnerRef.current !== ownerAtStart) {
+                await saveOperationRef.current!.clearSavedDraft();
+                return;
+            }
+            if (closeRequestedRef.current) return;
+            const draftCleared = await clearDraft();
+            if (saveOwnerRef.current !== ownerAtStart || closeRequestedRef.current) return;
+            if (!composerOpenRef.current) {
+                if (draftCleared) notifySavedReview();
+                return;
+            }
+            if (!draftCleared) {
+                setSaveRecovery('draft-cleanup');
+                toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
+                return;
+            }
+            setSaveRecovery('edit');
+            toast({ title: "이전 내용으로 등록되었습니다", description: "현재 입력은 유지했습니다. 저장된 리뷰는 내 리뷰에서 확인하고 수정해주세요." });
+        } finally {
+            submitInFlightRef.current = false;
+            if (saveOwnerRef.current === ownerAtStart && composerOpenRef.current && !closeRequestedRef.current) {
+                setIsSubmitting(false);
+            }
+        }
+    };
+
+    const handleRetryDraftCleanup = async () => {
+        const ownerAtStart = saveOwnerRef.current;
+        if (!ownerAtStart || submitInFlightRef.current || closeRequestedRef.current) return;
+        submitInFlightRef.current = true;
+        setIsSubmitting(true);
+        try {
+            const draftCleared = await clearDraft();
+            if (saveOwnerRef.current !== ownerAtStart || closeRequestedRef.current) return;
+            if (!composerOpenRef.current) {
+                if (draftCleared) notifySavedReview();
+                return;
+            }
+            if (!draftCleared) {
+                setSaveRecovery('draft-cleanup');
+                toast({ title: "임시 저장 정리 필요", description: "잠시 후 다시 시도해 주세요.", variant: "destructive" });
+                return;
+            }
+            setSaveRecovery('edit');
+            toast({ title: "임시 저장 정리 완료", description: "현재 입력은 유지했습니다." });
+        } finally {
+            submitInFlightRef.current = false;
+            if (saveOwnerRef.current === ownerAtStart && composerOpenRef.current && !closeRequestedRef.current) {
+                setIsSubmitting(false);
+            }
         }
     };
 
     const handleClose = useCallback(async () => {
+        if (closeRequestedRef.current) return;
+        const ownerAtStart = saveOwnerRef.current;
+        const scopeAtStart = draftScopeRef.current;
+        const inputsAtStart = latestSaveInputsRef.current;
+        const stepAtStart = currentStep;
+        const stillCurrent = () => composerOpenRef.current && saveOwnerRef.current === ownerAtStart
+            && draftScopeRef.current === scopeAtStart;
         closeRequestedRef.current = true;
+        verificationSelectionRef.current.invalidate();
         const cancellation = await saveOperationRef.current!.cancel();
+        if (!stillCurrent()) return;
         if (cancellation.status === 'blocked') {
             closeRequestedRef.current = false;
+            if (saveOperationRef.current!.hasPendingConfirmation()) setSaveRecovery('result-check');
             toast({ title: "저장 상태 확인 필요", description: "저장 결과 또는 사진 정리를 확인하지 못했습니다. 이 창에서 다시 시도해주세요.", variant: "destructive" });
             return;
         }
         if (cancellation.status === 'saved') {
-            if (!await clearDraft()) {
+            const draftCleared = await clearDraft();
+            if (!stillCurrent()) return;
+            if (!draftCleared) {
                 closeRequestedRef.current = false;
                 setSaveRecovery('draft-cleanup');
                 toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
@@ -1527,6 +1954,33 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             notifySavedReview();
             saveOperationRef.current!.releaseSaved();
         }
+        // Closing cancels the debounce. Flush the final bounded text revision
+        // before resetting the form; media remains excluded by the draft boundary.
+        if (cancellation.status !== 'saved' && ownerAtStart && inputsAtStart.restaurantId) {
+            await autoSaveInFlightRef.current;
+            if (!stillCurrent()) return;
+            const { visitedDate, visitedTime, categories, content } = inputsAtStart;
+            const previous = scopeAtStart.revision;
+            const hasChanges = !previous || previous.visitedDate !== visitedDate || previous.visitedTime !== visitedTime
+                || previous.content !== content || previous.currentStep !== stepAtStart
+                || JSON.stringify(previous.categories) !== JSON.stringify(categories);
+            if (hasChanges && (visitedDate || visitedTime || categories.length > 0 || content || previous)) {
+                try {
+                    const committed = await saveDraft({
+                        userId: ownerAtStart, restaurantId: inputsAtStart.restaurantId,
+                        visitedDate, visitedTime, categories, content, currentStep: stepAtStart,
+                    });
+                    if (!stillCurrent()) return;
+                    if (!committed) throw new Error('DRAFT_NOT_SAVED');
+                    scopeAtStart.revision = committed;
+                } catch {
+                    if (!stillCurrent()) return;
+                    closeRequestedRef.current = false;
+                    toast({ title: "임시 저장 실패", description: "마지막 입력을 저장하지 못했습니다. 입력을 유지했으니 다시 닫기를 시도해주세요.", variant: "destructive" });
+                    return;
+                }
+            }
+        }
         setSaveRecovery(null);
         ocrAbortControllerRef.current?.abort();
         ocrAbortControllerRef.current = null;
@@ -1535,8 +1989,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         setCategories([]);
         setContent("");
         replaceVerificationPhoto(null);
+        foodPhotosRef.current = [];
         setFoodPhotos([]);
-        setVerificationInputMode("ai");
+        setReceiptVerificationInputMode("ai");
         setForceOcrRefresh(false);
         setOcrFocusTarget(null);
         setOcrProgress(null);
@@ -1544,29 +1999,49 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         setAiFilledFields(new Set());
         setCurrentStep(1);
         onClose();
-    }, [onClose, replaceVerificationPhoto, clearDraft, notifySavedReview]);
+    }, [onClose, replaceVerificationPhoto, clearDraft, notifySavedReview, setReceiptVerificationInputMode, currentStep]);
 
     const saveRecoveryNotice = saveRecovery ? (
         <div role="status" className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
-            <p>{saveRecovery === 'edit'
-                ? "리뷰가 이미 등록되었습니다. 현재 변경한 입력은 이 창에 유지됩니다. 등록된 리뷰를 열어 수정해주세요."
-                : "리뷰는 등록되었지만 임시 저장 정리가 남아 있습니다. 다시 시도하면 정리만 확인하며 중복 등록하지 않습니다."}</p>
-            <a className="mt-2 inline-block underline underline-offset-4" href="/mypage/reviews" target="_blank" rel="noopener noreferrer">
-                등록된 리뷰 확인 (새 탭)
-            </a>
+            <p>{saveRecovery === 'result-check'
+                ? "저장 결과를 확인해 주세요."
+                : saveRecovery === 'edit'
+                    ? "이전 내용으로 등록되었습니다. 현재 입력은 유지됩니다."
+                    : "임시 저장 정리가 필요합니다."}</p>
+            {saveRecovery === 'result-check' ? (
+                <Button type="button" variant="outline" size="sm" className="mt-2 h-11 sm:h-8" onClick={handleConfirmSaveResult} disabled={isSubmitting}>
+                    저장 결과 확인
+                </Button>
+            ) : saveRecovery === 'draft-cleanup' ? (
+                <Button type="button" variant="outline" size="sm" className="mt-2 h-11 sm:h-8" onClick={handleRetryDraftCleanup} disabled={isSubmitting}>
+                    임시 저장 정리
+                </Button>
+            ) : (
+                <a className="mt-2 inline-block underline underline-offset-4" href="/mypage/reviews" target="_blank" rel="noopener noreferrer">
+                    등록된 리뷰 확인 (새 탭)
+                </a>
+            )}
         </div>
     ) : null;
 
-    // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
+    // 폼 유효성 검사 메모이제이션 (리뷰 내용 20~4,000자)
+    const normalizedContentLength = content.trim().length;
     const isFormValid = useMemo(() => {
-        return visitedDate && visitedTime && reviewTargetRestaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
-    }, [visitedDate, visitedTime, reviewTargetRestaurant?.id, categories.length, content, verificationPhoto, foodPhotos.length]);
+        return visitedDate && visitedTime && reviewTargetRestaurant?.id && categories.length > 0
+            && normalizedContentLength >= 20 && normalizedContentLength <= REVIEW_CONTENT_MAX_LENGTH
+            && verificationPhoto && foodPhotos.length > 0 && foodPhotos.length <= REVIEW_FOOD_PHOTO_MAX_COUNT;
+    }, [visitedDate, visitedTime, reviewTargetRestaurant?.id, categories.length, normalizedContentLength, verificationPhoto, foodPhotos.length]);
+
+    const isOcrBindingReadyForSubmit = verificationInputMode === "manual"
+        || (!isAnalyzing && Boolean(ocrResultRef && ocrResultRevision));
+    const canSubmitReview = Boolean(isFormValid && isOcrBindingReadyForSubmit);
 
     const isStepValid = useMemo<Record<ReviewFormStep, boolean>>(() => ({
         1: Boolean(verificationPhoto) && !isAnalyzing,
         2: Boolean(visitedDate && visitedTime && reviewTargetRestaurant?.id && categories.length > 0),
-        3: Boolean(content.trim().length >= 20 && foodPhotos.length > 0),
-    }), [categories.length, content, foodPhotos.length, isAnalyzing, reviewTargetRestaurant?.id, verificationPhoto, visitedDate, visitedTime]);
+        3: Boolean(normalizedContentLength >= 20 && normalizedContentLength <= REVIEW_CONTENT_MAX_LENGTH
+            && foodPhotos.length > 0 && foodPhotos.length <= REVIEW_FOOD_PHOTO_MAX_COUNT),
+    }), [categories.length, foodPhotos.length, isAnalyzing, normalizedContentLength, reviewTargetRestaurant?.id, verificationPhoto, visitedDate, visitedTime]);
 
     const getStepValidationMessage = useCallback((step: ReviewFormStep) => {
         if (step === 1) {
@@ -1578,8 +2053,14 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             return "방문 맛집, 방문 날짜/시간, 카테고리를 모두 입력해주세요.";
         }
 
+        if (normalizedContentLength > REVIEW_CONTENT_MAX_LENGTH) {
+            return `리뷰 내용은 최대 ${REVIEW_CONTENT_MAX_LENGTH.toLocaleString()}자까지 작성할 수 있습니다.`;
+        }
+        if (foodPhotos.length > REVIEW_FOOD_PHOTO_MAX_COUNT) {
+            return `음식 사진은 최대 ${REVIEW_FOOD_PHOTO_MAX_COUNT}장까지 등록할 수 있습니다.`;
+        }
         return "음식 사진 1장 이상과 리뷰 내용 20자 이상을 입력해주세요.";
-    }, [isAnalyzing]);
+    }, [foodPhotos.length, isAnalyzing, normalizedContentLength]);
 
     const handleNextStep = useCallback(() => {
         userStepOverrideDuringOcrRef.current = true;
@@ -1611,7 +2092,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current
             || submitInFlightRef.current || closeRequestedRef.current) return;
         const previousRevision = scope.revision;
+        setDraftLoadFailed(false);
         try {
+            await waitForDraftAutosave(`${user.id}:review:${targetRestaurantId}`);
             const draft = await getDraft(user.id, targetRestaurantId);
             if (draftScopeRef.current !== scope || scope.revision !== previousRevision || !composerOpenRef.current
                 || saveOwnerRef.current !== user.id || submitInFlightRef.current || closeRequestedRef.current) return;
@@ -1627,6 +2110,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                     replaceVerificationPhoto(draft.verificationPhoto);
                 }
                 if (draft.foodPhotos && draft.foodPhotos.length > 0) {
+                    foodPhotosRef.current = draft.foodPhotos;
                     setFoodPhotos(draft.foodPhotos);
                 }
                 if (draft.currentStep && REVIEW_FORM_STEPS.some((step) => step.id === draft.currentStep)) {
@@ -1635,10 +2119,11 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
                 setLastSavedAt(new Date(draft.savedAt));
             }
-        } catch (error) {
-            console.error('임시 저장 데이터 로드 실패:');
+            setLoadedDraftKey(draftLoadKey);
+        } catch {
+            if (draftScopeRef.current === scope && composerOpenRef.current) setDraftLoadFailed(true);
         }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id, replaceVerificationPhoto]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id, replaceVerificationPhoto, draftLoadKey]);
 
     // 자동 저장 (IndexedDB)
     const autoSave = useCallback(async () => {
@@ -1648,49 +2133,73 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         // 내용이 하나라도 있을 때만 저장 (빈 문자열이라도 저장 - 지운 경우 대응)
         // 모든 필드가 초기값인 경우에만 저장 스킵
         const hasAnyContent = visitedDate || visitedTime || categories.length > 0 || content || verificationPhoto || foodPhotos.length > 0;
-        if (!hasAnyContent) {
-            return;
-        }
-
         const scope = draftScopeRef.current;
+        if (loadedDraftKey !== draftLoadKey) return;
+        // Clearing the last field is still a revision of an existing draft.
+        if (!hasAnyContent && !scope.revision) return;
         if (scope.ownerId !== user.id || scope.restaurantId !== targetRestaurantId || !composerOpenRef.current) return;
-        const previousSave = autoSaveInFlightRef.current;
-        const pendingSave = (async () => {
-            await previousSave;
-            if (submitInFlightRef.current || closeRequestedRef.current || draftScopeRef.current !== scope
-                || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
+        const epoch = captureBrowserDraftEpoch(user.id);
+        const pendingSave = enqueueDraftWrite(`${user.id}:review:${targetRestaurantId}`, { owner: scope, isCurrent: () => isBrowserDraftEpochCurrent(user.id, epoch, true), async run() {
+            if (submitInFlightRef.current || closeRequestedRef.current) return true;
             try {
-                setIsSaving(true);
+                assertBrowserDraftWrite(user.id, epoch);
+                if (draftScopeRef.current === scope && composerOpenRef.current) setIsSaving(true);
                 const committed = await saveDraft({
                     userId: user.id, restaurantId: targetRestaurantId,
                     visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep,
                 });
-                if (draftScopeRef.current !== scope || saveOwnerRef.current !== user.id || !composerOpenRef.current) return;
-                scope.revision = committed;
-                setLastSavedAt(committed ? new Date(committed.savedAt) : null);
+                if (draftScopeRef.current === scope && saveOwnerRef.current === user.id && composerOpenRef.current) {
+                    scope.revision = committed;
+                    setLastSavedAt(committed ? new Date(committed.savedAt) : null);
+                }
+                return true;
             } catch {
                 console.error('자동 저장 실패:');
+                return false;
             } finally {
                 if (draftScopeRef.current === scope && composerOpenRef.current) setIsSaving(false);
             }
-        })();
+        } }).then(() => {});
         autoSaveInFlightRef.current = pendingSave;
         await pendingSave;
         if (autoSaveInFlightRef.current === pendingSave) autoSaveInFlightRef.current = null;
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep, loadedDraftKey, draftLoadKey]);
 
-    // 디바운스된 자동 저장 (500ms)
     useEffect(() => {
-        if (!isOpen || isSubmitting) return;
-        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
-        if (!targetRestaurantId) return;
+        const scope = draftScopeRef.current;
+        if (!isOpen || !user?.id || !scope.restaurantId) return;
+        const epoch = captureBrowserDraftEpoch(user.id);
+        const original = scope.revision;
+        const persisted = original && original.visitedDate === visitedDate && original.visitedTime === visitedTime
+            && JSON.stringify(original.categories) === JSON.stringify(categories) && original.content === content
+            && original.currentStep === currentStep;
+        if (!isSubmitting && !saveOperationRef.current?.hasPendingConfirmation() && !verificationPhoto && !foodPhotos.length
+            && (persisted || (!original && !(visitedDate || visitedTime || categories.length || content)))) return;
+        const beforeUnload = (event: BeforeUnloadEvent) => {
+            if (draftScopeRef.current !== scope || !composerOpenRef.current
+                || !isBrowserDraftEpochCurrent(user.id, epoch, true)) return;
+            if (isSubmitting || saveOperationRef.current?.hasPendingConfirmation()) {
+                blockDraftUnload(event);
+                return;
+            }
+            const revision = scope.revision;
+            const hasText = Boolean(visitedDate || visitedTime || categories.length || content);
+            const sameText = revision && revision.visitedDate === visitedDate && revision.visitedTime === visitedTime
+                && JSON.stringify(revision.categories) === JSON.stringify(categories) && revision.content === content
+                && revision.currentStep === currentStep;
+            // Media deliberately never enters text drafts. Do not imply that a
+            // completed text save can restore an in-memory attachment after reload.
+            if (verificationPhoto || foodPhotos.length || ((hasText || revision) && !sameText)) blockDraftUnload(event);
+        };
+        window.addEventListener('beforeunload', beforeUnload);
+        return () => window.removeEventListener('beforeunload', beforeUnload);
+    }, [isOpen, user?.id, visitedDate, visitedTime, categories, content, currentStep, verificationPhoto, foodPhotos, isSubmitting, lastSavedAt]);
 
-        const timer = setTimeout(() => {
-            autoSave();
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [isOpen, isSubmitting, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep, autoSave]);
+    // Admit committed text before switching to another restaurant unmounts
+    // this composer. The shared queue serializes/coalesces writes per target.
+    useLayoutEffect(() => {
+        if (isOpen && !isSubmitting) void autoSave();
+    }, [isOpen, isSubmitting, autoSave]);
 
     // SWR을 사용한 쿼터 조회 (자동 캐싱 및 중복 요청 제거)
     const { data: quota, mutate: mutateQuota } = useSWR(
@@ -1705,19 +2214,36 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             dedupingInterval: 60000,  // 1분 내 중복 요청 방지
         }
     );
+    const { data: featureReadiness, mutate: mutateFeatureReadiness } = useSWR(
+        isOpen && user ? '/api/runtime-compatibility/features' : null,
+        () => fetchFeatureDatabaseReadiness(),
+        { revalidateOnFocus: false, dedupingInterval: 60_000, shouldRetryOnError: false },
+    );
 
     const ocrLimitReached = quota?.unlimited ? false : quota?.remaining === 0;
+    const featureHeld = featureReadiness?.status !== 'ready';
     const canForceOcrRefresh = process.env.NODE_ENV !== "production" || quota?.unlimited === true;
     const handleUseReceiptPhotoOnly = () => {
-        setVerificationInputMode("manual");
-        setOcrFallbackNotice(null);
+        setReceiptVerificationInputMode("manual");
         setCurrentStep(2);
     };
 
     const handleRetryReceiptOcr = () => {
-        if (!verificationPhoto || isAnalyzing || ocrLimitReached) return;
+        if (featureHeld || ocrFallbackNotice?.type === 'pending' || !verificationPhoto || isAnalyzing || ocrLimitReached) return;
         void analyzeReceipt(verificationPhoto);
     };
+
+    const handleCheckReceiptOcr = () => {
+        if (featureHeld || !verificationPhoto || isAnalyzing) return;
+        void analyzeReceipt(verificationPhoto, undefined, true);
+    };
+
+    const renderFeatureHoldNotice = () => featureHeld ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900" role="status" aria-live="polite">
+            <p className="font-semibold">리뷰 기능 준비 중</p>
+            <p className="mt-1">{FEATURE_DATABASE_HELD_MESSAGE}</p>
+        </div>
+    ) : null;
 
     const renderOcrFallbackNotice = () => {
         if (!ocrFallbackNotice) return null;
@@ -1728,7 +2254,29 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             <div className={`rounded-lg border px-3 py-2 text-xs ${isTerminalError ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-border bg-secondary text-foreground'}`} role="status" aria-live="polite">
                 <p className="font-semibold">{ocrFallbackNotice.message}</p>
                 {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
-                {isTerminalError ? (
+                {ocrFallbackNotice.type === 'pending' ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 bg-background px-2 text-xs"
+                            disabled={!verificationPhoto || isAnalyzing}
+                            onClick={handleCheckReceiptOcr}
+                        >
+                            결과 확인
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 bg-background px-2 text-xs"
+                            onClick={handleUseReceiptPhotoOnly}
+                        >
+                            직접 입력
+                        </Button>
+                    </div>
+                ) : isTerminalError ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                         <Button
                             type="button"
@@ -1793,8 +2341,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     useEffect(() => {
         if (!ocrLimitReached) return;
         if (verificationInputMode !== "ai") return;
-        setVerificationInputMode("manual");
-    }, [ocrLimitReached, verificationInputMode]);
+        setReceiptVerificationInputMode("manual");
+    }, [ocrLimitReached, setReceiptVerificationInputMode, verificationInputMode]);
 
     useEffect(() => {
         if (canForceOcrRefresh) return;
@@ -1803,10 +2351,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
     // 초기 로딩 및 모달 열릴 때 임시 저장 불러오기
     useEffect(() => {
-        if (isOpen && user?.id && restaurant?.id) {
-            loadDraft();
+        if (isOpen && user?.id && reviewTargetRestaurant?.id) {
+            void loadDraft();
         }
-    }, [isOpen, user?.id, restaurant?.id, loadDraft]);
+    }, [isOpen, user?.id, reviewTargetRestaurant?.id, loadDraft]);
 
     useEffect(() => {
         if (!isOpen || !isMobileOrTablet) return;
@@ -1819,6 +2367,12 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             <Label className="flex items-center gap-2">
                 음식 사진 (다양한 각도) <span className="text-red-500">*</span>
             </Label>
+
+            {foodPhotos.length > REVIEW_FOOD_PHOTO_MAX_COUNT && (
+                <p role="alert" className="text-sm text-destructive">
+                    음식 사진은 최대 {REVIEW_FOOD_PHOTO_MAX_COUNT}장까지 등록할 수 있습니다. 현재 {foodPhotos.length}장이므로 초과한 사진을 직접 제거해 주세요.
+                </p>
+            )}
 
             {foodPhotos.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
@@ -1866,6 +2420,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 onDragLeave={handleFoodPhotosDragLeave}
                 onDrop={handleFoodPhotosDrop}
                 onClick={openFoodPhotosFileDialog}
+                aria-invalid={foodPhotos.length > REVIEW_FOOD_PHOTO_MAX_COUNT}
             >
                 <div className="flex flex-col items-center gap-4">
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-muted'}`}>
@@ -1885,7 +2440,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             </Button>
                             {foodPhotos.length > 0 && (
                                 <Badge variant="secondary" className="px-3 py-1">
-                                    📷 {foodPhotos.length}장 업로드됨
+                                    📷 {foodPhotos.length} / {REVIEW_FOOD_PHOTO_MAX_COUNT}장
                                 </Badge>
                             )}
                         </div>
@@ -1895,7 +2450,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             </Card>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
-                <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
+                <span>💡 다양한 각도의 사진을 최대 {REVIEW_FOOD_PHOTO_MAX_COUNT}장까지 업로드할 수 있습니다</span>
             </div>
         </div>
     ), [foodPhotoUrls, foodPhotos, handleDragOver, handleFoodPhotosChange, handleFoodPhotosDragEnter, handleFoodPhotosDragLeave, handleFoodPhotosDrop, isFoodPhotosDragging, openFoodPhotosFileDialog, removeFoodPhoto]);
@@ -1925,6 +2480,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 id={id}
                 placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
                 value={content}
+                aria-invalid={normalizedContentLength > REVIEW_CONTENT_MAX_LENGTH}
+                aria-describedby={`${id}-length`}
                 onChange={(e) => {
                     markManualOcrInteraction("review");
                     setContent(e.target.value);
@@ -1932,11 +2489,22 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 rows={8}
                 className="resize-none"
             />
-            <p className="text-xs text-muted-foreground text-right">
-                {content.length} / 최소 20자
+            <p id={`${id}-length`} className={`text-xs text-right ${normalizedContentLength > REVIEW_CONTENT_MAX_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {normalizedContentLength.toLocaleString()} / 최대 {REVIEW_CONTENT_MAX_LENGTH.toLocaleString()}자 (앞뒤 공백 제외, 최소 20자)
             </p>
         </div>
-    ), [content, getOcrFocusClass, markManualOcrInteraction, renderAiFilledBadge]);
+    ), [content, getOcrFocusClass, markManualOcrInteraction, normalizedContentLength, renderAiFilledBadge]);
+
+    if (isOpen && user?.id && reviewTargetRestaurant?.id && loadedDraftKey !== draftLoadKey) {
+        const pendingContent = <div className="space-y-3 p-4">
+            {draftLoadFailed ? <DraftLoadError onRetry={() => void loadDraft()} /> : <p role="status">임시 저장 내용을 확인하고 있어요.</p>}
+            <Button type="button" variant="outline" onClick={onClose}>리뷰 작성 닫기</Button>
+        </div>;
+        if (inline) return pendingContent;
+        if (shouldRenderMapPanel) return <section role="dialog" aria-label="리뷰 작성" className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-auto rounded-3xl border border-border bg-background shadow-2xl">{pendingContent}</section>;
+        if (isMobileOrTablet) return <BottomSheet isOpen onClose={onClose} {...MOBILE_FULL_FORM_SHEET} ariaLabel="리뷰 작성">{pendingContent}</BottomSheet>;
+        return <Dialog open onOpenChange={open => { if (!open) onClose(); }}><DialogContent><DialogHeader><DialogTitle>리뷰 작성</DialogTitle><DialogDescription>이 기기의 임시 저장 내용을 확인합니다.</DialogDescription></DialogHeader>{pendingContent}</DialogContent></Dialog>;
+    }
 
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
@@ -2007,7 +2575,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                             size="sm"
                                             className="h-7 px-2 text-xs"
                                             disabled={ocrLimitReached}
-                                            onClick={() => setVerificationInputMode("ai")}
+                                            onClick={() => setReceiptVerificationInputMode("ai")}
                                         >
                                             AI 자동 입력
                                         </Button>
@@ -2016,7 +2584,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                             variant={verificationInputMode === "manual" ? "default" : "outline"}
                                             size="sm"
                                             className="h-7 px-2 text-xs"
-                                            onClick={() => setVerificationInputMode("manual")}
+                                            onClick={() => setReceiptVerificationInputMode("manual")}
                                         >
                                             사진만 첨부
                                         </Button>
@@ -2034,6 +2602,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                     </p>
                                 )}
                                 {renderForceOcrRefreshToggle()}
+                                {renderFeatureHoldNotice()}
                                 {renderOcrFallbackNotice()}
                             </div>
                             <Card
@@ -2409,8 +2978,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                         <Button variant="outline" onClick={handleClose} className="flex-1 sm:flex-none">
                             취소
                         </Button>
-                        <Button onClick={handleSubmit} disabled={!isFormValid || isSubmitting || saveRecovery === 'edit'} className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none">
-                            {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
+                        <Button onClick={handleSubmit} disabled={featureHeld || !canSubmitReview || isSubmitting || saveRecovery !== null} className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none">
+                            {isSubmitting ? "등록 중..." : "리뷰 등록"}
                         </Button>
                     </div>
                 </div>
@@ -2461,7 +3030,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="리뷰 작성 단계 진행률">
                                     {REVIEW_FORM_STEPS.map((step) => (
                                         <div key={step.id} className="space-y-1">
-                                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
+                                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-brand-tangerine' : 'bg-muted'}`} />
                                             <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                                 {step.label}
                                             </span>
@@ -2519,7 +3088,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                     size="sm"
                                                     className="h-7 px-2 text-xs"
                                                     disabled={ocrLimitReached}
-                                                    onClick={() => setVerificationInputMode("ai")}
+                                                    onClick={() => setReceiptVerificationInputMode("ai")}
                                                 >
                                                     AI 자동 입력
                                                 </Button>
@@ -2528,7 +3097,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                     variant={verificationInputMode === "manual" ? "default" : "outline"}
                                                     size="sm"
                                                     className="h-7 px-2 text-xs"
-                                                    onClick={() => setVerificationInputMode("manual")}
+                                                    onClick={() => setReceiptVerificationInputMode("manual")}
                                                 >
                                                     사진만 첨부
                                                 </Button>
@@ -2546,6 +3115,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                             </p>
                                         )}
                                         {renderForceOcrRefreshToggle()}
+                                        {renderFeatureHoldNotice()}
                                         {renderOcrFallbackNotice()}
                                     </div>
                                     <Card
@@ -2985,10 +3555,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                     <Button
                                         type="button"
                                         onClick={handleSubmit}
-                                        disabled={!isFormValid || isSubmitting || saveRecovery === 'edit'}
+                                        disabled={featureHeld || !canSubmitReview || isSubmitting || saveRecovery !== null}
                                         className={`${mobileSheetStyles.primaryAction} flex-1`}
                                     >
-                                        {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
+                                        {isSubmitting ? "등록 중..." : "리뷰 등록"}
                                     </Button>
                                 )}
                             </div>
@@ -3073,7 +3643,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             <div className="grid grid-cols-3 gap-1.5" aria-label="리뷰 작성 안내 단계">
                                 {REVIEW_FORM_STEPS.map((step) => (
                                     <div key={step.id} className="space-y-1">
-                                        <div className="h-1.5 rounded-full bg-red-800" />
+                                        <div className="h-1.5 rounded-full bg-brand-tangerine" />
                                         <span className="block text-center text-2xs font-medium text-muted-foreground">
                                             {step.label}
                                         </span>
@@ -3112,7 +3682,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                     size="sm"
                                                     className="h-7 px-2 text-xs"
                                                     disabled={ocrLimitReached}
-                                                    onClick={() => setVerificationInputMode("ai")}
+                                                    onClick={() => setReceiptVerificationInputMode("ai")}
                                                 >
                                                     AI 자동 입력
                                                 </Button>
@@ -3121,7 +3691,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                     variant={verificationInputMode === "manual" ? "default" : "outline"}
                                                     size="sm"
                                                     className="h-7 px-2 text-xs"
-                                                    onClick={() => setVerificationInputMode("manual")}
+                                                    onClick={() => setReceiptVerificationInputMode("manual")}
                                                 >
                                                     사진만 첨부
                                                 </Button>
@@ -3139,6 +3709,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                             </p>
                                         )}
                                         {renderForceOcrRefreshToggle()}
+                                        {renderFeatureHoldNotice()}
                                         {renderOcrFallbackNotice()}
                                     </div>
                                     <Card
@@ -3541,10 +4112,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={!isFormValid || isSubmitting || saveRecovery === 'edit'}
+                                    disabled={featureHeld || !canSubmitReview || isSubmitting || saveRecovery !== null}
                                     className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none"
                                 >
-                                    {isSubmitting ? "등록 중..." : saveRecovery === "draft-cleanup" ? "임시 저장 정리 재시도" : "리뷰 등록"}
+                                    {isSubmitting ? "등록 중..." : "리뷰 등록"}
                                 </Button>
                             </div>
                         </div>

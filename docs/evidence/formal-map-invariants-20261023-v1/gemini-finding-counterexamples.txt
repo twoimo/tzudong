@@ -1,0 +1,71 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-formal/marker-state-model.test.mjs:
+FORMAL_BROWSER 156.0.8078.47
+FORMAL_VISUAL_TRANSITIONS 9216
+(pass) all 9,216 active/reacquired visual transitions show the current static marker and bubble [2839.28ms]
+(pass) a review-only transition retains the image and avoids an SDK icon replacement [1113.50ms]
+FORMAL_OWNERSHIP_STEPS 18056
+(pass) every pool/click action sequence through depth four keeps current callback ownership [1316.37ms]
+212 |   });
+213 | }, 60000);
+214 | 
+215 | test('review patches preserve retained masking, clamp and clone-descriptor round trips', async () => {
+216 |   await withFixture(async page => {
+217 |     expect(await page.evaluate(() => window.__formal.reviewBoundaries())).toEqual({
+                                                                                ^
+error: expect(received).toEqual(expected)
+
+  {
+    "anchor": {
+      "x": 18,
+      "y": 18,
+    },
+-   "clampAfterPatch": "23px",
++   "clampAfterPatch": "",
+    "evicted": true,
+-   "hiddenAfterPatch": "true",
+-   "hiddenAfterReplacement": "true",
++   "hiddenAfterPatch": null,
++   "hiddenAfterReplacement": null,
+    "photoAfterPatch": "https://example.com/p.webp",
+-   "reverted": true,
++   "reverted": false,
+  }
+
+- Expected  - 4
++ Received  + 4
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:217:75)
+      at async withFixture (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:187:11)
+      at async <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-formal/marker-state-model.test.mjs:216:9)
+(fail) review patches preserve retained masking, clamp and clone-descriptor round trips [912.60ms]
+(pass) cluster frames updated through the pool restore the requested frame and count [926.09ms]
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [5.32ms]
+(pass) malformed count values remain missing instead of coercing into a public flame [12.16ms]
+(pass) conflicting metrics for the same video fail in either input order [6.25ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [12.45ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [1.43ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [2.89ms]
+(pass) nearest-rank has no ember at n=19 but separates P95 and P98 at n=20 [3.85ms]
+76 | });
+77 | 
+78 | test('duplicate observations reject timestamp conflicts in either order and normalize video identity', async () => {
+79 |   const later = {...metric, fetched_at: '2026-07-02T00:00:00Z'};
+80 |   for (const rows of [[metric, later], [later, metric]]) {
+81 |     await expect(build({}, rows)).rejects.toThrow('popularity_metrics_video_conflict');
+                                               ^
+error: expect(received).rejects.toThrow(expected)
+
+Expected promise that rejects
+Received promise that resolved: Promise { <resolved> }
+
+      at <anonymous> (/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/apps/web/tests-unit/popularity-input-boundary.test.ts:81:43)
+(fail) duplicate observations reject timestamp conflicts in either order and normalize video identity [2.11ms]
+
+ 11 pass
+ 2 fail
+ 48 expect() calls
+Ran 13 tests across 2 files. [7.58s]

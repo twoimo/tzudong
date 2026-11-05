@@ -1,0 +1,93 @@
+{
+  "schema": "thumbnail-full-pg176-offline-rehearsal-v1",
+  "recordedAtUtc": "2026-10-24T09:46:49.014891+00:00",
+  "privateReceiptMtimeUtc": "2026-10-24T09:43:31.943793+00:00",
+  "privateReceiptSha256": "ceca882cd913ac9a12e19c2e2607051ce9a2be85040a0563d3ba539ebe2dc7c6",
+  "testedSourceCommit": "244f886cd125dc925ab3f356f4eba7cabd134d4d",
+  "candidateSha256": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+  "draftManifestSha256": "51a7c5b61cc268e7a8fe23261548d1950ecfda122e12a6b0d13645e297563bbc",
+  "snapshot": {
+    "sha256": "38a33fcb8498556914a31b01d37a2c1556f4819ca687bc3ab7bcc60cd7ccca79",
+    "transactionTime": "2026-10-24 09:22:07.714887+00",
+    "serverVersionNum": 170006,
+    "artifactCount": 11,
+    "singleExportedReadOnlySnapshot": true,
+    "systemLedgerRowsCopied": 89,
+    "userRowsCopied": 0,
+    "hostedWrites": 0
+  },
+  "reconstruction": {
+    "image": "supabase/postgres@sha256:fbe6c858a2ea9616aead3c39e132afcc0660decc5cb7dc656208ed145f5331ab",
+    "serverVersion": "17.6",
+    "network": "none",
+    "publishedPorts": 0,
+    "initialRoleOid10": "supabase_admin",
+    "binaryModeOnlyDuringSchemaRestore": true,
+    "normalRuntimeSystemTableMods": "off",
+    "postgresSuperuserDuringTests": false,
+    "omittedSourcePhysicalHorizonStatements": 341,
+    "restoredOriginalBetweenExpressions": 1,
+    "extensionCreationOwnerBindings": 10,
+    "sourceContractRowsProjected": 0,
+    "sourceAssertionBodiesChangedForRestore": 0,
+    "supplementalExplicitDefaultAcl": {
+      "readOnlyObservationSha256": "a0f264d679510b83ce117804747d0404fddebf45a2520b8dedbd3d278a70702a",
+      "localRestoreReceiptSha256": "48721104ffb369bae7e890d7c3fab9bf15d54c530c711e30de0f25431c573db4",
+      "sameSnapshotAsElevenArtifacts": false,
+      "ordinaryGrantRevoke": true,
+      "rollbackVerified": true
+    },
+    "attributeLimit": "2496/2497 attributes equal under the source caller/deparser context. One unprotected index display alias differs; source index DDL is identical. No whole physical-catalog identity claim."
+  },
+  "predecessor": {
+    "manifestRows": 1963,
+    "originalG014Assertions": 4,
+    "registryProjectionRows": 0,
+    "typeRows": 442,
+    "attributeRows": 2497,
+    "equalAttributeRows": 2496,
+    "unprotectedIndexDisplayAliasDifferences": 1,
+    "wholePhysicalCatalogIdentity": false,
+    "roles": 37,
+    "memberships": 29,
+    "exactLedgerRows": 89
+  },
+  "installation": {
+    "compiledSource": "8019c4e7788cf6706094937a5d4111958201793192d918817e824791db471ac2",
+    "statementCount": 43,
+    "lateFailureInjectedAfterTerminal": true,
+    "lateFailurePriorFieldsMatched": 23,
+    "lateFailureReconciliation": "not_applied",
+    "commitLedgerRows": 90,
+    "terminalFieldsMatched": 23,
+    "independentDurableReadback": true,
+    "durableFullG014Assertions": 4,
+    "durableReconciliation": "committed"
+  },
+  "sourceCi": {
+    "commit": "244f886cd125dc925ab3f356f4eba7cabd134d4d",
+    "observedAtUtc": "2026-10-24T09:16:49.132851+00:00",
+    "success": 25,
+    "skipped": 1,
+    "failed": 0,
+    "pending": 0,
+    "privateReceiptSha256": "48e4f03e8bb2e2a5f6d1d5f27719bf955057cbe872e114faa8f9228b1a91d157"
+  },
+  "cleanup": {
+    "ownedContainerStopped": true,
+    "ownedVolumePreserved": true,
+    "otherContainersDirectlyChanged": 0,
+    "defaultDockerContextPreserved": "desktop-linux",
+    "existingColimaConfigMtimeUnchanged": true
+  },
+  "hostedWrites": 0,
+  "userRowsCopied": 0,
+  "productionExecutionEnabled": false,
+  "limits": [
+    "Owned offline PG17.6 only; not fixed production caller admission, current writer fence, external three-stage review, protected promotion or hosted delivery.",
+    "Reconciliation branches observed directly; this is not a simulated network-loss transport test or Storage HTTP/provider generation proof.",
+    "The source snapshot is private schema/system-contract evidence; it is not uploaded in the external source bundle.",
+    "One later read-only raw ACL observation supplements the earlier consistent snapshot and is explicitly separate.",
+    "Deterministic installation/rollback checks do not establish population confidence intervals, speed, token or monetary savings."
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "tzudong-ocr-mixed-model-integrated-verification/v1",
+  "startedAt": "2026-10-18T18:32:11.651412+00:00",
+  "baseHead": "7d04fca8469c9d282f8885714435bd5124f3e826",
+  "sourceIntegrity": {
+    "apps/web/lib/ocr/gemini.ts": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef",
+    "apps/web/tests-unit/gemini-ocr.test.ts": "e5d8bf3b91b6adbef392d80e728f272a6bc8bf2841714b1bd3874dd49e3e883b",
+    "apps/web/package.json": "7b2d5f52d2c5fb32aa2d17db674ccd3f3823be18ca2d70c47d996d78b9d64c69",
+    "apps/web/package-lock.json": "b4ba1fbdc9aada044c495e6a1591700758ee74edc62c3311991f8d0d49cd86eb",
+    "apps/web/tsconfig.json": "42fa4271abb1177f6c171d2740f71012247c8f75dd05fd58ffa288231d9f2bc6",
+    "apps/web/next.config.mjs": "71327b5cc6278b06eeb3af07c09c7ee020350602c9310df53c8db5614d7af76c"
+  },
+  "environment": {
+    "node": "v24.22.0",
+    "bun": "1.4.0",
+    "npmReleaseAuthority": "11.6.2",
+    "dotenvAutoLoad": false,
+    "credentialInputs": "none supplied",
+    "outboundNetwork": "not instrumented"
+  },
+  "checks": {
+    "ocr-integration": {
+      "exitCode": 0,
+      "elapsedSeconds": 0.328,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-mixed-model-integrated-verification/ocr-integration.txt",
+      "sha256": "05479ee69bc9a064a4cbce44c9b538b99688755faab43be93b071049b3b5a45b"
+    },
+    "compiler-parity": {
+      "exitCode": 0,
+      "elapsedSeconds": 17.252,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-mixed-model-integrated-verification/compiler-parity.txt",
+      "sha256": "5aac9f15b50ba34c494b5cc044964774a6986a3baa21c2bdcd66103b2c3c2597"
+    },
+    "production-build": {
+      "exitCode": 0,
+      "elapsedSeconds": 56.724,
+      "artifact": "apps/web/performance/cross-audit-20261019/ocr-mixed-model-integrated-verification/production-build.txt",
+      "sha256": "44610bd64d6d591133590d25f9a1471561c3d1b020c0e4b365998243f3463518"
+    }
+  },
+  "limitations": [
+    "Local compiler and production-mode build only; no hosted database, provider billing, deployment or authenticated production flow is established.",
+    "Elapsed times are uncontrolled single observations and do not establish a performance change."
+  ],
+  "taskTsconfigIncludesRestored": true,
+  "sourceIntegrityUnchanged": true,
+  "finishedAt": "2026-10-18T18:33:26.029679+00:00"
+}

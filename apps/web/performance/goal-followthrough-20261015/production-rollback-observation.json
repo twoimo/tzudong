@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "production-rollback-candidate-observation",
+  "observedAt": "2026-10-15T05:58:27.724328+00:00",
+  "source": "authenticated Vercel MCP project, two alias, deployment readback",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "teamId": "team_OUj64KeLxJI3PkEbOaFZnorA",
+  "projectName": "tzudong",
+  "productionAliases": [
+    {
+      "alias": "tzudong.app",
+      "redirect": "www.tzudong.app",
+      "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5"
+    },
+    {
+      "alias": "www.tzudong.app",
+      "redirect": null,
+      "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5"
+    }
+  ],
+  "deployment": {
+    "id": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+    "readyState": "READY",
+    "target": "production",
+    "url": "tzudong-dbx25vroz-twoimos-projects.vercel.app",
+    "source": "redeploy",
+    "githubCommitRef": "main",
+    "githubCommitSha": "1884f87e53c4567ead7c9a0fb394b09b91a70396"
+  },
+  "limits": [
+    "Readback identifies current production and a rollback candidate only.",
+    "It is not a live feature, SQL application, Gemini policy or hold admission proof.",
+    "Revalidate before deployment, SQL apply or rollback; the operating evidence window is not extended.",
+    "No deployment, DNS, environment or hosted database mutation was performed."
+  ]
+}

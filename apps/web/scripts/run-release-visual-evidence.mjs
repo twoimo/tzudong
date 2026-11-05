@@ -144,7 +144,7 @@ function protectedIssuerSigner() {
 }
 
 export function scrubbedChildEnvironment(source = process.env) {
-    const allowed = ['PATH', 'Path', 'SystemRoot', 'SYSTEMROOT', 'WINDIR', 'HOME', 'USERPROFILE', 'TMP', 'TEMP', 'TMPDIR', 'COMSPEC', 'PATHEXT', 'CI', 'LANG', 'LC_ALL'];
+    const allowed = ['PATH', 'Path', 'SystemRoot', 'SYSTEMROOT', 'WINDIR', 'HOME', 'USERPROFILE', 'TMP', 'TEMP', 'TMPDIR', 'COMSPEC', 'PATHEXT', 'CI', 'LANG', 'LC_ALL', 'PLAYWRIGHT_BROWSERS_PATH'];
     return Object.fromEntries(allowed.filter((name) => typeof source[name] === 'string').map((name) => [name, source[name]]));
 }
 

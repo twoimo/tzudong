@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-18T20:06:14Z",
+  "node": "v24.22.0",
+  "checks": [
+    {
+      "name": "scoped-eslint",
+      "command": "/opt/homebrew/opt/node@24/bin/node ./node_modules/eslint/bin/eslint.js scripts/verify-admin-receipt-ocr-recovery-browser.ts scripts/preview-design-fixtures.mjs",
+      "exitCode": 0
+    },
+    {
+      "name": "standalone-typescript",
+      "command": "PATH=/opt/homebrew/opt/node@24/bin:$PATH ./node_modules/.bin/tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2022 --types node scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "exitCode": 0
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check -- apps/web/scripts/verify-admin-receipt-ocr-recovery-browser.ts apps/web/scripts/preview-design-fixtures.mjs",
+      "exitCode": 0
+    }
+  ],
+  "sources": [
+    {
+      "path": "scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "sha256": "5a671c4588c9622e737e037612f10d81276508aa5d1a28e5affe2f453048ea2b"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "sha256": "9c124f7118651b4e15089a73c994ae2163f0f1a301e152c5c790459157ca9e0a"
+    }
+  ]
+}

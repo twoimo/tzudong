@@ -40,6 +40,19 @@ export function restaurantMatchesOverseasCountry(restaurant: Pick<Restaurant, 'r
     return terms.some((term) => addressText.includes(term));
 }
 
+/** Region keys share country names (미국(LA)/미국(뉴욕)), so only city keywords decide the region. */
+export function findOverseasRegionKeyForRestaurant(
+    restaurant: Pick<Restaurant, 'road_address' | 'jibun_address' | 'english_address'>,
+): string | null {
+    const addressText = ADDRESS_FIELDS.map((field) => restaurant[field]).filter(Boolean).join(' ');
+    if (!addressText) return null;
+
+    for (const [key, config] of Object.entries(OVERSEAS_REGIONS)) {
+        if (config.keywords.some((keyword) => addressText.includes(keyword))) return key;
+    }
+    return null;
+}
+
 export function buildOverseasCountryAddressOrFilter(country: string | null | undefined, wildcard: '%' | '*' = '%') {
     if (typeof country !== 'string') return null;
 

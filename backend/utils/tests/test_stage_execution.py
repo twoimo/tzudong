@@ -8,6 +8,11 @@ import shlex
 import sys
 import tempfile
 import unittest
+import io
+from unittest.mock import patch
+
+from backend.utils.pipeline_cache_contracts import stage_inputs
+from backend.utils import stage_cache
 
 ROOT=Path(__file__).resolve().parents[3]
 CLI=ROOT/'backend/bin/stage_cache.py'
@@ -160,8 +165,19 @@ main() { process_channel tzuyang; }
         source=script.read_text();anchor='if [[ "${1:-}" == "--stage-worker" ]]; then\n    if [[ $# -ne 8'
         self.assertEqual(source.count(anchor),1)
         copy.write_text(source.replace(anchor,overrides+'\n'+anchor,1))
-        env=os.environ.copy();env.update(PYTHON_CMD=sys.executable,FX_BACKEND=str(ROOT/'backend'),FX_ROOT=str(self.root),
-            FX_DATA_REL=os.path.relpath(data,ROOT/'backend'),FX_ASSET=str(assets),FX_WORKER=str(stub),
+        # The real receipt builder now lives beside stage_cache; preserve the
+        # production layout so mutated fixture assets are the actual inputs.
+        for relative in ['bin/stage_cache.py', 'utils/stage_cache.py', 'utils/jsonl_utils.py',
+                         'utils/pipeline_cache_contracts.py']:
+            destination=self.root/'backend'/relative;destination.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copy2(ROOT/'backend'/relative,destination)
+        plan=stage_inputs('crawl',self.root/'backend',data,data,video,[])
+        for asset in plan['assets']:
+            if not asset.exists():
+                asset.parent.mkdir(parents=True,exist_ok=True);asset.write_text('synthetic asset')
+
+        env=os.environ.copy();env.update(PYTHON_CMD=sys.executable,FX_BACKEND=str(self.root/'backend'),FX_ROOT=str(self.root),
+            FX_DATA_REL=os.path.relpath(data,self.root/'backend'),FX_ASSET=str(assets),FX_WORKER=str(stub),
             FX_CHUNK_API=str(chunk_api),PRIMARY_MODEL='gemini-3.7-flash',FALLBACK_MODEL='gemini-3.7-flash',
             GEMINI_CHUNK_THINKING_LEVEL='LOW')
         bash='/opt/homebrew/bin/bash' if Path('/opt/homebrew/bin/bash').is_file() else shutil.which('bash')
@@ -215,6 +231,65 @@ main() { process_channel tzuyang; }
                 self.assertEqual(len(self.calls.read_text().splitlines()),expected_calls)
                 self.assertEqual((data/'crawling'/f'{video}.jsonl').read_bytes(),original_output)
                 self.assertNotEqual(json.loads(receipt.read_text())['inputHash'],before)
+
+
+class BatchCacheTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.asset = self.root / 'helper.py'
+        self.asset.write_text('# helper one\n')
+        for video in ('a', 'b'):
+            (self.root / (video + '.input')).write_text('input ' + video)
+            (self.root / (video + '.output')).write_text('output ' + video)
+            receipt, outputs, plan = self.recipe(video)
+            stage_cache.complete(receipt, stage_cache.fingerprint(**plan), outputs)
+
+    def recipe(self, video):
+        return (self.root / (video + '.receipt'), [self.root / (video + '.output')],
+                dict(inputs=[self.root / (video + '.input')], assets=[self.asset],
+                     metadata=[], settings={'fixture': True}))
+
+    def test_shared_asset_is_content_hashed_once_per_invocation_not_trusted_from_stat(self):
+        digest = stage_cache.input_digest
+        with patch.object(stage_cache, 'input_digest', wraps=digest) as hashes:
+            self.assertEqual(stage_cache.cache_batch_hits(['a', 'b'], self.recipe), ['a', 'b'])
+        self.assertEqual(sum(call.args[0] == self.asset for call in hashes.call_args_list), 1)
+        stat = self.asset.stat()
+        self.asset.write_text('# helper two\n')  # same length, restored mtime
+        os.utime(self.asset, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+        with patch.object(stage_cache, 'input_digest', wraps=digest) as hashes:
+            self.assertEqual(stage_cache.cache_batch_hits(['a', 'b'], self.recipe), [])
+        self.assertEqual(sum(call.args[0] == self.asset for call in hashes.call_args_list), 1)
+
+    def test_shared_asset_race_rejects_previously_admitted_and_memoized_results(self):
+        def race(video):
+            if video == 'b':
+                self.asset.write_text('# changed after first read\n')
+            return self.recipe(video)
+        self.assertEqual(stage_cache.cache_batch_hits(['a', 'b'], race), [])
+
+    def test_input_race_and_missing_receipt_are_not_promoted(self):
+        def race(video):
+            if video == 'b':
+                (self.root / 'a.input').write_text('changed after first admission')
+            return self.recipe(video)
+        self.assertEqual(stage_cache.cache_batch_hits(['a', 'b'], race), [])
+        (self.root / 'a.receipt').unlink()
+        self.assertEqual(stage_cache.cache_batch_hits(['a', 'b'], self.recipe), ['b'])
+
+    def test_batch_reader_rejects_unbounded_duplicate_and_path_inputs(self):
+        values = ['{}', '["a"]\n["b"]', 'null', '{', json.dumps(['a', 'a']),
+                  json.dumps([True]), json.dumps(['../outside']), json.dumps(['/absolute']),
+                  json.dumps(['nested/path']), json.dumps(['{id}']), json.dumps(['x' * 65]),
+                  json.dumps([str(i) for i in range(10_001)]), ' ' * 256_001]
+        for value in values:
+            with self.subTest(value=value[:60]), patch.object(sys, 'stdin', io.StringIO(value)):
+                with self.assertRaises(ValueError):
+                    stage_cache.read_cache_batch()
+        with patch.object(sys, 'stdin', io.StringIO('["a","b"]')):
+            self.assertEqual(stage_cache.read_cache_batch(), ['a', 'b'])
 
 
 if __name__=='__main__':unittest.main()

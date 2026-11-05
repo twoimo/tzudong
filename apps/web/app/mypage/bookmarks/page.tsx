@@ -25,12 +25,14 @@ import {
   myPageResponsiveMediaListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 
+import { readMyPageRouteState, writeMyPageRouteState } from "@/lib/mypage-route-state";
+
 const PAGE_SIZE = 15;
 
 export default function BookmarksPage() {
-  const { data: bookmarks = [], isLoading, isError } = useBookmarks();
+  const { data: bookmarks = [], isLoading, isError, isFetching, refetch } = useBookmarks();
   const { toggleBookmark, isLoading: isToggling } = useToggleBookmark();
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [visibleCount, setVisibleCount] = useState(() => readMyPageRouteState("/mypage/bookmarks").bookmarkLimit ?? PAGE_SIZE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const visibleBookmarks = useMemo(
@@ -44,10 +46,15 @@ export default function BookmarksPage() {
   }, [bookmarks.length]);
 
   useEffect(() => {
+    writeMyPageRouteState("/mypage/bookmarks", { bookmarkLimit: Math.max(PAGE_SIZE, visibleCount) });
+  }, [visibleCount]);
+
+  useEffect(() => {
+    if (isLoading) return;
     setVisibleCount((prev) =>
       Math.min(Math.max(prev, PAGE_SIZE), bookmarks.length),
     );
-  }, [bookmarks.length]);
+  }, [bookmarks.length, isLoading]);
 
   useEffect(() => {
     if (!hasMore) return;
@@ -86,6 +93,8 @@ export default function BookmarksPage() {
   if (isError) {
     return (
       <MyPageErrorState
+        onRetry={() => void refetch()}
+        retrying={isFetching}
         title="북마크를 불러오지 못했습니다"
         description="저장한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
       />

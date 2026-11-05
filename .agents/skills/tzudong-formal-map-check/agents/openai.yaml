@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tzudong 상태·수식 검증"
+  short_description: "마커 재사용과 근거 수식의 한정 범위를 반례·변형 코드로 검증"
+  default_prompt: "Use $tzudong-formal-map-check to check the changed marker and evidence contracts with bounded native checks and report the limits."

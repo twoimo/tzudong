@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "passed": false,
+  "failureCode": "setup:expect(locator).toBeVisible() failed\n\nLocator: getByRole('region', { name: '리뷰 상세 작업 패널' }).getByRole('button', { name: 'OCR 복구', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('region', { name: '리뷰 상세 작업 패널' }).getByRole('button', { name: 'OCR 복구', exact: true }) with timeout 5000ms\n  - waiting for getByRole('region', { name: '리뷰 상세 작업 패널' }).getByRole('button', { name: 'OCR 복구', exact: true })\n",
+  "kind": "actual-admin-ui-with-loopback-synthetic-ocr-endpoints",
+  "story": "pending review OCR recovery button -> preview -> explicit confirmation -> guarded recovery request -> rendered success/refusal/conflict state",
+  "sourceHead": "cfba8fbbf532c0337c8443c719e5b0d7bf9baf48",
+  "sourceStart": [
+    {
+      "path": "components/admin/SubmissionListView.tsx",
+      "bytes": 147704,
+      "sha256": "008bd707a271b081475055accb8072b028c4a669c51615026c9e67035a78e713"
+    },
+    {
+      "path": "app/api/admin/ocr-receipts/rerun/route.ts",
+      "bytes": 16076,
+      "sha256": "eccfd0c1a8c90bd35c3ca85027bb568a1cfb0aebd52a2449c4a34720f7822a6d"
+    },
+    {
+      "path": "lib/ocr/admin-receipt-recovery.ts",
+      "bytes": 11999,
+      "sha256": "f1c90b07be744e976fbc393b6e486481d48ed87e890d3a610d555436924737bc"
+    },
+    {
+      "path": "lib/runtime-feature-readiness-contract.ts",
+      "bytes": 2169,
+      "sha256": "83761d3ae754f4ebfc7b2be23b4bdf0788f3b7dd3f1bfac03f3801859e0b3bba"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "bytes": 24007,
+      "sha256": "a4b2eac5cde5b5b48edb4e3a4d5e7adbf232defaa3b2317edd48ff251d672906"
+    },
+    {
+      "path": "scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "bytes": 19652,
+      "sha256": "97083c672a03d21262ed18e73dbbf580b6c9134d9eab58e31ac427a539d95143"
+    }
+  ],
+  "sourceEnd": [
+    {
+      "path": "components/admin/SubmissionListView.tsx",
+      "bytes": 147704,
+      "sha256": "008bd707a271b081475055accb8072b028c4a669c51615026c9e67035a78e713"
+    },
+    {
+      "path": "app/api/admin/ocr-receipts/rerun/route.ts",
+      "bytes": 18918,
+      "sha256": "7130b8babf3f767566e90a3372fa695bd23bf3dcb096b1b99b0f4dca96c2079e"
+    },
+    {
+      "path": "lib/ocr/admin-receipt-recovery.ts",
+      "bytes": 11999,
+      "sha256": "f1c90b07be744e976fbc393b6e486481d48ed87e890d3a610d555436924737bc"
+    },
+    {
+      "path": "lib/runtime-feature-readiness-contract.ts",
+      "bytes": 2169,
+      "sha256": "83761d3ae754f4ebfc7b2be23b4bdf0788f3b7dd3f1bfac03f3801859e0b3bba"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "bytes": 24007,
+      "sha256": "a4b2eac5cde5b5b48edb4e3a4d5e7adbf232defaa3b2317edd48ff251d672906"
+    },
+    {
+      "path": "scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "bytes": 19652,
+      "sha256": "97083c672a03d21262ed18e73dbbf580b6c9134d9eab58e31ac427a539d95143"
+    }
+  ],
+  "environment": {
+    "origin": "http://127.0.0.1:18794",
+    "fakeSupabaseOrigin": "http://127.0.0.1:18793",
+    "browser": "155.0.8059.82",
+    "node": "v26.3.0",
+    "viewport": {
+      "width": 1423,
+      "height": 954
+    },
+    "loopbackOnly": true
+  },
+  "counts": {
+    "assertions": 0,
+    "previews": 0,
+    "applies": 0,
+    "confirmations": 0,
+    "externalBlocked": 0,
+    "unexpectedMutationsBlocked": 2,
+    "expectedAckLossNetworkFailures": 0,
+    "unexpectedLocalNetworkFailures": 2,
+    "pageErrorCount": 0,
+    "unexpectedConsoleErrors": 7,
+    "forwardedExternalRequests": 0,
+    "realProviderCalls": 0,
+    "hostedDatabaseCalls": 0,
+    "hostedMutations": 0
+  },
+  "geometry": {
+    "recoveryButton": null,
+    "reviewPanel": {
+      "x": 1043,
+      "y": 173,
+      "width": 352,
+      "height": 757
+    }
+  },
+  "assertions": [],
+  "confirmationMessages": [],
+  "recoveryRequests": [],
+  "screenshots": [],
+  "limitations": {
+    "browserUiAndRequestContractOnly": true,
+    "realRouteHandlerExecution": false,
+    "sqlRpcExecution": false,
+    "githubWorkflowDispatch": false,
+    "providerAccuracyEvaluated": false,
+    "hostedDeploymentEvaluated": false
+  }
+}

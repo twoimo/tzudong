@@ -1,9 +1,10 @@
+import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
 import { beforeAll, afterAll, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium, type Browser, type Page } from '@playwright/test';
 
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = chromium.executablePath();
 const localTest = existsSync(chrome) ? test : test.skip;
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -20,23 +21,26 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { LocalStoryboardWorkspace } from './components/admin/storyboard/LocalStoryboardWorkspace';
 import { STORYBOARD_WORKFLOW } from './lib/admin/storyboard/production-contract';
+import { STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, STORYBOARD_GEMINI_TEXT_MODEL, storyboardGeminiDeclaredModels } from './lib/admin/storyboard/gemini-models';
 const A = '${A}', B = '${B}', now = '2026-10-05T00:00:00.000Z';
+const FEATURE_DATABASE_READY = Object.freeze({schemaVersion:1,status:'ready',code:'FEATURE_DATABASE_READY'});
 const scene = n => ({sceneNo:n, title:'Scene '+n, durationSec:10, description:'Description', visualDirection:'Camera',
  narration:'Narration', caption:'Caption', productionNotes:['Note'], imagePrompt:'Image', sourceIds:[], revision:1, image:null, imageError:null});
 const project = id => ({id, revision:1, status:'partial', createdAt:now, updatedAt:now,
  request:{workflow:STORYBOARD_WORKFLOW,requestId:id,prompt:'Fixture',sceneCount:5,retrieval:'none',sources:[],imageWidth:1024,imageHeight:576,
- providers:{externalAI:false,text:{id:'manual',model:''},image:{id:'manual',model:''}}},
+ providers:{externalAI:true,text:{id:'gemini-api',model:STORYBOARD_GEMINI_TEXT_MODEL},image:{id:'gemini-api',model:STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL}}},
  document:{schema:STORYBOARD_WORKFLOW,projectId:id,revision:1,generatedAt:now,title:id===A?'Project A':'Project B',logline:'Fixture',
- textProvenance:{providerId:'manual',model:'',verification:'user-import',generatedAt:now,requestId:id,responseId:null,responseModel:null,modelEvidence:'unverified'},
+ textProvenance:{providerId:'gemini-api',model:STORYBOARD_GEMINI_TEXT_MODEL,verification:'official-api',generatedAt:now,requestId:id,responseId:'fixture-response',responseModel:STORYBOARD_GEMINI_TEXT_MODEL,modelEvidence:'response'},
  scenes:Array.from({length:5},(_,i)=>scene(i+1))}});
 const projects = {[A]:project(A),[B]:project(B)};
+const workers=[{id:'fixture-gemini-worker',online:true,lastHeartbeat:now,models:storyboardGeminiDeclaredModels()}];
 let mode='success', readFailure=false, release=null, lastEdit=null;
 const calls=[], confirms=[];
-const fixtureApi = window.storyboardDepartureFixture = { answer:false, legacy:0, links:0, confirms,
+const fixtureApi = window.storyboardDepartureFixture = { answer:false, links:0, confirms,
  mode: value=>{mode=value;}, readFailure:value=>{readFailure=value;}, release:()=>release?.(),
  applyLast:()=>apply(lastEdit.id,lastEdit.body),
  advanceOther:()=>{projects[A].revision++;projects[A].document.revision++;},
- state:()=>({calls:structuredClone(calls),confirms:[...confirms],legacy:fixtureApi.legacy,links:fixtureApi.links})};
+ state:()=>({calls:structuredClone(calls),confirms:[...confirms],links:fixtureApi.links})};
 window.confirm = text=>{confirms.push(text);return fixtureApi.answer;};
 function apply(id, body) {
  const p=projects[id];p.revision++;p.document.revision=p.revision;
@@ -46,7 +50,7 @@ const view = id => ({ok:true,project:structuredClone(projects[id]),job:null,even
 const reply = (value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}});
 window.fetch = async (url,init={})=>{
  const method=init.method||'GET', path=new URL(url,location.href).pathname;
- if (path==='/api/admin/storyboard/production' && method==='GET') return reply({ok:true,workers:[],projects:Object.values(projects).map(p=>({id:p.id,revision:p.revision,status:p.status,title:p.document.title,createdAt:now,updatedAt:now}))});
+ if (path==='/api/admin/storyboard/production' && method==='GET') return reply({ok:true,readiness:FEATURE_DATABASE_READY,workers,projects:Object.values(projects).map(p=>({id:p.id,revision:p.revision,status:p.status,title:p.document.title,createdAt:now,updatedAt:now}))});
  const id=path.split('/').at(-1);
  if (!projects[id]) throw new Error('Unexpected fixture request');
  if(method==='GET'){calls.push({method,id});if(readFailure)throw new TypeError('Fixture offline');return reply(view(id));}
@@ -65,12 +69,13 @@ createRoot(document.getElementById('root')).render(<>
  <a href='/admin?module=users' onClick={e=>{e.preventDefault();fixtureApi.links++;}}>Other admin page</a>
  <button data-admin-console-menu-item-mode='desktop-sidebar' aria-controls='admin-console-canvas' onClick={()=>fixtureApi.links++}>Desktop module</button>
  <button data-admin-console-menu-item-mode='mobile-dropdown' aria-controls='admin-console-canvas' onClick={()=>fixtureApi.links++}>Mobile module</button>
- <LocalStoryboardWorkspace onOpenLegacy={()=>fixtureApi.legacy++}/>
+ <LocalStoryboardWorkspace/>
 </>);
 `;
     const bundle = await Bun.build({
         entrypoints: ['storyboard-departure-fixture'], target: 'browser', format: 'iife', write: false,
-        define: { 'process.env.NODE_ENV': '"test"' },
+        // Isolated browser build: no Node process or operator environment is present.
+        define: { 'process.env': '{}', 'process.env.NODE_ENV': '"test"' },
         plugins: [{ name: 'offline-storyboard', setup(builder) {
             builder.onResolve({ filter: /^storyboard-departure-fixture$/ }, () => ({ path: 'fixture.tsx', namespace: 'fixture' }));
             builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: fixture, loader: 'tsx', resolveDir: join(import.meta.dir, '..') }));
@@ -83,13 +88,13 @@ createRoot(document.getElementById('root')).render(<>
     });
     expect(bundle.success).toBe(true);
     script = await bundle.outputs[0].text();
-    browser = await chromium.launch({ executablePath: chrome, headless: true });
+    browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
 });
 afterAll(async () => { await browser?.close(); });
 
 type FixtureState = {
     calls: {method: string; id: string; body?: {action: string; revision: number; scene: {title: string}}}[];
-    confirms: string[]; legacy: number; links: number;
+    confirms: string[]; links: number;
 };
 type Fixture = {answer: boolean; mode(value: string): void; readFailure(value: boolean): void; release(): void;
     applyLast(): void; advanceOther(): void; state(): FixtureState};
@@ -129,7 +134,7 @@ async function waitEditable(page: Page) {
     });
 }
 
-localTest('project/new/legacy/sidebar/Escape guards preserve the draft; accepted discard works', () => run(async page => {
+localTest('project/new/sidebar/Escape guards preserve the draft; accepted discard works', () => run(async page => {
     await edit(page);
     for (const action of [
         () => page.getByLabel('프로젝트 선택', {exact:true}).selectOption(B),
@@ -143,10 +148,8 @@ localTest('project/new/legacy/sidebar/Escape guards preserve the draft; accepted
         await action(); expect(await editor(page).inputValue()).toBe('Unsaved fixture');
         expect(await page.getByLabel('프로젝트 선택', {exact:true}).inputValue()).toBe(A);
     }
-    await page.getByRole('button', {name:'연결 설정',exact:true}).click();
-    await page.getByRole('button', {name:'이전 작업 공간 열기',exact:true}).click();
     const cancelled = await state(page);
-    expect(cancelled.confirms).toHaveLength(8); expect(cancelled.legacy).toBe(0); expect(cancelled.links).toBe(0);
+    expect(cancelled.confirms).toHaveLength(7); expect(cancelled.links).toBe(0);
     expect(cancelled.calls.filter(item => item.method === 'POST')).toHaveLength(0);
     expect(await page.evaluate(() => !window.dispatchEvent(new Event('beforeunload', {cancelable:true})))).toBe(true);
     await page.evaluate(() => { window.storyboardDepartureFixture.answer = true; });

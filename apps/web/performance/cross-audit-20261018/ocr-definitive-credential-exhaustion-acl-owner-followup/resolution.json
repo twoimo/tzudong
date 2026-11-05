@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "tzudong-source-bound-followup-resolution-v1",
+  "receiptId": "OCR-DURABLE-CREDENTIAL-EXHAUSTION-ACL-OWNER-FOLLOWUP-20261019",
+  "recordedAt": "2026-10-18T16:14:54Z",
+  "baseHead": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "scope": "exact function/table ACL and table-owner runtime seal follow-up",
+  "reviewAnchor": {
+    "path": "apps/web/performance/cross-audit-20261018/ocr-catalog-recovery-independent-source-review-20261019.json",
+    "sha256": "5bd7bcad51a43aea296b19b5ae04314898430df36a5b94f9aa3ea503f8e28fd1",
+    "decisionId": "OCR-CATALOG-INDEPENDENT-002",
+    "verdict": "ACCEPT_RESOLVED_IN_SOURCE_AND_LOCAL_SQL_FIXTURE"
+  },
+  "history": {
+    "priorFollowupPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/resolution.json",
+    "priorFollowupSha256": "507029a10ebf649187c3a8be67fbf63c2657df5d415bcc3ace69734747be0314",
+    "preservedUnmodified": true
+  },
+  "sourceHashes": {
+    "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql": "3fb993b19e4972b4683be0493b21211ce4961583ff298811612af2a2f2972acd",
+    "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql": "1d0d2e37ce83b3efaae67b7553d6692fb8825ecc95b6969e70d520894db075bc",
+    ".github/receipt-ocr-post105-sql-successor.v1.json": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+    "apps/web/tests-unit/receipt-ocr-post105-sql-successor.test.ts": "6134b41c2bf0be61b203598c9bd22e7965b020bdf1a668afb69d492b2527dde0",
+    "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0"
+  },
+  "implementation": [
+    {
+      "id": "OCR-DCR-ACL-001",
+      "status": "resolved",
+      "behavior": "The sealed function_contract now includes each required function owner and a deterministic normalized proacl expansion in addition to definition hash, language, and volatility. Runtime readiness recomputes and compares the complete object, so an EXECUTE grant to any extra role is held."
+    },
+    {
+      "id": "OCR-DCR-ACL-002",
+      "status": "resolved",
+      "behavior": "A sealed table_contract records deterministic normalized relacl expansions and relowner names for both private recovery tables. Runtime readiness recomputes and compares both entries, so any extra table grantee or owner change is held."
+    },
+    {
+      "id": "OCR-DCR-ACL-003",
+      "status": "preserved",
+      "behavior": "The existing explicit PK, RLS, policy, function definition, language, volatility, SECURITY DEFINER, search_path, allowlist, ledger, and known-role checks remain in place. The compiler source is unchanged; its terminal readback calls the exact runtime capability."
+    },
+    {
+      "id": "OCR-DCR-ACL-004",
+      "status": "preserved",
+      "behavior": "Application TypeScript is byte-identical to the prior 32-pass direct regression. No app behavior, quota policy, provider path, model, or external state changed."
+    }
+  ],
+  "catalogIdentity": {
+    "migrationVersion": "20261018152032",
+    "migrationSha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "statementCount": 44,
+    "statementVectorSha256": "54df90f1f3e6b23eb11b949d4c0d57856e02dcfb66fc998b5065cc424a34d14e",
+    "migrationIdentityRoot": "17dc235a7c78f273a2e4c1d9030995f712da1a2e42e8cca28c8c7b732b37e65a",
+    "operatingTargetIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1",
+    "rehearsalTargetIdentityRoot": "b6184e8b14977dcba0d66959d1ef266b29268f5420b86451a7d213b81d5c6e24",
+    "suffixRoot": "a1d19693f49105141cb75c37645824a41637e5a8047aaca837fd853d4fbe4b07",
+    "successorState": "held_unapplied"
+  },
+  "verification": [
+    {
+      "command": "/Users/twoimo/.bun/bin/bun --no-env-file test tests-unit/receipt-ocr-post105-sql-successor.test.ts --timeout 30000",
+      "result": "7 pass, 0 fail, 59 assertions",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-acl-owner-followup/post105-successor-bun.txt",
+      "rawSha256": "dc87c05aa32f4d260acf16d676703d804da6beb736afc0d2f95913b5f92de07f"
+    },
+    {
+      "command": "bash /tmp/run-tzudong-ocr-catalog-followup.sh",
+      "result": "exit 0; PG17_CATALOG_FOLLOWUP=passed",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-acl-owner-followup/sql-catalog-fixtures-pg17.11.txt",
+      "rawSha256": "14936e8b15f1404c65c093961a569505ea76eff147d71f5175a1b3f8a4095292",
+      "adversarialResults": [
+        "authenticated SELECT grant on receipt_credential_rejection_releases -> held",
+        "supabase_admin EXECUTE grant on public release wrapper -> held",
+        "release table owner changed to supabase_admin -> held",
+        "catalog table owner changed to supabase_admin -> held",
+        "baseline restored to ready after each savepoint rollback"
+      ]
+    },
+    {
+      "command": "git diff --check -- <SQL migration, SQL fixture, successor manifest>",
+      "result": "exit 0",
+      "rawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-acl-owner-followup/diff-check.txt",
+      "rawSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "not rerun: durable receipt OCR direct suite",
+      "result": "prior 32 pass / 0 fail / 195 assertions reused because both application TypeScript files remain byte-identical",
+      "priorRawPath": "apps/web/performance/cross-audit-20261018/ocr-definitive-credential-exhaustion-catalog-followup/durable-bun.txt",
+      "priorRawSha256": "e5b5034c7ff5b4c655a5556e9e4ddd542a05217daaa274c0564f1d380fa66786"
+    }
+  ],
+  "limits": [
+    "The PostgreSQL 17.11 run is a disposable synthetic minimal predecessor harness, not a hosted apply or full terminal-105 catalog replay.",
+    "The 105-to-106 successor remains held and unapplied; local source and SQL tests do not prove hosted installation, runtime ACL state, deployment, or production readiness.",
+    "Global parity and Next build were not repeated because application TypeScript and compiler source were unchanged; root owns the final integration gate."
+  ],
+  "externalEffects": {
+    "hostedDatabaseWrites": 0,
+    "providerCalls": 0,
+    "storageCalls": 0,
+    "gitWrites": 0
+  }
+}

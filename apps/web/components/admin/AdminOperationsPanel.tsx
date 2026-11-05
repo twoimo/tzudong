@@ -3,13 +3,15 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useQueries } from '@tanstack/react-query';
 import { ArrowUpRight, Bot, RefreshCw, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { restoreAdminDetailFocus } from '@/lib/admin/detail-focus';
+import { adminQueryLastReadFailed } from '@/lib/admin/query-read-state';
 import { readOperationsSource } from '@/lib/admin/operations-source';
 import {
   OPERATIONS_SOURCES,
@@ -35,6 +37,10 @@ export function AdminOperationsPanel() {
   const rowRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const detailRef = useRef<HTMLElement | null>(null);
+  const detailRetryRef = useRef<HTMLButtonElement | null>(null);
+  const detailRetryHadFocusRef = useRef(false);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const detailShownRef = useRef(false);
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)');
     const update = () => setInlineInspector(media.matches);
@@ -51,7 +57,7 @@ export function AdminOperationsPanel() {
   const snapshots: Partial<Record<OperationsSourceId, OperationsSnapshot>> = {};
   queries.forEach((query, index) => {
     const sourceId = OPERATIONS_SOURCES[index];
-    if (query.isError) snapshots[sourceId] = operationsUnavailable(sourceId, 'unavailable');
+    if (adminQueryLastReadFailed(query) && !query.data) snapshots[sourceId] = operationsUnavailable(sourceId, 'unavailable');
     else if (query.data) snapshots[sourceId] = query.data;
   });
   const model = buildOperationsViewModel(snapshots);
@@ -62,15 +68,30 @@ export function AdminOperationsPanel() {
   const busy = queries.some(query => query.isFetching);
   const refresh = () => { void Promise.all(queries.map(query => query.refetch())); };
   const selectedQuery = selected ? queries[OPERATIONS_SOURCES.indexOf(selected.sourceId)] : null;
+  useLayoutEffect(() => {
+    if (!detailRetryHadFocusRef.current) return;
+    if (selectedQuery?.isFetching && (document.activeElement === document.body || document.activeElement === detailRef.current)) {
+      detailRetryRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    if (!selectedQuery?.isFetching) detailRetryHadFocusRef.current = false;
+  });
+  const selectedRowId = selected?.id ?? null;
+  useEffect(() => {
+    if (selectedRowId) { detailShownRef.current = true; return; }
+    if (!detailShownRef.current) return;
+    detailShownRef.current = false;
+    if (inlineInspector) window.requestAnimationFrame(() => restoreAdminDetailFocus('[data-operations-inspector]', rowRef.current, searchRef.current));
+  }, [selectedRowId, inlineInspector]);
 
-  const closeDetail = () => { setSelectedId(null); if (inlineInspector) window.requestAnimationFrame(() => rowRef.current?.focus()); };
+  const closeDetail = () => setSelectedId(null);
   const stateLabel = (row: (typeof rows)[number]) => row.state === 'ready' ? PRIORITY_LABELS[row.priority] : OPERATIONS_STATE_LABELS[row.state];
   const stateClass = (row: (typeof rows)[number]) => row.priority === 'failure' ? 'border-destructive/25 bg-destructive/5 text-destructive' : row.priority === 'attention' ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200' : 'border-border text-muted-foreground';
   const inspector = selected ? <aside key={selected.id} ref={detailRef} tabIndex={-1} className={cn('h-full min-h-0 overflow-y-auto outline-none', inlineInspector ? 'admin-cms-inspector' : 'p-3')} aria-label="운영 항목 상세" data-operations-inspector onKeyDown={event => { if (inlineInspector && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeDetail(); } }}>
     <div className="flex items-start justify-between gap-2"><h2 className="min-w-0 text-base font-semibold leading-6">{selected.title}</h2><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label="운영 항목 상세 닫기" onClick={closeDetail}><X className="h-3.5 w-3.5" /></Button></div>
     <span className={`mt-2 inline-flex rounded border px-1.5 py-0.5 text-[11px] ${stateClass(selected)}`}>{stateLabel(selected)}</span>
     <p className="mt-3 text-xs leading-5 text-muted-foreground">{selected.summary}</p>
-    {selected.metrics.length > 0 ? <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border p-3">
+    {selected.metrics.length > 0 ? <dl className="admin-detail-section mt-3 grid grid-cols-2 gap-x-4 gap-y-3 p-3">
       {selected.metrics.map(item => <div key={item.id} className="min-w-0"><dt className="text-xs text-muted-foreground">{item.label}</dt><dd className="mt-0.5 break-words text-sm font-medium tabular-nums">{item.value === null ? '확인 불가' : `${number.format(item.value)}건`}</dd></div>)}
     </dl> : null}
     <dl className="mt-3 space-y-3 text-xs leading-5">
@@ -79,20 +100,20 @@ export function AdminOperationsPanel() {
       {selected.details.map(item => <div key={item.label}><dt className="text-muted-foreground">{item.label}</dt><dd className="break-words">{item.value}</dd></div>)}
     </dl>
     <div className="mt-4 flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link href={selected.href}>관리 화면 열기<ArrowUpRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" /></Link></Button>
-      {selected.state !== 'loading' && selected.state !== 'ready' ? <Button size="sm" variant="outline" disabled={selectedQuery?.isFetching} onClick={() => { void selectedQuery?.refetch(); }}>다시 조회</Button> : null}
+      {selected.state !== 'loading' && selected.state !== 'ready' ? <Button ref={detailRetryRef} size="sm" variant="outline" aria-disabled={selectedQuery?.isFetching || undefined} aria-busy={selectedQuery?.isFetching || undefined} onClick={(event) => { detailRetryHadFocusRef.current = event.currentTarget === document.activeElement || detailRetryHadFocusRef.current; if (selectedQuery?.isFetching) return; void selectedQuery?.refetch(); }}>다시 조회</Button> : null}
     </div>
   </aside> : null;
 
-  return <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background" aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
+  return <section className="admin-surface flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background" aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
     <AdminPageHeader title={getAdminModuleTitle("llm")} icon={Bot} titleId="admin-operations-title" summary="읽기 전용" data-admin-module-header="compact" data-admin-module-header-module="llm"
-      actions={<Button variant="ghost" size="sm" disabled={busy} onClick={refresh} aria-label="운영 상태 새로고침" className="gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />새로고침</Button>}
+      actions={<Button variant="ghost" size="sm" aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => { if (!busy) refresh(); }} aria-label="운영 상태 새로고침" className="gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />새로고침</Button>}
     />
-    <div className="flex shrink-0 flex-wrap gap-x-5 gap-y-1 border-b px-3 py-2 text-xs" aria-label="운영 집계">
+    <div className="flex shrink-0 flex-wrap gap-x-5 gap-y-1 bg-muted/30 px-3 py-2 text-xs" aria-label="운영 집계">
       {model.summaries.map(item => <span key={item.id} className="text-muted-foreground">{item.label} <strong className="font-medium tabular-nums text-foreground" data-operations-summary={item.id}>{item.value === null ? (snapshots[item.id as OperationsSourceId] ? '확인 불가' : '조회 중') : `${number.format(item.value)}건`}</strong></span>)}
     </div>
-    <div className="admin-cms-toolbar shrink-0">
-      <label className="relative min-w-[150px] flex-1"><Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input type="search" aria-label="운영 항목 검색" value={search} onChange={event => { setSearch(event.target.value); setSelectedId(null); }} maxLength={120} placeholder="운영 항목 검색" className="h-9 w-full rounded-md border bg-background pl-8 pr-2 text-sm" /></label>
-      <select aria-label="운영 상태 필터" value={status} onChange={event => { setStatus(event.target.value as typeof status); setSelectedId(null); }} className="h-9 rounded-md border bg-background px-2 text-xs"><option value="all">전체 상태</option><option value="attention">확인 필요 ({model.attentionCount})</option><option value="failure">실패 확인</option><option value="waiting">검수 대기</option><option value="running">진행 중</option><option value="idle">대기 없음</option></select>
+    <div className="admin-cms-toolbar admin-toolbar shrink-0">
+      <label className="relative min-w-[150px] flex-1"><Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input ref={searchRef} type="search" aria-label="운영 항목 검색" value={search} onChange={event => { setSearch(event.target.value); setSelectedId(null); }} maxLength={120} placeholder="운영 항목 검색" className="h-9 w-full rounded-md border bg-background pl-8 pr-2 text-sm" /></label>
+      <select aria-label="운영 상태 필터" value={status} onChange={event => { setStatus(event.target.value as typeof status); setSelectedId(null); }} className="h-9 rounded-md border bg-background px-2 text-xs"><option value="all">전체 상태</option><option value="attention">확인 필요 ({model.sources.every(source => source.state !== 'loading') ? model.attentionCount : '미확인'})</option><option value="failure">실패 확인</option><option value="waiting">검수 대기</option><option value="running">진행 중</option><option value="idle">대기 없음</option></select>
       <select aria-label="운영 목록 정렬" value={sort} onChange={event => setSort(event.target.value as typeof sort)} className="h-9 rounded-md border bg-background px-2 text-xs"><option value="priority">우선순위순</option><option value="name">항목 이름순</option></select>
     </div>
     <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -104,11 +125,11 @@ export function AdminOperationsPanel() {
             <td><span className={`inline-flex rounded border px-1.5 py-0.5 text-[11px] ${stateClass(row)}`}>{stateLabel(row)}</span></td>
           </tr>)}
         </tbody></table>
-        {!rows.length ? <div role="status" className="flex min-h-40 flex-col items-center justify-center gap-3 p-4 text-sm text-muted-foreground"><p>조건에 맞는 운영 항목이 없습니다.</p><Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatus('all'); }}>필터 초기화</Button></div> : null}
+        {!rows.length ? <div role="status" className="admin-empty-state m-3 !min-h-0 !flex-row !items-center !justify-between gap-3 p-3 !text-left text-sm text-muted-foreground"><p>조건에 맞는 운영 항목이 없습니다.</p><Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatus('all'); }}>필터 초기화</Button></div> : null}
       </div>
       {inlineInspector ? inspector : null}
     </div>
     <footer className="admin-cms-footer shrink-0" aria-live="polite"><span>{rows.length} / {model.rows.length}개</span>{model.sources.map(source => <span key={source.sourceId} className="text-[11px]">{SOURCE_LABELS[source.sourceId]} · {OPERATIONS_STATE_LABELS[source.state]}</span>)}</footer>
-    <Sheet open={!inlineInspector && !!selected} onOpenChange={open => { if (!open) setSelectedId(null); }}><SheetContent data-operations-drawer className="flex w-full flex-col p-0 pt-10 sm:max-w-lg" onOpenAutoFocus={event => { event.preventDefault(); detailRef.current?.focus(); }} onCloseAutoFocus={event => { event.preventDefault(); rowRef.current?.focus(); }}><SheetHeader className="sr-only"><SheetTitle>운영 항목 상세</SheetTitle><SheetDescription>선택한 항목의 상태와 조회 근거</SheetDescription></SheetHeader>{!inlineInspector ? inspector : null}</SheetContent></Sheet>
+    <Sheet open={!inlineInspector && !!selected} onOpenChange={open => { if (!open) setSelectedId(null); }}><SheetContent data-operations-drawer className="flex w-full flex-col p-0 pt-10 sm:max-w-lg" onOpenAutoFocus={event => { event.preventDefault(); detailRef.current?.focus(); }} onCloseAutoFocus={event => { event.preventDefault(); restoreAdminDetailFocus('[data-operations-drawer]', rowRef.current, searchRef.current); }}><SheetHeader className="sr-only"><SheetTitle>운영 항목 상세</SheetTitle><SheetDescription>선택한 항목의 상태와 조회 근거</SheetDescription></SheetHeader>{!inlineInspector ? inspector : null}</SheetContent></Sheet>
   </section>;
 }

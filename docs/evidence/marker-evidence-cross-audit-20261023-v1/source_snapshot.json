@@ -1,0 +1,310 @@
+{
+  "source_kind": "attached_source",
+  "repository": "https://github.com/twoimo/tzudong",
+  "commit": "ac80e35da566db242420a62bbf3e3320b5c00e76",
+  "bundle_sha256": "6edea509e566107a4a4bbced53055aed79ea3ca3c1094367a468bf7cb0f047e5",
+  "files": [
+    {
+      "path": "apps/web/app/api/public-popularity/route.ts",
+      "bytes": 559,
+      "sha256": "dbebbbb737f20f45a08ae774a67492fa772100ffb5cd3237f6942a9f84e9ee48"
+    },
+    {
+      "path": "apps/web/components/filters/filter-state.ts",
+      "bytes": 286,
+      "sha256": "2299c78f3f92078eb456440a933ab691d844ec31fae67b85d9ce1c1f72d3219a"
+    },
+    {
+      "path": "apps/web/components/map/OverseasMap.tsx",
+      "bytes": 18937,
+      "sha256": "e067cf3805a4cafe8b3697fa5fe8e206629f34f3dfefea7985983afa5d7847f8"
+    },
+    {
+      "path": "apps/web/components/restaurant/Badge3DViewer.tsx",
+      "bytes": 5473,
+      "sha256": "a54439aa7e2046f7ab96c8cedf9963d7fb0abd258e5a0fb21080581ba58ed760"
+    },
+    {
+      "path": "apps/web/components/restaurant/PopularityBadge.tsx",
+      "bytes": 6319,
+      "sha256": "2e00ee91a5b08108dc78f543ffdf93d6e91f7d4d9a611f851886ba6bd3ed3ff1"
+    },
+    {
+      "path": "apps/web/components/restaurant/RestaurantDetailPanel.tsx",
+      "bytes": 82540,
+      "sha256": "5dc4c34b08da8cd2ee29b0060b2c7bfa3882038903f6df1dcc1ea35aa4e80e09"
+    },
+    {
+      "path": "apps/web/components/restaurant/RestaurantEvidenceCarousel.tsx",
+      "bytes": 5068,
+      "sha256": "115a76ff8e1897a2f8e0690cc35f81e7390f4063679a37f7cbe483c66c0d2798"
+    },
+    {
+      "path": "apps/web/config/maps.ts",
+      "bytes": 1643,
+      "sha256": "3ec2eaad268d43ef0115f326a4d6a81f0163073189c497ede7661cbb3798d457"
+    },
+    {
+      "path": "apps/web/constants/overseas-regions.ts",
+      "bytes": 3087,
+      "sha256": "4d986e8cb4b9166ec56ed9d12b3d8d32db2ed63b861a772888c7e8b319fde4af"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurant-detail.tsx",
+      "bytes": 3820,
+      "sha256": "6adc4c1c2391ba3ad47dd6c9637672c3d350099a0b46421b3676320ec03e8377"
+    },
+    {
+      "path": "apps/web/hooks/use-restaurants.tsx",
+      "bytes": 30154,
+      "sha256": "2313e3e7f76ad9e3137bd75aac525238809c3ffa120c36e55d856dddf396b1a7"
+    },
+    {
+      "path": "apps/web/hooks/useDevicePerformance.ts",
+      "bytes": 8389,
+      "sha256": "db9f8cfeecf7d7086482752e48455a4d9fd1150412a1a360cd28715d9d05f5ca"
+    },
+    {
+      "path": "apps/web/integrations/supabase/types.ts",
+      "bytes": 108964,
+      "sha256": "484fec0a6c979280cfad372c7edb2f6c9586d8bb9d39be14e01c7c721a0c4bd2"
+    },
+    {
+      "path": "apps/web/lib/cluster-marker.ts",
+      "bytes": 9772,
+      "sha256": "43414721e67e9e4f33a44a8cbefbd2b17f81a9f7f5fbf49261952c7cc0e4690f"
+    },
+    {
+      "path": "apps/web/lib/clustering.ts",
+      "bytes": 33844,
+      "sha256": "915170037ddcabfdba190900eca37d9a4ebc6718d83d36ca300c0fef4802de5e"
+    },
+    {
+      "path": "apps/web/lib/device-location-map.ts",
+      "bytes": 9379,
+      "sha256": "884697059112904b4293679d640e5577ab5e4f1355e2a729917da95f4f32b845"
+    },
+    {
+      "path": "apps/web/lib/device-performance.ts",
+      "bytes": 5146,
+      "sha256": "bcb8a6f5dd29ecfd33846452c7531777579b448006fccbbf6c47c5dcf7af1b92"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-device-capability.ts",
+      "bytes": 929,
+      "sha256": "d3d0f575f0e483dfbb5ab465379f0f65c95d28ec97b0190335710cd840125b68"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/badge-viewer-lifecycle.ts",
+      "bytes": 3306,
+      "sha256": "b470fe9fb3c3a8c9984cc075f3be1004f394c6732872b6c6b94e67310372dfd0"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/constants.ts",
+      "bytes": 7408,
+      "sha256": "471834208104d092365b8203350e7b9c4aba6a716a602f2a29589361d8fc9a43"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/errors.ts",
+      "bytes": 2008,
+      "sha256": "02bda67b89fadf3d2f5aa27f6a146c0dc746a7de1f9a6cd91dc82cf177e901c9"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/frames.ts",
+      "bytes": 9213,
+      "sha256": "253fda0e407c5c9b0353984ff639d4dc6688b2f4df9c5c90bcdc764d22cf90c1"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/guards.ts",
+      "bytes": 7046,
+      "sha256": "5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/popularity-marker.ts",
+      "bytes": 2969,
+      "sha256": "65fd5cc14b916e92720dfdaf81f20545b8caf3d8b3e56d9c06a4e4a9baea49d6"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/public-popularity-publication.json",
+      "bytes": 138754,
+      "sha256": "4292f73048150e1d13410e85acf220d786ddbffe0baac1d18a03588c89bbb93f"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/published-popularity.ts",
+      "bytes": 5687,
+      "sha256": "84ee9979ace9756456178449f6d831fe796cee0d68d66e155fc127aaef4163f1"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/records.ts",
+      "bytes": 4163,
+      "sha256": "b9c6b9c08e8044cf839b46d2b5295199cc6f644ea4f51c0169f4b731022a7883"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/storage-key.mjs",
+      "bytes": 226,
+      "sha256": "4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/types.ts",
+      "bytes": 3726,
+      "sha256": "9d64ad2c6e57bea45af5066d89a26535b616429c9032d16fccfefcdeb78bad6b"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/upload-evidence-frame.ts",
+      "bytes": 2259,
+      "sha256": "d1ce82e82f186752229832b21adc33298e07626a76f6661b883fa2e1125e48e7"
+    },
+    {
+      "path": "apps/web/lib/home-map-theme-filters.ts",
+      "bytes": 13014,
+      "sha256": "3722db246c2af68f2ed84cfc92dbfa4cd9aa61748e9cea1a3170198d20c1c9e7"
+    },
+    {
+      "path": "apps/web/lib/home-map-youtube-kpi.ts",
+      "bytes": 7303,
+      "sha256": "9d97b99bb48e9b7a4c25bdfb2658af869a2f76628b824b3ff5ba45b12143620a"
+    },
+    {
+      "path": "apps/web/lib/html-escape.ts",
+      "bytes": 3845,
+      "sha256": "80483bd4443ee0d48e9162919cc050434f8e8251c19e7c68326fac07540b1d8e"
+    },
+    {
+      "path": "apps/web/lib/map-query-helpers.ts",
+      "bytes": 3554,
+      "sha256": "a377c9b456b6358569b2798c69cdd0b06851061cf73125d614bb270e0f140ddf"
+    },
+    {
+      "path": "apps/web/lib/naver-map-cluster-visuals.ts",
+      "bytes": 5849,
+      "sha256": "e6827ce69615a202ca866aa5ced193b78d8b16c3ab9f44d3abb665e7b94f4d92"
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "bytes": 9365,
+      "sha256": "6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8"
+    },
+    {
+      "path": "apps/web/lib/naver-map-view-helpers.ts",
+      "bytes": 2816,
+      "sha256": "4da2b00df772267fbfebe32b7dfd13653aa600c8c94224b5d8c7981f038edff0"
+    },
+    {
+      "path": "apps/web/lib/overseas-map-helpers.ts",
+      "bytes": 3355,
+      "sha256": "087b639dadb31c999af39f546d1ae7779836d956efe022f48cbab152da5f1097"
+    },
+    {
+      "path": "apps/web/lib/overseas-map-marker-helpers.ts",
+      "bytes": 1989,
+      "sha256": "0d6235f99fa1f23c8e4b7df435628e321698b0a646214984c655c26a184c2605"
+    },
+    {
+      "path": "apps/web/lib/overseas-map-provider.ts",
+      "bytes": 414,
+      "sha256": "c480cc57caf50aa33d9b0bfdf3fa4efb8f330b56c03deb776de3c4d0dd619220"
+    },
+    {
+      "path": "apps/web/lib/overseas-map-restaurant-helpers.ts",
+      "bytes": 683,
+      "sha256": "d5908d9e4fc505013a5dc7d2824915a4e71a124e0c8235841f8c79c22980ffb5"
+    },
+    {
+      "path": "apps/web/lib/overseas-region-matching.ts",
+      "bytes": 2650,
+      "sha256": "35333c22a6a6b677a7612ffe461774a54a84f9a8c6fa3e324885104a8d072c4f"
+    },
+    {
+      "path": "apps/web/lib/restaurant-marker-kind.ts",
+      "bytes": 2454,
+      "sha256": "9b24ad33c226721584205536961a0285177ea9e515a6c9c5e0a06e6abaf9e90d"
+    },
+    {
+      "path": "apps/web/lib/restaurant-merged-media.ts",
+      "bytes": 11189,
+      "sha256": "d3836ccf54dd13bd33cc899e9bdfc199e31fa10e4f6b7ab237ab30c5bac17a59"
+    },
+    {
+      "path": "apps/web/lib/restaurant-review-counts.ts",
+      "bytes": 1316,
+      "sha256": "38cc88d3b6f2ddf653461a61d5a23272b98a0186c5680e66c67ebeb371916163"
+    },
+    {
+      "path": "apps/web/lib/restaurant-visit-count.ts",
+      "bytes": 1835,
+      "sha256": "3595801da4b5bb69e9da51def61b353f94c533cb61d45fdc9ca151fa359dfa1c"
+    },
+    {
+      "path": "apps/web/lib/supabase-rest-client.ts",
+      "bytes": 5139,
+      "sha256": "a53ef5aaa3bb2436032c5cbab50b15e54d86c9be47600b957208bb6479f1ad27"
+    },
+    {
+      "path": "apps/web/lib/verified-review-count-rows.ts",
+      "bytes": 2693,
+      "sha256": "3a31a9ad9b60d3916b8244af94b1c423b2fd2d00ebc6c7ac4f4992162b752af3"
+    },
+    {
+      "path": "apps/web/lib/youtube-url.ts",
+      "bytes": 3682,
+      "sha256": "2dfac7f47bd227540c89250229d1c9fc29eb2cdcdc0aad50e63144b783251faa"
+    },
+    {
+      "path": "apps/web/next.config.mjs",
+      "bytes": 15007,
+      "sha256": "f70c9fa51483a25863a297cae57c3abde09a634a15dfb0b76e1c81ed96cff41b"
+    },
+    {
+      "path": "apps/web/package.json",
+      "bytes": 7264,
+      "sha256": "d697463db2081c6df8b0419d0aa14e12f8bc1c797529d9c49be25926be0706ac"
+    },
+    {
+      "path": "apps/web/scripts/build-public-popularity.ts",
+      "bytes": 4439,
+      "sha256": "a6f71ce2fea76bc1183b09961cc153d97bf8d9970f87fed1ae49414893212dcd"
+    },
+    {
+      "path": "apps/web/scripts/publish-evidence-frames.ts",
+      "bytes": 5449,
+      "sha256": "296ac93773968dda8b5daa8a8166ff234e782acbc31f8a9b178910221babee99"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-engineering-remaining.test.ts",
+      "bytes": 19974,
+      "sha256": "e41d63cfbea9daa58c0636d1a7babc372999ebd6611378ab23d009c7f3b40b41"
+    },
+    {
+      "path": "apps/web/tests-unit/evidence-publication-runtime.test.ts",
+      "bytes": 6477,
+      "sha256": "f6b6692b887d5cffd5b33f128a6fd2218fae4513dd6d9dee12b998a8fc161cd9"
+    },
+    {
+      "path": "apps/web/tests-unit/naver-map-marker-visuals.test.ts",
+      "bytes": 6406,
+      "sha256": "0a99f600f7ba9b3e7bacf8b8b582f2ed8dcbd2f57ba5012b8a73334993d6bf0e"
+    },
+    {
+      "path": "apps/web/tests-unit/overseas-map-marker-helpers.test.ts",
+      "bytes": 4062,
+      "sha256": "99ec55d3e30a219806a217db9d2390660d4e685ecf8651b622fcd9c66472f94a"
+    },
+    {
+      "path": "apps/web/tests-unit/public-popularity-publication.test.ts",
+      "bytes": 12531,
+      "sha256": "6c552c1224825bb577e2d862acb4be325426064793e616e3981f19157c3933bb"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "bytes": 1368,
+      "sha256": "cdbd2b57d55c77ea1ef2b81124b7007fec7df15d55cc917c8c9eca5704234c49"
+    },
+    {
+      "path": "apps/web/types/restaurant.ts",
+      "bytes": 3942,
+      "sha256": "ef43ac1b93a751cb03fed1fcabecacf21d245e0b54f47a66dd67639c34ebd94b"
+    }
+  ],
+  "source_bytes": 704328,
+  "state": "prepared_only"
+}

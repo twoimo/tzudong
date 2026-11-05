@@ -1,0 +1,1347 @@
+import { describe, expect, test } from 'bun:test';
+import {
+  DurableReceiptOcrCapabilityHeldError,
+  DurableReceiptOcrPendingError,
+  type DurableReceiptOcrBinding,
+  type DurableReceiptOcrPayload,
+  type DurableReceiptOcrStore,
+  buildDurableReceiptOcrPayload,
+  buildOcrInputContextHash,
+  createSupabaseDurableReceiptOcrStore,
+  createSupabaseRecoveryBoundReceiptOcrStore,
+  executeDurableReceiptOcr,
+  hasDurableOcrReviewResult,
+  pollDurableReceiptOcrResult,
+  RECEIPT_OCR_CREDENTIAL_RELEASE_CAPABILITY_VERSION,
+  RECEIPT_OCR_DEFAULT_GENERATION,
+} from '@/lib/ocr/durable-result';
+import {
+  callGeminiReceiptOcrWithCredentialFallback,
+  GeminiOcrError,
+  getGeminiOcrInferenceConfigSnapshot,
+} from '@/lib/ocr/gemini';
+import { buildReceiptOcrEnvelope, RECEIPT_OCR_NORMALIZATION_VERSION } from '@/lib/ocr/receipt-normalization';
+import { ReviewSaveOperation } from '@/lib/reviews/review-save-operation';
+import { buildReviewPhotoObjectPath } from '@/lib/review-photo-url';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const USER_A = '00000000-0000-4000-8000-000000000001';
+const USER_B = '00000000-0000-4000-8000-000000000002';
+
+function binding(overrides: Partial<DurableReceiptOcrBinding> = {}): DurableReceiptOcrBinding {
+  return {
+    userId: USER_A,
+    imageHash: 'a'.repeat(64),
+    inputContextHash: 'b'.repeat(64),
+    provider: 'gemini',
+    modelPolicy: ['gemini-3.6-flash'],
+    generation: RECEIPT_OCR_DEFAULT_GENERATION,
+    promptVersion: 'receipt-extraction-v2',
+    preprocessVersion: 'receipt-image-v3',
+    normalizationVersion: RECEIPT_OCR_NORMALIZATION_VERSION,
+    ...overrides,
+  };
+}
+
+function payload(model = 'gemini-3.6-flash', normalizationVersion = RECEIPT_OCR_NORMALIZATION_VERSION): DurableReceiptOcrPayload {
+  return {
+    ...buildDurableReceiptOcrPayload({
+    provider: 'gemini',
+    model,
+    envelope: buildReceiptOcrEnvelope({
+      provider: 'gemini',
+      model,
+      attempts: [{ model, ok: true, elapsedMs: 1 }],
+      data: {
+        store_name: '테스트 식당',
+        date: '2026-10-13',
+        time: '12:34',
+        total_amount: 12300,
+        items: [{ name: '비빔밥', price: 12300 }],
+        confidence: 0.98,
+      },
+    }),
+    }),
+    normalization_version: normalizationVersion,
+  };
+}
+
+function fingerprint(value: DurableReceiptOcrBinding): string {
+  return JSON.stringify([
+    value.userId, value.imageHash, value.inputContextHash, value.provider, value.modelPolicy, value.generation,
+    value.promptVersion, value.preprocessVersion, value.normalizationVersion,
+  ]);
+}
+
+function fakeStore(): DurableReceiptOcrStore {
+  const rows = new Map<string, {
+    resultRef: string;
+    claimToken: string | null;
+    status: 'processing' | 'succeeded' | 'indeterminate';
+    dispatchStage: 'reserved' | 'possibly_dispatched' | 'completed' | 'uncertain';
+    payload?: DurableReceiptOcrPayload;
+    resultRevision?: string;
+  }>();
+  const credentialRejectionReleases = new Set<string>();
+  let sequence = 1;
+  return {
+    async assertDefinitiveCredentialReleaseReady() {},
+    async claim(input) {
+      const key = fingerprint(input);
+      let row = rows.get(key);
+      if (!row) {
+        const suffix = String(sequence++).padStart(12, '0');
+        row = {
+          resultRef: `10000000-0000-4000-8000-${suffix}`,
+          claimToken: input.operationId,
+          status: 'processing',
+          dispatchStage: 'reserved',
+        };
+        rows.set(key, row);
+        return { status: 'claimed', resultRef: row.resultRef, claimToken: input.operationId };
+      }
+      if (row.status === 'succeeded' && (!input.forceRefresh || row.dispatchStage === 'uncertain')) {
+        return {
+          status: 'cached',
+          resultRef: row.resultRef,
+          resultRevision: row.resultRevision!,
+          payload: row.payload!,
+        };
+      }
+      if (row.status === 'processing') {
+        if (input.forceRefresh && row.dispatchStage === 'reserved') {
+          row.claimToken = input.operationId;
+          return { status: 'claimed', resultRef: row.resultRef, claimToken: input.operationId };
+        }
+        if (input.forceRefresh && row.dispatchStage === 'possibly_dispatched') {
+          row.status = row.payload ? 'succeeded' : 'indeterminate';
+          row.dispatchStage = 'uncertain';
+          row.claimToken = null;
+          return row.payload
+            ? {
+                status: 'cached',
+                resultRef: row.resultRef,
+                resultRevision: row.resultRevision!,
+                payload: row.payload,
+              }
+            : { status: 'indeterminate', resultRef: row.resultRef };
+        }
+        return { status: 'processing', resultRef: row.resultRef };
+      }
+      if (row.status === 'indeterminate' || !input.forceRefresh) return { status: 'indeterminate', resultRef: row.resultRef };
+      row.status = 'processing';
+      row.dispatchStage = 'reserved';
+      row.claimToken = input.operationId;
+      return { status: 'claimed', resultRef: row.resultRef, claimToken: input.operationId };
+    },
+    async markDispatched(input) {
+      const row = rows.get(fingerprint(input.binding));
+      if (!row || row.resultRef !== input.resultRef || row.claimToken !== input.claimToken || row.status !== 'processing') throw new Error('claim mismatch');
+      if (row.dispatchStage === 'reserved') row.dispatchStage = 'possibly_dispatched';
+      if (row.dispatchStage !== 'possibly_dispatched') throw new Error('dispatch mismatch');
+    },
+    async complete(input) {
+      const row = rows.get(fingerprint(input.binding));
+      if (!row || row.resultRef !== input.resultRef || row.claimToken !== input.claimToken || row.status !== 'processing' || row.dispatchStage !== 'possibly_dispatched') throw new Error('claim mismatch');
+      row.status = 'succeeded';
+      row.dispatchStage = 'completed';
+      row.claimToken = null;
+      row.payload = input.payload;
+      row.resultRevision = crypto.randomUUID();
+      return row.resultRevision;
+    },
+    async markIndeterminate(input) {
+      const row = rows.get(fingerprint(input.binding));
+      if (!row || row.resultRef !== input.resultRef || row.claimToken !== input.claimToken || row.status !== 'processing' || row.dispatchStage !== 'possibly_dispatched') throw new Error('claim mismatch');
+      row.status = row.payload ? 'succeeded' : 'indeterminate';
+      row.dispatchStage = 'uncertain';
+      row.claimToken = null;
+    },
+    async releaseDefinitiveCredentialRejection(input) {
+      const releaseKey = `${input.resultRef}:${input.claimToken}`;
+      if (credentialRejectionReleases.has(releaseKey)) return;
+      const key = fingerprint(input.binding);
+      const row = rows.get(key);
+      if (!row || row.resultRef !== input.resultRef || row.claimToken !== input.claimToken
+        || row.status !== 'processing' || row.dispatchStage !== 'possibly_dispatched') {
+        throw new Error('claim mismatch');
+      }
+      credentialRejectionReleases.add(releaseKey);
+      if (row.payload) {
+        row.status = 'succeeded';
+        row.dispatchStage = 'completed';
+        row.claimToken = null;
+      } else {
+        rows.delete(key);
+      }
+    },
+    async release(input) {
+      const key = fingerprint(input.binding);
+      const row = rows.get(key);
+      if (!row || row.resultRef !== input.resultRef || row.claimToken !== input.claimToken || row.status !== 'processing' || row.dispatchStage !== 'reserved') throw new Error('claim mismatch');
+      if (row.payload) {
+        row.status = 'succeeded';
+        row.dispatchStage = 'completed';
+        row.claimToken = null;
+      } else {
+        rows.delete(key);
+      }
+    },
+    async read(input) {
+      const row = rows.get(fingerprint(input));
+      if (!row) return { status: 'not_found' };
+      if (row.status === 'succeeded') return {
+        status: 'succeeded',
+        resultRef: row.resultRef,
+        resultRevision: row.resultRevision!,
+        payload: row.payload!,
+      };
+      return { status: row.status, resultRef: row.resultRef };
+    },
+  };
+}
+
+function gate() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+type MixedProviderCall = { credential: string; model: string };
+
+function installResponseThenCredentialProvider(calls: MixedProviderCall[]) {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const model = new URL(request.url).pathname.split('/').at(-1)!.replace(':generateContent', '');
+    calls.push({
+      credential: request.headers.get('x-goog-api-key') ?? '',
+      model,
+    });
+    if (model === 'model-a') {
+      return Response.json({
+        candidates: [{ content: { parts: [{ text: 'synthetic non-json response' }] } }],
+      });
+    }
+    if (model !== 'model-b') throw new Error('unexpected synthetic model dispatch');
+    return Response.json({
+      error: {
+        code: 400,
+        message: 'synthetic rejected credential',
+        status: 'INVALID_ARGUMENT',
+        details: [{
+          '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+          reason: 'API_KEY_INVALID',
+          domain: 'googleapis.com',
+        }],
+      },
+    }, { status: 400 });
+  }) as typeof fetch;
+  return () => { globalThis.fetch = originalFetch; };
+}
+
+function runResponseThenCredentialProvider() {
+  return callGeminiReceiptOcrWithCredentialFallback({
+    credentials: [
+      { apiKey: 'credential-primary-marker' },
+      { apiKey: 'credential-unused-marker' },
+    ],
+    imageBase64: 'AA==',
+    mimeType: 'image/png',
+    prompt: 'synthetic receipt',
+    env: { GEMINI_OCR_MODEL: 'model-a,model-b' } as NodeJS.ProcessEnv,
+  });
+}
+
+describe('durable receipt OCR execution', () => {
+  test('holds before claim, quota reservation, and provider dispatch when the recovery capability is unavailable', async () => {
+    const delegate = fakeStore();
+    let claims = 0;
+    let quotaReservations = 0;
+    let providerCalls = 0;
+    const store: DurableReceiptOcrStore = {
+      ...delegate,
+      async assertDefinitiveCredentialReleaseReady() {
+        throw new DurableReceiptOcrCapabilityHeldError();
+      },
+      async claim(input) {
+        claims++;
+        return delegate.claim(input);
+      },
+    };
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      beforeProvider: async () => { quotaReservations++; },
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toBeInstanceOf(DurableReceiptOcrCapabilityHeldError);
+    expect({ claims, quotaReservations, providerCalls }).toEqual({
+      claims: 0, quotaReservations: 0, providerCalls: 0,
+    });
+  });
+
+  test('accepts only the exact versioned recovery capability response', async () => {
+    const valid = {
+      schema_version: 1,
+      status: 'ready',
+      capability_version: RECEIPT_OCR_CREDENTIAL_RELEASE_CAPABILITY_VERSION,
+    };
+    const responses: Array<{ data: unknown; error: unknown; accepted: boolean }> = [
+      { data: valid, error: null, accepted: true },
+      { data: null, error: { code: 'missing' }, accepted: false },
+      { data: { ...valid, status: 'held' }, error: null, accepted: false },
+      { data: { ...valid, schema_version: 2 }, error: null, accepted: false },
+      {
+        data: { ...valid, capability_version: 'receipt-ocr-definitive-credential-release-v1' },
+        error: null,
+        accepted: false,
+      },
+      { data: { ...valid, capability_version: 'other' }, error: null, accepted: false },
+      { data: { ...valid, extra: true }, error: null, accepted: false },
+    ];
+    for (const response of responses) {
+      const store = createSupabaseDurableReceiptOcrStore({ rpc: async () => response });
+      if (response.accepted) {
+        await expect(store.assertDefinitiveCredentialReleaseReady()).resolves.toBeUndefined();
+      } else {
+        await expect(store.assertDefinitiveCredentialReleaseReady())
+          .rejects.toBeInstanceOf(DurableReceiptOcrCapabilityHeldError);
+      }
+    }
+  });
+
+  test('normalizes a throwing capability RPC to held before claim, quota, or provider work', async () => {
+    const rpcCalls: string[] = [];
+    let quotaReservations = 0;
+    let providerCalls = 0;
+    const store = createSupabaseDurableReceiptOcrStore({
+      async rpc(name) {
+        rpcCalls.push(name);
+        throw new Error('synthetic capability transport failure');
+      },
+    });
+
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      beforeProvider: async () => { quotaReservations++; },
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toBeInstanceOf(DurableReceiptOcrCapabilityHeldError);
+    expect(rpcCalls).toEqual(['get_receipt_ocr_credential_release_capability']);
+    expect(quotaReservations).toBe(0);
+    expect(providerCalls).toBe(0);
+  });
+
+  test('routes a recovery claim only through the operation-bound RPC', async () => {
+    const recoveryOperationId = '30000000-0000-4000-8000-000000000001';
+    const claimToken = '30000000-0000-4000-8000-000000000002';
+    const resultRef = '30000000-0000-4000-8000-000000000003';
+    const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    const store = createSupabaseRecoveryBoundReceiptOcrStore({
+      async rpc(name, args) {
+        calls.push({ name, args: args as Record<string, unknown> });
+        return { data: { status: 'claimed', result_ref: resultRef, claim_token: claimToken }, error: null };
+      },
+    }, recoveryOperationId);
+
+    await expect(store.claim({
+      ...binding(), operationId: claimToken, forceRefresh: false,
+    })).resolves.toMatchObject({ status: 'claimed', resultRef, claimToken });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.name).toBe('claim_receipt_ocr_recovery_result');
+    expect(calls[0]!.args.p_recovery_operation_id).toBe(recoveryOperationId);
+  });
+
+  test('requires an exact bounded definitive release reply', async () => {
+    const valid = {
+      status: 'released',
+      result_ref: '10000000-0000-4000-8000-000000000001',
+      disposition: 'deleted',
+      result_revision: null,
+      idempotent: false,
+    };
+    const responses = [
+      valid,
+      { ...valid, extra: true },
+      { ...valid, idempotent: 'false' },
+      { ...valid, result_revision: crypto.randomUUID() },
+      { ...valid, disposition: 'restored', result_revision: null },
+      { ...valid, disposition: 'restored', result_revision: crypto.randomUUID() },
+    ];
+    for (const [index, data] of responses.entries()) {
+      const store = createSupabaseDurableReceiptOcrStore({ rpc: async () => ({ data, error: null }) });
+      const release = store.releaseDefinitiveCredentialRejection({
+        binding: binding(),
+        resultRef: valid.result_ref,
+        claimToken: '10000000-0000-4000-8000-000000000002',
+      });
+      if (index === 0 || index === responses.length - 1) {
+        await expect(release).resolves.toBeUndefined();
+      } else {
+        await expect(release).rejects.toThrow('OCR_RESULT_PERSISTENCE_FAILED');
+      }
+    }
+  });
+
+  test('calls the funded provider once, then reuses the verified result without consuming another call', async () => {
+    const store = fakeStore();
+    let providerCalls = 0;
+    let quotaReservations = 0;
+    const run = () => executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      beforeProvider: async () => { quotaReservations++; },
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+
+    const first = await run();
+    const reused = await run();
+    expect(first.cacheReused).toBe(false);
+    expect(reused.cacheReused).toBe(true);
+    expect(reused.resultRef).toBe(first.resultRef);
+    expect(reused.resultRevision).toBe(first.resultRevision);
+    expect(providerCalls).toBe(1);
+    expect(quotaReservations).toBe(1);
+  });
+
+  test('reuses identical inference settings, but misses when the effective thinking level changes', async () => {
+    const store = fakeStore();
+    const imageHash = 'c'.repeat(64);
+    const mediumConfig = getGeminiOcrInferenceConfigSnapshot({
+      GEMINI_OCR_THINKING_LEVEL: 'medium',
+    } as NodeJS.ProcessEnv);
+    const highConfig = getGeminiOcrInferenceConfigSnapshot({
+      GEMINI_OCR_THINKING_LEVEL: 'high',
+    } as NodeJS.ProcessEnv);
+    const contextHash = (config: typeof mediumConfig) => buildOcrInputContextHash(imageHash, null, config);
+    const mediumBinding = binding({ imageHash, inputContextHash: contextHash(mediumConfig) });
+    const highBinding = binding({ imageHash, inputContextHash: contextHash(highConfig) });
+    let providerCalls = 0;
+    const run = (durableBinding: DurableReceiptOcrBinding) => executeDurableReceiptOcr({
+      store,
+      binding: durableBinding,
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+
+    const first = await run(mediumBinding);
+    const samePolicy = await run(mediumBinding);
+    const changedPolicy = await run(highBinding);
+
+    expect(contextHash(mediumConfig)).toBe(contextHash(getGeminiOcrInferenceConfigSnapshot({
+      GEMINI_OCR_THINKING_LEVEL: 'MEDIUM',
+    } as NodeJS.ProcessEnv)));
+    expect(contextHash(highConfig)).not.toBe(contextHash(mediumConfig));
+    expect(first.cacheReused).toBe(false);
+    expect(samePolicy.cacheReused).toBe(true);
+    expect(changedPolicy.cacheReused).toBe(false);
+    expect(changedPolicy.resultRef).not.toBe(first.resultRef);
+    expect(providerCalls).toBe(2);
+
+    const statusRead = await pollDurableReceiptOcrResult({
+      store,
+      binding: mediumBinding,
+      attempts: 1,
+    });
+    expect(statusRead.status).toBe('succeeded');
+    expect(providerCalls).toBe(2);
+  });
+
+  test('binds the ordered model policy while preserving the actual fallback response model', async () => {
+    const store = fakeStore();
+    const policyBinding = binding({ modelPolicy: ['gemini-primary', 'gemini-fallback'] });
+    const first = await executeDurableReceiptOcr({
+      store,
+      binding: policyBinding,
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => payload('gemini-fallback'),
+    });
+    expect(first.payload.model).toBe('gemini-fallback');
+    expect((await store.read(policyBinding))).toMatchObject({
+      status: 'succeeded',
+      resultRef: first.resultRef,
+      resultRevision: first.resultRevision,
+      payload: { model: 'gemini-fallback' },
+    });
+    const reused = await executeDurableReceiptOcr({
+      store,
+      binding: policyBinding,
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { throw new Error('unexpected_provider_call'); },
+    });
+    expect(reused.cacheReused).toBe(true);
+  });
+
+  test('bounded owner-scoped readback receives a committed result without another claim or provider call', async () => {
+    const expected = payload('gemini-fallback');
+    const states = [
+      { status: 'not_found' as const },
+      { status: 'processing' as const, resultRef: '10000000-0000-4000-8000-000000000001' },
+      {
+        status: 'succeeded' as const,
+        resultRef: '10000000-0000-4000-8000-000000000001',
+        resultRevision: '20000000-0000-4000-8000-000000000001',
+        payload: expected,
+      },
+    ];
+    let reads = 0;
+    let waits = 0;
+    const result = await pollDurableReceiptOcrResult({
+      store: { read: async () => states[reads++] ?? states.at(-1)! },
+      binding: binding({ modelPolicy: ['gemini-primary', 'gemini-fallback'] }),
+      attempts: 4,
+      wait: async () => { waits++; },
+    });
+    expect(result).toEqual(states[2]);
+    expect(reads).toBe(3);
+    expect(waits).toBe(2);
+  });
+
+  test('bounded readback never turns processing or missing state into a claim', async () => {
+    for (const status of ['not_found', 'processing'] as const) {
+      let reads = 0;
+      const result = await pollDurableReceiptOcrResult({
+        store: { read: async () => {
+          reads++;
+          return status === 'processing'
+            ? { status, resultRef: '10000000-0000-4000-8000-000000000001' }
+            : { status };
+        } },
+        binding: binding(),
+        attempts: 4,
+      });
+      expect(result.status).toBe(status);
+      expect(reads).toBe(4);
+    }
+  });
+
+  test('admits one provider call for concurrent duplicate requests', async () => {
+    const store = fakeStore();
+    const entered = gate();
+    const finish = gate();
+    let providerCalls = 0;
+    const first = executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => {
+        providerCalls++;
+        entered.resolve();
+        await finish.promise;
+        return payload();
+      },
+    });
+    await entered.promise;
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toMatchObject({ state: 'processing' } satisfies Partial<DurableReceiptOcrPendingError>);
+    finish.resolve();
+    await first;
+    expect(providerCalls).toBe(1);
+  });
+
+  test('does not reuse across owner, input, model, prompt, preprocess or normalization boundaries', async () => {
+    const store = fakeStore();
+    let providerCalls = 0;
+    for (const bound of [
+      binding(),
+      binding({ userId: USER_B }),
+      binding({ imageHash: 'c'.repeat(64) }),
+      binding({ inputContextHash: 'd'.repeat(64) }),
+      binding({ modelPolicy: ['gemini-next'] }),
+      binding({ generation: '00000000-0000-4000-8000-000000000099' }),
+      binding({ promptVersion: 'receipt-extraction-v3' }),
+      binding({ preprocessVersion: 'receipt-image-v4' }),
+      binding({ normalizationVersion: 'receipt-normalization-v2' }),
+    ]) {
+      await executeDurableReceiptOcr({
+        store,
+        binding: bound,
+        operationId: crypto.randomUUID(),
+        forceRefresh: false,
+        runProvider: async () => { providerCalls++; return payload(bound.modelPolicy[0], bound.normalizationVersion); },
+      });
+    }
+    expect(providerCalls).toBe(9);
+  });
+
+  test('keeps an uncertain provider call non-retryable even when force refresh is requested', async () => {
+    const store = fakeStore();
+    let providerCalls = 0;
+    const first = () => executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; throw new Error('synthetic lost response'); },
+    });
+    await expect(first()).rejects.toThrow('synthetic lost response');
+    await expect(first()).rejects.toMatchObject({ state: 'indeterminate' } satisfies Partial<DurableReceiptOcrPendingError>);
+    expect(providerCalls).toBe(1);
+
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toMatchObject({ state: 'indeterminate' } satisfies Partial<DurableReceiptOcrPendingError>);
+    expect(providerCalls).toBe(1);
+  });
+
+  test('marks a no-payload mixed model result indeterminate without credential release', async () => {
+    const delegate = fakeStore();
+    let markIndeterminateCalls = 0;
+    let credentialReleaseCalls = 0;
+    const store: DurableReceiptOcrStore = {
+      ...delegate,
+      async markIndeterminate(input) {
+        markIndeterminateCalls++;
+        await delegate.markIndeterminate(input);
+      },
+      async releaseDefinitiveCredentialRejection(input) {
+        credentialReleaseCalls++;
+        await delegate.releaseDefinitiveCredentialRejection(input);
+      },
+    };
+    const calls: MixedProviderCall[] = [];
+    const restoreFetch = installResponseThenCredentialProvider(calls);
+    const bound = binding({ modelPolicy: ['model-a', 'model-b'] });
+
+    try {
+      await expect(executeDurableReceiptOcr({
+        store,
+        binding: bound,
+        operationId: crypto.randomUUID(),
+        forceRefresh: false,
+        runProvider: runResponseThenCredentialProvider,
+      })).rejects.toMatchObject({ definitiveCredentialRejection: false });
+    } finally {
+      restoreFetch();
+    }
+
+    expect(calls).toEqual([
+      { credential: 'credential-primary-marker', model: 'model-a' },
+      { credential: 'credential-primary-marker', model: 'model-b' },
+    ]);
+    expect(credentialReleaseCalls).toBe(0);
+    expect(markIndeterminateCalls).toBe(1);
+    expect(await store.read(bound)).toMatchObject({ status: 'indeterminate' });
+  });
+
+  test('preserves a verified payload after a mixed model force refresh without credential release', async () => {
+    const delegate = fakeStore();
+    let markIndeterminateCalls = 0;
+    let credentialReleaseCalls = 0;
+    const store: DurableReceiptOcrStore = {
+      ...delegate,
+      async markIndeterminate(input) {
+        markIndeterminateCalls++;
+        await delegate.markIndeterminate(input);
+      },
+      async releaseDefinitiveCredentialRejection(input) {
+        credentialReleaseCalls++;
+        await delegate.releaseDefinitiveCredentialRejection(input);
+      },
+    };
+    const bound = binding({ modelPolicy: ['model-a', 'model-b'] });
+    const originalPayload = payload('model-a');
+    const original = await executeDurableReceiptOcr({
+      store,
+      binding: bound,
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => originalPayload,
+    });
+    const calls: MixedProviderCall[] = [];
+    const restoreFetch = installResponseThenCredentialProvider(calls);
+
+    try {
+      await expect(executeDurableReceiptOcr({
+        store,
+        binding: bound,
+        operationId: crypto.randomUUID(),
+        forceRefresh: true,
+        runProvider: runResponseThenCredentialProvider,
+      })).rejects.toMatchObject({ definitiveCredentialRejection: false });
+    } finally {
+      restoreFetch();
+    }
+
+    expect(calls).toEqual([
+      { credential: 'credential-primary-marker', model: 'model-a' },
+      { credential: 'credential-primary-marker', model: 'model-b' },
+    ]);
+    expect(credentialReleaseCalls).toBe(0);
+    expect(markIndeterminateCalls).toBe(1);
+    expect(await store.read(bound)).toEqual({
+      status: 'succeeded',
+      resultRef: original.resultRef,
+      resultRevision: original.resultRevision,
+      payload: originalPayload,
+    });
+
+    let retryProviderCalls = 0;
+    const blockedRetry = await executeDurableReceiptOcr({
+      store,
+      binding: bound,
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      runProvider: async () => { retryProviderCalls++; return payload('model-b'); },
+    });
+    expect(blockedRetry).toMatchObject({
+      cacheReused: true,
+      resultRef: original.resultRef,
+      resultRevision: original.resultRevision,
+      payload: originalPayload,
+    });
+    expect(retryProviderCalls).toBe(0);
+  });
+
+  test('releases only a typed definitive credential exhaustion so a repaired credential can retry', async () => {
+    const store = fakeStore();
+    let providerCalls = 0;
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => {
+        providerCalls++;
+        throw new GeminiOcrError([], true);
+      },
+    })).rejects.toMatchObject({ definitiveCredentialRejection: true });
+    expect(await store.read(binding())).toEqual({ status: 'not_found' });
+
+    const repaired = await executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+    expect(repaired.cacheReused).toBe(false);
+    expect(providerCalls).toBe(2);
+  });
+
+  test('does not trust an arbitrary credential rejection sentinel', async () => {
+    const store = fakeStore();
+    const untrusted = Object.assign(new Error('synthetic untrusted sentinel'), {
+      definitiveCredentialRejection: true,
+    });
+    let providerCalls = 0;
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; throw untrusted; },
+    })).rejects.toBe(untrusted);
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toMatchObject({ state: 'indeterminate' } satisfies Partial<DurableReceiptOcrPendingError>);
+    expect(providerCalls).toBe(1);
+  });
+
+  test('fails closed when the definitive credential release RPC is unavailable', async () => {
+    const delegate = fakeStore();
+    const store: DurableReceiptOcrStore = {
+      ...delegate,
+      async releaseDefinitiveCredentialRejection() {
+        throw new Error('synthetic successor unavailable');
+      },
+    };
+    let providerCalls = 0;
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; throw new GeminiOcrError([], true); },
+    })).rejects.toMatchObject({ definitiveCredentialRejection: true });
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toMatchObject({ state: 'indeterminate' } satisfies Partial<DurableReceiptOcrPendingError>);
+    expect(providerCalls).toBe(1);
+  });
+
+  test('allows retry after a committed definitive release acknowledgement is lost', async () => {
+    const delegate = fakeStore();
+    let loseReleaseAck = true;
+    const store: DurableReceiptOcrStore = {
+      ...delegate,
+      async releaseDefinitiveCredentialRejection(input) {
+        await delegate.releaseDefinitiveCredentialRejection(input);
+        if (loseReleaseAck) {
+          loseReleaseAck = false;
+          throw new Error('synthetic release ACK loss');
+        }
+      },
+    };
+    let providerCalls = 0;
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; throw new GeminiOcrError([], true); },
+    })).rejects.toMatchObject({ definitiveCredentialRejection: true });
+
+    await executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+    expect(providerCalls).toBe(2);
+  });
+
+  test('restores the last verified payload and revision after a definitive refresh rejection', async () => {
+    const store = fakeStore();
+    let providerCalls = 0;
+    const original = await executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      runProvider: async () => { providerCalls++; throw new GeminiOcrError([], true); },
+    })).rejects.toMatchObject({ definitiveCredentialRejection: true });
+
+    const restored = await executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+    expect(restored.cacheReused).toBe(true);
+    expect(restored.resultRef).toBe(original.resultRef);
+    expect(restored.resultRevision).toBe(original.resultRevision);
+    expect(providerCalls).toBe(2);
+  });
+
+  test('supports repeated rejected refreshes while a stale release replay cannot overwrite the new claim', async () => {
+    const delegate = fakeStore();
+    const releaseInputs: Array<{
+      binding: DurableReceiptOcrBinding;
+      resultRef: string;
+      claimToken: string;
+    }> = [];
+    const store: DurableReceiptOcrStore = {
+      ...delegate,
+      async releaseDefinitiveCredentialRejection(input) {
+        releaseInputs.push(input);
+        await delegate.releaseDefinitiveCredentialRejection(input);
+      },
+    };
+    const original = await executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => payload(),
+    });
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await expect(executeDurableReceiptOcr({
+        store,
+        binding: binding(),
+        operationId: crypto.randomUUID(),
+        forceRefresh: true,
+        runProvider: async () => { throw new GeminiOcrError([], true); },
+      })).rejects.toMatchObject({ definitiveCredentialRejection: true });
+    }
+    expect(releaseInputs).toHaveLength(2);
+    expect(releaseInputs[0].resultRef).toBe(original.resultRef);
+    expect(releaseInputs[1].resultRef).toBe(original.resultRef);
+    expect(releaseInputs[1].claimToken).not.toBe(releaseInputs[0].claimToken);
+
+    const active = await store.claim({
+      ...binding(), operationId: crypto.randomUUID(), forceRefresh: true,
+    });
+    expect(active.status).toBe('claimed');
+    if (active.status !== 'claimed') throw new Error('fixture claim failed');
+    await store.markDispatched({
+      binding: binding(), resultRef: active.resultRef, claimToken: active.claimToken,
+    });
+
+    await store.releaseDefinitiveCredentialRejection(releaseInputs[0]);
+    const replacement = payload();
+    const replacementRevision = await store.complete({
+      binding: binding(),
+      resultRef: active.resultRef,
+      claimToken: active.claimToken,
+      payload: replacement,
+    });
+    expect(replacementRevision).not.toBe(original.resultRevision);
+    expect(await store.read(binding())).toMatchObject({
+      status: 'succeeded',
+      resultRef: original.resultRef,
+      resultRevision: replacementRevision,
+    });
+  });
+
+  test('recovers only an explicitly forced reservation that was durably undispatched', async () => {
+    const store = fakeStore();
+    const abandoned = await store.claim({
+      ...binding(), operationId: '10000000-0000-4000-8000-000000000091', forceRefresh: false,
+    });
+    expect(abandoned.status).toBe('claimed');
+    let providerCalls = 0;
+    const recovered = await executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: '10000000-0000-4000-8000-000000000092',
+      forceRefresh: true,
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+    expect(recovered.cacheReused).toBe(false);
+    expect(providerCalls).toBe(1);
+    if (abandoned.status === 'claimed') {
+      await expect(store.markDispatched({
+        binding: binding(), resultRef: abandoned.resultRef, claimToken: abandoned.claimToken,
+      })).rejects.toThrow('claim mismatch');
+    }
+  });
+
+  test('turns a possibly dispatched abandoned claim uncertain without replaying it', async () => {
+    const store = fakeStore();
+    const abandoned = await store.claim({
+      ...binding(), operationId: '10000000-0000-4000-8000-000000000093', forceRefresh: false,
+    });
+    expect(abandoned.status).toBe('claimed');
+    if (abandoned.status !== 'claimed') throw new Error('fixture claim failed');
+    await store.markDispatched({
+      binding: binding(), resultRef: abandoned.resultRef, claimToken: abandoned.claimToken,
+    });
+    let providerCalls = 0;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await expect(executeDurableReceiptOcr({
+        store,
+        binding: binding(),
+        operationId: crypto.randomUUID(),
+        forceRefresh: true,
+        runProvider: async () => { providerCalls++; return payload(); },
+      })).rejects.toMatchObject({ state: 'indeterminate' } satisfies Partial<DurableReceiptOcrPendingError>);
+    }
+    expect(providerCalls).toBe(0);
+  });
+
+  test('does not call the provider when dispatch-stage acknowledgement is lost', async () => {
+    const delegate = fakeStore();
+    let loseDispatchAck = true;
+    const store: DurableReceiptOcrStore = {
+      ...delegate,
+      async markDispatched(input) {
+        await delegate.markDispatched(input);
+        if (loseDispatchAck) {
+          loseDispatchAck = false;
+          throw new Error('synthetic dispatch ACK loss');
+        }
+      },
+    };
+    let providerCalls = 0;
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toThrow('synthetic dispatch ACK loss');
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toMatchObject({ state: 'indeterminate' } satisfies Partial<DurableReceiptOcrPendingError>);
+    expect(providerCalls).toBe(0);
+  });
+
+  test('reuses a committed result after completion acknowledgement loss with one provider call', async () => {
+    const delegate = fakeStore();
+    let loseCompletionAck = true;
+    const store: DurableReceiptOcrStore = {
+      ...delegate,
+      async complete(input) {
+        const resultRevision = await delegate.complete(input);
+        if (loseCompletionAck) {
+          loseCompletionAck = false;
+          throw new Error('synthetic completion ACK loss');
+        }
+        return resultRevision;
+      },
+    };
+    let providerCalls = 0;
+    const run = () => executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+    await expect(run()).rejects.toThrow('synthetic completion ACK loss');
+    expect((await run()).cacheReused).toBe(true);
+    expect(providerCalls).toBe(1);
+  });
+
+  test('rejects tab A revision after tab B force-refreshes the same result reference', async () => {
+    const store = fakeStore();
+    const tabA = await executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => payload(),
+    });
+    const replacement = payload();
+    replacement.normalized = { ...replacement.normalized, total_amount: 45600 };
+    const tabB = await executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      runProvider: async () => replacement,
+    });
+
+    expect(tabB.resultRef).toBe(tabA.resultRef);
+    expect(tabB.resultRevision).not.toBe(tabA.resultRevision);
+    const saveAgainstCurrentRevision = (revision: string) => {
+      if (revision !== tabB.resultRevision) throw new Error('receipt_ocr_result_stale');
+      return replacement.normalized.total_amount;
+    };
+    expect(() => saveAgainstCurrentRevision(tabA.resultRevision)).toThrow('receipt_ocr_result_stale');
+    expect(saveAgainstCurrentRevision(tabB.resultRevision)).toBe(45600);
+  });
+
+  test('keeps the last verified result when a forced replacement fails before or after provider dispatch', async () => {
+    const store = fakeStore();
+    let providerCalls = 0;
+    const runNormal = () => executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: false,
+      runProvider: async () => { providerCalls++; return payload(); },
+    });
+    const original = await runNormal();
+
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      beforeProvider: async () => { throw new Error('synthetic quota unavailable'); },
+      runProvider: async () => { providerCalls++; return payload(); },
+    })).rejects.toThrow('synthetic quota unavailable');
+    expect((await runNormal()).resultRef).toBe(original.resultRef);
+    expect(providerCalls).toBe(1);
+
+    await expect(executeDurableReceiptOcr({
+      store,
+      binding: binding(),
+      operationId: crypto.randomUUID(),
+      forceRefresh: true,
+      runProvider: async () => { providerCalls++; throw new Error('synthetic lost refresh response'); },
+    })).rejects.toThrow('synthetic lost refresh response');
+    expect((await runNormal()).resultRef).toBe(original.resultRef);
+    expect(providerCalls).toBe(2);
+  });
+
+  test('rejects a tampered cached payload before it reaches the review flow', async () => {
+    const valid = payload();
+    const tamperedPayloads = [
+      { ...valid, provider: 'other-provider' },
+      { ...valid, model: 'gemini-other' },
+      { ...valid, normalization_version: 'receipt-normalization-other' },
+      { ...valid, normalized: { ...valid.normalized, raw_text: 'provider output' } },
+      { ...valid, normalized: { ...valid.normalized, store_name: 'x'.repeat(161) } },
+      {
+        ...valid,
+        field_trust: valid.field_trust.map((entry, index) => index === 0
+          ? { ...entry, rawValue: 'provider raw value' }
+          : entry),
+      },
+    ];
+    for (const resultPayload of tamperedPayloads) {
+      const store = createSupabaseDurableReceiptOcrStore({
+        rpc: async () => ({
+          error: null,
+          data: {
+            status: 'cached',
+            result_ref: '10000000-0000-4000-8000-000000000001',
+            result_revision: '20000000-0000-4000-8000-000000000001',
+            result_payload: resultPayload,
+          },
+        }),
+      });
+      await expect(store.claim({ ...binding(), operationId: crypto.randomUUID(), forceRefresh: false }))
+        .rejects.toThrow('OCR_RESULT_PERSISTENCE_FAILED');
+    }
+  });
+
+  test('persists only the bounded public receipt contract', () => {
+    const durable = buildDurableReceiptOcrPayload({
+      provider: 'gemini',
+      model: 'gemini-3.6-flash',
+      envelope: buildReceiptOcrEnvelope({
+        provider: 'gemini',
+        model: 'gemini-3.6-flash',
+        attempts: [{ model: 'gemini-3.6-flash', ok: true, elapsedMs: 25, error: 'must not persist' }],
+        data: {
+          store_name: '테스트 식당',
+          date: '2026-10-13',
+          time: '12:34',
+          total_amount: 12300,
+          category: '한식',
+          review_draft: '맛있게 먹은 메뉴를 확인해서 작성해주세요.',
+          items: [{ name: '비빔밥', price: 12300 }],
+          confidence: 0.98,
+        },
+      }),
+    });
+    expect(Object.keys(durable.normalized).sort()).toEqual([
+      'category', 'confidence', 'date', 'items', 'review_draft', 'store_name', 'time', 'total_amount',
+    ]);
+    expect(durable).not.toHaveProperty('raw');
+    expect(durable).not.toHaveProperty('attempts');
+    expect(durable.field_trust.every((entry) => !('rawValue' in entry) && !('normalizedValue' in entry))).toBe(true);
+  });
+
+  test('preserves an administrator-corrected receipt instead of scheduling another provider call', () => {
+    expect(hasDurableOcrReviewResult({
+      ocr_processed_at: '2026-10-13T10:00:00.000Z',
+      receipt_data: {
+        schema_version: 'receipt_summary_v1',
+        status: 'processed',
+        store_name: '관리자 교정 상호',
+        corrected_by_admin: true,
+      },
+    })).toBe(true);
+    expect(hasDurableOcrReviewResult({
+      ocr_processed_at: null,
+      receipt_data: { status: 'operator_corrected', store_name: '부분 교정 상호' },
+      receipt_hash: null,
+      is_duplicate: false,
+    })).toBe(true);
+    expect(hasDurableOcrReviewResult({
+      ocr_processed_at: null,
+      receipt_data: null,
+      receipt_hash: 'a'.repeat(64),
+      is_duplicate: false,
+    })).toBe(true);
+    expect(hasDurableOcrReviewResult({ ocr_processed_at: null, receipt_data: null })).toBe(false);
+    const adminProcessor = readFileSync(join(import.meta.dir, '../lib/ocr/admin-receipt-processor.ts'), 'utf8');
+    expect(adminProcessor).toContain('if (hasDurableOcrReviewResult(review))');
+    expect(adminProcessor).toContain('getReviewReceiptOcrGeneration(');
+    expect(adminProcessor).toContain('publishReviewReceiptOcrResult(');
+    expect(adminProcessor).toContain('forceRefresh: false');
+    expect(adminProcessor).not.toContain('.from(\'reviews\')\n        .update(update)');
+  });
+
+  test('binds an administrator reset to a fresh durable generation before processing', () => {
+    const migration = readFileSync(join(
+      import.meta.dir,
+      '../../../backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql',
+    ), 'utf8');
+    const adminProcessor = readFileSync(join(import.meta.dir, '../lib/ocr/admin-receipt-processor.ts'), 'utf8');
+
+    expect(migration).toContain('CREATE TRIGGER review_ocr_generation_on_reset');
+    expect(migration).toContain('EXECUTE FUNCTION ocr_private.register_review_ocr_generation()');
+    expect(adminProcessor.indexOf('getReviewReceiptOcrGeneration(')).toBeLessThan(
+      adminProcessor.indexOf('executeDurableReceiptOcr({'),
+    );
+    expect(adminProcessor).toContain('generation,');
+    expect(adminProcessor).toContain('forceRefresh: false');
+  });
+
+  test('serializes concurrent review saves and requires OCR reference readback', async () => {
+    const entered = gate();
+    const finish = gate();
+    let inserts = 0;
+    let saved = false;
+    const reviewId = '20000000-0000-4000-8000-000000000001';
+    const ocrResultRef = '30000000-0000-4000-8000-000000000001';
+    const ocrResultRevision = '30000000-0000-4000-8000-000000000002';
+    const ownerId = USER_A;
+    const restaurantId = '40000000-0000-4000-8000-000000000001';
+    const verification = buildReviewPhotoObjectPath({ ownerId, reviewId, purpose: 'verification' }, 'receipt.jpg')!;
+    const food = buildReviewPhotoObjectPath({ ownerId, reviewId, purpose: 'food' }, 'food.webp')!;
+    const operation = new ReviewSaveOperation({
+      currentOwner: () => ownerId,
+      newId: () => reviewId,
+      prepare: async () => [
+        { path: verification, purpose: 'verification', file: new File(['receipt'], 'receipt.jpg', { type: 'image/jpeg' }) },
+        { path: food, purpose: 'food', file: new File(['food'], 'food.webp', { type: 'image/webp' }) },
+      ],
+      upload: async () => ({ error: null }),
+      insert: async () => {
+        inserts++;
+        entered.resolve();
+        await finish.promise;
+        saved = true;
+        return { error: null };
+      },
+      read: async () => ({
+        error: null,
+        data: saved ? {
+          id: reviewId,
+          user_id: ownerId,
+          restaurant_id: restaurantId,
+          verification_photo: verification,
+          food_photos: [food],
+          receipt_data: { ocr_result_id: ocrResultRef, ocr_result_revision: ocrResultRevision },
+          ocr_processed_at: '2026-10-13T10:00:00.000Z',
+        } : null,
+      }),
+      cleanup: async () => true,
+    });
+    const draft = {
+      ownerId,
+      restaurantId,
+      title: '테스트 리뷰',
+      content: '동시 저장 테스트를 위한 충분히 긴 리뷰 내용입니다.',
+      visitedAt: '2026-10-13T12:34:00',
+      categories: ['한식'],
+      verificationPhoto: new File(['receipt'], 'receipt.jpg', { type: 'image/jpeg' }),
+      foodPhotos: [new File(['food'], 'food.webp', { type: 'image/webp' })],
+      ocrResultRef,
+      ocrResultRevision,
+    };
+    const first = operation.submit(draft);
+    await entered.promise;
+    expect(await operation.submit(draft)).toBe('blocked');
+    expect(inserts).toBe(1);
+    finish.resolve();
+    expect(await first).toBe('saved');
+  });
+
+  test('review save sends only an OCR result reference and revision while the server derives receipt fields', () => {
+    const modal = readFileSync(join(import.meta.dir, '../components/reviews/ReviewModal.tsx'), 'utf8');
+    const route = readFileSync(join(import.meta.dir, '../app/api/ocr/reviews/save/route.ts'), 'utf8');
+    expect(modal).toContain('ocrResultRef: draft.ocrResultRef');
+    expect(modal).toContain('ocrResultRevision: draft.ocrResultRevision');
+    expect(modal).not.toContain('receipt_data: data');
+    expect(route).toContain(".rpc('create_review_with_receipt_ocr");
+    expect(route).toContain('p_ocr_result_id: body.ocrResultRef');
+    expect(route).toContain('p_ocr_result_revision: body.ocrResultRevision');
+    expect(route).toContain('receiptData?.ocr_result_id !== body.ocrResultRef');
+    expect(route).toContain('receiptData?.ocr_result_revision !== body.ocrResultRevision');
+  });
+
+  test('migration keeps durable results private, version-bound and non-expiring on uncertainty', () => {
+    const migration = readFileSync(join(import.meta.dir, '../../../backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql'), 'utf8');
+    expect(migration).toContain('CREATE SCHEMA IF NOT EXISTS ocr_private');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS receipt_hash text');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS receipt_data jsonb');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS is_duplicate boolean DEFAULT false');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS ocr_processed_at timestamptz');
+    expect(migration).toContain("RAISE EXCEPTION 'REVIEW_OCR_COLUMN_CONTRACT_DRIFT'");
+    expect(migration).toContain("attribute.attidentity = ''");
+    expect(migration).toContain("attribute.attgenerated = ''");
+    expect(migration).toContain('attribute.atttypmod = -1');
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_receipt_hash');
+    expect(migration).toContain('CREATE INDEX IF NOT EXISTS reviews_ocr_pending_idx');
+    expect(migration).toContain('CREATE INDEX IF NOT EXISTS reviews_duplicate_idx');
+    expect(migration).toContain("RAISE EXCEPTION 'REVIEW_OCR_INDEX_CONTRACT_DRIFT'");
+    expect(migration).toContain("access_method.amname = 'btree'");
+    expect(migration).toContain('index_row.indisvalid');
+    expect(migration).toContain('index_row.indisready');
+    expect(migration).toContain('index_row.indislive');
+    expect(migration).toContain('v_review_ocr_columns_ready boolean');
+    expect(migration).toContain('v_review_ocr_indexes_ready boolean');
+    expect(migration).toContain('AND coalesce(v_review_ocr_columns_ready, false)');
+    expect(migration).toContain('AND coalesce(v_review_ocr_indexes_ready, false)');
+    expect(migration).toContain('ALTER TABLE ocr_private.receipt_results FORCE ROW LEVEL SECURITY');
+    expect(migration).toContain('REVOKE ALL ON TABLE ocr_private.receipt_results FROM PUBLIC, anon, authenticated');
+    expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.claim_receipt_ocr_result');
+    expect(migration).toContain('TO service_role');
+    expect(migration).toContain('user_id,\n    image_hash,\n    input_context_hash,\n    provider,\n    model_policy,\n    generation,\n    prompt_version,\n    preprocess_version,\n    normalization_version');
+    expect(migration).toContain("status IN ('processing', 'succeeded', 'indeterminate')");
+    expect(migration).toContain('model_policy jsonb NOT NULL');
+    expect(migration).toContain('generation uuid NOT NULL');
+    expect(migration).toContain('public.read_receipt_ocr_result(');
+    expect(migration).toContain('public.get_review_receipt_ocr_generation(');
+    expect(migration).toContain('public.publish_review_receipt_ocr_result(');
+    expect(migration).toContain('CREATE FUNCTION ocr_private.register_review_ocr_generation()');
+    expect(migration).toContain('SECURITY DEFINER\nSET search_path = \'\'');
+    expect(migration).toContain('REVOKE ALL ON FUNCTION ocr_private.register_review_ocr_generation() FROM PUBLIC, anon, authenticated, service_role');
+    expect(migration).toContain('Rows have no automatic TTL');
+    expect(migration).toContain("WHERE id = p_result_id\n    AND user_id = p_user_id\n    AND generation = p_generation\n    AND status = 'succeeded'\n  FOR SHARE;");
+    expect(migration).toContain('v_result.result_revision IS DISTINCT FROM p_ocr_result_revision');
+    expect(migration).toContain("RAISE EXCEPTION 'receipt_ocr_result_stale'");
+    expect(migration.indexOf('FROM public.reviews\n  WHERE id = p_review_id AND user_id = p_user_id\n  FOR UPDATE;')).toBeLessThan(
+      migration.indexOf('FROM ocr_private.review_generations\n  WHERE review_id = p_review_id AND user_id = p_user_id\n  FOR SHARE;'),
+    );
+    expect(migration).toContain('pg_advisory_xact_lock');
+  });
+
+  test('adds a post-held-105 credential recovery capability without rewriting the OCR predecessor', () => {
+    const predecessor = readFileSync(
+      join(import.meta.dir, '../../../backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql'),
+      'utf8',
+    );
+    const successor = readFileSync(
+      join(import.meta.dir, '../../../backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql'),
+      'utf8',
+    );
+    const fixture = readFileSync(
+      join(import.meta.dir, '../../../backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql'),
+      'utf8',
+    );
+    const catalogFixture = readFileSync(
+      join(import.meta.dir, '../../../backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql'),
+      'utf8',
+    );
+    expect(predecessor).not.toContain('release_receipt_ocr_definitive_credential_rejection');
+    expect(successor).toContain('PRIMARY KEY (result_id, claim_token)');
+    expect(successor).toContain('ocr_private.valid_result_payload(durable_result.result_payload)');
+    expect(successor).toContain("durable_result.model_policy ? (durable_result.result_payload->>'model')");
+    expect(successor).toContain('CREATE FUNCTION public.get_receipt_ocr_credential_release_capability()');
+    expect(successor).toContain("'receipt-ocr-definitive-credential-release-v1'");
+    expect(successor).toContain('TO service_role');
+    expect(successor).toContain('FROM PUBLIC, anon, authenticated');
+    expect(successor).not.toContain('reserve_ocr_daily_quota');
+    expect(fixture).toContain('public.claim_receipt_ocr_result(');
+    expect(fixture).toContain('public.mark_receipt_ocr_dispatched(');
+    expect(fixture).toContain('RECEIPT_OCR_CREDENTIAL_RELEASE_STALE_ACK_NOT_IDEMPOTENT');
+    expect(fixture).toContain('extensions.dblink_send_query');
+    expect(catalogFixture).toContain('RECEIPT_OCR_RELEASE_HELPER_BODY_DRIFT=held');
+    expect(catalogFixture).toContain('PRIMARY KEY (result_id)');
+    expect(catalogFixture).toContain('DISABLE ROW LEVEL SECURITY');
+    expect(catalogFixture).toContain('DROP POLICY receipt_credential_rejection_releases_owner_only');
+    expect(catalogFixture).toContain("WHERE version = '20261018152032'");
+  });
+});

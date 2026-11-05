@@ -10,10 +10,15 @@ import {
   type ClusterProperties,
 } from '../lib/clustering';
 
-const point = (id: string, lng: number, category: string): PointFeature<ClusterProperties> => ({
+const point = (
+  id: string,
+  lng: number,
+  category: string,
+  popularityTier: ClusterProperties['popularityTier'] = 'standard',
+): PointFeature<ClusterProperties> => ({
   type: 'Feature',
   geometry: { type: 'Point', coordinates: [lng, 37.5] },
-  properties: { restaurantId: id, category, categories: [category] },
+  properties: { restaurantId: id, category, categories: [category], popularityTier },
 });
 
 describe('Supercluster 9 application adapter compatibility', () => {
@@ -27,6 +32,7 @@ describe('Supercluster 9 application adapter compatibility', () => {
     expect(isCluster(cluster)).toBe(true);
     if (!isCluster(cluster)) throw new Error('Expected a cluster');
     expect(cluster.properties.point_count).toBe(2);
+    expect(cluster.properties.popularityTier).toBe('standard');
     expect(expandCluster(index, cluster.properties.cluster_id).sort()).toEqual(['a', 'b']);
     expect(getClusterCategories(index, cluster.properties.cluster_id).sort()).toEqual(['분식', '한식']);
 
@@ -34,6 +40,20 @@ describe('Supercluster 9 application adapter compatibility', () => {
     expect(individual.every((feature) => !isCluster(feature))).toBe(true);
     expect(individual.map((feature) => feature.properties.restaurantId).sort()).toEqual(['a', 'b']);
     expect(getClusters(index, [-10, -10, 10, 10], 13)).toEqual([]);
+  });
+
+  test('keeps the highest popularity tier inside a cluster', () => {
+    const index = createClusterIndex(null, { maxZoom: 12, radius: 80 }, false);
+    index.load([
+      point('top', 127, '한식', 'fire'),
+      point('mid', 127.0001, '분식', 'ember'),
+      point('next', 127.0002, '중식', 'rainbow'),
+    ]);
+    const clustered = getClusters(index, [126, 37, 128, 38], 8);
+    expect(clustered).toHaveLength(1);
+    const cluster = clustered[0];
+    if (!isCluster(cluster)) throw new Error('Expected a cluster');
+    expect(cluster.properties.popularityTier).toBe('fire');
   });
 
   test('accepts an empty index without manufacturing a cluster', () => {

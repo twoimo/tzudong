@@ -1,7 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
 import { releaseSearchSelectionOwnership as releaseSearchSelectionOwnershipSnapshot } from '@/lib/mobile-home-search-selection';
+import { findOverseasRegionKeyForRestaurant } from '@/lib/overseas-region-matching';
+
+const DEFAULT_OVERSEAS_REGION = "헝가리(부다페스트)";
 
 export function useHomeState(mapMode: 'domestic' | 'overseas') {
     // 맛집 선택 및 모달
@@ -12,7 +15,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
 
     // 지도 모드 및 지역/국가
     const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
-    const [selectedCountry, setSelectedCountry] = useState<string | null>("헝가리(부다페스트)");
+    const [selectedCountry, setSelectedCountry] = useState<string | null>(DEFAULT_OVERSEAS_REGION);
     const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
 
     // UI 모드
@@ -98,16 +101,23 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
             setSearchedRestaurant(nextSnapshot.searchedRestaurant);
         }
     }, [isPanelOpen, panelRestaurant, searchedRestaurant, selectedRestaurant]);
-    // mapMode 변경 시 초기화
+    const detailRestaurantRef = useRef<Restaurant | null>(null);
     useEffect(() => {
+        detailRestaurantRef.current = isPanelOpen ? (panelRestaurant ?? selectedRestaurant) : null;
+    });
+
+    // mapMode 변경 시 초기화. 링크로 연 상세가 새 모드에 속하면 유지하고 그 지역으로 맞춘다.
+    useEffect(() => {
+        const detailRestaurant = detailRestaurantRef.current;
+        const detailRegionKey = detailRestaurant ? findOverseasRegionKeyForRestaurant(detailRestaurant) : null;
+        const keepsDetail = Boolean(detailRestaurant) && (mapMode === 'overseas') === (detailRegionKey !== null);
         if (mapMode === 'domestic') {
             setSelectedRegion(null);
-            setSelectedCategories([]);
         } else {
-            setSelectedCountry("헝가리(부다페스트)");
-            setSelectedCategories([]);
+            setSelectedCountry(keepsDetail && detailRegionKey ? detailRegionKey : DEFAULT_OVERSEAS_REGION);
         }
-        clearRestaurantDetailSelection();
+        setSelectedCategories([]);
+        if (!keepsDetail) clearRestaurantDetailSelection();
     }, [clearRestaurantDetailSelection, mapMode]);
 
     // 새로고침 시 상태 초기화

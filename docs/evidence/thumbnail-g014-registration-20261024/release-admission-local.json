@@ -1,0 +1,46 @@
+{
+  "schema": "thumbnail-release-admission-local-v1",
+  "observedAt": "2026-10-24T12:22:40.040507+00:00",
+  "sourceParent": "32e30416844f7c366a87d51bff6c09023f46e426",
+  "files": [
+    {
+      "path": ".github/thumbnail-production-successor.v2.json",
+      "sha256": "381465961c5820d7074e8a318db6b5129a3ae81aa868da9254af26748d67d849"
+    },
+    {
+      "path": "apps/web/tests-unit/thumbnail-production-successor.test.ts",
+      "sha256": "520d2e6a842926b3bb2bafd208cef495bb9d6063a84b063f86384ac8cf56aba2"
+    },
+    {
+      "path": "apps/web/scripts/thumbnail-production-successor.mjs",
+      "sha256": "ba165e0da35e88ddc41969e2b4951d1e1b10097ca153df2d78fabec08b926475"
+    },
+    {
+      "path": "apps/web/scripts/thumbnail-operating-collector.mjs",
+      "sha256": "044ab341deb437439327d4c9ae1a0cdab3035f9623e1bd87d5629fd36654d4b2"
+    },
+    {
+      "path": "apps/web/scripts/thumbnail-local-owner.mjs",
+      "sha256": "1a6e45cd3af10084799f5c5b0824abc99057ecd8fa6484da5282d105bc73afca"
+    }
+  ],
+  "releaseSha256": "381465961c5820d7074e8a318db6b5129a3ae81aa868da9254af26748d67d849",
+  "checks": {
+    "tests": 52,
+    "pass": 52,
+    "fail": 0,
+    "assertions": 689,
+    "testFiles": 3,
+    "focusedLintErrors": 0,
+    "focusedLintWarnings": 0
+  },
+  "limits": [
+    "DB and owner transport are substituted in unit tests",
+    "Earlier actual PG17.6 and owner GET observations remain separate",
+    "No CI or protected promotion claim for this new source",
+    "Inspect validates the frozen draft only and remains held"
+  ],
+  "operatingApplied": false,
+  "hostedWrites": 0,
+  "providerCalls": 0
+}

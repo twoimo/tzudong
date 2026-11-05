@@ -1,0 +1,110 @@
+name: Review receipt OCR
+run-name: Review receipt OCR · ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      reviewIds:
+        description: Optional exact review UUID array, bounded to 50
+        required: false
+        type: string
+      modelPolicy:
+        description: Exact ordered Gemini model policy from the administrator request (JSON array)
+        required: true
+        type: string
+      thinkingLevel:
+        description: Same inference setting as the administrator request
+        required: true
+        type: choice
+        options: [LOW, MEDIUM, HIGH]
+      recoveryOperationId:
+        description: Optional opaque recovery operation UUID for one bound review
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: review-receipt-ocr
+  cancel-in-progress: false
+
+jobs:
+  process:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'twoimo/tzudong' &&
+      github.event.repository.full_name == 'twoimo/tzudong' &&
+      github.event.repository.default_branch == 'main' &&
+      github.event.repository.owner.login == github.repository_owner &&
+      github.repository_owner == github.actor &&
+      github.triggering_actor == github.actor &&
+      github.event.sender.login == github.actor &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_name == 'main' &&
+      github.ref_protected
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      OCR_REVIEW_IDS: ${{ inputs.reviewIds }}
+      OCR_BATCH_LIMIT: '50'
+      OCR_MODEL_POLICY: ${{ inputs.modelPolicy }}
+      OCR_THINKING_LEVEL: ${{ inputs.thinkingLevel }}
+      OCR_RECOVERY_OPERATION_ID: ${{ inputs.recoveryOperationId }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEMINI_CREDITS_API_KEY: ${{ secrets.GEMINI_CREDITS_API_KEY }}
+    steps:
+      - name: Checkout exact triggering commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify authenticated owner dispatch and protected main source
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EVENT_REPOSITORY_FULL_NAME: ${{ github.event.repository.full_name }}
+          EVENT_REPOSITORY_OWNER: ${{ github.event.repository.owner.login }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          SENDER_LOGIN: ${{ github.event.sender.login }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REPOSITORY" = twoimo/tzudong
+          test "$EVENT_REPOSITORY_FULL_NAME" = twoimo/tzudong
+          test "$DEFAULT_BRANCH" = main
+          test "$EVENT_REPOSITORY_OWNER" = "$REPOSITORY_OWNER"
+          test "$GITHUB_ACTOR" = "$REPOSITORY_OWNER"
+          test "$TRIGGERING_ACTOR" = "$REPOSITORY_OWNER"
+          test "$SENDER_LOGIN" = "$REPOSITORY_OWNER"
+          test "$GITHUB_REF" = refs/heads/main
+          test "$GITHUB_REF_NAME" = main
+          test "$GITHUB_REF_PROTECTED" = true
+          test "$GITHUB_SHA" = "$(git rev-parse --verify HEAD)"
+          test "$GITHUB_SHA" = "$(git show -s --format=%H HEAD)"
+          test -z "$(git symbolic-ref --quiet HEAD || true)"
+          test -z "$(git status --short)"
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install exact web dependencies
+        run: npx --yes npm@11.6.2 ci --ignore-scripts --no-audit --no-fund
+
+      - name: Set up pinned Bun runtime
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.0'
+
+      - name: Process bounded receipt OCR batch
+        run: bun --no-env-file --conditions=react-server scripts/run-admin-receipt-ocr-workflow.ts

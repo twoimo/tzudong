@@ -1,0 +1,19 @@
+{
+  "observed_at": "2026-10-20T09:40:23.826Z",
+  "source": "Actual owned in-app browser visible JSON at https://www.tzudong.app/api/health",
+  "rollback_sha": "7d76c2b0a2e9566160a051f7c3520b3acc427923",
+  "health": {
+    "ok": true,
+    "service": "tzudong-web",
+    "releaseId": "5445fa71104b2408962c1c5d369babf3bb778838",
+    "gitSha": "7d76c2b0a2e9566160a051f7c3520b3acc427923",
+    "deploymentId": "dpl_3wE2S6nWaeUMtmwAKbVsvy2JFWnR",
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "host": "www.tzudong.app"
+  },
+  "production_aliases_observed_by_provider": [
+    "www.tzudong.app",
+    "tzudong.app"
+  ],
+  "python_direct_transport": "HTTP403; browser visible health succeeded; no protection changes"
+}

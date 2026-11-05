@@ -1,0 +1,51 @@
+{
+  "automation": {
+    "fileSha256": "c0d647e64e3654eb898ae3118c6c2d9f483016d1bf11848702addfbfe7079b66",
+    "id": "tzudong-github-ci",
+    "nameAndSchedulePreserved": true,
+    "notificationPolicyChanged": false,
+    "persistedSettingsReadbackMatches": true,
+    "status": "ACTIVE",
+    "targetThreadPreserved": true
+  },
+  "baselineSha256": "d8e08c6371f3dab93fdb3495d5b14266d457e6e0490876f1e2546177a0b89070",
+  "configSha256": "83a84d0cb9491481395e0caf549a00722bf497b40277e5c4eb21e1e484b8f8f4",
+  "firstLiveTick": {
+    "apiRequests": 22,
+    "blockingPendingCount": 1,
+    "collectionSeconds": 16.795757,
+    "coverageComplete": true,
+    "distinctSourceTreeCount": 8,
+    "id": "20261015T064515.175960Z",
+    "programModelCalls": 0,
+    "referenceStatus": "collecting_reference",
+    "refreshedJobSets": 7,
+    "remoteMutations": 0,
+    "reusedJobSets": 48,
+    "sha256": "48039a685ed67cca34f199011492074b18bb821135c1283ce421bf15b4d6bc29",
+    "status": "observed",
+    "successCountForReference": 12,
+    "timingInvalidTerminalAttempts": 1
+  },
+  "kind": "ci-monitor-v6-automation-activation-readback",
+  "limits": [
+    "The same five pinned source files and baseline were verified in a dedicated clean checkout; no extra live tick was run solely for relocation.",
+    "This confirms one successful live collection/analysis and persisted scheduler configuration, not a future trigger or performance effect.",
+    "Additional CI review fixes remain in the editable PR candidate and do not alter this frozen monitor source."
+  ],
+  "preservation": {
+    "analysisCheckpointCopied": false,
+    "baselineChanged": false,
+    "originalV4AndV5Changed": false,
+    "referenceActivated": false,
+    "unresolvedNonTombstonePreserved": true
+  },
+  "recordedAt": "2026-10-15T06:59:47.845437+00:00",
+  "schemaVersion": 1,
+  "sourceCheckout": "/Users/twoimo/.codex/worktrees/ci-monitor-frozen-20261015/tzudong",
+  "sourceCheckoutClean": true,
+  "sourceCommit": "c4d4cd79747f1bdadb8ce764c384ff340979a0aa",
+  "sourceFileHashChecks": 5,
+  "sourceHashMismatches": 0,
+  "stateRoot": "/Users/twoimo/.codex/runtime-cache/tzudong-ci-monitor-20261015-v6-candidate-20261015T064444Z"
+}

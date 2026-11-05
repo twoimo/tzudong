@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   useCallback,
   useEffect,
   useMemo,
@@ -15,14 +16,9 @@ import Image from "next/image";
 import { MapPanelHeader } from '@/components/home/map-panel-chrome';
 import { useRouter, useSearchParams } from "next/navigation";
 import { flushSync } from "react-dom";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import CategoryFilter from "@/components/filters/CategoryFilter";
+import { HomeMapRegionFilter } from "@/components/home/HomeMapRegionFilter";
 const loadDropdownMenu = () => import("@/components/ui/dropdown-menu");
 const DropdownMenu = dynamic(() => loadDropdownMenu().then((mod) => mod.DropdownMenu), {
   loading: () => (
@@ -47,17 +43,20 @@ const DropdownMenuItem = dynamic(() =>
 const DropdownMenuTrigger = dynamic(() =>
   loadDropdownMenu().then((mod) => mod.DropdownMenuTrigger),
 );
-import RegionSelector from "@/components/region/RegionSelector";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { preloadOverseasMap } from "@/lib/overseas-map-loader";
 import DesktopLeftPanelMapHome from "@/components/home/DesktopLeftPanelMapHome";
-import CategoryFilter from "@/components/filters/CategoryFilter";
+
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
+import type { HomeMapResultSummary } from '@/lib/home-map-result-summary';
 import type { FilterState } from "@/components/filters/filter-state";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
 import { isPublicRestrictedMode } from "@/lib/site-config";
 import type { Announcement } from "@/types/announcement";
-import type { Region, Restaurant } from "@/types/restaurant";
-import { useOverseasCountryCounts } from "@/components/home/use-overseas-country-counts";
+import { REGIONS, type Region, type Restaurant } from "@/types/restaurant";
+import { useHomeRouteMemory } from "@/hooks/use-home-route-memory";
 import { useDeferredComponent } from "@/hooks/use-deferred-component";
+import { DeferredPanelFallback } from "@/components/home/DeferredPanelFallback";
 import AnnouncementPanelLoadingFallback from "@/components/announcement/AnnouncementPanelLoadingFallback";
 import HydratedDetailRestaurant from "@/components/home/HydratedDetailRestaurant";
 // Import through the deferred-panel barrel: it carries the
@@ -84,10 +83,9 @@ import {
   type HomeMapUserPreferences,
 } from "@/lib/home-map-user-preferences";
 import {
-  HOME_MAP_THEME_FILTERS,
   type HomeMapThemeFilterId,
 } from "@/lib/home-map-theme-filters";
-import { HomeMapThemeFilterIcon } from "@/components/home/home-map-theme-filter-icons";
+import { HomeMapThemeFilters } from "@/components/home/HomeMapThemeFilters";
 import type { User } from "@supabase/supabase-js";
 import {
   Bell,
@@ -265,6 +263,7 @@ interface HomeDesktopControlPanelProps {
   selectedCountry: string | null;
   selectedCategories: string[];
   filters: FilterState;
+  resultSummary: HomeMapResultSummary;
   onRegionChange: (region: Region | null) => void;
   onCountryChange: (country: string) => void;
   onCategoryChange: (categories: string[]) => void;
@@ -279,7 +278,7 @@ interface HomeDesktopControlPanelProps {
   contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
   isMapFullscreen?: boolean;
   onPanelClose?: () => void;
-  onDetailPanelBack?: () => void;
+  onDetailPanelBack?: () => boolean | void;
   onReviewModalOpen?: () => void;
   onAdminEditRestaurant?: (restaurant: Restaurant) => void;
   onRequestEditRestaurant?: (restaurant: Restaurant) => void;
@@ -289,6 +288,7 @@ interface HomeDesktopControlPanelProps {
   onSetPanelCollapsed?: (collapsed: boolean) => void;
   desktopPanelSide?: HomeMapPanelSide;
   user?: User | null;
+  isAuthLoading?: boolean;
   isAdmin?: boolean;
   activeRightPanel?: HomeOverlayPanelType;
   selectedAnnouncement?: Announcement | null;
@@ -805,6 +805,7 @@ export default function HomeDesktopControlPanel({
   selectedCountry,
   selectedCategories,
   filters,
+  resultSummary,
   onRegionChange,
   onCountryChange,
   onCategoryChange,
@@ -829,6 +830,7 @@ export default function HomeDesktopControlPanel({
   onSetPanelCollapsed,
   desktopPanelSide = "left",
   user = null,
+  isAuthLoading = false,
   isAdmin = false,
   activeRightPanel = null,
   selectedAnnouncement = null,
@@ -836,19 +838,20 @@ export default function HomeDesktopControlPanel({
   const router = useRouter();
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const initialRoutePanel = searchParams.get("panel");
-  const countryCounts = useOverseasCountryCounts(mapMode);
   const desktopSearchShellRef = useRef<HTMLDivElement>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const [activeLeftPanelView, setActiveLeftPanelView] =
     useState<DesktopLeftPanelView>(() =>
-      initialRoutePanel === "announcement" && !isPublicRestrictedMode ? "announcement" : "map",
+      !isPublicRestrictedMode && isDesktopLeftPanelRouteView(initialRoutePanel)
+        ? initialRoutePanel : "map",
     );
   const [activeProfileUserId, setActiveProfileUserId] = useState<string | null>(
     user?.id ?? null,
   );
-  const [desktopSearchQuery, setDesktopSearchQuery] = useState("");
+  const searchOwner = isAuthLoading ? null : user?.id ?? "anonymous";
+  const [desktopSearchQuery, setDesktopSearchQuery] = useHomeRouteMemory(searchOwner, "desktop-search-query", "");
   const [desktopSearchType, setDesktopSearchType] =
-    useState<SearchType>("name");
+    useHomeRouteMemory<SearchType>(searchOwner, "desktop-search-type", "name");
   const [isDesktopSearchActive, setIsDesktopSearchActive] = useState(
     initialIntent === "search",
   );
@@ -878,48 +881,67 @@ export default function HomeDesktopControlPanel({
     activeLeftPanelView === "map" &&
     !isPanelOpen &&
     !shouldShowDesktopSearchResults;
+  const [failedPanel, setFailedPanel] = useState<DesktopLeftPanelView | null>(null);
+  const [panelRetryKey, setPanelRetryKey] = useState(0);
+  const handlePanelLoadError = useCallback(() => {
+    setFailedPanel(activeLeftPanelView);
+  }, [activeLeftPanelView]);
+  const retryDeferredPanel = useCallback(() => {
+    setFailedPanel(null);
+    setPanelRetryKey((key) => key + 1);
+  }, []);
+  const panelLoadOptions = { onError: handlePanelLoadError, retryKey: panelRetryKey };
   const DeferredRestaurantSearch =
     useDeferredComponent<RestaurantSearchComponentProps>(
       shouldShowDesktopSearchResults,
       loadDesktopRestaurantSearch,
+      panelLoadOptions,
     );
   const DeferredFeedOverlay = useDeferredComponent<FeedOverlayComponentProps>(
     activeLeftPanelView === "feed",
     loadFeedOverlay,
+      panelLoadOptions,
   );
   const DeferredStampOverlay = useDeferredComponent<StampOverlayComponentProps>(
     activeLeftPanelView === "stamp",
     loadStampOverlay,
+    panelLoadOptions,
   );
   const DeferredLeaderboardOverlay =
     useDeferredComponent<LeaderboardOverlayComponentProps>(
       activeLeftPanelView === "leaderboard",
       loadLeaderboardOverlay,
+      panelLoadOptions,
     );
   const DeferredUserProfilePanel =
     useDeferredComponent<UserProfilePanelComponentProps>(
       activeLeftPanelView === "profile" && Boolean(activeProfileUserId),
       loadUserProfilePanel,
+      panelLoadOptions,
     );
   const DeferredDesktopLeftPanelBookmarks =
     useDeferredComponent<DesktopLeftPanelBookmarksComponentProps>(
       activeLeftPanelView === "bookmarks" && Boolean(user),
       loadDesktopLeftPanelBookmarks,
+      panelLoadOptions,
     );
   const DeferredDesktopLeftPanelNotifications =
     useDeferredComponent<DesktopLeftPanelNotificationsComponentProps>(
       activeLeftPanelView === "notifications" && Boolean(user),
       loadDesktopLeftPanelNotifications,
+      panelLoadOptions,
     );
   const DeferredAnnouncementPanel =
     useDeferredComponent<AnnouncementPanelComponentProps>(
       activeLeftPanelView === "announcement" && !isPublicRestrictedMode,
       loadAnnouncementPanel,
+      panelLoadOptions,
     );
   const DeferredAdminReviewPanel =
     useDeferredComponent<AdminReviewPanelComponentProps>(
       activeLeftPanelView === "adminReviews" && isAdmin,
       loadAdminReviewPanel,
+      panelLoadOptions,
     );
   useEffect(() => {
     if (initialIntent !== "search") return;
@@ -985,9 +1007,26 @@ export default function HomeDesktopControlPanel({
     [desktopSearchQuery, desktopSearchType, isDesktopSearchActive],
   );
 
+  const restoreDetailSearchState = useCallback(() => {
+    if (!hasCapturedDetailReturnRef.current) return;
+    const returnState = detailReturnStateRef.current;
+    setActiveLeftPanelView(returnState.view);
+    setActiveProfileUserId(returnState.profileUserId);
+    setDesktopSearchQuery(returnState.searchQuery);
+    setDesktopSearchType(returnState.searchType);
+    setIsDesktopSearchActive(returnState.isSearchActive);
+  }, [setDesktopSearchQuery, setDesktopSearchType]);
+
+  useEffect(() => {
+    window.addEventListener("home.restore.succeeded", restoreDetailSearchState);
+    return () => {
+      window.removeEventListener("home.restore.succeeded", restoreDetailSearchState);
+    };
+  }, [restoreDetailSearchState]);
+
   useEffect(() => {
     const handleExternalDetailReturnCapture = () => {
-      if (pendingDetailReturnCaptureRef.current) return;
+      if (pendingDetailReturnCaptureRef.current || hasCapturedDetailReturnRef.current) return;
 
       captureDetailReturnView(activeLeftPanelViewRef.current, {
         pendingDetailOpen: true,
@@ -1058,6 +1097,7 @@ export default function HomeDesktopControlPanel({
         panelParam === "settings") &&
       !user
     ) {
+      if (isAuthLoading) return;
       showDesktopLeftPanelAuthToast(
         panelParam === "profile"
           ? "profile"
@@ -1089,7 +1129,7 @@ export default function HomeDesktopControlPanel({
     if (panelParam === "profile") {
       setActiveProfileUserId(searchParams.get("user") || user?.id || null);
     }
-  }, [activeRightPanel, onSetPanelCollapsed, router, searchParams, user]);
+  }, [activeRightPanel, isAuthLoading, onSetPanelCollapsed, router, searchParams, user]);
 
   useEffect(() => {
     if (activeRightPanel === "announcement") {
@@ -1137,10 +1177,9 @@ export default function HomeDesktopControlPanel({
       }
     }
 
+    // The parent owns detail/list history. During a back navigation, the
+    // restored panel URL can arrive before its detail selection is cleared.
     setActiveLeftPanelView("map");
-    if (isDesktopLeftPanelRouteView(searchParams.get("panel"))) {
-      replaceBrowserHistoryRoute("/");
-    }
   }, [
     captureDetailReturnView,
     isPanelOpen,
@@ -1201,7 +1240,14 @@ export default function HomeDesktopControlPanel({
     revealDesktopLeftPanel();
     setActiveLeftPanelView("map");
     setIsDesktopSearchActive(true);
-  }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel]);
+    if (isDesktopLeftPanelRouteView(searchParams.get("panel"))) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("panel");
+      next.delete("user");
+      const query = next.toString();
+      router.replace(query ? `/?${query}` : "/", { scroll: false });
+    }
+  }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel, router, searchParams]);
 
   const toggleDesktopSearchType = useCallback(() => {
     setDesktopSearchType((current) =>
@@ -1209,12 +1255,12 @@ export default function HomeDesktopControlPanel({
     );
     setIsDesktopSearchActive(true);
     desktopSearchInputRef.current?.focus();
-  }, []);
+  }, [setDesktopSearchType]);
 
   const clearDesktopSearch = useCallback(() => {
     setDesktopSearchQuery("");
     setIsDesktopSearchActive(false);
-  }, []);
+  }, [setDesktopSearchQuery]);
 
   const handleDesktopSearchRestaurantSelect = useCallback(
     (restaurant: Restaurant) => {
@@ -1264,11 +1310,9 @@ export default function HomeDesktopControlPanel({
     const returnProfileUserId = returnState.profileUserId;
 
     pendingDetailReturnCaptureRef.current = false;
-    (onDetailPanelBack ?? onPanelClose)?.();
-
-    setDesktopSearchQuery(returnState.searchQuery);
-    setDesktopSearchType(returnState.searchType);
-    setIsDesktopSearchActive(returnState.isSearchActive);
+    restoreDetailSearchState();
+    if (onDetailPanelBack?.() === true) return;
+    if (!onDetailPanelBack) onPanelClose?.();
 
     if (
       (returnView === "profile" ||
@@ -1297,7 +1341,7 @@ export default function HomeDesktopControlPanel({
     }
     router.replace(returnRoute, { scroll: false });
     replaceBrowserHistoryRoute(returnRoute);
-  }, [onDetailPanelBack, onPanelClose, onSetPanelCollapsed, router, user]);
+  }, [onDetailPanelBack, onPanelClose, onSetPanelCollapsed, restoreDetailSearchState, router, user]);
 
   const handleShortcutClick = useCallback(
     (
@@ -1517,33 +1561,7 @@ export default function HomeDesktopControlPanel({
             onMouseDownCapture={handlePanelMouseDownCapture}
             onFocusCapture={handlePanelFocusCapture}
           >
-            <div className="flex min-w-0 max-w-full items-center gap-2 overflow-x-auto rounded-full p-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {HOME_MAP_THEME_FILTERS.map((theme) => {
-                const isSelected = selectedTheme === theme.id;
-                return (
-                  <Button
-                    key={theme.id}
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    onClick={() => onThemeChange(isSelected ? null : theme.id)}
-                    aria-pressed={isSelected}
-                    aria-label={`${theme.ariaLabel}${isSelected ? " 선택됨" : ""}`}
-                    title={`${theme.label}: ${theme.description}`}
-                    className={cn(
-                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 home-map-floating-control-text text-xs font-semibold shadow-sm motion-reduce:transition-none",
-                      "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                      isSelected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background/95 text-foreground hover:bg-secondary/80",
-                    )}
-                  >
-                    <HomeMapThemeFilterIcon themeId={theme.id} />
-                    <span>{theme.label}</span>
-                  </Button>
-                );
-              })}
-            </div>
+            <HomeMapThemeFilters activeThemeId={selectedTheme} onThemeChange={onThemeChange} />
           </div>
 
           <div
@@ -1577,6 +1595,9 @@ export default function HomeDesktopControlPanel({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleModeChange("overseas")}
+                  onPointerEnter={preloadOverseasMap}
+                  onPointerDown={preloadOverseasMap}
+                  onFocus={preloadOverseasMap}
                   aria-pressed={mapMode === "overseas"}
                   aria-label="해외 맛집 지도 보기"
                   className={cn(
@@ -1590,47 +1611,39 @@ export default function HomeDesktopControlPanel({
                 </Button>
               </div>
             )}
-            {mapMode === "domestic" ? (
-              <RegionSelector
-                selectedRegion={selectedRegion}
-                onRegionChange={onRegionChange}
-                onRegionSelect={onSearchExecute}
-                className="!h-8 !w-full !min-w-0 gap-1 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&>svg]:h-3.5 [&>svg]:w-3.5"
-                compactTrigger
-                contentSide="top"
-                contentAlign="start"
-              />
-            ) : (
-              <Select
-                value={selectedCountry || undefined}
-                onValueChange={onCountryChange}
-              >
-                <SelectTrigger className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&>span]:truncate">
-                  <SelectValue placeholder="해외 지역" />
-                </SelectTrigger>
-                <SelectContent
-                  side="top"
-                  align="start"
-                  className="z-[180] max-h-[min(24rem,calc(100dvh-8rem))] rounded-2xl border-border shadow-2xl"
-                >
-                  {OVERSEAS_REGION_LIST.map((region) => (
-                    <SelectItem key={region} value={region}>
-                      {region} ({countryCounts[region] || 0}개)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
+            <HomeMapRegionFilter
+              mapMode={mapMode}
+              value={mapMode === "domestic" ? selectedRegion || "all" : selectedCountry || undefined}
+              resultSummary={resultSummary}
+              options={[
+                ...(mapMode === "domestic" ? [{
+                  value: "all",
+                  label: "대한민국",
+                  count: resultSummary.status === "ready" ? resultSummary.count ?? 0 : undefined,
+                }] : []),
+                ...(mapMode === "domestic" ? REGIONS : OVERSEAS_REGION_LIST).map((region) => ({
+                  value: region,
+                  label: region,
+                  count: resultSummary.status === "ready"
+                    ? (mapMode === "domestic" ? resultSummary.regionCounts : resultSummary.countryCounts)[region] ?? 0
+                    : undefined,
+                })),
+              ]}
+              onValueChange={(value) => {
+                if (mapMode === "overseas") onCountryChange(value);
+                else { const region = value === "all" ? null : value as Region; onRegionChange(region); onSearchExecute(region); }
+              }}
+            />
             <CategoryFilter
               selectedCategories={selectedCategories}
               onCategoryChange={onCategoryChange}
-              selectedRegion={mapMode === "domestic" ? selectedRegion : null}
-              selectedCountry={mapMode === "overseas" ? selectedCountry : null}
-              className="h-8 w-full min-w-0 gap-1 rounded-full border-border bg-background/95 px-2 home-map-floating-control-text text-xs font-medium shadow-sm hover:bg-secondary/80 [&_svg]:size-3.5"
+              selectedRegion={selectedRegion}
+              selectedCountry={selectedCountry}
+              resultSummary={resultSummary}
               compactTrigger
               contentSide="top"
               contentAlign="start"
+              className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 text-xs font-medium shadow-sm"
             />
           </div>
         </>
@@ -1711,9 +1724,8 @@ export default function HomeDesktopControlPanel({
                 "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5",
               )}
               data-desktop-left-panel-search-bar="true"
-              onClick={activateDesktopSearch}
             >
-              <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0">
+              <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0" onClick={activateDesktopSearch}>
                 <Image
                   src="/logo-png-129-8d374bb80346.png"
                   unoptimized
@@ -1805,6 +1817,7 @@ export default function HomeDesktopControlPanel({
                     sideOffset={8}
                     className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl"
                     data-desktop-map-menu="true"
+                    onClick={(event) => event.stopPropagation()}
                   >
                     {DESKTOP_MAP_MENU_ITEMS.map((item) => {
                       const isActive = activeLeftPanelView === item.id;
@@ -1812,7 +1825,7 @@ export default function HomeDesktopControlPanel({
                       return (
                         <DropdownMenuItem
                           key={item.id}
-                          onClick={() => handleDesktopMapMenuItemSelect(item.id)}
+                          onSelect={() => handleDesktopMapMenuItemSelect(item.id)}
                           className={cn(
                             desktopMapMenuItemClass,
                             isActive && "bg-primary/10 text-primary focus:text-primary",
@@ -1843,79 +1856,111 @@ export default function HomeDesktopControlPanel({
                 : "px-4 py-4",
             )}
           >
-            {activeLeftPanelView === "feed" && DeferredFeedOverlay ? (
-              <DeferredFeedOverlay
-                onClose={handleReturnToMapPanel}
-                onOpenReviewModal={onReviewModalOpen}
-                hideReviewModal={Boolean(onReviewModalOpen)}
-                initialReviewId={searchParams.get("review")}
-                onOpenRestaurantDetail={
-                  handleInlinePanelRestaurantOpen as (
-                    restaurant: Restaurant,
-                  ) => void
-                }
-                onOpenUserProfile={handleInlinePanelUserOpen}
-                onOpenAuth={() => {
-                  showDesktopLeftPanelAuthToast("review");
-                  requestAuthUi({
-                    source: "desktop-left-panel-feed",
-                    route: "/",
-                    reason: "write-review",
-                  });
-                }}
-              />
-            ) : activeLeftPanelView === "stamp" && DeferredStampOverlay ? (
-              <DeferredStampOverlay
-                onClose={handleReturnToMapPanel}
-                singleColumnCards
-                onOpenRestaurantDetail={
-                  handleInlinePanelRestaurantOpen as (
-                    restaurant: Restaurant,
-                  ) => void
-                }
-              />
-            ) : activeLeftPanelView === "leaderboard" &&
-              DeferredLeaderboardOverlay ? (
-              <DeferredLeaderboardOverlay
-                onClose={handleReturnToMapPanel}
-                onOpenUserProfile={handleInlinePanelUserOpen}
-              />
-            ) : activeLeftPanelView === "profile" &&
-              activeProfileUserId &&
-              DeferredUserProfilePanel ? (
-              <DeferredUserProfilePanel
-                userId={activeProfileUserId}
-                onClose={handleReturnToMapPanel}
-                showBackButton
-                onUserClick={handleInlinePanelUserOpen}
-                onRestaurantClick={
-                  handleInlinePanelRestaurantOpen as (
-                    restaurant: Restaurant,
-                  ) => void
-                }
-              />
-            ) : activeLeftPanelView === "bookmarks" &&
-              DeferredDesktopLeftPanelBookmarks ? (
-              <DeferredDesktopLeftPanelBookmarks
-                onRestaurantOpen={handleInlinePanelRestaurantOpen}
-                onClose={handleReturnToMapPanel}
-              />
-            ) : activeLeftPanelView === "notifications" &&
-              DeferredDesktopLeftPanelNotifications ? (
-              <DeferredDesktopLeftPanelNotifications
-                onRestaurantIdOpen={handleInlinePanelRestaurantIdOpen}
-                onClose={handleReturnToMapPanel}
-                onOpenProfile={() => {
-                  if (!user) return;
-                  setActiveProfileUserId(user.id);
-                  setActiveLeftPanelView("profile");
-                  router.push("/?panel=profile", { scroll: false });
-                }}
-                onOpenAnnouncements={() => {
-                  if (isPublicRestrictedMode) return;
-                  router.push("/?panel=announcement", { scroll: false });
-                }}
-              />
+            <Activity key={`${user?.id ?? "anonymous"}:feed`} mode={activeLeftPanelView === "feed" ? "visible" : "hidden"}>
+              {DeferredFeedOverlay ? (
+                <div className="h-full min-h-0" data-retained-panel="feed">
+                  <DeferredFeedOverlay
+                    onClose={handleReturnToMapPanel}
+                    onOpenReviewModal={onReviewModalOpen}
+                    hideReviewModal={Boolean(onReviewModalOpen)}
+                    initialReviewId={searchParams.get("review")}
+                    onOpenRestaurantDetail={
+                      handleInlinePanelRestaurantOpen as (
+                        restaurant: Restaurant,
+                      ) => void
+                    }
+                    onOpenUserProfile={handleInlinePanelUserOpen}
+                    onOpenAuth={() => {
+                      showDesktopLeftPanelAuthToast("review");
+                      requestAuthUi({
+                        source: "desktop-left-panel-feed",
+                        route: "/",
+                        reason: "write-review",
+                      });
+                    }}
+                  />
+                </div>
+              ) : null}
+            </Activity>
+            <Activity key={`${user?.id ?? "anonymous"}:stamp`} mode={activeLeftPanelView === "stamp" ? "visible" : "hidden"}>
+              {DeferredStampOverlay ? (
+                <div className="h-full min-h-0" data-retained-panel="stamp">
+                  <DeferredStampOverlay
+                    onClose={handleReturnToMapPanel}
+                    singleColumnCards
+                    onOpenRestaurantDetail={
+                      handleInlinePanelRestaurantOpen as (
+                        restaurant: Restaurant,
+                      ) => void
+                    }
+                  />
+                </div>
+              ) : null}
+            </Activity>
+            <Activity key={`${user?.id ?? "anonymous"}:leaderboard`} mode={activeLeftPanelView === "leaderboard" ? "visible" : "hidden"}>
+              {DeferredLeaderboardOverlay ? (
+                <div className="h-full min-h-0" data-retained-panel="leaderboard">
+                  <DeferredLeaderboardOverlay
+                    onClose={handleReturnToMapPanel}
+                    onOpenUserProfile={handleInlinePanelUserOpen}
+                  />
+                </div>
+              ) : null}
+            </Activity>
+            <Activity key={`${user?.id ?? "anonymous"}:profile:${activeProfileUserId}`} mode={activeLeftPanelView === "profile" ? "visible" : "hidden"}>
+              {user && activeProfileUserId && DeferredUserProfilePanel ? (
+                <div className="h-full min-h-0" data-retained-panel="profile">
+                  <DeferredUserProfilePanel
+                    userId={activeProfileUserId}
+                    onClose={handleReturnToMapPanel}
+                    showBackButton
+                    onUserClick={handleInlinePanelUserOpen}
+                    onRestaurantClick={
+                      handleInlinePanelRestaurantOpen as (
+                        restaurant: Restaurant,
+                      ) => void
+                    }
+                  />
+                </div>
+              ) : null}
+            </Activity>
+            <Activity key={`${user?.id ?? "anonymous"}:bookmarks`} mode={activeLeftPanelView === "bookmarks" ? "visible" : "hidden"}>
+              {user && DeferredDesktopLeftPanelBookmarks ? (
+                <div className="h-full min-h-0" data-retained-panel="bookmarks">
+                  <DeferredDesktopLeftPanelBookmarks
+                    onRestaurantOpen={handleInlinePanelRestaurantOpen}
+                    onClose={handleReturnToMapPanel}
+                  />
+                </div>
+              ) : null}
+            </Activity>
+            <Activity key={`${user?.id ?? "anonymous"}:notifications`} mode={activeLeftPanelView === "notifications" ? "visible" : "hidden"}>
+              {user && DeferredDesktopLeftPanelNotifications ? (
+                <div className="h-full min-h-0" data-retained-panel="notifications">
+                  <DeferredDesktopLeftPanelNotifications
+                    onRestaurantIdOpen={handleInlinePanelRestaurantIdOpen}
+                    onClose={handleReturnToMapPanel}
+                    onOpenProfile={() => {
+                      if (!user) return;
+                      setActiveProfileUserId(user.id);
+                      setActiveLeftPanelView("profile");
+                      router.push("/?panel=profile", { scroll: false });
+                    }}
+                    onOpenAnnouncements={() => {
+                      if (isPublicRestrictedMode) return;
+                      router.push("/?panel=announcement", { scroll: false });
+                    }}
+                  />
+                </div>
+              ) : null}
+            </Activity>
+            {(activeLeftPanelView === "feed" && DeferredFeedOverlay)
+              || (activeLeftPanelView === "stamp" && DeferredStampOverlay)
+              || (activeLeftPanelView === "leaderboard" && DeferredLeaderboardOverlay)
+              || (activeLeftPanelView === "profile" && activeProfileUserId && DeferredUserProfilePanel)
+              || (activeLeftPanelView === "bookmarks" && DeferredDesktopLeftPanelBookmarks)
+              || (activeLeftPanelView === "notifications" && DeferredDesktopLeftPanelNotifications) ? (
+              null
             ) : activeLeftPanelView === "settings" && user ? (
               <DesktopMapSettingsPanel
                 user={user}
@@ -1936,6 +1981,8 @@ export default function HomeDesktopControlPanel({
                     initialAnnouncement={selectedAnnouncement}
                     adminActionsMode="inline"
                   />
+                ) : failedPanel === "announcement" ? (
+                  <DeferredPanelFallback title="공지" failed onRetry={retryDeferredPanel} onClose={handleExternalLeftPanelClose} />
                 ) : (
                   <AnnouncementPanelLoadingFallback
                     isAdmin={isAdmin}
@@ -1954,7 +2001,16 @@ export default function HomeDesktopControlPanel({
                   onClose={handleExternalLeftPanelClose}
                 />
               </div>
-            ) : isInlinePanelViewActive ? null : (
+            ) : isInlinePanelViewActive ? (
+              <DeferredPanelFallback
+                key={activeLeftPanelView}
+                title={DESKTOP_MAP_MENU_ITEMS.find((item) => item.id === activeLeftPanelView)?.label
+                  ?? (activeLeftPanelView === "adminReviews" ? "리뷰 관리" : "공지")}
+                failed={failedPanel === activeLeftPanelView}
+                onClose={handleReturnToMapPanel}
+                onRetry={retryDeferredPanel}
+              />
+            ) : (
               <>
                 {shouldShowDesktopSearchResults && DeferredRestaurantSearch ? (
                   <div
@@ -1986,6 +2042,8 @@ export default function HomeDesktopControlPanel({
                       className="h-full w-full"
                     />
                   </div>
+                ) : shouldShowDesktopSearchResults ? (
+                  <DeferredPanelFallback title="검색" failed={failedPanel === "map"} onRetry={retryDeferredPanel} onClose={clearDesktopSearch} />
                 ) : isPanelOpen && panelRestaurant ? (
                   <div
                     className="h-full min-h-0 overflow-hidden bg-background"
@@ -2012,6 +2070,7 @@ export default function HomeDesktopControlPanel({
                   </div>
                 ) : shouldShowDesktopMapHome ? (
                   <DesktopLeftPanelMapHome
+                    resultSummary={resultSummary}
                     onRestaurantOpen={
                       handleInlinePanelRestaurantOpen as (
                         restaurant: Restaurant,

@@ -1,0 +1,16 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/overseas-map-marker-helpers.test.ts:
+(pass) overseas map marker helpers > validates the same coordinates before marker creation and external map movement [0.21ms]
+(pass) overseas map marker helpers > builds class-only marker HTML with valid local and HTTPS images [0.47ms]
+(pass) overseas map marker helpers > fails closed for unsafe marker image values and escapes alt text [0.30ms]
+(pass) overseas map marker helpers > prefers selected restaurant id over searched id [0.05ms]
+(pass) overseas map marker helpers > toggles only fixed size and selected classes without style mutation [0.24ms]
+
+tests-unit/overseas-marker-refresh-browser.test.ts:
+(pass) retained overseas markers refresh content, location and click data without recreating or losing selection [2418.29ms]
+
+ 6 pass
+ 0 fail
+ 84 expect() calls
+Ran 6 tests across 2 files. [2.66s]

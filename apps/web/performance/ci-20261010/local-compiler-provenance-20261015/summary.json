@@ -1,0 +1,219 @@
+{
+  "aaNoise": {
+    "absoluteRelativeDifferencePercent": {
+      "max": 25.587062374056185,
+      "mean": 12.548726774977846,
+      "min": 3.7379029723654122,
+      "n": 7,
+      "p50": 12.656123414585869,
+      "p75": 17.89186130799192,
+      "p95": 24.500384325337155
+    },
+    "signedDifferenceMs": {
+      "max": 2907.6729159999995,
+      "mean": -922.482500142857,
+      "meanBootstrap95Ci": [
+        -3399.429037403572,
+        1450.9478451428574
+      ],
+      "min": -5844.271416,
+      "n": 7,
+      "p50": -943.6752090000009,
+      "p75": 1868.5118125000008,
+      "p95": 2880.3658414
+    }
+  },
+  "commandDurationMs": {
+    "after": {
+      "parity": {
+        "max": 23537.04925,
+        "mean": 22800.619559714287,
+        "min": 20635.442,
+        "n": 7,
+        "p50": 23377.960292,
+        "p75": 23463.426896,
+        "p95": 23521.293724900002
+      },
+      "verify": {
+        "max": 361.963834,
+        "mean": 327.11010714285715,
+        "min": 280.180042,
+        "n": 7,
+        "p50": 343.372583,
+        "p75": 355.92241650000005,
+        "p95": 360.4098463
+      }
+    },
+    "before": {
+      "compat": {
+        "max": 22907.619042,
+        "mean": 20924.396440714285,
+        "min": 17359.509167,
+        "n": 7,
+        "p50": 21110.924083,
+        "p75": 22149.294229500003,
+        "p95": 22737.523054499998
+      },
+      "native": {
+        "max": 2577.532916,
+        "mean": 2111.017631142857,
+        "min": 1778.855709,
+        "n": 7,
+        "p50": 2121.137584,
+        "p75": 2240.2449585000004,
+        "p95": 2482.4513288
+      },
+      "parity": {
+        "max": 30085.252709,
+        "mean": 24959.44897642857,
+        "min": 22902.398834,
+        "n": 7,
+        "p50": 24236.580958,
+        "p75": 25422.9215415,
+        "p95": 29030.111508799997
+      },
+      "verify": {
+        "max": 373.55825,
+        "mean": 327.6497321428571,
+        "min": 267.441084,
+        "n": 7,
+        "p50": 351.8805,
+        "p75": 355.7505415,
+        "p95": 368.8020749
+      }
+    }
+  },
+  "comparison": "verify+native+compat+parity versus verify+parity",
+  "evidenceAdmission": {
+    "admitted": false,
+    "budgetChecks": {
+      "absolute": true,
+      "noiseMeanCiIncludesZero": true,
+      "noiseP95": false,
+      "relative": true
+    },
+    "integrityChecks": {
+      "aaSampleCountPreserved": true,
+      "allSequencesSucceeded": true,
+      "pairedSampleCountPreserved": true,
+      "resourceMeasurementsComplete": true,
+      "sourceContractUnchanged": true
+    },
+    "officialApproval": false,
+    "predeclaredBudgets": {
+      "absoluteMeanReductionBootstrap95CiLowerBoundMs": 2000,
+      "noiseAaMeanDifference95CiMustIncludeZero": true,
+      "noiseAaP95AbsoluteRelativeDifferencePercentMaximum": 5,
+      "relativeMeanReductionBootstrap95CiLowerBoundPercent": 5
+    },
+    "scope": "local duplicate compiler command sequence only"
+  },
+  "pairedReduction": {
+    "absoluteMs": {
+      "max": 31810.069334,
+      "mean": 25195.281416714286,
+      "meanBootstrap95Ci": [
+        22569.849059428576,
+        28105.20529869285
+      ],
+      "medianBootstrap95Ci": [
+        21678.767126000002,
+        28880.095832999996
+      ],
+      "min": 19783.399332000005,
+      "n": 7,
+      "p50": 24505.747541,
+      "p75": 27119.012958499996,
+      "p95": 30931.077283699997
+    },
+    "relativePercent": {
+      "max": 57.9966213700778,
+      "mean": 51.87336536665004,
+      "meanBootstrap95Ci": [
+        48.78899660223136,
+        55.09149565741496
+      ],
+      "medianBootstrap95Ci": [
+        47.67002678139976,
+        57.20582014621416
+      ],
+      "min": 45.30797500636164,
+      "n": 7,
+      "p50": 51.64728815054033,
+      "p75": 54.739108242615096,
+      "p95": 57.7593810029187
+    }
+  },
+  "sampleCountAaPaired": 7,
+  "sampleCountPaired": 7,
+  "schemaVersion": 2,
+  "scope": {
+    "excluded": [
+      "hosted runner latency and queue time",
+      "release typecheck benchmark routing",
+      "GitHub billing or billed minutes",
+      "application tests, builds, lint, and security scans"
+    ],
+    "included": "local duplicate diagnostic sequence only"
+  },
+  "sequenceCpuSeconds": {
+    "after": {
+      "max": 42.07,
+      "mean": 41.0,
+      "min": 39.31,
+      "n": 7,
+      "p50": 41.519999999999996,
+      "p75": 41.705000000000005,
+      "p95": 42.010000000000005
+    },
+    "before": {
+      "max": 78.33,
+      "mean": 75.52142857142857,
+      "min": 71.86,
+      "n": 7,
+      "p50": 75.3,
+      "p75": 76.55499999999999,
+      "p95": 77.85
+    }
+  },
+  "sequenceDurationMs": {
+    "after": {
+      "max": 23880.876834,
+      "mean": 23128.20131542857,
+      "min": 20916.073583,
+      "n": 7,
+      "p50": 23740.349791,
+      "p75": 23797.120083,
+      "p95": 23856.0012336
+    },
+    "before": {
+      "max": 55606.351334,
+      "mean": 48323.48273214285,
+      "min": 43664.276166,
+      "n": 7,
+      "p50": 48037.835625,
+      "p75": 49447.2246455,
+      "p95": 53863.296758599994
+    }
+  },
+  "sequenceMaximumResidentSetBytes": {
+    "after": {
+      "max": 2076803072.0,
+      "mean": 1952081042.2857144,
+      "min": 1849016320.0,
+      "n": 7,
+      "p50": 1941323776.0,
+      "p75": 2001223680.0,
+      "p95": 2070609920.0
+    },
+    "before": {
+      "max": 2061041664.0,
+      "mean": 2004273444.5714285,
+      "min": 1928019968.0,
+      "n": 7,
+      "p50": 2049638400.0,
+      "p75": 2056994816.0,
+      "p95": 2060019302.4
+    }
+  }
+}

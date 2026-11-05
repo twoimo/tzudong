@@ -1,0 +1,97 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/naver-map-cluster-visuals.test.ts:
+(pass) naver map cluster visuals > hashes string keys deterministically [0.14ms]
+(pass) naver map cluster visuals > builds cluster feature with lng/lat coordinates [0.04ms]
+(pass) naver map cluster visuals > builds cluster marker html content [0.13ms]
+(pass) naver map cluster visuals > returns naver cluster marker visual payload [0.04ms]
+(pass) naver map cluster visuals > builds cluster marker render plan from position and current animation index [0.04ms]
+(pass) naver map cluster visuals > builds animation icon plan from key and injected index resolver [0.05ms]
+(pass) naver map cluster visuals > skips a marker icon write when the content and anchor are unchanged [0.02ms]
+
+tests-unit/naver-map-marker-visuals.test.ts:
+(pass) naver map marker visuals > refreshes both cached selection states when the public popularity tier changes in place [0.34ms]
+(pass) naver map marker visuals > keeps shared visual cache entries distinct across refreshed rows and overlay markers [0.57ms]
+(pass) naver map marker visuals > reuses the visual for the same restaurant until a displayed field changes [0.08ms]
+(pass) naver map marker visuals > returns selected marker payload [0.08ms]
+(pass) naver map marker visuals > returns unselected marker payload [0.11ms]
+(pass) naver map marker visuals > shows red visit count badge for restaurants visited at least twice [0.14ms]
+(pass) naver map marker visuals > does not show visit count badge for single-visit restaurants [0.03ms]
+(pass) naver map marker visuals > marks user-submitted restaurants with a distinct marker wrapper without changing category asset [0.05ms]
+(pass) naver map marker visuals > uses admin overlay marker assets for trend and seasonal marker kinds [0.06ms]
+
+tests-unit/evidence-frame-conflict.test.ts:
+(pass) frame conflicts fail closed at both public read boundaries while strict publication validation still rejects [1.05ms]
+
+tests-unit/public-popularity-publication.test.ts:
+(pass) operator-published public popularity > rejects private fields, duplicate IDs, invalid grades and unreviewed nonempty cohorts [0.08ms]
+(pass) operator-published public popularity > bounds entry count and serialized bytes and freezes independent copies [4.26ms]
+(pass) operator-published public popularity > list and detail derive the same tier without a database tier column; stale/raw tiers cannot promote it [1.30ms]
+(pass) operator-published public popularity > merged representatives use their published identity and do not inherit a child grade [0.18ms]
+(pass) operator-published public popularity > explicit canonical membership keeps compact, full, partial, and direct-detail grades identical [0.16ms]
+(pass) operator-published public popularity > new members or conflicting cohorts fail closed for either display representative [0.13ms]
+(pass) operator-published public popularity > rejects ambiguous/incomplete canonical membership and bounds the whole member index [2.90ms]
+(pass) operator-published public popularity > published membership overrides a stale caller tier and the detail panel does not mention flame counts [0.44ms]
+(pass) operator-published public popularity > published endpoint returns the reviewed public snapshot and stable ETag without raw scores [488.88ms]
+(pass) public tier reaches the outer Naver render guard > same IDs/viewport/selection refreshes fire → rainbow → standard, while normalized missing values skip [0.35ms]
+(pass) public tier reaches the outer Naver render guard > retained selection/search grades also invalidate the unchanged-query guard [0.02ms]
+
+tests-unit/evidence-engineering-remaining.test.ts:
+(pass) evidence engineering remaining tasks > uploads only the immutable webp key and refuses collisions [0.31ms]
+(pass) evidence engineering remaining tasks > moderation requires preview, confirm, apply, and readback before an audit record [0.25ms]
+179 |       includeYoutubeMetaForTheme: false,
+180 |     })).toContain(RESTAURANT_EVIDENCE_FRAME_EMBED);
+181 |     expect(RESTAURANT_EVIDENCE_FRAME_EMBED).not.toContain("ocr");
+182 |     expect(visible[0]?.youtube_seek_url).toBe(`https://www.youtube.com/watch?v=${VIDEO_ID}&t=125`);
+183 |     const carousel = readFileSync(resolve(import.meta.dir, "../components/restaurant/RestaurantEvidenceCarousel.tsx"), "utf8");
+184 |     expect(carousel).toContain('loading={presentation.loading}');
+                           ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "loading={presentation.loading}"
+Received: "\"use client\";\n\nimport { useState } from \"react\";\nimport { isLevel1SourceObserved, parseEvidenceFrame, approvedEvidenceFramesOrEmpty } from \"@/lib/evidence-engineering/frames\";\nimport type { RestaurantEvidenceFrame } from \"@/lib/evidence-engineering/types\";\n\nexport function evidenceFrameEmbedRow(item: unknown): unknown {\n  if (!item || typeof item !== \"object\" || Array.isArray(item)) return item;\n  const record = item as Record<string, unknown>;\n  const timestamp = record.timestamp_ms;\n  const timestampMs = typeof timestamp === \"string\" && /^[0-9]+$/.test(timestamp)\n    ? Number(timestamp)\n    : timestamp;\n  return {\n    frame_id: record.frame_id,\n    content_sha256: record.content_sha256,\n    video_id: record.video_id,\n    timestamp_ms: timestampMs,\n    storage_object_key: record.storage_object_key,\n    youtube_seek_url: record.youtube_seek_url,\n    frame_type: record.frame_type,\n    evidence_level: record.evidence_level,\n    confidence_level: record.confidence_level,\n    moderation_status: record.moderation_status,\n    detected_shop_name: record.detected_shop_name ?? null,\n    detected_branch_name: record.detected_branch_name ?? null,\n    image_url: record.image_url ?? null,\n  };\n}\n\nexport function publicEvidenceFrames(groups: readonly unknown[][]): RestaurantEvidenceFrame[] {\n  return publicReviewedVideoFrames(groups).filter(isLevel1SourceObserved);\n}\n\n// Reviewed video context may be shown, but does not become L1 identity proof.\nexport function publicReviewedVideoFrames(groups: readonly unknown[][]): RestaurantEvidenceFrame[] {\n  const parsed = groups.map((group) => group.flatMap((item) => {\n    try {\n      return [parseEvidenceFrame(evidenceFrameEmbedRow(item))];\n    } catch {\n      return [];\n    }\n  }));\n  return approvedEvidenceFramesOrEmpty(parsed).filter(\n    (frame) => frame.evidence_level === \"SOURCE_OBSERVED\",\n  );\n}\n\nexport function publicEvidenceImageSource(frame: RestaurantEvidenceFrame): string {\n  const valid = parseEvidenceFrame(frame);\n  return valid.image_url ?? `/evidence-frames/${valid.storage_object_key}`;\n}\n\nfunction frameLabel(frame: RestaurantEvidenceFrame): string {\n  if (frame.frame_type === \"storefront_sign\") return \"매장 간판\";\n  if (frame.frame_type === \"publisher_location_caption\") return \"영상의 매장 안내\";\n  return frame.frame_type === \"menu_receipt\" ? \"메뉴·영수증 장면\" : \"영상 속 현장 장면\";\n}\n\nexport function publicFramePresentation(frame: RestaurantEvidenceFrame): {\n  href: string;\n  loading: \"lazy\";\n  bulkHighResolutionFetch: false;\n  enlargement: \"separate_request\";\n} {\n  return {\n    href: frame.youtube_seek_url,\n    loading: \"lazy\",\n    bulkHighResolutionFetch: false,\n    enlargement: \"separate_request\",\n  };\n}\n\nfunction EvidenceFrameImage({ frame }: { frame: RestaurantEvidenceFrame }) {\n  const [failed, setFailed] = useState(false);\n  if (failed) return <span role=\"status\" className=\"flex aspect-video items-center justify-center rounded-t-xl bg-muted px-3 text-center text-xs text-muted-foreground\">장면 이미지를 불러오지 못했어요. 원본 영상에서 확인해 주세요.</span>;\n  return (\n    // eslint-disable-next-line @next/next/no-img-element -- Immutable reviewed frames use native lazy images.\n    <img src={publicEvidenceImageSource(frame)} alt={frame.detected_shop_name ?? frameLabel(frame)}\n      width={640} height={360} loading=\"lazy\" decoding=\"async\" onError={() => setFailed(true)}\n      className=\"aspect-video w-full rounded-t-xl object-cover\" />\n  );\n}\n\nexport function RestaurantEvidenceCarousel({ frames }: { frames: readonly RestaurantEvidenceFrame[][] }) {\n  const visible = publicReviewedVideoFrames(frames);\n  if (visible.length === 0) return null;\n  return (\n    <section className=\"py-2 pb-[env(safe-area-inset-bottom)]\" aria-label=\"쯔양 영상 근거와 방문 장면\">\n      <p className=\"text-2xs font-bold tracking-wide text-brand-garden-text\">쯔양 영상 속 그 장면</p>\n      <h3 className=\"mb-2 text-sm font-black tracking-tight\">{visible.some(isLevel1SourceObserved) ? \"영상에서 확인한 간판·방문 장면 📸\" : \"영상에서 확인한 방문·현장 장면 📸\"}</h3>\n      {visible.some((frame) => !isLevel1SourceObserved(frame)) && (\n        <p className=\"mb-2 text-xs text-muted-foreground\">현장 장면은 영상의 맥락을 보여주며, 매장 신원을 확인하는 간판·매장 안내와 구분해요.</p>\n      )}\n      <div className=\"flex gap-3 overflow-x-auto pb-2\" tabIndex={0} aria-label=\"영상 장면 가로 스크롤\">\n        {visible.map((frame) => {\n          const presentation = publicFramePresentation(frame);\n          return (\n          <a\n            key={frame.frame_id}\n            href={presentation.href}\n            target=\"_blank\"\n            rel=\"noopener noreferrer\"\n            className=\"block w-[min(68vw,18rem)] shrink-0 rounded-xl border border-border bg-card sm:w-64 lg:w-72\"\n            aria-label={`${frameLabel(frame)} ${Math.floor(frame.timestamp_ms / 60000)}분 ${Math.floor(frame.timestamp_ms / 1000) % 60}초 영상 열기`}\n          >\n              <EvidenceFrameImage key={`${frame.storage_object_key}:${publicEvidenceImageSource(frame)}`} frame={frame} />\n              <span className=\"flex items-center justify-between gap-2 px-2 py-2 text-xs\">\n                <span>{frameLabel(frame)}</span>\n                <span className=\"tabular-nums text-muted-foreground\">{Math.floor(frame.timestamp_ms / 60000)}:{String(Math.floor(frame.timestamp_ms / 1000) % 60).padStart(2, \"0\")}</span>\n              </span>\n          </a>\n          );\n        })}\n      </div>\n    </section>\n  );\n}\n"
+
+      at <anonymous> (apps/web/tests-unit/evidence-engineering-remaining.test.ts:184:22)
+(fail) evidence engineering remaining tasks > public carousel keeps approved sign evidence and its seek url [0.38ms]
+(pass) evidence engineering remaining tasks > operational caution ignores a plain search miss and does not use device coordinates [0.04ms]
+(pass) evidence engineering remaining tasks > marker wrapper stays on transform and opacity [0.21ms]
+(pass) evidence engineering remaining tasks > merged media unions approved frames and does not promote a higher tier [0.15ms]
+(pass) evidence engineering remaining tasks > missing evidence embed falls back without dropping restaurants [0.19ms]
+(pass) evidence engineering remaining tasks > badge viewer stays closed until experimental mode is opened and can close again [0.10ms]
+(pass) evidence engineering remaining tasks > open cross-check clauses stay locked without new formulas [0.51ms]
+(pass) evidence engineering remaining tasks > render summary records percentiles without a 60fps gate [0.04ms]
+
+tests-unit/evidence-publication-runtime.test.ts:
+(pass) reviewed evidence publication > publishes hash-verified WebP idempotently and refuses a wrong confirmation or immutable collision [6.29ms]
+(pass) reviewed evidence publication > rejects unreviewed frames, altered bytes, source traversal and mismatched restaurant videos [23.40ms]
+(pass) reviewed evidence publication > refuses publication through an output symlink [2.69ms]
+(pass) actual public popularity cohort > reproduces every published member from the frozen public business rows and observed video metrics [19.89ms]
+
+tests-unit/popularity-input-boundary.test.ts:
+(pass) rejects unapproved source rows before merge rather than granting a public tier [2.72ms]
+(pass) rejects missing, blank, nonfinite and out-of-range source coordinates before merge coerces them [5.50ms]
+(pass) preserves approved names and records the actual P98/P95/P85 policy for valid inputs [1.17ms]
+(pass) uses the shared-map latitude boundary and rejects unnamed publication inputs [2.78ms]
+
+tests-unit/restaurant-merged-media.test.ts:
+(pass) restaurant merged media helpers > collects every youtube video and tzuyang review from merged restaurant records [0.15ms]
+(pass) restaurant merged media helpers > feeds merged media counts into natural detail copy [0.07ms]
+(pass) restaurant merged media helpers > keeps distinct youtube metadata when different videos share the same title [0.03ms]
+(pass) restaurant merged media helpers > hydrates a fetched single detail row with the selected merge context [0.21ms]
+(pass) restaurant merged media helpers > keeps a known tzuyang review when the fetched row has an empty review [0.08ms]
+(pass) restaurant merged media helpers > collects tzuyang reviews stored as arrays or review objects [0.05ms]
+(pass) restaurant merged media helpers > pairs each tzuyang review with its video title and publish date [0.12ms]
+
+tests-unit/overseas-map-marker-helpers.test.ts:
+(pass) overseas map marker helpers > builds class-only marker HTML with valid local and HTTPS images [0.12ms]
+(pass) overseas map marker helpers > fails closed for unsafe marker image values and escapes alt text [0.10ms]
+(pass) overseas map marker helpers > prefers selected restaurant id over searched id [0.02ms]
+(pass) overseas map marker helpers > toggles only fixed size and selected classes without style mutation [0.09ms]
+
+1 tests failed:
+(fail) evidence engineering remaining tasks > public carousel keeps approved sign evidence and its seek url [0.38ms]
+
+ 56 pass
+ 1 fail
+ 1166 expect() calls
+Ran 57 tests across 9 files. [660.00ms]

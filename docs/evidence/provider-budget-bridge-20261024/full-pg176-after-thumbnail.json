@@ -1,0 +1,115 @@
+{
+  "schema": "provider-budget-full-pg176-after-thumbnail-v1",
+  "status": "passed",
+  "observedAt": "2026-10-24T10:33:16.690154+00:00",
+  "sourceBase": "6539427742b2542dcfe471a0c399c2ba7c4177cd",
+  "composition": {
+    "candidateSha256": "7f6847fa83f7e1f87ce8ff289623796182a323a245a3308007fd689aa6ff3c24",
+    "runner": {
+      "bytes": 17255,
+      "sha256": "6d4e4e47526be9528f85a4331aa0dd689fdbbbf199848c5f81c251bc5e96898c"
+    },
+    "sourceSnapshot": "38a33fcb8498556914a31b01d37a2c1556f4819ca687bc3ab7bcc60cd7ccca79",
+    "systemPolicyCaptureSha256": "c656c43925a213f1a4acb315fc267e38d0ab204e0f79b4a997f23420f15eb320",
+    "runtime": {
+      "owner": "postgres",
+      "caller": "postgres",
+      "session": "postgres",
+      "version": 170006,
+      "superuser": "off",
+      "systemMods": "off"
+    },
+    "sourceTemplateUnchanged": true,
+    "thumbnailTerminalFieldsMatchedBeforeAndAfter": 23,
+    "fullG014Assertions": 4,
+    "lateFailureAfterFullPost": true,
+    "lateFailureStateRestored": true,
+    "membershipRestored": true,
+    "negativeControls": {
+      "missingLeaseRejected": true,
+      "survivingLeaseRejectedByG014": true,
+      "reapplyRejected": true
+    },
+    "existingPolicyRowsPreserved": 3,
+    "directionsPolicy": [
+      20,
+      200,
+      10000
+    ],
+    "ledgerRowsUnchanged": 90,
+    "systemPolicyRowsCopied": 3,
+    "userRowsCopied": 0,
+    "hostedWrites": 0,
+    "providerCalls": 0,
+    "limits": [
+      "Owned offline PG17.6 clone after thumbnail installation; not an admitted budget forward migration or ledger 90 to 91.",
+      "No real admin/provider request or HTTP/PostgREST verification. Separate PG17.11 functional and concurrency tests remain distinct.",
+      "System policy capture was a separate read-only observation, not the original complete schema snapshot."
+    ]
+  },
+  "functional": {
+    "source": "6539427742b2542dcfe471a0c399c2ba7c4177cd",
+    "candidateSha256": "7f6847fa83f7e1f87ce8ff289623796182a323a245a3308007fd689aa6ff3c24",
+    "runner": {
+      "bytes": 16232,
+      "sha256": "a7c28a9e6b5a03faefc0ba86810139ca0903aaf65ba3e6d996026d52d4524307"
+    },
+    "serverVersionNum": 170006,
+    "healthyPublicRpc": true,
+    "sameOperationNoAdditionalCounterOrDecision": true,
+    "claimsJsonFallback": true,
+    "rejectedWithoutBudgetMutation": {
+      "null-jwt-role": "42501",
+      "non-admin-actor": "42501",
+      "browser-role": "42501"
+    },
+    "inactiveAdminRejected": true,
+    "firstAllowedPlusNewOperations": 21,
+    "totalAllowed": 20,
+    "totalDenied": 1,
+    "counterValues": {
+      "global_day": 20,
+      "actor_minute": 21,
+      "global_minute": 20
+    },
+    "privateCoreDeniedToServiceRole": true,
+    "fullG014BeforeAndAfter": 4,
+    "negativeControls": {
+      "originalPublic42501": true,
+      "originalPublicDeniedBoundary": "schema auth",
+      "originalCounter42883": true,
+      "nullGuardRemovalAdmitsNull": true,
+      "allMutationsRolledBack": true
+    },
+    "parentDatabaseUnchanged": true,
+    "syntheticAuthRowsCreated": 3,
+    "productionUserRowsCopied": 0,
+    "hostedWrites": 0,
+    "providerCalls": 0,
+    "limits": [
+      "Owned offline PG17.6 functional SQL only, using actual restored schema and auth functions with three synthetic local users.",
+      "Not HTTP/PostgREST, real provider usage, operation-wide liveness, operating admission or a population estimate."
+    ]
+  },
+  "privateReceiptSha256": {
+    "composition": "165461e08ecb9585fa677b32c6865411671de5a05c672304e4a791a09e376975",
+    "functional": "a1a558f674f1f015802dbd199aa5e98c4323bdb94c446acddd2ba532d1d0063d"
+  },
+  "fixtureDifferences": {
+    "ownerDefaultNamespaceAclElidedByLogicalDump": true,
+    "sourceRawAclVerifiedInSeparateReadOnlyObservation": true,
+    "restoredByOrdinaryDclInOwnedClone": true,
+    "candidateGuardRelaxed": false,
+    "registryProjectionOrAssertionRewrite": false
+  },
+  "failedHarnessHistory": [
+    "Original function DDL terminator/role clause connection corrected before valid baseline reproduction.",
+    "Baseline expected private-budget schema denial, but actual original RPC first fails at auth schema; retained actual 42501 boundary.",
+    "SELECT set_config emitted an additional JSON-shaped line; claim setup changed to non-emitting DO.",
+    "Last-admin deactivation was correctly rejected by existing G014; inactive synthetic user now starts disabled while an active admin remains."
+  ],
+  "ownedContainerStopped": true,
+  "otherContainersChanged": 0,
+  "operatingApplied": false,
+  "confidenceInterval": "not applicable: deterministic scoped state/SQL tests; no operating success-rate, performance or cost claim"
+}

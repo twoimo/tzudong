@@ -1,0 +1,69 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/evidence-frame-failure-browser.test.ts:
+(pass) context-only frames keep an honest heading and original video link after image failure, and recover for a new source [8315.36ms]
+
+tests-unit/marker-pool.test.ts:
+(pass) marker pool > provider listener teardown failure does not strand the remaining markers or pool state [0.57ms]
+(pass) marker pool > exports the same singleton and creates one marker/listener for a new id [0.07ms]
+(pass) marker pool > reuses an active marker and updates only changed map, position, icon, and click handler [0.73ms]
+(pass) marker pool > releases after the fade delay and reuses the pooled marker for a new id [0.13ms]
+(pass) marker pool > reclaims a fading marker instead of creating a second node [0.04ms]
+(pass) marker pool > updates active markers and treats unknown ids as safe no-ops [0.04ms]
+(pass) marker pool > a returning batch reuses its restaurant identities and updated click handlers without rebuilding icons [0.12ms]
+(pass) marker pool > releaseExcept and releaseAll keep only the requested active ids before delayed cleanup [0.07ms]
+(pass) marker pool > clear cancels a release that was already scheduled [0.03ms]
+(pass) marker pool > clear leaves the pool empty for markers that were still active [0.03ms]
+(pass) marker pool > keeps the category image when only the review bubble changes [1.36ms]
+(pass) pool reuse and changed visit badges update static marker content even with the same image [0.21ms]
+(pass) detached SDK clicks cannot dispatch stale data and reuse keeps one owned listener [0.07ms]
+(pass) disposal stays bounded across cache capacity and repeated clear [3.91ms]
+
+tests-unit/naver-loader-failure-browser.test.ts:
+(pass) live SDK success becomes ready without requesting the local stub [440.99ms]
+(pass) live network-error remains a visible error and never becomes a simulated map [633.61ms]
+(pass) explicit retry recovers after network-error without a page reload [473.49ms]
+(pass) live missing-api remains a visible error and never becomes a simulated map [693.65ms]
+(pass) explicit retry recovers after missing-api without a page reload [523.97ms]
+(pass) one retry after network-error recovers every concurrent consumer [583.12ms]
+(pass) admin error control recovers after network-error [478.94ms]
+(pass) configured SDK URL shares one retry after network-error [562.31ms]
+(pass) one retry after missing-api recovers every concurrent consumer [474.68ms]
+(pass) admin error control recovers after missing-api [431.21ms]
+(pass) configured SDK URL shares one retry after missing-api [494.50ms]
+(pass) explicit local offline mode still uses its deterministic stub [306.64ms]
+(pass) unmount releases provider subscriptions and settled script callbacks [344.08ms]
+(pass) lazy consumers share one deferred request and one explicit retry [600.49ms]
+(pass) unmount cancels deferred provider work before script injection [448.78ms]
+
+tests-unit/naver-map-event-cleanup.test.ts:
+(pass) listener removal preserves the provider receiver and handle [0.09ms]
+(pass) absent provider or listener is safe during partial initialization [0.04ms]
+(pass) one failed provider removal does not prevent the next teardown [0.05ms]
+(pass) a retained idle handler becomes inert before callback and cannot repeat a stale correction [0.04ms]
+(pass) cleanup cancels a still-pending idle correction even if the provider retains its handler [0.01ms]
+
+tests-unit/naver-map-wheel-helpers.test.ts:
+(pass) naver map wheel helpers > returns no-op when delta direction is zero [0.08ms]
+(pass) naver map wheel helpers > uses previous target zoom during fast continuous wheel input [0.03ms]
+(pass) naver map wheel helpers > clamps zoom to min/max bounds [0.01ms]
+(pass) naver map wheel helpers > builds viewport-relative mouse offsets and in-bounds flag [0.16ms]
+(pass) naver map wheel helpers > marks viewport plan as outside when wheel event is beyond bounds [0.01ms]
+(pass) naver map wheel helpers > rebuilds center-relative mouse offset after zoom [0.02ms]
+(pass) naver map wheel helpers > builds anchor adjustment payload for hover-preserving zoom correction [0.02ms]
+(pass) naver map wheel helpers > builds stable wheel input payload
+(pass) naver map wheel helpers > queues wheel input when anchor adjustment is still running [0.03ms]
+(pass) naver map wheel helpers > flushes queued wheel input only when anchor adjustment is idle [0.05ms]
+(pass) naver map wheel helpers > resolves post-adjust continuation state from current zoom and queue flag [0.02ms]
+(pass) naver map wheel helpers > builds projection adapter around map constructors and projection API [0.06ms]
+(pass) naver map wheel helpers > clears a pending anchor-adjust listener through injected remover [0.05ms]
+(pass) naver map wheel helpers > treats an unchanged projection offset as not ready for same-turn correction [0.03ms]
+(pass) naver map wheel helpers > resolves cleanup state by resetting anchor-adjust and queue state
+
+tests-unit/overseas-marker-refresh-browser.test.ts:
+(pass) retained overseas markers refresh content, location and click data without recreating or losing selection [2441.76ms]
+
+ 51 pass
+ 0 fail
+ 1206 expect() calls
+Ran 51 tests across 6 files. [19.76s]

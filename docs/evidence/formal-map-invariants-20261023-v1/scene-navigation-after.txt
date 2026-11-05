@@ -1,0 +1,72 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/evidence-carousel-navigation-browser.test.ts:
+(pass) scene navigation keeps the restaurant selected at 1440px [1862.56ms]
+(pass) scene navigation keeps the restaurant selected at 390px [1686.45ms]
+(pass) scene navigation keeps the restaurant selected at 820px [1673.18ms]
+
+tests-unit/evidence-frame-failure-browser.test.ts:
+(pass) context-only frames keep an honest heading and original video link after image failure, and recover for a new source [2446.62ms]
+
+tests-unit/home-map-keyboard-navigation.test.ts:
+(pass) home map keyboard navigation guards > returns step for ArrowRight when guard passes [0.09ms]
+(pass) home map keyboard navigation guards > returns step for ArrowLeft when guard passes [0.01ms]
+(pass) home map keyboard navigation guards > returns null for editable target [0.02ms]
+(pass) home map keyboard navigation guards > returns null for interactive target [0.02ms]
+(pass) home map keyboard navigation guards > returns null when modifiers or composition are active [0.04ms]
+(pass) home map keyboard navigation guards > recognizes contenteditable target [0.01ms]
+(pass) home map keyboard adjacent restaurant selection > selects next and previous restaurant by step [0.06ms]
+(pass) home map keyboard adjacent restaurant selection > returns null on boundary and never selects outside current list (mode boundary safety) [0.03ms]
+(pass) desktop arrow event handler > moves to next and previous restaurants according to arrow key when enabled [0.05ms]
+(pass) desktop arrow event handler > does not process when desktop=false [0.01ms]
+(pass) desktop arrow event handler > does not process when panel is closed
+(pass) desktop arrow event handler > does not process when no current restaurant exists [0.01ms]
+(pass) desktop arrow event handler > does not process when swipeable count is 1
+(pass) desktop arrow event handler > calls preventDefault only when movement happened [0.03ms]
+
+tests-unit/evidence-frame-conflict.test.ts:
+(pass) frame conflicts fail closed at both public read boundaries while strict publication validation still rejects [1.21ms]
+
+tests-unit/evidence-engineering-remaining.test.ts:
+(pass) evidence engineering remaining tasks > uploads only the immutable webp key and refuses collisions [0.47ms]
+(pass) evidence engineering remaining tasks > moderation requires preview, confirm, apply, and readback before an audit record [0.32ms]
+(pass) evidence engineering remaining tasks > public carousel keeps approved sign evidence and its seek url [0.35ms]
+(pass) evidence engineering remaining tasks > operational caution ignores a plain search miss and does not use device coordinates [0.04ms]
+(pass) evidence engineering remaining tasks > marker wrapper stays on transform and opacity [0.39ms]
+(pass) evidence engineering remaining tasks > merged media unions approved frames and does not promote a higher tier [0.14ms]
+(pass) evidence engineering remaining tasks > missing evidence embed falls back without dropping restaurants [0.19ms]
+(pass) evidence engineering remaining tasks > badge viewer stays closed until experimental mode is opened and can close again [0.11ms]
+(pass) evidence engineering remaining tasks > open cross-check clauses stay locked without new formulas [0.54ms]
+(pass) evidence engineering remaining tasks > render summary records percentiles without a 60fps gate [0.05ms]
+
+tests-unit/home-map-swipe-restaurants.test.ts:
+(pass) home map swipe restaurant dedupe > matches the pairwise reference over randomized fixtures [8.18ms]
+(pass) home map swipe restaurant dedupe > matches the reference when merged ids point backwards and forwards [0.17ms]
+(pass) home map swipe restaurant dedupe > treats the same id as a duplicate and keeps the first occurrence [0.02ms]
+(pass) home map swipe restaurant dedupe > drops a later restaurant that shares name and coordinates [0.02ms]
+(pass) home map swipe restaurant dedupe > keeps restaurants with the same name but coordinates past the tolerance [0.02ms]
+(pass) home map swipe restaurant dedupe > treats null, zero, and non-numeric coordinates as not comparable [0.02ms]
+(pass) home map swipe restaurant dedupe > maps an empty list, a single row, and falsy rows without throwing [0.03ms]
+(pass) home map swipe restaurant dedupe > isSameRestaurantForSwipe keeps the pairwise contract [0.06ms]
+(pass) home map swipe restaurant dedupe > hasSameSwipeCoordinates is false when either coordinate is missing [0.02ms]
+
+tests-unit/mobile-home-map-regressions.test.ts:
+(pass) mobile home map regression guards > search-selected restaurant can still swipe to a different visible restaurant [0.04ms]
+(pass) mobile home map regression guards > marker render is not skipped when another marker takes over after a search selection [0.14ms]
+(pass) mobile home map regression guards > marker render is not skipped when the sheet closes and a new marker opens with cleared search state [0.02ms]
+(pass) mobile home map regression guards > single-visible post-search swipe falls back to the nearest restaurant [0.21ms]
+(pass) mobile home map regression guards > search ownership release keeps the current detail selection active [0.04ms]
+(pass) mobile home map regression guards > peek-state downward sheet gesture dismisses only after intentional distance or speed [0.02ms]
+(pass) mobile home map regression guards > blank map taps collapse the sheet, enter fullscreen map, then restore the peek sheet [0.02ms]
+(pass) mobile home map regression guards > blank map fullscreen toggle is inactive outside a mobile restaurant panel
+(pass) mobile home map regression guards > cluster marker zoom jumps immediately without Naver morph animation [0.41ms]
+(pass) mobile home map regression guards > mobile restaurant detail sheet peeks on map interaction without skipping fullscreen tap sequence [0.70ms]
+(pass) mobile home map regression guards > mobile visible marker sheet receives map interaction epoch before requesting peek height [0.26ms]
+(pass) mobile home map regression guards > G002 mobile category sheet commits immediately without delayed apply affordance [0.20ms]
+(pass) mobile home map regression guards > G012 mobile sheets and details own fixed map-control safe area [0.14ms]
+(pass) mobile home map regression guards > home detail route history uses app-owned list/detail states and browser back restoration contracts [0.15ms]
+
+ 52 pass
+ 0 fail
+ 313 expect() calls
+Ran 52 tests across 7 files. [7.98s]

@@ -1,0 +1,5 @@
+
+> web@1.2.4 typecheck:parity
+> node scripts/run-typecheck.mjs --compiler parity
+
+{"status":"passed","diagnostics":0,"logicalInputs":3351,"logicalInputNamesSha256":"127c63b72a8b143d30331423de187a55551d734f22babb67ee5a2f910d5ceeb5","nonLibraryContentSha256":"38d90e0d31fdaed39ff69445a8a734905732e85177d116cfd5af1ee23d4b0317","standardLibraryContentSha256":{"native":"d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64","compat":"82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"}}

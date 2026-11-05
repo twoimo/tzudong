@@ -22,3 +22,20 @@ apps/web/performance/tzuyang-review-census-20261009/checkpoint-v1/census_admissi
 # Preserve original bytes of sealed production build logs bound to detached maps.
 apps/web/performance/readiness-develop-integration-20261010/production-build-v7.log -text
 apps/web/performance/readiness-followthrough-20261010/production-build-final-v10.log -text
+
+# The hash-bound audit bundle contains literal unified-diff blank context lines.
+# Preserve those space markers; other whitespace checks still apply.
+apps/web/performance/cross-audit-20261018/source_bundle.txt whitespace=-blank-at-eol
+# Forward readiness SQL is sealed by the retained PG17 replay and audit bundle.
+backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql whitespace=-blank-at-eof
+
+# Preserve literal bytes of the final-source package and its failed build receipt.
+apps/web/performance/cross-audit-20261018/final-source-antithesis-post-cms/final-source-antithesis-source_bundle.txt whitespace=-blank-at-eof
+apps/web/performance/cross-audit-20261018/followup-verification/web-build.txt whitespace=-blank-at-eol
+
+# Preserve hash-bound original audit Markdown hard breaks and the raw test receipt.
+# These exact evidence paths retain their bytes; source whitespace checks stay enabled.
+apps/web/performance/cross-audit-20261019/ocr-indeterminate-recovery-independent-audit/audit.md whitespace=-blank-at-eol
+apps/web/performance/cross-audit-20261019/ocr-indeterminate-recovery-independent-audit/final-candidate-audit-20261018T195954Z.md whitespace=-blank-at-eol
+apps/web/performance/cross-audit-20261019/ocr-indeterminate-recovery-independent-audit/syntax-delta-followup-20261018T201149Z.md whitespace=-blank-at-eol
+apps/web/performance/cross-audit-20261019/ocr-admission-recovery-app-integrated-verification/recovery108-source-ready-scoped-20261019.txt whitespace=-blank-at-eof

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T14:35:18Z",
+  "head": "a6160a87d13c20ac5479a23ab10c0281ee9680e9",
+  "review": {
+    "pullRequest": 3215,
+    "threadId": "PRRT_kwDOQGRyNc6sq8bK",
+    "priority": "P2",
+    "finding": "A late receipt-image preparation could outlive replacement, removal, close, or unmount and commit stale private bytes."
+  },
+  "result": {
+    "selectionLease": "Each preparation owns one generation and AbortSignal. Starting a replacement aborts the previous compressor.",
+    "commitFence": "Prepared bytes can replace the selected receipt only while their generation remains current.",
+    "lifecycleFence": "Removal, close, closed-state transition, and unmount invalidate the generation before pending work can commit or start OCR.",
+    "privacyBoundary": "No raw receipt bytes, OCR payloads, tokens, provider diagnostics, or request bodies are retained in this receipt."
+  },
+  "scope": {
+    "owned": [
+      "apps/web/lib/ocr/latest-selection.ts",
+      "apps/web/lib/ocr/receipt-upload-preparation.ts",
+      "apps/web/tests-unit/latest-selection.test.ts",
+      "apps/web/tests-unit/review-storage-verification.test.ts"
+    ],
+    "shared": [
+      "apps/web/components/reviews/ReviewModal.tsx",
+      "apps/web/tests-unit/review-modal-ocr-ux.test.ts"
+    ],
+    "sharedFileNote": "ReviewModal and its OCR UX test also contain the disjoint SSE/status-recovery worker's current changes; the hashes below bind the combined current source without attributing that lane here."
+  },
+  "verification": {
+    "targetedTests": {
+      "command": "bun test tests-unit/latest-selection.test.ts tests-unit/review-storage-verification.test.ts tests-unit/review-modal-ocr-ux.test.ts",
+      "exitCode": 0,
+      "passed": 21,
+      "failed": 0,
+      "expectCalls": 93
+    },
+    "targetedEslint": {
+      "command": "bun x eslint components/reviews/ReviewModal.tsx lib/ocr/latest-selection.ts lib/ocr/receipt-upload-preparation.ts tests-unit/latest-selection.test.ts tests-unit/review-storage-verification.test.ts tests-unit/review-modal-ocr-ux.test.ts",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 0
+    },
+    "typecheckParity": {
+      "command": "npm run typecheck:parity",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "logicalInputs": 3324,
+      "logicalInputNamesSha256": "4858633d19293e689a51ee0ea1cf5eed6a419a5d8148aaf6978eeee4fddfdb78",
+      "nonLibraryContentSha256": "1c9005ed288df33ca1d2df85b4bb28b9607ca177424e0de5d70012771d9ef35d"
+    },
+    "diffCheck": {
+      "command": "git diff --check -- <six affected source/test paths>",
+      "exitCode": 0
+    }
+  },
+  "hashes": {
+    "apps/web/components/reviews/ReviewModal.tsx": "7fb9932ddeb4ab1d7b7d3b28dece717dded733768a2bda595e7c6d1cd2c8802d",
+    "apps/web/lib/ocr/latest-selection.ts": "109fc4dc6ba16a24433fa698c7497ac9968dfb2cb003cbe799cdf79663825179",
+    "apps/web/lib/ocr/receipt-upload-preparation.ts": "14a011d50aa019157770bca7705bf9582a6b1a48a48e334acd8e19ba0b4bc7cd",
+    "apps/web/tests-unit/latest-selection.test.ts": "5a0e9d17ca5565ef7c6d695a21ea86f20719d5c4f01e1cf442e3f4c4f644ac7d",
+    "apps/web/tests-unit/review-storage-verification.test.ts": "a3a4e112186824193a1598faa82320da7c33c5fd074908266fdf68baca47f355",
+    "apps/web/tests-unit/review-modal-ocr-ux.test.ts": "a43facf284aff89b01076297f092e89a11b38d0da9c85bbb3b68bfc10b3bbb1c",
+    "combinedDiffSha256": "9349d75a86e64d4c040104a215d0a92f21efe3112a4b8ea0383e9a824165acb7"
+  },
+  "limits": [
+    "Local source, unit, lint, and typecheck evidence only.",
+    "No full unit suite, production build, browser flow, provider call, database write, Storage write, commit, or push was performed.",
+    "The shared ReviewModal hash may change when the disjoint OCR recovery worker finishes; final integration checks must bind the merged source."
+  ]
+}

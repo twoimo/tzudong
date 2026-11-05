@@ -1,0 +1,15 @@
+{
+  "run": 39867375237,
+  "revision": "2e0f8dd97e24164425653b4f3ed3153016c0878a",
+  "conclusion": "success",
+  "jobs": {
+    "Install": "success",
+    "Windows npm": "success",
+    "Windows Bun": "success",
+    "Ubuntu npm": "success",
+    "Ubuntu Bun": "success",
+    "Admin": "success"
+  },
+  "nightly": false,
+  "followup_scope": "Only test coverage/evidence changes after this run; no application runtime code changes."
+}

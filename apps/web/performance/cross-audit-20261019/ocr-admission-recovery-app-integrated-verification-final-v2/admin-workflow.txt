@@ -1,0 +1,26 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/admin-receipt-ocr-workflow.test.ts:
+(pass) trusted administrator receipt OCR workflow > executes at most fifty selected reviews strictly in order and serially [0.58ms]
+(pass) trusted administrator receipt OCR workflow > stops on a held owner before any readback or provider-capable processing [0.07ms]
+(pass) trusted administrator receipt OCR workflow > never resends after an uncertain call when post-call readback is lost [0.11ms]
+(pass) trusted administrator receipt OCR workflow > advances on the next workflow selection after a terminal row defect [0.15ms]
+(pass) trusted administrator receipt OCR workflow > keeps global or uncertain failures pending and stops the batch [0.05ms]
+(pass) trusted administrator receipt OCR workflow > requires both review and owner identity on before and after readback [0.07ms]
+(pass) trusted administrator receipt OCR workflow > requires an exact bounded review-id set for scoped dispatches [0.07ms]
+(pass) trusted administrator receipt OCR workflow > rejects malformed workflow policies and preserves the declared order [0.07ms]
+(pass) trusted administrator receipt OCR workflow > canonicalizes legacy manual Gemini aliases before snapshot and provider validation [0.04ms]
+(pass) trusted administrator receipt OCR workflow > treats every non-204 or lost dispatch response as indeterminate without reading its body [0.14ms]
+(pass) trusted administrator receipt OCR workflow > serializes JSONB snapshot CAS in the real PostgREST request URL [2.19ms]
+(pass) trusted administrator receipt OCR workflow > allows guarded rerun to reset a terminal row defect after photo replacement [0.61ms]
+(pass) trusted administrator receipt OCR workflow > allows one concurrent reset winner and stops the loser before dispatch [0.18ms]
+(pass) trusted administrator receipt OCR workflow > reports partial reset conflict, skips dispatch, and retries pending rows without another reset [0.07ms]
+(pass) trusted administrator receipt OCR workflow > keeps secrets and raw OCR/provider material outside workflow inputs and logs [0.22ms]
+(pass) trusted administrator receipt OCR workflow > dispatches recovery with only the opaque operation and exact public execution policy [0.03ms]
+(pass) trusted administrator receipt OCR workflow > admits funded workflow execution only for the repository owner at protected main [153.59ms]
+(pass) trusted administrator receipt OCR workflow > preserves bounded reset state for indeterminate dispatch and scopes every worker batch [0.56ms]
+
+ 18 pass
+ 0 fail
+ 121 expect() calls
+Ran 18 tests across 1 file. [232.00ms]

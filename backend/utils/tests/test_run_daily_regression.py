@@ -713,7 +713,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn('--completion-proof "$COMPLETION_PROOF"', workflow)
         self.assertNotIn("--completion-proof remote_manifest_check", workflow)
         self.assertIn("remote_manifest_check", workflow)
-        self.assertIn("actions/upload-artifact@v7.0.1", workflow)
+        self.assertIn(
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1",
+            workflow,
+        )
         self.assertIn("STATUS_SCOPE_SAFE", workflow)
         self.assertIn("status_scope must match [A-Za-z0-9._-]+", workflow)
         self.assertNotIn("backend/log/cron/gdrive-upload-staging/**", workflow)
@@ -773,7 +776,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(dependabot.count('target-branch: "develop"'), 7)
         self.assertIn('package-ecosystem: "cargo"', dependabot)
         self.assertIn('directory: "/backend/rust"', dependabot)
-        self.assertEqual(dependabot.count('applies-to: "version-updates"'), 2)
+        self.assertEqual(dependabot.count('applies-to: "version-updates"'), 3)
         self.assertEqual(dependabot.count('          - "minor"'), 2)
         self.assertEqual(dependabot.count('          - "patch"'), 2)
         self.assertIn('dependency-name: "@types/node"', dependabot)

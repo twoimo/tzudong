@@ -10,11 +10,13 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type DragEventHandler,
+  type MouseEvent as ReactMouseEvent,
   type ReactElement,
   type ReactNode,
   type TouchEventHandler,
@@ -81,7 +83,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingPreview, LoadingSurface } from '@/components/ui/loading-surface';
 import {
   Tooltip as UiTooltip,
   TooltipContent as UiTooltipContent,
@@ -99,6 +101,7 @@ import {
   normalizeAdminDashboardWidgetOrder,
   type AdminDashboardWidgetId,
 } from "@/lib/admin/dashboard-widget-order";
+import { getDashboardKpiPresentation } from "@/lib/admin/dashboard-kpi-presentation";
 import {
   DEFAULT_ADMIN_SIDEBAR_ORDER,
   normalizeAdminSidebarOrder,
@@ -106,6 +109,7 @@ import {
 } from "@/lib/admin/sidebar-order";
 import { getMobileScrollNavVisibilityAction } from "@/lib/mobile-scroll-nav-visibility";
 import {
+  ADMIN_PENDING_COUNT_DOMAIN_IDS,
   ADMIN_PENDING_COUNTS_QUERY_KEY,
   getAdminPendingCountsTotal,
   getAdminPendingReviewCount,
@@ -118,6 +122,7 @@ import { readBrowserStorageString, writeBrowserStorageString } from "@/lib/brows
 import { resolveGitHubActionsRunUrl } from "@/lib/open-external-url";
 import { buildScopedBrowserTitle } from "@/lib/seo";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
+import { adminQueryLastReadFailed } from "@/lib/admin/query-read-state";
 import type {
   InsightTreemapPeriod,
   InsightTreemapDataQualityStatus,
@@ -388,7 +393,7 @@ function getSidebarBadgeClassName(sectionLabel: string, isActive: boolean) {
   if (isActive) return "text-primary-foreground/75";
   if (sectionLabel === "검수") return "text-amber-700 dark:text-amber-300";
   if (sectionLabel === "운영") return "text-sky-700 dark:text-sky-300";
-  if (sectionLabel === "실험실") return "text-violet-700 dark:text-violet-300";
+  if (sectionLabel === "실험실") return "text-primary";
   if (sectionLabel === "홈") return "text-emerald-700 dark:text-emerald-300";
 
   return "text-muted-foreground";
@@ -761,6 +766,7 @@ function AdminEvaluationModuleStaticShell({
       className="flex h-full min-h-0 flex-col overflow-hidden"
       data-admin-evaluation-dynamic-loading-shell="true"
     >
+
       <AdminPageHeader
         title={getAdminModuleTitle(moduleId)}
         icon={ClipboardCheck}
@@ -768,109 +774,253 @@ function AdminEvaluationModuleStaticShell({
         data-admin-module-header="compact"
         data-admin-module-header-module={moduleId}
         data-admin-sidebar-module-loading-header="true"
-        actions={<div className="flex items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
-            <Button type="button" variant="secondary" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="리스트 뷰" aria-pressed="true">
+        actions={
+          <div
+            className="flex items-center justify-end gap-1.5"
+            data-admin-evaluation-view-actions="top-right"
+          >
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled
+              className="h-8 w-8 p-0 disabled:opacity-100"
+              aria-label="리스트 뷰"
+              aria-pressed="true"
+            >
+
               <LayoutList className="h-4 w-4" aria-hidden="true" />
+
               <span className="sr-only">리스트</span>
+
             </Button>
-            <Button type="button" variant="ghost" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="슬라이드 뷰" aria-pressed="false">
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled
+              className="h-8 w-8 p-0 disabled:opacity-100"
+              aria-label="슬라이드 뷰"
+              aria-pressed="false"
+            >
+
               <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+
               <span className="sr-only">슬라이드</span>
+
             </Button>
-          </div>}
+
+          </div>
+        }
       />
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 p-2">
+
         <div className="space-y-2 lg:hidden" data-admin-evaluation-static-loading-controls="true">
+
           <div className="grid grid-cols-3 gap-1.5">
-            {ADMIN_EVALUATION_STATIC_STATUS_FILTERS.map((label, index) => (
-              <Button
-                key={label}
-                type="button"
-                variant={index === 0 ? "default" : "outline"}
-                size="sm"
-                disabled
-                className="h-8 min-w-0 rounded-full px-2 text-xs font-medium disabled:opacity-100"
-                aria-pressed={index === 0}
-              >
-                {label}
-              </Button>
-            ))}
+
+            {
+              ADMIN_EVALUATION_STATIC_STATUS_FILTERS.map((label, index) => (
+                <Button
+                  key={label}
+                  type="button"
+                  variant={index === 0 ? "default" : "outline"}
+                  size="sm"
+                  disabled
+                  className="h-8 min-w-0 rounded-full px-2 text-xs font-medium disabled:opacity-100"
+                  aria-pressed={index === 0}
+                >
+
+                  {label}
+
+                </Button>
+              ))
+            }
+
           </div>
 
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <div className="flex h-9 items-center rounded-md border bg-background pl-8 pr-3 text-sm text-muted-foreground">
+
+            <Search
+              className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+
+            <div
+              className="flex h-9 items-center rounded-md border bg-background pl-8 pr-3 text-sm text-muted-foreground"
+            >
               영상 제목 검색...
             </div>
+
           </div>
 
           <div className="flex min-w-0 items-center justify-between gap-2 py-0.5">
+
             <div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">
+
               <span>검수 항목</span>
+
               <span className="ml-1 font-medium">집계 중</span>
+
             </div>
+
             <div className="flex shrink-0 items-center gap-1">
-              <Button type="button" variant="outline" size="sm" disabled className="h-8 rounded-full px-2.5 text-xs font-semibold disabled:opacity-100">
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled
+                className="h-8 rounded-full px-2.5 text-xs font-semibold disabled:opacity-100"
+              >
                 상세 필터
               </Button>
-              <Button type="button" variant="ghost" size="sm" disabled aria-label="필터 초기화" className="h-8 w-8 rounded-full p-0 text-muted-foreground disabled:opacity-100">
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-        </div>
 
-        <div ref={mobileSkeletonRef} className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-          {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
-            <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" />
-                  <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" />
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div ref={desktopSkeletonRef} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
-          <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <div key={index} className="px-2 py-2">
-                <Skeleton className={index === 1 ? "h-3 w-24 rounded-full motion-reduce:animate-none" : "mx-auto h-3 w-12 rounded-full motion-reduce:animate-none"} />
-              </div>
-            ))}
-          </div>
-          <div className="divide-y divide-border">
-            {Array.from({ length: desktopSkeletonCount }).map((_, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled
+                aria-label="필터 초기화"
+                className="h-8 w-8 rounded-full p-0 text-muted-foreground disabled:opacity-100"
               >
-                <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                <div className="flex min-w-0 items-center gap-2">
-                  <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                    <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </div>
-                </div>
-                {Array.from({ length: 6 }).map((__, cellIndex) => (
-                  <Skeleton key={cellIndex} className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                ))}
-                <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            ))}
+
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+
+              </Button>
+
+            </div>
+
           </div>
+
         </div>
+
+        <div
+          ref={mobileSkeletonRef}
+          className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden"
+          aria-hidden="true"
+        >
+
+          <LoadingSurface label="검수 카드 로딩 중" className="col-span-full">
+
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+
+              {
+                Array.from({ length: mobileSkeletonCount }, (_, index) => (
+                  <article key={index} className="rounded-md border border-border/70 bg-card p-3">
+
+                    <div className="flex items-center gap-2">
+
+                      <svg
+                        viewBox="0 0 64 48"
+                        role="img"
+                        aria-label="맛집 사진"
+                        className="h-12 w-16 shrink-0 rounded-md border"
+                      >
+
+                        <rect width="64" height="48" fill="currentColor" opacity="0.1" />
+
+                      </svg>
+
+                      <div className="min-w-0 flex-1 space-y-1.5">
+
+                        <h3 className="text-sm font-semibold">맛집 검수 항목</h3>
+
+                        <p className="text-xs">영상과 맛집 정보</p>
+
+                        <div className="grid grid-cols-3 gap-1.5 text-xs">
+
+                          <span>검수</span>
+
+                          <span>위치</span>
+
+                          <span>분류</span>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  </article>
+                ))
+              }
+
+            </div>
+
+          </LoadingSurface>
+
+        </div>
+
+        <div
+          ref={desktopSkeletonRef}
+          className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex"
+        >
+
+          <LoadingSurface label="검수 목록 로딩 중">
+
+            <div
+              className="grid bg-muted/35 px-2 py-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+            >
+
+              {
+                ["선택", "검수 항목", "평가", "분류", "상태", "주소", "영상", "기록", "작업"].map(label => (
+                  <span key={label}>
+
+                    {label}
+
+                  </span>
+                ))
+              }
+
+            </div>
+
+            <div className="divide-y divide-border">
+
+              {
+                Array.from({ length: desktopSkeletonCount }, (_, index) => (
+                  <div
+                    key={index}
+                    className="grid min-h-16 items-center gap-2 p-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+                  >
+
+                    <span>선택</span>
+
+                    <div>
+
+                      <p className="text-sm font-semibold">맛집 검수 항목</p>
+
+                      <p className="mt-1">영상과 맛집 정보</p>
+
+                    </div>
+
+                    {
+                      ["평가", "분류", "상태", "주소", "영상", "기록"].map(label => (
+                        <span key={label}>
+
+                          {label}
+
+                        </span>
+                      ))
+                    }
+
+                    <span>상세 보기</span>
+
+                  </div>
+                ))
+              }
+
+            </div>
+
+          </LoadingSurface>
+
+        </div>
+
       </div>
+
     </div>
   );
 }
@@ -1239,6 +1389,27 @@ function formatNumber(value: number | null | undefined) {
     : "—";
 }
 
+function sumKnownNumbers(values: Array<number | null | undefined>): number | null {
+  let sum = 0;
+  for (const value of values) {
+    if (typeof value !== "number" || !Number.isFinite(value)) return null;
+    sum += value;
+  }
+  return sum;
+}
+
+function pendingCountsOmitADomainCount(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  const domains = (payload as { domains?: unknown }).domains;
+  if (!domains || typeof domains !== "object" || Array.isArray(domains)) return false;
+  return ADMIN_PENDING_COUNT_DOMAIN_IDS.some((id) => {
+    const domain = (domains as Record<string, unknown>)[id];
+    if (!domain || typeof domain !== "object" || Array.isArray(domain)) return false;
+    const count = (domain as { count?: unknown }).count;
+    return typeof count !== "number" || !Number.isFinite(count);
+  });
+}
+
 function formatSignedNumber(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   if (value === 0) return "0";
@@ -1436,7 +1607,13 @@ async function fetchAdminPendingCounts(): Promise<AdminPendingCountsResponse> {
     throw new Error("admin-pending-counts-failed");
   }
 
-  return normalizeAdminPendingCountsResponse(await response.json());
+  const payload: unknown = await response.json();
+  // A domain object without a numeric count is not a confirmed zero.
+  if (pendingCountsOmitADomainCount(payload)) {
+    throw new Error("admin-pending-counts-failed");
+  }
+
+  return normalizeAdminPendingCountsResponse(payload);
 }
 
 async function fetchDashboardSummary(): Promise<DashboardSummaryResponse> {
@@ -1532,6 +1709,8 @@ function useAdminOverviewStats(isAdmin: boolean): {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
+  isRetrying: boolean;
+  retryFailed: () => void;
 } {
   const pendingCountsQuery = useQuery({
     queryKey: ADMIN_PENDING_COUNTS_QUERY_KEY,
@@ -1549,6 +1728,7 @@ function useAdminOverviewStats(isAdmin: boolean): {
   });
 
   const bannersQuery = useAdBannersAdmin(isAdmin);
+  const statsQueries = [pendingCountsQuery, dashboardSummaryQuery, bannersQuery];
   const banners = bannersQuery.data ?? [];
   const pendingCounts = pendingCountsQuery.data ?? null;
 
@@ -1579,13 +1759,18 @@ function useAdminOverviewStats(isAdmin: boolean): {
       dashboardVideos: dashboardSummaryQuery.data?.videos ?? null,
     },
     isLoading:
-      pendingCountsQuery.isLoading ||
-      dashboardSummaryQuery.isLoading ||
-      bannersQuery.isLoading,
-    hasError:
-      pendingCountsQuery.isError ||
-      dashboardSummaryQuery.isError ||
-      bannersQuery.isError,
+      (pendingCountsQuery.isLoading && !adminQueryLastReadFailed(pendingCountsQuery)) ||
+      (dashboardSummaryQuery.isLoading && !adminQueryLastReadFailed(dashboardSummaryQuery)) ||
+      (bannersQuery.isLoading && !adminQueryLastReadFailed(bannersQuery)),
+    hasError: statsQueries.some(adminQueryLastReadFailed),
+    isRetrying: statsQueries.some(
+      (query) => adminQueryLastReadFailed(query) && query.isFetching,
+    ),
+    retryFailed: () => {
+      for (const query of statsQueries) {
+        if (adminQueryLastReadFailed(query)) void query.refetch();
+      }
+    },
   };
 }
 
@@ -3072,7 +3257,7 @@ function getDashboardChangeProgress(change: number | null) {
 }
 
 const adminDashboardCardClass =
-  "min-h-0 min-w-0 w-full overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
+  "min-h-0 min-w-0 w-full overflow-hidden border border-border/70 bg-background shadow-none";
 
 const adminDashboardChartMargin = { top: 10, right: 10, bottom: 2, left: 0 };
 const adminDashboardScatterChartMargin = {
@@ -3090,7 +3275,7 @@ const adminDashboardTooltipWrapperStyle = {
   pointerEvents: "none",
 } satisfies CSSProperties;
 const adminDashboardTooltipContentClassName =
-  "max-w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-border bg-popover px-2.5 py-1.5 text-xs leading-4 text-popover-foreground shadow-xl";
+  "max-w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-border bg-popover px-2.5 py-1.5 text-xs leading-4 text-popover-foreground shadow-xl"; // taste-skill-ignore: tooltip overlay
 const adminDashboardTooltipPortalClassName =
   "border-0 bg-transparent p-0 text-popover-foreground shadow-none";
 const adminDashboardTooltipLineClassName =
@@ -3114,7 +3299,7 @@ const adminDashboardControlGroupClassName =
 const adminDashboardControlButtonClassName =
   "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-2xs font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 const adminDashboardFullscreenCardClassName =
-  "fixed inset-2 z-[80] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] overflow-auto scrollbar-hide rounded-3xl border-primary/35 bg-card p-4 shadow-2xl sm:inset-4 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)]";
+  "fixed inset-2 z-[80] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] overflow-auto scrollbar-hide rounded-3xl border-primary/35 bg-card p-4 shadow-2xl sm:inset-4 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)]"; // taste-skill-ignore: fullscreen overlay
 
 function formatRechartsTooltipValue(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
@@ -3215,7 +3400,7 @@ function AdminDashboardTooltipPanel({
         </div>
       ) : null}
       {footer ? (
-        <p className="border-t border-border/70 pt-0.5 text-2xs font-semibold leading-3 text-muted-foreground [text-wrap:pretty]">
+        <p className="rounded-sm bg-muted/35 px-1 py-0.5 text-2xs font-semibold leading-3 text-muted-foreground [text-wrap:pretty]">
           {footer}
         </p>
       ) : null}
@@ -3421,12 +3606,18 @@ function AdminDashboardViewToggle({
           className={cn(
             adminDashboardControlButtonClassName,
             "text-muted-foreground hover:text-foreground",
-            value === view && "bg-background text-foreground shadow-sm",
+            value === view && "bg-background text-foreground shadow-none",
           )}
           aria-pressed={value === view}
+          aria-label={`${label} ${view === "chart" ? "그래프" : "표"} 보기`}
           onClick={() => onChange(view)}
         >
-          {view === "chart" ? "그래프" : "표"}
+          {view === "chart" ? (
+            <BarChart2 className="hidden h-3.5 w-3.5" aria-hidden="true" data-admin-dashboard-view-icon="true" />
+          ) : (
+            <LayoutList className="hidden h-3.5 w-3.5" aria-hidden="true" data-admin-dashboard-view-icon="true" />
+          )}
+          <span data-admin-dashboard-view-label="true">{view === "chart" ? "그래프" : "표"}</span>
         </button>
       ))}
     </div>
@@ -3451,7 +3642,7 @@ function AdminDashboardFullscreenButton({
       type="button"
       className={cn(
         adminDashboardControlButtonClassName,
-        "h-7 w-7 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground",
+        "h-7 w-7 border border-border bg-background p-0 text-muted-foreground shadow-none hover:text-foreground",
         isFullscreen && "border-primary/50 text-primary",
       )}
       aria-label={`${label} 카드 ${isFullscreen ? "전체화면 닫기" : "전체화면으로 보기"}`}
@@ -3493,6 +3684,7 @@ function AdminDashboardSeriesToggle<Key extends string>({
     key: Key;
     label: string;
     dotClassName: string;
+    compactLabel?: string;
   }>;
   visibility: AdminDashboardSeriesVisibility<Key>;
   onToggle: (key: Key) => void;
@@ -3523,12 +3715,14 @@ function AdminDashboardSeriesToggle<Key extends string>({
               adminDashboardControlButtonClassName,
               "shrink-0 border",
               isVisible
-                ? "border-border bg-background text-foreground shadow-sm"
+                ? "border-border bg-background text-foreground shadow-none"
                 : "border-transparent bg-muted/35 text-muted-foreground hover:text-foreground",
               isLastVisible && "cursor-not-allowed opacity-70",
             )}
             aria-pressed={isVisible}
             aria-label={`${option.label} ${isVisible ? "숨기기" : "보이기"}`}
+            data-admin-dashboard-series-compact={option.compactLabel ? "true" : undefined}
+            title={option.label}
             disabled={isLastVisible}
             onClick={() => onToggle(option.key)}
           >
@@ -3539,7 +3733,12 @@ function AdminDashboardSeriesToggle<Key extends string>({
               )}
               aria-hidden="true"
             />
-            {option.label}
+            <span data-admin-dashboard-series-label="true">{option.label}</span>
+            {option.compactLabel ? (
+              <span className="hidden" data-admin-dashboard-series-compact-label="true" aria-hidden="true">
+                {option.compactLabel}
+              </span>
+            ) : null}
           </button>
         );
       })}
@@ -3560,7 +3759,7 @@ function AdminDashboardImpactRankLegend() {
     <div
       className={cn(
         adminDashboardControlGroupClassName,
-        "gap-1 px-2 text-2xs font-extrabold leading-none text-muted-foreground shadow-sm",
+        "gap-1 px-2 text-2xs font-extrabold leading-none text-muted-foreground shadow-none",
       )}
       aria-label="상위 영상 영향도 색상 범례: 순위 구분"
       data-admin-dashboard-rank-legend="impact"
@@ -3626,7 +3825,7 @@ function AdminDashboardScrollTable<Row>({
                 key={column.key}
                 scope="col"
                 className={cn(
-                  "min-w-0 border-b border-border/70 px-2.5 py-2 text-left text-2xs font-extrabold text-muted-foreground",
+                  "min-w-0 border-b border-border/70 px-2.5 py-2 text-left text-2xs font-extrabold text-muted-foreground", // taste-skill-ignore: real table header boundary
                   column.align === "right" && "text-right",
                   column.className,
                 )}
@@ -3643,7 +3842,7 @@ function AdminDashboardScrollTable<Row>({
                 <td
                   key={column.key}
                   className={cn(
-                    "min-w-0 border-b border-border/45 px-2.5 py-2 align-middle text-foreground last:border-b-0",
+                    "min-w-0 border-b border-border/45 px-2.5 py-2 align-middle text-foreground last:border-b-0", // taste-skill-ignore: real table row boundary
                     column.align === "right" &&
                       "text-right font-extrabold tabular-nums",
                     column.className,
@@ -3657,7 +3856,7 @@ function AdminDashboardScrollTable<Row>({
         </tbody>
       </table>
       {hasMoreRows ? (
-        <div className="sticky bottom-0 border-t border-border/70 bg-background/95 px-2.5 py-1.5 text-right text-2xs font-extrabold tabular-nums text-muted-foreground backdrop-blur">
+        <div className="sticky bottom-0 border-t border-border/70 bg-background/95 px-2.5 py-1.5 text-right text-2xs font-extrabold tabular-nums text-muted-foreground backdrop-blur">{/* taste-skill-ignore: sticky table footer */}
           추가 행 표시 중 {formatNumber(rows.length)}/{formatNumber(totalRows)}
         </div>
       ) : null}
@@ -3672,235 +3871,48 @@ function AdminDashboardKpiValueSkeleton() {
       data-admin-dashboard-dynamic-skeleton="kpi"
       aria-hidden="true"
     >
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="h-8 w-32 max-w-full rounded-full motion-reduce:animate-none" />
-        <Skeleton className="h-3 w-24 max-w-full rounded-full motion-reduce:animate-none" />
-      </div>
-      <Skeleton className="h-11 w-24 shrink-0 rounded-xl motion-reduce:animate-none" />
+
+      <LoadingSurface label="관리자 지표 조회 중" className="w-full">
+
+        <div className="flex min-w-0 items-center justify-between gap-3">
+
+          <div>
+
+            <p className="text-3xl font-semibold">000</p>
+
+            <p className="mt-2 text-xs">집계 현황</p>
+
+          </div>
+
+          <span className="rounded-xl border p-3 text-sm">최근 추이</span>
+
+        </div>
+
+      </LoadingSurface>
+
     </div>
   );
 }
 
-function AdminDashboardPanelBodySkeleton({
-  variant = "chart",
-}: {
-  variant?: AdminDashboardSkeletonVariant;
-}) {
+function AdminDashboardPanelBodySkeleton({ variant = "chart" }: { variant?: AdminDashboardSkeletonVariant }) {
   const { ref: tableSkeletonRef, count: tableSkeletonCount } = useFilledSkeletonCount(28, 5);
-  if (variant === "table") {
-    return (
-      <div
-        ref={tableSkeletonRef}
-        className="min-h-0 flex-1 space-y-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="table"
-        aria-hidden="true"
-      >
-        {Array.from({ length: tableSkeletonCount }).map((_, index) => (
-          <div
-            key={index}
-            className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] gap-3"
-          >
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "ops") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 gap-3"
-        data-admin-dashboard-dynamic-skeleton="ops"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 2 }).map((_, sectionIndex) => (
-          <div key={sectionIndex} className="grid gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-4 w-12 rounded-full motion-reduce:animate-none" />
-            </div>
-            {Array.from({ length: 4 }).map((__, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2"
-              >
-                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-2 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "bubble") {
-    return (
-      <div
-        className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="bubble"
-        aria-hidden="true"
-      >
-        <div className="absolute inset-x-5 bottom-10 h-px bg-border/60" />
-        <div className="absolute inset-y-5 left-10 w-px bg-border/60" />
-        {[
-          ["left-[9%] top-[58%] h-10 w-10", "bg-teal-100 dark:bg-teal-950/45"],
-          ["left-[25%] top-[38%] h-14 w-14", "bg-teal-100/80 dark:bg-teal-950/35"],
-          [
-            "left-[43%] top-[52%] h-11 w-11",
-            "bg-teal-100/60 dark:bg-teal-950/25",
-          ],
-          [
-            "left-[62%] top-[30%] h-16 w-16",
-            "bg-muted-foreground/20 dark:bg-muted-foreground/18",
-          ],
-          [
-            "left-[78%] top-[62%] h-9 w-9",
-            "bg-muted-foreground/10 dark:bg-muted-foreground/12",
-          ],
-        ].map(([positionClassName, colorClassName], index) => (
-          <Skeleton
-            key={index}
-            className={cn(
-              "absolute rounded-full motion-reduce:animate-none",
-              positionClassName,
-              colorClassName,
-            )}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "line") {
-    return (
-      <div
-        className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="line"
-        aria-hidden="true"
-      >
-        <div className="relative h-full min-h-[8rem] overflow-hidden">
-          <div className="absolute inset-x-1 top-1/4 h-px bg-border/50" />
-          <div className="absolute inset-x-1 top-1/2 h-px bg-border/50" />
-          <div className="absolute inset-x-1 top-3/4 h-px bg-border/50" />
-          <svg
-            className="absolute inset-0 h-full w-full text-muted/80"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            focusable="false"
-          >
-            <polyline
-              points="2,68 18,44 34,58 50,30 66,48 82,24 98,38"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points="2,48 18,56 34,34 50,52 66,26 82,45 98,28"
-              fill="none"
-              stroke="currentColor"
-              strokeOpacity="0.62"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points="2,75 18,72 34,82 50,61 66,70 82,54 98,63"
-              fill="none"
-              stroke="currentColor"
-              strokeOpacity="0.42"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton
-              key={index}
-              className="absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none"
-              style={{ left: `${7 + index * 17}%` }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (variant === "stacked") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 content-evenly gap-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="stacked"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 3 }).map((_, rowIndex) => (
-          <div key={rowIndex} className="grid gap-1.5">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-3 w-16 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-3 w-24 rounded-full motion-reduce:animate-none" />
-            </div>
-            <div className="flex h-9 overflow-hidden rounded-xl bg-muted/40">
-              {[28, 23, 19, 17, 13].map((width, segmentIndex) => (
-                <Skeleton
-                  key={segmentIndex}
-                  className="h-full rounded-none motion-reduce:animate-none"
-                  style={{
-                    width: `${width + ((rowIndex + segmentIndex) % 3)}%`,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "diagnosis") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-1"
-        data-admin-dashboard-dynamic-skeleton="diagnosis"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div
-            key={index}
-            className="flex min-h-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5"
-          >
-            <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
-            <div className="space-y-1">
-              <Skeleton className="h-3 w-full rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-3 w-3/4 rounded-full motion-reduce:animate-none" />
-            </div>
-            <Skeleton className="h-1.5 w-full rounded-full motion-reduce:animate-none" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div
-      className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
-      data-admin-dashboard-dynamic-skeleton="chart"
+      ref={variant === "table" ? tableSkeletonRef : undefined}
+      className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
+      data-admin-dashboard-dynamic-skeleton={variant}
       aria-hidden="true"
     >
-      <div className="flex h-full min-h-[8rem] items-end gap-3">
-        {Array.from({ length: 7 }).map((_, index) => (
-          <Skeleton
-            key={index}
-            className="flex-1 rounded-t-xl motion-reduce:animate-none"
-            style={{ height: `${36 + ((index * 17) % 48)}%` }}
-          />
-        ))}
-      </div>
+
+      <LoadingPreview
+        kind={variant === "table" ? "table" : variant === "ops" ? "list" : variant === "diagnosis" ? "dashboard" : "chart"}
+        rows={variant === "table" ? tableSkeletonCount : 2}
+        compact
+        showHeader={false}
+        label="관리자 지표 조회 중"
+        className="h-full min-h-32"
+      />
+
     </div>
   );
 }
@@ -3910,7 +3922,7 @@ function AdminDashboardManagementSkeleton() {
 
   return (
     <section
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible"
+      className="admin-surface flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible"
       aria-label="관리자 대시보드 (KPI) 로딩 중"
       data-admin-dashboard-management-skeleton="true"
       data-layout-recipe="command-surface"
@@ -3919,7 +3931,7 @@ function AdminDashboardManagementSkeleton() {
     >
       <AdminPageHeader title={getAdminModuleTitle("overview")} icon={Activity} summary="KPI 데이터 조회 중"
         actions={<div
-          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
+          className="admin-toolbar flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden"
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
           data-allow-horizontal-scroll="true"
@@ -3933,7 +3945,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-2xs"
+              className="h-8 shrink-0 rounded-md px-2.5 text-xs"
               disabled
             >
               카드 순서
@@ -3942,7 +3954,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-2xs"
+              className="h-8 shrink-0 rounded-md px-2.5 text-xs"
               disabled
             >
               초기화
@@ -4117,16 +4129,19 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "views",
                       label: "조회수",
+                      compactLabel: "조회",
                       dotClassName: "bg-teal-500",
                     },
                     {
                       key: "engagement",
                       label: "참여",
+                      compactLabel: "참여",
                       dotClassName: "bg-muted-foreground/45",
                     },
                     {
                       key: "engagementRate",
                       label: "참여율",
+                      compactLabel: "비율",
                       dotClassName: "bg-amber-500",
                     },
                   ]}
@@ -4288,7 +4303,7 @@ function AdminDashboardCardTitle({
           </div>
         ) : null}
       </div>
-      <div className="h-px bg-border/70" aria-hidden="true" />
+      <div className="h-1 bg-muted/35" aria-hidden="true" />
     </div>
   );
 }
@@ -4451,11 +4466,15 @@ function AdminDashboardKpiCard({
             data-admin-dashboard-kpi-title-actions="single-line-scroll"
           >
             {isLoading ? (
-              <Skeleton
-                className="h-5 w-20 shrink-0 rounded-full motion-reduce:animate-none"
-                data-admin-dashboard-dynamic-skeleton="delta"
-                aria-label={`${title} 기간 대비 로딩 중`}
-              />
+              <div data-admin-dashboard-dynamic-skeleton="delta">
+
+                <LoadingSurface label={title + " 기간 대비 로딩 중"} className="h-5 w-20 shrink-0">
+
+                  <span className="text-xs">00.0%</span>
+
+                </LoadingSurface>
+
+              </div>
             ) : delta !== undefined ? (
               <AdminDashboardInlineTooltip
                 label={`${title} ${deltaLabel}`}
@@ -4479,7 +4498,7 @@ function AdminDashboardKpiCard({
             {fullscreenAction}
           </div>
         </div>
-        <div className="h-px bg-border/70" aria-hidden="true" />
+        <div className="h-1 bg-muted/35" aria-hidden="true" />
       </div>
       {isLoading ? (
         <AdminDashboardKpiValueSkeleton />
@@ -4537,10 +4556,11 @@ function AdminDashboardKpiCard({
         </div>
       )}
       {isLoading ? (
-        <Skeleton
-          className="h-1.5 rounded-full motion-reduce:animate-none"
-          aria-hidden="true"
-        />
+        <LoadingSurface label="지표 비율 조회 중" className="h-1.5 overflow-hidden">
+
+          <progress max={100} value={40} className="block h-1.5 w-full" />
+
+        </LoadingSurface>
       ) : (
         <div className="grid gap-1.5">
           <div
@@ -4588,14 +4608,8 @@ function AdminDashboardOpsSummaryCard({
       rawValue: row.rawValue,
     })),
   );
-  const riskTotal = sections.reduce(
-    (sum, section) =>
-      section.title === "검수 리스크"
-        ? sum +
-          section.rows.reduce((rowSum, row) => rowSum + (row.rawValue ?? 0), 0)
-        : sum,
-    0,
-  );
+  const riskRows = sections.find((section) => section.title === "검수 리스크")?.rows;
+  const riskTotal = riskRows ? sumKnownNumbers(riskRows.map((row) => row.rawValue)) : null;
 
   return (
     <div
@@ -5682,7 +5696,7 @@ function AdminDashboardPdfReportButton({ onExport }: { onExport: () => void }) {
       type="button"
       variant="outline"
       size="sm"
-      className="h-7 shrink-0 gap-1 rounded-full px-2 text-2xs font-bold text-muted-foreground hover:text-foreground"
+      className="h-8 shrink-0 gap-1 rounded-md px-2.5 text-xs font-bold text-muted-foreground hover:text-foreground"
       aria-label="KPI 대시보드를 PDF 보고서로 내보내기"
       data-admin-dashboard-kpi-pdf-export-trigger="true"
       onClick={onExport}
@@ -5721,7 +5735,7 @@ function AdminDashboardPeriodSelector({
               type="button"
               variant={isSelected ? "default" : "outline"}
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-2xs font-bold"
+              className="h-8 shrink-0 rounded-md px-2.5 text-xs font-bold"
               aria-pressed={isSelected}
               data-admin-dashboard-period-option={option.value}
               onClick={() => onChange(option.value)}
@@ -5737,7 +5751,7 @@ function AdminDashboardPeriodSelector({
             type="button"
             variant="outline"
             size="sm"
-            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-2xs font-extrabold text-muted-foreground hover:text-foreground md:hidden"
+            className="order-3 h-8 shrink-0 gap-1 rounded-md px-2.5 text-xs font-extrabold text-muted-foreground hover:text-foreground md:hidden"
             aria-label={`대시보드 타임프레임 설정: ${selectedOption.label}`}
             data-admin-dashboard-period-select-trigger="true"
           >
@@ -5748,7 +5762,7 @@ function AdminDashboardPeriodSelector({
         <PopoverContent
           align="end"
           sideOffset={8}
-          className="w-[min(18rem,calc(100vw-24px))] rounded-2xl border-border bg-card p-2 shadow-primary"
+          className="w-[min(18rem,calc(100vw-24px))] rounded-lg border-border bg-card p-2 shadow-primary"
           aria-label="대시보드 타임프레임 설정"
           data-admin-dashboard-period-menu="true"
         >
@@ -5771,7 +5785,7 @@ function AdminDashboardPeriodSelector({
                   type="button"
                   variant={isSelected ? "default" : "ghost"}
                   size="sm"
-                  className="h-11 min-h-11 min-w-[44px] rounded-xl px-2 text-2xs font-bold"
+                  className="h-11 min-h-11 min-w-[44px] rounded-md px-2 text-xs font-bold"
                   style={{ minWidth: 44 }}
                   aria-pressed={isSelected}
                   data-admin-dashboard-period-option={option.value}
@@ -5810,17 +5824,26 @@ function AdminDashboardCollectionLogPopover({
   const latestJobs = logs?.workflow.latestJobs.slice(0, 3) ?? [];
   const snapshot = logs?.snapshot;
   const hasSavedSnapshot = Boolean(snapshot?.available);
+  const readFailed = !isLoading && !logs;
+  const snapshotReadFailed = snapshot?.error === "SNAPSHOT_QUERY_FAILED";
+  const workflowAccessDenied = /^github-runs-(401|403|404)$/.test(
+    logs?.workflow.error ?? "",
+  );
   const isWorkflowHealthy = latestRun
     ? latestRun.status !== "completed" || latestRun.conclusion === "success"
     : logs?.workflow.available;
   const collectionStatusLabel = hasSavedSnapshot
     ? "수집 정상"
-    : "저장 확인 필요";
+    : snapshotReadFailed
+      ? "저장 확인 실패"
+      : "저장 확인 필요";
   const collectionStatusClassName = hasSavedSnapshot
     ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300"
     : "border-border bg-secondary text-foreground";
   const workflowStatusLabel = !logs?.workflow.available
-    ? "로그 권한 필요"
+    ? workflowAccessDenied
+      ? "로그 권한 필요"
+      : "로그 확인 실패"
     : latestRun
       ? getCollectionLogStatusLabel(latestRun.status, latestRun.conclusion)
       : "실행 없음";
@@ -5839,7 +5862,7 @@ function AdminDashboardCollectionLogPopover({
           variant="outline"
           size="sm"
           className={cn(
-            "h-7 w-7 shrink-0 rounded-full p-0 text-muted-foreground hover:text-foreground",
+            "h-8 w-8 shrink-0 rounded-md p-0 text-muted-foreground hover:text-foreground",
             isError && "border-destructive/30 text-destructive",
           )}
           aria-label="GitHub Actions KPI 데이터 수집 로그 열기"
@@ -5851,10 +5874,10 @@ function AdminDashboardCollectionLogPopover({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-[min(92vw,25rem)] overflow-hidden rounded-2xl border-border/80 p-0 shadow-xl"
+        className="w-[min(92vw,25rem)] overflow-hidden rounded-2xl border-border/80 p-0 shadow-xl" data-ui="collection-log-popover"
         data-admin-dashboard-kpi-collection-log-panel="simple"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-border/70 bg-background px-3 py-2.5">
+        <div className="flex items-start justify-between gap-3 bg-muted/25 px-3 py-2.5">
           <div className="min-w-0">
             <p className="text-sm font-extrabold text-foreground">
               데이터 수집 상태
@@ -5869,8 +5892,11 @@ function AdminDashboardCollectionLogPopover({
             variant="ghost"
             size="sm"
             className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-2xs font-bold md:h-7 md:min-h-0 md:min-w-0"
-            disabled={isFetching}
-            onClick={onRefresh}
+            aria-disabled={isFetching || undefined}
+            aria-busy={isFetching || undefined}
+            onClick={() => {
+              if (!isFetching) onRefresh();
+            }}
           >
             <RefreshCw
               className={cn("mr-1 h-3.5 w-3.5", isFetching && "animate-spin")}
@@ -5883,12 +5909,28 @@ function AdminDashboardCollectionLogPopover({
         <div className="max-h-[70vh] space-y-2.5 overflow-y-auto p-3">
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-20 rounded-2xl" />
-              <Skeleton className="h-16 rounded-2xl" />
+
+              <LoadingPreview
+                kind="list"
+                rows={2}
+                compact
+                showHeader={false}
+                label="수집 상태 조회 중"
+                className="min-h-36"
+              />
+
             </div>
           ) : null}
 
-          {!isLoading ? (
+          {readFailed ? (
+            <p
+              role="alert"
+              className="rounded-2xl border border-destructive/30 bg-destructive/5 p-3 text-xs font-semibold leading-5 text-destructive"
+              data-admin-dashboard-kpi-collection-log-read-failed="true"
+            >
+              수집 상태를 불러오지 못했습니다. 갱신을 눌러 다시 확인해 주세요.
+            </p>
+          ) : !isLoading ? (
             <>
               <div className="rounded-2xl border border-border/70 bg-muted/20 p-3">
                 <div className="flex items-start justify-between gap-3">
@@ -5907,12 +5949,16 @@ function AdminDashboardCollectionLogPopover({
                       )}
                       {hasSavedSnapshot
                         ? "최근 스냅샷 저장됨"
-                        : "저장된 스냅샷 없음"}
+                        : snapshotReadFailed
+                          ? "스냅샷 조회 실패"
+                          : "저장된 스냅샷 없음"}
                     </p>
                     <p className="mt-1 text-2xs leading-5 text-muted-foreground">
                       {hasSavedSnapshot
                         ? `마지막 저장: ${formatDashboardDateTime(snapshot?.fetchedAt)}`
-                        : "수집 결과가 아직 저장되지 않았습니다."}
+                        : snapshotReadFailed
+                          ? "저장된 스냅샷을 조회하지 못했습니다. 잠시 후 갱신해 주세요."
+                          : "수집 결과가 아직 저장되지 않았습니다."}
                     </p>
                   </div>
                   <Badge
@@ -5973,7 +6019,9 @@ function AdminDashboardCollectionLogPopover({
                         ? latestRun
                           ? `최근 실행: #${latestRun.runNumber ?? "—"} · ${formatDashboardDateTime(latestRun.startedAt ?? latestRun.createdAt)}`
                           : "워크플로는 찾았지만 실행 기록은 아직 없습니다."
-                        : "수집 실패가 아니라, 이 서버가 GitHub 실행 로그를 읽을 권한이 없는 상태입니다."}
+                        : workflowAccessDenied
+                          ? "수집 실패가 아니라, 이 서버가 GitHub 실행 로그를 읽을 권한이 없는 상태입니다."
+                          : "GitHub 실행 로그를 읽지 못해 수집 실행 결과를 아직 확인할 수 없습니다. 잠시 후 갱신해 주세요."}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -6003,7 +6051,7 @@ function AdminDashboardCollectionLogPopover({
                   </div>
                 </div>
 
-                {!logs?.workflow.available ? (
+                {!logs?.workflow.available && workflowAccessDenied ? (
                   <p className="mt-2 rounded-xl bg-muted/40 px-2 py-1.5 text-2xs leading-4 text-muted-foreground">
                     서버 환경 변수에 GitHub 읽기 토큰이 없거나 권한이
                     부족합니다. GITHUB_ACTIONS_TOKEN 또는 GH_TOKEN을 설정하면
@@ -6052,17 +6100,23 @@ function AdminDashboardManagementPanel({
   stats,
   isLoading,
   hasError,
+  isRetrying,
+  onRetry,
   isAdmin,
 }: {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   isAdmin: boolean;
 }) {
   const { toast } = useToast();
   const lastDashboardDataErrorKindRef = useRef<
     "metrics" | "operations" | null
   >(null);
+  const dashboardRetryHadFocusRef = useRef(false);
+  const dashboardSummaryRef = useRef<HTMLSpanElement | null>(null);
   const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
   const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
     useState<AdminDashboardPeriod | null>(null);
@@ -6090,6 +6144,7 @@ function AdminDashboardManagementPanel({
   const [dashboardOrderMessage, setDashboardOrderMessage] = useState(
     "카드 순서는 관리자 계정별로 저장됩니다.",
   );
+  const [pdfReportMessage, setPdfReportMessage] = useState<string | null>(null);
   const [isDashboardMobileViewport, setIsDashboardMobileViewport] = useState(
     () => getIsAdminDashboardMobileViewport(),
   );
@@ -6752,13 +6807,26 @@ function AdminDashboardManagementPanel({
       ),
     [videosByPublishedAt],
   );
+  const insightFailedWithoutData = adminQueryLastReadFailed(insightQuery) && !insightQuery.data;
+  const growthFailedWithoutData = adminQueryLastReadFailed(growthInsightQuery) && !growthInsightQuery.data;
   const isInsightDynamicLoading =
-    insightQuery.isLoading ||
-    growthInsightQuery.isLoading ||
+    (insightQuery.isLoading && !insightFailedWithoutData) ||
+    (growthInsightQuery.isLoading && !growthFailedWithoutData) ||
     pendingSkeletonPeriod === period;
   const isChartLoading = isInsightDynamicLoading;
+  const metricReadFailedWithoutData = !isChartLoading && (insightFailedWithoutData || growthFailedWithoutData);
+  const isMetricValueHidden = isChartLoading || metricReadFailedWithoutData;
+  const formatMetricNumber = useCallback(
+    (value: number) => (isMetricValueHidden ? "—" : formatNumber(value)),
+    [isMetricValueHidden],
+  );
+  const metricReadFailedPanelBody = (
+    <p className="admin-empty-state p-6 text-center text-sm text-muted-foreground" data-admin-dashboard-metric-read-failed="true">
+      지표를 불러오지 못했습니다. 머리글의 다시 조회로 확인하세요.
+    </p>
+  );
   const dashboardDataErrorKind =
-    insightQuery.isError || growthInsightQuery.isError
+    adminQueryLastReadFailed(insightQuery) || adminQueryLastReadFailed(growthInsightQuery)
       ? "metrics"
       : hasError
         ? "operations"
@@ -6843,11 +6911,11 @@ function AdminDashboardManagementPanel({
   const trendDisplayedPointCount = trendPoints.length;
   const impactMetricLabel =
     getDashboardCardView("impact") === "table"
-      ? `${dashboardViewMetricLabel} · 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개`
+      ? `${dashboardViewMetricLabel} · 전체 ${formatMetricNumber(dashboardUploadVideoBasisCount)}개`
       : impactDisplayedVideoCount < dashboardUploadVideoBasisCount
         ? `${dashboardViewMetricLabel} · 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개`
-        : `${dashboardViewMetricLabel} · 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개`;
-  const trendMetricLabel = `${dashboardViewMetricLabel} · 전체 ${formatNumber(trendDisplayedPointCount)}개`;
+        : `${dashboardViewMetricLabel} · 전체 ${formatMetricNumber(dashboardUploadVideoBasisCount)}개`;
+  const trendMetricLabel = `${dashboardViewMetricLabel} · 전체 ${formatMetricNumber(trendDisplayedPointCount)}개`;
   const selectedPeriodLabel =
     ADMIN_DASHBOARD_PERIOD_OPTIONS.find((option) => option.value === period)
       ?.label ?? "선택 기간";
@@ -6857,9 +6925,6 @@ function AdminDashboardManagementPanel({
       : hasPeriodGrowthComparison
         ? `${selectedPeriodLabel} · 기간 순증`
         : `${selectedPeriodLabel} · 기간 영상 현재`;
-  const periodRatioCaptionPrefix = hasPeriodGrowthComparison
-    ? "조회 증가 대비"
-    : "조회수 대비";
   const channelStats = youtubeChannelQuery.data;
   const channelViewDelta =
     period !== "ALL" &&
@@ -6888,8 +6953,9 @@ function AdminDashboardManagementPanel({
       ),
     [channelStats?.previousSubscriberCount, channelStats?.subscriberCount],
   );
+  const channelReadFailedWithoutData = adminQueryLastReadFailed(youtubeChannelQuery) && !youtubeChannelQuery.data;
   const isSubscriberLoading =
-    youtubeChannelQuery.isLoading || pendingSkeletonPeriod === period;
+    (youtubeChannelQuery.isLoading && !channelReadFailedWithoutData) || pendingSkeletonPeriod === period;
   const hasSubscriberCount = channelStats?.subscriberCount != null;
   const cumulativeVideoTotal = channelStats?.videoCount ?? stats.totalVideos;
   const hasSnapshotVideoCountComparison =
@@ -6926,8 +6992,8 @@ function AdminDashboardManagementPanel({
   );
   const topContentComparisonCount = topContentVideosByInsightScore.length;
   const topContentCardMetric = hasPeriodGrowthComparison
-    ? `업로드 영상 ${formatNumber(topContentComparisonCount)}개`
-    : `선택 영상 ${formatNumber(topContentComparisonCount)}개`;
+    ? `업로드 영상 ${formatMetricNumber(topContentComparisonCount)}개`
+    : `선택 영상 ${formatMetricNumber(topContentComparisonCount)}개`;
   const uploadCountCohortChange = calculateDashboardUploadCountChange(
     growthVideos,
     period,
@@ -6968,15 +7034,23 @@ function AdminDashboardManagementPanel({
         ? `현재 구독자 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
         : `${selectedPeriodLabel} 구독자 순증 ${formatSignedNumber(subscriberDelta)}`;
   const subscriberCardTitle = "현재 구독자";
-  const viewCardTitle = hasPeriodGrowthComparison
-    ? "기간 조회 증가"
-    : "기간 조회 합계";
-  const likeCardTitle = hasPeriodGrowthComparison
-    ? "기간 좋아요 증가"
-    : "기간 좋아요 합계";
-  const commentCardTitle = hasPeriodGrowthComparison
-    ? "기간 댓글 증가"
-    : "기간 댓글 합계";
+  const kpiPresentation = getDashboardKpiPresentation({
+    isAllPeriod: period === "ALL",
+    selectedPeriodLabel,
+    hasPeriodGrowthComparison,
+    videoPeriodDeltasAreFlat,
+    hasPeriodCohortVideos: (insightQuery.data?.videos.length ?? 0) > 0,
+    channelViewDelta,
+    viewDenominatorLabel: formatMetricNumber(periodViewDisplayValue),
+  });
+  const {
+    viewCardTitle,
+    periodViewCardTitle,
+    likeCardTitle,
+    commentCardTitle,
+    ratioCaptionPrefix: periodRatioCaptionPrefix,
+  } = kpiPresentation;
+  const kpiCurrentCaption = kpiPresentation.currentCaption ?? periodMetricCaption;
   const pendingTotal = stats.pendingTotal;
   const missingCoordinates =
     typeof stats.totalRestaurants === "number" &&
@@ -6987,22 +7061,22 @@ function AdminDashboardManagementPanel({
     {
       label: "영상 수",
       value: formatNumber(visibleVideoTotal),
-      rawValue: visibleVideoTotal ?? 0,
+      rawValue: visibleVideoTotal ?? null,
     },
     {
       label: "맛집 데이터",
       value: formatNumber(stats.totalRestaurants),
-      rawValue: stats.totalRestaurants ?? 0,
+      rawValue: stats.totalRestaurants,
     },
     {
       label: "좌표 완료",
       value: formatNumber(stats.withCoordinates),
-      rawValue: stats.withCoordinates ?? 0,
+      rawValue: stats.withCoordinates,
     },
     {
       label: "영상 연결",
       value: formatNumber(stats.totalVideos),
-      rawValue: stats.totalVideos ?? 0,
+      rawValue: stats.totalVideos,
     },
   ];
   const operationalLiabilities = [
@@ -7024,12 +7098,12 @@ function AdminDashboardManagementPanel({
     {
       label: "좌표 미완료",
       value: formatNumber(missingCoordinates),
-      rawValue: missingCoordinates ?? 0,
+      rawValue: missingCoordinates,
     },
     {
       label: "비활성 배너",
       value: formatNumber(stats.inactiveBanners),
-      rawValue: stats.inactiveBanners ?? 0,
+      rawValue: stats.inactiveBanners,
     },
   ];
   const impactTableRows = useMemo(
@@ -7309,23 +7383,23 @@ function AdminDashboardManagementPanel({
         caption: subscriberCaption,
       },
       {
-        label: viewCardTitle,
-        value: isChartLoading ? "—" : formatNumber(periodViewDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`,
+        label: periodViewCardTitle,
+        value: isMetricValueHidden ? "—" : formatNumber(periodViewDisplayValue),
+        caption: `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeViewValue)}`,
       },
       {
         label: likeCardTitle,
-        value: isChartLoading ? "—" : formatNumber(periodLikeDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`,
+        value: isMetricValueHidden ? "—" : formatNumber(periodLikeDisplayValue),
+        caption: `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`,
       },
       {
         label: commentCardTitle,
-        value: isChartLoading ? "—" : formatNumber(periodCommentDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`,
+        value: isMetricValueHidden ? "—" : formatNumber(periodCommentDisplayValue),
+        caption: `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`,
       },
       {
         label: "업로드 영상 수",
-        value: isChartLoading ? "—" : formatNumber(periodUploadVideoValue),
+        value: isMetricValueHidden ? "—" : formatNumber(periodUploadVideoValue),
         caption: periodVideoCaption,
       },
     ];
@@ -7358,11 +7432,13 @@ function AdminDashboardManagementPanel({
     cumulativeLikeValue,
     cumulativeViewValue,
     dashboardViewMetricLabel,
-    isChartLoading,
+    formatMetricNumber,
+    isMetricValueHidden,
+    kpiCurrentCaption,
     likeCardTitle,
     periodCommentDisplayValue,
     periodLikeDisplayValue,
-    periodMetricCaption,
+    periodViewCardTitle,
     periodUploadVideoValue,
     periodVideoCaption,
     periodViewDisplayValue,
@@ -7373,7 +7449,6 @@ function AdminDashboardManagementPanel({
     topContentContributionFormula,
     topContentInsights,
     topContentTableRows,
-    viewCardTitle,
   ]);
   const handleExportPdfReport = useCallback(() => {
     const opened = openAdminDashboardPdfReport({
@@ -7381,27 +7456,57 @@ function AdminDashboardManagementPanel({
       generatedAtLabel: formatAdminDashboardReportGeneratedAt(),
     });
 
-    if (!opened) {
-      setDashboardOrderMessage(
-        "PDF 보고서 창을 열지 못했습니다. 브라우저 팝업 허용 상태를 확인해 주세요.",
-      );
-    } else {
-      setDashboardOrderMessage(
-        "PDF 보고서 창을 열었습니다. 새 창에서 PDF로 저장/인쇄 버튼이나 브라우저 인쇄 대화상자를 확인해 주세요.",
-      );
-    }
+    setPdfReportMessage(
+      opened
+        ? "PDF 보고서 창을 열었습니다. 새 창에서 PDF로 저장/인쇄 버튼이나 브라우저 인쇄 대화상자를 확인해 주세요."
+        : "PDF 보고서 창을 열지 못했습니다. 브라우저 팝업 허용 상태를 확인해 주세요.",
+    );
   }, [pdfReportData]);
+  const overviewHeadlineKnown =
+    typeof stats.pendingTotal === "number" &&
+    typeof stats.totalRestaurants === "number" &&
+    typeof stats.totalVideos === "number";
   const shouldShowMobileDashboardLoadingPrompt =
-    isDashboardMobileViewport && (isLoading || isSubscriberLoading || isChartLoading);
-  const dashboardHeaderSummary = isLoading
-    ? "KPI 데이터 조회 중"
-    : hasError
-      ? "일부 운영 데이터 확인 필요"
-      : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`;
+    isDashboardMobileViewport && ((isLoading && !overviewHeadlineKnown) || isSubscriberLoading || isChartLoading);
+  const isDashboardRetrying =
+    isRetrying ||
+    [insightQuery, growthInsightQuery, youtubeChannelQuery].some(
+      (query) => adminQueryLastReadFailed(query) && query.isFetching,
+    );
+  const retryDashboardData = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    dashboardRetryHadFocusRef.current = document.activeElement === event.currentTarget;
+    onRetry();
+    for (const query of [insightQuery, growthInsightQuery, youtubeChannelQuery]) {
+      if (adminQueryLastReadFailed(query)) void query.refetch();
+    }
+  };
+  useLayoutEffect(() => {
+    if (isDashboardRetrying || !dashboardRetryHadFocusRef.current) return;
+    dashboardRetryHadFocusRef.current = false;
+    if (!dashboardDataErrorKind && document.activeElement === document.body) {
+      dashboardSummaryRef.current?.focus({ preventScroll: true });
+    }
+  }, [dashboardDataErrorKind, isDashboardRetrying]);
+  const dashboardHeaderSummary = dashboardDataErrorKind
+    ? (
+      <span className="inline-flex flex-wrap items-center gap-2" role="alert" data-admin-dashboard-read-error={dashboardDataErrorKind}>
+        <span>{dashboardDataErrorKind === "metrics" ? "지표 데이터 확인 필요" : "일부 운영 데이터 확인 필요"}</span>
+        <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" aria-busy={isDashboardRetrying} onClick={retryDashboardData}>
+          {isDashboardRetrying ? "조회 중…" : "다시 조회"}
+        </Button>
+      </span>
+    )
+    : (
+      <span ref={dashboardSummaryRef} tabIndex={-1} className="focus-visible:outline-none">
+        {isLoading && !overviewHeadlineKnown
+          ? "KPI 데이터 조회 중"
+          : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`}
+      </span>
+    );
 
   return (
     <section
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible"
+      className="admin-surface flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible"
       aria-label="관리자 대시보드 (KPI)"
       data-admin-dashboard-management="true"
       data-layout-recipe="command-surface"
@@ -7410,7 +7515,7 @@ function AdminDashboardManagementPanel({
     >
       <AdminPageHeader title={getAdminModuleTitle("overview")} icon={Activity} summary={dashboardHeaderSummary}
         actions={<div
-          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
+          className="admin-toolbar flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden"
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
           data-allow-horizontal-scroll="true"
@@ -7424,7 +7529,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant={isDashboardOrderEditorOpen ? "default" : "outline"}
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-2xs"
+              className="h-8 shrink-0 rounded-md px-2.5 text-xs"
               aria-label="KPI 카드 직접 드래그 순서 설정"
               aria-pressed={isDashboardOrderEditorOpen}
               disabled={isDashboardOrderLoading}
@@ -7445,7 +7550,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-2xs"
+              className="h-8 shrink-0 rounded-md px-2.5 text-xs"
               disabled={
                 isDashboardOrderLoading ||
                 isDashboardOrderSaving ||
@@ -7466,9 +7571,9 @@ function AdminDashboardManagementPanel({
             <AdminDashboardCollectionLogPopover
               open={isCollectionLogsOpen}
               logs={collectionLogsQuery.data}
-              isLoading={collectionLogsQuery.isLoading}
+              isLoading={collectionLogsQuery.isLoading && !adminQueryLastReadFailed(collectionLogsQuery)}
               isFetching={collectionLogsQuery.isFetching}
-              isError={collectionLogsQuery.isError}
+              isError={adminQueryLastReadFailed(collectionLogsQuery)}
               onOpenChange={setIsCollectionLogsOpen}
               onRefresh={() => void collectionLogsQuery.refetch()}
             />
@@ -7486,7 +7591,7 @@ function AdminDashboardManagementPanel({
       />
       {shouldShowMobileDashboardLoadingPrompt ? (
         <p
-          className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-2xs font-semibold leading-5 text-muted-foreground md:hidden"
+          className="admin-detail-section mb-2 bg-muted/30 px-3 py-2 text-xs font-medium leading-5 text-muted-foreground md:hidden"
           data-admin-dashboard-mobile-loading-prompt="live"
         >
           KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
@@ -7495,10 +7600,19 @@ function AdminDashboardManagementPanel({
 
       {isDashboardOrderEditorOpen ? (
         <p
-          className="mb-2 shrink-0 text-2xs font-semibold text-muted-foreground"
+          className="admin-detail-section mb-2 shrink-0 px-3 py-2 text-xs font-medium text-muted-foreground"
           data-admin-dashboard-order-live-status="true"
         >
           {dashboardOrderMessage}
+        </p>
+      ) : null}
+      {pdfReportMessage ? (
+        <p
+          role="status"
+          className="admin-detail-section mb-2 shrink-0 px-3 py-2 text-xs font-medium text-muted-foreground"
+          data-admin-dashboard-pdf-report-status="true"
+        >
+          {pdfReportMessage}
         </p>
       ) : null}
 
@@ -7506,7 +7620,7 @@ function AdminDashboardManagementPanel({
       {fullscreenWidgetId ? (
         <button
           type="button"
-          className="fixed inset-0 z-[70] cursor-default bg-background/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[70] cursor-default bg-background/85"
           aria-label="전체화면 카드 닫기"
           data-admin-dashboard-card-fullscreen-backdrop="true"
           onClick={() => setFullscreenWidgetId(null)}
@@ -7554,8 +7668,8 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("views")}
           reorderProps={getDashboardCardReorderProps("views")}
-          value={isChartLoading ? "—" : formatNumber(viewCardValue)}
-          caption={`${videoPeriodDeltasAreFlat ? `${selectedPeriodLabel} · 채널 조회 순증` : periodMetricCaption} · 현재 전체 누적 ${formatNumber(channelStats?.viewCount ?? cumulativeViewValue)}`}
+          value={isMetricValueHidden ? "—" : formatNumber(viewCardValue)}
+          caption={`${kpiPresentation.viewCaption ?? periodMetricCaption} · 현재 전체 누적 ${channelStats?.viewCount != null ? formatNumber(channelStats.viewCount) : formatMetricNumber(cumulativeViewValue)}`}
           delta={formatDashboardChangeLabel(viewCardChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(viewCardChange)}
@@ -7564,10 +7678,12 @@ function AdminDashboardManagementPanel({
           sparklineData={viewSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 조회수, 없으면 선택 기간 영상의 현재 조회수 합계입니다.",
-            "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
-            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ...(kpiPresentation.viewInfoLines ?? [
+              "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
+              "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 조회수, 없으면 선택 기간 영상의 현재 조회수 합계입니다.",
+              "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
+              "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ]),
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
             "주의: 아래 작은 선은 영상 게시일 순서에 따른 조회수 흐름입니다.",
@@ -7582,11 +7698,11 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("likes")}
           reorderProps={getDashboardCardReorderProps("likes")}
-          value={isChartLoading ? "—" : formatNumber(periodLikeDisplayValue)}
+          value={isMetricValueHidden ? "—" : formatNumber(periodLikeDisplayValue)}
           caption={
             likeRate == null
-              ? `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`
-              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`
+              ? `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`
+              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatMetricNumber(cumulativeLikeValue)}`
           }
           delta={formatDashboardChangeLabel(likeChange)}
           deltaLabel="기간 대비"
@@ -7596,10 +7712,13 @@ function AdminDashboardManagementPanel({
           sparklineData={likeSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 좋아요 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 좋아요 수, 없으면 선택 기간 영상의 현재 좋아요 합계입니다.",
-            "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
-            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ...(kpiPresentation.likeInfoLines ?? [
+              "설명: 선택 기간 영상들의 좋아요 합계를 보여주는 카드입니다.",
+              "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 좋아요 수, 없으면 선택 기간 영상의 현재 좋아요 합계입니다.",
+              "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
+              "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ]),
+            ...kpiPresentation.ratioInfoLines,
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 좋아요 비율은 조회수 중 좋아요로 반응한 비중입니다.",
             "주의: 조회 대비 비율은 조회수 중 좋아요로 반응한 비중을 뜻합니다.",
@@ -7614,11 +7733,11 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("comments")}
           reorderProps={getDashboardCardReorderProps("comments")}
-          value={isChartLoading ? "—" : formatNumber(periodCommentDisplayValue)}
+          value={isMetricValueHidden ? "—" : formatNumber(periodCommentDisplayValue)}
           caption={
             commentRate == null
-              ? `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`
-              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`
+              ? `${kpiCurrentCaption} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`
+              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatMetricNumber(cumulativeCommentValue)}`
           }
           delta={formatDashboardChangeLabel(commentChange)}
           deltaLabel="기간 대비"
@@ -7628,10 +7747,13 @@ function AdminDashboardManagementPanel({
           sparklineData={commentSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 댓글 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 댓글 수, 없으면 선택 기간 영상의 현재 댓글 합계입니다.",
-            "계산식: 기간 댓글 증가 = 각 영상의 (현재 댓글 - 이전 댓글) 합계.",
-            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ...(kpiPresentation.commentInfoLines ?? [
+              "설명: 선택 기간 영상들의 댓글 합계를 보여주는 카드입니다.",
+              "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 댓글 수, 없으면 선택 기간 영상의 현재 댓글 합계입니다.",
+              "계산식: 기간 댓글 증가 = 각 영상의 (현재 댓글 - 이전 댓글) 합계.",
+              "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            ]),
+            ...kpiPresentation.ratioInfoLines,
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
             "주의: 조회 대비 댓글 비율은 조회수 중 댓글로 반응한 비중을 뜻합니다.",
@@ -7646,7 +7768,7 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("videos")}
           reorderProps={getDashboardCardReorderProps("videos")}
-          value={isChartLoading ? "—" : formatNumber(periodUploadVideoValue)}
+          value={isMetricValueHidden ? "—" : formatNumber(periodUploadVideoValue)}
           caption={periodVideoCaption}
           delta={formatDashboardChangeLabel(videoCountChange)}
           deltaLabel="기간 대비"
@@ -7684,6 +7806,7 @@ function AdminDashboardManagementPanel({
             title="상위 영상 영향도"
             metric={impactMetricLabel}
             infoLines={[
+              `요약: ${impactMetricLabel}.`,
               hasPeriodGrowthComparison
                 ? "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회 증가가 크고, 위로 갈수록 좋아요와 댓글 증가가 큽니다."
                 : "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
@@ -7691,6 +7814,7 @@ function AdminDashboardManagementPanel({
                 ? `표시: 그래프는 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개, 표는 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`
                 : `표시: 그래프와 표 모두 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`,
               "읽는 법: 원이 클수록 조회수와 반응을 합친 영향도가 큰 영상입니다. 색은 순위 구분입니다.",
+              "색상 범례: 진한 청록부터 옅은 회색까지 상위 1~5위 순입니다.",
               "계산식: 참여 = 좋아요 + 댓글.",
               hasPeriodGrowthComparison
                 ? "기간 비교 때는 현재값에서 이전값을 뺀 증가량으로 위치를 잡습니다."
@@ -7726,6 +7850,8 @@ function AdminDashboardManagementPanel({
                     : "bubble"
                 }
               />
+            ) : metricReadFailedWithoutData ? (
+              metricReadFailedPanelBody
             ) : getDashboardCardView("impact") === "table" ? (
               <AdminDashboardScrollTable
                 rows={progressiveImpactTableRows}
@@ -7807,7 +7933,9 @@ function AdminDashboardManagementPanel({
             title="영상별 성과 분포"
             metric={trendMetricLabel}
             infoLines={[
+              `요약: ${trendMetricLabel}.`,
               "설명: 선택 기간 업로드 영상을 게시일 순서로 놓고 조회수, 참여, 참여율을 비교합니다.",
+              "지표 범례: 청록은 조회수, 회색은 참여, 주황은 참여율입니다. 제목 옆 버튼으로 각 지표를 숨기거나 표시합니다.",
               `표시: 그래프와 표 모두 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`,
               "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
               "참고: 참여는 좋아요와 댓글을 더한 값이고, 참여율은 조회수 대비 참여 비중입니다.",
@@ -7825,16 +7953,19 @@ function AdminDashboardManagementPanel({
                     {
                       key: "views",
                       label: "조회수",
+                      compactLabel: "조회",
                       dotClassName: "bg-teal-500",
                     },
                     {
                       key: "engagement",
                       label: "참여",
+                      compactLabel: "참여",
                       dotClassName: "bg-muted-foreground/45",
                     },
                     {
                       key: "engagementRate",
                       label: "참여율",
+                      compactLabel: "비율",
                       dotClassName: "bg-amber-500",
                     },
                   ]}
@@ -7864,6 +7995,8 @@ function AdminDashboardManagementPanel({
                   getDashboardCardView("trend") === "table" ? "table" : "line"
                 }
               />
+            ) : metricReadFailedWithoutData ? (
+              metricReadFailedPanelBody
             ) : getDashboardCardView("trend") === "table" ? (
               <AdminDashboardScrollTable
                 rows={progressiveTrendTableRows}
@@ -7890,9 +8023,11 @@ function AdminDashboardManagementPanel({
               rows: operationalAssets,
               totalLabel: "합계",
               totalValue: formatNumber(
-                (stats.totalRestaurants ?? 0) +
-                  (stats.totalVideos ?? 0) +
-                  (stats.activeBanners ?? 0),
+                sumKnownNumbers([
+                  stats.totalRestaurants,
+                  stats.totalVideos,
+                  stats.activeBanners,
+                ]),
               ),
             },
             {
@@ -7900,11 +8035,11 @@ function AdminDashboardManagementPanel({
               rows: operationalLiabilities,
               totalLabel: "합계",
               totalValue: formatNumber(
-                pendingTotal === null
-                  ? null
-                  : pendingTotal +
-                      (missingCoordinates ?? 0) +
-                      (stats.inactiveBanners ?? 0),
+                sumKnownNumbers([
+                  pendingTotal,
+                  missingCoordinates,
+                  stats.inactiveBanners,
+                ]),
               ),
             },
           ]}
@@ -8006,6 +8141,8 @@ function AdminDashboardManagementPanel({
                     : "stacked"
                 }
               />
+            ) : metricReadFailedWithoutData ? (
+              metricReadFailedPanelBody
             ) : getDashboardCardView("topContent") === "table" ? (
               <AdminDashboardScrollTable
                 rows={progressiveTopContentTableRows}
@@ -8036,7 +8173,7 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="성과 진단"
-            metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}
+            metric={`진단 신호 ${formatMetricNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}
             infoLines={[
               "설명: 지금 확인할 만한 영상 성과 신호를 요약한 카드입니다.",
               "읽는 법: 성과 기여, 참여율, 초반 반응, 재상승 후보를 작은 카드로 분류합니다.",
@@ -8078,6 +8215,8 @@ function AdminDashboardManagementPanel({
                     : "diagnosis"
                 }
               />
+            ) : metricReadFailedWithoutData ? (
+              metricReadFailedPanelBody
             ) : getDashboardCardView("engagementRate") === "table" ? (
               <AdminDashboardScrollTable
                 rows={diagnosisTableRows}
@@ -8366,14 +8505,16 @@ function AdminSidebar({
         aria-controls="admin-console-canvas"
         data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}
         data-admin-console-menu-item-state={isActive ? "active" : "inactive"}
+        data-admin-console-menu-item-section={section.label}
+        data-admin-console-menu-item-status={itemStatus ? "present" : "none"}
         className={cn(
-          "group relative flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+          "group relative flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap border border-transparent text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
           isDropdown
-            ? "min-h-9 w-full rounded-lg px-2 py-1.5 text-sm"
-            : "min-h-9 w-full rounded-lg px-2 py-1 text-sm",
+            ? "min-h-10 w-full rounded-md px-2.5 py-1.5 text-sm"
+            : "min-h-9 w-full rounded-md px-2 py-1 text-sm",
           !isDropdown &&
             isCollapsed &&
-            "md:mx-auto md:h-8 md:min-h-8 md:w-8 md:justify-center md:gap-0 md:px-0",
+            "md:mx-auto md:h-10 md:min-h-10 md:w-10 md:justify-center md:gap-0 md:px-0",
           isActive
             ? "border-transparent bg-primary/8 text-primary"
             : "border-transparent text-muted-foreground hover:bg-muted/65 hover:text-foreground",
@@ -8409,7 +8550,7 @@ function AdminSidebar({
         {itemStatus && (
           <span
             className={cn(
-              "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-2xs font-bold leading-4 transition-all duration-100 motion-reduce:transition-none",
+              "ml-auto shrink-0 rounded-sm border px-2 py-0.5 text-2xs font-bold leading-4 transition-[background-color,border-color,color,opacity,transform] duration-100 motion-reduce:transition-none",
               itemStatus.urgent
                 ? isActive
                   ? "border-primary/20 bg-primary/10 text-primary"
@@ -8441,7 +8582,10 @@ function AdminSidebar({
               data-admin-sidebar-collapsed-tooltip="true"
             >
               <AdminDashboardTooltipLinesPanel
-                lines={[item.title]}
+                lines={[
+                  item.title,
+                  ...(itemStatus ? [itemStatus.label] : []),
+                ]}
                 dataAttribute="sidebar-collapsed"
                 className="max-w-[14rem]"
               />
@@ -8457,7 +8601,8 @@ function AdminSidebar({
   const renderOrderControls = (placement: "dropdown" | "sidebar") => (
     <div
       id="admin-sidebar-order-editor"
-      className="rounded-2xl bg-background/85 p-2"
+      className="admin-detail-section rounded-md bg-background p-2"
+      role="group"
       aria-label="메뉴 순서 설정"
       data-admin-sidebar-order-editor={placement}
       data-admin-sidebar-order-edit-mode={isSidebarOrderEditMode ? "enabled" : "locked"}
@@ -8465,7 +8610,7 @@ function AdminSidebar({
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
         <div className="min-w-0">
-          <p className="truncate text-xs font-bold text-foreground">
+          <p className="admin-section-title truncate text-xs font-bold text-foreground">
             메뉴 순서
           </p>
         </div>
@@ -8474,8 +8619,10 @@ function AdminSidebar({
             type="button"
             variant={isSidebarOrderEditMode ? "default" : "outline"}
             size="sm"
-            className="h-6 shrink-0 rounded-full px-2 text-2xs font-bold"
+            className="h-8 shrink-0 rounded-md px-2.5 text-xs font-bold"
             aria-pressed={isSidebarOrderEditMode}
+            aria-expanded={isSidebarOrderEditMode}
+            aria-controls={`admin-sidebar-order-options-${placement}`}
             data-admin-sidebar-order-edit-toggle="true"
             onClick={() => {
               setIsSidebarOrderEditMode((current) => !current);
@@ -8492,7 +8639,7 @@ function AdminSidebar({
             type="button"
             variant="outline"
             size="sm"
-            className="h-6 shrink-0 rounded-full px-2 text-2xs font-bold"
+            className="h-8 shrink-0 rounded-md px-2.5 text-xs font-bold"
             disabled={
               !isSidebarOrderEditMode ||
               !canLoadPreferences ||
@@ -8514,22 +8661,23 @@ function AdminSidebar({
 
       {!isSidebarOrderEditMode && (
         <p
-          className="mb-1.5 rounded-lg border border-dashed border-border bg-muted/25 px-2 py-1 text-2xs leading-5 text-muted-foreground"
+          className="admin-detail-section mb-2 bg-muted/25 px-2.5 py-2 text-xs leading-5 text-muted-foreground"
           data-admin-sidebar-order-edit-lock-message="true"
         >
           순서 편집을 켜야 이동 버튼이 활성화됩니다.
         </p>
       )}
 
-      <div className="space-y-2">
+      {isSidebarOrderEditMode && (
+      <div id={`admin-sidebar-order-options-${placement}`} className="space-y-2">
         {orderedSidebarSections.map((section, sectionIndex) => (
           <div
             key={section.label}
-            className="space-y-0.5 border-t border-border/55 pt-2 first:border-t-0 first:pt-0"
+            className="space-y-1 rounded-md bg-muted/25 p-1.5"
             data-admin-sidebar-order-section="compact"
           >
             <div className="flex h-5 items-center justify-between gap-1.5 px-1">
-              <span className="truncate text-2xs font-semibold text-muted-foreground">
+              <span className="admin-field-label truncate text-xs font-semibold text-muted-foreground">
                 {section.label}
               </span>
               <div className="flex shrink-0 gap-1">
@@ -8537,7 +8685,7 @@ function AdminSidebar({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-2xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="h-8 w-8 rounded-md border-0 bg-transparent p-0 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
                   aria-label={`${section.label} 섹션 앞으로`}
                   disabled={
                     !canLoadPreferences ||
@@ -8559,7 +8707,7 @@ function AdminSidebar({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-2xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="h-8 w-8 rounded-md border-0 bg-transparent p-0 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
                   aria-label={`${section.label} 섹션 뒤로`}
                   disabled={
                     !canLoadPreferences ||
@@ -8584,7 +8732,7 @@ function AdminSidebar({
               {section.items.map((item, itemIndex) => (
                 <div
                   key={item.id}
-                  className="grid min-h-7 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-muted/55"
+                  className="grid min-h-9 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-background"
                   data-admin-sidebar-order-item="compact"
                 >
                   <span className="min-w-0 truncate text-xs font-semibold text-foreground">
@@ -8595,7 +8743,7 @@ function AdminSidebar({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-2xs text-muted-foreground hover:bg-background/80 hover:text-foreground"
+                      className="h-8 w-8 rounded-md border-0 bg-transparent p-0 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                       aria-label={`${item.title} 메뉴 앞으로`}
                       disabled={
                         !canLoadPreferences ||
@@ -8622,7 +8770,7 @@ function AdminSidebar({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-2xs text-muted-foreground hover:bg-background/80 hover:text-foreground"
+                      className="h-8 w-8 rounded-md border-0 bg-transparent p-0 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                       aria-label={`${item.title} 메뉴 뒤로`}
                       disabled={
                         !canLoadPreferences ||
@@ -8652,9 +8800,10 @@ function AdminSidebar({
           </div>
         ))}
       </div>
+      )}
 
       <p
-        className="mt-2 rounded-lg bg-muted/30 px-2 py-1 text-2xs leading-5 text-muted-foreground"
+        className="admin-detail-section mt-2 bg-muted/30 px-2.5 py-2 text-xs leading-5 text-muted-foreground"
         aria-live="polite"
       >
         {sidebarOrderMessage}
@@ -8680,7 +8829,7 @@ function AdminSidebar({
         variant="ghost"
         size="sm"
         className={cn(
-          "h-9 rounded-full border border-border bg-card text-xs font-bold text-muted-foreground shadow-inner transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-muted/70 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background dark:border-border/70 dark:bg-muted/35 dark:text-foreground dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] dark:hover:bg-muted/55 data-[admin-sidebar-theme-current=dark]:border-border/70 data-[admin-sidebar-theme-current=dark]:bg-muted/35 data-[admin-sidebar-theme-current=dark]:text-foreground data-[admin-sidebar-theme-current=dark]:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] data-[admin-sidebar-theme-current=dark]:hover:bg-muted/55",
+          "h-9 rounded-md border border-border bg-card text-xs font-bold text-muted-foreground shadow-none transition-[background-color,color,transform] duration-150 hover:bg-muted/70 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background dark:border-border/70 dark:bg-muted/35 dark:text-foreground dark:shadow-none dark:hover:bg-muted/55 data-[admin-sidebar-theme-current=dark]:border-border/70 data-[admin-sidebar-theme-current=dark]:bg-muted/35 data-[admin-sidebar-theme-current=dark]:text-foreground data-[admin-sidebar-theme-current=dark]:shadow-none data-[admin-sidebar-theme-current=dark]:hover:bg-muted/55",
           isCompactSidebar
             ? "w-9 justify-center p-0"
             : "w-full min-w-0 justify-start gap-2 px-3",
@@ -8716,13 +8865,13 @@ function AdminSidebar({
       id={contentId}
       align="end"
       sideOffset={10}
-      className="scrollbar-hide max-h-[min(720px,calc(100dvh-20px))] w-[min(23rem,calc(100vw-16px))] overflow-y-auto overscroll-contain rounded-xl border-border bg-card p-2 shadow-primary"
+      className="scrollbar-hide max-h-[min(720px,calc(100dvh-20px))] w-[min(23rem,calc(100vw-16px))] overflow-y-auto overscroll-contain rounded-lg border-border bg-card p-2 shadow-primary"
       style={{ maxHeight: "min(720px, calc(100dvh - 20px))" }}
       aria-label="관리자 콘솔 메뉴"
       data-admin-console-menu-dropdown="true"
       onCloseAutoFocus={handleAdminMenuCloseAutoFocus}
     >
-      <div className="mb-2 flex items-center gap-2 rounded-xl bg-muted/35 p-2">
+      <div className="admin-detail-section mb-2 flex items-center gap-2 rounded-md bg-muted/35 p-2">
         <Link
           href="/"
           className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background"
@@ -8751,8 +8900,8 @@ function AdminSidebar({
 
       <nav className="grid gap-1.5" aria-label="관리자 통합 메뉴">
         {orderedSidebarSections.map((section) => (
-          <div key={section.label} className="min-w-0 rounded-xl bg-background/45 p-1">
-            <p className="px-1.5 pb-1 text-2xs font-extrabold tracking-[0.08em] text-muted-foreground">
+          <div key={section.label} className="min-w-0 rounded-md bg-background/45 p-1">
+            <p className="admin-section-title px-1.5 pb-1 text-xs font-bold text-muted-foreground">
               {section.label}
             </p>
             {section.items.map((item) =>
@@ -8777,12 +8926,12 @@ function AdminSidebar({
       side="right"
       align="end"
       sideOffset={10}
-      className="max-h-[min(760px,calc(100dvh-24px))] w-[min(24rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
+      className="max-h-[min(760px,calc(100dvh-24px))] w-[min(24rem,calc(100vw-24px))] overflow-y-auto rounded-lg border-border bg-card p-2.5 shadow-primary"
       aria-label="계정 및 사이드바 설정"
       data-admin-sidebar-account-menu-content="true"
     >
       <div
-        className="mb-3 flex items-center gap-2 rounded-2xl bg-muted/35 p-2"
+        className="admin-detail-section mb-3 flex items-center gap-2 rounded-md bg-muted/35 p-2"
         data-admin-sidebar-account-summary="true"
       >
         <span
@@ -8803,14 +8952,14 @@ function AdminSidebar({
       </div>
 
       <div className="space-y-2" data-admin-sidebar-account-theme-section="true">
-        <p className="px-1 text-2xs font-bold tracking-[0.08em] text-muted-foreground">
+        <p className="admin-field-label px-1 text-xs font-bold text-muted-foreground">
           표시 모드
         </p>
         {renderThemeControls("sidebar", { compact: false })}
       </div>
 
       <div
-        className="mt-3 border-t border-border/60 pt-3"
+        className="mt-3 bg-muted/20 pt-3"
         data-admin-sidebar-account-order-section="true"
       >
         {renderOrderControls("sidebar")}
@@ -8828,8 +8977,8 @@ function AdminSidebar({
           className={cn(
             "group/sidebar-account transition-colors duration-150 focus-visible:ring-primary focus-visible:ring-offset-background",
             isCollapsed
-              ? "grid h-9 w-9 place-items-center rounded-xl bg-transparent p-0 text-muted-foreground shadow-none hover:bg-background/80 hover:text-foreground dark:hover:bg-muted/55"
-              : "h-11 w-full min-w-0 justify-start gap-2 rounded-2xl border border-border bg-background/95 px-1.5 py-1 text-foreground shadow-sm backdrop-blur-sm hover:bg-secondary/80 hover:text-accent-foreground dark:border-border/70 dark:bg-background/80",
+              ? "grid h-10 w-10 place-items-center rounded-md bg-transparent p-0 text-muted-foreground shadow-none hover:bg-background/80 hover:text-foreground dark:hover:bg-muted/55"
+              : "h-10 w-full min-w-0 justify-start gap-2 rounded-md border border-border bg-background px-1.5 py-1 text-foreground shadow-none hover:bg-secondary/80 hover:text-accent-foreground dark:border-border/70 dark:bg-background/80",
           )}
           aria-label={`${accountDisplayName} 계정 및 사이드바 설정 열기`}
           data-admin-sidebar-account-trigger={isCollapsed ? "collapsed" : "expanded"}
@@ -8862,7 +9011,7 @@ function AdminSidebar({
         <div
           ref={mobileHeaderRef}
           className={cn(
-            "flex h-14 shrink-0 transform-gpu items-center gap-2 overflow-hidden border-b border-border bg-card/95 px-3 py-2 shadow-sm transition-[transform,border-color] duration-300 ease-out will-change-transform motion-reduce:transition-none md:hidden",
+            "flex h-14 shrink-0 transform-gpu items-center gap-2 overflow-hidden bg-card px-3 py-2 shadow-none transition-[transform,border-color] duration-300 ease-out will-change-transform motion-reduce:transition-none md:hidden",
             !showMobileHeader && "pointer-events-none border-transparent",
           )}
           style={{
@@ -8918,7 +9067,7 @@ function AdminSidebar({
 
       <aside
         className={cn(
-          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 font-sans tracking-normal shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
+          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden bg-card p-2 font-sans tracking-normal shadow-none transition-[width,padding] duration-300 motion-reduce:transition-none md:flex admin-surface",
           isCollapsed
             ? "md:w-[4.5rem] md:min-w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5"
             : "md:min-w-[var(--admin-sidebar-expanded-width)] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
@@ -8930,7 +9079,7 @@ function AdminSidebar({
       >
         <div
           className={cn(
-            "mb-1.5 flex min-h-9 items-center gap-2 border-b border-border/70 px-1 pb-1.5 transition-[border-color] duration-200 motion-reduce:transition-none",
+            "mb-1.5 flex min-h-9 items-center gap-2 bg-muted/20 px-1 pb-1.5 transition-[background-color] duration-200 motion-reduce:transition-none",
             isCollapsed &&
               "md:h-[3.5625rem] md:min-h-[3.5625rem] md:w-[3.5625rem] md:items-center md:justify-center md:px-0 md:py-0",
           )}
@@ -9039,16 +9188,19 @@ function AdminSidebar({
               <div
                 key={section.label}
                 className={cn(
-                  "block space-y-1.5",
+                    "block space-y-1",
                   isCollapsed &&
                     "md:flex md:w-full md:flex-col md:items-center",
                 )}
+                role="group"
+                aria-label={section.label}
+                data-admin-sidebar-section={section.label}
               >
                 <p
                   className={cn(
-                    "px-2.5 text-2xs font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
+                    "admin-section-title px-2.5 text-xs font-semibold text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
                     (!showLabels || isCollapsed) &&
-                      "md:h-px md:px-0 md:opacity-0",
+                      "md:h-0 md:px-0 md:opacity-0",
                   )}
                 >
                   {section.label}
@@ -9069,8 +9221,35 @@ function AdminSidebar({
               : "space-y-3",
           )}
           data-admin-sidebar-footer-actions="true"
+          role="group"
           aria-label="관리자 사이드바 설정"
         >
+          {isCollapsed ? (
+            <UiTooltipProvider delayDuration={120}>
+              <UiTooltip>
+                <UiTooltipTrigger asChild>
+                  <Link
+                    href="/"
+                    className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                    aria-label="쯔동여지도 홈으로 이동"
+                    data-admin-sidebar-collapsed-home="true"
+                  >
+                    <Store className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </UiTooltipTrigger>
+                <UiTooltipContent
+                  side="right"
+                  align="center"
+                  className={adminDashboardTooltipPortalClassName}
+                >
+                  <AdminDashboardTooltipLinesPanel
+                    lines={["쯔동여지도 홈"]}
+                    dataAttribute="sidebar-collapsed-home"
+                  />
+                </UiTooltipContent>
+              </UiTooltip>
+            </UiTooltipProvider>
+          ) : null}
           {renderSidebarAccountMenu()}
         </div>
       </aside>
@@ -9079,7 +9258,15 @@ function AdminSidebar({
 }
 
 function LlmSessionWorkspace() {
-  return <AdminOperationsPanel />;
+  return (
+    <section
+      className="admin-surface h-full min-h-0 min-w-0 overflow-hidden"
+      aria-label="LLM 운영 작업 화면"
+      data-admin-console-workspace="llm"
+    >
+      <AdminOperationsPanel />
+    </section>
+  );
 }
 
 function getAdminAuditActionLabel(action: string) {
@@ -9125,6 +9312,19 @@ function AuditPlaceholder() {
   });
   const auditPayload = auditEventsQuery.data;
   const events = auditPayload?.events ?? [];
+  const auditReadFailed = adminQueryLastReadFailed(auditEventsQuery);
+  const isAuditFirstLoad = auditEventsQuery.isLoading && !auditReadFailed;
+  const isAuditRetrying = auditEventsQuery.isFetching;
+  const auditSearchRef = useRef<HTMLInputElement>(null);
+  const auditRetryRef = useRef<HTMLButtonElement>(null);
+  const auditPanelHadFocusRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!auditPanelHadFocusRef.current || document.activeElement !== document.body) return;
+    (auditRetryRef.current ?? auditSearchRef.current)?.focus();
+  });
+  const retryAuditRead = () => {
+    if (!isAuditRetrying) void auditEventsQuery.refetch();
+  };
   const normalizedSearch = search.trim().toLocaleLowerCase("ko-KR");
   const visibleEvents = events.filter((event) => (!status || event.status === status) &&
     (!normalizedSearch || [getAdminAuditActionLabel(event.action), event.reasonCode, event.id, event.targetUserId]
@@ -9141,7 +9341,7 @@ function AuditPlaceholder() {
   const coverageBadgeLabel =
     isAuditAuthUnavailable
       ? "세션 확인 필요"
-      : unavailable || auditEventsQuery.isError
+      : unavailable || (auditReadFailed && events.length === 0)
         ? "읽기 확인 필요"
         : hasTruthfulCoverage
           ? `부분 감사 · ${events.length}개`
@@ -9155,18 +9355,24 @@ function AuditPlaceholder() {
       icon={ScrollText}
       summary={coverageBadgeLabel}
       actions={<>
-        <Button size="sm" variant="ghost" aria-label="감사 로그 새로고침" disabled={auditEventsQuery.isFetching} onClick={() => auditEventsQuery.refetch()}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />새로고침</Button>
+        <Button size="sm" variant="ghost" aria-label="감사 로그 새로고침" aria-disabled={isAuditRetrying || undefined} aria-busy={isAuditRetrying || undefined} onClick={retryAuditRead}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />새로고침</Button>
         <Button asChild size="sm" variant="outline"><Link href="/admin/privacy-incidents" title="사람이 검토하고 처리합니다. 자동 신고나 수리 완료를 주장하지 않습니다." data-admin-privacy-incidents-link="true">개인정보 사고 대응<ExternalLink aria-hidden="true" className="h-3 w-3" /></Link></Button>
       </>}
       contentClassName="overflow-y-auto"
     >
-      <div className="min-h-[480px]">
-        <div className="admin-cms-toolbar">
-          <label className="relative min-w-0 flex-1"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input aria-label="감사 로그 검색" placeholder="작업·대상·감사 ID 검색" value={search} maxLength={256} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" /></label>
+      <div
+        className="min-h-[480px]"
+        onFocus={() => { auditPanelHadFocusRef.current = true; }}
+        onBlur={(event) => {
+          if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) auditPanelHadFocusRef.current = false;
+        }}
+      >
+        <div className="admin-cms-toolbar admin-toolbar">
+          <label className="relative min-w-0 flex-1"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /><input ref={auditSearchRef} aria-label="감사 로그 검색" placeholder="작업·대상·감사 ID 검색" value={search} maxLength={256} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs" /></label>
           <select aria-label="감사 처리 상태" value={status} onChange={(event) => setStatus(event.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs"><option value="">전체 상태</option><option value="intent">적용 전</option><option value="applied">적용됨</option><option value="failed">실패</option></select>
         </div>
         <details
-          className="border-b border-border px-3 py-2 text-xs leading-5 text-muted-foreground"
+          className="admin-detail-section px-3 py-2 text-xs leading-5 text-muted-foreground"
           data-admin-audit-coverage="partial-domain-specific"
           data-admin-audit-coverage-source={getAdminAuditCoverageSourceSummary(coverage)}
           data-admin-audit-coverage-domain={getAdminAuditCoverageDomainSummary(coverage)}
@@ -9184,18 +9390,25 @@ function AuditPlaceholder() {
           </p>
         </details>
 
-        {auditEventsQuery.isLoading ? (
-          <div className="space-y-2" aria-label="감사 로그 로딩 중">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
+        {isAuditFirstLoad ? (
+          <div className="admin-detail-section space-y-2 p-3" aria-label="감사 로그 로딩 중">
+
+            <LoadingPreview
+              kind="list"
+              rows={3}
+              compact
+              showHeader={false}
+              label="감사 로그 로딩 중"
+              className="min-h-48"
+            />
+
           </div>
         ) : null}
 
-        {!auditEventsQuery.isLoading && (unavailable || auditEventsQuery.isError) ? (
+        {!isAuditFirstLoad && (unavailable || (auditReadFailed && events.length === 0)) ? (
           <div
             className={cn(
-              "rounded-2xl p-4 text-sm leading-6",
+              "admin-empty-state p-4 text-sm leading-6",
               isAuditAuthUnavailable
                 ? "border border-destructive/20 bg-destructive/10 text-destructive"
                 : "border border-amber-200 bg-amber-50/80 text-amber-900",
@@ -9235,13 +9448,48 @@ function AuditPlaceholder() {
                   감사 로그 다시 확인
                 </Button>
               </div>
-            ) : null}
+            ) : (
+              <Button
+                ref={auditRetryRef}
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-3 h-8 bg-background"
+                aria-disabled={isAuditRetrying || undefined}
+                aria-busy={isAuditRetrying || undefined}
+                onClick={retryAuditRead}
+              >
+                {isAuditRetrying ? "확인 중…" : "감사 로그 다시 확인"}
+              </Button>
+            )}
           </div>
         ) : null}
 
-        {!auditEventsQuery.isLoading && !unavailable && !auditEventsQuery.isError && events.length === 0 ? (
+        {auditReadFailed && events.length > 0 && !unavailable ? (
           <div
-            className="rounded-2xl border border-border bg-muted/25 p-4 text-center text-sm leading-6 text-muted-foreground"
+            role="alert"
+            className="flex flex-wrap items-center gap-2 border-b border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900"
+            data-admin-audit-stale-read="true"
+          >
+            <span className="min-w-0 flex-1">감사 로그를 다시 읽지 못했습니다. 이전 목록을 표시하고 있습니다.</span>
+            <Button
+              ref={auditRetryRef}
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 bg-background"
+              aria-disabled={isAuditRetrying || undefined}
+              aria-busy={isAuditRetrying || undefined}
+              onClick={retryAuditRead}
+            >
+              {isAuditRetrying ? "확인 중…" : "다시 확인"}
+            </Button>
+          </div>
+        ) : null}
+
+        {!isAuditFirstLoad && !unavailable && !auditReadFailed && events.length === 0 ? (
+          <div
+            className="admin-empty-state bg-muted/25 p-4 text-sm leading-6 text-muted-foreground"
             role="status"
             data-admin-audit-empty-state="true"
           >
@@ -9250,7 +9498,7 @@ function AuditPlaceholder() {
           </div>
         ) : null}
 
-        {events.length > 0 && !unavailable && !auditEventsQuery.isError ? (
+        {events.length > 0 && !unavailable ? (
           <>
             <div className="admin-cms-table-container">
               <table className="admin-cms-table" data-admin-audit-event-list="admin_audit_events">
@@ -9259,24 +9507,24 @@ function AuditPlaceholder() {
                   <Fragment key={event.id}>
                     <tr className={selectedId === event.id ? "admin-cms-row-selected" : ""}>
                       <td><button type="button" aria-expanded={selectedId === event.id} aria-controls={`audit-detail-${event.id}`} onClick={() => setSelectedId(selectedId === event.id ? null : event.id)} className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="block text-sm font-medium">{getAdminAuditActionLabel(event.action)}</span><span className="block text-xs text-muted-foreground">{formatDashboardDateTime(event.createdAt)}</span></button></td>
-                      <td className="hidden max-w-48 truncate font-mono text-xs sm:table-cell">{event.targetUserId ?? "—"}</td>
+                      <td className="hidden max-w-48 truncate text-xs sm:table-cell">{event.targetUserId ?? "—"}</td>
                       <td><Badge variant="outline" className={cn("whitespace-nowrap px-2 py-0.5 text-2xs", getAdminAuditStatusClassName(event.status))}>{event.status === "applied" ? "적용됨" : event.status === "failed" ? "실패" : event.status === "intent" ? "적용 전" : event.status}</Badge></td>
                     </tr>
                     {selectedId === event.id ? <tr id={`audit-detail-${event.id}`}><td colSpan={3}>
-                      <dl className="grid gap-2 break-all text-xs sm:grid-cols-2" aria-label="감사 항목 상세">
-                        <div><dt className="text-muted-foreground">감사 ID</dt><dd className="font-mono">{event.id}</dd></div>
-                        <div><dt className="text-muted-foreground">대상</dt><dd className="font-mono">{event.targetUserId ?? "—"}</dd></div>
-                        <div><dt className="text-muted-foreground">사유</dt><dd>{event.reasonCode || "—"}</dd></div>
-                        <div><dt className="text-muted-foreground">적용 시각</dt><dd>{event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}</dd></div>
-                        <div><dt className="text-muted-foreground">상관 ID</dt><dd className="font-mono">{event.correlationId ?? "—"}</dd></div>
-                        {event.errorCode ? <div><dt className="text-destructive">오류 코드</dt><dd className="font-mono text-destructive">{event.errorCode}</dd></div> : null}
+                      <dl className="admin-detail-section grid gap-2 break-all p-3 text-xs sm:grid-cols-2" aria-label="감사 항목 상세">
+                        <div><dt className="admin-field-label text-muted-foreground">감사 ID</dt><dd>{event.id}</dd></div>
+                        <div><dt className="admin-field-label text-muted-foreground">대상</dt><dd>{event.targetUserId ?? "—"}</dd></div>
+                        <div><dt className="admin-field-label text-muted-foreground">사유</dt><dd>{event.reasonCode || "—"}</dd></div>
+                        <div><dt className="admin-field-label text-muted-foreground">적용 시각</dt><dd>{event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}</dd></div>
+                        <div><dt className="admin-field-label text-muted-foreground">상관 ID</dt><dd>{event.correlationId ?? "—"}</dd></div>
+                        {event.errorCode ? <div><dt className="admin-field-label text-destructive">오류 코드</dt><dd className="text-destructive">{event.errorCode}</dd></div> : null}
                       </dl>
                     </td></tr> : null}
                   </Fragment>
                 ))}</tbody>
               </table>
             </div>
-            {visibleEvents.length === 0 ? <p role="status" className="p-4 text-center text-xs text-muted-foreground">일치하는 감사 로그가 없습니다.</p> : null}
+            {visibleEvents.length === 0 ? <p role="status" className="admin-empty-state p-4 text-xs text-muted-foreground">일치하는 감사 로그가 없습니다. 검색어나 상태 필터를 조정해 주세요.</p> : null}
             <footer className="admin-cms-footer"><span>최근 조회 {visibleEvents.length} / {events.length}개 · 사용자 관리</span><span className="ml-auto">항목을 선택해 상세 확인</span></footer>
           </>
         ) : null}
@@ -9369,13 +9617,13 @@ function InlineModulePanel({
   return (
     <section
       aria-label={`${module.title} 작업 화면`}
-      className={cn("flex min-h-full min-w-0 flex-col md:h-full md:min-h-0", module.id === "knowledge-graph" && "!h-full !min-h-0")}
+      className={cn("admin-surface flex min-h-full min-w-0 flex-col md:h-full md:min-h-0", module.id === "knowledge-graph" && "!h-full !min-h-0")}
       data-admin-console-inline-module-frame="true"
       data-admin-console-inline-module-id={module.id}
     >
       <div
         className={cn(
-          "min-h-[360px] flex-1 rounded-lg bg-background shadow-none md:min-h-0 md:rounded-xl md:border md:border-border md:shadow-sm",
+          "admin-surface min-h-[360px] flex-1 bg-background shadow-none md:min-h-0",
           "overflow-visible md:overflow-hidden",
           module.id === "knowledge-graph" && "flex min-h-0 flex-col !overflow-hidden",
         )}
@@ -9407,25 +9655,6 @@ type AdminConsoleCanvasSkeletonConfig = {
   variant: AdminConsoleCanvasSkeletonVariant;
 };
 
-const ADMIN_CONSOLE_CANVAS_SKELETON_ROWS = [0, 1, 2, 3, 4, 5] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_CARDS = [
-  "primary",
-  "secondary",
-  "tertiary",
-  "quaternary",
-] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_METRICS = [
-  "metric-a",
-  "metric-b",
-  "metric-c",
-  "metric-d",
-] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE = [
-  "queued",
-  "checking",
-  "applying",
-  "readback",
-] as const;
 
 function getAdminConsoleModuleLoadingSkeleton(
   moduleId: AdminModuleId,
@@ -9547,7 +9776,7 @@ function AdminConsoleCanvasSkeleton({ moduleId }: { moduleId: AdminModuleId }) {
 
   return (
     <section
-      className="flex h-full min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm md:min-h-0"
+      className="flex h-full min-h-[520px] min-w-0 flex-col overflow-hidden rounded-md border border-border bg-background shadow-none md:min-h-0"
       data-admin-console-content-loading="true"
       data-admin-sidebar-module-loading="page-shell"
       data-admin-sidebar-module-loading-viewport="true"
@@ -9571,66 +9800,43 @@ function AdminConsoleCanvasSkeleton({ moduleId }: { moduleId: AdminModuleId }) {
   );
 }
 
-function AdminConsoleSkeletonMetricStrip({
-  className,
-}: {
-  className?: string;
-}) {
+function AdminConsoleSkeletonMetricStrip({ className }: { className?: string }) {
   return (
-    <div className={cn("grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4", className)}>
-      {ADMIN_CONSOLE_CANVAS_SKELETON_METRICS.map((metric) => (
-        <div
-          key={metric}
-          className="min-h-20 rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-        >
-          <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="mt-3 h-6 w-24 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="mt-3 h-2 w-full rounded-full motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
+    <LoadingSurface label="관리자 집계 로딩 중">
+
+      <div className={cn("grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4", className)}>
+
+        {
+          ["등록 현황", "처리 현황", "최근 기록", "검토 현황"].map(label => (
+            <div key={label} className="min-h-20 rounded-xl border border-border bg-card/95 p-3">
+
+              <p className="text-xs">
+
+                {label}
+
+              </p>
+
+              <p className="mt-3 text-xl font-semibold">000</p>
+
+            </div>
+          ))
+        }
+
+      </div>
+
+    </LoadingSurface>
   );
 }
 
-function AdminConsoleSkeletonRows({
-  count = ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.length,
-  withMedia = false,
-}: {
-  count?: number;
-  withMedia?: boolean;
-}) {
-  return (
-    <div className="divide-y divide-border">
-      {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, count).map((row) => (
-        <div
-          key={row}
-          className={cn(
-            "grid items-center gap-2 px-3 py-3",
-            withMedia
-              ? "sm:grid-cols-[56px_minmax(0,1fr)_90px]"
-              : "sm:grid-cols-[minmax(0,1fr)_80px]",
-          )}
-        >
-          {withMedia ? (
-            <Skeleton className="h-10 w-14 rounded-md motion-reduce:animate-none" />
-          ) : null}
-          <div className="min-w-0 space-y-1.5">
-            <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-3/5 rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-7 rounded-lg motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
-  );
-}
+
 
 function AdminConsoleCanvasSkeletonBody({
   variant,
 }: {
   variant: AdminConsoleCanvasSkeletonVariant;
 }) {
+  const listKind = variant === "insights-grid" || variant === "route-map" ? "chart" : variant === "user-table" || variant === "evaluation-table" ? "table" : "list";
+  const detailKind = variant === "insights-grid" || variant === "route-map" ? "chart" : variant === "banner-editor" ? "form" : "cards";
   if (variant === "evaluation-table" || variant === "submission-queue") {
     return (
       <div
@@ -9638,26 +9844,28 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-evaluation="viewport-table"
       >
+
         <AdminConsoleSkeletonMetricStrip className="xl:grid-cols-5" />
+
         <section
           className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="grid border-b border-border bg-muted/30 px-3 py-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(5,78px)_112px]">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
-              <Skeleton
-                key={cell}
-                className="h-3 w-20 rounded-full motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-          <AdminConsoleSkeletonRows count={6} withMedia />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "refresh-history") {
     return (
       <div
@@ -9665,32 +9873,42 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-refresh-history="viewport-split"
       >
+
         <section
           className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 md:grid-cols-2"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-full min-h-28 rounded-xl motion-reduce:animate-none"
-            />
-          ))}
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "banner-editor") {
     return (
       <div
@@ -9698,35 +9916,42 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-banners="viewport-editor"
       >
+
         <section
           className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={5} withMedia />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(300px,0.8fr)]"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
-          <div className="space-y-2">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, 5).map((row) => (
-              <Skeleton
-                key={row}
-                className="h-10 rounded-lg motion-reduce:animate-none"
-              />
-            ))}
-          </div>
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "user-table") {
     return (
       <div
@@ -9734,26 +9959,28 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-users="viewport-table"
       >
+
         <AdminConsoleSkeletonMetricStrip />
+
         <section
           className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="grid border-b border-border bg-muted/30 px-3 py-2 md:grid-cols-[minmax(0,1.2fr)_120px_120px_96px]">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
-              <Skeleton
-                key={cell}
-                className="h-3 w-24 rounded-full motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "insights-grid") {
     return (
       <div
@@ -9761,26 +9988,42 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-insights="viewport-charts"
       >
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <AdminConsoleSkeletonMetricStrip />
-          <Skeleton className="min-h-72 flex-1 rounded-2xl motion-reduce:animate-none" />
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
-          <AdminConsoleSkeletonRows count={4} />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "route-map") {
     return (
       <div
@@ -9788,27 +10031,42 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-routes="viewport-map"
       >
+
         <section
           className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <Skeleton className="h-full min-h-96 rounded-2xl motion-reduce:animate-none" />
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-36 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   if (variant === "llm-workspace" || variant === "audit-log") {
     return (
       <div
@@ -9816,45 +10074,62 @@ function AdminConsoleCanvasSkeletonBody({
         data-admin-sidebar-module-loading-grid="true"
         data-admin-sidebar-module-loading-ops="viewport-cards"
       >
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE.map((item) => (
-            <div key={item} className="rounded-xl border border-border/70 p-3">
-              <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="mt-3 h-3 w-full rounded-full motion-reduce:animate-none" />
-              <Skeleton className="mt-2 h-3 w-4/5 rounded-full motion-reduce:animate-none" />
-            </div>
-          ))}
+
+          <LoadingPreview
+            kind={listKind}
+            rows={6}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
         <section
           className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
-          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
+
+          <LoadingPreview
+            kind={detailKind}
+            rows={4}
+            compact
+            label="관리자 화면 로딩 중"
+            className="h-full min-h-0"
+          />
+
         </section>
+
       </div>
     );
   }
-
   return (
     <div
       className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]"
       data-admin-sidebar-module-loading-grid="true"
     >
+
       <section
         className="min-h-[300px] overflow-hidden rounded-xl border border-border bg-card/95 lg:min-h-0"
         aria-hidden="true"
         data-admin-sidebar-module-loading-list="true"
       >
-        <div className="border-b border-border bg-muted/30 px-3 py-2">
-          <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
-        </div>
-        <AdminConsoleSkeletonRows count={5} />
+
+        <LoadingPreview
+          kind={listKind}
+          rows={6}
+          compact
+          label="관리자 화면 로딩 중"
+          className="h-full min-h-0"
+        />
+
       </section>
 
       <section
@@ -9862,23 +10137,17 @@ function AdminConsoleCanvasSkeletonBody({
         aria-hidden="true"
         data-admin-sidebar-module-loading-detail="true"
       >
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="space-y-1.5">
-            <Skeleton className="h-5 w-36 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-56 max-w-full rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-8 w-20 rounded-lg motion-reduce:animate-none" />
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-24 rounded-xl motion-reduce:animate-none"
-            />
-          ))}
-          <Skeleton className="h-32 rounded-xl motion-reduce:animate-none sm:col-span-2" />
-        </div>
+
+        <LoadingPreview
+          kind={detailKind}
+          rows={4}
+          compact
+          label="관리자 화면 로딩 중"
+          className="h-full min-h-0"
+        />
+
       </section>
+
     </div>
   );
 }
@@ -9892,15 +10161,12 @@ function AdminStoryboardModuleLoadingSkeleton() {
       data-storyboard-module-loading="true"
       data-storyboard-module-loading-layout="page-shell"
       data-storyboard-viewport-fit="bounded"
-      style={{
-        height: "calc(var(--full-height, 100vh) - 2rem)",
-        maxHeight: "100%",
-        minHeight: 0,
-      }}
+      style={{ height: "calc(var(--full-height, 100vh) - 2rem)", maxHeight: "100%", minHeight: 0 }}
       role="status"
       aria-busy="true"
       aria-label="스토리보드 생성 화면 로딩 중"
     >
+
       <AdminPageHeader
         title={getAdminModuleTitle("storyboard")}
         icon={Clapperboard}
@@ -9908,154 +10174,127 @@ function AdminStoryboardModuleLoadingSkeleton() {
         data-admin-module-header="compact"
         data-admin-module-header-module="storyboard"
       />
+
       <div
         className="grid min-h-0 flex-1 gap-3 overflow-hidden p-2"
         data-storyboard-desktop-split-layout="inline-grid"
         data-storyboard-module-loading-grid="true"
         style={{
+
           display: "grid",
-          gridTemplateColumns:
-            "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
-          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))",
+          gridTemplateColumns: "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
+          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))"
         }}
       >
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-sm"
+
+        <section
+          className="flex min-h-0 flex-col overflow-hidden rounded-md border border-border/70 bg-card shadow-none p-3"
           aria-label="스토리보드 도우미 준비 영역"
           data-storyboard-module-loading-chat-shell="static"
           style={{
+
             gridColumn: "var(--storyboard-input-panel-column, 2)",
             gridRow: "var(--storyboard-input-panel-row, 1)",
-            minWidth: 0,
+            minWidth: 0
           }}
         >
-          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                  <MessageSquareText className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                <div className="h-4 w-32 rounded-full bg-muted/80" />
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <div className="h-4 w-4 rounded-full bg-muted/80" />
-                <div className="h-8 w-8 rounded-full bg-muted/70" />
-                <div className="h-8 w-8 rounded-full bg-muted/70" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-background"
-              data-storyboard-module-loading-chat="true"
-            >
-              <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-3">
-                <div className="max-w-[88%] space-y-2">
-                  <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-40 max-w-full rounded-full bg-muted-foreground/12" />
-                  <div className="mt-2 flex gap-2">
-                    <div className="h-7 w-20 rounded-full border border-border/60 bg-background" />
-                    <div className="h-7 w-20 rounded-full bg-primary/75" />
-                  </div>
-                </div>
-                <div className="max-w-[92%] space-y-2">
-                  <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/12" />
-                  <div className="h-3 w-52 max-w-full rounded-full bg-muted-foreground/12" />
-                </div>
-              </div>
-              <div
-                className="shrink-0 border-t border-border/70 bg-background/80 p-2.5"
-                data-storyboard-module-loading-composer="true"
-              >
-                <div className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-background px-3">
-                  <div className="h-5 w-5 shrink-0 rounded-full bg-muted/80" />
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
-            </div>
-            <span className="sr-only">
-              스토리보드 도우미 영역을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
 
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          <div className="min-h-0 flex-1" data-storyboard-module-loading-chat="true">
+
+            <LoadingSurface label="스토리보드 도우미 준비 중">
+
+              <div className="space-y-4">
+
+                <h2 className="text-sm font-semibold">스토리보드 도우미</h2>
+
+                <p className="max-w-[88%] rounded-xl border p-3 text-sm">영상의 주제와 장면 구성을 준비해요.</p>
+
+                <p className="ml-auto max-w-[88%] rounded-xl border p-3 text-sm">장면의 분위기와 흐름</p>
+
+              </div>
+
+            </LoadingSurface>
+
+          </div>
+
+          <div className="shrink-0" data-storyboard-module-loading-composer="true">
+
+            <LoadingPreview kind="navigation" compact showHeader={false} label="스토리보드 입력 영역 준비 중" />
+
+          </div>
+
+        </section>
+
+        <section
+          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none p-2"
           aria-label="스토리보드 캔버스 준비 영역"
           data-storyboard-module-loading-canvas="true"
           style={{
+
             gridColumn: "var(--storyboard-result-panel-column, 1)",
             gridRow: "var(--storyboard-result-panel-row, 1)",
-            minWidth: 0,
+            minWidth: 0
           }}
         >
-          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="h-4 w-12 shrink-0 rounded-full bg-muted/80" />
-              <div className="h-6 w-20 shrink-0 rounded-full border border-border/70 bg-background" />
-              <div className="h-3 w-48 max-w-[32vw] rounded-full bg-muted/70" />
-            </div>
-            <div
-              className="ml-auto flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden px-1 py-1"
-              data-storyboard-module-loading-toolbar="true"
-            >
-              <div className="h-8 w-16 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-32 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-28 shrink-0 rounded-md bg-muted/70" />
-            </div>
-          </CardHeader>
-          <CardContent className="min-h-0 flex-1 p-2 pt-1">
-            <div
-              className="h-full min-h-0"
-              data-storyboard-module-loading-frame-grid="true"
-              aria-hidden="true"
-            >
-              {STORYBOARD_MODULE_LOADING_CUT_NOS.map((cutNo) => (
+
+          <div className="shrink-0" data-storyboard-module-loading-toolbar="true">
+
+            <LoadingPreview kind="navigation" compact showHeader={false} label="장면 도구 준비 중" />
+
+          </div>
+
+          <div className="min-h-0 flex-1" data-storyboard-module-loading-frame-grid="true">
+
+            {
+              STORYBOARD_MODULE_LOADING_CUT_NOS.map(cutNo => (
                 <div
-                  key={`storyboard-loading-cut-${cutNo}`}
-                  className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/80"
+                  key={cutNo}
+                  className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/80"
                   data-storyboard-module-loading-cut={String(cutNo)}
+                  data-storyboard-module-loading-glass="false"
+                  data-storyboard-module-loading-shimmer="false"
                 >
-                  <div className="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52">
-                    <span className="absolute left-3 top-3 z-10 h-5 w-14 rounded-full bg-slate-700/70" />
-                    <span className="absolute right-3 top-3 z-10 h-6 w-12 rounded-full bg-white/80" />
-                    <span
-                      className="absolute inset-0 bg-gradient-to-br from-white/58 via-slate-200/28 to-slate-500/24"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-glass="true"
-                    />
-                    <span
-                      className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-shimmer="true"
-                    />
-                  </div>
-                  <div className="shrink-0 space-y-1 border-t border-border/45 bg-background/90 px-2.5 py-1.5">
-                    <div className="grid items-center gap-2 rounded-lg bg-muted/15 px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-muted/65" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div className="grid items-center gap-2 rounded-lg bg-rose-500/[0.045] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-rose-100/70" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div className="grid items-center gap-2 rounded-lg bg-amber-400/[0.10] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-amber-100/75" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                  </div>
+
+                  <LoadingSurface label="스토리보드 장면 준비 중" className="h-full">
+
+                    <article className="flex h-full min-h-0 flex-col">
+
+                      <svg viewBox="0 0 320 180" role="img" aria-label="장면 미리보기" className="min-h-0 w-full flex-1">
+
+                        <rect width="320" height="180" fill="currentColor" opacity="0.08" />
+
+                      </svg>
+
+                      <div className="shrink-0 space-y-1 px-3 py-2 text-xs">
+
+                        <p>
+
+                          {"장면 "}
+
+                          {cutNo}
+
+                        </p>
+
+                        <p>화면 구성과 대사</p>
+
+                        <p>장면 설명</p>
+
+                      </div>
+
+                    </article>
+
+                  </LoadingSurface>
+
                 </div>
-              ))}
-            </div>
-            <span className="sr-only">
-              스토리보드 캔버스 영역을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
+              ))
+            }
+
+          </div>
+
+        </section>
+
       </div>
+
     </section>
   );
 }
@@ -10067,234 +10306,156 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
       data-thumbnail-module-loading="true"
       data-thumbnail-module-loading-layout="page-shell"
       data-thumbnail-module-loading-parity="storyboard-shell"
+      data-thumbnail-module-loading-glass-shell="false"
+      data-thumbnail-module-loading-page-shimmer="false"
       role="status"
       aria-busy="true"
       aria-label="유튜브 썸네일 생성 화면 로딩 중"
     >
-      <span
-        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-background via-slate-50/72 to-slate-200/48 dark:via-slate-900/54 dark:to-slate-700/32"
-        aria-hidden="true"
-        data-thumbnail-module-loading-glass-shell="true"
-      />
-      <span
-        className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/3 z-0 w-1/3 bg-gradient-to-r from-transparent via-white/62 to-transparent dark:via-white/22"
-        aria-hidden="true"
-        data-thumbnail-module-loading-page-shimmer="true"
-      />
+
       <AdminPageHeader
         title={getAdminModuleTitle("youtube-thumbnail-generator")}
         icon={ImageIcon}
-        className="relative z-10"
         data-admin-sidebar-module-loading-header="true"
         data-admin-module-header="compact"
         data-admin-module-header-module="youtube-thumbnail-generator"
       />
-      <div className="relative z-10 grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden p-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-        <Card
-          className="relative order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background/86 shadow-none"
+
+      <div
+        className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden p-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+      >
+
+        <section
+          className="order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background p-3"
           aria-label="유튜브 썸네일 도우미 준비 영역"
           data-thumbnail-module-loading-chat-shell="static"
           data-thumbnail-module-loading-card-glass="chat"
+          data-thumbnail-module-loading-chat-shell-glass="false"
+          data-thumbnail-module-loading-chat-shell-shimmer="false"
         >
-          <span
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/36 via-slate-100/14 to-slate-300/18 dark:from-slate-800/22 dark:via-slate-700/12 dark:to-slate-500/14"
-            aria-hidden="true"
-            data-thumbnail-module-loading-chat-shell-glass="true"
-          />
-          <span
-            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/52 to-transparent dark:via-white/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-chat-shell-shimmer="true"
-          />
-          <CardHeader className="relative z-10 shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                  <MessageSquareText className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 truncate">
-                  유튜브 썸네일 생성 도우미
-                </span>
-              </CardTitle>
-              <Badge
-                variant="outline"
-                className="h-6 shrink-0 rounded-full px-2 text-2xs"
-              >
-                준비 중
-              </Badge>
+
+          <div
+            className="flex min-h-0 flex-1 flex-col"
+            data-thumbnail-module-loading-chat="true"
+            data-thumbnail-module-loading-chat-tone="neutral-storyboard"
+            data-thumbnail-module-loading-chat-glass="false"
+            data-thumbnail-module-loading-chat-shimmer="false"
+          >
+
+            <div className="min-h-0 flex-1 overflow-hidden" data-thumbnail-module-loading-chat-log="true">
+
+              <LoadingSurface label="썸네일 도우미 준비 중">
+
+                <div className="space-y-4 text-sm">
+
+                  <div className="max-w-[86%] space-y-2" data-thumbnail-module-loading-chat-message="assistant">
+
+                    <p className="rounded-md border p-3" data-thumbnail-module-loading-chat-bubble="guide">썸네일의 주제와 구성을 준비해요.</p>
+
+                    <div className="flex gap-2 text-xs" data-thumbnail-module-loading-chat-actions="outside-bubble">
+
+                      <span className="rounded-full border px-3 py-1">구성</span>
+
+                      <span className="rounded-full border px-3 py-1">스타일</span>
+
+                    </div>
+
+                  </div>
+
+                  <p
+                    className="ml-auto max-w-[78%] rounded-2xl border p-3"
+                    data-thumbnail-module-loading-chat-message="user"
+                  >이미지와 제목 구성</p>
+
+                  <div className="max-w-[86%]" data-thumbnail-module-loading-chat-message="assistant">
+
+                    <p className="rounded-2xl border p-3" data-thumbnail-module-loading-chat-bubble="assistant">캔버스에서 배치를 확인해요.</p>
+
+                  </div>
+
+                </div>
+
+              </LoadingSurface>
+
             </div>
-          </CardHeader>
-          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/92 to-muted/32 shadow-sm"
-              data-thumbnail-module-loading-chat="true"
-              data-thumbnail-module-loading-chat-tone="neutral-storyboard"
-            >
-              <span
-                className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/42 via-slate-100/16 to-slate-300/18 dark:from-slate-800/26 dark:via-slate-700/14 dark:to-slate-600/16"
-                aria-hidden="true"
-                data-thumbnail-module-loading-chat-glass="true"
-              />
-              <span
-                className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/56 to-transparent dark:via-white/18"
-                aria-hidden="true"
-                data-thumbnail-module-loading-chat-shimmer="true"
-              />
-              <div
-                className="relative z-10 min-h-0 flex-1 space-y-3 overflow-hidden p-3"
-                data-thumbnail-module-loading-chat-log="true"
-                aria-hidden="true"
-              >
-                <div
-                  className="flex gap-2"
-                  data-thumbnail-module-loading-chat-message="assistant"
-                >
-                  <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted/80">
-                    <div className="h-3.5 w-3.5 rounded-full bg-muted-foreground/20" />
-                  </div>
-                  <div className="max-w-[86%] space-y-1 text-left">
-                    <div className="h-2.5 w-14 rounded-full bg-muted-foreground/18" />
-                    <div
-                      className="space-y-2 rounded-2xl rounded-bl-md bg-background px-3 py-2 shadow-sm ring-1 ring-border/60"
-                      data-thumbnail-module-loading-chat-bubble="guide"
-                    >
-                      <div className="h-3 w-44 max-w-full rounded-full bg-muted-foreground/14" />
-                      <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div
-                      className="flex flex-wrap gap-1.5 pl-1"
-                      data-thumbnail-module-loading-chat-actions="outside-bubble"
-                    >
-                      <div className="h-7 w-20 rounded-full border border-border/70 bg-background/80" />
-                      <div className="h-7 w-20 rounded-full bg-muted/80" />
-                    </div>
-                  </div>
-                </div>
 
-                <div
-                  className="flex justify-end gap-2"
-                  data-thumbnail-module-loading-chat-message="user"
-                >
-                  <div className="max-w-[78%] space-y-1 text-right">
-                    <div className="ml-auto h-2.5 w-5 rounded-full bg-muted-foreground/16" />
-                    <div className="rounded-2xl rounded-br-md bg-muted/70 px-3 py-2">
-                      <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/16" />
-                    </div>
-                  </div>
-                  <div className="mt-5 h-7 w-7 shrink-0 rounded-full bg-muted/80" />
-                </div>
+            <div className="shrink-0" data-thumbnail-module-loading-composer="true">
 
-                <div
-                  className="flex gap-2"
-                  data-thumbnail-module-loading-chat-message="assistant"
-                >
-                  <div className="mt-5 h-7 w-7 shrink-0 rounded-full bg-muted/80" />
-                  <div className="max-w-[86%] space-y-1 text-left">
-                    <div className="h-2.5 w-16 rounded-full bg-muted-foreground/16" />
-                    <div
-                      className="space-y-2 rounded-2xl rounded-bl-md border border-border/60 bg-muted/55 px-3 py-2"
-                      data-thumbnail-module-loading-chat-bubble="assistant"
-                    >
-                      <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/16" />
-                      <div className="h-3 w-32 max-w-full rounded-full bg-muted-foreground/12" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="relative z-10 shrink-0 border-t border-border/70 bg-background/74 p-2.5"
-                data-thumbnail-module-loading-composer="true"
-                aria-hidden="true"
-              >
-                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-2">
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
+              <LoadingPreview kind="navigation" compact showHeader={false} label="썸네일 입력 영역 준비 중" />
+
             </div>
-            <span className="sr-only">
-              도우미 영역의 말풍선과 입력창을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
 
-        <Card
-          className="relative order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/72 shadow-none"
+          </div>
+
+        </section>
+
+        <section
+          className="order-1 flex min-h-0 flex-col overflow-hidden bg-card/70 p-3"
           aria-label="유튜브 썸네일 캔버스 로딩"
           data-thumbnail-module-loading-canvas="true"
           data-thumbnail-module-loading-card-glass="canvas"
+          data-thumbnail-module-loading-canvas-shell-glass="false"
+          data-thumbnail-module-loading-canvas-shell-shimmer="false"
         >
-          <span
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/34 via-slate-100/14 to-slate-300/20 dark:from-slate-800/24 dark:via-slate-700/14 dark:to-slate-600/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-canvas-shell-glass="true"
-          />
-          <span
-            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-canvas-shell-shimmer="true"
-          />
-          <CardHeader className="relative z-10 flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
-              <span className="shrink-0 whitespace-nowrap font-semibold">
-                캔버스 편집 / PNG 내보내기
-              </span>
-            </CardTitle>
-            <div className="ml-auto hidden min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1 sm:flex">
-              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-20 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md bg-muted/80" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 pt-0">
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-              <div
-                className="relative aspect-video w-full max-w-full overflow-hidden rounded-2xl border border-slate-300/80 bg-gradient-to-br from-slate-100 via-slate-200 to-slate-400/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-slate-700/70 dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52"
-                data-thumbnail-module-loading-canvas-frame="true"
-                data-thumbnail-module-loading-canvas-aspect="16:9"
-              >
-                <span
-                  className="absolute inset-0 bg-gradient-to-br from-white/42 via-slate-200/22 to-slate-500/18"
-                  aria-hidden="true"
-                  data-thumbnail-module-loading-canvas-glass="true"
-                />
-                <span
-                  className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                  aria-hidden="true"
-                  data-thumbnail-module-loading-shimmer="true"
-                />
-              </div>
-            </div>
+
+          <h2 className="shrink-0 py-2 text-sm font-semibold">캔버스 편집 / PNG 내보내기</h2>
+
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+
             <div
-              className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6"
-              data-thumbnail-module-loading-toolbar="true"
+              className="relative aspect-video w-full max-w-full overflow-hidden rounded-lg border border-border"
+              data-thumbnail-module-loading-canvas-frame="true"
+              data-thumbnail-module-loading-canvas-aspect="16:9"
+              data-thumbnail-module-loading-canvas-glass="false"
+              data-thumbnail-module-loading-shimmer="false"
             >
-              {THUMBNAIL_MODULE_LOADING_TOOL_IDS.map((toolId) => (
-                <div
-                  key={`thumbnail-module-loading-tool-${toolId}`}
-                  className="relative h-8 overflow-hidden rounded-lg border border-border/60 bg-gradient-to-br from-background/88 via-slate-50/68 to-slate-200/54 dark:via-slate-800/44 dark:to-slate-700/34"
-                >
-                  <span
-                    className="absolute inset-0 bg-gradient-to-br from-white/28 via-transparent to-slate-400/14"
-                    aria-hidden="true"
-                    data-thumbnail-module-loading-tool-glass="true"
-                  />
-                  <span
-                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/54 to-transparent dark:via-white/16"
-                    aria-hidden="true"
-                    data-thumbnail-module-loading-tool-shimmer="true"
-                  />
-                </div>
-              ))}
+
+              <LoadingSurface label="썸네일 캔버스 준비 중" className="h-full">
+
+                <svg viewBox="0 0 320 180" role="img" aria-label="썸네일 미리보기" className="h-full w-full">
+
+                  <rect width="320" height="180" fill="currentColor" opacity="0.08" />
+
+                  <text x="24" y="90" fontSize="24">영상 제목</text>
+
+                </svg>
+
+              </LoadingSurface>
+
             </div>
-          </CardContent>
-        </Card>
+
+          </div>
+
+          <div
+            className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6"
+            data-thumbnail-module-loading-toolbar="true"
+          >
+
+            {
+              THUMBNAIL_MODULE_LOADING_TOOL_IDS.map(toolId => (
+                <div
+                  key={toolId}
+                  className="h-8 overflow-hidden rounded-md border border-border/60"
+                  data-thumbnail-module-loading-tool-glass="false"
+                  data-thumbnail-module-loading-tool-shimmer="false"
+                >
+
+                  <LoadingSurface label="썸네일 도구 준비 중">
+
+                    <span className="block px-2 py-1 text-xs">편집 도구</span>
+
+                  </LoadingSurface>
+
+                </div>
+              ))
+            }
+
+          </div>
+
+        </section>
+
       </div>
-      <span className="sr-only">
-        유튜브 썸네일 페이지 구조와 캔버스, 채팅 도우미를 함께 준비하고
-        있습니다.
-      </span>
+
     </section>
   );
 }
@@ -10323,6 +10484,8 @@ export function AdminConsoleOverview({
     stats,
     isLoading: statsLoading,
     hasError: statsHasError,
+    isRetrying: statsRetrying,
+    retryFailed: retryFailedStats,
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
@@ -10877,7 +11040,7 @@ export function AdminConsoleOverview({
     isAdminCanvasBootstrapping ||
     (moduleWaitsForContent && !contentReadyModuleIds.has(activeModuleId));
   return (
-    <main
+    <div
       className="h-[var(--full-height,100vh)] min-h-0 min-w-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
       data-admin-console-shell="true"
       data-design-surface="admin"
@@ -10922,7 +11085,7 @@ export function AdminConsoleOverview({
           aria-label="관리자 콘솔 작업 화면"
           role="region"
           className={cn(
-            "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain scrollbar-hide border-y border-border bg-background p-2 font-sans tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset md:border-y-0 md:p-4",
+            "admin-surface h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain scrollbar-hide border-y border-border bg-background p-2 font-sans tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset md:border-y-0 md:p-4",
             activeModuleId === "overview"
               ? "overflow-y-auto"
               : activeModuleId === "storyboard"
@@ -10958,6 +11121,8 @@ export function AdminConsoleOverview({
                 stats={stats}
                 isLoading={statsLoading}
                 hasError={statsHasError}
+                isRetrying={statsRetrying}
+                onRetry={retryFailedStats}
                 isAdmin={canLoadAdminConsoleData}
               />
             </AdminEmbeddedModuleShell>
@@ -10987,6 +11152,6 @@ export function AdminConsoleOverview({
           </div>
         </section>
       </div>
-    </main>
+    </div>
   );
 }

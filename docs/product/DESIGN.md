@@ -2,12 +2,12 @@
 
 ## Source of truth
 - Status: Active
-- Last refreshed: 2026-07-08
+- Last refreshed: 2026-10-21
 - Primary product surfaces: public map/home shell, admin unified console, admin moderation/evaluations, submissions/reviews, banner management, user/account management, insights, LLM operations session panel
 - Evidence reviewed:
-  - `apps/web/app/globals.css`: warm ivory background, red primary, muted borders, radius, semantic Pretendard UI + Noto Serif KR display typography, app header height, body overflow hidden with layout-owned scrolling.
+  - `apps/web/styles/light-root-tokens.css`, `apps/web/app/globals.css`: warm cream background, ink primary, tangerine focus/selection, garden-green eyebrow, cream surfaces, muted borders, radius, semantic Pretendard UI + Noto Serif KR display typography, app header height, body overflow hidden with layout-owned scrolling.
   - `apps/web/app/app-globals.css`: runtime tokens, accessibility utilities, subtle noise/background, shadow/elevation, motion conventions.
-  - `apps/web/components/layout/Header.tsx`: rounded controls, red primary actions, semantic sans typography for chrome, compact responsive behavior.
+  - `apps/web/components/layout/Header.tsx`: rounded controls, ink pill primary actions, tangerine notification badges, semantic sans typography for chrome, compact responsive behavior.
   - `apps/web/components/layout/OverlayLayout.tsx`, `apps/web/components/layout/MainLayout.tsx`: desktop overlay/panel composition and mobile-specific layout behavior.
   - `apps/web/components/admin/AdminConsoleOverview.tsx`: unified admin console, collapsible sidebar, right content canvas, direct inline modules, guarded apply and LLM workspace concepts.
   - `apps/web/components/admin/AdminUsersPanel.tsx`, `apps/web/app/api/admin/users/**`: administrator-only user/account management with server-side Supabase Auth Admin boundaries, self-lockout guards, and audit events.
@@ -19,10 +19,11 @@
   - `apps/web/components/ui/table.tsx`, `apps/web/tests/responsive-overflow.spec.ts`: owner-gated horizontal-scroll policy via `data-horizontal-scroll-owner` and responsive overflow guard allowlisting.
   - `apps/web/performance/*`: canonical performance inputs, scorer/validator outputs, frozen-tree evidence, and artifact-map references only; the artifact-map SHA is recorded out of band.
   - `backend/naming-renames.v1.json`: bounded high-confidence taxonomy and rename evidence, not authorization for all-path naming churn.
+  - Tzuyang family shops, observed 2026-10-21 as visual references only: Goodtzu food mall (`https://www.goodtzu.co.kr`; near-black ink `#1b1b1b`, tangerine `#ff7b43`, heavy wordmark, playful food copy) and Gardens clothing mall (`https://gardens.it.kr`; garden green `#207846`, cream `#f5f0e9`, green eyebrow over bold title with emoji, green rank chips, black pill CTA). No logos, photos, product copy, or commerce links are copied into Tzudong.
   - StyleGallery commit `2a9ae14e1ed1e6ebc9ec525a7c305a7cc9830b34` is used as a recipe and scroll-ownership checklist; `apps/web/stylegallery-adoption.v1.json` records clean-room, no-copy adoption. Neither reference implies affiliation.
 
 ## Brand
-- Personality: warm Korean food-map product, editorial, trustworthy, calm, operationally clear.
+- Personality: warm Korean food-map product in the Tzuyang family (Goodtzu ink and tangerine appetite, Gardens cream and garden-green calm), playful in public headings and trustworthy in data, calm and operationally clear in admin.
 - Trust signals: visible counts/status, source/readback/audit copy, stable routes, explicit read-only/guarded-apply boundaries.
 - Avoid: generic cold SaaS dashboard chrome, heavy glassmorphism, English-first admin labels, decorative jargon, iframe-like nested page UX.
 
@@ -71,11 +72,12 @@
 - Principle 5: 레이아웃 소유권 명시. StyleGallery-style primitives document the one spatial job each surface owns; horizontal scan areas must expose a narrow owner instead of hiding overflow broadly.
 
 ## Visual language
-- Color: warm ivory/off-white surfaces (`hsl(38 30% 98%)`), red primary (`hsl(0 74% 42%)`) for high-emphasis actions/active states, muted border/status colors for secondary information.
+- Color: warm cream canvas (`hsl(36 33% 97%)`) with white cards and cream (`--brand-cream`, `hsl(35 41% 94%)`) secondary surfaces; ink primary (`hsl(0 0% 11%)`) for high-emphasis actions and active states; tangerine (`--brand-tangerine`, `hsl(18 100% 63%)`) for focus rings, selection tint, notification badges, progress, and the fire popularity ring, with `--brand-tangerine-ink` (`hsl(18 88% 38%)`) when tangerine carries text; garden green (`--brand-garden`, `hsl(146 58% 30%)`) for eyebrows, rank chips, and trust cues. Dark mode switches the primary to tangerine with ink text, and overrides the brand surfaces: cream and tints become dark warm fills, tangerine text lightens, and `--brand-garden-text` lightens so eyebrows stay readable while `--brand-garden` stays dark enough for white rank chips. Red stays semantic only: errors, required marks, likes, and YouTube marks.
+- Section headings (public): Gardens pattern via `BrandSectionHeading` or `MapPanelHeader eyebrow` — small garden-green Korean eyebrow, heavy (`font-black`) ink title, optional emoji. Rank lists use garden-green circular chips; counts and `TOP` labels use ink pills.
 - Typography: Pretendard for Korean UI/body density; Noto Serif KR remains the intentional display/editorial role. Compact strong headings are allowed, but avoid sterile enterprise typography and avoid global serif body text. Meta chips use `text-2xs` (11px). Readable copy uses `text-xs`, `text-sm`, or `text-base`. Do not introduce `text-[9px]` through `text-[15px]`.
 - Status surfaces use `bg-secondary text-foreground` with `border-border`. Photo indicators and Naver, Kakao, and Google brand marks keep their own colors.
 - Spacing/layout rhythm: full-width admin viewport, tight but readable operational density, `min-h-0` and layout-owned scroll containers.
-- Shape/radius/elevation: controls use `rounded-md`, cards use `rounded-xl`, chips use `rounded-full`. Sidebar controls may use `rounded-2xl`. Subtle borders and soft shadow stay for hierarchy.
+- Shape/radius/elevation: `--radius` is `0.75rem`; controls use `rounded-md`, cards use `rounded-xl`, chips and primary public CTAs use `rounded-full`. Sidebar controls may use `rounded-2xl`. Subtle borders and soft shadow stay for hierarchy.
 - Motion: subtle transitions; collapse/expand should not show text squeezing or awkward reflow.
 - Imagery/iconography: lucide icons are supporting cues; text remains the source of meaning.
 
@@ -102,7 +104,7 @@
 ## Accessibility
 - Target standard: WCAG 2.2 AA for new UI and regressions; it is a target, not a certification claim.
 - Keyboard/focus behavior: sidebar, collapse control, active canvas, and module actions are reachable in predictable order; focus rings remain visible, are not clipped, and the layout-owned scroll container scrolls the focused control into view.
-- Contrast/readability: red-on-ivory, muted text on tinted cards, and status badges remain readable.
+- Contrast/readability: ink-on-cream, garden green on cream, tangerine-ink text, muted text on tinted cards, and status badges remain readable; bright tangerine never carries small white text.
 - Screen-reader semantics: icon-only/collapsed controls require stable accessible names; active navigation exposes `aria-current` or equivalent; content canvas has a clear label.
 - Mobile controls respect safe-area insets. Motion honors `prefers-reduced-motion`, remains subtle, and is never required to understand state.
 - Accessibility and visual evidence is sanitized: retain only route, viewport, visible control labels, fixed state codes/counts, and approved scroll owners; exclude cookies, tokens, headers, local storage, precise coordinates, raw OCR, raw admin/table data, and Supabase payloads.

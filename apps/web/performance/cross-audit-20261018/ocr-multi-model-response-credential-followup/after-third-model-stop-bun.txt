@@ -1,0 +1,34 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/gemini-ocr.test.ts:
+(pass) gemini receipt ocr helper > retains older explicit sampling while omitting removed controls for modern Flash models [0.35ms]
+(pass) gemini receipt ocr helper > installed SDK sends no obsolete sampling override for the configured OCR baseline and 3.8 [2.89ms]
+(pass) gemini receipt ocr helper > migrates a legacy env model to the 3.8 wire URL and returned metadata [0.95ms]
+(pass) gemini receipt ocr helper > does not spend a provider call after caller cancellation [0.18ms]
+(pass) gemini receipt ocr helper > stops fallback after cancellation during a request and drops duplicate models [0.29ms]
+(pass) gemini receipt ocr helper > defaults to gemini-3.6-flash as the authoritative OCR baseline [0.03ms]
+(pass) gemini receipt ocr helper > normalizes exact 3.7 aliases before deduplication and preserves other model names [0.01ms]
+(pass) gemini receipt ocr helper > calls migrated aliases once while retaining other configured fallbacks [0.20ms]
+(pass) gemini receipt ocr helper > defaults OCR thinking to medium and allows env override [0.02ms]
+(pass) gemini receipt ocr helper > uses the caller snapshot for the provider request even if the environment disagrees [0.11ms]
+(pass) gemini receipt ocr helper > builds Gemini multimodal parts without exposing secrets [0.02ms]
+(pass) gemini receipt ocr helper > calls configured Gemini model and normalizes receipt JSON [0.12ms]
+(pass) gemini receipt ocr helper > falls through Gemini model list before failing [0.08ms]
+(pass) gemini receipt ocr helper > does not dispatch a fallback after an uncertain transport failure [0.18ms]
+(pass) gemini receipt ocr helper > rotates credentials in order only after a structured API key rejection [0.68ms]
+(pass) gemini receipt ocr helper > does not downgrade a prior model response to a definitive credential-only rejection [0.38ms]
+(pass) gemini receipt ocr helper > does not rotate credentials after transport or generic request uncertainty [0.29ms]
+(pass) gemini receipt ocr helper > does not treat an unclassified 400 response as credential rejection [0.25ms]
+(pass) gemini receipt ocr helper > does not rotate on contradictory 5xx authentication metadata [0.23ms]
+(pass) gemini receipt ocr helper > does not rotate on status-less structured error prose [0.13ms]
+(pass) gemini receipt ocr helper > does not rotate when structured authentication metadata has a non-numeric status [0.14ms]
+(pass) gemini receipt ocr helper > does not rotate after a provider response is received but cannot be parsed [0.32ms]
+(pass) gemini receipt ocr helper > does not rotate after caller cancellation even when the provider response arrives [0.20ms]
+(pass) gemini receipt ocr helper > preserves prior bounded attempts when a rotated credential has an uncertain failure [0.35ms]
+(pass) gemini receipt ocr helper > does not include the API key in missing-key errors [0.04ms]
+(pass) gemini receipt ocr helper > throws provider error with attempts when all Gemini candidates fail [0.12ms]
+
+ 26 pass
+ 0 fail
+ 116 expect() calls
+Ran 26 tests across 1 file. [211.00ms]

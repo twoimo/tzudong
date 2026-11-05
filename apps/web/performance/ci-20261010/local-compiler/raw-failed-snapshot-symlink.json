@@ -1,0 +1,1141 @@
+{
+  "loadAverageAfter": [
+    14.58984375,
+    14.29931640625,
+    12.61279296875
+  ],
+  "measuredPairs": [
+    {
+      "loadAverageAfter": [
+        16.236328125,
+        12.5302734375,
+        11.201171875
+      ],
+      "loadAverageBefore": [
+        12.59228515625,
+        11.55859375,
+        10.79541015625
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 1,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 71.247666,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50446336,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 2050.51875,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1731362816,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 21375.278667,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1933754368,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 21896.891875,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2055651328,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 45394.596375,
+          "sequence": "before",
+          "success": false
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 46.850542,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50528256,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 25251.382084,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1852948480,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 25298.620959,
+          "sequence": "after",
+          "success": false
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        15.3466796875,
+        13.30908203125,
+        11.61279296875
+      ],
+      "loadAverageBefore": [
+        16.236328125,
+        12.5302734375,
+        11.201171875
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 2,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 72.44725,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50331648,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 29815.099667,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1928560640,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 29887.936875,
+          "sequence": "after",
+          "success": false
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 47.399334,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50462720,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1804.249542,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1766801408,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 17111.62375,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1852211200,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 20153.749208,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1922269184,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 39117.741167,
+          "sequence": "before",
+          "success": false
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        13.88720703125,
+        13.2841796875,
+        11.7275390625
+      ],
+      "loadAverageBefore": [
+        15.3466796875,
+        13.30908203125,
+        11.61279296875
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 3,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 38.116458,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50020352,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1512.2445,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1757642752,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 19446.679166,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1905999872,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 18801.410916,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1922760704,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 39799.089542,
+          "sequence": "before",
+          "success": false
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 51.644334,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50315264,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 20749.096167,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1926430720,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 20801.169042,
+          "sequence": "after",
+          "success": false
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        16.5654296875,
+        14.03515625,
+        12.119140625
+      ],
+      "loadAverageBefore": [
+        13.88720703125,
+        13.2841796875,
+        11.7275390625
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 4,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 63.527042,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50479104,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 22097.973458,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1930395648,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 22161.853375,
+          "sequence": "after",
+          "success": false
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 53.765875,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50528256,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1725.398583,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1790967808,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 18200.815542,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1929379840,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 27617.017542,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1779253248,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 47597.865083,
+          "sequence": "before",
+          "success": false
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        12.93896484375,
+        13.45068359375,
+        12.029296875
+      ],
+      "loadAverageBefore": [
+        16.5654296875,
+        14.03515625,
+        12.119140625
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 5,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 42.432458,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50036736,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1643.040375,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1789722624,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 16976.82925,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1912832000,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 22670.488334,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 2078834688,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 41333.372166,
+          "sequence": "before",
+          "success": false
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 38.703292,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50282496,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 21394.66125,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1882341376,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 21433.627917,
+          "sequence": "after",
+          "success": false
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        14.25537109375,
+        13.9365234375,
+        12.34326171875
+      ],
+      "loadAverageBefore": [
+        12.93896484375,
+        13.45068359375,
+        12.029296875
+      ],
+      "order": [
+        "after",
+        "before"
+      ],
+      "pair": 6,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 58.324375,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50495488,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 25745.796375,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1854832640,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 25804.508292,
+          "sequence": "after",
+          "success": false
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 69.499375,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50544640,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 2302.476,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1812545536,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 20611.404292,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1851473920,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 24167.770417,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1870528512,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 47151.978084,
+          "sequence": "before",
+          "success": false
+        }
+      ]
+    },
+    {
+      "loadAverageAfter": [
+        14.58984375,
+        14.29931640625,
+        12.61279296875
+      ],
+      "loadAverageBefore": [
+        14.25537109375,
+        13.9365234375,
+        12.34326171875
+      ],
+      "order": [
+        "before",
+        "after"
+      ],
+      "pair": 7,
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 49.874417,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50462720,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 1963.397,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1728544768,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 24481.0795,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1853882368,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 31222.22425,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1916944384,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 57717.451542,
+          "sequence": "before",
+          "success": false
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 39.661125,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50053120,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 14863.025583,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1916534784,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 14902.952708,
+          "sequence": "after",
+          "success": false
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "benchmarkScriptSha256": "990639a936d566de761387e1155f86c16d528d3cddaecc91c484d76b40c60b85",
+    "bootstrap": {
+      "samples": 10000,
+      "seed": 20261010
+    },
+    "bunVersion": "1.4.0 (recorded project/runtime pin; Bun not invoked)",
+    "cpuCount": 18,
+    "createdAt": "2026-10-10T09:34:22.859414+00:00",
+    "gitHead": "a9ce6ba2be377594e30dc865c621f2854006aa79",
+    "gitStatusSha256": "169dd6cd7fdc0d5da6feace63721275271dc56a301b7394a193b4b30d2fe97fc",
+    "loadAverageBefore": [
+      11.0771484375,
+      11.11328125,
+      10.57421875
+    ],
+    "machine": "arm64",
+    "nodePath": "/opt/homebrew/Cellar/node@24/24.21.0/bin/node",
+    "nodeVersion": "v24.21.0",
+    "npmPackageManagerPin": "npm@11.6.2",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "rssMeasurement": "/usr/bin/time -l maximum resident set size; descriptive only",
+    "schemaVersion": 1,
+    "sequences": {
+      "after": [
+        "verify",
+        "parity"
+      ],
+      "before": [
+        "verify",
+        "native",
+        "compat",
+        "parity"
+      ]
+    },
+    "sourceHashes": {
+      "package-lock.json": "ce2e7d9dee5cb837a77f504028452b5e04f9f96a3413bfa2e9a005fa5de7531d",
+      "package.json": "d271e307e944fca7aa8c354bf664733807ee6f03958de2ab05c2adf96fcd44be",
+      "scripts/run-typecheck.mjs": "3e006896b1c85d61b9b8f5ac0020822faf573212c473c70089b190d84313fb9d",
+      "scripts/verify-typescript-toolchain.mjs": "b7f7450e7477e3664b410b4a501df99317e2711c8c3db03911826a157d0689f5",
+      "tsconfig.json": "776471d5c093f02d7d3d24c3c1b61736c8d685a9ed1ef3d13c48f1f804396b17"
+    },
+    "sourceSnapshotMethod": "macOS cp -cRL copy-on-write clone"
+  },
+  "warmups": [
+    {
+      "index": 1,
+      "order": [
+        "before",
+        "after"
+      ],
+      "runs": [
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 79.167125,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50724864,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "native"
+              ],
+              "command": "native",
+              "durationMs": 3313.736333,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1707589632,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "compat"
+              ],
+              "command": "compat",
+              "durationMs": 20632.522625,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1917321216,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": true
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 25134.486167,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1928839168,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 49160.758291,
+          "sequence": "before",
+          "success": false
+        },
+        {
+          "commands": [
+            {
+              "argv": [
+                "node",
+                "scripts/verify-typescript-toolchain.mjs"
+              ],
+              "command": "verify",
+              "durationMs": 41.334959,
+              "exitCode": 1,
+              "maximumResidentSetBytes": 50102272,
+              "stderrBytesExcludingTime": 80,
+              "stderrPreview": "[verify-typescript-toolchain] error=Error code=TOOLCHAIN_SHIM_RESOLUTION_INVALID",
+              "stderrSha256ExcludingTime": "0cce43d3e70b072a073a7e9c75404ee47f23d2ce6e268c82ab18774de0f5ded8",
+              "stdoutBytes": 0,
+              "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "success": false
+            },
+            {
+              "argv": [
+                "node",
+                "scripts/run-typecheck.mjs",
+                "--compiler",
+                "parity"
+              ],
+              "command": "parity",
+              "durationMs": 28676.651584,
+              "exitCode": 0,
+              "maximumResidentSetBytes": 1937375232,
+              "stderrBytesExcludingTime": 0,
+              "stderrPreview": "",
+              "stderrSha256ExcludingTime": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "stdoutBytes": 428,
+              "stdoutSha256": "9e73c195a3f577e61304dd934b0acd372b2f161ea495b9730212b758f29e5093",
+              "success": true
+            }
+          ],
+          "durationMs": 28718.36825,
+          "sequence": "after",
+          "success": false
+        }
+      ]
+    }
+  ]
+}

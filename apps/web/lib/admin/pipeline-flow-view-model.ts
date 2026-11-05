@@ -107,6 +107,7 @@ export function pipelineJobsForDisplay(snapshot: PipelineStatusView | undefined,
   if (snapshot.source === 'job_api') return snapshot.jobs;
   return snapshot.jobs.map(job => {
     const gha = manifest?.github?.id === job.id ? manifest.github : null;
+    if (!gha) return { ...job, dry_run: undefined, adapter_index: null };
     const state = parseGithubWorkflowState(gha);
     return { ...job, status: state.jobStatus, hasError: state.failed === true, dry_run: undefined, adapter_index: null };
   });

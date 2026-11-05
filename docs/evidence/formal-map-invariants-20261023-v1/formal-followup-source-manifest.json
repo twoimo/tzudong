@@ -1,0 +1,41 @@
+{
+  "sourceRevision": "a1dd40016ff7cf23055073c8637d5b3ee00d6781",
+  "bundleSha256": "fa286900e904a8bc2b14df0868acc09acde9a6e1e95cb861a30d5181046756b4",
+  "bundleBytes": 114580,
+  "sourceFiles": [
+    {
+      "path": "apps/web/lib/marker-pool.ts",
+      "bytes": 14532,
+      "sha256": "7541c064ab4190abc0fc7500ee7d5f91ac862ca4e3429b56b8b9b59659c0db4e"
+    },
+    {
+      "path": "apps/web/lib/retained-marker-accessibility.ts",
+      "bytes": 3837,
+      "sha256": "a3833232541307a61e5a914ac0ad96d6c804ded7e086cf084339e68ddab76cc4"
+    },
+    {
+      "path": "apps/web/tests-formal/marker-state-model.test.mjs",
+      "bytes": 14175,
+      "sha256": "160f8b703aa906a01e03008980429aea859b1b222c17003740d8658322f9cc47"
+    },
+    {
+      "path": "apps/web/tests-unit/retained-marker-accessibility.test.ts",
+      "bytes": 8292,
+      "sha256": "e0b3266209b2943eccc7672b3597db10df4faf358b304e3f1440235ea74fd1e3"
+    },
+    {
+      "path": "apps/web/scripts/verify-marker-formal.mjs",
+      "bytes": 8356,
+      "sha256": "53c6676d8f9bbc357a6e1df273892cb7723aba9dcc1a218aeef0807fc8e202a9"
+    }
+  ],
+  "snapshotProof": {
+    "snapshot": "06d5d37e0e792dfd64e96389cd70e3ca8d1323e7",
+    "mapSha256": "66f6c1c0a17e99922fc489c369073a9d4c9bdc4397bbeb9cf41cbd0605e292ab",
+    "detachedDigestMatches": true,
+    "filesVerified": 32,
+    "sourceFilesVerified": 35,
+    "selfOrDigestListed": false,
+    "scope": "Verified against immutable snapshot, not newer mutable worktree. Pro receives local raw proof, not a claim of its own execution."
+  }
+}

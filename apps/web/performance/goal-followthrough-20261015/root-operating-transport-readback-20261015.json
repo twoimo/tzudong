@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "adminRecordOperationsPresent": true,
+    "migrationCount": 86,
+    "reviewMediaCleanupPresent": false
+  },
+  "confidenceInterval95": null,
+  "directPostgres": {
+    "attempts": 1,
+    "clientTimeoutSeconds": 10,
+    "connectTimeoutSeconds": 5,
+    "credentialChanged": false,
+    "credentialSource": "existing runtime mirror, value not copied to receipt",
+    "exitCode": 2,
+    "failureClass": "network_unreachable",
+    "ipv4DnsAddresses": 0,
+    "ipv6DnsAddresses": 1,
+    "lockTimeoutMs": 1000,
+    "readOnly": true,
+    "statementTimeoutMs": 5000
+  },
+  "effects": {
+    "deployments": 0,
+    "hostedDataWrites": 0,
+    "hostedSchemaWrites": 0,
+    "newCredentials": 0,
+    "providerCalls": 0,
+    "settingsChanged": 0
+  },
+  "kind": "goal-current-operating-readonly-transport-readback",
+  "limits": [
+    "MCP catalog observation proves current schema presence only, not successor acceptance or writer quiescence.",
+    "Vercel project inspection proves current CLI access, not deployment or GitHub Actions credential availability.",
+    "No server data, SQL payload rows, secrets or raw provider bodies are persisted."
+  ],
+  "nextAction": "Use the already configured protected-workflow database transport after source promotion and fresh admission; do not infer missing DB credentials from a missing local URL.",
+  "observedAt": "2026-10-15T06:34:56.515565+00:00",
+  "project": {
+    "databaseName": "postgres",
+    "executorRole": "postgres",
+    "healthy": true,
+    "nameMatched": true,
+    "serverVersion": "17.6",
+    "supabaseRef": "aqlcofblfxdrjhhdmarw"
+  },
+  "sampleDescription": "one deterministic current catalog/configuration readback and one bounded connection attempt; no performance effect estimate",
+  "schemaVersion": 1,
+  "sourceRevision": "d5889fa4ef0105ce98efe138796c4f0cdf06b3c0",
+  "vercelCli": {
+    "authenticatedProjectInspectionExitCode": 0,
+    "expectedProjectIdMatched": true,
+    "nameMatched": true,
+    "newLoginOrLink": false,
+    "node": "24.21.0",
+    "scopeMatched": true,
+    "version": "56.5.0"
+  }
+}

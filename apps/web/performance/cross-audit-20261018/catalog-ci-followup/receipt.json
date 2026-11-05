@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "catalog-ci-followup-local-observation",
+  "createdAt": "2026-10-18T21:09:12+09:00",
+  "ci": {
+    "repository": "twoimo/tzudong",
+    "headSha": "457023a656c7d17671527870679f093ee01e5aeb",
+    "runId": 39124436784,
+    "jobId": 117666491434,
+    "checkName": "generate",
+    "failedStep": "Generate first clean source-only catalog replay",
+    "annotation": "Process completed with exit code 3."
+  },
+  "localFailureObservation": {
+    "rawOutputRetained": false,
+    "summaryOnly": true,
+    "lastAppliedSource": "backend/supabase/migrations/20261013190200_review_verification_immutable_key_fence.sql",
+    "failedSource": "backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql",
+    "error": "FEATURE_RUNTIME_STORAGE_FENCE_PREREQUISITE_MISSING",
+    "localExitCodeRetained": false
+  },
+  "fixIdentity": {
+    "hostedMigrationChanged": false,
+    "originalMigrationSha256": "469dbea773cc838feecb4519ca1b5c03e9ea2fab32462007f7769c5ed1b7fed9",
+    "transformerPath": "backend/supabase/scripts/transform_review_verification_readiness_pg15_replay.py",
+    "transformerSha256": "e5b3c7ff25775ab058fc4c24fe658274e85737a8113dba3808c2d31ae5d2e73a",
+    "transformedReplaySha256": "306788531769133e5ccc4e600079e74bbfa0e74467cfc3f8855a544c7b3b5dbe",
+    "changedContract": "PG17 executor-version guard only; reverse substitution restores the exact hosted source bytes"
+  },
+  "localSuccessObservation": {
+    "rawOutputRetained": false,
+    "summaryOnly": true,
+    "unitTestsPassed": 12,
+    "unitTestsFailed": 0,
+    "generatorExitCode": 0,
+    "generatorOutputPath": "/tmp/tzudong-catalog-fixed-repro-20261018",
+    "serverVersion": "15.8",
+    "rowCount": 1960,
+    "migrationChainSha256": "a75f9cbf9597975b5a30f692a487b0517bca70ea73d784d361ff1b8ec473cd4b",
+    "generatorSha256SumsSha256": "910371a0f7a36d568ccd63e833a2bee038c9e46a4cb15a4d1f3654c38a54afef",
+    "allGeneratorSha256SumsPassed": true
+  },
+  "limitations": [
+    "Source-only PostgreSQL 15.8 reconstruction candidate.",
+    "Not historical application proof, hosted-state evidence, deployment evidence, or authorization.",
+    "The local verification source_sha belongs to ephemeral test Git metadata and is not the PR head.",
+    "No raw local stdout or stderr file was retained; observed-output.txt is a bounded observation summary."
+  ]
+}

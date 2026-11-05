@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "changed-sql-fixture-input-source-contract-followup",
+  "recordedAt": "2026-10-18T17:12:26.112185+00:00",
+  "command": [
+    "/Users/twoimo/.bun/bin/bun",
+    "--no-env-file",
+    "test",
+    "tests-unit/durable-receipt-ocr.test.ts",
+    "-t",
+    "adds a post-held-105 credential recovery capability",
+    "--timeout",
+    "30000"
+  ],
+  "exitCode": 0,
+  "raw": {
+    "path": "apps/web/performance/cross-audit-20261019/integrated-review-fixes-verification/durable-fixture-source-contract-followup.txt",
+    "sha256": "e439d855f65778962fa839d29bced215bb03f86021e894ed22bf69057e0e0f19"
+  },
+  "sourceSha256": {
+    "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0",
+    "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+    "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47"
+  },
+  "reason": "One existing durable test reads the changed SQL fixture text; the other runtime client tests and app source are unchanged. This targeted subset is not added to the earlier32-pass count.",
+  "limits": [
+    "Source contract only; final PG17.6 execution and teardown remain separate."
+  ]
+}

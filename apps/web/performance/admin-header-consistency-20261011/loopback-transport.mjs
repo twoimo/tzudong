@@ -59,7 +59,32 @@ function safeHeaderValue(value) {
     return typeof value === 'string' && value.length <= 16_384 && !/[\r\n\u0000]/.test(value)
 }
 
-export function buildFixtureUpstreamOptions(req, authority, port, bypass, upgrade = false) {
+function admittedSyntheticSessionCookie(req, syntheticSessionCookie) {
+    if (syntheticSessionCookie === undefined) return undefined
+    if (
+        !safeHeaderValue(syntheticSessionCookie) ||
+        syntheticSessionCookie.length > 4_096 ||
+        !/^sb-[a-z0-9-]+-auth-token=base64-[a-z0-9_-]+$/i.test(syntheticSessionCookie)
+    ) {
+        throw new Error('FIXTURE_SESSION_CONTRACT_INVALID')
+    }
+    const incomingCookie = req.headers.cookie
+    if (!safeHeaderValue(incomingCookie)) return undefined
+    return incomingCookie
+        .split(';')
+        .some((part) => part.trim() === syntheticSessionCookie)
+        ? syntheticSessionCookie
+        : undefined
+}
+
+export function buildFixtureUpstreamOptions(
+    req,
+    authority,
+    port,
+    bypass,
+    upgrade = false,
+    syntheticSessionCookie,
+) {
     if (!upstreamPorts.has(port) || (!upgrade && !['GET', 'HEAD'].includes(req.method))) {
         throw new Error('FIXTURE_INPUT_INVALID')
     }
@@ -100,6 +125,8 @@ export function buildFixtureUpstreamOptions(req, authority, port, bypass, upgrad
         headers['accept-encoding'] = 'identity'
         headers[bypass.header] = '1'
         headers[bypass.tokenHeader] = bypass.token
+        const admittedCookie = admittedSyntheticSessionCookie(req, syntheticSessionCookie)
+        if (admittedCookie) headers.cookie = admittedCookie
     }
     return {
         hostname: '127.0.0.1',
@@ -111,8 +138,24 @@ export function buildFixtureUpstreamOptions(req, authority, port, bypass, upgrad
     }
 }
 
-export function fixtureUpstreamRequest(req, authority, port, bypass, upgrade = false) {
-    return http.request(buildFixtureUpstreamOptions(req, authority, port, bypass, upgrade))
+export function fixtureUpstreamRequest(
+    req,
+    authority,
+    port,
+    bypass,
+    upgrade = false,
+    syntheticSessionCookie,
+) {
+    return http.request(
+        buildFixtureUpstreamOptions(
+            req,
+            authority,
+            port,
+            bypass,
+            upgrade,
+            syntheticSessionCookie,
+        ),
+    )
 }
 
 const responseHeaderAllowlist = new Set([
@@ -139,20 +182,46 @@ const responseHeaderAllowlist = new Set([
     'x-nextjs-stale-time',
 ])
 
-function safeResponseHeaders(incoming) {
+function addFixtureConnectSource(policy) {
+    const directives = policy
+        .split(';')
+        .map((directive) => directive.trim())
+        .filter(Boolean)
+    const connectIndex = directives.findIndex((directive) => /^connect-src(?:\s|$)/.test(directive))
+    if (connectIndex === -1) return policy
+
+    const connectSources = directives[connectIndex].split(/\s+/)
+    if (connectSources.includes("'none'") || connectSources.includes(SUPABASE_ORIGIN)) return policy
+    directives[connectIndex] = [...connectSources, SUPABASE_ORIGIN].join(' ')
+    return directives.join('; ')
+}
+
+export function fixtureResponseHeaders(incoming) {
     const headers = {}
     for (const [name, value] of Object.entries(incoming)) {
         if (!responseHeaderAllowlist.has(name) || value === undefined) continue
-        if (typeof value === 'string' && safeHeaderValue(value)) headers[name] = value
-        if (Array.isArray(value) && value.every(safeHeaderValue)) headers[name] = value
+        const rewriteCsp = name === 'content-security-policy' || name === 'content-security-policy-report-only'
+        if (typeof value === 'string' && safeHeaderValue(value)) {
+            headers[name] = rewriteCsp ? addFixtureConnectSource(value) : value
+        }
+        if (Array.isArray(value) && value.every(safeHeaderValue)) {
+            headers[name] = rewriteCsp ? value.map(addFixtureConnectSource) : value
+        }
     }
     return headers
 }
 
-export function forwardFixtureRead(req, res, authority, port, bypass) {
-    const bridge = fixtureUpstreamRequest(req, authority, port, bypass)
+export function forwardFixtureRead(req, res, authority, port, bypass, syntheticSessionCookie) {
+    const bridge = fixtureUpstreamRequest(
+        req,
+        authority,
+        port,
+        bypass,
+        false,
+        syntheticSessionCookie,
+    )
     bridge.on('response', (reply) => {
-        res.writeHead(reply.statusCode ?? 502, safeResponseHeaders(reply.headers))
+        res.writeHead(reply.statusCode ?? 502, fixtureResponseHeaders(reply.headers))
         reply.on('error', () => res.destroy())
         reply.pipe(res)
     })

@@ -42,7 +42,7 @@ const possibleImages = ['png', 'jpg', 'webp'].map((extension) => resolve(cli.out
 for (const imagePath of possibleImages) assertNewArtifactPath(imagePath, 'existing_artifact_requires_readback');
 
 const request = contractModule.storyboardProductionRequestSchema.parse({
-  workflow: 'storyboard-mlx-v1',
+  workflow: contractModule.STORYBOARD_WORKFLOW,
   requestId: randomUUID(),
   prompt: '개인정보와 실제 식당 이름이 없는 합성 검증용 촬영안. 국수 한 그릇을 소재로 5개 장면을 구성하고 각 설명은 간결하게 작성하세요.',
   sceneCount: 5,

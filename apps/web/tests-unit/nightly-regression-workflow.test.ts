@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const appRoot = resolve(import.meta.dir, "..");
 const read = (relativePath: string) => readFileSync(resolve(appRoot, relativePath), "utf8");
+
+// One governed pin record: the exact action SHA and the exact version comment the
+// workflow must carry together. A moved SHA or a stale version comment fails.
+const DOWNLOAD_ARTIFACT_PIN = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # actions/download-artifact@v8.0.2";
 
 const packageSource = read("package.json");
 const packageJson = JSON.parse(packageSource) as {
@@ -87,6 +91,41 @@ describe("nightly regression package and source contracts", () => {
     expect(nightlyRunnerSource).toContain(
       "TZUDONG_NODE24_EXECUTABLE: supervisorExecutable",
     );
+  });
+
+  test("preserves an explicit browser cache through nightly unit child boundaries", async () => {
+    const declarations = sourceBlock(nightlyRunnerSource, "const hostedIdentityKeys = [", "const curatedBrowserSpecs = [");
+    const picker = sourceBlock(nightlyRunnerSource, "const pickEnvironment =", "function usage()");
+    const unit = sourceBlock(nightlyRunnerSource, "async function runUnitRegression(environment)", "const localDockerBaseEnvironmentKeys =");
+    const observations: Array<{ cache: string | null; providerSecretPresent: boolean }> = [];
+    const run = new Function("process", "runCommand", `${declarations}\n${picker}\n${unit}
+      return async environment => {
+        const keys = environment.NIGHTLY_MODE === 'local' ? localRuntimeKeys : hostedRuntimeKeys;
+        await runUnitRegression(pickEnvironment(environment, [...keys]));
+      };`)(
+      { env: {} },
+      async (command: string, args: string[], options: { env: Record<string, string> }) => {
+        expect([command, ...args]).toEqual(["bun", "run", "test:unit"]);
+        const probe = spawnSync(process.execPath, ["-e", `console.log(JSON.stringify({
+          cache: process.env.PLAYWRIGHT_BROWSERS_PATH ?? null,
+          providerSecretPresent: ['OPENAI_API_KEY', 'GEMINI_API_KEY', 'DATABASE_URL'].some(k => k in process.env)
+        }))`], { env: options.env, encoding: "utf8" });
+        expect(probe.status).toBe(0);
+        observations.push(JSON.parse(probe.stdout.trim()));
+        return { code: probe.status };
+      },
+    ) as (environment: Record<string, string>) => Promise<void>;
+    const cache = join(tmpdir(), "task-owned-cft");
+    for (const mode of ["local", "hosted"]) {
+      await run({ NIGHTLY_MODE: mode, PLAYWRIGHT_BROWSERS_PATH: cache,
+        OPENAI_API_KEY: "fixture-provider-secret", GEMINI_API_KEY: "fixture-provider-secret", DATABASE_URL: "fixture-database-secret" });
+    }
+    await run({ NIGHTLY_MODE: "local" });
+    expect(observations).toEqual([
+      { cache, providerSecretPresent: false },
+      { cache, providerSecretPresent: false },
+      { cache: null, providerSecretPresent: false },
+    ]);
   });
 
   test("passes only validated GitHub socket admission context to local stack children", () => {
@@ -201,11 +240,11 @@ describe("nightly regression package and source contracts", () => {
     expect(hostedWorkflowSource).not.toMatch(/^\s*uses:\s+\S+@v\d+\b/gm);
   });
 
-  test("routes publication script changes through web admin pull and push CI", () => {
+  test("routes GitHub workflow inputs through web admin pull and push CI", () => {
     const pullPaths = sourceBlock(webAdminWorkflowSource, "  pull_request:", "  push:");
     const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
-    expect(pullPaths).toContain("      - '.github/scripts/**'");
-    expect(pushPaths).toContain("      - '.github/scripts/**'");
+    expect(pullPaths).toContain("      - '.github/**'");
+    expect(pushPaths).toContain("      - '.github/**'");
   });
 
   test("parses local and hosted mode only from explicit command arguments", () => {
@@ -379,7 +418,7 @@ describe("nightly regression package and source contracts", () => {
       "'/api/dashboard/summary'",
       "const LOCAL_ADMIN_YOUTUBE_KPI_SEARCHES = new Set([",
       "'?period=1M&viewMode=all&metricMode=views&scope=channel-growth'",
-      "function isAllowedLocalAdminRead(url: URL, method: string): boolean",
+      "function isAllowedLocalAdminRead(url: URL, method: string, rscHeader?: string): boolean",
       "url.pathname === '/api/admin/evaluations'",
       "return !url.search;",
       "url.search === '?restaurantIds=00000000-0000-4000-8000-000000000101&types=trend'",
@@ -622,7 +661,7 @@ describe("nightly regression package and source contracts", () => {
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
       "receipt.schema !== 'local-receipt-v2'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 140",
+      "receipt.ledger.length !== migrationLedgerUnitCount()",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -639,7 +678,7 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
       "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
-    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== 140");
+    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== migrationLedgerUnitCount()");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
@@ -900,7 +939,7 @@ describe("nightly regression package and source contracts", () => {
       "UNIT_OUTCOME: ${{ steps.nightly-unit.outcome }}",
       "E2E_OUTCOME: ${{ steps.nightly-e2e.outcome }}",
       "--mode local",
-      "actions/upload-artifact@v4",
+      "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4.6.0",
       "publication-boundary.txt",
       "failure-diagnostics/local-stack-failure-diagnostics.json",
       "steps.prepare-lifecycle-diagnostic.outputs.path",
@@ -920,10 +959,10 @@ describe("nightly regression package and source contracts", () => {
       "for attempt in range(4)",
       "cli_returncode != 0",
       "'image': 'public.ecr.aws/supabase/postgres-meta:v0.96.6'",
-      "public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed",
+      "ghcr.io/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed",
       "sha256:c496f84f24947250e706f03aca4af956a099d8f7e5521279f47e4077964d339a",
       "'platform': 'linux/amd64'",
-      "'registry': 'public.ecr.aws'",
+      "'registry': 'ghcr.io'",
       "['docker', 'image', 'tag'",
       "'docker', 'image', 'inspect'",
       "source_readback[:4] != tag_readback[:4]",
@@ -1070,7 +1109,7 @@ describe("nightly regression package and source contracts", () => {
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
       "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
       "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
-      "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+      DOWNLOAD_ARTIFACT_PIN,
     ]) {
       expect(localWorkflowSource).toContain(action);
     }
@@ -1082,7 +1121,6 @@ describe("nightly regression package and source contracts", () => {
     expect(localWorkflowSource).toContain("needs: local");
     expect(localWorkflowSource).toContain("if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.suite == 'all') }}");
     expect(localWorkflowSource).toContain('test "${GITHUB_SHA}" = "$main_sha"');
-    expect(localWorkflowSource).toContain("actions/download-artifact@v4");
     expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-run.log");
     expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-web.log");
     expect(localWorkflowSource).not.toContain("(Path('apps/web/nightly-run.log')");
@@ -1147,7 +1185,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 140",
+      'source.get("migrationCount") != count',
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -1158,7 +1196,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 140");
+    expect(publicationBuilderSource).toContain('len(ledger) != manifest["source"]["migrationCount"]');
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));
@@ -1206,13 +1244,13 @@ describe("nightly regression package and source contracts", () => {
     expect(failedDiagnosticsUploadBlock).toContain(
       "nightly-artifacts/local-image-pull-preflight.json",
     );
-    expect(packageLockSource).toContain('"node_modules/supabase": {\n      "version": "2.117.0"');
+    expect(packageLockSource).toContain('"node_modules/supabase": {\n      "version": "2.121.0"');
     expect(packageLockSource).toContain(
-      '"node_modules/@supabase/cli-linux-x64": {\n      "version": "2.117.0"',
+      '"node_modules/@supabase/cli-linux-x64": {\n      "version": "2.121.0"',
     );
-    expect(bunLockSource).toContain('"supabase": ["supabase@2.117.0"');
+    expect(bunLockSource).toContain('"supabase": ["supabase@2.121.0"');
     expect(bunLockSource).toContain(
-      '"@supabase/cli-linux-x64": ["@supabase/cli-linux-x64@2.117.0"',
+      '"@supabase/cli-linux-x64": ["@supabase/cli-linux-x64@2.121.0"',
     );
     expect(failedDiagnosticsUploadBlock).not.toContain("local-browser-route-diagnostics.json");
     expect(failedDiagnosticsUploadBlock).toContain("nightly-unit-run-summary.json");
@@ -1386,6 +1424,7 @@ describe("nightly regression package and source contracts", () => {
           E2E_EXIT_CODE: "7",
           NIGHTLY_ADMIN_EMAIL: "private@example.invalid",
           NIGHTLY_ADMIN_PASSWORD: "private-test-password",
+          GITHUB_STEP_SUMMARY: join(temporaryRoot, "github-step-summary.md"),
         },
       });
       expect(successful.status).toBe(0);
@@ -1430,6 +1469,7 @@ describe("nightly regression package and source contracts", () => {
             NIGHTLY_SUITE: "unit",
             UNIT_OUTCOME: "success",
             UNIT_EXIT_CODE: "9",
+            GITHUB_STEP_SUMMARY: join(inconsistentRoot, "github-step-summary.md"),
             E2E_OUTCOME: "skipped",
             E2E_EXIT_CODE: "",
           },
@@ -1487,19 +1527,32 @@ describe("nightly regression package and source contracts", () => {
         `${JSON.stringify(evidence)}\n`,
         { mode: 0o600 },
       );
-      const result = spawnSync("python3", ["-c", script], {
-        cwd: temporaryRoot,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          GITHUB_WORKSPACE: repositoryRoot,
-          NIGHTLY_SUITE: "e2e",
-          UNIT_OUTCOME: "skipped",
-          UNIT_EXIT_CODE: "",
-          E2E_OUTCOME: "failure",
-          E2E_EXIT_CODE: "1",
-        },
-      });
+      const ambientSummary = join(temporaryRoot, "ambient-sentinel-summary.md");
+      const previousSummary = process.env.GITHUB_STEP_SUMMARY;
+      process.env.GITHUB_STEP_SUMMARY = ambientSummary;
+      let result!: SpawnSyncReturns<string>;
+      try {
+        result = spawnSync("python3", ["-c", script], {
+          cwd: temporaryRoot,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            GITHUB_WORKSPACE: repositoryRoot,
+            NIGHTLY_SUITE: "e2e",
+            UNIT_OUTCOME: "skipped",
+            UNIT_EXIT_CODE: "",
+            E2E_OUTCOME: "failure",
+            E2E_EXIT_CODE: "1",
+            GITHUB_STEP_SUMMARY: join(temporaryRoot, "github-step-summary.md"),
+          },
+        });
+      } finally {
+        if (previousSummary === undefined) {
+          delete process.env.GITHUB_STEP_SUMMARY;
+        } else {
+          process.env.GITHUB_STEP_SUMMARY = previousSummary;
+        }
+      }
       expect(result.status).toBe(0);
       const target = join(
         temporaryRoot,
@@ -1507,6 +1560,10 @@ describe("nightly regression package and source contracts", () => {
       );
       expect(lstatSync(target).mode & 0o777).toBe(0o600);
       expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(evidence);
+      expect(readFileSync(join(temporaryRoot, "github-step-summary.md"), "utf8")).toBe(
+        "- E2E fixed failure classes: failed=1\n- E2E curated failure IDs: PW-NAV#2:failed\n",
+      );
+      expect(() => lstatSync(ambientSummary)).toThrow();
 
       const runnerRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-runner-evidence-"));
       try {
@@ -1613,6 +1670,7 @@ describe("nightly regression package and source contracts", () => {
             UNIT_EXIT_CODE: "",
             E2E_OUTCOME: "failure",
             E2E_EXIT_CODE: "1",
+            GITHUB_STEP_SUMMARY: join(rejectedRoot, "github-step-summary.md"),
           },
         });
         expect(rejected.status).not.toBe(0);
@@ -1630,25 +1688,26 @@ describe("nightly regression package and source contracts", () => {
   });
 
   test("routes public web and local Supabase changes into Web Admin CI", () => {
-    const pullPaths = sourceBlock(webAdminWorkflowSource, "  pull_request:", "  push:");
-    const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
+    const workflow = Bun.YAML.parse(webAdminWorkflowSource) as {
+      on: { pull_request: { paths: string[] }; push: { paths: string[] } };
+    };
     for (const path of [
-      "apps/web/**",
-      "apps/web/app/**",
-      "apps/web/components/**",
-      "apps/web/hooks/**",
-      "apps/web/integrations/**",
-      "apps/web/lib/**",
-      "apps/web/public/**",
-      "apps/web/supabase/**",
-      "backend/supabase/**",
+      "apps/web/app/page.tsx",
+      "apps/web/app/admin/page.tsx",
+      "apps/web/components/admin/Table.tsx",
+      "apps/web/hooks/useRestaurants.ts",
+      "apps/web/integrations/supabase/client.ts",
+      "apps/web/lib/supabase/server.ts",
+      "apps/web/public/logo.svg",
+      "apps/web/supabase/migrations/change.sql",
+      "backend/supabase/migrations/change.sql",
       ".github/workflows/nightly-regression.yml",
       ".github/workflows/nightly-local-regression.yml",
       ".github/nightly-local-publication-allowlist.txt",
     ]) {
-      const line = `      - '${path}'`;
-      expect(pullPaths).toContain(line);
-      expect(pushPaths).toContain(line);
+      for (const paths of [workflow.on.pull_request.paths, workflow.on.push.paths]) {
+        expect(paths.some((pattern) => new Bun.Glob(pattern).match(path))).toBe(true);
+      }
     }
   });
 });
@@ -1659,13 +1718,22 @@ describe('local migration v2 receipt envelope', () => {
     'const localMigrationReceiptExpectedKeys =', 'const localStackProvenanceExpectedKeys =');
   const envelope = sourceBlock(nightlyRunnerSource,
     'function assertLocalMigrationReceiptEnvelope(', 'async function assertLocalMigrationReceipt(');
-  const { validate, keys } = new Function('localProjectName', 'localReceiptSequenceMarkers',
+  const migrationLedgerUnits = readdirSync(resolve(appRoot, '../../backend/supabase/migrations'))
+    .filter((name) => /^\d{8,14}(?:_|\.)/.test(name) && name.toLowerCase().endsWith('.sql')).length;
+  const bindEnvelope = (count: number) => new Function(
+    'localProjectName',
+    'localReceiptSequenceMarkers',
+    'migrationLedgerUnitCount',
     `${keysDeclaration}\n${envelope}\nreturn { validate: assertLocalMigrationReceiptEnvelope, keys: localMigrationReceiptExpectedKeys.split(',') };`,
-  )('fixture-project', ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']);
-  const receipt = (): Record<string, unknown> => ({
+  )('fixture-project', ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed'], () => count) as {
+    validate: (receipt: Record<string, unknown>, stack: Record<string, string>) => void;
+    keys: string[];
+  };
+  const { validate, keys } = bindEnvelope(migrationLedgerUnits);
+  const receipt = (units = migrationLedgerUnits): Record<string, unknown> => ({
     ...Object.fromEntries(keys.map((key: string) => [key, 'fixture'])),
     schema: 'local-receipt-v2', serializer: 'receipt-v1', project_name: 'fixture-project',
-    ledger: Array(140).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
+    ledger: Array(units).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
   });
   const stack = { config_sha256: 'fixture', input_provenance_sha256: 'fixture', env_provenance_sha256: 'fixture' };
 
@@ -1673,6 +1741,12 @@ describe('local migration v2 receipt envelope', () => {
     expect(() => validate(receipt(), stack)).not.toThrow();
     expect(nightlyRunnerSource).toContain("const localMigrationReceiptFilename = 'local-receipt-v1.json'");
     expect(nightlyRunnerSource).toContain('module._load_receipt_file(pathlib.Path(sys.argv[2]))');
+  });
+
+  test('admits one simulated added migration and rejects that length against the current directory', () => {
+    const added = migrationLedgerUnits + 1;
+    expect(() => bindEnvelope(added).validate(receipt(added), stack)).not.toThrow();
+    expect(() => validate(receipt(added), stack)).toThrow('local-receipt-v2');
   });
 
   test('rejects stale counts/schema, absent proofs, extra fields and provenance drift', () => {

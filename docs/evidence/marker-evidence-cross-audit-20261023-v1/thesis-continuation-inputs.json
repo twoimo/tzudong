@@ -1,0 +1,71 @@
+{
+  "kind": "source_readability_and_truncation_followup",
+  "original_turn": "5a27c60b-1d2a-44f8-9bcd-444212c8605e",
+  "original_reservation": "eafa9bdb2f4d10f162bbc75e",
+  "original_bundle_sha256": "6edea509e566107a4a4bbced53055aed79ea3ca3c1094367a468bf7cb0f047e5",
+  "commit": "ac80e35da566db242420a62bbf3e3320b5c00e76",
+  "reason": "Actual first answer source-missing list and exact cutoff TH-M-01",
+  "attachment": {
+    "path": "docs/evidence/marker-evidence-cross-audit-20261023-v1/source-core-continuation.txt",
+    "bytes": 95063,
+    "sha256": "bd02b4544434077d3334194d7adf4a19689f63ecacd1e6f9ed32adaf608ec4d5"
+  },
+  "files": [
+    {
+      "path": "apps/web/scripts/build-public-popularity.ts",
+      "bytes": 4439,
+      "sha256": "a6f71ce2fea76bc1183b09961cc153d97bf8d9970f87fed1ae49414893212dcd"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/frames.ts",
+      "bytes": 9213,
+      "sha256": "253fda0e407c5c9b0353984ff639d4dc6688b2f4df9c5c90bcdc764d22cf90c1"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/published-popularity.ts",
+      "bytes": 5687,
+      "sha256": "84ee9979ace9756456178449f6d831fe796cee0d68d66e155fc127aaef4163f1"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/guards.ts",
+      "bytes": 7046,
+      "sha256": "5ba23587a7efd71f83867875292eb0255f5d5d34daeca98ca8418623961127a4"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/storage-key.mjs",
+      "bytes": 226,
+      "sha256": "4f49025a1c93baf0f732e3ab57fb8b576a3857dab4d4a9910534b21358df3148"
+    },
+    {
+      "path": "apps/web/lib/evidence-engineering/upload-evidence-frame.ts",
+      "bytes": 2259,
+      "sha256": "d1ce82e82f186752229832b21adc33298e07626a76f6661b883fa2e1125e48e7"
+    },
+    {
+      "path": "apps/web/scripts/publish-evidence-frames.ts",
+      "bytes": 5449,
+      "sha256": "296ac93773968dda8b5daa8a8166ff234e782acbc31f8a9b178910221babee99"
+    },
+    {
+      "path": "apps/web/lib/naver-map-marker-visuals.ts",
+      "bytes": 9365,
+      "sha256": "6b73821b062691fc9d1139448bca5ff7c690379e1ba9e50322f8b7c3a9ac83b8"
+    },
+    {
+      "path": "apps/web/lib/naver-map-cluster-visuals.ts",
+      "bytes": 5849,
+      "sha256": "e6827ce69615a202ca866aa5ced193b78d8b16c3ab9f44d3abb665e7b94f4d92"
+    },
+    {
+      "path": "apps/web/lib/cluster-marker.ts",
+      "bytes": 9772,
+      "sha256": "43414721e67e9e4f33a44a8cbefbd2b17f81a9f7f5fbf49261952c7cc0e4690f"
+    },
+    {
+      "path": "apps/web/lib/clustering.ts",
+      "bytes": 33844,
+      "sha256": "915170037ddcabfdba190900eca37d9a4ebc6718d83d36ca300c0fef4802de5e"
+    }
+  ],
+  "prompt_sha256": "23b2d89a773203edf1f13f3e4ab116439d33eb31a468e4c0ccdb1f63b0148cb1"
+}

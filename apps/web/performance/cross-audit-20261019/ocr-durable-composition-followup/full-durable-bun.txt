@@ -1,0 +1,42 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/durable-receipt-ocr.test.ts:
+(pass) durable receipt OCR execution > holds before claim, quota reservation, and provider dispatch when the recovery capability is unavailable [0.29ms]
+(pass) durable receipt OCR execution > accepts only the exact versioned recovery capability response [0.22ms]
+(pass) durable receipt OCR execution > normalizes a throwing capability RPC to held before claim, quota, or provider work [0.08ms]
+(pass) durable receipt OCR execution > requires an exact bounded definitive release reply [0.25ms]
+(pass) durable receipt OCR execution > calls the funded provider once, then reuses the verified result without consuming another call [0.72ms]
+(pass) durable receipt OCR execution > reuses identical inference settings, but misses when the effective thinking level changes [0.72ms]
+(pass) durable receipt OCR execution > binds the ordered model policy while preserving the actual fallback response model [0.11ms]
+(pass) durable receipt OCR execution > bounded owner-scoped readback receives a committed result without another claim or provider call [0.06ms]
+(pass) durable receipt OCR execution > bounded readback never turns processing or missing state into a claim [0.06ms]
+(pass) durable receipt OCR execution > admits one provider call for concurrent duplicate requests [0.27ms]
+(pass) durable receipt OCR execution > does not reuse across owner, input, model, prompt, preprocess or normalization boundaries [0.40ms]
+(pass) durable receipt OCR execution > keeps an uncertain provider call non-retryable even when force refresh is requested [0.18ms]
+(pass) durable receipt OCR execution > marks a no-payload mixed model result indeterminate without credential release [2.98ms]
+(pass) durable receipt OCR execution > preserves a verified payload after a mixed model force refresh without credential release [0.57ms]
+(pass) durable receipt OCR execution > releases only a typed definitive credential exhaustion so a repaired credential can retry [0.15ms]
+(pass) durable receipt OCR execution > does not trust an arbitrary credential rejection sentinel [0.16ms]
+(pass) durable receipt OCR execution > fails closed when the definitive credential release RPC is unavailable [0.14ms]
+(pass) durable receipt OCR execution > allows retry after a committed definitive release acknowledgement is lost [0.20ms]
+(pass) durable receipt OCR execution > restores the last verified payload and revision after a definitive refresh rejection [0.22ms]
+(pass) durable receipt OCR execution > supports repeated rejected refreshes while a stale release replay cannot overwrite the new claim [0.53ms]
+(pass) durable receipt OCR execution > recovers only an explicitly forced reservation that was durably undispatched [0.11ms]
+(pass) durable receipt OCR execution > turns a possibly dispatched abandoned claim uncertain without replaying it [0.11ms]
+(pass) durable receipt OCR execution > does not call the provider when dispatch-stage acknowledgement is lost [0.08ms]
+(pass) durable receipt OCR execution > reuses a committed result after completion acknowledgement loss with one provider call [0.10ms]
+(pass) durable receipt OCR execution > rejects tab A revision after tab B force-refreshes the same result reference [0.16ms]
+(pass) durable receipt OCR execution > keeps the last verified result when a forced replacement fails before or after provider dispatch [0.17ms]
+(pass) durable receipt OCR execution > rejects a tampered cached payload before it reaches the review flow [0.34ms]
+(pass) durable receipt OCR execution > persists only the bounded public receipt contract [0.09ms]
+(pass) durable receipt OCR execution > preserves an administrator-corrected receipt instead of scheduling another provider call [0.61ms]
+(pass) durable receipt OCR execution > binds an administrator reset to a fresh durable generation before processing [0.70ms]
+(pass) durable receipt OCR execution > serializes concurrent review saves and requires OCR reference readback [0.85ms]
+(pass) durable receipt OCR execution > review save sends only an OCR result reference and revision while the server derives receipt fields [0.53ms]
+(pass) durable receipt OCR execution > migration keeps durable results private, version-bound and non-expiring on uncertainty [0.17ms]
+(pass) durable receipt OCR execution > adds a post-held-105 credential recovery capability without rewriting the OCR predecessor [1.91ms]
+
+ 34 pass
+ 0 fail
+ 207 expect() calls
+Ran 34 tests across 1 file. [180.00ms]

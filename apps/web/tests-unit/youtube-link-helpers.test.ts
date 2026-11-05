@@ -125,12 +125,16 @@ describe('YouTube link helpers', () => {
   test('checks original dimensions before rendering candidates through Next Image', () => {
     const thumbnailSource = source('components/ui/youtube-thumbnail.tsx');
     const detailSource = source('components/restaurant/RestaurantDetailPanel.tsx');
+    const carouselSource = source('components/restaurant/RestaurantVideoCarousel.tsx');
 
     expect(thumbnailSource).toContain('const probe = new window.Image()');
     expect(thumbnailSource).toContain('naturalWidth: probe.naturalWidth');
     expect(thumbnailSource).toContain('width={candidateDimensions.width}');
     expect(thumbnailSource).toContain('height={candidateDimensions.height}');
-    expect(detailSource.match(/<YoutubeThumbnail/g)).toHaveLength(2);
+    expect(detailSource).toContain('<RestaurantVideoCarousel');
+    expect(detailSource).toContain('videos={youtubeVideos}');
+    expect(carouselSource).toContain('<YoutubeThumbnail');
+    expect(carouselSource.match(/<MediaImage/g)).toHaveLength(2);
     expect(detailSource).not.toContain("getYoutubeThumbnailUrl(videoId, 'sddefault')");
   });
 });

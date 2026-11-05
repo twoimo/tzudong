@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "skill": {
+    "name": "taste-skill",
+    "upstream": "https://github.com/Leonxlnx/taste-skill",
+    "commit": "f624f37a8c650b9cc550253104925efe4c8de246",
+    "direction": "dense-tiles / The well-kept board",
+    "seed": 331628995,
+    "scopeAdaptation": "User explicitly requests an operational CMS; retain data tables, form boundaries, semantic status colors, accessible touch targets and functional density. Do not apply marketing imagery/hero/animation quotas to pass a heuristic."
+  },
+  "measurements": [
+    {
+      "metric": "page title font size",
+      "before": 16,
+      "after": 18,
+      "absoluteDelta": 2,
+      "percentChange": 12.5,
+      "unit": "px",
+      "n": 45,
+      "environment": "Same synthetic loopback,1440/834/390px,Chrome/Playwright1.63",
+      "confidenceInterval95": null,
+      "reason": "Deterministic geometry enumeration; not a sampled latency/usability claim."
+    },
+    {
+      "metric": "bright-green treemap label contrast",
+      "before": 2.1189735054122596,
+      "after": 7.717923428537454,
+      "absoluteDelta": 5.598949923125195,
+      "percentChange": 264.2293501463995,
+      "unit": "contrast ratio",
+      "input": {
+        "background": "#30cc5a",
+        "beforeForeground": "#ffffff",
+        "afterForeground": "#17202f"
+      },
+      "confidenceInterval95": null,
+      "reason": "Deterministic WCAG relative-luminance calculation,rounded.",
+      "display": {
+        "before": 2.12,
+        "after": 7.72
+      }
+    },
+    {
+      "metric": "dark-view low-contrast samples reported by taste probe",
+      "before": 12,
+      "after": 0,
+      "absoluteDelta": -12,
+      "percentChange": -100,
+      "n": 12,
+      "confidenceInterval95": null,
+      "reason": "Same12viewstates; probe sample count,not all application text or independent unique elements."
+    }
+  ],
+  "checks": {
+    "light": {
+      "views": 45,
+      "modules": 15,
+      "widths": [
+        1440,
+        834,
+        390
+      ],
+      "documentOverflow": 0,
+      "pageErrors": 0,
+      "duplicateMain": 0,
+      "expectedTitleMismatch": 0
+    },
+    "dark": {
+      "views": 12,
+      "widths": [
+        1440,
+        390
+      ],
+      "actualDarkClassVerified": true,
+      "documentOverflow": 0,
+      "pageErrors": 0,
+      "lowContrastSamples": 0
+    },
+    "focusedUI": {
+      "passed": 79,
+      "failed": 0,
+      "assertions": 4122,
+      "files": 6
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "sourceInputs": 1592,
+      "sourceDrift": [],
+      "cleanupFailures": [],
+      "cssBoundary": "passed",
+      "scope": "Exact pre-final OCR concurrency and batch-copy follow-up source; retained as historical if later source changes."
+    },
+    "successFixtures": {
+      "views": 9,
+      "modules": [
+        "pipeline",
+        "knowledge-graph",
+        "storyboard"
+      ],
+      "widths": [
+        1440,
+        834,
+        390
+      ],
+      "runner": "Bun 1.4.0 / Playwright 1.63 / Chrome; synthetic loopback fixture; no hosted API or provider calls",
+      "expectedTitleMismatch": 0,
+      "documentOverflow": 0,
+      "pageErrors": 0,
+      "lowContrastSamples": 0,
+      "providerCalls": 0,
+      "mutationsSent": 0,
+      "note": "Synthetic GET adapter; not production data, real generation or real graph-analysis evidence."
+    },
+    "readOnlyInteractions": {
+      "passed": true,
+      "broadRun": {
+        "passed": 22,
+        "failed": 3,
+        "note": "Preserved partial run; gaps were not counted as passed."
+      },
+      "focusedCompletion": {
+        "passed": 4,
+        "failed": 0,
+        "includesSyntheticAuthPrecondition": true
+      },
+      "coverage": "All15sidebar destinations,collapsedrail/focus,mobilemenu,pipelinekeyboard/detail,graphfilter/detail,user/submission/reviewfilter-inspectors,expliciterror/heldstates",
+      "sentNonReadRequests": 0,
+      "externalRequests": 0,
+      "reference": "interaction-audit-summary.json"
+    }
+  },
+  "notClaimed": [
+    "Improved task completion time",
+    "Lower production latency or cost",
+    "Hosted correctness or deployment",
+    "Successful paid model/OCR operation",
+    "Global skill lint all-pass",
+    "All success-state provider/graph flows"
+  ],
+  "pending": [
+    "Remaining full-unit failures and OCR concurrency follow-through",
+    "Protected promotion and live verification remain part of active long goal",
+    "Final source-bound TypeScript verification and affected follow-up build after OCR concurrency changes"
+  ]
+}

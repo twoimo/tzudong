@@ -14,13 +14,13 @@ import type { Tables } from '@/integrations/supabase/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PROPOSAL_SELECT = 'id, run_id, restaurant_id, overlay_type, proposal_status, label, description, active_from, active_until, score, score_breakdown, evidence, proposal_hash, supersedes_proposal_id, reviewed_by_admin_id, reviewed_at, review_reason, overlay_audit_id, created_at, updated_at, restaurants(id, name, approved_name, lat, lng, status)';
+const PROPOSAL_SELECT = 'id, run_id, restaurant_id, overlay_type, proposal_status, label, description, active_from, active_until, score, score_breakdown, evidence, proposal_hash, supersedes_proposal_id, reviewed_by_admin_id, reviewed_at, review_reason, overlay_audit_id, created_at, updated_at, restaurants(id, name:approved_name, approved_name, lat, lng, status)';
 const OVERLAY_CONFLICT_SELECT = 'restaurant_id, overlay_type, label, is_active, updated_at';
 
 type TrendProposalRestaurantQueryRow = Pick<
   Tables<'restaurants'>,
-  'id' | 'name' | 'approved_name' | 'lat' | 'lng' | 'status'
->;
+  'id' | 'approved_name' | 'lat' | 'lng' | 'status'
+> & { name: Tables<'restaurants'>['approved_name'] };
 
 type TrendProposalQueryRow = Pick<
   Tables<'admin_restaurant_map_overlay_proposals'>,

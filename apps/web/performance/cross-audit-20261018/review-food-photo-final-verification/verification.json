@@ -1,0 +1,41 @@
+{
+  "schema": "tzudong-review-food-photo-verification/v1",
+  "startedAt": "2026-10-18T14:49:46.729730+00:00",
+  "baseHead": "17eec51ae1f487d6e4445368cc2a7fead0dc8911",
+  "sourceIntegrity": {
+    "apps/web/app/api/ocr/reviews/save/route.ts": "a1ee27c435f4d6e6edc37758a2c846d8b7bfb713c915c51e3a5bfef623b32e11",
+    "apps/web/components/reviews/ReviewModal.tsx": "5f3e9ab0ca2f549d47ef6475073b66365fff717d53f13a038b6408e4a0c0f5fb",
+    "apps/web/lib/reviews/review-save-operation.ts": "48def0f277e7e0081f91b557e2d9b5b953a6e0461360668bee1169ba3939dabe",
+    "apps/web/tests-unit/review-save-operation.test.ts": "50254e9bd20da2db4b6f2386193dc60174b26546cf523fc2a9f16d7daaf5454f",
+    "apps/web/tests-unit/review-save-submit.test.ts": "70c1c53f8fd41763ae0ad306d9c5d0b02e984dd1aa3643cd8dc0db6630a3414d",
+    "apps/web/tests-unit/review-upload-uncertainty.test.ts": "569edc7db091e94a872cb12079c62553972564c4b94dc9400c0de0e2c80c9584"
+  },
+  "environment": {
+    "node": "24.22.0",
+    "npmReleaseAuthority": "11.6.2",
+    "dotenvAutoLoad": false,
+    "credentialInputs": "none supplied",
+    "outboundNetwork": "not instrumented"
+  },
+  "checks": {
+    "compiler-parity": {
+      "exitCode": 0,
+      "elapsedSeconds": 16.576,
+      "artifact": "apps/web/performance/cross-audit-20261018/review-food-photo-final-verification/compiler-parity.txt",
+      "sha256": "190cbda860a4bbe04b37cbae1c24e0ff933973a36a99ab8c177238ca7291d0a8"
+    },
+    "production-build": {
+      "exitCode": 0,
+      "elapsedSeconds": 52.287,
+      "artifact": "apps/web/performance/cross-audit-20261018/review-food-photo-final-verification/production-build.txt",
+      "sha256": "90b280cecd6a6a0d820fd730195d6c8481bd1b7a8e45689e02ebaf825c2e0b1e"
+    }
+  },
+  "limitations": [
+    "Local compiler and production-mode build only. No hosted runtime, provider billing, or deployment result is established.",
+    "Elapsed times are single uncontrolled observations; no performance comparison is admitted."
+  ],
+  "taskTsconfigIncludesRestored": true,
+  "sourceIntegrityUnchanged": true,
+  "finishedAt": "2026-10-18T14:50:55.603616+00:00"
+}

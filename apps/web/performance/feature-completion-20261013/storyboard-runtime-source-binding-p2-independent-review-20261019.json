@@ -1,0 +1,284 @@
+{
+  "schema": "tzudong.storyboard-runtime-source-binding-independent-review/v1",
+  "append_only": true,
+  "events": [
+    {
+      "event_id": "STORYBOARD-RUNTIME-SOURCE-BINDING-INDEPENDENT-P2-20261019-001",
+      "captured_at": "2026-10-19T00:17:09+09:00",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "kind": "independent_source_review",
+      "reviewed_owner_receipt": {
+        "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-binding-p2-20261019.json",
+        "sha256": "81d3cefea418ee8cd6d3be059117f92b538c5a3228d70eb09c0141fd537bf408",
+        "preserved_unchanged": true
+      },
+      "owner_fix_verdict": "accepted_partial",
+      "owner_fix_evidence": {
+        "source_path_count_before": 30,
+        "source_path_count_after": 32,
+        "added_paths": [
+          "apps/web/lib/admin/storyboard/production-assets.ts",
+          "apps/web/lib/admin/storyboard/resource-invariants.ts"
+        ],
+        "runtime_source_binding_sha256_before": "954b5a7e2fbc5bffc048c612b95f2307d6f306190f92b725fb4955bf9a8eb451",
+        "runtime_source_binding_sha256_after": "aa170d446a9820e1f7bd195ad399a708a7ab036c99eb4c6c9f3618b111f4fde5",
+        "canonical_policy_sha256_before": "db93f1b2e58f9f0f60062a9842ff46e19579169a2b61eb7934feaf5529cfc47b",
+        "canonical_policy_sha256_after": "d7d622838d5e67281aaf881b1434f24bc874eac192dbe252abce54b92f71fc46",
+        "targeted_tests": {
+          "command": "/Users/twoimo/.bun/bin/bun test tests-unit/storyboard-runtime-source-binding.test.ts",
+          "cwd": "apps/web",
+          "passed": 7,
+          "failed": 0,
+          "expectations": 67
+        }
+      },
+      "accepted_findings": [
+        {
+          "id": "STORYBOARD-SOURCE-BINDING-P2-PROVIDER-BUDGET",
+          "severity": "P2",
+          "verdict": "ACCEPT",
+          "boundary": "provider request admission, quota, inflight and lease cleanup",
+          "counterexample": "apps/web/lib/admin/storyboard/gemini-client.ts dynamically imports backend/utils/provider-budget.mjs for every model catalog and generation call. That wrapper executes backend.utils.provider_budget as a Python subprocess. Neither first-party runtime file is present in STORYBOARD_RUNTIME_SOURCE_PATHS, so changes to provider admission or lease semantics leave the storyboard source and canonical policy digests unchanged.",
+          "import_chain": [
+            "apps/web/lib/admin/storyboard/gemini-client.ts:14-16 -> backend/utils/provider-budget.mjs",
+            "backend/utils/provider-budget.mjs:54-60 -> backend/utils/provider_budget.py"
+          ],
+          "source_binding_membership": {
+            "backend/utils/provider-budget.mjs": false,
+            "backend/utils/provider_budget.py": false
+          },
+          "source_sha256": {
+            "backend/utils/provider-budget.mjs": "8313b93666a36342bd1c53581c9ec2034a07c23225ac5fb9e6988424fe395f27",
+            "backend/utils/provider_budget.py": "edfd9b77125f05a81209fd9799c5e8465f169dbf175d9ca8361adf3cb50b78e7"
+          },
+          "required_followup": "Bind both first-party runtime files and add a narrow regression that discovers the dynamic import and Python -m target without recursively hashing external packages."
+        },
+        {
+          "id": "STORYBOARD-SOURCE-BINDING-P2-STORAGE-AUTHORITY",
+          "severity": "P2",
+          "verdict": "ACCEPT",
+          "boundary": "storyboard Storage destination and privileged credential admission",
+          "counterexample": "apps/web/lib/admin/storyboard/production-store.ts routes every storyboard upload, download, list and remove through apps/web/lib/supabase/storage-server.ts. That helper enforces the production-versus-loopback URL/key pairing and chooses the Storage authority, but it is absent from STORYBOARD_RUNTIME_SOURCE_PATHS; those rules can therefore change without changing the storyboard source or canonical policy digest.",
+          "import_chain": [
+            "apps/web/lib/admin/storyboard/production-store.ts:3 -> apps/web/lib/supabase/storage-server.ts",
+            "apps/web/lib/admin/storyboard/production-store.ts:126-150 -> upload/download/list/remove"
+          ],
+          "source_binding_membership": {
+            "apps/web/lib/supabase/storage-server.ts": false
+          },
+          "source_sha256": {
+            "apps/web/lib/supabase/storage-server.ts": "7efee141365fb88c8504a16bfe4a5865ff2c875be78c9a17b4fa542fdb6d507e"
+          },
+          "required_followup": "Bind the dedicated Storage authority helper and assert its direct production-store edge; keep generic unrelated infrastructure and external packages outside this bounded closure."
+        }
+      ],
+      "reviewed_source_binding": {
+        "path": "apps/web/lib/admin/storyboard/runtime-source-binding.ts",
+        "sha256": "14ac1a175b3cc9fbd9df687ad46531b17a5cddd4d0cca30ff8e596cb29c9b8fa",
+        "source_count": 32
+      },
+      "reviewed_test": {
+        "path": "apps/web/tests-unit/storyboard-runtime-source-binding.test.ts",
+        "sha256": "cbc9b4920fded0f7d077dbdfdee0570df3f52603a2d008ae93b733cf1b6ce6ef"
+      },
+      "followup": {
+        "owner_fix_requested": true,
+        "status": "pending_new_frozen_hashes_and_receipt",
+        "independent_recheck_required": true,
+        "recheck_scope": [
+          "new declared source list and exact hashes",
+          "dynamic import discovery for provider-budget.mjs",
+          "Python module target discovery for provider_budget.py",
+          "direct Storage authority edge for storage-server.ts",
+          "source and canonical policy digest transition",
+          "targeted and related runtime compatibility tests"
+        ]
+      },
+      "boundaries": [
+        "This receipt records source-level findings only and does not change product source, Git state, browser state, database, Storage, provider, coordinator or deployment.",
+        "The prior 32-source owner receipt remains immutable historical evidence and is not relabeled as complete.",
+        "Deployment and field readback remain separate after any followup fix."
+      ]
+    },
+    {
+      "event_id": "STORYBOARD-RUNTIME-SOURCE-BINDING-INDEPENDENT-P2-20261019-002",
+      "captured_at": "2026-10-19T00:19:06+09:00",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "kind": "owner_followup_source_recheck",
+      "supersedes_status_only": "STORYBOARD-RUNTIME-SOURCE-BINDING-INDEPENDENT-P2-20261019-001.followup.status",
+      "owner_followup_receipt": {
+        "status": "pending_new_append_only_owner_receipt",
+        "prior_32_source_receipt_preserved": true
+      },
+      "reviewed_source_binding": {
+        "path": "apps/web/lib/admin/storyboard/runtime-source-binding.ts",
+        "sha256": "0e3cb7805bd6ee0dc46217baa30de29347491220c7b7ab87b938b0a49b20076b",
+        "source_count": 35,
+        "runtime_source_binding_sha256": "c0da765eafb23620c32ea8de6d4990ebfff4132de337560a8a1993706b3853c9",
+        "canonical_policy_sha256": "7b6569433db7a1a826d4004fd0a66ebc1fcb9ca022b070575b291ded6d011618"
+      },
+      "reviewed_test": {
+        "path": "apps/web/tests-unit/storyboard-runtime-source-binding.test.ts",
+        "sha256": "d7f56e2bf52a94c06a45c56426f8f11c80a9e3b31a3a119106f50a9b4b05fa38"
+      },
+      "bound_execution_dependencies": [
+        {
+          "path": "backend/utils/provider-budget.mjs",
+          "sha256": "8313b93666a36342bd1c53581c9ec2034a07c23225ac5fb9e6988424fe395f27",
+          "edge_verified": "gemini-client.ts dynamic import"
+        },
+        {
+          "path": "backend/utils/provider_budget.py",
+          "sha256": "edfd9b77125f05a81209fd9799c5e8465f169dbf175d9ca8361adf3cb50b78e7",
+          "edge_verified": "provider-budget.mjs Python -m target"
+        },
+        {
+          "path": "apps/web/lib/supabase/storage-server.ts",
+          "sha256": "7efee141365fb88c8504a16bfe4a5865ff2c875be78c9a17b4fa542fdb6d507e",
+          "edge_verified": "production-store.ts privileged Storage import"
+        }
+      ],
+      "finding_decisions": [
+        {
+          "id": "STORYBOARD-SOURCE-BINDING-P2-PROVIDER-BUDGET",
+          "prior_verdict": "ACCEPT",
+          "current_verdict": "RESOLVED_SOURCE",
+          "evidence": "Both the dynamic JS budget wrapper and its Python module target are in the 35-path binding. The regression asserts both execution edges and independently mutates each file to require new source and canonical policy digests."
+        },
+        {
+          "id": "STORYBOARD-SOURCE-BINDING-P2-STORAGE-AUTHORITY",
+          "prior_verdict": "ACCEPT",
+          "current_verdict": "RESOLVED_SOURCE",
+          "evidence": "The dedicated privileged Storage client is in the 35-path binding. The regression asserts the production-store import and independently mutates storage-server.ts to require new source and canonical policy digests."
+        }
+      ],
+      "verification": [
+        {
+          "command": "/Users/twoimo/.bun/bin/bun test tests-unit/storyboard-runtime-source-binding.test.ts tests-unit/admin-storyboard-policy-readback.test.ts tests-unit/public-storyboard-runtime-compatibility.test.ts tests-unit/storyboard-gemini-execution-contract.test.ts tests-unit/storyboard-retired-cli.test.ts tests-unit/storyboard-runtime-compatibility-observer.test.ts",
+          "cwd": "apps/web",
+          "status": "passed",
+          "tests": 38,
+          "failures": 0,
+          "expectations": 264
+        },
+        {
+          "command": "calculateStoryboardRuntimeSourceBinding plus evaluateStoryboardRuntimePolicy readback",
+          "status": "passed",
+          "source_count": 35,
+          "all_three_followup_paths_present": true
+        },
+        {
+          "command": "bounded one-hop first-party import inventory for declared runtime sources",
+          "status": "passed_with_declared_scope",
+          "result": "No additional provider, model, worker-memory or storyboard-Storage execution gate remained outside the binding. Generic shared auth, Supabase DB clients, telemetry, type declarations and external packages were not promoted into this bounded policy digest."
+        }
+      ],
+      "verdict": "accepted_resolved_source_owner_receipt_pending",
+      "remaining_gates": [
+        "A new owner append-only receipt must freeze the 35-source file hashes, source binding c0da765e... and canonical policy 7b656943....",
+        "A new build is required because the source binding is injected by next.config.mjs at build time.",
+        "Both public production aliases and the authenticated storyboard-policy endpoint require fresh post-deploy readback before runtime compatibility is confirmed.",
+        "This source review does not prove provider, Storage, worker, database, deployment or field behavior."
+      ],
+      "boundaries": [
+        "The accepted findings event remains immutable historical evidence.",
+        "This recheck changed only this append-only independent review receipt; product source and external state were read-only."
+      ]
+    },
+    {
+      "event_id": "STORYBOARD-RUNTIME-SOURCE-BINDING-INDEPENDENT-P2-20261019-003",
+      "captured_at": "2026-10-19T00:23:52+09:00",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "kind": "owner_followup_freeze_receipt_verification",
+      "resolves_pending_status_from": "STORYBOARD-RUNTIME-SOURCE-BINDING-INDEPENDENT-P2-20261019-002.owner_followup_receipt.status",
+      "owner_followup_receipt": {
+        "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-binding-p2-followup-20261019.json",
+        "sha256": "05464572c246b473bdbf0cefad07b854e4d72df3de3e54cdcd80370f50bf2e41",
+        "event_id": "STORYBOARD-RUNTIME-SOURCE-BINDING-P2-20261019-002",
+        "append_only": true,
+        "verdict": "accepted_resolved_local_followup"
+      },
+      "predecessor_receipt": {
+        "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-binding-p2-20261019.json",
+        "sha256": "81d3cefea418ee8cd6d3be059117f92b538c5a3228d70eb09c0141fd537bf408",
+        "preserved_unchanged": true,
+        "source_count": 32
+      },
+      "freeze_crosscheck": {
+        "source_count": 35,
+        "runtime_source_binding_sha256": "c0da765eafb23620c32ea8de6d4990ebfff4132de337560a8a1993706b3853c9",
+        "canonical_policy_sha256_independent_readback": "7b6569433db7a1a826d4004fd0a66ebc1fcb9ca022b070575b291ded6d011618",
+        "all_declared_followup_paths_present": true,
+        "all_owner_recorded_source_bytes_and_sha256_match_current_files": true,
+        "source_binding": {
+          "path": "apps/web/lib/admin/storyboard/runtime-source-binding.ts",
+          "bytes": 5397,
+          "sha256": "0e3cb7805bd6ee0dc46217baa30de29347491220c7b7ab87b938b0a49b20076b"
+        },
+        "test": {
+          "path": "apps/web/tests-unit/storyboard-runtime-source-binding.test.ts",
+          "bytes": 9894,
+          "sha256": "d7f56e2bf52a94c06a45c56426f8f11c80a9e3b31a3a119106f50a9b4b05fa38"
+        },
+        "execution_dependencies": [
+          {
+            "path": "backend/utils/provider-budget.mjs",
+            "bytes": 8188,
+            "sha256": "8313b93666a36342bd1c53581c9ec2034a07c23225ac5fb9e6988424fe395f27"
+          },
+          {
+            "path": "backend/utils/provider_budget.py",
+            "bytes": 11027,
+            "sha256": "edfd9b77125f05a81209fd9799c5e8465f169dbf175d9ca8361adf3cb50b78e7"
+          },
+          {
+            "path": "apps/web/lib/supabase/storage-server.ts",
+            "bytes": 2578,
+            "sha256": "7efee141365fb88c8504a16bfe4a5865ff2c875be78c9a17b4fa542fdb6d507e"
+          }
+        ]
+      },
+      "verification": {
+        "independent_related_suite": {
+          "status": "passed",
+          "tests": 38,
+          "failures": 0,
+          "expectations": 264
+        },
+        "owner_receipt_targeted": {
+          "status": "passed",
+          "tests": 9,
+          "failures": 0,
+          "expectations": 82
+        },
+        "owner_receipt_typecheck_parity": {
+          "status": "passed_receipt_readback_only",
+          "diagnostics": 0,
+          "logical_inputs": 3351,
+          "logical_input_names_sha256": "127c63b72a8b143d30331423de187a55551d734f22babb67ee5a2f910d5ceeb5",
+          "non_library_content_sha256": "542b505e98633fa0b6f6619079441cdea62f1f102407481277a809fb09aa43c0"
+        }
+      },
+      "finding_decisions": [
+        {
+          "id": "STORYBOARD-SOURCE-BINDING-P2-PROVIDER-BUDGET",
+          "verdict": "RESOLVED_SOURCE_FREEZE_VERIFIED"
+        },
+        {
+          "id": "STORYBOARD-SOURCE-BINDING-P2-STORAGE-AUTHORITY",
+          "verdict": "RESOLVED_SOURCE_FREEZE_VERIFIED"
+        }
+      ],
+      "verdict": "owner_followup_freeze_verified_local",
+      "remaining_gates": [
+        "A new authorized build must inject source binding c0da765e...; builds made before this followup cannot establish it.",
+        "Both exact production aliases and the authenticated storyboard-policy endpoint need fresh post-deploy readback of the matching canonical policy.",
+        "Provider, Storage, worker, database, deployment and field behavior remain unverified by this local source freeze."
+      ],
+      "boundaries": [
+        "The earlier two events are preserved unchanged.",
+        "This event verifies local frozen source and receipt identity only; it does not claim external validation or deployment."
+      ]
+    }
+  ]
+}

@@ -49,6 +49,8 @@ test('historical OCR configuration fails closed and records only safe resolved p
 
     const insecure = resolve(root, 'insecure.env');
     writeFileSync(insecure, 'GEMINI_OCR_MODEL=gemini-3.8-flash\n', { mode: 0o644 });
+    // chmod creates the intended unsafe fixture even under Nightly's umask 077.
+    chmodSync(insecure, 0o644);
     expect(() => resolveOcrVerificationConfiguration({
       currentCandidate: false,
       source: {},

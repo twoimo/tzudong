@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -36,23 +36,52 @@ describe('source-bound route census', () => {
     const census = JSON.parse(first.bytes);
     expect(census.kind).toBe('source-and-historical-evidence-inventory-only');
     expect(census.counts).toMatchObject({
-      publicOrAccountPages: 21,
+      publicOrAccountPages: 22,
       publicShareHandlers: 1,
       adminPhysicalPages: 5,
-      totalSurfaces: 27,
+      totalSurfaces: 28,
     });
     expect(census.assertions).toMatchObject({
       expectedCurrentCounts: true,
-      historicalPublicMatrixCoversCurrentPublicPatterns: true,
+      historicalPublicMatrixCoversCurrentPublicPatterns: false,
+      missingHistoricalRowsMatchDeclaredSourceOnlyAdditions: true,
+      publicPatternsWithoutHistoricalRows: ['/auth/complete'],
       historicalPublicOperatingVerificationCount: 0,
     });
 
     const byRoute = new Map(census.routes.map((route: { routePattern: string }) => [route.routePattern, route]));
+    expect(byRoute.get('/auth/complete')?.evidence).toMatchObject({ evidenceFound: false, scope: 'none', operatingAuthenticatedDataVerified: false });
     expect(byRoute.get('/s/[code]')?.evidence.representativeInputs).toEqual(['/s/audit-invalid-code']);
     expect(byRoute.get('/user/[userId]')?.evidence.representativeInputs).toEqual([
       '/user/00000000-0000-4000-8000-000000000009',
     ]);
     expect(byRoute.get('/admin/privacy-incidents')?.evidence.scope).toBe('no current source-bound render evidence');
     expect(census.limitations).toContain('No route was requested, rendered, authenticated, or mutated by this source census.');
+  });
+
+  test('keeps the capture-compatible inventory aligned with the share HTTP handler', () => {
+    const inventoryPath = join(webRoot, 'performance/cms-followthrough-20261009/route-inventory.json');
+    const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'));
+    const publicSurfaces = inventory.public_or_account_pages;
+    const adminPages = inventory.admin_legacy_or_canonical_pages;
+    const shareSurface = publicSurfaces.find((surface: { route: string }) => surface.route === '/s/[code]');
+
+    expect(inventory.inventory_scope).toEqual({
+      logical_surfaces: 28,
+      physical_page_sources: 27,
+      public_or_account_page_sources: 22,
+      public_share_handlers: 1,
+      admin_page_sources: 5,
+      limitation: 'Source inventory only; no current browser, authentication, database, mutation, or production evidence.',
+    });
+    expect(publicSurfaces).toHaveLength(23);
+    expect(adminPages).toHaveLength(5);
+    expect(shareSurface).toMatchObject({
+      source: 'app/s/[code]/route.ts',
+      surface_kind: 'http-route-handler',
+      current_browser_evidence: false,
+    });
+    expect(existsSync(join(webRoot, shareSurface.source))).toBe(true);
+    expect(existsSync(join(webRoot, 'app/s/[code]/page.tsx'))).toBe(false);
   });
 });

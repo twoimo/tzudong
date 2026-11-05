@@ -4,6 +4,7 @@ import {
   buildVisibleMarkerReviewBubbleMapSignature,
   buildVisibleMarkerReviewBubbleRenderToken,
   buildVisibleRestaurantIdSignature,
+  wrapNaverMarkerContentWithReviewBubble,
   type VisibleMarkerReviewBubble,
 } from '../lib/visible-marker-review-bubbles';
 
@@ -16,6 +17,17 @@ const baseBubble: VisibleMarkerReviewBubble = {
 };
 
 describe('visible marker review bubble signatures', () => {
+  test('in-place review field updates reach the wrapped HTML', () => {
+    const bubble = { ...baseBubble, photoUrl: null as string | null };
+    const marker = '<div data-testid="marker">식당</div>';
+    expect(wrapNaverMarkerContentWithReviewBubble(marker, bubble, false)).toContain(bubble.content);
+    bubble.content = '제자리에서 갱신한 리뷰';
+    expect(wrapNaverMarkerContentWithReviewBubble(marker, bubble, false)).toContain(bubble.content);
+    bubble.userName = '새 리뷰 작성자';
+    expect(wrapNaverMarkerContentWithReviewBubble(marker, bubble, false)).toContain(bubble.userName);
+    bubble.photoUrl = 'https://example.com/replaced-photo.webp';
+    expect(wrapNaverMarkerContentWithReviewBubble(marker, bubble, false)).toContain(bubble.photoUrl);
+  });
   test('reuses the id signature for the same restaurant list', () => {
     const restaurants = [{ id: 'a' }, { id: 'b' }];
     const first = buildVisibleRestaurantIdSignature(restaurants);

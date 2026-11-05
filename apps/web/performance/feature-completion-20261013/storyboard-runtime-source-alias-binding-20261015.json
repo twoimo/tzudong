@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "kind": "storyboard-runtime-source-alias-binding",
+  "observedAt": "2026-10-15T06:42:17Z",
+  "baseRevision": "609b228751ddd33fba2590f83bdc6aacb9fecbdb",
+  "candidateWorkingTree": true,
+  "resolvedDefects": [
+    {
+      "defect": "production alias identity could be synthesized from one HTTP readback",
+      "resolution": "both HTTP routes are observed independently; an apex redirect is recorded only as a route fact, while deployment identity requires exact Vercel vendor API readback"
+    },
+    {
+      "defect": "Gemini-only policy digest was independent of the executable worker/provider source",
+      "resolution": "the build injects a deterministic digest of every declared storyboard execution boundary and the canonical policy digest includes that source binding"
+    }
+  ],
+  "sourceBinding": {
+    "algorithm": "storyboard-runtime-source-binding/v1",
+    "schemaVersion": 1,
+    "sources": [
+      {
+        "bytes": 2484,
+        "path": "apps/web/scripts/storyboard-gemini-worker.ts",
+        "sha256": "b937d14c2dc76e41f0521596a21a5ac3fcf50eb726e085f22666b516eeb6e38a"
+      },
+      {
+        "bytes": 2192,
+        "path": "apps/web/lib/admin/storyboard/gemini-models.ts",
+        "sha256": "ab400eb533abb4c4a65d2a1c31329fbe744c4569e3a7187a8d2e01a4c3816dca"
+      },
+      {
+        "bytes": 14271,
+        "path": "apps/web/lib/admin/storyboard/production-contract.ts",
+        "sha256": "1e4a0676ccb4672021b2c1f1ddc7eb9060eda70efcf3a3c1f7760a3e538a0132"
+      },
+      {
+        "bytes": 4990,
+        "path": "apps/web/lib/admin/storyboard/production-worker-auth.ts",
+        "sha256": "f3993b0cb2d2a2cbf41c9d2d005dc26ed48cc5c2751fa9a5c908babded3e35a2"
+      },
+      {
+        "bytes": 27324,
+        "path": "apps/web/lib/admin/storyboard/production-store.ts",
+        "sha256": "f2f7c56bbf0596853a9acf2dd9c9518a2aa75631f0b6063355c9e3e71adc3cdd"
+      },
+      {
+        "bytes": 10960,
+        "path": "apps/web/lib/admin/storyboard/production-api.ts",
+        "sha256": "a3f6bd9fe82ce1e072052cbf6d75feef34c56afa2ab2f666d362d81636203d9f"
+      },
+      {
+        "bytes": 9175,
+        "path": "apps/web/lib/admin/storyboard/gemini-client.ts",
+        "sha256": "cacefadf6e7aae666c544cfb716662b9a2eb39a68f65ca840478797fadbb036f"
+      },
+      {
+        "bytes": 1644,
+        "path": "apps/web/lib/admin/storyboard/outbound-worker-contract.ts",
+        "sha256": "e54bb5c1a26bdba03c8c3f485b784b6a7a313ba5602a82bc8a01cdcbcfe901cf"
+      },
+      {
+        "bytes": 21445,
+        "path": "apps/web/lib/admin/storyboard/outbound-worker.ts",
+        "sha256": "48e722f0d62d2e44a595b7fcc10feed04d026b23e2ebd4ff2a74618094269140"
+      },
+      {
+        "bytes": 261,
+        "path": "apps/web/app/api/admin/storyboard/production/route.ts",
+        "sha256": "b847d1e6e849d7dc2b1c380fe72ed426fcac1b8471be4f938d6909683bcd0803"
+      },
+      {
+        "bytes": 267,
+        "path": "apps/web/app/api/admin/storyboard/production/[id]/route.ts",
+        "sha256": "18e2cd3856404ed1e1a9f83b102cc1c2caa82bb987c2e63466f7f20d674b1fb4"
+      },
+      {
+        "bytes": 191,
+        "path": "apps/web/app/api/admin/storyboard/production/[id]/images/route.ts",
+        "sha256": "f4e430ad1d0a5eff6c19ed13cfffba1d561710d701b7b68a0ccec1af6df2d465"
+      },
+      {
+        "bytes": 209,
+        "path": "apps/web/app/api/admin/storyboard/production/[id]/export/route.ts",
+        "sha256": "45041d211a8e77ffd699ac5da4870fe5bd97518a4384a29f76e2d0585b4c53ab"
+      },
+      {
+        "bytes": 208,
+        "path": "apps/web/app/api/admin/storyboard/production/[id]/assets/[assetId]/route.ts",
+        "sha256": "71655d63ceca687c52d2468488f5154e504de8a5daadb087528e26c42ad09d51"
+      },
+      {
+        "bytes": 236,
+        "path": "apps/web/app/api/admin/operating-readback/storyboard-policy/route.ts",
+        "sha256": "5eae479feb08ae5c9abcf90c807ac71998415f2675abbaa88b1336e4a26d6c8b"
+      },
+      {
+        "bytes": 4457,
+        "path": "apps/web/app/api/admin/operating-readback/storyboard-policy/readback-response.ts",
+        "sha256": "4e849df1300ec44f55764a6027b7378d6e318b943744506dbde4d94d07b60e7d"
+      },
+      {
+        "bytes": 239,
+        "path": "apps/web/app/api/runtime-compatibility/storyboard/route.ts",
+        "sha256": "6c52957ad9b673c49115b9366fb79b36da536bf42173bfca4b16b13e09bc6675"
+      },
+      {
+        "bytes": 2477,
+        "path": "apps/web/app/api/runtime-compatibility/storyboard/runtime-response.ts",
+        "sha256": "5dfdce90e9a02355ffb868a56b4952e44f59d3c2da6e9ed58cfa0f85df8e18f1"
+      },
+      {
+        "bytes": 3249,
+        "path": "apps/web/lib/admin/storyboard/runtime-policy.ts",
+        "sha256": "9466b96a5d85e337e34b645dcfc2778f7d2fb9860c757826f6101240a0aa1ec9"
+      },
+      {
+        "bytes": 4625,
+        "path": "apps/web/lib/admin/storyboard/runtime-source-binding.ts",
+        "sha256": "0a350ed25a43da113cadcdbf14c66a610a979a53a47280f752ed0cc8f68a3ad7"
+      }
+    ],
+    "sha256": "9ddbba0c54dae67b70a2301168034b633f2c0cf1e4b2ae5c3a2a3d548c389cd8"
+  },
+  "runtimePolicy": {
+    "canonicalPolicy": {
+      "defaultImageModel": "gemini-3.1-flash-image",
+      "executionWorkflow": "storyboard-gemini-v1",
+      "imageModels": [
+        "gemini-3.1-flash-image",
+        "gemini-3-pro-image"
+      ],
+      "legacyExecutionAdmission": "blocked",
+      "provider": "gemini-api",
+      "readableLegacyWorkflow": "storyboard-mlx-v1",
+      "sourceBindingSchemaVersion": 1,
+      "sourceBindingSha256": "9ddbba0c54dae67b70a2301168034b633f2c0cf1e4b2ae5c3a2a3d548c389cd8",
+      "textModels": [
+        "gemini-3.8-flash"
+      ]
+    },
+    "canonicalPolicySha256": "3426d02d2cad6c690030b6002d801361224045f7cc60d69e515e1a196cec4a8c"
+  },
+  "aliasObservation": {
+    "endpoints": [
+      "https://tzudong.app/api/runtime-compatibility/storyboard",
+      "https://www.tzudong.app/api/runtime-compatibility/storyboard"
+    ],
+    "acceptedRoutes": {
+      "apex": "direct fixed DTO or exact redirect to the canonical www endpoint",
+      "www": "direct fixed DTO only"
+    },
+    "identityAuthority": "Vercel vendor API only",
+    "redirectNeverPromotedToDeploymentIdentity": true,
+    "providedCurrentVendorReadback": {
+      "provenance": "parent-provided fresh Vercel MCP readback",
+      "independentlyQueriedByThisReceipt": false,
+      "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+      "deploymentId": "dpl_EUxJnWmDDozCSMWb2sqNSPgKJLM5",
+      "sourceCommit": "1884f87e53c4567ead7c9a0fb394b09b91a70396",
+      "aliases": [
+        {
+          "alias": "tzudong.app",
+          "redirect": "www.tzudong.app"
+        },
+        {
+          "alias": "www.tzudong.app",
+          "redirect": null
+        }
+      ]
+    }
+  },
+  "workflowAdmission": {
+    "source": ".github/workflows/review-media-sql-successor.yml",
+    "sourceSha256": "98d77342a8dac80729bf03e2d9fe0b826d1417c106836947558c73045e5f945b",
+    "pinnedVercelCliVersion": "56.5.0",
+    "pinnedCliInstalledForApply": true,
+    "vendorQueries": [
+      "GET /v13/deployments/{deploymentId}?teamId={teamId}",
+      "GET /v4/aliases/tzudong.app?teamId={teamId}",
+      "GET /v4/aliases/www.tzudong.app?teamId={teamId}"
+    ],
+    "exactVendorStdoutValidated": true,
+    "frozenDtoSynthesisAllowed": false,
+    "liveVendorReadbackVerifiedBeforeBaseMutation": true,
+    "credentialAbsenceStopsBeforeBaseMutation": true,
+    "githubSecretNameMetadata": {
+      "queryCount": 1,
+      "matchingVercelReadCredentialNames": [],
+      "secretValuesRead": 0,
+      "mutations": 0,
+      "consequence": "apply remains fail-closed before the predecessor mutation until repository Actions secret VERCEL_TOKEN authorizes read-only Vercel API access"
+    },
+    "requiredOneTimeOperatingDependency": "Register a least-privilege repository Actions secret named VERCEL_TOKEN that can read the exact Tzudong Vercel team, project, deployment, and aliases; do not change SUPABASE_DB_URL or create a local database credential."
+  },
+  "changedSourceIntegrity": {
+    "apps/web/scripts/observe-storyboard-runtime-compatibility.mjs": "9fca2db6d27a1e82faf4fd86cf312fbf2a7564c0978b608cf68a0db116ebdd36",
+    "apps/web/scripts/review-media-operating-orchestrator.mjs": "fd34ebef0f798c5e1720c72975bf043bffee2d40d56a05558b9f00cced6d369a",
+    "apps/web/next.config.mjs": "71327b5cc6278b06eeb3af07c09c7ee020350602c9310df53c8db5614d7af76c",
+    "apps/web/app/api/admin/operating-readback/storyboard-policy/readback-response.ts": "4e849df1300ec44f55764a6027b7378d6e318b943744506dbde4d94d07b60e7d",
+    "apps/web/app/api/runtime-compatibility/storyboard/runtime-response.ts": "5dfdce90e9a02355ffb868a56b4952e44f59d3c2da6e9ed58cfa0f85df8e18f1",
+    "apps/web/lib/admin/storyboard/runtime-policy.ts": "9466b96a5d85e337e34b645dcfc2778f7d2fb9860c757826f6101240a0aa1ec9",
+    "apps/web/lib/admin/storyboard/runtime-source-binding.ts": "0a350ed25a43da113cadcdbf14c66a610a979a53a47280f752ed0cc8f68a3ad7"
+  },
+  "counterexampleTests": [
+    "editing the real worker entrypoint with a non-Gemini fallback marker changes both source binding and policy digest",
+    "missing apex observation, cross-host apex redirect, and direct-alias identity drift fail closed",
+    "missing alias route facts fail before the controller runs",
+    "missing credential, wrong deployment, wrong alias, and unavailable vendor readback stop before predecessor or feature mutation"
+  ],
+  "verification": {
+    "targeted": {
+      "pass": 46,
+      "fail": 0,
+      "assertions": 409
+    },
+    "affectedCombined": {
+      "files": 21,
+      "pass": 303,
+      "fail": 0,
+      "assertions": 1875,
+      "elapsedSeconds": 60.9,
+      "logSha256": "f9341762e5652b250a650cdb57f8b76feaec101c23532ad1efd876bd60a0832f"
+    },
+    "typescriptParity": {
+      "nativeVersion": "7.0.2",
+      "compatVersion": "6.0.2",
+      "logicalInputs": 3161,
+      "diagnostics": 0,
+      "logicalInputNamesSha256": "245bfa2f783055580dfebd60afcc3f956175780c92f4c6fa1f811f0a227e5ffd",
+      "nonLibraryContentSha256": "afd34ff4b074e356b0e8b7c534f7b1ae1ef962dc170ff4ff2ba06c8008d36863"
+    },
+    "eslint": {
+      "targetedErrors": 0
+    },
+    "productionBuild": {
+      "nodeVersion": "24.21.0",
+      "npmVersion": "11.6.2",
+      "nextVersion": "16.3.8",
+      "pages": 52,
+      "exitCode": 0,
+      "isolatedDistDir": ".next-feature-runtime-binding",
+      "publicCompatibilityLocalReadback": {
+        "status": 200,
+        "cacheControl": "private, no-store"
+      },
+      "provesProductionAliasIdentity": false
+    }
+  },
+  "retainedPostgresEvidence": {
+    "replayedForThisChange": false,
+    "reason": "runtime observer, workflow adapter, build binding, and readback changes are outside the SQL source root and parent SQL controller; replaying identical SQL bytes adds no signal",
+    "manifestSha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6",
+    "parentControllerSha256": "4f3dacb6f51a669bf64209b380b19e8274d2703101fc50f815153237f4a99d93",
+    "sourceRoot": "61f9d7637c0714a7b0d9108c6f7959ea820175a7870dba681498b570296a1544",
+    "compiledSqlSha256": "285d0c859117006646389dbd2a22de9aef1c0b97bc796a9e4d4448a8a232b093",
+    "currentProofSha256": "6bd946be5b9e0a9a9ef1523112f535456955bc424eaf278c1e23812ce8efc75e",
+    "selectorSha256": "67d69712d0ded23baf81faac35bc277d3e38e156639b02030efe0f6c9276e89d",
+    "engine": "17.6",
+    "migrationCount": 11,
+    "statementCount": 112,
+    "rollbackStageCount": 12,
+    "historicalEvidenceRelabelled": false
+  },
+  "invariants": {
+    "launchPolicy": "held",
+    "evidenceWindowMinutes": 15,
+    "writerFences": 7,
+    "migrationSourceChanges": 0,
+    "originalSqlBytesChanged": 0,
+    "geminiModelsChanged": 0,
+    "providerLimitsChanged": 0
+  },
+  "statistics": {
+    "sampleCount": 1,
+    "confidenceInterval95": null,
+    "reason": "deterministic source and contract verification; not a latency or throughput sample"
+  },
+  "externalEffects": {
+    "githubSecretNameMetadataReads": 1,
+    "hostedDatabaseCalls": 0,
+    "providerCalls": 0,
+    "deployments": 0,
+    "remoteMutations": 0
+  },
+  "limits": [
+    "The Vercel project/deployment mapping in this receipt was supplied by a fresh parent Vercel MCP readback and was not independently queried by this subtask.",
+    "The repository Actions secret-name readback currently contains no VERCEL_TOKEN, so apply is correctly fail-closed until that one least-privilege read credential is registered.",
+    "The local build and route readback prove bundled source-policy consistency, not hosted deployment identity or live Gemini execution."
+  ]
+}

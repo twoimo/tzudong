@@ -256,8 +256,14 @@ describe('public API security source contracts', () => {
       );
     }
 
-    for (const callerSource of [editRestaurantModal, submissionListView]) {
-      expect(callerSource).toContain("fetch('/api/naver-search', {");
+    const adminProviderClient = source('lib/admin/admin-geocode-client.ts');
+    expect(editRestaurantModal).toContain('fetchAdminPlaceItems(query)');
+    expect(editRestaurantModal).toContain('fetchAdminGeocode(address)');
+    expect(source('components/admin/AdminRestaurantModal.tsx')).toContain('fetchAdminGeocode(address)');
+    expect(adminProviderClient).toContain("postProvider('/api/naver-search', { query, display: 5 }");
+    expect(adminProviderClient).toContain("postProvider('/api/naver-geocode', { query }");
+    expect(submissionListView).toContain("fetch('/api/naver-search', {");
+    for (const callerSource of [adminProviderClient, submissionListView]) {
       expect(callerSource).toContain("method: 'POST'");
       expect(callerSource).toContain("'Content-Type': 'application/json'");
       expect(callerSource).not.toContain('/api/naver-search?');
@@ -428,13 +434,13 @@ describe('public API security source contracts', () => {
     const ocrRerunSource = source('app/api/admin/ocr-receipts/rerun/route.ts');
     const ocrResetAllSource = source('app/api/admin/ocr-receipts/reset-all/route.ts');
     const ocrProcessSource = source('app/api/admin/ocr-receipts/process/route.ts');
+    const ocrProcessCoreSource = source('lib/ocr/admin-receipt-processor.ts');
+    const ocrWorkflowDispatchSource = source('lib/ocr/workflow-dispatch.ts');
     const adminUsersSource = source('app/api/admin/users/route.ts');
     const adminUserUpdateSource = source('app/api/admin/users/[userId]/route.ts');
     const restaurantRequestReviewSource = source('app/api/admin/restaurant-requests/[requestId]/review/route.ts');
     const directionsSource = source('app/api/admin/routes/directions/route.ts');
     const thumbnailRouteSources = [
-      source('app/api/admin/youtube-thumbnail-generator/route.ts'),
-      source('app/api/admin/youtube-thumbnail-generator/chat/route.ts'),
       source('app/api/admin/youtube-thumbnail-generator/history/route.ts'),
       source('app/api/admin/youtube-thumbnail-generator/reference-image/route.ts'),
       source('app/api/admin/youtube-thumbnail-generator/release-candidates/route.ts'),
@@ -443,6 +449,16 @@ describe('public API security source contracts', () => {
       source('app/api/admin/youtube-thumbnail-generator/releases/current/route.ts'),
       source('app/api/admin/youtube-thumbnail-generator/releases/publish/route.ts'),
     ];
+    const queueFailureSource = source('lib/admin/youtube-thumbnail-generator/queue-api.ts');
+    const retiredThumbnailSource = source('lib/admin/youtube-thumbnail-generator/retired-api.ts');
+    // Delegated queue/retirement handlers return bounded codes and retain no
+    // diagnostics. Do not require obsolete per-route error logging to return.
+    expect(queueFailureSource).toContain('Response.json({ ok: false, error: code }');
+    expect(queueFailureSource).toContain("'persistence_unavailable'");
+    for (const delegated of [queueFailureSource, retiredThumbnailSource]) {
+      expect(delegated).toContain('no-store');
+      expect(delegated).not.toMatch(/error\??\.message|console\.(?:log|error)|response\.text\(\)/);
+    }
 
     expect(naverSearchSource).not.toContain('NextResponse.json(errorData');
     expect(naverSearchSource).not.toContain("console.error('[API] Naver API Error Response:', errorData)");
@@ -468,27 +484,38 @@ describe('public API security source contracts', () => {
     expect(youtubeMetaSource).not.toContain("searchParams.set('key'");
     expect(youtubeMetaSource).toContain("MAX_REQUEST_BYTES = 2 * 1024");
     expect(youtubeMetaSource).toContain("MAX_PROVIDER_BYTES = 512 * 1024");
-    expect(youtubeMetaSource).toContain("response_format: {");
-    expect(youtubeMetaSource).toContain("type: 'json_schema'");
-    expect(youtubeMetaSource).toContain("max_completion_tokens: 256");
-    expect(youtubeMetaSource).toContain("maxItems: MAX_SPONSOR_COUNT");
-    expect(youtubeMetaSource).toContain("hasPositiveFirstPartySponsorEvidence");
+    expect(youtubeMetaSource).toContain("ads_info: analyzeDisclosure(videoData.description)");
+    expect(youtubeMetaSource).not.toContain("OpenAI");
+    expect(youtubeMetaSource).not.toContain("OPENAI_API_KEY");
+    expect(youtubeMetaSource).not.toContain("openai_sponsor_analysis");
     expect(youtubeMetaSource).toContain("redirect: 'error'");
     expect(youtubeMetaSource).toContain("'Cache-Control': 'no-store'");
     expect(youtubeMetaSource).not.toContain("request.json()");
     expect(youtubeMetaSource).not.toContain("console.error");
 
-    for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource, ocrProcessSource]) {
+    for (const routeSource of [
+      ocrReceiptsSource,
+      ocrRerunSource,
+      ocrResetAllSource,
+      ocrProcessSource,
+      ocrProcessCoreSource,
+    ]) {
       expect(routeSource).not.toContain("err instanceof Error ? err.message : 'Unknown error'");
       expect(routeSource).not.toContain('errorText);');
       expect(routeSource).not.toContain('${updateError.message}');
       expect(routeSource).not.toContain('${resetError.message}');
-      expect(routeSource).toContain('errorName: getGuardedMutationErrorName');
     }
 
-    for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource]) {
-      expect(routeSource).toContain('await response.text().catch(() => null)');
+    for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource, ocrProcessCoreSource]) {
+      expect(routeSource).toContain('errorName: getGuardedMutationErrorName');
     }
+    expect(ocrProcessSource).not.toMatch(/error\.message|console\.(?:error|warn|log)/);
+
+    for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource]) {
+      expect(routeSource).not.toContain('response.text()');
+    }
+    expect(ocrWorkflowDispatchSource).toContain('await response.body?.cancel().catch(() => undefined)');
+    expect(ocrWorkflowDispatchSource).not.toContain('response.text()');
 
     for (const routeSource of [
       adminUsersSource,

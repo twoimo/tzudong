@@ -1,5 +1,7 @@
 import { getCanonicalReviewPhotoObjectPath, type ReviewPhotoPurpose } from '@/lib/review-photo-url';
 
+export const REVIEW_FOOD_PHOTO_MAX_COUNT = 20;
+
 export interface ReviewSaveDraft {
     ownerId: string;
     restaurantId: string;
@@ -9,6 +11,8 @@ export interface ReviewSaveDraft {
     categories: string[];
     verificationPhoto: File;
     foodPhotos: File[];
+    ocrResultRef?: string | null;
+    ocrResultRevision?: string | null;
 }
 
 export interface ReviewSaveUpload {
@@ -23,6 +27,8 @@ export interface SavedReviewReadback {
     restaurant_id: string | null;
     verification_photo: string | null;
     food_photos: string[] | null;
+    receipt_data?: unknown;
+    ocr_processed_at?: string | null;
 }
 
 export interface ReviewSaveDependencies {
@@ -39,6 +45,7 @@ export interface ReviewSaveDependencies {
 
 export type ReviewSaveResult = 'saved' | 'saved-previous' | 'failed' | 'blocked' | 'cancelled';
 export type ReviewSaveCancellation = { status: 'cancelled' | 'blocked' } | { status: 'saved'; draft: ReviewSaveDraft };
+export type ReviewSaveConfirmation = { status: 'blocked' } | { status: 'saved'; draft: ReviewSaveDraft };
 type Operation = {
     id: string;
     draft: ReviewSaveDraft;
@@ -56,7 +63,9 @@ function sameDraft(a: ReviewSaveDraft, b: ReviewSaveDraft): boolean {
         && a.content === b.content && a.visitedAt === b.visitedAt
         && a.categories.length === b.categories.length && a.categories.every((value, i) => value === b.categories[i])
         && a.verificationPhoto === b.verificationPhoto
-        && a.foodPhotos.length === b.foodPhotos.length && a.foodPhotos.every((file, i) => file === b.foodPhotos[i]);
+        && a.foodPhotos.length === b.foodPhotos.length && a.foodPhotos.every((file, i) => file === b.foodPhotos[i])
+        && (a.ocrResultRef ?? null) === (b.ocrResultRef ?? null)
+        && (a.ocrResultRevision ?? null) === (b.ocrResultRevision ?? null);
 }
 
 // Only explicit transaction rejections are definite. In particular, a duplicate
@@ -98,6 +107,22 @@ export class ReviewSaveOperation {
 
     requestCancel(): void { this.cancelling = true; }
 
+    hasPendingConfirmation(): boolean {
+        const op = this.operation;
+        return Boolean(op && this.owns(op) && (op.write === 'unknown' || op.write === 'saved'));
+    }
+
+    confirmPending(): Promise<ReviewSaveConfirmation> {
+        if (this.active) return Promise.resolve({ status: 'blocked' });
+        // A completed close attempt may leave the cancellation latch set after
+        // cleanup was blocked. Read-only confirmation can safely resume it.
+        this.cancelling = false;
+        const pending = this.confirmPendingResult().catch((): ReviewSaveConfirmation => ({ status: 'blocked' }))
+            .finally(() => { this.active = null; });
+        this.active = pending;
+        return pending;
+    }
+
     async clearSavedDraft(): Promise<boolean> {
         const op = this.operation;
         if (op?.write !== 'saved' || !op.draftDeletion) return false;
@@ -123,6 +148,17 @@ export class ReviewSaveOperation {
 
     private owns(op: Operation): boolean { return this.deps.currentOwner() === op.draft.ownerId; }
 
+    private async confirmPendingResult(): Promise<ReviewSaveConfirmation> {
+        const op = this.operation;
+        if (!op || !this.owns(op)) return { status: 'blocked' };
+        if (op.write === 'saved') return { status: 'saved', draft: op.draft };
+        if (op.write !== 'unknown') return { status: 'blocked' };
+        const readback = await this.read(op);
+        return readback === 'saved'
+            ? { status: 'saved', draft: op.draft }
+            : { status: 'blocked' };
+    }
+
     private savedResult(op: Operation, draft: ReviewSaveDraft): ReviewSaveResult | null {
         return op.write === 'saved' ? (sameDraft(op.draft, draft) ? 'saved' : 'saved-previous') : null;
     }
@@ -139,6 +175,14 @@ export class ReviewSaveOperation {
                 || data.restaurant_id !== op.draft.restaurantId || data.verification_photo !== verification
                 || !data.food_photos || data.food_photos.length !== food.length
                 || !data.food_photos.every((path, i) => path === food[i])) return 'blocked';
+            if (op.draft.ocrResultRef || op.draft.ocrResultRevision) {
+                const receiptData = data.receipt_data;
+                if (!op.draft.ocrResultRef || !op.draft.ocrResultRevision
+                    || !receiptData || typeof receiptData !== 'object' || Array.isArray(receiptData)
+                    || (receiptData as Record<string, unknown>).ocr_result_id !== op.draft.ocrResultRef
+                    || (receiptData as Record<string, unknown>).ocr_result_revision !== op.draft.ocrResultRevision
+                    || typeof data.ocr_processed_at !== 'string') return 'blocked';
+            }
             op.write = 'saved';
             return 'saved';
         } catch { return 'blocked'; }
@@ -203,6 +247,7 @@ export class ReviewSaveOperation {
         }
         if (this.cancelling) return 'cancelled';
         if (!op) {
+            if (draft.foodPhotos.length > REVIEW_FOOD_PHOTO_MAX_COUNT) return 'failed';
             op = {
                 id: this.deps.newId(),
                 draft: { ...draft, categories: [...draft.categories], foodPhotos: [...draft.foodPhotos] },

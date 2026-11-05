@@ -30,13 +30,13 @@ export const HOME_MAP_THEME_FILTERS = [
         id: 'hot-view',
         label: '조회수 폭발',
         ariaLabel: '조회수가 높은 쯔양 영상 맛집 필터',
-        description: '연결된 쯔양 영상 조회수가 현재 결과 상위권인 맛집',
+        description: '지역·카테고리 조건에 맞고 조회수 지표가 있는 맛집의 영상별 최대 조회수 상위 20% (올림, 경계 동률 포함)',
     },
     {
         id: 'comment-hot',
         label: '댓글 폭주',
         ariaLabel: '댓글 반응이 많은 쯔양 영상 맛집 필터',
-        description: '연결된 쯔양 영상 댓글 수가 현재 결과 상위권인 맛집',
+        description: '지역·카테고리 조건에 맞고 댓글 지표가 있는 맛집의 영상별 최대 댓글 수 상위 20% (올림, 경계 동률 포함)',
     },
     {
         id: 'fresh-video',
@@ -54,7 +54,7 @@ export const HOME_MAP_THEME_FILTERS = [
         id: 'fan-signal',
         label: '반응 찐함',
         ariaLabel: '조회수 대비 댓글 반응이 진한 쯔양 영상 맛집 필터',
-        description: '조회수 대비 댓글 밀도가 높은 영상의 맛집',
+        description: '맛집별 최대 조회수의 중앙값 이상인 영상 중 댓글/조회수 비율이 높은 맛집 상위 20% (올림, 경계 동률 포함)',
     },
 ] as const satisfies ReadonlyArray<HomeMapThemeFilter>;
 

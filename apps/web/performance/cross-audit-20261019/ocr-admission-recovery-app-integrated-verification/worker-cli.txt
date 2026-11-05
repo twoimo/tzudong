@@ -1,0 +1,20 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/ocr-live-verification-cli.test.ts:
+(pass) historical OCR configuration fails closed and records only safe resolved provenance [1.28ms]
+(pass) OCR CLI rejects a missing historical snapshot before reserving evidence or accessing the provider [21.43ms]
+(pass) both live CLIs reject incomplete, duplicate, unknown, and excess options before reading credentials [93.39ms]
+(pass) both live CLIs cannot write into the performance root or outside its evidence subdirectories [63.89ms]
+(pass) existing OCR and storyboard pending receipts remain byte-identical and block provider access [65.35ms]
+(pass) operator env must be an owner-only regular non-symlink file before provider modules load [33.00ms]
+(pass) storyboard refuses an earlier image before reservation or provider access [164.33ms]
+(pass) OCR metadata timeout records no generation admission or delivery uncertainty [0.20ms]
+(pass) OCR metadata rejection records no generation admission or delivery uncertainty [0.01ms]
+(pass) OCR metadata with the wrong model identity records no generation admission or delivery uncertainty [0.08ms]
+(pass) OCR generation failure is delivery-unknown only after the durable generation admission [0.11ms]
+(pass) OCR generation is not invoked when durable admission persistence fails [0.05ms]
+
+ 12 pass
+ 0 fail
+ 82 expect() calls
+Ran 12 tests across 1 file. [496.00ms]

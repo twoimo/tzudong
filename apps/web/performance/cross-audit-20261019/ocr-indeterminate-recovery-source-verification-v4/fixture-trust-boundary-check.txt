@@ -1,0 +1,2 @@
+main review content values: 2 values, both >= 10 characters
+other 108 fixtures: no public.reviews insert

@@ -1,0 +1,112 @@
+{
+  "schema": "tzudong.storyboard-runtime-source-binding-review/v1",
+  "append_only": true,
+  "events": [
+    {
+      "event_id": "STORYBOARD-RUNTIME-SOURCE-BINDING-P2-20261019-001",
+      "captured_at": "2026-10-19T00:09:31+0900",
+      "base_head": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+      "review_source": {
+        "thread": "PRRT_kwDOQGRyNc6tra7E",
+        "url": "https://github.com/twoimo/tzudong/pull/3215#discussion_r4307435742",
+        "classification": "P2"
+      },
+      "verdict": "accepted_resolved_local",
+      "finding": {
+        "counterexample": "production-store.ts imports production-assets.ts for image validation, hashing and storage preparation, while outbound-worker.ts imports resource-invariants.ts for worker memory admission. Neither imported execution gate was present in the build-time runtime compatibility source list, so either file could change without changing the source or canonical policy digest.",
+        "confirmed_import_edges": [
+          {
+            "importer": "apps/web/lib/admin/storyboard/production-store.ts",
+            "specifier": "./production-assets",
+            "resolved_path": "apps/web/lib/admin/storyboard/production-assets.ts"
+          },
+          {
+            "importer": "apps/web/lib/admin/storyboard/outbound-worker.ts",
+            "specifier": "./resource-invariants.ts",
+            "resolved_path": "apps/web/lib/admin/storyboard/resource-invariants.ts"
+          }
+        ]
+      },
+      "resolution": {
+        "source_path_count_before": 30,
+        "source_path_count_after": 32,
+        "added_paths": [
+          "apps/web/lib/admin/storyboard/production-assets.ts",
+          "apps/web/lib/admin/storyboard/resource-invariants.ts"
+        ],
+        "scope_rule": "Bind the two first-party transitive execution gates that directly control storyboard asset validation/storage and worker memory admission; do not recursively hash external packages or unrelated shared infrastructure.",
+        "runtime_source_binding_sha256_before": "954b5a7e2fbc5bffc048c612b95f2307d6f306190f92b725fb4955bf9a8eb451",
+        "runtime_source_binding_sha256_after": "aa170d446a9820e1f7bd195ad399a708a7ab036c99eb4c6c9f3618b111f4fde5",
+        "owned_diff_bytes_before_receipt": 3356,
+        "owned_diff_sha256_before_receipt": "8bfaa79c8668ec5c9af371c190caa80141997229d97ae9e7384ea592c0a89065"
+      },
+      "source_binding": {
+        "apps/web/lib/admin/storyboard/runtime-source-binding.ts": {
+          "bytes": 5275,
+          "sha256": "14ac1a175b3cc9fbd9df687ad46531b17a5cddd4d0cca30ff8e596cb29c9b8fa"
+        },
+        "apps/web/tests-unit/storyboard-runtime-source-binding.test.ts": {
+          "bytes": 7692,
+          "sha256": "cbc9b4920fded0f7d077dbdfdee0570df3f52603a2d008ae93b733cf1b6ce6ef"
+        },
+        "apps/web/lib/admin/storyboard/production-assets.ts": {
+          "bytes": 4234,
+          "sha256": "445f1a9395ba32772e216e8e7cb3e6a814d60fa6d795ba733959329a14913814"
+        },
+        "apps/web/lib/admin/storyboard/resource-invariants.ts": {
+          "bytes": 1666,
+          "sha256": "07ce62376457349d393de1ec99b12b6a7ad8bd2852e1a84b63533401799484e5"
+        }
+      },
+      "verification": [
+        {
+          "command": "/Users/twoimo/.bun/bin/bun test tests-unit/storyboard-runtime-source-binding.test.ts",
+          "cwd": "apps/web",
+          "status": "passed",
+          "tests": 7,
+          "failures": 0,
+          "expectations": 67
+        },
+        {
+          "command": "/Users/twoimo/.bun/bin/bun test tests-unit/storyboard-runtime-source-binding.test.ts tests-unit/admin-storyboard-policy-readback.test.ts tests-unit/public-storyboard-runtime-compatibility.test.ts tests-unit/storyboard-gemini-execution-contract.test.ts tests-unit/storyboard-retired-cli.test.ts tests-unit/storyboard-runtime-compatibility-observer.test.ts",
+          "cwd": "apps/web",
+          "status": "passed",
+          "tests": 36,
+          "failures": 0,
+          "expectations": 249
+        },
+        {
+          "command": "npm run typecheck:parity",
+          "cwd": "apps/web",
+          "status": "passed",
+          "diagnostics": 0,
+          "logical_inputs": 3350,
+          "logical_input_names_sha256": "1836c11b74ddc315ca7be1d256ed3738780e433fd513dd8a85e9ee4914e54924",
+          "non_library_content_sha256": "b2778e949aef27a6418bf1f307c1082102fbe0e536b1235d0edd25834f9076de"
+        },
+        {
+          "command": "git diff --check -- apps/web/lib/admin/storyboard/runtime-source-binding.ts apps/web/tests-unit/storyboard-runtime-source-binding.test.ts",
+          "status": "passed"
+        }
+      ],
+      "reconfirmation_conditions": [
+        "Because next.config.mjs injects the source binding at build time, a deployment built before this source change cannot establish the new digest.",
+        "After an authorized build and deployment, both https://tzudong.app/api/runtime-compatibility/storyboard and https://www.tzudong.app/api/runtime-compatibility/storyboard must independently read back the deployed commit and the canonical policy derived from source binding aa170d446a9820e1f7bd195ad399a708a7ab036c99eb4c6c9f3618b111f4fde5.",
+        "The authenticated storyboard-policy readback must return the same source list and digest before runtime compatibility is treated as confirmed.",
+        "Any later byte change to one of the 32 declared source paths requires a new build-time digest and fresh readback; this local receipt cannot be reused as deployment or field evidence.",
+        "Existing runtime compatibility evidence remains bound to its prior source digest and does not verify this change."
+      ],
+      "unchanged_contracts": [
+        "No storyboard provider, model, quota, memory reserve, image limit or runtime policy value changed.",
+        "No evidence manifest, SQL migration, migration pin, database, provider, OSK, coordinator or sealed report changed."
+      ],
+      "external_actions": {
+        "provider_calls": 0,
+        "database_calls": 0,
+        "research_dispatches": 0,
+        "coordinator_mutations": 0,
+        "git_mutations": 0
+      }
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { ArrowLeft, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { pageHeadingTitleClass, pageHeadingDescriptionClass } from "@/components/layout/page-heading-styles";
 
 export const mapPanelIconButtonClass =
   "h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary";
@@ -10,9 +11,9 @@ export const mapPanelIconButtonClass =
 export const pageHeaderIconButtonClass =
   "h-10 w-10 shrink-0 rounded-full bg-muted/45 shadow-none hover:bg-muted";
 export const pageHeaderTitleClass =
-  "flex min-w-0 items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl";
+  `flex items-center gap-2 ${pageHeadingTitleClass}`;
 export const pageHeaderDescriptionClass =
-  "mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm";
+  `mt-1 text-pretty ${pageHeadingDescriptionClass}`;
 
 export function MapPanelHeader({
   title,
@@ -28,6 +29,8 @@ export function MapPanelHeader({
   titleAs: TitleTag = "h2",
   variant = "panel",
   titleAddon,
+  eyebrow,
+  wrapTitle = false,
   children,
 }: {
   title: string;
@@ -41,21 +44,27 @@ export function MapPanelHeader({
   closeLabel?: string;
   closeAction?: "close" | "back";
   titleAs?: "h1" | "h2";
-  variant?: "panel" | "page";
+  variant?: "panel" | "page" | "sheet";
   titleAddon?: ReactNode;
+  eyebrow?: string;
+  wrapTitle?: boolean;
   children?: ReactNode;
 }) {
   const isPage = variant === "page";
+  const isSheet = variant === "sheet";
+  const hasSheetActions = isSheet && Boolean(actions);
+  const actionsInHeader = isPage || isSheet;
   return (
     <header className={cn("min-h-14 shrink-0 border-b border-border bg-background px-3 py-3", isPage && "sm:px-5 sm:py-4")} data-layout-primitives="stack" data-map-panel-header="true" data-header-variant={variant}>
-      <div className={isPage ? "flex flex-wrap items-start justify-between gap-3" : "flex min-h-8 items-center gap-2"}>
-        <div className={cn("min-w-0 flex-1", isPage && "basis-[min(11rem,100%)]")}>
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      <div className={cn(isPage ? "flex flex-wrap items-start justify-between gap-3" : "flex min-h-8 items-center gap-2", isSheet && "items-start", hasSheetActions && "flex-wrap min-[360px]:flex-nowrap")}>
+        <div className={cn("min-w-0 flex-1", isPage && "basis-[min(11rem,100%)]", isSheet && "flex min-h-11 flex-col justify-center", hasSheetActions && "order-last basis-full min-[360px]:order-none min-[360px]:basis-auto")}>
+          {eyebrow ? <p className="mb-0.5 text-2xs font-bold tracking-wide text-brand-garden-text xs:text-xs">{eyebrow}</p> : null}
+          <div className={cn("flex min-w-0 items-center gap-x-2", isPage ? "flex-wrap gap-y-1" : "flex-nowrap")}>
             <TitleTag id={titleId} className={isPage ? pageHeaderTitleClass : "flex min-w-0 items-center gap-2 text-sm font-semibold leading-5 text-foreground"}>
-              {titleIcon ? <span className={cn("shrink-0 text-primary", isPage ? "[&_svg]:size-5 sm:[&_svg]:size-6" : "[&_svg]:size-4")} aria-hidden="true">{titleIcon}</span> : null}
-              <span className="min-w-0 truncate" title={title}>{title}</span>
+              {titleIcon ? <span className={cn("shrink-0", isPage ? "text-brand-tangerine-ink" : "text-primary", isPage ? "[&_svg]:size-5 sm:[&_svg]:size-6" : "[&_svg]:size-4")} aria-hidden="true">{titleIcon}</span> : null}
+              <span className={cn("min-w-0", wrapTitle ? "whitespace-normal break-words [overflow-wrap:anywhere]" : "truncate")} title={title}>{title}</span>
               {!isPage && typeof count === "number" ? (
-                <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium leading-4 tabular-nums text-primary" aria-label={`${count.toLocaleString()}${countUnit}`}>
+                <span className="shrink-0 rounded-full bg-brand-cream px-2 py-0.5 text-[11px] font-bold leading-4 tabular-nums text-foreground" aria-label={`${count.toLocaleString()}${countUnit}`}>
                   {count.toLocaleString()}{countUnit}
                 </span>
               ) : null}
@@ -63,14 +72,19 @@ export function MapPanelHeader({
             {isPage && typeof count === "number" ? (
               <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">({count.toLocaleString()}{countUnit})</span>
             ) : null}
-            {titleAddon}
+            {isPage ? titleAddon : null}
           </div>
           {description ? (
-            <p className={isPage ? pageHeaderDescriptionClass : "mt-1 truncate text-xs leading-4 text-muted-foreground"}>{description}</p>
+            <p className={isPage ? pageHeaderDescriptionClass : "mt-1 text-pretty text-xs leading-4 text-muted-foreground"}>{description}</p>
           ) : null}
         </div>
-        <div className={cn("flex shrink-0 items-center gap-1.5", isPage && "ml-auto sm:gap-2")}>
-          {actions}
+        <div
+          className={cn("flex shrink-0 flex-nowrap items-center gap-1.5", isPage && "ml-auto sm:gap-2", isSheet && "[&>button]:h-11 [&>button]:w-11", hasSheetActions && "order-first ml-auto min-[360px]:order-none min-[360px]:ml-0")}
+          role={isSheet ? "group" : undefined}
+          aria-label={isSheet ? "패널 동작" : undefined}
+          data-map-panel-actions="true"
+        >
+          {actionsInHeader ? actions : null}
           {onClose ? (
             <Button
               type="button"
@@ -85,6 +99,12 @@ export function MapPanelHeader({
           ) : null}
         </div>
       </div>
+      {!isPage && (titleAddon || (!isSheet && actions)) ? (
+        <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2" data-map-panel-toolbar="true">
+          {titleAddon ? <div className="flex min-w-0 flex-wrap items-center gap-1">{titleAddon}</div> : null}
+          {!isSheet && actions ? <div className="ml-auto flex flex-wrap items-center gap-1.5">{actions}</div> : null}
+        </div>
+      ) : null}
       {children}
     </header>
   );

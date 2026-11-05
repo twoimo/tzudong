@@ -1,0 +1,16 @@
+{
+  "id": "tzudong-github-ci",
+  "kind": "heartbeat",
+  "name": "Tzudong GitHub CI 성능 감시",
+  "status": "ACTIVE",
+  "rrule": "FREQ=HOURLY;INTERVAL=6",
+  "target_thread_id": "01a0f860-10d0-71b0-bb2a-95c2b52e025e",
+  "created_at": 1791705521043,
+  "updated_at": 1791714319477,
+  "promptSha256": "0e39865b302d763889468255faac4cbed838a17a843bc9a9222e9827b5091ba4",
+  "goalStateUnchanged": true,
+  "monitorScope": "read_only_ci",
+  "stateVersion": "v3",
+  "firstManualTickVerified": true,
+  "futureScheduledTickVerified": false
+}

@@ -136,6 +136,8 @@ function admission() {
     ([key, state], index) => [key, { evidenceSha256: (index + 8).toString(16).repeat(64), state }],
   ));
   return {
+    applyEvidenceMapSha256: '6'.repeat(64),
+    applyQuiescenceReadbackSha256: '7'.repeat(64),
     attemptId: '123e4567-e89b-42d3-a456-426614174000',
     createdAt: '2026-10-12T07:59:00.000Z',
     expiresAt: '2026-10-12T08:10:00.000Z',
@@ -264,8 +266,123 @@ function custodyFiles(document = admission()) {
   for (const [key, state] of Object.entries(manifest.requiredWriterFences)) {
     const name = `writer-fence-${key}.json`;
     receipts[name] = { ...common, fence: key, kind: 'writer-fence-readback-receipt', state };
-    document.writerFences[key].evidenceSha256 = sha256(canonicalBytes(receipts[name]));
   }
+  const attestation = {
+    assertedAt: document.createdAt,
+    authority: 'authenticated-repository-owner-workflow-dispatch',
+    basis: 'standing-custody-confirmation-bound-by-owner-dispatch',
+    event: 'workflow_dispatch',
+    fences: {
+      browserRpc: 'stopped', dashboard: 'stopped', directSql: 'stopped', providerIngress: 'stopped',
+    },
+    kind: 'review-media-successor-operator-custody-attestation',
+    noticeState: 'not-issued',
+    operatorRole: 'repository-owner',
+    repository: 'twoimo/tzudong',
+    runAttempt: '1',
+    runId: '42',
+    schemaVersion: 1,
+    scope: 'stopped-until-application-result',
+    sourceRevision: document.sourceRevision,
+    workflowRef: 'twoimo/tzudong/.github/workflows/review-media-sql-successor.yml@refs/heads/main',
+  };
+  const bundle = {
+    adminRecordMutationsHold: {
+      commit: document.sourceRevision,
+      deploymentId: document.rollback.deploymentId,
+      holdActive: true,
+      observedAt: document.createdAt,
+    },
+    createdAt: document.createdAt,
+    expiresAt: document.expiresAt,
+    kind: 'review-media-successor-vercel-operating-bundle',
+    manifestSha256: document.manifestSha256,
+    protectedMain: {},
+    rollbackPolicy: {},
+    rollbackReadback: {
+      deploymentId: document.rollback.deploymentId,
+      gitSha: document.rollback.deploymentSha,
+    },
+    schemaVersion: 1,
+    sourceRevision: document.sourceRevision,
+    sourceRoot: document.sourceRoot,
+    storyboardPolicy: {
+      deployment: {
+        branch: 'main',
+        deploymentId: document.rollback.deploymentId,
+        sourceCommit: document.sourceRevision,
+      },
+      policy: { canonicalPolicySha256: 'c'.repeat(64) },
+      schemaVersion: 1,
+    },
+  };
+  const inFlightQuiescence = {
+    coverage: [
+      'pipeline_control.admin_record_media_cleanup',
+      'pipeline_control.admin_record_operations',
+      'public.reviews',
+      'storage.objects',
+    ],
+    inFlightWriters: 0,
+    lockMode: 'SHARE',
+    observedAt: document.createdAt,
+  };
+  const machine = {
+    adminRuntimeHold: {
+      deploymentId: document.rollback.deploymentId,
+      holdActive: true,
+      observedAt: document.createdAt,
+    },
+    automaticReviewer: { observedAt: document.createdAt, state: 'stopped' },
+    g037WriteFreeze: { observedAt: document.createdAt, state: 'active' },
+    inFlightQuiescence,
+    kind: 'review-media-successor-machine-operating-observations',
+    schemaVersion: 1,
+    sourceRevision: document.sourceRevision,
+  };
+  const quiescence = {
+    ...common,
+    ...inFlightQuiescence,
+    kind: 'apply-in-flight-quiescence-readback',
+  };
+  receipts['operator-custody-attestation.json'] = attestation;
+  receipts['vercel-operating-bundle.json'] = bundle;
+  receipts['apply-machine-operating-observations.json'] = machine;
+  receipts['apply-quiescence-readback.json'] = quiescence;
+  const attestationSha256 = sha256(canonicalBytes(attestation));
+  const bundleSha256 = sha256(canonicalBytes(bundle));
+  const machineSha256 = sha256(canonicalBytes(machine));
+  const receiptProvenance: Record<string, any> = {};
+  for (const [key, state] of Object.entries(manifest.requiredWriterFences)) {
+    const name = `apply-writer-fence-${key}.json`;
+    const operator = ['browserRpc', 'dashboard', 'directSql', 'providerIngress'].includes(key);
+    receipts[name] = { ...common, fence: key, kind: 'writer-fence-readback-receipt', state };
+    document.writerFences[key].evidenceSha256 = sha256(canonicalBytes(receipts[name]));
+    receiptProvenance[key] = {
+      evidenceSha256: operator
+        ? attestationSha256
+        : key === 'adminRecordMutationsHold' ? bundleSha256 : machineSha256,
+      provenance: operator
+        ? 'authenticated-owner-custody-commitment'
+        : key === 'adminRecordMutationsHold'
+          ? 'immutable-deployment-machine-observation'
+          : 'fresh-machine-observation',
+      receiptSha256: document.writerFences[key].evidenceSha256,
+    };
+  }
+  const evidenceMap = {
+    attestationSha256,
+    bundleSha256,
+    kind: 'review-media-successor-apply-operating-evidence-map',
+    machineSha256,
+    quiescenceSha256: sha256(canonicalBytes(quiescence)),
+    receiptProvenance,
+    schemaVersion: 1,
+    sourceRevision: document.sourceRevision,
+  };
+  receipts['apply-operating-evidence-map.json'] = evidenceMap;
+  document.applyEvidenceMapSha256 = sha256(canonicalBytes(evidenceMap));
+  document.applyQuiescenceReadbackSha256 = evidenceMap.quiescenceSha256;
   const storedRehearsalAdmission = {
     ...rehearsalAdmission(),
     attemptId: rehearsalAttemptId,
@@ -304,6 +421,35 @@ function custodyFiles(document = admission()) {
   return { admissionPath, directory, document, journalPath, rehearsalJournalPath };
 }
 
+function rehashApplyOperatingEvidence(files: ReturnType<typeof custodyFiles>) {
+  const attestationBytes = readFileSync(join(files.directory, 'operator-custody-attestation.json'));
+  const bundleBytes = readFileSync(join(files.directory, 'vercel-operating-bundle.json'));
+  const machineBytes = readFileSync(join(files.directory, 'apply-machine-operating-observations.json'));
+  const quiescenceBytes = readFileSync(join(files.directory, 'apply-quiescence-readback.json'));
+  const mapPath = join(files.directory, 'apply-operating-evidence-map.json');
+  const map = JSON.parse(readFileSync(mapPath, 'utf8'));
+  map.attestationSha256 = sha256(attestationBytes);
+  map.bundleSha256 = sha256(bundleBytes);
+  map.machineSha256 = sha256(machineBytes);
+  map.quiescenceSha256 = sha256(quiescenceBytes);
+  for (const key of Object.keys(manifest.requiredWriterFences)) {
+    const receiptBytes = readFileSync(join(files.directory, `apply-writer-fence-${key}.json`));
+    files.document.writerFences[key].evidenceSha256 = sha256(receiptBytes);
+    map.receiptProvenance[key].receiptSha256 = sha256(receiptBytes);
+    map.receiptProvenance[key].evidenceSha256 = [
+      'browserRpc', 'dashboard', 'directSql', 'providerIngress',
+    ].includes(key)
+      ? map.attestationSha256
+      : key === 'adminRecordMutationsHold'
+        ? map.bundleSha256
+        : map.machineSha256;
+  }
+  const mapBytes = canonicalBytes(map);
+  writeFileSync(mapPath, mapBytes, { mode: 0o600 });
+  files.document.applyEvidenceMapSha256 = sha256(mapBytes);
+  files.document.applyQuiescenceReadbackSha256 = sha256(quiescenceBytes);
+}
+
 function rewriteRehearsalTimeline(files: ReturnType<typeof custodyFiles>, {
   expiresAt = files.document.expiresAt,
   observedAt,
@@ -334,6 +480,30 @@ function rewriteRehearsalTimeline(files: ReturnType<typeof custodyFiles>, {
   const journalBytes = Buffer.from(`${journal.map(entry => JSON.stringify(canonical(entry))).join('\n')}\n`);
   writeFileSync(files.rehearsalJournalPath, journalBytes, { mode: 0o600 });
   files.document.rehearsalJournalSha256 = sha256(journalBytes);
+
+  const freshObservedAt = new Date(Date.parse(publishedAt) + 1_000).toISOString();
+  const machinePath = join(files.directory, 'apply-machine-operating-observations.json');
+  const machine = JSON.parse(readFileSync(machinePath, 'utf8'));
+  machine.automaticReviewer.observedAt = freshObservedAt;
+  machine.g037WriteFreeze.observedAt = freshObservedAt;
+  machine.inFlightQuiescence.observedAt = freshObservedAt;
+  const machineBytes = canonicalBytes(machine);
+  writeFileSync(machinePath, machineBytes, { mode: 0o600 });
+
+  const quiescencePath = join(files.directory, 'apply-quiescence-readback.json');
+  const quiescence = JSON.parse(readFileSync(quiescencePath, 'utf8'));
+  quiescence.observedAt = freshObservedAt;
+  const quiescenceBytes = canonicalBytes(quiescence);
+  writeFileSync(quiescencePath, quiescenceBytes, { mode: 0o600 });
+
+  for (const key of ['automaticReviewer', 'g037WriteFreeze']) {
+    const fencePath = join(files.directory, `apply-writer-fence-${key}.json`);
+    const fence = JSON.parse(readFileSync(fencePath, 'utf8'));
+    fence.observedAt = freshObservedAt;
+    const fenceBytes = canonicalBytes(fence);
+    writeFileSync(fencePath, fenceBytes, { mode: 0o600 });
+  }
+  rehashApplyOperatingEvidence(files);
 }
 
 function rebindRehearsalEvidence(files: ReturnType<typeof custodyFiles>, stored: any) {
@@ -572,6 +742,21 @@ test('apply accepts rehearsal evidence completed after thirty seconds within its
     verifiedAt: '2026-10-12T08:08:05.000Z',
     publishedAt: '2026-10-12T08:08:10.000Z',
   });
+  const rehearsalAdmissionDocument = JSON.parse(readFileSync(
+    join(files.directory, 'rehearsal-admission.json'),
+    'utf8',
+  ));
+  for (const key of [
+    'adminRecordMutationsHold', 'browserRpc', 'dashboard', 'directSql', 'providerIngress',
+  ]) {
+    expect(files.document.writerFences[key]).toEqual(rehearsalAdmissionDocument.writerFences[key]);
+  }
+  for (const key of ['automaticReviewer', 'g037WriteFreeze']) {
+    expect(files.document.writerFences[key].state)
+      .toBe(rehearsalAdmissionDocument.writerFences[key].state);
+    expect(files.document.writerFences[key].evidenceSha256)
+      .not.toBe(rehearsalAdmissionDocument.writerFences[key].evidenceSha256);
+  }
   expect(validateSuccessorAdmission(files.document, executableRecord, {
     now: new Date('2026-10-12T08:09:00.000Z'),
     receiptDirectory: files.directory,
@@ -596,6 +781,93 @@ test('apply rejects rehearsal evidence outside the original fifteen-minute lease
     now: new Date('2026-10-12T08:09:00.000Z'),
     receiptDirectory: files.directory,
   })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+});
+
+test('apply rejects machine evidence observed before rehearsal publication even when rehashed', () => {
+  const files = custodyFiles();
+  const staleObservedAt = new Date(Date.parse(files.document.createdAt) - 31_000).toISOString();
+  const machinePath = join(files.directory, 'apply-machine-operating-observations.json');
+  const machine = JSON.parse(readFileSync(machinePath, 'utf8'));
+  machine.automaticReviewer.observedAt = staleObservedAt;
+  machine.g037WriteFreeze.observedAt = staleObservedAt;
+  machine.inFlightQuiescence.observedAt = staleObservedAt;
+  writeFileSync(machinePath, canonicalBytes(machine), { mode: 0o600 });
+  const quiescencePath = join(files.directory, 'apply-quiescence-readback.json');
+  const quiescence = JSON.parse(readFileSync(quiescencePath, 'utf8'));
+  quiescence.observedAt = staleObservedAt;
+  writeFileSync(quiescencePath, canonicalBytes(quiescence), { mode: 0o600 });
+  for (const key of ['automaticReviewer', 'g037WriteFreeze']) {
+    const path = join(files.directory, `apply-writer-fence-${key}.json`);
+    const receipt = JSON.parse(readFileSync(path, 'utf8'));
+    receipt.observedAt = staleObservedAt;
+    writeFileSync(path, canonicalBytes(receipt), { mode: 0o600 });
+  }
+  rehashApplyOperatingEvidence(files);
+  expect(() => validateSuccessorAdmission(files.document, executableRecord, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+});
+
+test('apply rejects a changed deployment in fresh machine evidence even when rehashed', () => {
+  const files = custodyFiles();
+  const machinePath = join(files.directory, 'apply-machine-operating-observations.json');
+  const machine = JSON.parse(readFileSync(machinePath, 'utf8'));
+  machine.adminRuntimeHold.deploymentId = 'dpl_ChangedDuringRehearsal123';
+  writeFileSync(machinePath, canonicalBytes(machine), { mode: 0o600 });
+  rehashApplyOperatingEvidence(files);
+  expect(() => validateSuccessorAdmission(files.document, executableRecord, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+});
+
+test('apply rejects a rehashed storyboard runtime deployment mismatch', () => {
+  const files = custodyFiles();
+  const bundlePath = join(files.directory, 'vercel-operating-bundle.json');
+  const bundle = JSON.parse(readFileSync(bundlePath, 'utf8'));
+  bundle.storyboardPolicy.deployment.deploymentId = 'dpl_ChangedStoryboardRuntime123';
+  writeFileSync(bundlePath, canonicalBytes(bundle), { mode: 0o600 });
+  rehashApplyOperatingEvidence(files);
+  expect(() => validateSuccessorAdmission(files.document, executableRecord, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+});
+
+test('apply rejects a fence timestamp relabeled as fresh when its machine provenance is older', () => {
+  const files = custodyFiles();
+  const path = join(files.directory, 'apply-writer-fence-automaticReviewer.json');
+  const receipt = JSON.parse(readFileSync(path, 'utf8'));
+  receipt.observedAt = new Date(Date.parse(receipt.observedAt) + 1_000).toISOString();
+  writeFileSync(path, canonicalBytes(receipt), { mode: 0o600 });
+  rehashApplyOperatingEvidence(files);
+  expect(() => validateSuccessorAdmission(files.document, executableRecord, {
+    now: fixedNow,
+    receiptDirectory: files.directory,
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+});
+
+test('apply rejects a post-admission fence receipt tamper before database transport', () => {
+  const files = custodyFiles();
+  const path = join(files.directory, 'apply-writer-fence-automaticReviewer.json');
+  const receipt = JSON.parse(readFileSync(path, 'utf8'));
+  receipt.observedAt = new Date(Date.parse(receipt.observedAt) + 1).toISOString();
+  writeFileSync(path, canonicalBytes(receipt), { mode: 0o600 });
+  let transports = 0;
+  expect(() => runReviewMediaSuccessor({
+    admissionPath: files.admissionPath,
+    journalPath: files.journalPath,
+    environment: { SUPABASE_DB_URL: databaseUrl },
+  }, {
+    now: () => fixedNow,
+    gitFactsImpl: () => ({ clean: true, detached: true, revision }),
+    loadManifestImpl: () => executableRecord,
+    protectedMainReadbackImpl: () => protectedSourceReadbackBinding(manifest, revision),
+    rollbackReadbackImpl: () => rollbackReadback(),
+    runPsqlImpl: () => { transports += 1; return '{}'; },
+  })).toThrow('SUCCESSOR_ADMISSION_INVALID');
+  expect(transports).toBe(0);
 });
 
 test('actual psql runner with a spy transport preserves the post-lock expiry code', () => {

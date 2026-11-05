@@ -1,0 +1,221 @@
+{
+  "schema": "tzudong-ocr-credential-admission-source-adjudication-followup/v1",
+  "capturedAt": "2026-10-19T03:45:02+0900",
+  "reviewMode": "read_only_concurrent_evidence_followup",
+  "predecessorMatrix": {
+    "path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix.json",
+    "sha256": "7a1a8fd3c086e72f648eaefa703844b140648a65d9648e2701d3007a3405815b",
+    "preservedUnmodified": true
+  },
+  "scope": {
+    "included": [
+      "close or retain only the prior real-helper durable composition gate",
+      "correct the operating-apply status of migration 106",
+      "refine the minimum operational comparison between amending held 106 and adding forward 107",
+      "state source-grounded 105-to-106-to-107 atomic admission and old-getter bypass conditions"
+    ],
+    "excluded": [
+      "re-adjudication of the frozen GPT report",
+      "application or SQL implementation",
+      "test execution",
+      "Git or database operations",
+      "browser,provider or external research operations"
+    ],
+    "supplementalOnly": true,
+    "replacesOriginalThesisGeminiReverseGate": false
+  },
+  "newEvidence": {
+    "resolution": {
+      "path": "apps/web/performance/cross-audit-20261019/ocr-durable-composition-followup/resolution.json",
+      "bytes": 5637,
+      "sha256": "87f0c20c273911e2a6d9b61ff509c6feb1e6ed03318e93e604e839a4b40b2ad5",
+      "receiptId": "OCR-DURABLE-MIXED-HISTORY-COMPOSITION-REGRESSION-20261019"
+    },
+    "currentTestSource": {
+      "path": "apps/web/tests-unit/durable-receipt-ocr.test.ts",
+      "bytes": 54331,
+      "sha256": "17d21c2ff3e9f43cdcb9247a2be4f80e8b582eaff14ded428935d674614b8e76"
+    },
+    "fixedHelper": {
+      "path": "apps/web/lib/ocr/gemini.ts",
+      "sha256": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef"
+    },
+    "operatingStatus": {
+      "path": "docs/operations/review-recovery-20261019.md",
+      "sha256": "76bf468f5668a42379f2b149decf2c792b0c0c8d06e5ab794b77601ce0994af5",
+      "relevantSection": "Delivery conditions",
+      "statement": "Existing applied migrations and 89-to-100-to-105 manifests are preserved; the credential-release successor 106 is held_unapplied, source-only and not connected to the operating runner."
+    }
+  },
+  "decisionUpdates": [
+    {
+      "id": "OCR-SUP-FOLLOWUP-APP-001",
+      "supersedesFindingId": "OCR-SUP-D1-005",
+      "priorDecision": "CONDITIONAL_OPEN_TEST_GAP",
+      "decision": "ACCEPT_RESOLVED_AT_APPLICATION_COMPOSITION_BOUNDARY",
+      "sourceEvidence": [
+        {
+          "path": "apps/web/tests-unit/durable-receipt-ocr.test.ts",
+          "lineRanges": ["16-20", "210-253", "581-619"],
+          "observation": "The no-payload case composes the real callGeminiReceiptOcrWithCredentialFallback helper with executeDurableReceiptOcr, observes exactly model-a and model-b on the first credential, zero release calls, one markIndeterminate call and public indeterminate readback."
+        },
+        {
+          "path": "apps/web/tests-unit/durable-receipt-ocr.test.ts",
+          "lineRanges": ["621-688"],
+          "observation": "The force-refresh case composes the same helper, observes zero release calls and one markIndeterminate call, preserves resultRef,payload,revision and proves the subsequent forced retry reuses the uncertain result with zero provider calls."
+        }
+      ],
+      "receiptEvidence": {
+        "directComposition": "2 pass,0 fail,12 assertions",
+        "fullDurable": "34 pass,0 fail,207 assertions",
+        "realProviderCalls": 0,
+        "databaseCalls": 0
+      },
+      "adjudication": "The exact discriminating application regression requested by report lines 301-328 now exists. The provider-helper classification is joined to durable method dispatch and observable fakeStore state for both no-payload and force-refresh cases.",
+      "evidenceBoundary": "This closes only the local application composition gap. fakeStore readback does not re-prove PostgreSQL row state, exact-token RPC idempotency, ACL admission or SQL race behavior; those remain separate SQL/PG evidence classes.",
+      "remainingCondition": "Preserve both composition tests and their source hashes in any later helper or durable-state change."
+    },
+    {
+      "id": "OCR-SUP-FOLLOWUP-STATUS-001",
+      "correctsFindingId": "OCR-SUP-D2-006",
+      "decision": "CORRECT_OPERATING_STATUS",
+      "incorrectInferenceRejected": "There is no evidence that migration 106 has been applied to the operating database, and this follow-up does not classify it as applied.",
+      "actualLineage": {
+        "operatingApplied": {
+          "transition": "89-to-100-to-105",
+          "terminalLedgerCount": 105,
+          "classification": "existing applied migration and manifest lineage"
+        },
+        "credentialRelease106": {
+          "operatingApplyCount": 0,
+          "status": "held_unapplied",
+          "connectedToOperatingRunner": false,
+          "evidence": [
+            "local source and compiler pins",
+            "local PG17.6 constituent,aggregate and role-qualified fixture evidence",
+            "PG15 deterministic source-only replay evidence"
+          ],
+          "notEvidenceOf": [
+            "hosted apply",
+            "operating ledger 106",
+            "deployment",
+            "hosted capability ready"
+          ]
+        }
+      },
+      "correctedReasonFor107": "The recommendation for a forward 107 is based on preserving already frozen and published 106 source,manifest,compiler,PG15 and PG17 pins while closing admission before the first operating apply. It is not remediation of an actually applied 106."
+    },
+    {
+      "id": "OCR-SUP-FOLLOWUP-STRUCTURE-001",
+      "decision": "RECOMMEND_FORWARD_107_FOR_CUSTODY_AND_ATOMIC_FIRST_APPLY",
+      "candidateComparison": {
+        "amendHeld106": {
+          "operatingPrecondition": "Technically possible because operating apply count is zero.",
+          "invalidStateBehavior": "A canonical allowlist assertion can abort the 105-to-106 transaction before a seal or ledger transition. The operating database remains at applied 105.",
+          "atomicity": "Smallest code shape: one revised 105-to-106 outer transaction can create objects, check initial ACL,insert ledger106 and seal ready atomically.",
+          "custodyImpact": "Changes the frozen raw migration hash,statement vector,manifest,compiler,PG15 adapter pin and all PG17 source-bound receipts. Existing published 106 evidence must remain historical and a complete new source freeze must replace it.",
+          "verificationCost": "Rebuild every 106 compiler/unit/SQL fixture,PG15 dual-clean,PG17 constituent/aggregate/role proof and later hosted admission evidence.",
+          "decision": "NOT_RECOMMENDED_DESPITE_OPERATING_APPLY_ZERO"
+        },
+        "forward107": {
+          "operatingPrecondition": "Start from the actually applied terminal 105 and keep 106 as the frozen first step of one not-yet-executed closure.",
+          "invalidStateBehavior": "The updated app accepts only the new v2 capability. Missing,rolled-back,unsealed or ACL-invalid 107 is held before claim,quota or provider work; v1 cannot be accepted as fallback.",
+          "atomicity": "Compile 106 and 107 migrations,ledger rows and final v2 seal into one outer 105-to-107 transaction. Do not commit 106 ready in a separate operating action. Any failure rolls the whole closure back to applied 105.",
+          "custodyImpact": "Preserves every 106 byte and historical receipt. Adds independently pinned 107 migration,manifest/compiler,app capability version,fixtures and PG15 source-only adapter.",
+          "verificationCost": "Incremental 107 unit,SQL,PG15,PG17 and hosted gates. More new code than revising 106, but no invalidation or relabeling of existing 106 evidence.",
+          "decision": "RECOMMENDED"
+        }
+      }
+    },
+    {
+      "id": "OCR-SUP-FOLLOWUP-ADMISSION-001",
+      "decision": "CONDITIONAL_SOURCE_CONTRACT_FOR_107",
+      "requiredConditions": [
+        {
+          "id": "OCR107-ADMIT-001",
+          "condition": "A new versioned capability response must be required by every application caller. The existing durable preflight's exact schema,status,capability_version check must reject v1,missing,malformed or held responses before claim,quota or provider work."
+        },
+        {
+          "id": "OCR107-ADMIT-002",
+          "condition": "The only operating plan must compile applied105 through raw106 and raw107,insert both ledger identities,and seal the final v2 contract in one outer transaction. The existing standalone 105-to-106 operating plan must remain disconnected or held and must not be an alternate apply path."
+        },
+        {
+          "id": "OCR107-ADMIT-003",
+          "condition": "107 must replace the private capability getter reached by the existing public wrapper or replace both under exact owner and ACL control. It must not leave an executable old v1 getter alias or an application code path that accepts v1. service_role remains limited to the guarded public wrapper."
+        },
+        {
+          "id": "OCR107-ADMIT-004",
+          "condition": "Before final seal and on every getter readback,all four functions and two tables must satisfy the exact canonical owner and normalized explicit ACL allowlist independently of sealed equality. Any extra grantee,privilege or grant option keeps v2 held."
+        },
+        {
+          "id": "OCR107-ADMIT-005",
+          "condition": "The 107 compiler must bind exact raw bytes,statement vector,ledger count/root and final v2 catalog identity. It may return ready only after the allowlist,existing definition/RLS/policy checks and terminal 107 ledger all match."
+        },
+        {
+          "id": "OCR107-ADMIT-006",
+          "condition": "PG15 source-only replay receives a new separately pinned 107 adapter or combined exact 106-to-107 fixture. It must continue to reject a real ledger and must never be described as operating or hosted readiness. The existing 106 adapter hash stays unchanged."
+        },
+        {
+          "id": "OCR107-ADMIT-007",
+          "condition": "Negative fixtures must prove actual initial aclitems for privacy_workflow_owner-created wrappers,postgres-created private helpers and postgres-created private tables. A deliberately bad ACL that equals the sealed snapshot must still produce v2 held,with default ACL,owner,membership and object ACL restoration verified."
+        }
+      ],
+      "minimumReadbacks": [
+        "prior operating ledger remains exact applied105 before execution",
+        "single outer transaction contains both 106 and 107 ledger transitions",
+        "no external session can observe committed v1-ready 106 between them",
+        "terminal ledger count/root and exact 107 statement vector match the new manifest",
+        "the public capability response is exactly v2 ready only at terminal state",
+        "v1 response,old getter alias,extra explicit ACL and owner drift each fail closed",
+        "application preflight stops before claim,quota and provider for every non-v2 state"
+      ],
+      "hostedBoundary": "No 106 or 107 operating apply/readback exists yet. Hosted admission remains unverified until the authorized first 105-to-107 closure and independent readback complete."
+    }
+  ],
+  "updatedOverallDecisions": {
+    "currentApplicationDecision": "ACCEPT_RESOLVED_IN_LOCAL_SOURCE_AND_APPLICATION_COMPOSITION_TESTS",
+    "applicationSqlPatchRequired": false,
+    "currentAclDecision": "OPEN_REQUIRES_VERSIONED_FORWARD_ADMISSION",
+    "migration106OperatingStatus": "HELD_UNAPPLIED_OPERATING_APPLY_ZERO",
+    "recommendedDatabaseStructure": "ATOMIC_105_TO_106_TO_107_FORWARD_CLOSURE_WITH_V2_FAIL_CLOSED_CAPABILITY",
+    "hosted": "UNVERIFIED",
+    "mandatoryGeminiAndFinalReverse": "REQUIRED_SEPARATE"
+  },
+  "remainingGates": [
+    {
+      "id": "OCR-GATE-APP-001",
+      "status": "closed_local_application_composition",
+      "evidence": "resolution 87f0c20c... and durable test source 17d21c2f..."
+    },
+    {
+      "id": "OCR-GATE-ACL-001",
+      "status": "open",
+      "condition": "Implement and verify the versioned forward 107 admission contract."
+    },
+    {
+      "id": "OCR-GATE-HOSTED-001",
+      "status": "unverified",
+      "condition": "Authorized atomic 105-to-107 operating apply and terminal ledger/catalog/capability/app readback."
+    },
+    {
+      "id": "OCR-GATE-CROSS-AUDIT-001",
+      "status": "required_separate",
+      "condition": "The supplemental GPT report and these local matrices do not replace Gemini adversarial research or final GPT reverse verification."
+    }
+  ],
+  "reviewerEffects": {
+    "predecessorMatrixModified": false,
+    "sourceEdits": 0,
+    "sqlEdits": 0,
+    "testEdits": 0,
+    "testsExecuted": 0,
+    "gitOperations": 0,
+    "databaseOperations": 0,
+    "browserOperations": 0,
+    "externalOperations": 0,
+    "ownedOutputs": [
+      "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix-followup.json",
+      "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix-followup.json.sha256"
+    ]
+  }
+}

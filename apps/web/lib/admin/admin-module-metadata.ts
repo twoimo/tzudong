@@ -1,4 +1,8 @@
-import type { AdminConsoleRouteModuleId } from "@/lib/admin/admin-module-routing";
+import {
+  getAdminModuleIdFromSearchParams,
+  type AdminConsoleRouteModuleId,
+} from "@/lib/admin/admin-module-routing";
+import { buildNoIndexMetadata, buildScopedBrowserTitle } from "@/lib/seo";
 
 export const ADMIN_MODULE_TITLES = {
   overview: "대시보드 (KPI)",
@@ -21,4 +25,19 @@ export const ADMIN_MODULE_TITLES = {
 
 export function getAdminModuleTitle(moduleId: AdminConsoleRouteModuleId): string {
   return ADMIN_MODULE_TITLES[moduleId];
+}
+
+export function getAdminPageMetadata(
+  query: Record<string, string | string[] | undefined>,
+) {
+  const moduleId = getAdminModuleIdFromSearchParams({
+    get(key) {
+      const value = query[key];
+      return (Array.isArray(value) ? value[0] : value) ?? null;
+    },
+  });
+
+  return buildNoIndexMetadata({
+    title: buildScopedBrowserTitle([getAdminModuleTitle(moduleId), "관리자 콘솔"]),
+  });
 }

@@ -6,6 +6,7 @@ import NextImage from "next/image";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { changeBrowserAccountPassword } from "@/lib/auth/isolated-browser-account";
 import {
   Card,
   CardContent,
@@ -13,6 +14,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { LegacyDraftRecovery } from '@/components/mypage/LegacyDraftRecovery';
+import { captureBrowserDraftEpoch } from '@/lib/privacy/browser-draft-lifecycle';
+import { pageHeadingTitleClass } from "@/components/layout/page-heading-styles";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,6 +67,7 @@ import {
 import {
   createAccountDeletionReauthenticationSession,
   issueAccountDeletionReauthenticationProof,
+  type AccountDeletionReauthenticationSession,
 } from "@/lib/privacy/account-deletion-reauth";
 import {
   resolveProfileAvatarUrl,
@@ -396,9 +401,12 @@ export default function ProfilePage() {
     proofId: string;
     expiresAt: string;
     bearerToken: string;
+    reauthentication: AccountDeletionReauthenticationSession;
   }> | null>(null);
   const [deletionProgressMessage, setDeletionProgressMessage] = useState<string | null>(null);
   const accountDeletionPollController = useRef<AbortController | null>(null);
+  const accountDeletionReauth = useRef<AccountDeletionReauthenticationSession | null>(null);
+  const accountDeletionGeneration = useRef(0);
   const [deletionPassword, setDeletionPassword] = useState("");
   const [showDeletionPassword, setShowDeletionPassword] = useState(false);
 
@@ -490,10 +498,14 @@ export default function ProfilePage() {
   }, [displayName, isMobileNicknameEditing]);
   useEffect(() => () => {
     accountDeletionPollController.current?.abort();
+    accountDeletionGeneration.current += 1;
+    const reauthentication = accountDeletionReauth.current;
+    accountDeletionReauth.current = null;
+    void reauthentication?.dispose();
     consentSettingsRequestRef.current?.abort();
     consentSettingsRequestRef.current = null;
     setDeletionSession(null);
-  }, []);
+  }, [userId]);
 
   const refreshProfileAvatarQueries = async () => {
     if (!user) return;
@@ -658,23 +670,9 @@ export default function ProfilePage() {
 
     setLoading(true);
     try {
-      // 현재 비밀번호 검증 (재인증)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
+      await changeBrowserAccountPassword({
+        userId: user.id, email: user.email, password: currentPassword, newPassword,
       });
-
-      if (signInError) {
-        toast.error("현재 비밀번호가 올바르지 않습니다");
-        return;
-      }
-
-      // 비밀번호 변경
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) throw error;
 
       setCurrentPassword("");
       setNewPassword("");
@@ -691,6 +689,8 @@ export default function ProfilePage() {
   // A fresh password session owns preview, proof, and apply; it never reaches storage.
   const handleAccountPermanentDelete = async () => {
     if (!user?.email) return;
+    const generation = ++accountDeletionGeneration.current;
+    const ownsGeneration = () => accountDeletionGeneration.current === generation;
 
     if (deleteConfirmationText !== ACCOUNT_DELETION_CONFIRMATION_TEXT) {
       toast.error(`확인 문구 ${ACCOUNT_DELETION_CONFIRMATION_TEXT}를 정확히 입력해 주세요.`);
@@ -710,6 +710,11 @@ export default function ProfilePage() {
           password: deletionPassword,
         });
         if (!freshSession) throw new Error("reauthentication_failed");
+        if (!ownsGeneration()) { await freshSession.dispose(); return; }
+        await accountDeletionReauth.current?.dispose();
+        if (!ownsGeneration()) { await freshSession.dispose(); return; }
+        accountDeletionReauth.current = freshSession;
+        if (!freshSession.isCurrent()) throw new Error("reauthentication_superseded");
 
         const previewResponse = await fetch("/api/account/delete", {
           method: "POST",
@@ -725,15 +730,16 @@ export default function ProfilePage() {
             ? previewPayload.preview
             : null,
         );
-        if (!previewResponse.ok || !preview) throw new Error("preview_unavailable");
+        if (!previewResponse.ok || !preview || !ownsGeneration() || !freshSession.isCurrent()) throw new Error("preview_unavailable");
 
-        const proof = await issueAccountDeletionReauthenticationProof(user.id);
-        if (!proof) throw new Error("proof_unavailable");
+        const proof = await issueAccountDeletionReauthenticationProof(user.id, freshSession);
+        if (!proof || !ownsGeneration() || !freshSession.isCurrent()) throw new Error("proof_unavailable");
         setDeletionSession({
           preview,
           proofId: proof.proofId,
           expiresAt: proof.expiresAt,
           bearerToken: freshSession.bearerToken,
+          reauthentication: freshSession,
         });
         setDeletionPassword("");
         setShowDeletionPassword(false);
@@ -741,6 +747,8 @@ export default function ProfilePage() {
         return;
       }
 
+      if (!ownsGeneration() || accountDeletionReauth.current !== deletionSession.reauthentication
+        || !deletionSession.reauthentication.isCurrent()) throw new Error("reauthentication_superseded");
       if (Date.parse(deletionSession.expiresAt) <= Date.now()) {
         setDeletionSession(null);
         throw new Error("proof_expired");
@@ -779,6 +787,7 @@ export default function ProfilePage() {
       setDeletionProgressMessage("계정 삭제 완료 확인 중입니다. 이 창을 닫지 마세요.");
       const readback = await pollAccountDeletionReadback(deletionSession.preview, pollController.signal);
       accountDeletionPollController.current = null;
+      if (!ownsGeneration() || !deletionSession.reauthentication.isCurrent()) throw new Error("reauthentication_superseded");
       if (readback.kind !== "applied") {
         setDeletionProgressMessage("계정 삭제 완료를 확인하지 못했습니다. 브라우저 데이터는 유지됩니다.");
         throw new Error(`account_deletion_${readback.kind}`);
@@ -786,20 +795,29 @@ export default function ProfilePage() {
 
       const receipt = readback.receipt;
       setDeletionSession(null);
-      const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+      const sessionCleared = await deletionSession.reauthentication.clearBrowserSession();
+      if (!sessionCleared) throw new Error("reauthentication_superseded");
       const browserCleanup = await clearAccountDeletionBrowserStores(user.id, receipt);
-      if (signOutError || browserCleanup.status !== "complete") {
+      await deletionSession.reauthentication.dispose();
+      accountDeletionReauth.current = null;
+      if (browserCleanup.status !== "complete") {
         window.location.replace("/data-deletion?browserCleanup=required");
         return;
       }
       window.location.replace("/");
     } catch {
+      const reauthentication = accountDeletionReauth.current;
+      if (ownsGeneration()) accountDeletionReauth.current = null;
+      if (ownsGeneration()) await reauthentication?.dispose();
+      if (!ownsGeneration()) return;
       setDeletionSession(null);
       toast.error("계정 삭제를 완료하지 못했습니다. 최근 로그인 상태와 삭제 미리보기를 다시 확인해 주세요.");
     } finally {
-      setDeletionPassword("");
-      setShowDeletionPassword(false);
-      setLoading(false);
+      if (ownsGeneration()) {
+        setDeletionPassword("");
+        setShowDeletionPassword(false);
+        setLoading(false);
+      }
     }
   };
 
@@ -984,15 +1002,19 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch 2xl:grid-cols-3"
+      className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start"
       data-mypage-profile-page="true"
-      data-mypage-profile-density="dashboard-matrix"
+      data-mypage-profile-density="content-first"
       data-mypage-profile-viewport-fit="content"
       data-mypage-profile-matrix="content-2x2"
       data-mypage-profile-matrix-size="content-track"
       data-mypage-profile-mobile-flow="stack"
-      data-mypage-profile-desktop-flow="matrix-2x2"
+      data-mypage-profile-desktop-flow="activity-then-settings"
     >
+      <header className="hidden space-y-2 lg:col-span-2 md:block">
+        <h1 className={pageHeadingTitleClass}>내 프로필</h1>
+        <p className="text-sm leading-6 text-muted-foreground">맛집을 다녀온 기록과 다음 등급까지의 진행 상황을 확인하세요.</p>
+      </header>
       <div
         className="min-w-0 space-y-3 sm:space-y-5 md:contents md:space-y-0"
         data-mypage-profile-main-column="true"
@@ -1195,7 +1217,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0"
+          className="overflow-hidden rounded-2xl border border-border bg-card shadow-none md:order-1 lg:col-start-1"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -1244,7 +1266,7 @@ export default function ProfilePage() {
             ))}
           </CardContent>
           <CardContent
-            className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="hidden space-y-5 p-5 md:block"
             data-mypage-desktop-tier-dashboard="true"
           >
             <div className="flex items-start justify-between gap-3">
@@ -1264,7 +1286,7 @@ export default function ProfilePage() {
             </div>
 
             <div
-              className="space-y-2 lg:flex lg:flex-1 lg:flex-col lg:justify-center"
+              className="space-y-2"
               data-mypage-desktop-tier-progress="true"
             >
               <div className="flex items-center justify-between gap-3">
@@ -1328,13 +1350,13 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
+          className="hidden min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-2 md:flex md:flex-col lg:col-start-2"
           data-mypage-desktop-recent-activity="true"
         >
           <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
             <CardTitle className="text-base">최근 활동</CardTitle>
           </CardHeader>
-          <CardContent className="grid min-h-0 flex-1 md:grid-rows-3 lg:p-3 lg:pt-0">
+          <CardContent className="grid gap-1 px-5 pb-5">
             {recentActivityItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -1368,7 +1390,7 @@ export default function ProfilePage() {
       >
         {/* 비밀번호 변경 */}
         <Card
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"
+          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-3"
           data-mypage-password-card="full-width"
         >
           <CardHeader className="shrink-0 lg:p-3 lg:pb-1.5">
@@ -1507,7 +1529,7 @@ export default function ProfilePage() {
 
         <Card
           aria-label="선택 마케팅 수신 설정"
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-5 lg:col-span-2 lg:row-start-3 2xl:col-span-1 2xl:col-start-3 2xl:row-span-2 2xl:row-start-1"
+          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-4"
           data-privacy-consent-settings="true"
         >
           <CardContent className="space-y-4 p-4 lg:p-4">
@@ -1656,16 +1678,17 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        <LegacyDraftRecovery key={`${user.id}:${captureBrowserDraftEpoch(user.id).generation}`} userId={user.id} />
+
         <Card
           id="account-deletion"
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
+          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-6 lg:col-span-2"
           data-mypage-danger-zone="true"
           data-layout-primitives="form-flow stack"
           data-mypage-danger-zone-layout="matrix-bottom-right"
         >
           <CardContent className="min-h-0 p-3 md:flex md:flex-1 md:flex-col lg:p-3">
             <details
-              open
               className="group p-1 md:flex md:flex-1 md:flex-col lg:p-0"
             >
               <summary className="flex min-h-10 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-9">
@@ -1768,6 +1791,11 @@ export default function ProfilePage() {
                       <AlertDialogCancel
                         onClick={() => {
                           accountDeletionPollController.current?.abort();
+                          accountDeletionGeneration.current += 1;
+                          const reauthentication = accountDeletionReauth.current;
+                          accountDeletionReauth.current = null;
+                          void reauthentication?.dispose();
+                          setLoading(false);
                           setDeleteConfirmationText("");
                           setDeletionPassword("");
                           setShowDeletionPassword(false);

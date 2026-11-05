@@ -1,0 +1,6 @@
+
+> web@1.2.4 build
+> node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs
+
+Failed to type check.  
+[REDACTED:bounded]

@@ -1,0 +1,68 @@
+{
+  "finding": "SEC-F-01",
+  "sourceRevision": "1ca3d984598e7caca575ceeca4118ee418da60cf",
+  "checkedAt": "2026-10-23T23:51:13.926272+00:00",
+  "failure": {
+    "workflow": 40039695632,
+    "sha": "5afda8b8546a8f298dc843fb6e7219c17c71d910",
+    "job": "npm-audit",
+    "advisory": "GHSA-mrhx-c7xc-m3w5",
+    "directWeb": "zod 4.6.5",
+    "backendTransitive": "chromium-bidi 17.0.2 -> zod 3.25.76"
+  },
+  "sources": [
+    "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5",
+    "https://github.com/colinhacks/zod/commit/a0ebf97",
+    "https://github.com/puppeteer/puppeteer/releases/tag/puppeteer-v25.13.0"
+  ],
+  "fix": {
+    "web": "zod 4.6.6; npm and Bun lock integrity match",
+    "backend": "puppeteer 25.13.0; chromium-bidi 157.0.8090-0; transitive zod 4.6.7",
+    "npmAuthority": "11.6.2 / Node24",
+    "override": "No incompatible major-version Zod override"
+  },
+  "verification": {
+    "sizeAdmissionBefore": "6 pass / 6 fail; rejected collections still visited all 101 elements",
+    "sizeAdmissionAfter": "12 pass / 30 assertions; six oversized collection shapes visit zero elements; six valid controls parse normally",
+    "browserFixturesAfter": "29 pass / 10 files / 182 assertions",
+    "backendCompatibilityAfter": "12 pass / 0 fail; isolated callers, no external I/O",
+    "npmAudit": "web and backend zero vulnerabilities",
+    "lint": "PASS scoped changed TypeScript tests",
+    "parity": "0 diagnostics / 3388 inputs",
+    "fullLocalSuite": "Initial broadened general run: 3953 pass, 4 skip, 17 fail. Sixteen were absent browser process.env build inputs; the remaining readback fixture omitted required submissions.items. Targeted browser 29/182 plus readback2/10 pass after corrections. Fresh full suite running; no full pass claimed.",
+    "recordReadbackFixtureAfter": "2 pass / 10 assertions; unchanged real component, complete submissions/items API fixture"
+  },
+  "testHarnessCorrections": [
+    "Browser-only fixtures replace process.env with a literal empty object and NODE_ENV test; site-config public build inputs otherwise access absent Node process. Real product code unchanged.",
+    "Canonical realpath for macOS temp fixture: argv /var and import.meta.url /private/var previously prevented direct-entry guards executing. All 12 actual caller checks now pass.",
+    "Keep the submission readback fixture complete with items: []; production correctly retains its fence when that API response is incomplete."
+  ],
+  "candidateCancellation": {
+    "deploymentId": "dpl_Ed4A6bwgLVeebfexV9DXHh77Twxt",
+    "sha": "9887f816cf5847f8f8e1c609fdafe9f8cfc74a2c",
+    "state": "CANCELED",
+    "phase": "Before production aliases moved",
+    "operationalRollback": false,
+    "productionReadbackSha": "4fa0edb9d0cb4ae10c09f8aafaec443a3f7a556c"
+  },
+  "artifactCorrection": {
+    "priorMapSha256": "143b2173c4598d7e7433950cc71e98635ad9c1d6dcafef4375313e4ead3a4714",
+    "priorDetachedDigest": "40d42e185c01afe01a39176c423d816c1c389343ea71c52c67c4215fc9e27213",
+    "matched": false,
+    "priorCommittedEntriesVerified": 91,
+    "decision": "The old map included its detached digest despite declaring that excluded. Current map explicitly excludes both map and digest entries before serialization; final committed bytes are independently verified.",
+    "excludedSelfPaths": [
+      "docs/evidence/formal-map-invariants-20261023-v1/artifact-map.json",
+      "docs/evidence/formal-map-invariants-20261023-v1/artifact-map.sha256"
+    ]
+  },
+  "priorFormalRuntimeRevision": "a1dd40016ff7cf23055073c8637d5b3ee00d6781",
+  "hostGuardRuntimeRevision": "a62683bae44ce8d2036e7352f9ea7d40d8efd0e5",
+  "externalReview": "Completed source-bound ordinary reports preserved. This maintained dependency patch and verification-harness corrections do not replace or rerun them.",
+  "newPreview": "PENDING",
+  "protectedRelease": "PENDING",
+  "productionVerification": "NOT_RUN_FOR_THIS_SOURCE",
+  "overallComplete": false,
+  "nightly": "SEPARATE_HISTORICAL_FAILURE_39457197351_NO_RERUN",
+  "dependencyRevision": "53b79a97721840d2d2c4acda2799994cd02a608d"
+}

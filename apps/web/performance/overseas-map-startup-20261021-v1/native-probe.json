@@ -1,0 +1,105 @@
+{
+  "ready": true,
+  "elapsedMs": 1952,
+  "browser": "153.0.8010.12",
+  "facts": {
+    "state": "ready",
+    "canvas": true,
+    "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+    "text": "해외 지도 열기\n일본\n헝가리\n핀 준비 완료\nOpenFreeMap © OpenMapTiles Data from OpenStreetMap\n맛집 핀을 불러오고 있어요"
+  },
+  "errors": [],
+  "events": [
+    {
+      "event": "response",
+      "origin": "http://127.0.0.1:18924",
+      "path": "/scripts/maplibre/0f1bc36377a215d4eb1d233a4411f1e78bf602ed886ce88ef361a669fe59e5cf/maplibre-gl-worker.mjs",
+      "status": 200,
+      "contentType": "application/javascript; charset=UTF-8"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/styles/positron",
+      "status": 200,
+      "contentType": "application/json"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/planet",
+      "status": 200,
+      "contentType": "application/json"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/sprites/ofm_f384/ofm.json",
+      "status": 200,
+      "contentType": "application/json"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/sprites/ofm_f384/ofm.png",
+      "status": 200,
+      "contentType": "image/png"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/planet/20261018_080001_pt/10/566/357.pbf",
+      "status": 200,
+      "contentType": "application/vnd.mapbox-vector-tile"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/planet/20261018_080001_pt/10/565/357.pbf",
+      "status": 200,
+      "contentType": "application/vnd.mapbox-vector-tile"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/planet/20261018_080001_pt/10/566/358.pbf",
+      "status": 200,
+      "contentType": "application/vnd.mapbox-vector-tile"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/planet/20261018_080001_pt/10/565/358.pbf",
+      "status": 200,
+      "contentType": "application/vnd.mapbox-vector-tile"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/fonts/Noto%20Sans%20Regular/256-511.pbf",
+      "status": 200,
+      "contentType": "application/x-protobuf"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/fonts/Noto%20Sans%20Italic/0-255.pbf",
+      "status": 200,
+      "contentType": "application/x-protobuf"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/fonts/Noto%20Sans%20Regular/0-255.pbf",
+      "status": 200,
+      "contentType": "application/x-protobuf"
+    },
+    {
+      "event": "response",
+      "origin": "https://tiles.openfreemap.org",
+      "path": "/fonts/Noto%20Sans%20Bold/0-255.pbf",
+      "status": 200,
+      "contentType": "application/x-protobuf"
+    }
+  ]
+}

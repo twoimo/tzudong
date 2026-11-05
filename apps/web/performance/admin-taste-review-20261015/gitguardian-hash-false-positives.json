@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "kind": "gitguardian-hash-false-positive-classification",
+  "scope": {
+    "repository": "twoimo/tzudong",
+    "pullRequest": 3215,
+    "classificationOnly": true,
+    "authorizationState": "pending-explicit-false-positive-authorization"
+  },
+  "priorAuthorizedIncident": {
+    "incident": 38234125,
+    "status": "Ignored",
+    "disposition": "Test credential",
+    "appliesToNewIncidents": false
+  },
+  "incidents": [
+    {
+      "incident": 38246983,
+      "occurrence": 304360849,
+      "detector": "Generic Password",
+      "status": "Triggered",
+      "classification": "source-sha256-fingerprint-false-positive",
+      "fieldPaths": [
+        "$.selectedBuildInputs[\"lib/auth/password-recovery-proof.ts\"]"
+      ],
+      "originalReceipts": [
+        {
+          "path": "apps/web/performance/feature-completion-20261013/ocr-recovery-build-rejected-20261015.json",
+          "line": 548
+        },
+        {
+          "path": "apps/web/performance/feature-completion-20261013/ocr-recovery-build-final-20261015.json",
+          "line": 547
+        }
+      ],
+      "verification": {
+        "matchedFieldShapeVerified": true,
+        "matchedFieldShapeMethod": "Parsed both JSON receipts and verified that the field is a 64-character lowercase hexadecimal string.",
+        "sourceProvenanceVerified": true,
+        "sourceProvenanceMethod": "Compared each retained field with SHA-256 computed from the referenced source file bytes at the receipt-producing commit; both comparisons matched.",
+        "matchedFieldIsCredentialMaterial": false,
+        "matchedValueCopiedIntoThisReceipt": false
+      }
+    },
+    {
+      "incident": 38246985,
+      "occurrence": 304360848,
+      "detector": "Generic High Entropy Secret",
+      "status": "Triggered",
+      "classification": "source-sha256-fingerprint-false-positive",
+      "fieldPaths": [
+        "$.selectedBuildInputs[\"components/auth/AuthModal.tsx\"]"
+      ],
+      "originalReceipts": [
+        {
+          "path": "apps/web/performance/feature-completion-20261013/ocr-recovery-build-rejected-20261015.json",
+          "line": 246
+        },
+        {
+          "path": "apps/web/performance/feature-completion-20261013/ocr-recovery-build-final-20261015.json",
+          "line": 245
+        }
+      ],
+      "verification": {
+        "matchedFieldShapeVerified": true,
+        "matchedFieldShapeMethod": "Parsed both JSON receipts and verified that the field is a 64-character lowercase hexadecimal string.",
+        "sourceProvenanceVerified": true,
+        "sourceProvenanceMethod": "Compared each retained field with SHA-256 computed from the referenced source file bytes at the receipt-producing commit; both comparisons matched.",
+        "matchedFieldIsCredentialMaterial": false,
+        "matchedValueCopiedIntoThisReceipt": false
+      }
+    },
+    {
+      "incident": 38246984,
+      "occurrence": 304360851,
+      "detector": "Generic High Entropy Secret",
+      "status": "Triggered",
+      "classification": "git-commit-provenance-false-positive",
+      "fieldPaths": [
+        "$.fixtureVerified.credentialFormRemovedInCommit"
+      ],
+      "originalReceipts": [
+        {
+          "path": "apps/web/performance/goal-followthrough-20261015/gitguardian-38234125-test-credential-readback-20261015.json",
+          "line": 15
+        }
+      ],
+      "verification": {
+        "matchedFieldShapeVerified": true,
+        "matchedFieldShapeMethod": "Parsed the JSON receipt and verified that the field is a 40-character lowercase hexadecimal string.",
+        "commitProvenanceVerified": true,
+        "commitProvenanceMethod": "Verified that the referenced value resolves to a commit object in the repository and records the fixture credential-form removal boundary.",
+        "matchedFieldIsCredentialMaterial": false,
+        "matchedValueCopiedIntoThisReceipt": false
+      }
+    }
+  ],
+  "integrity": {
+    "originalEvidenceChanged": false,
+    "sourceChanged": false,
+    "scannerConfigurationChanged": false,
+    "incidentStateChanged": false,
+    "exceptionApplied": false,
+    "matchedValuesIncluded": false,
+    "rawUiBodiesIncluded": false,
+    "sourceFingerprintsRemainOnlyInOriginalSealedReceipts": true,
+    "sidecarIntegrityVerifiedBeforeClassification": true
+  }
+}

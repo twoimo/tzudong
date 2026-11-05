@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "baselineReportSha256": "4d6c4282b1ed3f0f99617f58be80f30adbd742fb0e60c424cbd590d348dd4832",
+  "admitted": [
+    "header font size, weight and line height at capture",
+    "header geometry at capture",
+    "document overflow and JavaScript errors at capture"
+  ],
+  "excluded": [
+    "settled data content",
+    "row density comparison",
+    "task success rate",
+    "latency or usability gain"
+  ],
+  "reason": "Some before views contain component loading skeletons. Preserve them as header-only baseline; do not infer fully settled content.",
+  "discardedAfter": "after-layout-regression-partial/report.json",
+  "afterLimitation": "30 cases captured before desktop mobile-header CSS display conflict was repaired. Not admitted as final validation.",
+  "additionalUnadmitted": [
+    {
+      "path": "after-layout-regression-partial",
+      "reason": "Mobile-only toolbar remained visible on desktop, reducing canvas to sidebar column; repaired before valid views."
+    },
+    {
+      "path": "after-landmark-partial",
+      "reason": "Detected nested main in thumbnail module; repaired before admitted final views."
+    },
+    {
+      "path": "after-dark-unapplied",
+      "reason": "Initial harness set unrelated theme key; actual dark class not applied, so not admitted as dark proof."
+    },
+    {
+      "path": "after-dark-contrast-before",
+      "reason": "Valid pre-fix dark contrast capture; retained for exact12view sample comparison."
+    }
+  ],
+  "validViewReports": [
+    "after/report.json (desktop/tablet30cases; stopped at offscreen lazy-placeholder readiness)",
+    "after-mobile/report.json (mobile15cases; viewport-intersection readiness)",
+    "after-dark/report.json (actualdark12cases)",
+    "after-success/report.json (Bun/syntheticGET9cases)"
+  ]
+}

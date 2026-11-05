@@ -1,0 +1,38 @@
+CATALOG CI FOLLOW-UP OBSERVATION SUMMARY
+========================================
+
+This is not a raw CI or local process log. No raw stdout/stderr file was retained.
+The lines below are bounded observations transcribed from GitHub check annotations,
+job step metadata, and the completed local source-only replay.
+
+CI observation
+--------------
+Repository: twoimo/tzudong
+Head: 457023a656c7d17671527870679f093ee01e5aeb
+Run: 39124436784
+Job: 117666491434 (generate)
+Failed step: Generate first clean source-only catalog replay
+Annotation: Process completed with exit code 3.
+
+Local failure observation
+-------------------------
+Last successful source:
+  backend/supabase/migrations/20261013190200_review_verification_immutable_key_fence.sql
+Failed source:
+  backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql
+Observed PostgreSQL error:
+  FEATURE_RUNTIME_STORAGE_FENCE_PREREQUISITE_MISSING
+The local failure exit code was not separately retained.
+
+Local success observation
+-------------------------
+Related unit tests: 12 passed, 0 failed.
+Source-only Catalog generator exit code: 0.
+Final message:
+  generated source-only evidence in /tmp/tzudong-catalog-fixed-repro-20261018
+The generated SHA256SUMS file verified every listed artifact as OK.
+
+Evidence boundary
+-----------------
+The replay used PostgreSQL 15.8 and source-only synthetic reconstruction inputs.
+It is not hosted-state, deployment, credential, or operating SQL evidence.

@@ -1,0 +1,119 @@
+{
+  "boundaries": [
+    "Local disposable PG17.6 counterexample only.",
+    "No source edit, pull, hosted/API/account access, Git mutation or global role change was performed.",
+    "Explicit aclexplode rows and sealed entries established the forbidden grants; superuser effective privilege was not used as ACL evidence.",
+    "Raw SQL and detailed ACL rows remain in the private proof; this receipt contains fixed codes, counts, hashes and role-qualified results only."
+  ],
+  "cases": {
+    "functionCreatorDefaults": {
+      "capabilityStatus": "ready",
+      "counterexampleEstablished": true,
+      "createdObjectCount": 4,
+      "creatorRoleCount": 2,
+      "defaultAclCountAfterMutation": 2,
+      "defaultAclCountBefore": 0,
+      "explicitAclItemCount": 4,
+      "fixedResultCode": "INITIAL_DEFAULT_ACL_SEALED_READY",
+      "privilege": "EXECUTE",
+      "sealedAclItemCount": 4,
+      "sealedAclObjectCount": 4
+    },
+    "tableCreatorDefault": {
+      "capabilityStatus": "ready",
+      "counterexampleEstablished": true,
+      "createdObjectCount": 2,
+      "creatorRoleCount": 1,
+      "defaultAclCountAfterMutation": 1,
+      "defaultAclCountBefore": 0,
+      "explicitAclItemCount": 2,
+      "fixedResultCode": "INITIAL_DEFAULT_ACL_SEALED_READY",
+      "privilege": "SELECT",
+      "sealedAclItemCount": 2,
+      "sealedAclObjectCount": 2
+    }
+  },
+  "classification": "initial_creator_default_acl_is_sealed_and_ready_without_independent_admission",
+  "conclusion": {
+    "allFourNewFunctionsCounterexampleEstablished": true,
+    "bothNewTablesCounterexampleEstablished": true,
+    "hostedReadinessEstablished": false,
+    "initialAclIndependentAdmissionMissing": true,
+    "requiredCondition": "Add exact initial and runtime owner/ACL allowlists independent of sealed snapshot equality, then prove both default-ACL cases are held."
+  },
+  "decision": "ACCEPT",
+  "execution": {
+    "engine": "17.6",
+    "harnessSha256": "64a854c100e4e8b0fd067569e7d6ec03d4d18efea9ed6df503114af0740999d0",
+    "predecessorLedgerCount": 105,
+    "predecessorLedgerIdentityRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+    "proofSha256": "55921606f416a7c58642e263100bf0fc66c37c52050fa5769e882f8fc57663bf",
+    "stderrBytes": 0,
+    "terminalLedgerCount": 106,
+    "terminalLedgerIdentityRoot": "83a1b91fa12541581e53dca933a12ca6c5aa4470dd70f912444d38dcd19522c1"
+  },
+  "findingId": "OCR-ACL-INITIAL-DEFAULT-001",
+  "kind": "receipt-ocr-initial-default-acl-all-six-counterexample-public-receipt",
+  "ownership": {
+    "containerInspectFailedAfterTeardown": true,
+    "ownerLabelReadbackMatched": true,
+    "ownerLabelResidualCount": 0,
+    "volumeResidualCount": 0
+  },
+  "preservation": {
+    "retained105DumpSha256After": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+    "retained105DumpSha256Before": "1bd6fec250effce772bce4fa98df91dd5ca489baa6aea056cd652dbc97d7cbda",
+    "retained105Unchanged": true,
+    "sourceDumpSha256After": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "sourceDumpSha256Before": "b7777306a43cc84408434e9835973604b2eb520cf9e9e8d0ee4bba6dcb41257f",
+    "sourceUnchanged": true
+  },
+  "roleQualified": {
+    "effectiveHasPrivilegeUsedAsAclEvidence": false,
+    "postgres": {
+      "rolbypassrls": true,
+      "rolcanlogin": true,
+      "rolinherit": true,
+      "rolsuper": false
+    },
+    "privacyWorkflowOwner": {
+      "rolbypassrls": false,
+      "rolcanlogin": false,
+      "rolinherit": false,
+      "rolsuper": false
+    },
+    "roleStateRestoredAfterEachCase": true,
+    "supabaseAdmin": {
+      "rolbypassrls": true,
+      "rolcanlogin": true,
+      "rolinherit": true,
+      "rolsuper": true
+    },
+    "workflowOwnerToPostgres": {
+      "adminOption": true,
+      "grantor": "supabase_admin",
+      "inheritOption": false,
+      "rowCount": 1,
+      "setOption": false
+    }
+  },
+  "schemaVersion": 1,
+  "sourceBinding": {
+    "compilerSha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+    "frozenRevision": "14a8f5da4268df890c7adf10bf89e99ce071f6f5",
+    "manifestSha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "rawMigrationSha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "supplementalReportSha256": "117b7a0f220af81c5283b385a1b5f46b440c628521fc5ca3522f3a5e7517a215"
+  },
+  "status": "passed",
+  "derivedFromPublicSummarySha256": "9c8c69cd0d1f4dd05fbbf0d3866bc83c039e4efc4ef0b91480803e58f5cff011",
+  "privateProofReadbackVerifiedByRoot": true,
+  "actualAclRowsAndSealComparedByRoot": true,
+  "containerIdentifiersOmitted": true,
+  "roleScopeLimitation": "Forbidden explicit ACLs violate the independent policy regardless of effective superuser privileges. This does not establish real data exposure or hosted permissions.",
+  "officialSemanticsSources": [
+    "https://www.postgresql.org/docs/17/sql-alterdefaultprivileges.html",
+    "https://www.postgresql.org/docs/17/functions-info.html",
+    "https://www.postgresql.org/docs/17/ddl-priv.html"
+  ]
+}

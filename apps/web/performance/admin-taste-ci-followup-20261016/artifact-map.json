@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T15:38:11.362941+00:00",
+  "root": "apps/web/performance/admin-taste-ci-followup-20261016",
+  "files": [
+    {
+      "path": "orchestration-reconciliation-followup.json",
+      "bytes": 3742,
+      "sha256": "57905162a45753ecdfaae5a94282c3c53f7811286b28f9de23af4267df747e65"
+    },
+    {
+      "path": "source-freeze.json",
+      "bytes": 629,
+      "sha256": "8741340050ffece713dae75151502c2727e7032822f352f832600a8969835eaa"
+    }
+  ],
+  "scope": "Byte inventory only; local generated reconciliation proof."
+}

@@ -27,7 +27,7 @@ export function buildEditRestaurantInitialFormData(restaurant: Restaurant): Edit
         });
     });
 
-    if (youtubeReviews.length === 0) {
+    if (!youtubeReviews.some((review) => review.restaurant_id === restaurant.id)) {
         youtubeReviews.push({
             youtube_link: restaurant.youtube_link ?? '',
             tzuyang_review: restaurant.tzuyang_review ?? '',

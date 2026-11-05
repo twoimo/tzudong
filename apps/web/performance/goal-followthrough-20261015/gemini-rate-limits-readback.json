@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "sanitized-current-gemini-rate-limits",
+  "observedAt": "2026-10-15T05:50:18.714963+00:00",
+  "surface": "Google AI Studio Rate Limit authenticated UI",
+  "project": "tzudong-free-zero",
+  "tier": "Tier 1",
+  "observationWindowDays": 28,
+  "usageAggregationDelayMinutes": 15,
+  "models": [
+    {
+      "displayName": "Gemini 3.8 Flash",
+      "rpm": 1000,
+      "tpm": 2000000,
+      "rpd": 10000,
+      "observedPeakRPM": 1,
+      "observedPeakTPMDisplay": "92.17K",
+      "observedPeakRPD": 16
+    },
+    {
+      "displayName": "Nano Banana Pro (Gemini 3 Pro Image)",
+      "rpm": 20,
+      "tpm": 100000,
+      "rpd": 250
+    },
+    {
+      "displayName": "Nano Banana 2 (Gemini 3.1 Flash Image)",
+      "rpm": 100,
+      "tpm": 200000,
+      "rpd": 1000
+    }
+  ],
+  "limits": [
+    "Project-wide displayed limits, not per-key additive allowances.",
+    "Historical peak usage does not prove current spare capacity or model authorization.",
+    "No limit, auto-charge, model or account setting was changed.",
+    "No performance effect or cash saving is inferred."
+  ],
+  "runtimePilotProposedLimits": {
+    "requestsPerMinute": 1,
+    "maxInflight": 1,
+    "maxVideos": 1,
+    "maxCalls": 2,
+    "maxInputTokens": 1048576,
+    "executed": false
+  }
+}

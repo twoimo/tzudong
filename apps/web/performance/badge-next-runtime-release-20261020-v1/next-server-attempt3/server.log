@@ -1,0 +1,20 @@
+▲ Next.js 16.3.8 (webpack)
+✓ Running next.config.mjs took 6ms
+- Experiments (use with caution):
+  · cpus: 2
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.1s
+  Running TypeScript ...
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+  	- incremental was set to true
+  	- include was updated to add '.next/dev/types/**/*.ts'
+  	- plugins was updated to add { name: 'next' }
+
+../apps/web/components/restaurant/Badge3DViewer.tsx(13,8): error TS7016: Could not find a declaration file for module 'three'. '/Users/twoimo/Documents/projects/tzudong-evidence-unblock/apps/web/node_modules/three/build/three.module.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/three` if it exists or add a new declaration (.d.ts) file containing `declare module 'three';`
+Failed to type check.
+

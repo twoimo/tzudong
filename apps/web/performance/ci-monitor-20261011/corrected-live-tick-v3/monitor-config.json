@@ -1,0 +1,16 @@
+{
+  "baselineSha256": "d8e08c6371f3dab93fdb3495d5b14266d457e6e0490876f1e2546177a0b89070",
+  "limit": 20,
+  "maximumBaselineAttempts": 100,
+  "maximumInputAttempts": 2100,
+  "maximumPages": 5,
+  "repository": "twoimo/tzudong",
+  "sourceSha256": {
+    "collect-ci-monitor.py": "283094e56dfec28990ef2f1ddd61046e9f7f5c0833d92d5bb0c26271827dc438",
+    "collect-ci-performance.py": "5b5fc5bdebf4161b71db91f171d277e6f0677fcbbb459f5b5c4fb1023c037cd4",
+    "monitor-ci-performance.py": "d4ff6c1ace299ace94038dd53786e247bcc5be1c3f5b91c10c373c74c1cb2b9e",
+    "prepare-ci-reference.py": "0ad397c62dabcf85e122d141a4b2ea2dadae8865477e37e313e5597fa8b868a9",
+    "run-ci-monitor.py": "a91611993f4d232aa6d583719ab35e07006469f6dbe3f4bbed35598cf2810914"
+  },
+  "workflow": "web-admin-ci.yml"
+}

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-18T20:24:09Z",
+  "node": "v24.22.0",
+  "bun": "v1.4.0",
+  "checks": [
+    {
+      "name": "affected-unit-tests",
+      "command": "bun test tests-unit/admin-receipt-recovery.test.ts tests-unit/zz-ocr-route-contract.test.ts",
+      "exitCode": 0,
+      "testsPassed": 26,
+      "testsFailed": 0,
+      "assertions": 381
+    },
+    {
+      "name": "scoped-eslint",
+      "command": "/opt/homebrew/opt/node@24/bin/node ./node_modules/eslint/bin/eslint.js components/admin/SubmissionListView.tsx scripts/verify-admin-receipt-ocr-recovery-browser.ts scripts/preview-design-fixtures.mjs",
+      "exitCode": 0
+    },
+    {
+      "name": "standalone-typescript",
+      "command": "PATH=/opt/homebrew/opt/node@24/bin:$PATH ./node_modules/.bin/tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2022 --types node scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "exitCode": 0
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check -- apps/web/components/admin/SubmissionListView.tsx apps/web/scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "exitCode": 0
+    }
+  ],
+  "sources": [
+    {
+      "path": "components/admin/SubmissionListView.tsx",
+      "sha256": "1d7b5a06139091e0280548f56e689be4b5d0438539af4ff5ef3b193fca192b69"
+    },
+    {
+      "path": "lib/admin/guarded-mutation-contract.ts",
+      "sha256": "c8bdba8045b01ad8d29655eba29d8d8f5e0ba2a807a96fe5f3900d36a6e27684"
+    },
+    {
+      "path": "tests-unit/admin-receipt-recovery.test.ts",
+      "sha256": "6d1db4c79fe9060e07a1f40f3a9e1ba3fc690615b09c58aa8f155a96fe72c8d0"
+    },
+    {
+      "path": "tests-unit/zz-ocr-route-contract.test.ts",
+      "sha256": "9a8073d40fd9a5bafbfdcb300c58abef2a392373f2dd3e2ac0157068c43e43fb"
+    },
+    {
+      "path": "scripts/verify-admin-receipt-ocr-recovery-browser.ts",
+      "sha256": "d3ddce93f0ebf0d75b72a03c2b727341a050d037212e8c2213663cac1dc72bb5"
+    },
+    {
+      "path": "scripts/preview-design-fixtures.mjs",
+      "sha256": "9c124f7118651b4e15089a73c994ae2163f0f1a301e152c5c790459157ca9e0a"
+    }
+  ]
+}

@@ -1,0 +1,285 @@
+{
+  "scope": "Read-only hosted catalog observations. No user rows, credentials, object payloads or hosted writes. Not an execution admission receipt.",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "metadata": {
+    "observed_at": "2026-10-24 07:21:23.414582+00",
+    "ledger_count": 89,
+    "ledger_latest": "20261017160000",
+    "ledger_digest": "7acfd9c3887fa67540cc0a9ed3487900cbccc6678cb69c29218bf5216e7aa4ec",
+    "storage_relations": [
+      {
+        "rls": true,
+        "force": false,
+        "owner": "supabase_storage_admin",
+        "relation": "buckets",
+        "caller_owner_usage": false
+      },
+      {
+        "rls": true,
+        "force": false,
+        "owner": "supabase_storage_admin",
+        "relation": "objects",
+        "caller_owner_usage": false
+      }
+    ],
+    "bucket_columns": [
+      {
+        "name": "id",
+        "type": "text",
+        "notnull": true
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "notnull": true
+      },
+      {
+        "name": "owner",
+        "type": "uuid",
+        "notnull": false
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "notnull": false
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "notnull": false
+      },
+      {
+        "name": "public",
+        "type": "boolean",
+        "notnull": false
+      },
+      {
+        "name": "avif_autodetection",
+        "type": "boolean",
+        "notnull": false
+      },
+      {
+        "name": "file_size_limit",
+        "type": "bigint",
+        "notnull": false
+      },
+      {
+        "name": "allowed_mime_types",
+        "type": "text[]",
+        "notnull": false
+      },
+      {
+        "name": "owner_id",
+        "type": "text",
+        "notnull": false
+      },
+      {
+        "name": "type",
+        "type": "storage.buckettype",
+        "notnull": true
+      },
+      {
+        "name": "versioning_status",
+        "type": "text",
+        "notnull": true
+      },
+      {
+        "name": "lifecycle_configuration",
+        "type": "jsonb",
+        "notnull": false
+      },
+      {
+        "name": "lifecycle_configuration_generation",
+        "type": "uuid",
+        "notnull": false
+      }
+    ],
+    "object_policy_count": 10
+  },
+  "policies": {
+    "observed_at": "2026-10-24 07:22:49.682336+00",
+    "policy_rows": [
+      [
+        "objects",
+        "Admin delete access",
+        "d",
+        true,
+        [
+          "PUBLIC"
+        ],
+        "((bucket_id = 'ad-banner-images'::text) AND is_user_admin(auth.uid()))",
+        null
+      ],
+      [
+        "objects",
+        "Admin upload access",
+        "a",
+        true,
+        [
+          "PUBLIC"
+        ],
+        null,
+        "((bucket_id = 'ad-banner-images'::text) AND is_user_admin(auth.uid()))"
+      ],
+      [
+        "objects",
+        "Anyone can view review photos",
+        "r",
+        true,
+        [
+          "PUBLIC"
+        ],
+        "(bucket_id = 'review-photos'::text)",
+        null
+      ],
+      [
+        "objects",
+        "Authenticated users can upload review photos",
+        "a",
+        true,
+        [
+          "authenticated"
+        ],
+        null,
+        "(bucket_id = 'review-photos'::text)"
+      ],
+      [
+        "objects",
+        "Public read access",
+        "r",
+        true,
+        [
+          "PUBLIC"
+        ],
+        "(bucket_id = 'ad-banner-images'::text)",
+        null
+      ],
+      [
+        "objects",
+        "Public read access for profile-avatars",
+        "r",
+        true,
+        [
+          "PUBLIC"
+        ],
+        "(bucket_id = 'profile-avatars'::text)",
+        null
+      ],
+      [
+        "objects",
+        "Users can delete own avatar",
+        "d",
+        true,
+        [
+          "PUBLIC"
+        ],
+        "((bucket_id = 'profile-avatars'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))",
+        null
+      ],
+      [
+        "objects",
+        "Users can delete own review photos",
+        "d",
+        true,
+        [
+          "authenticated"
+        ],
+        "((bucket_id = 'review-photos'::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))",
+        null
+      ],
+      [
+        "objects",
+        "Users can update own review photos",
+        "w",
+        true,
+        [
+          "authenticated"
+        ],
+        "((bucket_id = 'review-photos'::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1]))",
+        null
+      ],
+      [
+        "objects",
+        "Users can upload own avatar",
+        "a",
+        true,
+        [
+          "PUBLIC"
+        ],
+        null,
+        "((bucket_id = 'profile-avatars'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))"
+      ]
+    ],
+    "policy_digest": "0ac3c20e004f01a0c5a735093a4484f7ee251ae72b41095f4a2979f87b1055a4",
+    "caller_bucket_insert": true,
+    "caller_bucket_select": true,
+    "bucket_defaults": [
+      {
+        "name": "created_at",
+        "default": "now()"
+      },
+      {
+        "name": "updated_at",
+        "default": "now()"
+      },
+      {
+        "name": "public",
+        "default": "false"
+      },
+      {
+        "name": "avif_autodetection",
+        "default": "false"
+      },
+      {
+        "name": "type",
+        "default": "'STANDARD'::storage.buckettype"
+      },
+      {
+        "name": "versioning_status",
+        "default": "'DISABLED'::text"
+      }
+    ]
+  },
+  "assertions": [
+    {
+      "proname": "assert_g014_catalog_contract",
+      "body_sha256": "50948ddce54dbba9497978964bebc535c27ebe98fb0f46bf05e2ec17ab0b9e01",
+      "owner": "privacy_workflow_owner",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}"
+    },
+    {
+      "proname": "assert_g014_definer_contract",
+      "body_sha256": "b9e2f7d812783deee6c91d27d22d6c2019be9aa04e4f1221cc7482567775354a",
+      "owner": "privacy_workflow_owner",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}"
+    },
+    {
+      "proname": "assert_g014_public_rpc_allowlist",
+      "body_sha256": "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+      "owner": "privacy_workflow_owner",
+      "security_definer": true,
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}"
+    },
+    {
+      "proname": "assert_g014_workflow_owner_contract",
+      "body_sha256": "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d",
+      "owner": "privacy_workflow_owner",
+      "security_definer": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": "{privacy_workflow_owner=X/privacy_workflow_owner}"
+    }
+  ]
+}

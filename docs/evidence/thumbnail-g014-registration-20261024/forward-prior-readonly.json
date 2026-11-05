@@ -1,0 +1,77 @@
+{
+  "kind": "draft_forward_read_only_prior",
+  "project": "aqlcofblfxdrjhhdmarw",
+  "capturedAtUtc": "2026-10-24 07:56:27 UTC",
+  "querySource": ".github/thumbnail-production-installation.draft.v1.json#migration.expectedPriorState",
+  "expectedFields": 23,
+  "allExpectedFieldsMatched": true,
+  "observation": {
+    "bucket": [],
+    "caller": "postgres",
+    "assertions": [
+      [
+        "assert_g014_catalog_contract",
+        "50948ddce54dbba9497978964bebc535c27ebe98fb0f46bf05e2ec17ab0b9e01",
+        true,
+        "privacy_workflow_owner",
+        [
+          "search_path=\"\""
+        ],
+        "{privacy_workflow_owner=X/privacy_workflow_owner}"
+      ],
+      [
+        "assert_g014_definer_contract",
+        "b9e2f7d812783deee6c91d27d22d6c2019be9aa04e4f1221cc7482567775354a",
+        true,
+        "privacy_workflow_owner",
+        [
+          "search_path=\"\""
+        ],
+        "{privacy_workflow_owner=X/privacy_workflow_owner}"
+      ],
+      [
+        "assert_g014_public_rpc_allowlist",
+        "f23203a0a2366eca16b30b256729e859efc556952df8cb75485924153e1188ef",
+        true,
+        "privacy_workflow_owner",
+        [
+          "search_path=\"\""
+        ],
+        "{privacy_workflow_owner=X/privacy_workflow_owner}"
+      ],
+      [
+        "assert_g014_workflow_owner_contract",
+        "345aed9acb1da06262740ef06d81e51855a44c7470aa8b431a23e6fa629aab1d",
+        false,
+        "privacy_workflow_owner",
+        [
+          "search_path=\"\""
+        ],
+        "{privacy_workflow_owner=X/privacy_workflow_owner}"
+      ]
+    ],
+    "ledgerCount": 89,
+    "queueSchema": false,
+    "queueTables": [],
+    "serverMajor": 17,
+    "nonSuperuser": true,
+    "registryCount": 137,
+    "ownerBootstrap": true,
+    "queueFunctions": [],
+    "registryNewRows": [],
+    "ledgerPrefixCount": 89,
+    "oldRegistryDigest": "e18337a71017c051d5e8dd1624806010a07d756aa11b2ffb1338005421ee2c16",
+    "ledgerPrefixDigest": "7acfd9c3887fa67540cc0a9ed3487900cbccc6678cb69c29218bf5216e7aa4ec",
+    "ledgerPrefixLatest": "20261017160000",
+    "browserRoleBoundary": true,
+    "ledgerTargetPresent": false,
+    "storageLockCapability": true,
+    "storagePolicyContract": true,
+    "storageServerBoundary": true,
+    "storageManagedBoundary": true,
+    "temporaryObjectsAbsent": true
+  },
+  "hostedWrites": 0,
+  "assertionsInvoked": 0,
+  "scope": "One SELECT metadata readback. Capture time follows the query; no server timestamp was selected. Not full G014 execution, writer-fence freshness, installation admission, terminal state or hosted write proof."
+}

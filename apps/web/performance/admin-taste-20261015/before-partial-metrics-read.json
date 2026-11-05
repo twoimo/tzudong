@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "phase": "before",
+  "environment": "Node 24 / Playwright 1.63 / Chrome; synthetic loopback fixture; no hosted API or provider calls",
+  "cases": [
+    {
+      "module": "overview",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "대시보드 (KPI)",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 57
+      },
+      "titleStyle": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "pageErrors": 0,
+      "screenshot": "overview-1440.png"
+    },
+    {
+      "module": "restaurants",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "맛집 관리",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 57
+      },
+      "titleStyle": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "pageErrors": 0,
+      "screenshot": "restaurants-1440.png"
+    },
+    {
+      "module": "submissions",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "제보 관리",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 57
+      },
+      "titleStyle": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "pageErrors": 0,
+      "screenshot": "submissions-1440.png"
+    },
+    {
+      "module": "reviews",
+      "width": 1440,
+      "visibleHeaders": 1,
+      "title": "리뷰 관리",
+      "header": {
+        "x": 220,
+        "y": 12,
+        "width": 1208,
+        "height": 57
+      },
+      "titleStyle": {
+        "size": "16px",
+        "weight": "600",
+        "lineHeight": "24px"
+      },
+      "documentOverflow": 0,
+      "canvasOverflow": 0,
+      "tableRows": 0,
+      "visibleTableRows": 0,
+      "rowHeight": null,
+      "navigationTargets": 15,
+      "mainFont": "pretendard, \"pretendard Fallback\", \"Apple SD Gothic Neo\", \"Malgun Gothic\", \"Segoe UI\", system-ui, -apple-system, \"system-ui\", sans-serif",
+      "pageErrors": 0,
+      "screenshot": "reviews-1440.png"
+    }
+  ],
+  "source": {
+    "styles/admin-ui.css": "b0741acb28a35b16f4bcab415b5549bf30924c19efba86a8048ced2456d4c307",
+    "components/admin/AdminPageHeader.tsx": "ac2621a32fbed7b801798675683a439b8900621ef86e6116034d71a1cfb40a73",
+    "components/admin/AdminConsoleOverview.tsx": "e3ea987a737af697a5d7ea155a474ed448f1d539fe46178914bb5abc419ac4d1"
+  }
+}

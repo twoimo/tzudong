@@ -1,0 +1,476 @@
+{
+  "schema": "tzudong-ocr-credential-admission-source-adjudication/v1",
+  "capturedAt": "2026-10-19T03:40:27+0900",
+  "reviewMode": "read_only_supplemental_report_source_adjudication",
+  "scope": {
+    "reportDecisions": [
+      "exact-claim release after a trusted definitive credential rejection",
+      "operating admission from post-seal ACL equality versus an independent initial canonical ACL allowlist"
+    ],
+    "supplementalOnly": true,
+    "replacesOriginalThesisGeminiReverseGate": false,
+    "hostedReadinessEstablished": false,
+    "sourceSqlTestsGitDatabaseBrowserExternalExecutionPerformed": false
+  },
+  "reportAnchor": {
+    "path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/chatgpt-full-report.md",
+    "bytes": 38673,
+    "sha256": "117b7a0f220af81c5283b385a1b5f46b440c628521fc5ca3522f3a5e7517a215",
+    "originalUrl": "https://chatgpt.com/c/6ad50f71-6e94-83ee-bdf1-851a80101df8",
+    "frozenSourceRevision": "14a8f5da4268df890c7adf10bf89e99ce071f6f5",
+    "frozenSourceBundleSha256": "90c4e3f0540c90d4be1f9ea1439538e73feddaf79790e0cdb90ebcd179921866",
+    "preservedFullText": true,
+    "coordinatorSlot": "completed_released_by_owner_before_this_adjudication"
+  },
+  "currentSourceAnchors": {
+    "apps/web/lib/ocr/gemini.ts": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef",
+    "apps/web/tests-unit/gemini-ocr.test.ts": "e5d8bf3b91b6adbef392d80e728f272a6bc8bf2841714b1bd3874dd49e3e883b",
+    "apps/web/lib/ocr/durable-result.ts": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787",
+    "apps/web/tests-unit/durable-receipt-ocr.test.ts": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0",
+    "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+    "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+    "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47",
+    ".github/receipt-ocr-post105-sql-successor.v1.json": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+    "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda",
+    "backend/supabase/scripts/transform_receipt_ocr_credential_release_pg15_replay.py": "d047596d26c76574e515406388d9a22a1bb482eed65add8f8956f475abc19b1b"
+  },
+  "verificationEvidence": {
+    "mixedModelResolution": {
+      "path": "apps/web/performance/cross-audit-20261018/ocr-multi-model-response-credential-followup/resolution-followup.json",
+      "sha256": "615b644827300b39773bc2718c6b43391b497f910d7de75ca3cfc579284d70bf",
+      "result": "26 pass,0 fail,116 assertions for the provider helper; no real provider call"
+    },
+    "integratedLocalVerification": {
+      "path": "apps/web/performance/cross-audit-20261019/ocr-mixed-model-integrated-verification/verification.json",
+      "sha256": "1dbf14a94e1a0167dd42de8ad13846a063b35757c86c63e0bc38476e7fe71b67",
+      "ocrIntegration": {
+        "tests": 79,
+        "assertions": 447,
+        "failures": 0,
+        "artifactSha256": "05479ee69bc9a064a4cbce44c9b538b99688755faab43be93b071049b3b5a45b"
+      },
+      "compilerParity": {
+        "status": "passed",
+        "diagnostics": 0,
+        "artifactSha256": "5aac9f15b50ba34c494b5cc044964774a6986a3baa21c2bdcd66103b2c3c2597"
+      },
+      "productionBuild": {
+        "status": "passed",
+        "staticPages": 54,
+        "artifactSha256": "44610bd64d6d591133590d25f9a1471561c3d1b020c0e4b365998243f3463518"
+      },
+      "classification": "local synthetic tests, compiler parity and build only; no provider, hosted database, deployment, billing or authenticated production evidence"
+    }
+  },
+  "overallDecisions": {
+    "frozen14a8f5daDecision1": "ACCEPT_REPORT_REJECT_FINDING",
+    "currentDecision1": "CONDITIONAL_RESOLVED_IN_HELPER_PENDING_REAL_HELPER_DURABLE_INTEGRATION",
+    "frozen14a8f5daDecision2": "ACCEPT_REPORT_REJECT_FINDING",
+    "currentDecision2": "OPEN_REQUIRES_FORWARD_SUCCESSOR_ADMISSION",
+    "recommendedDatabaseStructure": "SEPARATE_FORWARD_107_WITH_VERSIONED_FAIL_CLOSED_ADMISSION",
+    "hosted": "UNVERIFIED"
+  },
+  "findings": [
+    {
+      "id": "OCR-SUP-D1-001",
+      "title": "The exact-token release primitive is stale-ACK and stale-token safe",
+      "reportReference": {
+        "heading": "SQL exact-claim primitive itself is safe against stale ACK",
+        "lineRange": "73-87"
+      },
+      "decision": "ACCEPT",
+      "evidence": [
+        {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "lineRanges": ["254-289", "302-355"],
+          "observation": "The transaction locks by result id, returns an existing result-id/token release receipt idempotently, then requires processing/possibly_dispatched/exact claim token before an exact update or delete."
+        },
+        {
+          "path": "backend/supabase/tests/receipt_ocr_definitive_credential_rejection_release.sql",
+          "sha256": "c39bdaca94a53bb41d89a749276be750c8ae8f2bd4e0f455be3bf15d6e25ce07",
+          "observation": "The frozen fixture covers deleted/restored disposition, idempotent replay, wrong token/state, stale ACK and inter-session race."
+        }
+      ],
+      "currentImplementation": "unchanged and retained",
+      "condition": "Do not weaken exact result-id/token predicates or treat the local privileged dblink race as a NOSUPERUSER operating-race proof.",
+      "verification": [
+        "Existing direct SQL fixture remains required.",
+        "PG17 Event009 race remains privileged local concurrency evidence; Event011 proves only the canonical non-dblink NOSUPERUSER core."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D1-002",
+      "title": "Frozen source could downgrade a prior returned response into a release-authorizing final credential rejection",
+      "reportReference": {
+        "heading": "Decisive counterexample: model A response,parse failure,model B credential rejection",
+        "lineRange": "89-160"
+      },
+      "decision": "ACCEPT_FOR_FROZEN_SOURCE_RESOLVED_IN_CURRENT_HELPER",
+      "evidence": [
+        {
+          "path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/chatgpt-full-report.md",
+          "lineRange": "91-145",
+          "observation": "The report correctly traces the frozen per-model providerResponseReceived reset and final true flag."
+        },
+        {
+          "path": "apps/web/lib/ocr/gemini.ts",
+          "lineRanges": ["209-210", "259-276"],
+          "sha256": "e3b7de25cd364d85d44afcc43ebba70d0090a7766dae5f7465a413f4637897ef",
+          "observation": "Current code monotonically records nonCredentialOutcomeObserved. A later credential rejection throws true only if none was observed; otherwise it breaks and returns GeminiOcrError(...,false)."
+        }
+      ],
+      "currentImplementation": "The unsafe response-model to credential-model sequence now stops at the credential-model. It does not call the third model or rotate to another credential, and the durable layer therefore takes markIndeterminate rather than exact release.",
+      "condition": "Preserve the monotonic operation history. No later model or credential may turn a mixed history back into definitiveCredentialRejection=true.",
+      "verification": [
+        "The current helper regression observes exactly response-model and credential-model, definitiveCredentialRejection=false, and no third-model or next-credential call.",
+        "The current helper and test hashes match the integrated verification receipt."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D1-003",
+      "title": "A second public release-safety boolean is not required for the current conservative policy",
+      "reportReference": {
+        "heading": "Minimum patch and verification gate for credential release",
+        "lineRange": "164-274"
+      },
+      "decision": "REJECT_PROPOSED_API_SHAPE_ACCEPT_REQUIRED_INVARIANT",
+      "evidence": [
+        {
+          "path": "apps/web/lib/ocr/gemini.ts",
+          "lineRanges": ["209", "259-276", "291-317"],
+          "observation": "The current smaller design keeps definitiveCredentialRejection as the durable release predicate, but makes it false and stops all remaining fallback after any prior non-credential outcome. Pure credential-only rejection still rotates credentials."
+        },
+        {
+          "path": "apps/web/tests-unit/gemini-ocr.test.ts",
+          "lineRanges": ["267-309", "311-369", "570-614"],
+          "observation": "Tests preserve successful pure credential rotation, reject mixed model history, and keep credential-then-transport uncertainty non-definitive."
+        }
+      ],
+      "currentImplementation": "accepted as the minimum safe structure",
+      "condition": "If product policy later wants to continue fallback after mixed history, the two-predicate design or an equivalent explicit state model becomes necessary. The current policy intentionally stops instead.",
+      "verification": [
+        "Keep pure credential-only fallback coverage.",
+        "Keep the assertion that neither another model nor another credential is dispatched after the mixed stop."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D1-004",
+      "title": "Provider-helper mixed-history regression is present and source-bound",
+      "reportReference": {
+        "heading": "Required direct regression sequence",
+        "lineRange": "276-300"
+      },
+      "decision": "ACCEPT_RESOLVED",
+      "evidence": [
+        {
+          "path": "apps/web/tests-unit/gemini-ocr.test.ts",
+          "lineRange": "311-369",
+          "sha256": "e5d8bf3b91b6adbef392d80e728f272a6bc8bf2841714b1bd3874dd49e3e883b",
+          "observation": "The real helper runs response-model then a structured credential-model rejection, returns false, and proves third-model and the second credential were unused."
+        },
+        {
+          "path": "apps/web/performance/cross-audit-20261019/ocr-mixed-model-integrated-verification/ocr-integration.txt",
+          "sha256": "05479ee69bc9a064a4cbce44c9b538b99688755faab43be93b071049b3b5a45b",
+          "observation": "The source-bound local integration set reports 79 tests and 447 assertions passing."
+        }
+      ],
+      "currentImplementation": "complete at the provider-helper boundary",
+      "condition": "This local regression does not prove provider production behavior or billing.",
+      "verification": [
+        "26 helper tests,116 assertions passed in the direct receipt.",
+        "Compiler parity and the 54-page production build also passed for the same helper/test hashes."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D1-005",
+      "title": "The real helper is not yet integrated into durable no-payload and force-refresh mixed-history regressions",
+      "reportReference": {
+        "heading": "Required direct regression sequence",
+        "lineRange": "301-330"
+      },
+      "decision": "CONDITIONAL_OPEN_TEST_GAP",
+      "evidence": [
+        {
+          "path": "apps/web/tests-unit/durable-receipt-ocr.test.ts",
+          "lineRanges": ["1-17", "534-725"],
+          "sha256": "42100407b8e910abae97deb5e242db5913697fcaa24b571b1ce26a945f7c97e0",
+          "observation": "The durable suite imports GeminiOcrError but not callGeminiReceiptOcrWithCredentialFallback. Its release tests synthesize GeminiOcrError(...,true), so they do not join the actual mixed-model classifier to durable terminal state."
+        },
+        {
+          "path": "apps/web/performance/cross-audit-20261019/ocr-mixed-model-integrated-verification/ocr-integration.txt",
+          "sha256": "05479ee69bc9a064a4cbce44c9b538b99688755faab43be93b071049b3b5a45b",
+          "observation": "Both suites passed in one command, but no test composes the real provider helper inside executeDurableReceiptOcr for this counterexample."
+        }
+      ],
+      "currentImplementation": "the production call graph is safe by source composition, but the discriminating behavioral regression remains indirect",
+      "condition": "Add two direct synthetic integrations using the real helper as runProvider: no-payload must finish indeterminate/uncertain with zero release calls; force refresh must preserve payload and revision as succeeded/uncertain, never completed, with retry blocked.",
+      "verification": [
+        "Use model A returned/unparseable then model B structured credential rejection.",
+        "Assert no third model or next credential call, release RPC count 0, and markIndeterminate count 1.",
+        "No SQL change is required for this app regression."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D1-006",
+      "title": "Replay safety, provider calls, provider billing and application quota are separate evidence classes",
+      "reportReference": {
+        "heading": "At-most-once,provider calls,billing,quota are separate",
+        "lineRange": "332-343"
+      },
+      "decision": "ACCEPT_WITH_EVIDENCE_BOUNDARY",
+      "evidence": [
+        {
+          "path": "apps/web/lib/ocr/durable-result.ts",
+          "lineRanges": ["595-626", "628-653"],
+          "observation": "Durable state is fenced before runProvider."
+        },
+        {
+          "path": "apps/web/lib/ocr/gemini.ts",
+          "lineRanges": ["211-276", "291-320"],
+          "observation": "One durable run can contain model and credential loops."
+        }
+      ],
+      "currentImplementation": "unchanged",
+      "condition": "Do not claim credential errors are free, infer monetary savings, equate one application quota reservation with one provider call, or apply the user-route quota conclusion to the admin route without separate evidence.",
+      "verification": [
+        "Local source establishes ordering only.",
+        "Provider billing and hosted quota behavior remain unverified."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D2-001",
+      "title": "Post-seal equality detects drift but does not prove the initial ACL is allowed",
+      "reportReference": {
+        "heading": "What equality actually does;why creator default ACL differs from post-seal drift",
+        "lineRange": "351-438"
+      },
+      "decision": "ACCEPT_OPEN_SOURCE_GAP",
+      "evidence": [
+        {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "lineRanges": ["386-473", "530-667", "808-901"],
+          "observation": "The migration snapshots normalized function/table contracts and the getter checks current equality plus other invariants. It does not compare the initial normalized ACL to an independent canonical allowlist."
+        },
+        {
+          "path": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
+          "lineRange": "345-406",
+          "observation": "The compiler binds the ledger fields and requires ready readback, but contains no independent initial ACL admission predicate."
+        }
+      ],
+      "currentImplementation": "unresolved; raw migration, manifest and compiler remain byte-identical to the frozen report",
+      "condition": "Ready must require both sealed equality and a canonical owner/explicit-ACL predicate. Equality alone is insufficient.",
+      "verification": [
+        "A creator-default privilege must be proven present as an aclitem before testing admission.",
+        "A deliberately matching bad sealed snapshot must still yield held."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D2-002",
+      "title": "Existing post-seal mutation fixtures are valid but do not cover initial creator defaults",
+      "reportReference": {
+        "heading": "Current post-seal ACL test is valid but does not verify the initial-default counterexample",
+        "lineRange": "440-463"
+      },
+      "decision": "ACCEPT_WITH_LIMIT",
+      "evidence": [
+        {
+          "path": "backend/supabase/tests/receipt_ocr_credential_release_catalog_readiness.sql",
+          "lineRanges": ["113-151", "153-218"],
+          "sha256": "5b1460565194e4f1458e06c4c6021e536f8cc018f14b85e5b1eeb5502080ea47",
+          "observation": "The fixture proves actual post-seal wrapper ACL and table-owner mutations, then requires held and rolls back."
+        }
+      ],
+      "currentImplementation": "retained as post-seal drift evidence only",
+      "condition": "Do not relabel it as installation admission evidence.",
+      "verification": [
+        "Keep mutation readback before the held assertion.",
+        "Add separate pre-creation default-ACL fixtures for each creator/object class."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D2-003",
+      "title": "Explicit ACL, effective privilege, membership, owner and RLS must remain distinct",
+      "reportReference": {
+        "heading": "Do not mix explicit ACL,effective privilege,role membership,owner,RLS",
+        "lineRange": "465-469"
+      },
+      "decision": "ACCEPT",
+      "evidence": [
+        {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "lineRanges": ["386-473", "636-667"],
+          "observation": "The source separately computes normalized explicit ACL contracts and selected effective-privilege checks."
+        }
+      ],
+      "officialDocumentationReadback": {
+        "provenance": "root-provided read-only live verification; this adjudicator made no browser call",
+        "urls": [
+          "https://www.postgresql.org/docs/17/sql-alterdefaultprivileges.html",
+          "https://www.postgresql.org/docs/17/functions-info.html",
+          "https://www.postgresql.org/docs/17/ddl-priv.html"
+        ],
+        "relevantContract": "Only the current creator role's future-object defaults apply; member-role defaults are not inherited; per-schema defaults add to global defaults. aclexplode/acldefault describes catalog ACL representation and is not itself a policy allowlist."
+      },
+      "currentImplementation": "the distinction is required for the successor design",
+      "condition": "Never use supabase_admin superuser effective privilege as evidence of an explicit forbidden aclitem.",
+      "verification": [
+        "Read explicit normalized proacl/relacl entries and owners.",
+        "Verify the mutation actually occurred before requiring a held result."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D2-004",
+      "title": "The report's six-object owner and ACL allowlist matches the actual SQL",
+      "reportReference": {
+        "heading": "Minimum independent allowlist",
+        "lineRange": "473-508"
+      },
+      "decision": "ACCEPT",
+      "evidence": [
+        {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "lineRanges": ["156-233", "235-370", "649-667", "699-736"],
+          "observation": "The two public wrappers are owned by privacy_workflow_owner and grant non-owner EXECUTE only to service_role; two private helpers are owned by postgres and grant non-owner EXECUTE only to privacy_workflow_owner; two private tables are owned by postgres and intend no non-owner table ACL."
+        }
+      ],
+      "currentImplementation": "owner expectations are already checked, but an arbitrary non-owner aclitem can be born into and sealed by the current source",
+      "condition": "The canonical predicate must allow the owner entry and only the stated non-owner entries, rejecting every other grantee/privilege/grant-option combination.",
+      "verification": [
+        "Apply the same predicate before seal, in the compiler admission, and in runtime capability readback or its forward-successor equivalent."
+      ]
+    },
+    {
+      "id": "OCR-SUP-D2-005",
+      "title": "Initial-default negative coverage must include all three creator and object classes",
+      "reportReference": {
+        "heading": "Direct negative fixture",
+        "lineRange": "533-587"
+      },
+      "decision": "CONDITIONAL_EXPAND_REPORT_FIXTURE_SET",
+      "evidence": [
+        {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "lineRanges": ["156-235", "364-370", "704-736"],
+          "observation": "Objects are created by two roles across three classes: privacy_workflow_owner public functions, postgres private functions, and postgres private tables."
+        }
+      ],
+      "currentImplementation": "no initial-default fixture exists",
+      "condition": "In addition to the report's wrapper and table examples, add a postgres-created private-helper default EXECUTE case. Preserve and restore global and per-schema default ACL state exactly. Each fixture must prove the aclitem exists before the admission assertion.",
+      "verification": [
+        "privacy_workflow_owner future function default creates a forbidden wrapper EXECUTE aclitem",
+        "postgres future function default creates a forbidden private-helper EXECUTE aclitem",
+        "postgres ocr_private future table default creates a forbidden table privilege aclitem",
+        "bad ACL deliberately included in the sealed snapshot still returns held",
+        "default privileges, object ACLs, owners and membership restore byte-for-byte or normalized-equivalent after the fixture"
+      ]
+    },
+    {
+      "id": "OCR-SUP-D2-006",
+      "title": "Use a forward 107 admission successor rather than rewriting frozen 106",
+      "reportReference": {
+        "heading": "Minimum independent allowlist",
+        "lineRange": "510-531"
+      },
+      "decision": "RECOMMEND_FORWARD_107",
+      "evidence": [
+        {
+          "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+          "sha256": "9dc92d7b42f8329d16b61ac51bf0b05a8533a1655a94faa8cd74e3d9a92fe74c",
+          "observation": "The raw 106 migration is frozen, forward-only and bound to existing manifest/compiler/PG15/PG17 evidence."
+        },
+        {
+          "path": ".github/receipt-ocr-post105-sql-successor.v1.json",
+          "sha256": "ecc1d0678210f4ac06fe47fc4b62cfdd0694511aacc18ab20978d3e83d82af81",
+          "observation": "The 105-to-106 transition is hash and ledger bound."
+        }
+      ],
+      "currentImplementation": "106 remains unchanged and conditionally accepted only for post-seal drift detection",
+      "condition": "107 must introduce a versioned fail-closed admission that old v1 cannot satisfy, preserve receipt data, admit ready only after exact six-object owner/ACL readback, and leave the feature held when source, ledger or ACL state is invalid.",
+      "verification": [
+        "New app preflight must require the 107 capability version so an absent or rolled-back 107 cannot fall back to v1 ready.",
+        "The 107 transaction must make current runtime admission held before any compiler seal and must not expose an intermediate ready state.",
+        "The 107 compiler may seal only after exact canonical ACL/owner and ledger readback.",
+        "Keep 106 source, fixture and PG15 transformer pins unchanged; add separately pinned 107 source, compiler, fixtures and source-only adapter.",
+        "Run new PG17 constituent and aggregate paths, preserving the existing NOSUPER non-race versus privileged dblink-race classification.",
+        "Run a new PG15 dual-clean comparison for the 107 adapter; it remains source-only evidence.",
+        "Hosted apply, terminal ledger, catalog, capability version and app preflight readback remain a separate required gate."
+      ]
+    },
+    {
+      "id": "OCR-SUP-EVIDENCE-001",
+      "title": "The report keeps local PG17, PG15 and hosted evidence classes separate",
+      "reportReference": {
+        "heading": "Evidence grades and verification gates",
+        "lineRange": "589-618"
+      },
+      "decision": "ACCEPT",
+      "evidence": [
+        {
+          "path": "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/chatgpt-full-report.md",
+          "lineRange": "593-618",
+          "observation": "Event011 is limited to local canonical non-dblink NOSUPER core; Event009 race remains privileged local; PG15 is deterministic source-only; hosted is unverified."
+        }
+      ],
+      "currentImplementation": "no evidence class is promoted by this adjudication",
+      "condition": "The supplemental GPT report remains separate from the required Gemini adversarial stage and final reverse verification.",
+      "verification": [
+        "Do not claim deployment or hosted readiness from local source/tests/build.",
+        "Do not claim provider billing, quota savings or credential-error cost behavior."
+      ]
+    }
+  ],
+  "structureComparison": {
+    "amendFrozen106": {
+      "invalidStateBehavior": "A pre-seal allowlist assertion could atomically abort a brand-new 106 install before a valid seal. It cannot remediate a database where 106 is already applied, and an aborted edit provides no forward state transition there.",
+      "atomicity": "Simple within the existing single 105-to-106 outer transaction.",
+      "impact": "Changes the raw migration bytes and statement vector, invalidates the successor manifest/compiler, 106 direct fixtures, PG15 transformer pin and all role-qualified PG17 evidence. It conflicts with the applied/frozen migration rule.",
+      "verificationCost": "Full 106 source freeze, compiler, unit, PG15 dual-clean, PG17 constituent/aggregate/race classification and hosted evidence must be rebuilt; historical receipts remain historical only.",
+      "decision": "REJECT_UNDER_CURRENT_FROZEN_CONTRACT"
+    },
+    "forward107": {
+      "invalidStateBehavior": "Require a new capability version. If 107 is absent, rolls back or remains unsealed, the updated app rejects old v1 and performs no claim/quota/provider work. Invalid ACL can be normalized by explicit canonical grants/revokes with readback or left held, but must never be silently sealed.",
+      "atomicity": "One forward transaction changes the admission getter/contract to held and preserves existing release receipts and OCR results; a separately bound compiler seals only after the 107 ledger and exact allowlist match.",
+      "impact": "Preserves all 106 hashes and evidence. Adds a 107 migration, manifest/compiler transition, versioned app preflight, direct SQL fixtures and a separately pinned PG15 replay adapter.",
+      "verificationCost": "Incremental new 107 unit/SQL/PG15/PG17/hosted gates. Higher code count than editing 106, but lower custody risk and valid for already-applied 106 state.",
+      "decision": "RECOMMENDED"
+    },
+    "recommendation": "Use a forward 107 with a versioned fail-closed capability. Do not rewrite 106. Keep the release state machine and receipt data unchanged; scope 107 to independent canonical ACL/owner admission and ledger-bound readback."
+  },
+  "remainingGates": [
+    {
+      "id": "OCR-GATE-APP-001",
+      "status": "open",
+      "condition": "Add real-helper durable integrations for no-payload and force-refresh mixed histories."
+    },
+    {
+      "id": "OCR-GATE-ACL-001",
+      "status": "open",
+      "condition": "Implement and verify the forward 107 exact six-object canonical owner/ACL admission, including all three creator/object classes."
+    },
+    {
+      "id": "OCR-GATE-HOSTED-001",
+      "status": "unverified",
+      "condition": "Hosted apply, terminal ledger/catalog/capability version and app readback evidence."
+    },
+    {
+      "id": "OCR-GATE-CROSS-AUDIT-001",
+      "status": "required_separate",
+      "condition": "The original Gemini adversarial research and final GPT reverse verification remain mandatory and are not replaced by this supplemental report or local adjudication."
+    }
+  ],
+  "reviewerEffects": {
+    "reportModified": false,
+    "applicationSourceEdits": 0,
+    "sqlEdits": 0,
+    "testEdits": 0,
+    "gitOperations": 0,
+    "databaseOperations": 0,
+    "browserOperations": 0,
+    "externalResearchOperations": 0,
+    "providerCalls": 0,
+    "ownedOutputs": [
+      "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix.json",
+      "apps/web/performance/cross-audit-20261019/ocr-credential-admission-supplemental-review/decision-matrix.json.sha256"
+    ]
+  }
+}

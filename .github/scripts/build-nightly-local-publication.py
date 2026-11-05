@@ -17,7 +17,6 @@ import sys
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_MIGRATE_PATH = REPOSITORY_ROOT / "backend" / "supabase" / "scripts" / "local-migrate.py"
 PUBLICATION_VERIFIER_PATH = REPOSITORY_ROOT / ".github" / "scripts" / "verify-nightly-local-publication.py"
-EXPECTED_LEDGER_UNITS = 140
 HEX64 = re.compile(r"[a-f0-9]{64}")
 LOCAL_PROJECT = re.compile(r"tzudong-local-[a-f0-9]{12}")
 SUMMARY_FIELDS = {
@@ -208,7 +207,7 @@ def build_summary(state_root: Path) -> dict[str, object]:
     if (
         not isinstance(readback, list)
         or not isinstance(ledger, list)
-        or len(ledger) != EXPECTED_LEDGER_UNITS
+        or len(ledger) != manifest["source"]["migrationCount"]
         or not isinstance(sequence, list)
         or len(sequence) != 5
         or service != [["service", "150008", "UTF8", "UTC"]]

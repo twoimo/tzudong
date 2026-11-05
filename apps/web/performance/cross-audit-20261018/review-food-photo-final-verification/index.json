@@ -1,0 +1,118 @@
+{
+  "schema": "tzudong-review-food-photo-final-index/v1",
+  "capturedAt": "2026-10-18T14:51:53.936663+00:00",
+  "baseHead": "17eec51ae1f487d6e4445368cc2a7fead0dc8911",
+  "sourceState": "exact six-file followup snapshot pending commit",
+  "sourceIntegrity": {
+    "apps/web/app/api/ocr/reviews/save/route.ts": "a1ee27c435f4d6e6edc37758a2c846d8b7bfb713c915c51e3a5bfef623b32e11",
+    "apps/web/components/reviews/ReviewModal.tsx": "5f3e9ab0ca2f549d47ef6475073b66365fff717d53f13a038b6408e4a0c0f5fb",
+    "apps/web/lib/reviews/review-save-operation.ts": "48def0f277e7e0081f91b557e2d9b5b953a6e0461360668bee1169ba3939dabe",
+    "apps/web/tests-unit/review-save-operation.test.ts": "50254e9bd20da2db4b6f2386193dc60174b26546cf523fc2a9f16d7daaf5454f",
+    "apps/web/tests-unit/review-save-submit.test.ts": "70c1c53f8fd41763ae0ad306d9c5d0b02e984dd1aa3643cd8dc0db6630a3414d",
+    "apps/web/tests-unit/review-upload-uncertainty.test.ts": "569edc7db091e94a872cb12079c62553972564c4b94dc9400c0de0e2c80c9584"
+  },
+  "checks": {
+    "affectedTests": {
+      "pass": 174,
+      "fail": 0,
+      "assertions": 2642,
+      "artifact": "review-food-photo-closed-composer/after-full-tests.txt"
+    },
+    "independentCounterexamples": {
+      "pass": 13,
+      "fail": 0,
+      "overlapsAffectedTests": true
+    },
+    "targetedEslint": {
+      "exitCode": 0,
+      "files": 6
+    },
+    "compilerParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3350,
+      "logicalInputNamesSha256": "1836c11b74ddc315ca7be1d256ed3738780e433fd513dd8a85e9ee4914e54924",
+      "nonLibraryContentSha256": "6bad164b5ce17673a35191141051846b4bb4ab70a4276d6469c5f07b8304bf60",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "staticPages": 54,
+      "routeCssBytes": {
+        "home": 195887,
+        "generalApp": 329148,
+        "admin": 349615,
+        "deferred": 195887
+      }
+    }
+  },
+  "behavior": {
+    "maximumFoodPhotos": 20,
+    "newOverLimitDraft": {
+      "foodPhotos": 21,
+      "prepare": 0,
+      "upload": 0,
+      "insert": 0,
+      "inputPreserved": true
+    },
+    "existingUnknownOperation": "read-only confirmation preserves owner/id/snapshot and remains available for live draft with 0 or 21 photos",
+    "closedComposerCounterexample": {
+      "beforePass": 0,
+      "beforeFail": 1,
+      "afterAffectedSuitePass": 174,
+      "afterAffectedSuiteFail": 0,
+      "scope": "synthetic handler fixture; no hosted requests"
+    }
+  },
+  "evidence": {
+    "review-food-photo-limit-source-receipt.json": {
+      "sha256": "766dc8864623ac429e01c809610ad04bf1101ff273d7ea22198c69428971762d",
+      "bytes": 4132
+    },
+    "review-food-photo-recovery-source-receipt.json": {
+      "sha256": "7e3aad012accc94fb36e2203e1d27ca2cc2311fb0977e6de515efc67a472a4df",
+      "bytes": 4476
+    },
+    "review-food-photo-native-findings.json": {
+      "sha256": "bb9747313d954db868a601feb155a090c6e13b42f675fd61b23d35920ec741b4",
+      "bytes": 5301
+    },
+    "review-food-photo-native-resolution.json": {
+      "sha256": "d53a54f4da95201a7e1ca28a2918583bcfa117e3e34df01c94a05939ec4b2825",
+      "bytes": 5826
+    },
+    "review-food-photo-verification/verification.json": {
+      "sha256": "c27ad48759d654d6bffb9b7d4c2672bc464dcc51f1dada6d0a18cf1191962f4a",
+      "bytes": 2087
+    },
+    "review-food-photo-recovery-verification/verification.json": {
+      "sha256": "509a58839bb739853fe679320f1c5111fef81c0d76fb9c1c08e0b1c2f77bfa57",
+      "bytes": 2105
+    },
+    "review-food-photo-closed-composer/before.json": {
+      "sha256": "3c9cf6a0385bb33d66122acb4f5a36f471964863846b4835cbafbcdf711488e4",
+      "bytes": 498
+    },
+    "review-food-photo-closed-composer/after.json": {
+      "sha256": "a9cf5c281040e1bc2d60a9ca191e617bd0b3af5eb5d59516df951b1d36e84339",
+      "bytes": 523
+    }
+  },
+  "historicalPreparedExternalPackage": {
+    "path": "apps/web/performance/cross-audit-20261018/final-source-antithesis-post-cms/final-source-antithesis-source-manifest.json",
+    "sha256": "9876e8c47a205cbba81a31304908837d0ebf13396bf3e2cba5a2308fcfaada93",
+    "coversThisFollowup": false,
+    "nextAction": "Prepare a new complete final-source review snapshot including operation, modal, route, uncertainty tests and these findings before external final-source review. Preserve the original queued job and all old bundles."
+  },
+  "limitations": [
+    "Tests execute synthetic dependencies; no hosted DB/Storage/provider result or paid saving is established.",
+    "No fresh browser rendering of this recovery control was collected; JSX wiring and actual handler/controller code were exercised in synthetic fixtures.",
+    "No credentials were supplied to the production-mode build. Outbound network traffic was not instrumented.",
+    "The three build observations are not a performance comparison or a confidence interval.",
+    "External Gemini antithesis, final reverse verification, hosted SQL admission/apply, protected promotion, deployment and all live admin menu validation remain incomplete."
+  ],
+  "artifactMap": "apps/web/performance/cross-audit-20261018/review-food-photo-artifact-map.json"
+}

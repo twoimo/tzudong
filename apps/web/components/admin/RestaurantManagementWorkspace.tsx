@@ -46,8 +46,8 @@ export function RestaurantManagementWorkspace({ review, refresh }: { review: Rea
           actions={<div ref={setAutomation} className="admin-restaurant-header-automation min-w-0" />}
         >
           <TabsList aria-label="맛집 관리 작업 선택" className="h-auto shrink-0 p-0 sm:p-1">
-            <TabsTrigger value="review" className="min-h-11 px-3 sm:min-h-7">검수</TabsTrigger>
-            <TabsTrigger value="refresh" className="min-h-11 px-3 sm:min-h-7">최신화·이력</TabsTrigger>
+            <TabsTrigger value="review" className="min-h-11 px-3 sm:min-h-8">검수</TabsTrigger>
+            <TabsTrigger value="refresh" className="min-h-11 px-3 sm:min-h-8">최신화·이력</TabsTrigger>
           </TabsList>
           <div ref={setViews} className="admin-restaurant-header-views flex items-center" />
         </AdminPageHeader>

@@ -1,0 +1,10 @@
+{
+  "phase": "after root closed-composer guard correction, complete affected suite",
+  "exitCode": 0,
+  "sourceSha256": {
+    "apps/web/components/reviews/ReviewModal.tsx": "5f3e9ab0ca2f549d47ef6475073b66365fff717d53f13a038b6408e4a0c0f5fb",
+    "apps/web/tests-unit/review-save-submit.test.ts": "70c1c53f8fd41763ae0ad306d9c5d0b02e984dd1aa3643cd8dc0db6630a3414d"
+  },
+  "rawSha256": "0017eed149fbc9320018fe230cfb85745a742bc7b1a7184fb29d43236b169fd3",
+  "limitations": "Synthetic handler fixture only; no hosted requests."
+}

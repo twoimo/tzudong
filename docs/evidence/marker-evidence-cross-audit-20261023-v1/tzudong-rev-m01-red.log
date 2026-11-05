@@ -1,0 +1,22 @@
+bun test v1.4.0 (34cbb9a40)
+
+tests-unit/overseas-marker-refresh-browser.test.ts:
+ 99 |           for (const coordinates of [{ lat: null, lng: null }, { lat: 0, lng: 0 }, { lat: 91, lng: 140 },
+100 |             { lat: 35, lng: 181 }, { lat: '', lng: ' ' }, { lat: Number.NaN, lng: 140 }]) {
+101 |             fixture.__externalMove({ id: 'external-invalid', ...coordinates });
+102 |           }
+103 |         });
+104 |         expect(await page.evaluate(() => (window as unknown as { __sdk: { jumps: unknown[] } }).__sdk.jumps.length)).toBe(beforeInvalidMoves);
+                                                                                                                           ^
+error: expect(received).toBe(expected)
+
+Expected: 6
+Received: 12
+
+      at <anonymous> (apps/web/tests-unit/overseas-marker-refresh-browser.test.ts:104:118)
+(fail) retained overseas markers refresh content, location and click data without recreating or losing selection [5721.78ms]
+
+ 0 pass
+ 1 fail
+ 8 expect() calls
+Ran 1 test across 1 file. [6.11s]

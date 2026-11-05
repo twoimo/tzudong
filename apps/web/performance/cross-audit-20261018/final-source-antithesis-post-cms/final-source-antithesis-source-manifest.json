@@ -1,0 +1,937 @@
+{
+  "anchors": {
+    "antithesisBundle": {
+      "path": "apps/web/performance/cross-audit-20261018/gemini-antithesis-source_bundle.txt",
+      "sha256": "10fc28e7d72ed4fbb6e7b6206acbd31143528d0831d9f836ff41c47ace018bc7"
+    },
+    "preservedCompletionManifest": {
+      "path": "apps/web/performance/cross-audit-20261018/completion-manifest.json",
+      "sha256": "101254bdc596e1e0289ead8e752844636b3607c4da6963e72d4eb32bc37c4cc4"
+    },
+    "preservedQueuedGemini": {
+      "auditStatePath": "apps/web/performance/cross-audit-20261018/audit-state.json",
+      "auditStateSha256": "5dae20f710c2c1bda461760a612f047942b291e99b9d96c7176cf3e6d6d36392",
+      "dispatches": 0,
+      "job": "tzudong-b5d62c34-10fc28e7-antithesis-r01-r06",
+      "requestId": "b0b3b8780cd9dd5b3ffc4875",
+      "sourceBundleSha256": "10fc28e7d72ed4fbb6e7b6206acbd31143528d0831d9f836ff41c47ace018bc7",
+      "status": "queued_shared_service_busy",
+      "uploads": 0
+    },
+    "thesisBundle": {
+      "path": "apps/web/performance/cross-audit-20261018/source_bundle.txt",
+      "sha256": "bd8f5668b7a00d48a623471183863cda1ae9eb48c14a0d1dc569508e0f2058c3"
+    },
+    "thesisReport": {
+      "path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+      "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82"
+    },
+    "thesisUrl": "https://chatgpt.com/c/6ad4b1ad-fc10-83ec-bbd0-abd1dec881c4"
+  },
+  "boundaries": [
+    "No network, upload, dispatch, coordinator, Git, provider, database or deployment action is performed.",
+    "PG17 receipts are local synthetic evidence unless their own metadata says otherwise.",
+    "The preserved queued Gemini job remains bound to the old antithesis bundle.",
+    "This new bundle is a separate source snapshot for a later root-owned audit."
+  ],
+  "bundleBytes": 3204520,
+  "bundleSha256": "dd21308ffd9f7d7ce16793959ec650bb1721e641ee7c8f58b71fe898dc694d9c",
+  "excluded": [
+    "credentials, cookies, profiles and .env files",
+    "personal or operating database rows",
+    "OCR images and raw OCR/provider output",
+    "browser traces and media files",
+    "apps/web/supabase/.temp",
+    "the old flattened source bundles as nested content"
+  ],
+  "schema": "tzudong-final-source-antithesis/v1",
+  "selectedFiles": 119,
+  "selectedPathGitStatus": [
+    "M apps/web/app/admin/banners/page.tsx",
+    " M apps/web/app/api/admin/banners/route.ts",
+    " M apps/web/app/api/admin/users/route.ts",
+    " M apps/web/app/api/ocr/extract/route.ts",
+    " M apps/web/app/api/ocr/extract/stream/route.ts",
+    " M apps/web/components/admin/AdminUsersPanel.tsx",
+    " M apps/web/hooks/use-ad-banners.tsx",
+    " M apps/web/lib/ocr/admin-receipt-processor.ts",
+    " M apps/web/lib/ocr/gemini.ts",
+    " M apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+    " M apps/web/styles/admin-ui.css",
+    " M apps/web/tests-unit/ad-banner-url-security.test.ts",
+    " M apps/web/tests-unit/admin-console-uiux-source.test.ts",
+    " M apps/web/tests-unit/admin-user-management-source.test.ts",
+    " M apps/web/tests-unit/admin-users-mutation-scope.test.ts",
+    " M apps/web/tests-unit/gemini-ocr.test.ts",
+    " M apps/web/tests-unit/zz-ocr-route-contract.test.ts",
+    "?? .github/review-media-evidence-prefixed-feature-successor.v1.json",
+    "?? .github/review-media-evidence-prefixed-predecessor-successor.v1.json",
+    "?? apps/web/performance/admin-cms-followup-20261018/artifact-map.json",
+    "?? apps/web/performance/admin-cms-followup-20261018/focus-and-dirty-interactions.json",
+    "?? apps/web/performance/admin-cms-followup-20261018/render-metrics.json",
+    "?? apps/web/performance/admin-cms-followup-20261018/root-visual-delta-readback.json",
+    "?? apps/web/performance/cross-audit-20261018/admin-users-banners-final-diff-findings.json",
+    "?? apps/web/performance/cross-audit-20261018/admin-users-banners-final-resolution.json",
+    "?? apps/web/performance/cross-audit-20261018/admin-users-banners-native-resolution-review.json",
+    "?? apps/web/performance/cross-audit-20261018/evidence-prefixed-native-review-addendum.json",
+    "?? apps/web/performance/cross-audit-20261018/evidence-prefixed-native-review.json",
+    "?? apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-aggregate-execution-20261018.json",
+    "?? apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-local-readiness-20261018.json",
+    "?? apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-source-binding-followup-20261018.json",
+    "?? apps/web/performance/cross-audit-20261018/final-source-antithesis-plan.md",
+    "?? apps/web/performance/cross-audit-20261018/followup-verification/verification-current.json",
+    "?? apps/web/performance/cross-audit-20261018/hosted-ledger-local86-comparison-20261018.json",
+    "?? apps/web/performance/cross-audit-20261018/hosted-ledger-successor-findings.json",
+    "?? apps/web/performance/cross-audit-20261018/inline-focus-application-readback-20261018.json",
+    "?? apps/web/performance/cross-audit-20261018/prepare-final-source-antithesis-bundle.py",
+    "?? apps/web/performance/cross-audit-20261018/remaining-request-evidence-audit.json",
+    "?? apps/web/performance/feature-sql-integration-20261013/pg17-evidence-prefixed-aggregate-compiled-20261018.json",
+    "?? apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-evidence-prefixed-successors-20261018.json",
+    "?? apps/web/performance/feature-sql-integration-20261013/verify-evidence-prefixed-aggregate-compiled.mjs",
+    "?? apps/web/scripts/review-media-evidence-prefixed-feature-sql-successor.mjs",
+    "?? apps/web/scripts/review-media-evidence-prefixed-predecessor-sql-successor.mjs",
+    "?? apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+    "?? apps/web/tests-unit/admin-banners-functional-contract.test.ts",
+    "?? apps/web/tests-unit/admin-users-pagination-contract.test.ts",
+    "?? apps/web/tests-unit/review-media-evidence-prefixed-sql-successors.test.ts"
+  ],
+  "selectedSourceBytes": 3176552,
+  "snapshotLabel": "final-source-post-cms",
+  "snapshotType": "fresh_final_source_snapshot",
+  "sourceRevision": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "sources": [
+    {
+      "bytes": 4832,
+      "group": "evidence_prefixed_89_105",
+      "kind": "contract_manifest",
+      "path": ".github/review-media-evidence-prefixed-feature-successor.v1.json",
+      "sha256": "45b7f146f31bca9afb863152fd616529e90562fb1b3ecbaa409c218439d41867"
+    },
+    {
+      "bytes": 5722,
+      "group": "evidence_prefixed_89_105",
+      "kind": "contract_manifest",
+      "path": ".github/review-media-evidence-prefixed-predecessor-successor.v1.json",
+      "sha256": "a48f4d883db91a2b4f44869476c9fe9e4f329468c1e406e3703823ffef1d6f92"
+    },
+    {
+      "bytes": 139879,
+      "group": "evidence_prefixed_89_105",
+      "kind": "contract_manifest",
+      "path": ".github/review-media-feature-sql-successor.v1.json",
+      "sha256": "360e5b56fd2214523ee5738eec94e1d77f9050f899dd243136abff3b6b1cb3df"
+    },
+    {
+      "bytes": 150006,
+      "group": "evidence_prefixed_89_105",
+      "kind": "contract_manifest",
+      "path": ".github/review-media-sql-successor.v1.json",
+      "sha256": "ad1da2db884229ea4b1fbcf6e4caaa04c30c6df7562e94fff01341736ee689d6"
+    },
+    {
+      "bytes": 67743,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/app/admin/banners/page.tsx",
+      "sha256": "b0b100c854b619e75c3db5535c7208f2322587f4a66ce1aba2a19ebc022c0235"
+    },
+    {
+      "bytes": 7553,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/app/api/admin/banners/route.ts",
+      "sha256": "5c2bb24c1f0b4c1e6cbff87bd12fd7e5ebb3716668933ed82990e27cd8bbf54e"
+    },
+    {
+      "bytes": 15871,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/app/api/admin/users/[userId]/route.ts",
+      "sha256": "946e43b0769be3391ce7caf0cf0b4b0b05baf64204de3a812684b385c6fa16db"
+    },
+    {
+      "bytes": 9848,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/app/api/admin/users/route.ts",
+      "sha256": "d5c7cd52e71968f8ffb03b2cb296b0f94620c0dc5991e93b1031b9170cc86da9"
+    },
+    {
+      "bytes": 15609,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/app/api/ocr/extract/route.ts",
+      "sha256": "9ef49e254a75942d20418502127649d934d5433a60d494da6533b95da2760aa5"
+    },
+    {
+      "bytes": 15849,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/app/api/ocr/extract/stream/route.ts",
+      "sha256": "a7b2def343dfe88be312a9e9162573b18509bf2d19d19f555247fbcd1d4e82e8"
+    },
+    {
+      "bytes": 54482,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/components/admin/AdminUsersPanel.tsx",
+      "sha256": "671b8a93ca3c663827166001a1ba36591b05a8bae7cc1a12ebebeb38c96e2a3d"
+    },
+    {
+      "bytes": 140545,
+      "group": "review_cms_th004_th006",
+      "kind": "source_or_test",
+      "path": "apps/web/components/admin/SubmissionListView.tsx",
+      "sha256": "cab43ce4b4ab31dd47c159dc46f3fa059658205a8d581974358ff2040e6eaade"
+    },
+    {
+      "bytes": 222320,
+      "group": "review_cms_th004_th006",
+      "kind": "source_or_test",
+      "path": "apps/web/components/reviews/ReviewModal.tsx",
+      "sha256": "887f51f55e5c4e0b3b6ac2c13aff38bab4f2daf6f248ee8cfca773483c7b749a"
+    },
+    {
+      "bytes": 17703,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/hooks/use-ad-banners.tsx",
+      "sha256": "b314ab92baf377b648e5ad80b9d6a6cd49579ea1e781b1a192b820e53b74f86f"
+    },
+    {
+      "bytes": 9153,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/lib/ad-banner-url.ts",
+      "sha256": "5a9b05dd456119e19e7e4769d00944a9a53db52db70c7021858efe8e1d33e77d"
+    },
+    {
+      "bytes": 28730,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/lib/ocr/admin-receipt-processor.ts",
+      "sha256": "462eae8188af7c26493ee85b3d4957f17a95ede67830d5e3bc9e7a4609e2f5be"
+    },
+    {
+      "bytes": 12249,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/lib/ocr/gemini.ts",
+      "sha256": "341f17e62809b22746e2574d6bb2482fb849e53a7e86591236ec4aa350c44e6e"
+    },
+    {
+      "bytes": 5538,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/lib/ocr/route-helpers.ts",
+      "sha256": "2acc3cd13c9b186fafe389810519126d3476f8122afb09f9b6d19582883ca1b9"
+    },
+    {
+      "bytes": 4800,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/lib/ocr/runtime-config.ts",
+      "sha256": "d7050e234eeb28fdb5e635f2bdf3edf6adedbb129a0e9ccdbdf01268994beac1"
+    },
+    {
+      "bytes": 6451,
+      "group": "admin_users_banners_cas",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/admin-cms-followup-20261018/artifact-map.json",
+      "sha256": "7c5b421ada356a24d21fefa0751bb941943658e8f24682a4b44a28d7faf4c5eb"
+    },
+    {
+      "bytes": 1813,
+      "group": "review_cms_th004_th006",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/admin-cms-followup-20261018/focus-and-dirty-interactions.json",
+      "sha256": "720949d3899dfe07cb93f5fedc2ab049b551e0b558f98a5051cb0b6ad2a4ea74"
+    },
+    {
+      "bytes": 69301,
+      "group": "admin_users_banners_cas",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/admin-cms-followup-20261018/render-metrics.json",
+      "sha256": "a202519ded6a48627e8089ce935ce86134f37ca87f9ef22904866f928b8f6eb7"
+    },
+    {
+      "bytes": 1604,
+      "group": "admin_users_banners_cas",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/admin-cms-followup-20261018/root-visual-delta-readback.json",
+      "sha256": "2661d32521518ade40b6b0fee34d5b6117e9913b501950a306232a0bfc511255"
+    },
+    {
+      "bytes": 10551,
+      "group": "admin_users_banners_cas",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/admin-users-banners-final-diff-findings.json",
+      "sha256": "3a9b0d8a8b8d4b1b1d432cb7ffbb9204d77e74d4701ba1924acf5bbdb20c25ed"
+    },
+    {
+      "bytes": 5991,
+      "group": "admin_users_banners_cas",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/admin-users-banners-final-resolution.json",
+      "sha256": "9635c789bce58d6ed95ed94075f0cfb65ea860092e381b179796ffd9b1a5504a"
+    },
+    {
+      "bytes": 6293,
+      "group": "admin_users_banners_cas",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/admin-users-banners-native-resolution-review.json",
+      "sha256": "58f032e81e3c33efb68c938dc2ce0c72d931511ee7d45a85c8fb8e986e491815"
+    },
+    {
+      "bytes": 43130,
+      "group": "immutable_context",
+      "kind": "source_or_test",
+      "path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+      "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82"
+    },
+    {
+      "bytes": 863,
+      "group": "immutable_context",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-receipt.json",
+      "sha256": "86f75010e8c75939b9362d2c6fc44fd79e0196f1745fe9b62b6fb3fb1618a5a4"
+    },
+    {
+      "bytes": 14264,
+      "group": "review_cms_th004_th006",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/cms-findings.json",
+      "sha256": "bb585594e43e7c8c3d50d8f572dfbe381ef2d3dde040c3491411113f129041be"
+    },
+    {
+      "bytes": 17339,
+      "group": "review_verification_th007_th008",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/db-evidence-findings.json",
+      "sha256": "070c7e9c2c042a822cdc48c23d6dc923e12a3c70e082016eaddc388d8a586a84"
+    },
+    {
+      "bytes": 7105,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-native-review-addendum.json",
+      "sha256": "772899842329bd679efeb7fba6249a7bdc693577fb3d1e8db3dfdfa751550619"
+    },
+    {
+      "bytes": 11121,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-native-review.json",
+      "sha256": "a629f0f67af555586a4e8bcc2fae5bf42cc6fea93081a7ac686c7d1438db6da3"
+    },
+    {
+      "bytes": 4829,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-aggregate-execution-20261018.json",
+      "sha256": "dedd656403e1f2577c75eab435ea27acf7adcdb57cd3b34b244f0849f5e5ca2b"
+    },
+    {
+      "bytes": 5639,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-local-readiness-20261018.json",
+      "sha256": "7e9a89ddd73b2b73f5ee67267b5924ad055f508e3545ea0306024f5e74466650"
+    },
+    {
+      "bytes": 4041,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/evidence-prefixed-successors-source-binding-followup-20261018.json",
+      "sha256": "93990dde2d885d76167dd4ed77657cc5d74dc21fd9493bf2b57429a9efb0ad64"
+    },
+    {
+      "bytes": 7946,
+      "group": "immutable_context",
+      "kind": "source_or_test",
+      "path": "apps/web/performance/cross-audit-20261018/final-source-antithesis-plan.md",
+      "sha256": "e99d771548d1bdd037cd4f9dde70268ae01241080a5ef00623dd710f9667833e"
+    },
+    {
+      "bytes": 8889,
+      "group": "admin_users_banners_cas",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/followup-verification/verification-current.json",
+      "sha256": "6853ab355e36036d20fcfd8ea2f0f5cb3e7d828c564a4daebe65b68c198c9679"
+    },
+    {
+      "bytes": 3384,
+      "group": "immutable_context",
+      "kind": "source_or_test",
+      "path": "apps/web/performance/cross-audit-20261018/gemini-antithesis-plan.md",
+      "sha256": "a363edc5fdcdcf49683f556b26ad06f96ff5ed23cbe75296fe67ff10be5bca03"
+    },
+    {
+      "bytes": 3306,
+      "group": "immutable_context",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/gemini-antithesis-source-manifest.json",
+      "sha256": "7f4ddf1d58ee834660130d3c49ea3dcdda5879f58629a4554a86b33e5abc846a"
+    },
+    {
+      "bytes": 3436,
+      "group": "review_verification_th007_th008",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/hosted-catalog-metadata-20261018.json",
+      "sha256": "40aae58d1e548e6129b64e0bdbc73729cacc8dbded75b20125444c6f9244cbee"
+    },
+    {
+      "bytes": 7089,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-local86-comparison-20261018.json",
+      "sha256": "263b6d6c650c52485afa90fc46baeeae033b36464787ff7114489345b64fdfeb"
+    },
+    {
+      "bytes": 21710,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-mapping-20261018.json",
+      "sha256": "7d504bcff6afc3008935dedf5978d3f576c8fbf0f2e8ea4ff55641e7c7b5ba0a"
+    },
+    {
+      "bytes": 12161,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/hosted-ledger-successor-findings.json",
+      "sha256": "db49a08ca26e625a5585ae14286262917d3818ae9e1f90188c152ea56cb1e9ae"
+    },
+    {
+      "bytes": 2203,
+      "group": "review_cms_th004_th006",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/inline-focus-application-readback-20261018.json",
+      "sha256": "24cb258c14964ecc4d9b748454707a9b3a593f1b4a03ef3b75949db99d431931"
+    },
+    {
+      "bytes": 6271,
+      "group": "longform_th009",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/lineage-findings.json",
+      "sha256": "386c652b4b50f202e6abc4898cb9baae9fd3016e6bdefb81d2045c27e3fbdc8e"
+    },
+    {
+      "bytes": 10480,
+      "group": "immutable_context",
+      "kind": "source_or_test",
+      "path": "apps/web/performance/cross-audit-20261018/master-plan.md",
+      "sha256": "fbf4cd47c1bed3d7042ca7860050d640b72e25a5c798d1898790ba0f5ef0c0a9"
+    },
+    {
+      "bytes": 19941,
+      "group": "immutable_context",
+      "kind": "source_or_test",
+      "path": "apps/web/performance/cross-audit-20261018/prepare-final-source-antithesis-bundle.py",
+      "sha256": "be9d573f33efabe61cb363268fddf658377673efd9d6f3358091a66fafd42d6f"
+    },
+    {
+      "bytes": 7522,
+      "group": "provider_budget_th001_th003",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/provider-findings.json",
+      "sha256": "84eb9edc444bad055c1775e6fe8b9f34756c89fabda5219d734faba807750630"
+    },
+    {
+      "bytes": 24473,
+      "group": "ocr_credential_fallback",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/remaining-request-evidence-audit.json",
+      "sha256": "930a454c7162c90c9b76eec1445809d7546168001ca20a3d34f5e2464d15a70d"
+    },
+    {
+      "bytes": 3442,
+      "group": "immutable_context",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/cross-audit-20261018/source-manifest.json",
+      "sha256": "1bc8e76278b6b995ffc28a87d31ce188e9c8bce517541ed4f2ca11690aa4bf67"
+    },
+    {
+      "bytes": 3485,
+      "group": "review_verification_th007_th008",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/feature-completion-20261013/storyboard-runtime-source-closure-20261016.json",
+      "sha256": "5f319733eb1953be23c278b722688019b53a164b9fd88e3afda9002d25a681b2"
+    },
+    {
+      "bytes": 3588,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-evidence-prefixed-aggregate-compiled-20261018.json",
+      "sha256": "0efdf7f1c9c60feda3d14d9473c464fa8ce91a23d5f12d9427bfbac2d4ccc0c6"
+    },
+    {
+      "bytes": 33139,
+      "group": "evidence_prefixed_89_105",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-evidence-prefixed-successors-20261018.json",
+      "sha256": "88d1fd0d382ebdfbfe84828b7abe6864e29a6160538d57a65bedaff3e5bb2e9e"
+    },
+    {
+      "bytes": 30495,
+      "group": "review_verification_th007_th008",
+      "kind": "synthetic_receipt",
+      "path": "apps/web/performance/feature-sql-integration-20261013/pg17-existing-catalog-replay-review-verification-readiness-20261018.json",
+      "sha256": "9ce142b2de2a9e3980afbe85981a2a6cc29d9705a63fb1cb8d1ced46141af29d"
+    },
+    {
+      "bytes": 18909,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-evidence-prefixed-aggregate-compiled.mjs",
+      "sha256": "10ba2c13767738a70e71332d4a2534ab015b84356b165299cb70a938339f2fc3"
+    },
+    {
+      "bytes": 123614,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/performance/feature-sql-integration-20261013/verify-feature-migrations.mjs",
+      "sha256": "b3e258046c7bd908c41f915b13bfb8c5bc4f7e2580d06628ae1319b32b921b43"
+    },
+    {
+      "bytes": 22201,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/apply-supabase-migration.mjs",
+      "sha256": "02c404e0be3e81b7c8d4d7766ff29e750b1797f5ad49b5f496168170e21192d4"
+    },
+    {
+      "bytes": 291,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/review-media-evidence-prefixed-feature-sql-successor.mjs",
+      "sha256": "1abc26c0bc4a2546f0e8930067a2d0e089d156b37ed5d160eee6a3e53e5ef618"
+    },
+    {
+      "bytes": 295,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/review-media-evidence-prefixed-predecessor-sql-successor.mjs",
+      "sha256": "54d5a66695938c66b75c2c89b456dbfae9e876592fcbe3d5f9310ffc7cf2a07f"
+    },
+    {
+      "bytes": 27403,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/review-media-evidence-prefixed-sql-successors.mjs",
+      "sha256": "d76e45f0d3284d47a32231495409843b640f8107969ebf23814498f277827d3d"
+    },
+    {
+      "bytes": 80795,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/review-media-feature-sql-successor.mjs",
+      "sha256": "8b34863fd9f9355c0534796162320fcd4ab1921b7c038dc0596de146b49be192"
+    },
+    {
+      "bytes": 1565,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/review-media-sql-rehearsal.mjs",
+      "sha256": "c893c294719776bf5b064c3355866ab97e0fa9412082d9b47d7de5266094c65f"
+    },
+    {
+      "bytes": 107998,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/review-media-sql-successor.mjs",
+      "sha256": "4f3dacb6f51a669bf64209b380b19e8274d2703101fc50f815153237f4a99d93"
+    },
+    {
+      "bytes": 14597,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/supabase-migration-bundle.mjs",
+      "sha256": "fcebc20dc4846606dc14bdbe658a07daa32430ad632e52383151f5c22d22efb9"
+    },
+    {
+      "bytes": 15819,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/supabase-migration-transaction.mjs",
+      "sha256": "c67bdff4c63b1bf1b4a157863b3eb5253b5973a8fb54b7fd49351270787bed26"
+    },
+    {
+      "bytes": 12944,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/scripts/vercel-rollback-readback.mjs",
+      "sha256": "fa3876153f0e949d23115612cb34bc545c6c29bccb6ba2fd6042a38e70555e04"
+    },
+    {
+      "bytes": 21726,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/styles/admin-ui.css",
+      "sha256": "54ba62adad95ebb3aac23e472786e818e607d8ada6bbd610efbc31f7ddc0755a"
+    },
+    {
+      "bytes": 17104,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/ad-banner-url-security.test.ts",
+      "sha256": "09a0935b913536aaa17250825413efd231f901e1f6369683d5d92f5daa31bbec"
+    },
+    {
+      "bytes": 14608,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/admin-banners-functional-contract.test.ts",
+      "sha256": "244d696df6ef90aede9147150cd28e8d8cf26ffc63e6462e802928708db06070"
+    },
+    {
+      "bytes": 318007,
+      "group": "review_cms_th004_th006",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/admin-console-uiux-source.test.ts",
+      "sha256": "9c0c97aece2729716f9d0e22034ac99cbeaa81b977fadccfcdb60ebca0e7b834"
+    },
+    {
+      "bytes": 6172,
+      "group": "review_cms_th004_th006",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/admin-moderation-inline-focus-browser.test.ts",
+      "sha256": "c24f86520307c6ff02623677a1fc57074c72c11df46dce318082544858cdbbc5"
+    },
+    {
+      "bytes": 20558,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/admin-user-management-source.test.ts",
+      "sha256": "e062014256da90bbaa1eb424f62953b76f573c77e6b20fdff30917055f477ed1"
+    },
+    {
+      "bytes": 19421,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/admin-users-mutation-scope.test.ts",
+      "sha256": "d504bbb8c0f29629371da1adecfe37d1fe1b8f438fcacede848c43c8963ee309"
+    },
+    {
+      "bytes": 4045,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/admin-users-pagination-contract.test.ts",
+      "sha256": "4797cf2abaea7a4154279800495869ef7fc458fd019362be0fae0f6881c5ff6c"
+    },
+    {
+      "bytes": 24044,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/gemini-ocr.test.ts",
+      "sha256": "b5281bbd5181bf244e9f302610cee80e53aa5a5d6ab2a6f53c2b419ae7000b7b"
+    },
+    {
+      "bytes": 2304,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/ocr-route-helpers.test.ts",
+      "sha256": "325c2d82752ee0ea52a3c23ab3a1eaf99817260aa1ecd7bd8387ff00d0e13d62"
+    },
+    {
+      "bytes": 3479,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/ocr-runtime-config.test.ts",
+      "sha256": "52c693c64818d3b6ba8a4c4b24f2fdd1217be67b9b812406e19308a1cc654b8c"
+    },
+    {
+      "bytes": 21093,
+      "group": "review_cms_th004_th006",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/review-close-revision-browser.test.ts",
+      "sha256": "633e39f4e0b50acb5d49fe9524449ec7e964108fa13cef3147e740ce616e4756"
+    },
+    {
+      "bytes": 16917,
+      "group": "review_cms_th004_th006",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/review-draft-revision-browser.test.ts",
+      "sha256": "1805394e2516de2bbf16077598d4a168e908e535d78c1b99e171737ec2be046f"
+    },
+    {
+      "bytes": 11469,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/review-media-evidence-prefixed-sql-successors.test.ts",
+      "sha256": "94225e1111c33db554a34e24bef3d6ac2e47eaa80a7a1367b2d408dba7c83581"
+    },
+    {
+      "bytes": 35256,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/review-media-feature-sql-successor.test.ts",
+      "sha256": "6824eb7876052f59fe7ae146d6aa44949a37117fcb853f70bcf6d2fa3172a60e"
+    },
+    {
+      "bytes": 25540,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/review-media-sql-successor-harness.test.ts",
+      "sha256": "99c6bc0221188f93317640d4d65affdfeb91fea233bb0f0cc0f409407e419d84"
+    },
+    {
+      "bytes": 10925,
+      "group": "review_cms_th004_th006",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/review-modal-ocr-ux.test.ts",
+      "sha256": "3b5918261d1aca85ae163dba5ee4ae8f38aad5ebd20c5daa8ddd667f5f0e31ef"
+    },
+    {
+      "bytes": 68768,
+      "group": "review_cms_th004_th006",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/review-save-submit.test.ts",
+      "sha256": "f3a8a1ab323fdd16e7b216bcb5eb9eb28551e28b17c4b4a2c102df2f57f00089"
+    },
+    {
+      "bytes": 3190,
+      "group": "review_verification_th007_th008",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/review-verification-runtime-readiness.test.ts",
+      "sha256": "fc2d8e56e36c6af6c36cb4b0573f340e93ef993d7b773aaa88015ebac0092695"
+    },
+    {
+      "bytes": 40516,
+      "group": "ocr_credential_fallback",
+      "kind": "source_or_test",
+      "path": "apps/web/tests-unit/zz-ocr-route-contract.test.ts",
+      "sha256": "c058770baaa294e5a045be2b7c37886872755e3f9e299bbc8368c54c4bd92edc"
+    },
+    {
+      "bytes": 2036,
+      "group": "admin_users_banners_cas",
+      "kind": "source_or_test",
+      "path": "apps/web/types/ad-banner.ts",
+      "sha256": "6967b1bc1ee02a060c3bcef49ecbde386b6498f7565c9cd7ac94de4fa1941c97"
+    },
+    {
+      "bytes": 49195,
+      "group": "longform_th009",
+      "kind": "source_or_test",
+      "path": "backend/knowledge_graph/caption_osk_adapter.py",
+      "sha256": "2263613f9c4e9a493fd47cd3865c331b2edcbe0d49811b6ffdd02e62d0864ddf"
+    },
+    {
+      "bytes": 17608,
+      "group": "longform_th009",
+      "kind": "source_or_test",
+      "path": "backend/knowledge_graph/claude_video_adapter.py",
+      "sha256": "9969cc50edb6fc552b8e3f2010315983b5ca4a75e2ecd3f995a81225eccff3af"
+    },
+    {
+      "bytes": 124639,
+      "group": "longform_th009",
+      "kind": "source_or_test",
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "sha256": "9dab858574c0fcf82524f2a8049c1b5b521c75daa160938bd8f40aa51028d4df"
+    },
+    {
+      "bytes": 32208,
+      "group": "longform_th009",
+      "kind": "source_or_test",
+      "path": "backend/knowledge_graph/tests/test_caption_osk_adapter.py",
+      "sha256": "cad3420a704aae6ba929b700e00728d482169b6f08687c35dba8fd0ea5b793e7"
+    },
+    {
+      "bytes": 20601,
+      "group": "longform_th009",
+      "kind": "source_or_test",
+      "path": "backend/knowledge_graph/tests/test_claude_video_adapter.py",
+      "sha256": "0b4afc81f653fefd10898407eb27ef26d7b9c188f17c731c15c5f1ec28c65c0d"
+    },
+    {
+      "bytes": 39619,
+      "group": "longform_th009",
+      "kind": "source_or_test",
+      "path": "backend/knowledge_graph/tests/test_longform_analysis.py",
+      "sha256": "c74988ff405e5c3b3cb1c4c820a247e23bab8f20735ba5612fbc10b42fb61fa7"
+    },
+    {
+      "bytes": 67959,
+      "group": "longform_th009",
+      "kind": "source_or_test",
+      "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+      "sha256": "3b500b284cd8396a5a90c27433753b3e0a3f910d4351f79795f0f88d1500b55f"
+    },
+    {
+      "bytes": 17278,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261008192455_review_media_commit_cleanup.sql",
+      "sha256": "1b018884a0ba8bb25e6a9e31fa831e349bd4442118e5d4bf1699464e09e16c3c"
+    },
+    {
+      "bytes": 5281,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261008200719_review_verification_private.sql",
+      "sha256": "92b469ab0ed1a23bf91c1ab5a3f8e92d45cf0f4e06e5fa602d6a34ad0497a51b"
+    },
+    {
+      "bytes": 47177,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261008201635_review_media_catalog_integration.sql",
+      "sha256": "6e820eb535bc514e78f258110e36dff00537bcaefcffd8b354356107ca9c09fe"
+    },
+    {
+      "bytes": 13429,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261011072824_admin_review_media_completion.sql",
+      "sha256": "32626259ca77ea913f068ee804815ff439abbff1ce310da4525e4f0bb86d8338"
+    },
+    {
+      "bytes": 7661,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261011085342_review_legacy_shared_cleanup.sql",
+      "sha256": "623236ddbd87059b94c84486f9e14822dba0190d2448656259991bd1345a434f"
+    },
+    {
+      "bytes": 3666,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261011094346_admin_evaluation_revision_safeupdate.sql",
+      "sha256": "b7061015ea07192dccfcf0774d5548a9c2a584c7daa140d77fccd7c75cb8bf88"
+    },
+    {
+      "bytes": 4163,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261011100730_admin_record_expired_preview_readback.sql",
+      "sha256": "26c64074bb98e718ba96732ac2baeedb851afe6ff745e0ddb5ca075359892472"
+    },
+    {
+      "bytes": 12008,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261011103501_admin_verification_durable_staging.sql",
+      "sha256": "081c48e91172e4e98079b03aa210c0f7481d95a21945e5a288187263089e57db"
+    },
+    {
+      "bytes": 11418,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261011105114_review_media_storage_retirement_fence.sql",
+      "sha256": "79375138d7e82a3be2b85b219ff52147db13db9c93070569be40a61ab97c3d53"
+    },
+    {
+      "bytes": 8463,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261011110108_review_storage_caller_bound_admin_policy.sql",
+      "sha256": "45b2a0db333a1e24ac1f68b7693c7cfb98e10cd0ab366b98089c3679a6b5dfbc"
+    },
+    {
+      "bytes": 6694,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261011175912_review_owner_cleanup_completion.sql",
+      "sha256": "9164be35fc17e67c3f1aaf98aad13139a8fd469130bd1315879bff5dac63ba26"
+    },
+    {
+      "bytes": 15228,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql",
+      "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e"
+    },
+    {
+      "bytes": 56061,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql",
+      "sha256": "7a140594826c3375da71e74be44bdfe9c6e99c4465d8a9484a9d8180d696480d"
+    },
+    {
+      "bytes": 25506,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261013190100_g014_feature_rpc_catalog_contract.sql",
+      "sha256": "0c3f8b4cadc1d4bb0d88b53de49be34ef8e2751a47bfc18ebad89ae543b4c370"
+    },
+    {
+      "bytes": 14358,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261013190200_review_verification_immutable_key_fence.sql",
+      "sha256": "0a060ca537d3558779fd0cb1b780e7965189eb129f5018987f157c1cb5f2cd3d"
+    },
+    {
+      "bytes": 19008,
+      "group": "review_verification_th007_th008",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261016090000_review_verification_delete_guard_readiness.sql",
+      "sha256": "469dbea773cc838feecb4519ca1b5c03e9ea2fab32462007f7769c5ed1b7fed9"
+    },
+    {
+      "bytes": 2416,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261017043000_evidence_frames_and_popularity.sql",
+      "sha256": "d254fe76eb8c74587183bc89372891cd08a6a1cf92a99b8aa041497fa6ca7733"
+    },
+    {
+      "bytes": 1044,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261017140000_restaurant_popularity_shadow.sql",
+      "sha256": "fe0621f3a6f663beec2c14a60729ddbb17ba715205a114f24879af9b4dba11c6"
+    },
+    {
+      "bytes": 391,
+      "group": "evidence_prefixed_89_105",
+      "kind": "ddl",
+      "path": "backend/supabase/migrations/20261017160000_restaurant_popularity_shadow_tier.sql",
+      "sha256": "4ba19ee5b7ae3fbbfc4ffa00a93ed30e1197cd2ad1763e063a75f75158a48426"
+    },
+    {
+      "bytes": 7626,
+      "group": "evidence_prefixed_89_105",
+      "kind": "source_or_test",
+      "path": "backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+      "sha256": "398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd"
+    },
+    {
+      "bytes": 8188,
+      "group": "provider_budget_th001_th003",
+      "kind": "source_or_test",
+      "path": "backend/utils/provider-budget.mjs",
+      "sha256": "8313b93666a36342bd1c53581c9ec2034a07c23225ac5fb9e6988424fe395f27"
+    },
+    {
+      "bytes": 11027,
+      "group": "provider_budget_th001_th003",
+      "kind": "source_or_test",
+      "path": "backend/utils/provider_budget.py",
+      "sha256": "edfd9b77125f05a81209fd9799c5e8465f169dbf175d9ca8361adf3cb50b78e7"
+    },
+    {
+      "bytes": 32445,
+      "group": "provider_budget_th001_th003",
+      "kind": "source_or_test",
+      "path": "backend/utils/tests/gemini-client.test.mjs",
+      "sha256": "ff776a35a4c414dff9fbc10cff57a5b4e5c3f1813f55f5a0656d47721b70704f"
+    },
+    {
+      "bytes": 12989,
+      "group": "provider_budget_th001_th003",
+      "kind": "source_or_test",
+      "path": "backend/utils/tests/provider-budget-js.test.mjs",
+      "sha256": "43972f416ebaff2b29b9508b60c5569a7a9391b41d188a56a23cd313ebbed61f"
+    },
+    {
+      "bytes": 15862,
+      "group": "provider_budget_th001_th003",
+      "kind": "source_or_test",
+      "path": "backend/utils/tests/test_pipeline_performance.py",
+      "sha256": "9903c57f4f618fa2bae71cd32edc835dc6d514a10aa8c5e4723f9d61d908b8c8"
+    }
+  ]
+}

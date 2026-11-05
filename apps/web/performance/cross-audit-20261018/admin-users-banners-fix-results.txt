@@ -1,0 +1,118 @@
+TZUDONG ADMIN USERS AND BANNERS FINAL CAS FIX RESULTS
+generatedAt=2026-10-18T22:36:47+0900
+baseHead=86328a4c52a03e953519ea8d09b2672bef7eda57
+scope=local source and synthetic handler/helper tests only
+
+FINDING ADJUDICATION
+CMS-FINAL-001=ACCEPT
+CMS-FINAL-002=ACCEPT
+CMS-FINAL-003=ACCEPT
+CMS-FINAL-004=ACCEPT
+resolution=apps/web/performance/cross-audit-20261018/admin-users-banners-final-resolution.json
+
+COMMAND 1
+bun test tests-unit/admin-users-mutation-scope.test.ts tests-unit/admin-users-pagination-contract.test.ts tests-unit/admin-banners-functional-contract.test.ts tests-unit/admin-user-management-source.test.ts tests-unit/admin-exact-readback-api.test.ts tests-unit/ad-banner-url-security.test.ts
+exit=0
+raw-summary:
+bun test v1.4.0 (34cbb9a40)
+41 pass
+0 fail
+467 expect() calls
+Ran 41 tests across 6 files. [354.00ms]
+
+COMMAND 2
+bun test tests-unit/mobile-desktop-parity-source.test.ts --test-name-pattern 'banner admin uses one responsive'
+exit=0
+raw-summary:
+1 pass
+12 filtered out
+0 fail
+16 expect() calls
+
+COMMAND 3
+bun test tests-unit/admin-console-uiux-source.test.ts --test-name-pattern 'keeps admin pages dense'
+exit=0
+raw-summary:
+1 pass
+43 filtered out
+0 fail
+118 expect() calls
+
+COMMAND 4
+bun test tests-unit/admin-route-auth-contract.test.ts --test-name-pattern 'admin'
+exit=0
+raw-summary:
+4 pass
+0 fail
+1204 expect() calls
+
+COMMAND 5
+bun test tests-unit/admin-mutation-request-security.test.ts --test-name-pattern 'uses the shared bounded reader'
+exit=0
+raw-summary:
+1 pass
+3 filtered out
+0 fail
+36 expect() calls
+
+COMMAND 6
+node scripts/run-web-tool.mjs eslint app/admin/banners/page.tsx app/api/admin/banners/route.ts components/admin/AdminUsersPanel.tsx hooks/use-ad-banners.tsx tests-unit/admin-banners-functional-contract.test.ts tests-unit/ad-banner-url-security.test.ts tests-unit/admin-users-mutation-scope.test.ts tests-unit/admin-user-management-source.test.ts tests-unit/admin-console-uiux-source.test.ts --max-warnings=0
+exit=0
+raw-output=<empty>
+
+COMMAND 7
+bun test tests-unit/admin-user-management-source.test.ts
+exit=0
+raw-summary:
+9 pass
+0 fail
+225 expect() calls
+Ran 9 tests across 1 file. [177.00ms]
+note=rerun after preserving Cache-Control no-store on the admin user GET 500 response
+
+COMMAND 8
+node scripts/run-web-tool.mjs eslint app/api/admin/users/route.ts tests-unit/admin-user-management-source.test.ts --max-warnings=0
+exit=0
+raw-output=<empty>
+
+COMMAND 9
+npm run typecheck:native
+exit=0
+raw-output:
+> web@1.2.4 typecheck:native
+> node scripts/run-typecheck.mjs --compiler native
+
+COMMAND 10
+git diff --check -- app/admin/banners/page.tsx app/api/admin/banners/route.ts app/api/admin/users/route.ts components/admin/AdminUsersPanel.tsx hooks/use-ad-banners.tsx styles/admin-ui.css tests-unit/admin-banners-functional-contract.test.ts tests-unit/ad-banner-url-security.test.ts tests-unit/admin-users-mutation-scope.test.ts tests-unit/admin-user-management-source.test.ts tests-unit/admin-console-uiux-source.test.ts performance/cross-audit-20261018/admin-users-banners-final-resolution.json
+exit=0
+raw-output=<empty>
+
+SOURCE INTEGRITY
+7ea65f864dd14d36e8fec935843964e7f836ebe1f050f002ec53b313f41563fb  apps/web/app/admin/banners/page.tsx
+5c2bb24c1f0b4c1e6cbff87bd12fd7e5ebb3716668933ed82990e27cd8bbf54e  apps/web/app/api/admin/banners/route.ts
+b314ab92baf377b648e5ad80b9d6a6cd49579ea1e781b1a192b820e53b74f86f  apps/web/hooks/use-ad-banners.tsx
+5685300df4b5d42f2bbf897c022ddf1e4032c114e1bfdb321050ad2976e21a7e  apps/web/components/admin/AdminUsersPanel.tsx
+936bbf3a6177fadc5bf063bb3a09c91e668786533cd29f7f8677f55be153c999  apps/web/styles/admin-ui.css
+d5c7cd52e71968f8ffb03b2cb296b0f94620c0dc5991e93b1031b9170cc86da9  apps/web/app/api/admin/users/route.ts
+244d696df6ef90aede9147150cd28e8d8cf26ffc63e6462e802928708db06070  apps/web/tests-unit/admin-banners-functional-contract.test.ts
+09a0935b913536aaa17250825413efd231f901e1f6369683d5d92f5daa31bbec  apps/web/tests-unit/ad-banner-url-security.test.ts
+d504bbb8c0f29629371da1adecfe37d1fe1b8f438fcacede848c43c8963ee309  apps/web/tests-unit/admin-users-mutation-scope.test.ts
+1e287ffe7210d3c7f97543d62c0bb55d51a70ef16327758c167ed94ff04e8c19  apps/web/tests-unit/admin-user-management-source.test.ts
+9c0c97aece2729716f9d0e22034ac99cbeaa81b977fadccfcdb60ebca0e7b834  apps/web/tests-unit/admin-console-uiux-source.test.ts
+
+REVISION CONTRACT
+localBaselineFunction=backend/supabase/baselines/pre-20260214-public-schema.sql:3756
+localBaselineTrigger=backend/supabase/baselines/pre-20260214-public-schema.sql:5477
+hostedTriggerState=unverified
+
+BOUNDARIES
+hostedDatabaseReads=0
+hostedDatabaseWrites=0
+storageReads=0
+storageWrites=0
+providerCalls=0
+browserRuns=0
+deploymentWrites=0
+userDataRead=false
+actualAdminMutation=false
+gitMutation=false

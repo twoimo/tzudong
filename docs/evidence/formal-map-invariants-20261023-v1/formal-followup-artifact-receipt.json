@@ -1,0 +1,13 @@
+{
+  "path": "/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/docs/evidence/formal-map-invariants-20261023-v1/gpt6_pro_formal_root_followup_report.visible.txt",
+  "sha256": "ffedf822efa3011b98f0343fa7735faee687d0945d15e55471fb81afed4f10d2",
+  "source_bundle": "fa286900e904a8bc2b14df0868acc09acde9a6e1e95cb861a30d5181046756b4",
+  "kind": "audit",
+  "actual_model": "GPT-6 / Pro",
+  "actual_research": "off",
+  "original_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "report_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "complete": true,
+  "evidence": "Full unedited rendered response body extracted from original assistantaceabad1-d9ba-410a-8a94-cdd3f3218870, 10773UTF8bytes and actual SHA256. Browser Copy unavailable in prior extraction; same visible-copy method preserves complete text and separate private rawHTML. Includes final per-ID verdicts, local execution proof boundaries, exact prior snapshot and current-source host exclusions.",
+  "saved_at": "2026-10-23T09:28:07.529551+00:00"
+}

@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "kind": "receipt-ocr-post105-source-freeze",
+  "recordedAt": "2026-10-18T16:05:56Z",
+  "status": "source_frozen_execution_pending",
+  "baseHead": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "sourceBindings": {
+    "migration": {
+      "path": "backend/supabase/migrations/20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+      "sha256": "f6a56dd93c17487d91ea5fd59a7d6d929f9beac58d0564957900ceaae6746e35",
+      "statementCount": 44,
+      "statementVectorSha256": "b0ec57adf97b5547c7fcb00cdd5976a453e728ce164720cc327464cae42d745e"
+    },
+    "compiler": {
+      "path": "apps/web/scripts/receipt-ocr-post105-sql-successor.mjs",
+      "sha256": "4ba7e8b5c12e212809acf6d3c5fdaed4cf58ac70a1c663c25fb7db0bc979ebda"
+    },
+    "manifest": {
+      "path": ".github/receipt-ocr-post105-sql-successor.v1.json",
+      "sha256": "aaabf30561daf2d40c346d51a2a69c1bfd4fedff7885eefb1b52fe43686d6dec"
+    },
+    "successorTest": {
+      "path": "apps/web/tests-unit/receipt-ocr-post105-sql-successor.test.ts",
+      "sha256": "6134b41c2bf0be61b203598c9bd22e7965b020bdf1a668afb69d492b2527dde0"
+    },
+    "durableClientDependency": {
+      "path": "apps/web/lib/ocr/durable-result.ts",
+      "sha256": "666ad52a22c213138aef185fceccd60e5c9a2e2dc2b5f89bb40637ab8a87d787"
+    },
+    "heldMappings": [
+      {
+        "path": "apps/web/app/api/ocr/extract/route.ts",
+        "sha256": "417c64461809e89b60716b3831345ad582654635c364ca390c07114edc038503"
+      },
+      {
+        "path": "apps/web/app/api/ocr/extract/stream/route.ts",
+        "sha256": "c59b79938b19fb9105d5026ab9390162c351e56c24c47b5c33192275702cf81b"
+      },
+      {
+        "path": "apps/web/lib/ocr/admin-receipt-processor.ts",
+        "sha256": "698c5b0fa972b6c4f4daf896b07e35319c268e300ab258d95a2480600cc7ee94"
+      },
+      {
+        "path": "apps/web/tests-unit/receipt-ocr-capability-held-routes.test.ts",
+        "sha256": "5914f3899df19701a2e6d94e8ce41a7e8e1833031f5e9ce2e95211a87e7bcdd0"
+      }
+    ]
+  },
+  "identity": {
+    "operating": {
+      "predecessorLedgerCount": 105,
+      "predecessorRoot": "3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c",
+      "targetLedgerCount": 106,
+      "targetRoot": "dbf556b0f98f80c06ceffe69d2ae24a6090daab19c5dc5868d92bcbd23dbc17b"
+    },
+    "rehearsal": {
+      "predecessorLedgerCount": 105,
+      "predecessorRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+      "targetLedgerCount": 106,
+      "targetRoot": "e4c7dfce93b3ac69eb0660c5048cb6ecc82deb35c44e36fe18bf1fd114be9304"
+    },
+    "migrationIdentityRoot": "6d0e588fc01750f40467b5ad84e542533be14515af03fadeb8b0d1f61724217b",
+    "suffixRoot": "5782b587fc91229e79f90555f258978b7cce9c88fc7db4681a575238d712d138"
+  },
+  "compiledPlans": {
+    "operating": {
+      "bytes": 197742,
+      "sha256": "89ce75136f16f44dc30d7bb21697f232ff3fc6e3fd00603763b5558d1954595f"
+    },
+    "rehearsal": {
+      "bytes": 197742,
+      "sha256": "fa71f7f39052dd062a0fb16fdd2fbdf6f423ba381db7539f1d33ce58b60d3a4d"
+    },
+    "constituentExecution": {
+      "bytes": 36077,
+      "sha256": "5f68b7aa652070203b8a85f386935d3246cb7fb8b6d9168bd08d097df9819cf7"
+    }
+  },
+  "verification": [
+    {
+      "kind": "pg17_read_only_state_query",
+      "engine": "17.6",
+      "fixtureRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+      "mode": "rehearsal",
+      "result": {
+        "ledgerCount": 105,
+        "predecessorReady": true,
+        "targetStageIndex": 0,
+        "runtimeObjectCount": 0
+      }
+    },
+    {
+      "kind": "pg17_read_only_state_query",
+      "engine": "17.6",
+      "fixtureRoot": "2a1548759fa029261eebd8d121777e3ca7d51520722c750c4a1b0794040a0ab0",
+      "mode": "operating",
+      "result": {
+        "ledgerCount": 105,
+        "predecessorReady": false,
+        "targetStageIndex": 0,
+        "runtimeObjectCount": 0
+      }
+    },
+    {
+      "command": "cd apps/web && bun test ./tests-unit/receipt-ocr-post105-sql-successor.test.ts ./tests-unit/receipt-ocr-capability-held-routes.test.ts",
+      "result": "11 pass, 0 fail, 77 assertions"
+    },
+    {
+      "command": "cd apps/web && bunx eslint scripts/receipt-ocr-post105-sql-successor.mjs tests-unit/receipt-ocr-post105-sql-successor.test.ts tests-unit/receipt-ocr-capability-held-routes.test.ts app/api/ocr/extract/route.ts app/api/ocr/extract/stream/route.ts lib/ocr/admin-receipt-processor.ts",
+      "result": "exit 0"
+    }
+  ],
+  "executionAdmission": {
+    "state": "allowed_for_disposable_pg17_targets_only",
+    "requirements": [
+      "Use separate fresh constituent and aggregate targets cloned from the preserved catalog-105 fixture.",
+      "Materialize the exact hosted historical ledger metadata so the live predecessor count/root are 105/3ef9d904fd9545027d39041483e5375e6d9c861f5f1a64a61c23b94df1146e4c before operating execution.",
+      "Require target migration version 20261018152032 absent before execution.",
+      "Execute the exact frozen source/vector for the constituent path and the exact operating aggregate SHA-256 89ce75136f16f44dc30d7bb21697f232ff3fc6e3fd00603763b5558d1954595f for the aggregate path.",
+      "Require terminal ledger count/root 106/dbf556b0f98f80c06ceffe69d2ae24a6090daab19c5dc5868d92bcbd23dbc17b and exact ready capability after the compiler seal.",
+      "Keep source container and retained catalog-105 fixture unchanged; remove only task-owned disposable targets."
+    ]
+  },
+  "boundaries": [
+    "Source is held and not connected to any existing runner or hosted admission path.",
+    "The PG17 checks here executed read-only state queries only; no 106 migration was executed by this receipt.",
+    "No hosted database, provider, Storage, deployment, Git, or PostgreSQL 17.11 resource was changed.",
+    "The rehearsal root 2a154875... and operating root 3ef9d904... remain distinct identities."
+  ]
+}

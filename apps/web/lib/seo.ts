@@ -159,6 +159,7 @@ export const homeJsonLd = [
         '@context': 'https://schema.org',
         '@type': 'WebSite',
         name: SITE_NAME,
+        alternateName: ['쯔동여지도', 'Tzudong', '쯔양 맛집 지도', '쯔양 지도', 'Tzuyang Map'],
         url: SITE_URL,
         description: DEFAULT_DESCRIPTION,
         inLanguage: 'ko-KR',
@@ -172,5 +173,57 @@ export const homeJsonLd = [
         operatingSystem: 'Web',
         description: DEFAULT_DESCRIPTION,
         inLanguage: 'ko-KR',
+        browserRequirements: 'Requires JavaScript. Requires HTML5.',
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: SITE_URL + '/favicon-32x32.png',
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'Dataset',
+        name: '쯔양 맛집 지도 데이터셋 (Tzuyang Restaurant Catalog)',
+        description: '유튜버 쯔양의 영상에 등장한 국내외 맛집의 검증된 지리 좌표, 상호명, 카테고리, 리뷰 데이터셋',
+        url: SITE_URL,
+        keywords: ['쯔양 맛집', '먹방 맛집', '식당 지도', '한국 맛집', 'Korean Restaurant Dataset'],
+        creator: {
+            '@type': 'Organization',
+            name: SITE_NAME,
+            url: SITE_URL,
+        },
+        inLanguage: 'ko-KR',
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+            {
+                '@type': 'Question',
+                name: '쯔동여지도는 어떤 서비스인가요?',
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: '쯔동여지도는 인기 먹방 크리에이터 쯔양(tzuyang)이 유튜브 영상에서 직접 방문하고 식사한 국내외 맛집의 정확한 상호, 위치(도로명/지번 주소 및 지리 좌표), 카테고리, 주문 메뉴, 영상 타임라인 및 솔직 리뷰를 지도에서 한눈에 탐색할 수 있는 서비스입니다.',
+                },
+            },
+            {
+                '@type': 'Question',
+                name: '해외 맛집도 지도에서 찾아볼 수 있나요?',
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: '네, 쯔동여지도의 글로벌 맵 메뉴를 통해 쯔양이 방문한 해외 맛집의 위치와 현지 주소, 관련 영상을 확인할 수 있습니다.',
+                },
+            },
+            {
+                '@type': 'Question',
+                name: '방문 인증(도장 깨기) 기능은 어떻게 이용하나요?',
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: '쯔동여지도 지도에서 방문한 맛집을 확인하고 도장 깨기를 통해 나만의 쯔양 맛집 순례 기록과 스탬프를 적립하고 방문자 랭킹에 참여할 수 있습니다.',
+                },
+            },
+        ],
     },
 ];

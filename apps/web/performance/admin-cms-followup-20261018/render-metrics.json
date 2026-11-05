@@ -1,0 +1,2839 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-18T13:52:20.104Z",
+  "environment": "synthetic loopback Next development fixture",
+  "finalGeometryMode": "prefers-reduced-motion: reduce",
+  "normalMotionAlsoInspected": true,
+  "final": [
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:51:05.101Z",
+      "buttons": [
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "배너 목록 새로고침",
+          "right": 269.15625,
+          "width": 92.953125,
+          "x": 176.203125,
+          "y": 74
+        },
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "새 배너",
+          "right": 368,
+          "width": 92.84375,
+          "x": 275.15625,
+          "y": 74
+        },
+        {
+          "bottom": 350.328125,
+          "disabled": false,
+          "height": 83.328125,
+          "label": "검증용 맛집 안내활성합성 배너입니다. · 우선순위 1데스크톱 배너",
+          "right": 380,
+          "width": 370,
+          "x": 10,
+          "y": 267
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 154,
+        "height": 88,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": null,
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      },
+      "screenshot": {
+        "path": "apps/web/performance/admin-cms-followup-20261018/banners-final-390.jpg",
+        "sha256": "e0e122e2d350111212cda95c4d0e854edd26056b0c0d502c97fd023989a6cda3",
+        "mimeType": "image/jpeg",
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:51:21.743Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "배너 목록 새로고침",
+          "right": 707.15625,
+          "width": 92.953125,
+          "x": 614.203125,
+          "y": 22
+        },
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 806,
+          "width": 92.84375,
+          "x": 713.15625,
+          "y": 22
+        },
+        {
+          "bottom": 241.5,
+          "disabled": false,
+          "height": 40,
+          "label": "검증용 맛집 안내 편집",
+          "right": 456.84375,
+          "width": 220.84375,
+          "x": 236,
+          "y": 201.5
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 822,
+        "width": 602,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 250.5,
+        "height": 93.5,
+        "right": 822,
+        "rowHeights": [
+          56.5
+        ],
+        "width": 602,
+        "x": 220,
+        "y": 157
+      },
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 1112,
+        "width": 834
+      },
+      "screenshot": {
+        "path": "apps/web/performance/admin-cms-followup-20261018/banners-final-834.jpg",
+        "sha256": "39c23d094c455c7a6cc42d1f18debc182c4b7a5b7f020c157604ee0f6e320ac4",
+        "mimeType": "image/jpeg",
+        "width": 834,
+        "height": 1112
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:52:02.642Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "배너 목록 새로고침",
+          "right": 1313.15625,
+          "width": 92.953125,
+          "x": 1220.203125,
+          "y": 22
+        },
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 1412,
+          "width": 92.84375,
+          "x": 1319.15625,
+          "y": 22
+        },
+        {
+          "bottom": 241.5,
+          "disabled": false,
+          "height": 40,
+          "label": "검증용 맛집 안내 편집",
+          "right": 559.734375,
+          "width": 323.734375,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 597.15625,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 1289.34375,
+          "width": 89.6875,
+          "x": 1199.65625,
+          "y": 561.15625
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 1428,
+        "width": 1208,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 250.5,
+        "height": 93.5,
+        "right": 1067,
+        "rowHeights": [
+          56.5
+        ],
+        "width": 847,
+        "x": 220,
+        "y": 157
+      },
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      },
+      "screenshot": {
+        "path": "apps/web/performance/admin-cms-followup-20261018/banners-final-1440.jpg",
+        "sha256": "00ccfb3f1264d54a7b933af9c770db5339430ae9ecb4fd884f6c7c94b8b07220",
+        "mimeType": "image/jpeg",
+        "width": 1440,
+        "height": 960
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:52:20.011Z",
+      "buttons": [
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "사용자 목록 새로고침",
+          "right": 368,
+          "width": 92.953125,
+          "x": 275.046875,
+          "y": 74
+        },
+        {
+          "bottom": 214,
+          "disabled": false,
+          "height": 44,
+          "label": "검색",
+          "right": 368,
+          "width": 56.203125,
+          "x": 311.796875,
+          "y": 170
+        },
+        {
+          "bottom": 327,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 283
+        },
+        {
+          "bottom": 419.328125,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 375.328125
+        },
+        {
+          "bottom": 511.65625,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 467.65625
+        },
+        {
+          "bottom": 629.984375,
+          "disabled": true,
+          "height": 44,
+          "label": "이전 사용자 페이지",
+          "right": 88.203125,
+          "width": 66.203125,
+          "x": 22,
+          "y": 585.984375
+        },
+        {
+          "bottom": 629.984375,
+          "disabled": true,
+          "height": 44,
+          "label": "다음 사용자 페이지",
+          "right": 218.40625,
+          "width": 66.203125,
+          "x": 152.203125,
+          "y": 585.984375
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 162,
+        "height": 96,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": null,
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      },
+      "screenshot": {
+        "path": "apps/web/performance/admin-cms-followup-20261018/users-final-390.jpg",
+        "sha256": "9d0264331232541347d59662d132dbfd6421a9d0466b7cbb0f823ede5824de5f",
+        "mimeType": "image/jpeg",
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:51:34.799Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "사용자 목록 새로고침",
+          "right": 806,
+          "width": 92.953125,
+          "x": 713.046875,
+          "y": 22
+        },
+        {
+          "bottom": 108,
+          "disabled": false,
+          "height": 32,
+          "label": "검색",
+          "right": 806,
+          "width": 56.203125,
+          "x": 749.796875,
+          "y": 76
+        },
+        {
+          "bottom": 237.390625,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 235.4375,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 203.4375
+        },
+        {
+          "bottom": 290.28125,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 254.390625
+        },
+        {
+          "bottom": 288.328125,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 256.328125
+        },
+        {
+          "bottom": 343.171875,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 307.28125
+        },
+        {
+          "bottom": 341.21875,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 309.21875
+        },
+        {
+          "bottom": 1088,
+          "disabled": true,
+          "height": 32,
+          "label": "이전 사용자 페이지",
+          "right": 679.796875,
+          "width": 66.203125,
+          "x": 613.59375,
+          "y": 1056
+        },
+        {
+          "bottom": 1088,
+          "disabled": true,
+          "height": 32,
+          "label": "다음 사용자 페이지",
+          "right": 810,
+          "width": 66.203125,
+          "x": 743.796875,
+          "y": 1056
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 822,
+        "width": 602,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 352.171875,
+        "height": 195.171875,
+        "right": 822,
+        "rowHeights": [
+          52.390625,
+          52.890625,
+          52.890625
+        ],
+        "width": 602,
+        "x": 220,
+        "y": 157
+      },
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 1112,
+        "width": 834
+      },
+      "screenshot": {
+        "path": "apps/web/performance/admin-cms-followup-20261018/users-final-834.jpg",
+        "sha256": "cc41b96ba3b577b68e4385fa75f777913e7fbac64d5f460f44d1269dba81ef72",
+        "mimeType": "image/jpeg",
+        "width": 834,
+        "height": 1112
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:51:48.455Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "사용자 목록 새로고침",
+          "right": 1412,
+          "width": 92.953125,
+          "x": 1319.046875,
+          "y": 22
+        },
+        {
+          "bottom": 108,
+          "disabled": false,
+          "height": 32,
+          "label": "검색",
+          "right": 1051,
+          "width": 56.203125,
+          "x": 994.796875,
+          "y": 76
+        },
+        {
+          "bottom": 237.390625,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 235.4375,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 203.4375
+        },
+        {
+          "bottom": 290.28125,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 254.390625
+        },
+        {
+          "bottom": 288.328125,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 256.328125
+        },
+        {
+          "bottom": 343.171875,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 307.28125
+        },
+        {
+          "bottom": 341.21875,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 309.21875
+        },
+        {
+          "bottom": 936,
+          "disabled": true,
+          "height": 32,
+          "label": "이전 사용자 페이지",
+          "right": 924.796875,
+          "width": 66.203125,
+          "x": 858.59375,
+          "y": 904
+        },
+        {
+          "bottom": 936,
+          "disabled": true,
+          "height": 32,
+          "label": "다음 사용자 페이지",
+          "right": 1055,
+          "width": 66.203125,
+          "x": 988.796875,
+          "y": 904
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 1428,
+        "width": 1208,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 352.171875,
+        "height": 195.171875,
+        "right": 1067,
+        "rowHeights": [
+          52.390625,
+          52.890625,
+          52.890625
+        ],
+        "width": 847,
+        "x": 220,
+        "y": 157
+      },
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      },
+      "screenshot": {
+        "path": "apps/web/performance/admin-cms-followup-20261018/users-final-1440.jpg",
+        "sha256": "3c85fa32afe8e0d0bd74d44bb93f32acafffd94c303feead1860aab9ec7c1b97",
+        "mimeType": "image/jpeg",
+        "width": 1440,
+        "height": 960
+      }
+    }
+  ],
+  "normalMotionIntermediate": [],
+  "earlierIntermediate": [
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:39:31.823Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "사용자 목록 새로고침",
+          "right": 1412,
+          "width": 92.953125,
+          "x": 1319.046875,
+          "y": 22
+        },
+        {
+          "bottom": 108,
+          "disabled": false,
+          "height": 32,
+          "label": "검색",
+          "right": 1051,
+          "width": 56.203125,
+          "x": 994.796875,
+          "y": 76
+        },
+        {
+          "bottom": 237.390625,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 235.4375,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 203.4375
+        },
+        {
+          "bottom": 290.28125,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 254.390625
+        },
+        {
+          "bottom": 288.328125,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 256.328125
+        },
+        {
+          "bottom": 343.171875,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 307.28125
+        },
+        {
+          "bottom": 341.21875,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 309.21875
+        },
+        {
+          "bottom": 936,
+          "disabled": true,
+          "height": 32,
+          "label": "이전 사용자 페이지",
+          "right": 924.796875,
+          "width": 66.203125,
+          "x": 858.59375,
+          "y": 904
+        },
+        {
+          "bottom": 936,
+          "disabled": true,
+          "height": 32,
+          "label": "다음 사용자 페이지",
+          "right": 1055,
+          "width": 66.203125,
+          "x": 988.796875,
+          "y": 904
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 1428,
+        "width": 1208,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 352.171875,
+        "height": 195.171875,
+        "right": 1067,
+        "rowHeights": [
+          52.390625,
+          52.890625,
+          52.890625
+        ],
+        "width": 847,
+        "x": 220,
+        "y": 157
+      },
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:39:42.670Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "배너 목록 새로고침",
+          "right": 1313.15625,
+          "width": 92.953125,
+          "x": 1220.203125,
+          "y": 22
+        },
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 1412,
+          "width": 92.84375,
+          "x": 1319.15625,
+          "y": 22
+        },
+        {
+          "bottom": 245.5,
+          "disabled": false,
+          "height": 40,
+          "label": "검증용 맛집 안내 편집",
+          "right": 576.671875,
+          "width": 340.671875,
+          "x": 236,
+          "y": 205.5
+        },
+        {
+          "bottom": 597.15625,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 1289.34375,
+          "width": 89.6875,
+          "x": 1199.65625,
+          "y": 561.15625
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 1428,
+        "width": 1208,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 254.5,
+        "height": 93.5,
+        "right": 1067,
+        "rowHeights": [
+          56.5
+        ],
+        "width": 847,
+        "x": 220,
+        "y": 161
+      },
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      },
+      "phase": "before-status-color-consistency"
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:41:14.081Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "배너 목록 새로고침",
+          "right": 1313.15625,
+          "width": 92.953125,
+          "x": 1220.203125,
+          "y": 22
+        },
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 1412,
+          "width": 92.84375,
+          "x": 1319.15625,
+          "y": 22
+        },
+        {
+          "bottom": 245.5,
+          "disabled": false,
+          "height": 40,
+          "label": "검증용 맛집 안내 편집",
+          "right": 576.671875,
+          "width": 340.671875,
+          "x": 236,
+          "y": 205.5
+        },
+        {
+          "bottom": 597.15625,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 1289.34375,
+          "width": 89.6875,
+          "x": 1199.65625,
+          "y": 561.15625
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 1428,
+        "width": 1208,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 254.5,
+        "height": 93.5,
+        "right": 1067,
+        "rowHeights": [
+          56.5
+        ],
+        "width": 847,
+        "x": 220,
+        "y": 161
+      },
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:41:27.463Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "사용자 목록 새로고침",
+          "right": 806,
+          "width": 92.953125,
+          "x": 713.046875,
+          "y": 22
+        },
+        {
+          "bottom": 108,
+          "disabled": false,
+          "height": 32,
+          "label": "검색",
+          "right": 806,
+          "width": 56.203125,
+          "x": 749.796875,
+          "y": 76
+        },
+        {
+          "bottom": 237.390625,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 235.4375,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 203.4375
+        },
+        {
+          "bottom": 290.28125,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 254.390625
+        },
+        {
+          "bottom": 288.328125,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 256.328125
+        },
+        {
+          "bottom": 343.171875,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 307.28125
+        },
+        {
+          "bottom": 341.21875,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 309.21875
+        },
+        {
+          "bottom": 1088,
+          "disabled": true,
+          "height": 32,
+          "label": "이전 사용자 페이지",
+          "right": 679.796875,
+          "width": 66.203125,
+          "x": 613.59375,
+          "y": 1056
+        },
+        {
+          "bottom": 1088,
+          "disabled": true,
+          "height": 32,
+          "label": "다음 사용자 페이지",
+          "right": 810,
+          "width": 66.203125,
+          "x": 743.796875,
+          "y": 1056
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 822,
+        "width": 602,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 352.171875,
+        "height": 195.171875,
+        "right": 822,
+        "rowHeights": [
+          52.390625,
+          52.890625,
+          52.890625
+        ],
+        "width": 602,
+        "x": 220,
+        "y": 157
+      },
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 1112,
+        "width": 834
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:41:49.268Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "배너 목록 새로고침",
+          "right": 707.15625,
+          "width": 92.953125,
+          "x": 614.203125,
+          "y": 22
+        },
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 806,
+          "width": 92.84375,
+          "x": 713.15625,
+          "y": 22
+        },
+        {
+          "bottom": 265,
+          "disabled": false,
+          "height": 40,
+          "label": "검증용 맛집 안내 편집",
+          "right": 468.875,
+          "width": 232.875,
+          "x": 236,
+          "y": 225
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 822,
+        "width": 602,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 274,
+        "height": 113,
+        "right": 822,
+        "rowHeights": [
+          56.5
+        ],
+        "width": 602,
+        "x": 220,
+        "y": 161
+      },
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 1112,
+        "width": 834
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:42:58.801Z",
+      "buttons": [
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "사용자 목록 새로고침",
+          "right": 368,
+          "width": 92.953125,
+          "x": 275.046875,
+          "y": 74
+        },
+        {
+          "bottom": 214,
+          "disabled": false,
+          "height": 44,
+          "label": "검색",
+          "right": 368,
+          "width": 56.203125,
+          "x": 311.796875,
+          "y": 170
+        },
+        {
+          "bottom": 327,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 283
+        },
+        {
+          "bottom": 419.328125,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 375.328125
+        },
+        {
+          "bottom": 511.65625,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 467.65625
+        },
+        {
+          "bottom": 629.984375,
+          "disabled": true,
+          "height": 44,
+          "label": "이전 사용자 페이지",
+          "right": 88.203125,
+          "width": 66.203125,
+          "x": 22,
+          "y": 585.984375
+        },
+        {
+          "bottom": 629.984375,
+          "disabled": true,
+          "height": 44,
+          "label": "다음 사용자 페이지",
+          "right": 218.40625,
+          "width": 66.203125,
+          "x": 152.203125,
+          "y": 585.984375
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 162,
+        "height": 96,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": null,
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:44:16.231Z",
+      "buttons": [
+        {
+          "bottom": 200,
+          "disabled": false,
+          "height": 44,
+          "label": "배너 목록 새로고침",
+          "right": 120.953125,
+          "width": 92.953125,
+          "x": 28,
+          "y": 156
+        },
+        {
+          "bottom": 200,
+          "disabled": false,
+          "height": 44,
+          "label": "새 배너",
+          "right": 219.796875,
+          "width": 92.84375,
+          "x": 126.953125,
+          "y": 156
+        },
+        {
+          "bottom": 384.328125,
+          "disabled": false,
+          "height": 83.328125,
+          "label": "검증용 맛집 안내활성합성 배너입니다. · 우선순위 1데스크톱 배너",
+          "right": 380,
+          "width": 370,
+          "x": 10,
+          "y": 301
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 208,
+        "height": 142,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": null,
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      },
+      "phase": "before-compact-mobile-header"
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:46:06.825Z",
+      "buttons": [
+        {
+          "bottom": 200,
+          "disabled": false,
+          "height": 44,
+          "label": "배너 목록 새로고침",
+          "right": 120.953125,
+          "width": 92.953125,
+          "x": 28,
+          "y": 156
+        },
+        {
+          "bottom": 200,
+          "disabled": false,
+          "height": 44,
+          "label": "새 배너",
+          "right": 219.796875,
+          "width": 92.84375,
+          "x": 126.953125,
+          "y": 156
+        },
+        {
+          "bottom": 384.328125,
+          "disabled": false,
+          "height": 83.328125,
+          "label": "검증용 맛집 안내활성합성 배너입니다. · 우선순위 1데스크톱 배너",
+          "right": 380,
+          "width": 370,
+          "x": 10,
+          "y": 301
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 208,
+        "height": 142,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": null,
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:48:54.759Z",
+      "buttons": [
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "배너 목록 새로고침",
+          "right": 269.15625,
+          "width": 92.953125,
+          "x": 176.203125,
+          "y": 74
+        },
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "새 배너",
+          "right": 368,
+          "width": 92.84375,
+          "x": 275.15625,
+          "y": 74
+        },
+        {
+          "bottom": 330.328125,
+          "disabled": false,
+          "height": 83.328125,
+          "label": "검증용 맛집 안내활성합성 배너입니다. · 우선순위 1데스크톱 배너",
+          "right": 380,
+          "width": 370,
+          "x": 10,
+          "y": 247
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 154,
+        "height": 88,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": null,
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:50:13.925Z",
+      "buttons": [
+        {
+          "bottom": 121.33154296875,
+          "disabled": false,
+          "height": 44,
+          "label": "사용자 목록 새로고침",
+          "right": 368,
+          "width": 92.953125,
+          "x": 275.046875,
+          "y": 77.33154296875
+        },
+        {
+          "bottom": 217.33154296875,
+          "disabled": false,
+          "height": 44,
+          "label": "검색",
+          "right": 368,
+          "width": 56.203125,
+          "x": 311.796875,
+          "y": 173.33154296875
+        },
+        {
+          "bottom": 330.33154296875,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 286.33154296875
+        },
+        {
+          "bottom": 422.65966796875,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 378.65966796875
+        },
+        {
+          "bottom": 514.98779296875,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 470.98779296875
+        },
+        {
+          "bottom": 633.31591796875,
+          "disabled": true,
+          "height": 44,
+          "label": "이전 사용자 페이지",
+          "right": 88.203125,
+          "width": 66.203125,
+          "x": 22,
+          "y": 589.31591796875
+        },
+        {
+          "bottom": 633.31591796875,
+          "disabled": true,
+          "height": 44,
+          "label": "다음 사용자 페이지",
+          "right": 218.40625,
+          "width": 66.203125,
+          "x": 152.203125,
+          "y": 589.31591796875
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 165.33154296875,
+        "height": 96,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 69.33154296875
+      },
+      "loading": false,
+      "table": null,
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:51:05.101Z",
+      "buttons": [
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "배너 목록 새로고침",
+          "right": 269.15625,
+          "width": 92.953125,
+          "x": 176.203125,
+          "y": 74
+        },
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "새 배너",
+          "right": 368,
+          "width": 92.84375,
+          "x": 275.15625,
+          "y": 74
+        },
+        {
+          "bottom": 350.328125,
+          "disabled": false,
+          "height": 83.328125,
+          "label": "검증용 맛집 안내활성합성 배너입니다. · 우선순위 1데스크톱 배너",
+          "right": 380,
+          "width": 370,
+          "x": 10,
+          "y": 267
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 154,
+        "height": 88,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": null,
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:51:21.743Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "배너 목록 새로고침",
+          "right": 707.15625,
+          "width": 92.953125,
+          "x": 614.203125,
+          "y": 22
+        },
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 806,
+          "width": 92.84375,
+          "x": 713.15625,
+          "y": 22
+        },
+        {
+          "bottom": 241.5,
+          "disabled": false,
+          "height": 40,
+          "label": "검증용 맛집 안내 편집",
+          "right": 456.84375,
+          "width": 220.84375,
+          "x": 236,
+          "y": 201.5
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 822,
+        "width": 602,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 250.5,
+        "height": 93.5,
+        "right": 822,
+        "rowHeights": [
+          56.5
+        ],
+        "width": 602,
+        "x": 220,
+        "y": 157
+      },
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 1112,
+        "width": 834
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:51:34.799Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "사용자 목록 새로고침",
+          "right": 806,
+          "width": 92.953125,
+          "x": 713.046875,
+          "y": 22
+        },
+        {
+          "bottom": 108,
+          "disabled": false,
+          "height": 32,
+          "label": "검색",
+          "right": 806,
+          "width": 56.203125,
+          "x": 749.796875,
+          "y": 76
+        },
+        {
+          "bottom": 237.390625,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 235.4375,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 203.4375
+        },
+        {
+          "bottom": 290.28125,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 254.390625
+        },
+        {
+          "bottom": 288.328125,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 256.328125
+        },
+        {
+          "bottom": 343.171875,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 444.796875,
+          "width": 208.796875,
+          "x": 236,
+          "y": 307.28125
+        },
+        {
+          "bottom": 341.21875,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 767.78125,
+          "width": 50.203125,
+          "x": 717.578125,
+          "y": 309.21875
+        },
+        {
+          "bottom": 1088,
+          "disabled": true,
+          "height": 32,
+          "label": "이전 사용자 페이지",
+          "right": 679.796875,
+          "width": 66.203125,
+          "x": 613.59375,
+          "y": 1056
+        },
+        {
+          "bottom": 1088,
+          "disabled": true,
+          "height": 32,
+          "label": "다음 사용자 페이지",
+          "right": 810,
+          "width": 66.203125,
+          "x": 743.796875,
+          "y": 1056
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 822,
+        "width": 602,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 352.171875,
+        "height": 195.171875,
+        "right": 822,
+        "rowHeights": [
+          52.390625,
+          52.890625,
+          52.890625
+        ],
+        "width": 602,
+        "x": 220,
+        "y": 157
+      },
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 1112,
+        "width": 834
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:51:48.455Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "사용자 목록 새로고침",
+          "right": 1412,
+          "width": 92.953125,
+          "x": 1319.046875,
+          "y": 22
+        },
+        {
+          "bottom": 108,
+          "disabled": false,
+          "height": 32,
+          "label": "검색",
+          "right": 1051,
+          "width": 56.203125,
+          "x": 994.796875,
+          "y": 76
+        },
+        {
+          "bottom": 237.390625,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 235.4375,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 203.4375
+        },
+        {
+          "bottom": 290.28125,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 254.390625
+        },
+        {
+          "bottom": 288.328125,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 256.328125
+        },
+        {
+          "bottom": 343.171875,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 307.28125
+        },
+        {
+          "bottom": 341.21875,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 309.21875
+        },
+        {
+          "bottom": 936,
+          "disabled": true,
+          "height": 32,
+          "label": "이전 사용자 페이지",
+          "right": 924.796875,
+          "width": 66.203125,
+          "x": 858.59375,
+          "y": 904
+        },
+        {
+          "bottom": 936,
+          "disabled": true,
+          "height": 32,
+          "label": "다음 사용자 페이지",
+          "right": 1055,
+          "width": 66.203125,
+          "x": 988.796875,
+          "y": 904
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 1428,
+        "width": 1208,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 352.171875,
+        "height": 195.171875,
+        "right": 1067,
+        "rowHeights": [
+          52.390625,
+          52.890625,
+          52.890625
+        ],
+        "width": 847,
+        "x": 220,
+        "y": 157
+      },
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      }
+    },
+    {
+      "module": "banners",
+      "observedAt": "2026-10-18T13:52:02.642Z",
+      "buttons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "배너 목록 새로고침",
+          "right": 1313.15625,
+          "width": 92.953125,
+          "x": 1220.203125,
+          "y": 22
+        },
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 1412,
+          "width": 92.84375,
+          "x": 1319.15625,
+          "y": 22
+        },
+        {
+          "bottom": 241.5,
+          "disabled": false,
+          "height": 40,
+          "label": "검증용 맛집 안내 편집",
+          "right": 559.734375,
+          "width": 323.734375,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 597.15625,
+          "disabled": false,
+          "height": 36,
+          "label": "새 배너",
+          "right": 1289.34375,
+          "width": 89.6875,
+          "x": 1199.65625,
+          "y": 561.15625
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 1428,
+        "width": 1208,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 250.5,
+        "height": 93.5,
+        "right": 1067,
+        "rowHeights": [
+          56.5
+        ],
+        "width": 847,
+        "x": 220,
+        "y": 157
+      },
+      "title": "배너 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      }
+    },
+    {
+      "module": "users",
+      "observedAt": "2026-10-18T13:52:20.011Z",
+      "buttons": [
+        {
+          "bottom": 118,
+          "disabled": false,
+          "height": 44,
+          "label": "사용자 목록 새로고침",
+          "right": 368,
+          "width": 92.953125,
+          "x": 275.046875,
+          "y": 74
+        },
+        {
+          "bottom": 214,
+          "disabled": false,
+          "height": 44,
+          "label": "검색",
+          "right": 368,
+          "width": 56.203125,
+          "x": 311.796875,
+          "y": 170
+        },
+        {
+          "bottom": 327,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 283
+        },
+        {
+          "bottom": 419.328125,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 375.328125
+        },
+        {
+          "bottom": 511.65625,
+          "disabled": false,
+          "height": 44,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 467.65625
+        },
+        {
+          "bottom": 629.984375,
+          "disabled": true,
+          "height": 44,
+          "label": "이전 사용자 페이지",
+          "right": 88.203125,
+          "width": 66.203125,
+          "x": 22,
+          "y": 585.984375
+        },
+        {
+          "bottom": 629.984375,
+          "disabled": true,
+          "height": 44,
+          "label": "다음 사용자 페이지",
+          "right": 218.40625,
+          "width": 66.203125,
+          "x": 152.203125,
+          "y": 585.984375
+        }
+      ],
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 162,
+        "height": 96,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": null,
+      "title": "사용자 관리",
+      "titleFontSize": "18px",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    }
+  ],
+  "preRefinement": [
+    {
+      "module": "users",
+      "width": 1440,
+      "observedAt": "2026-10-18T13:18:50.546Z",
+      "canvas": {
+        "bottom": 960,
+        "height": 960,
+        "right": 1440,
+        "width": 1232,
+        "x": 208,
+        "y": 0
+      },
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 68,
+        "height": 56,
+        "right": 1428,
+        "width": 1208,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": {
+        "bottom": 352.171875,
+        "headers": [
+          "사용자",
+          "권한",
+          "상태",
+          "작업"
+        ],
+        "height": 195.171875,
+        "right": 1067,
+        "rowHeights": [
+          52.390625,
+          52.890625,
+          52.890625
+        ],
+        "width": 847,
+        "x": 220,
+        "y": 157
+      },
+      "title": [
+        {
+          "bottom": 52,
+          "fontSize": "18px",
+          "height": 24,
+          "right": 338.765625,
+          "text": "사용자 관리",
+          "width": 78.765625,
+          "x": 260,
+          "y": 28
+        }
+      ],
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      },
+      "visibleButtons": [
+        {
+          "bottom": 58,
+          "disabled": false,
+          "height": 36,
+          "label": "사용자 목록 새로고침",
+          "right": 1412,
+          "width": 92.953125,
+          "x": 1319.046875,
+          "y": 22
+        },
+        {
+          "bottom": 108,
+          "disabled": false,
+          "height": 32,
+          "label": "검색",
+          "right": 1051,
+          "width": 56.203125,
+          "x": 994.796875,
+          "y": 76
+        },
+        {
+          "bottom": 237.390625,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 201.5
+        },
+        {
+          "bottom": 235.4375,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 203.4375
+        },
+        {
+          "bottom": 290.28125,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 254.390625
+        },
+        {
+          "bottom": 288.328125,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 256.328125
+        },
+        {
+          "bottom": 343.171875,
+          "disabled": false,
+          "height": 35.890625,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 542.796875,
+          "width": 306.796875,
+          "x": 236,
+          "y": 307.28125
+        },
+        {
+          "bottom": 341.21875,
+          "disabled": false,
+          "height": 32,
+          "label": "상세",
+          "right": 963.78125,
+          "width": 50.203125,
+          "x": 913.578125,
+          "y": 309.21875
+        },
+        {
+          "bottom": 936,
+          "disabled": true,
+          "height": 32,
+          "label": "이전 사용자 페이지",
+          "right": 924.796875,
+          "width": 66.203125,
+          "x": 858.59375,
+          "y": 904
+        },
+        {
+          "bottom": 936,
+          "disabled": true,
+          "height": 32,
+          "label": "다음 사용자 페이지",
+          "right": 1055,
+          "width": 66.203125,
+          "x": 988.796875,
+          "y": 904
+        }
+      ]
+    },
+    {
+      "module": "users",
+      "width": 834,
+      "observedAt": "2026-10-18T13:19:34.346Z",
+      "canvas": {
+        "bottom": 1112,
+        "height": 1112,
+        "right": 834,
+        "width": 626,
+        "x": 208,
+        "y": 0
+      },
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 69,
+        "height": 57,
+        "right": 807,
+        "width": 587,
+        "x": 220,
+        "y": 12
+      },
+      "loading": false,
+      "table": null,
+      "title": [
+        {
+          "bottom": 52.5,
+          "fontSize": "18px",
+          "height": 24,
+          "right": 362.5,
+          "text": "대시보드 (KPI)",
+          "width": 102.5,
+          "x": 260,
+          "y": 28.5
+        }
+      ],
+      "viewport": {
+        "height": 1112,
+        "width": 834
+      },
+      "visibleButtons": [
+        {
+          "bottom": 60,
+          "disabled": false,
+          "height": 32,
+          "label": "KPI 카드 직접 드래그 순서 설정",
+          "right": 480.96875,
+          "width": 70.078125,
+          "x": 410.890625,
+          "y": 28
+        },
+        {
+          "bottom": 60,
+          "disabled": true,
+          "height": 32,
+          "label": "KPI 카드 순서를 처음 상태로 초기화",
+          "right": 540.6875,
+          "width": 55.71875,
+          "x": 484.96875,
+          "y": 28
+        },
+        {
+          "bottom": 60,
+          "disabled": false,
+          "height": 32,
+          "label": "KPI 대시보드를 PDF 보고서로 내보내기",
+          "right": 651.796875,
+          "width": 103.109375,
+          "x": 548.6875,
+          "y": 28
+        },
+        {
+          "bottom": 60,
+          "disabled": false,
+          "height": 32,
+          "label": "GitHub Actions KPI 데이터 수집 로그 열기",
+          "right": 687.796875,
+          "width": 32,
+          "x": 655.796875,
+          "y": 28
+        },
+        {
+          "bottom": 60,
+          "disabled": false,
+          "height": 32,
+          "label": "대시보드 타임프레임 설정: 1개월",
+          "right": 775,
+          "width": 79.203125,
+          "x": 695.796875,
+          "y": 28
+        },
+        {
+          "bottom": 105,
+          "disabled": false,
+          "height": 24,
+          "label": "현재 구독자 지표 설명 · 초보자 설명",
+          "right": 319.359375,
+          "width": 24,
+          "x": 295.359375,
+          "y": 81
+        },
+        {
+          "bottom": 105,
+          "disabled": false,
+          "height": 24,
+          "label": "기간 조회 증가 지표 설명 · 초보자 설명",
+          "right": 631.265625,
+          "width": 24,
+          "x": 607.265625,
+          "y": 81
+        },
+        {
+          "bottom": 250.5,
+          "disabled": false,
+          "height": 24,
+          "label": "기간 좋아요 증가 지표 설명 · 초보자 설명",
+          "right": 345,
+          "width": 24,
+          "x": 321,
+          "y": 226.5
+        },
+        {
+          "bottom": 250.5,
+          "disabled": false,
+          "height": 24,
+          "label": "기간 댓글 증가 지표 설명 · 초보자 설명",
+          "right": 631.265625,
+          "width": 24,
+          "x": 607.265625,
+          "y": 226.5
+        },
+        {
+          "bottom": 396,
+          "disabled": false,
+          "height": 24,
+          "label": "업로드 영상 수 지표 설명 · 초보자 설명",
+          "right": 333.765625,
+          "width": 24,
+          "x": 309.765625,
+          "y": 372
+        },
+        {
+          "bottom": 541.5,
+          "disabled": false,
+          "height": 24,
+          "label": "상위 영상 영향도 축과 산정 방식 설명 · 초보자 설명",
+          "right": 501.671875,
+          "width": 24,
+          "x": 477.671875,
+          "y": 517.5
+        },
+        {
+          "bottom": 575.5,
+          "disabled": false,
+          "height": 24,
+          "label": "그래프",
+          "right": 732.75,
+          "width": 49.71875,
+          "x": 683.03125,
+          "y": 551.5
+        },
+        {
+          "bottom": 575.5,
+          "disabled": false,
+          "height": 24,
+          "label": "표",
+          "right": 760,
+          "width": 27.25,
+          "x": 732.75,
+          "y": 551.5
+        },
+        {
+          "bottom": 577.5,
+          "disabled": false,
+          "height": 28,
+          "label": "상위 영상 영향도 카드 전체화면으로 보기",
+          "right": 795,
+          "width": 28,
+          "x": 767,
+          "y": 549.5
+        },
+        {
+          "bottom": 883.5,
+          "disabled": false,
+          "height": 24,
+          "label": "영상별 성과 분포 축과 산정 방식 설명 · 초보자 설명",
+          "right": 501.671875,
+          "width": 24,
+          "x": 477.671875,
+          "y": 859.5
+        },
+        {
+          "bottom": 917.5,
+          "disabled": false,
+          "height": 24,
+          "label": "조회수 숨기기",
+          "right": 554.828125,
+          "width": 63.71875,
+          "x": 491.109375,
+          "y": 893.5
+        },
+        {
+          "bottom": 917.5,
+          "disabled": false,
+          "height": 24,
+          "label": "참여 숨기기",
+          "right": 609.3125,
+          "width": 52.484375,
+          "x": 556.828125,
+          "y": 893.5
+        },
+        {
+          "bottom": 917.5,
+          "disabled": false,
+          "height": 24,
+          "label": "참여율 숨기기",
+          "right": 675.03125,
+          "width": 63.71875,
+          "x": 611.3125,
+          "y": 893.5
+        },
+        {
+          "bottom": 917.5,
+          "disabled": false,
+          "height": 24,
+          "label": "그래프",
+          "right": 732.75,
+          "width": 49.71875,
+          "x": 683.03125,
+          "y": 893.5
+        },
+        {
+          "bottom": 917.5,
+          "disabled": false,
+          "height": 24,
+          "label": "표",
+          "right": 760,
+          "width": 27.25,
+          "x": 732.75,
+          "y": 893.5
+        },
+        {
+          "bottom": 919.5,
+          "disabled": false,
+          "height": 28,
+          "label": "조회·참여 추이 카드 전체화면으로 보기",
+          "right": 795,
+          "width": 28,
+          "x": 767,
+          "y": 891.5
+        },
+        {
+          "bottom": 1195.5,
+          "disabled": false,
+          "height": 24,
+          "label": "운영·검수 요약 축과 산정 방식 설명 · 초보자 설명",
+          "right": 413.25,
+          "width": 24,
+          "x": 389.25,
+          "y": 1171.5
+        },
+        {
+          "bottom": 1195.5,
+          "disabled": false,
+          "height": 24,
+          "label": "그래프",
+          "right": 764.75,
+          "width": 49.71875,
+          "x": 715.03125,
+          "y": 1171.5
+        },
+        {
+          "bottom": 1195.5,
+          "disabled": false,
+          "height": 24,
+          "label": "표",
+          "right": 792,
+          "width": 27.25,
+          "x": 764.75,
+          "y": 1171.5
+        },
+        {
+          "bottom": 1569.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "콘텐츠 성과 TOP 5 축과 산정 방식 설명 · 초보자 설명",
+          "right": 456.796875,
+          "width": 24,
+          "x": 432.796875,
+          "y": 1545.21875
+        },
+        {
+          "bottom": 1569.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "조회수 숨기기",
+          "right": 586.828125,
+          "width": 63.71875,
+          "x": 523.109375,
+          "y": 1545.21875
+        },
+        {
+          "bottom": 1569.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "좋아요 숨기기",
+          "right": 652.546875,
+          "width": 63.71875,
+          "x": 588.828125,
+          "y": 1545.21875
+        },
+        {
+          "bottom": 1569.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "댓글 숨기기",
+          "right": 707.03125,
+          "width": 52.484375,
+          "x": 654.546875,
+          "y": 1545.21875
+        },
+        {
+          "bottom": 1569.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "그래프",
+          "right": 764.75,
+          "width": 49.71875,
+          "x": 715.03125,
+          "y": 1545.21875
+        },
+        {
+          "bottom": 1569.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "표",
+          "right": 792,
+          "width": 27.25,
+          "x": 764.75,
+          "y": 1545.21875
+        },
+        {
+          "bottom": 1902.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "성과 진단 축과 산정 방식 설명 · 초보자 설명",
+          "right": 465.6875,
+          "width": 24,
+          "x": 441.6875,
+          "y": 1878.21875
+        },
+        {
+          "bottom": 1902.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "그래프",
+          "right": 768.75,
+          "width": 49.71875,
+          "x": 719.03125,
+          "y": 1878.21875
+        },
+        {
+          "bottom": 1902.21875,
+          "disabled": false,
+          "height": 24,
+          "label": "표",
+          "right": 796,
+          "width": 27.25,
+          "x": 768.75,
+          "y": 1878.21875
+        }
+      ],
+      "validForRequestedModule": false,
+      "reason": "viewport override reset internal module to dashboard; retained as failed observation"
+    },
+    {
+      "module": "users",
+      "width": 390,
+      "observedAt": "2026-10-18T13:19:58.932Z",
+      "canvas": {
+        "bottom": 844,
+        "height": 788,
+        "right": 390,
+        "width": 390,
+        "x": 0,
+        "y": 56
+      },
+      "documentOverflow": 0,
+      "header": {
+        "bottom": 216,
+        "height": 150,
+        "right": 380,
+        "width": 370,
+        "x": 10,
+        "y": 66
+      },
+      "loading": false,
+      "table": {
+        "bottom": 0,
+        "headers": [
+          "사용자",
+          "권한",
+          "상태",
+          "작업"
+        ],
+        "height": 0,
+        "right": 0,
+        "rowHeights": [
+          0,
+          0,
+          0
+        ],
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "title": [
+        {
+          "bottom": 108,
+          "fontSize": "18px",
+          "height": 24,
+          "right": 124.765625,
+          "text": "사용자 관리",
+          "width": 78.765625,
+          "x": 46,
+          "y": 84
+        }
+      ],
+      "viewport": {
+        "height": 844,
+        "width": 390
+      },
+      "visibleButtons": [
+        {
+          "bottom": 208,
+          "disabled": false,
+          "height": 44,
+          "label": "사용자 목록 새로고침",
+          "right": 114.953125,
+          "width": 92.953125,
+          "x": 22,
+          "y": 164
+        },
+        {
+          "bottom": 268,
+          "disabled": false,
+          "height": 44,
+          "label": "검색",
+          "right": 368,
+          "width": 56.203125,
+          "x": 311.796875,
+          "y": 224
+        },
+        {
+          "bottom": 369,
+          "disabled": false,
+          "height": 32,
+          "label": "검증 사용자 1 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 337
+        },
+        {
+          "bottom": 456.65625,
+          "disabled": false,
+          "height": 32,
+          "label": "검증 사용자 2 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 424.65625
+        },
+        {
+          "bottom": 544.3125,
+          "disabled": false,
+          "height": 32,
+          "label": "검증 사용자 3 상세 보기",
+          "right": 368,
+          "width": 50.203125,
+          "x": 317.796875,
+          "y": 512.3125
+        },
+        {
+          "bottom": 657.96875,
+          "disabled": true,
+          "height": 32,
+          "label": "이전 사용자 페이지",
+          "right": 88.203125,
+          "width": 66.203125,
+          "x": 22,
+          "y": 625.96875
+        },
+        {
+          "bottom": 657.96875,
+          "disabled": true,
+          "height": 32,
+          "label": "다음 사용자 페이지",
+          "right": 218.40625,
+          "width": 66.203125,
+          "x": 152.203125,
+          "y": 625.96875
+        }
+      ]
+    }
+  ],
+  "unsettledHeaderAttempts": [
+    {
+      "module": "pipeline",
+      "expectedTitle": "크롤러 파이프라인",
+      "failed": "Error: TypeError: Cannot read properties of null (reading 'querySelectorAll')\n    at __playwrightEvaluate (<anonymous>:2686:584)\n    at <anonymous>:2687:14\n    at runUserScript (<a"
+    },
+    {
+      "module": "knowledge-graph",
+      "expectedTitle": "지식 그래프",
+      "observedAt": "2026-10-18T13:37:17.946Z",
+      "documentOverflow": 0,
+      "fatalText": false,
+      "h1Count": 1,
+      "headerRect": {
+        "height": 56,
+        "width": 1206,
+        "x": 221,
+        "y": 13
+      },
+      "loadingStates": [
+        "지식 그래프 화면 로딩 중"
+      ],
+      "title": "지식 그래프",
+      "titleFontSize": "18px",
+      "titleRect": {
+        "height": 24,
+        "width": 78.765625,
+        "x": 261,
+        "y": 29
+      },
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      }
+    },
+    {
+      "module": "insights",
+      "expectedTitle": "영상 성과 분석",
+      "observedAt": "2026-10-18T13:37:18.533Z",
+      "documentOverflow": 0,
+      "fatalText": false,
+      "h1Count": 0,
+      "headerRect": null,
+      "loadingStates": [],
+      "titleFontSize": null,
+      "titleRect": null,
+      "viewport": {
+        "height": 960,
+        "width": 1440
+      }
+    }
+  ],
+  "userDetail": {
+    "buttons": [
+      {
+        "height": 44,
+        "label": "프로필 저장",
+        "width": 111.875
+      },
+      {
+        "height": 44,
+        "label": "목록으로",
+        "width": 96.40625
+      },
+      {
+        "height": 44,
+        "label": "프로필",
+        "width": 55.125
+      },
+      {
+        "height": 44,
+        "label": "권한·계정",
+        "width": 68.65625
+      }
+    ],
+    "clientWidth": 389,
+    "height": 844,
+    "scrollWidth": 389,
+    "width": 390
+  },
+  "bannerDetail": {
+    "buttons": [
+      {
+        "height": 44,
+        "label": "수정 저장",
+        "role": null,
+        "width": 75.78125
+      },
+      {
+        "height": 44,
+        "label": "목록으로",
+        "role": null,
+        "width": 96.40625
+      },
+      {
+        "height": 24,
+        "label": "",
+        "role": "switch",
+        "width": 44
+      },
+      {
+        "height": 16,
+        "label": "",
+        "role": "checkbox",
+        "width": 16
+      },
+      {
+        "height": 16,
+        "label": "",
+        "role": "checkbox",
+        "width": 16
+      },
+      {
+        "height": 44,
+        "label": "변경 되돌리기",
+        "role": null,
+        "width": 364
+      },
+      {
+        "height": 44,
+        "label": "삭제",
+        "role": null,
+        "width": 338
+      }
+    ],
+    "clientWidth": 389,
+    "height": 844,
+    "scrollWidth": 389,
+    "width": 390,
+    "x": 0,
+    "y": 0
+  },
+  "limitations": [
+    "Each viewport/module has one retained final capture; this is geometry and appearance evidence, not a task-time or operating performance benchmark.",
+    "Unsettled header attempts are not all-menu passes.",
+    "Switch and checkbox visual controls retain native compact size; primary inspector buttons are 44px.",
+    "No operating data, provider inference, Storage write, or deployment was exercised."
+  ],
+  "normalizedAt": "2026-10-18T13:55:44.620783+00:00",
+  "collectionCorrection": {
+    "rawExport": "apps/web/performance/admin-cms-followup-20261018/render-metrics-unsettled-export.json",
+    "sha256": "571496fea1c75a3da8e9aad8e341d887023fb038165bdc4ecc4d8000c783ed5e",
+    "reason": "The collector closure retained its original metrics array. Latest observations and matching last-written JPEG bytes were selected without inventing captures. Incorrect .png extensions were renamed without altering bytes.",
+    "selection": "last observation per module/viewport after source freeze, excluding explicitly superseded phases"
+  },
+  "counts": {
+    "finalCaptures": 6,
+    "modules": 2,
+    "widths": [
+      390,
+      834,
+      1440
+    ],
+    "overflowFree": 6,
+    "titleFontSize18px": 6
+  },
+  "geometryDifferences": [
+    {
+      "metric": "users mobile header height",
+      "before": 150,
+      "after": 96,
+      "absoluteDifference": -54,
+      "percentChange": -36,
+      "unit": "px",
+      "nPerCondition": 1,
+      "nominal95Interval": null
+    },
+    {
+      "metric": "banners mobile header height",
+      "before": 142,
+      "after": 88,
+      "absoluteDifference": -54,
+      "percentChange": -38.028169014084504,
+      "unit": "px",
+      "nPerCondition": 1,
+      "nominal95Interval": null
+    },
+    {
+      "metric": "users mobile primary list/pagination target height",
+      "before": 32,
+      "after": 44,
+      "absoluteDifference": 12,
+      "percentChange": 37.5,
+      "unit": "px",
+      "nPerCondition": 1,
+      "nominal95Interval": null
+    }
+  ],
+  "geometryUncertainty": "Single synthetic observation per condition; confidence interval unavailable and no task-time, field accessibility or operating performance improvement is established."
+}

@@ -16,6 +16,8 @@ import {
     isExactLocalDirectProfileTablePath,
     isExactLocalProfileMutationRpcPath,
 } from './local-profile-mutation-rpc-boundary';
+import { withNavigationFailureObserver } from './navigation-failure-diagnostics';
+import { isAllowedLocalAdminRscRead } from './local-admin-rsc-read-boundary';
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const isLocalNightlyMode = process.env.NIGHTLY_MODE === 'local'
@@ -46,6 +48,17 @@ const LOCAL_APP_ORIGIN = (() => {
         // The runner validates the configured base URL before Playwright starts.
     }
     return undefined;
+})();
+const NIGHTLY_APP_ORIGIN = (() => {
+    if (LOCAL_APP_ORIGIN) return LOCAL_APP_ORIGIN;
+    try {
+        const url = new URL(process.env.PLAYWRIGHT_BASE_URL ?? '');
+        return (url.protocol === 'http:' || url.protocol === 'https:') && !url.username && !url.password
+            ? url.origin
+            : undefined;
+    } catch {
+        return undefined;
+    }
 })();
 const LOCAL_PORT_ENVIRONMENT_KEYS = [
     'APP_PORT',
@@ -728,7 +741,7 @@ function isAllowedLocalAdminMutation(url: URL, method: string): boolean {
         && !url.search
         && LOCAL_ADMIN_MUTATION_PATHS.has(url.pathname);
 }
-function isAllowedLocalAdminRead(url: URL, method: string): boolean {
+function isAllowedLocalAdminRead(url: URL, method: string, rscHeader?: string): boolean {
     const appPort = process.env.APP_PORT?.trim() || configuredUrlPort(process.env.PLAYWRIGHT_BASE_URL);
     if (
         method !== 'GET'
@@ -739,9 +752,13 @@ function isAllowedLocalAdminRead(url: URL, method: string): boolean {
     ) {
         return false;
     }
+    if (url.pathname === '/admin') {
+        return !url.search || isAllowedLocalAdminRscRead({
+            url, method, rscHeader, appOrigin: LOCAL_APP_ORIGIN,
+        });
+    }
     if (
-        url.pathname === '/admin'
-        || url.pathname === '/api/admin/pending-counts'
+        url.pathname === '/api/admin/pending-counts'
         || url.pathname === '/api/admin/evaluations'
         || url.pathname === '/api/admin/preferences/dashboard-widget-order'
         || url.pathname === '/api/admin/preferences/sidebar-order'
@@ -980,6 +997,7 @@ export const test = base.extend<{ preloadNaverMock: boolean }>({
     page: async ({ page, preloadNaverMock }, fixtureUse, testInfo) => {
         const diagnostics: NightlyRouteDiagnostic[] = [];
         let applicationConsoleErrorCount = 0;
+        return await withNavigationFailureObserver(page, NIGHTLY_APP_ORIGIN, async () => {
         const usesRealLocalSupabase = isLocalNightlyMode
             && testInfo.file.replaceAll('\\', '/').endsWith('/tests/local-supabase-admin.spec.ts');
         if (preloadNaverMock) {
@@ -1201,7 +1219,7 @@ export const test = base.extend<{ preloadNaverMock: boolean }>({
             const isAllowedAdminMutation = usesRealLocalSupabase
                 && isAllowedLocalAdminMutation(url, method);
             const isAllowedAdminRead = usesRealLocalSupabase
-                && isAllowedLocalAdminRead(url, method);
+                && isAllowedLocalAdminRead(url, method, request.headers().rsc);
             if (!isAllowedApplicationUrl(url) && !isAllowedAdminMutation && !isAllowedAdminRead) {
                 recordDiagnostic(diagnostics, diagnosticForUrl(url, method, 0, 'application-path-denied'));
                 await route.abort('blockedbyclient');
@@ -1230,6 +1248,18 @@ export const test = base.extend<{ preloadNaverMock: boolean }>({
                 'Nightly browser emitted a bounded Supabase announcement console error.',
             ).toBe(0);
         }
+        }, async (navigationSnapshot, fixtureFailed) => {
+            if (!fixtureFailed && testInfo.status === testInfo.expectedStatus && applicationConsoleErrorCount === 0) return;
+            const navigationPath = testInfo.outputPath('nightly-navigation-failure-diagnostics.json');
+            await writeFile(navigationPath, JSON.stringify(navigationSnapshot), {
+                encoding: 'utf8',
+                mode: 0o600,
+            });
+            await testInfo.attach('nightly-navigation-failure-diagnostics.json', {
+                path: navigationPath,
+                contentType: 'application/json',
+            });
+        });
     },
 });
 

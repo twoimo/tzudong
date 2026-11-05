@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T15:21:58.377378+00:00",
+  "root": "apps/web/performance/admin-taste-review-20261015",
+  "files": [
+    {
+      "path": "affected-tests-integrated-final.json",
+      "bytes": 6333,
+      "sha256": "320f3cc0869df6d647338df2f8f08269e7bab27b32887d6368561eb81fe6703a",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "affected-tests-integrated.json",
+      "bytes": 3991,
+      "sha256": "e356611f8fbba15df8ea18b1302f19abb7a4eb0243a581485ff80389da31c789",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "build-audit.mjs",
+      "bytes": 4267,
+      "sha256": "d4128aecf5c20a1a7edcaf376c501c3737842ded36cabdcc244390caa8db813b",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "build-report-review1.json",
+      "bytes": 263347,
+      "sha256": "5631fb9f9e79ecb27dae65b3d587b8b92da49472182e5af23ddaa9de45a3e323",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "build-report-review2.json",
+      "bytes": 263349,
+      "sha256": "2111385c7baeeb944ff1a75577732a81af76426b64194961a2fb7f26f8bfbec3",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "build-report-review3.json",
+      "bytes": 263410,
+      "sha256": "d5f7829f85676ab37c4d1b0573a393f32ab93505923aa4c8b0fc1e6873c6900c",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "ci-layout-review.json",
+      "bytes": 3586,
+      "sha256": "1c14725a57b46ab732126fb6a98e597d1239568bc6bbb4e38a6ccab957e66770",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "ci-lint-review.json",
+      "bytes": 1861,
+      "sha256": "bfc4ef17b18c0dd506f4b168f2ed69700ea2fe5aac44dc648f5f513f67b813cf",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "ci-lint-review2.json",
+      "bytes": 1839,
+      "sha256": "9db4becd8a56bccc0339214065641f2309630d5b29ed37f1ede2bbca22972419",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "gitguardian-false-positive-readback.json",
+      "bytes": 1115,
+      "sha256": "bfdadc64d5786c89f2f261f9e0b7c0252d77d28d5355370979f19f81573bcee7",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "gitguardian-hash-false-positives.json",
+      "bytes": 4285,
+      "sha256": "2358b34579d7038a88518fd2646317df3bf1526efcdfbf9e8af92004cb00f1af",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "longform-inventory-review-validation.json",
+      "bytes": 2823,
+      "sha256": "dc15cc7d99dbc43253c48cc4b4a6a4a4c1ea8087dca40981da43c87d060f847c",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "longform-inventory-review2.json",
+      "bytes": 2104,
+      "sha256": "a99fa1807a5befb4648aa9642a9632da8d5a09c75d708054f9a4beebba804e22",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "ocr-stream-recovery-evidence.json",
+      "bytes": 2450,
+      "sha256": "6053d7a8134acc0baf0c0521f0a5eef3df0a86575025d873acca7ecfec22fbfd",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "ocr-user-intent-review2.json",
+      "bytes": 3376,
+      "sha256": "342afc2144f4f506eae56af587a617ca049a050f4b88a274e4c6b75a49e359e8",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "receipt-selection-race.json",
+      "bytes": 3833,
+      "sha256": "03e004e2d4214682d5934218487aa508968dca0f3d649e2ff780f8d26be654ad",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "review-thread-validation.json",
+      "bytes": 3023,
+      "sha256": "d80582db16e3b2981350bf102f1260b653b3d7574ddd17b37ac54283532d343b",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "source-freeze-delivery.json",
+      "bytes": 3830,
+      "sha256": "f6b2828aee8d5602a4c31cafcf272d0ec75aa42d6f1f4ad9fb9cb945c378374a",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "source-freeze-final.json",
+      "bytes": 3061,
+      "sha256": "6b5163cc26b12e66f6b9c8a2225c3f108a16ae93c299b05014773558cd587e67",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "source-freeze.json",
+      "bytes": 2342,
+      "sha256": "3994962cbfaf0f419405b6f4e25a58423d1246954c11d2970aeb955bd90df7b0",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "storyboard-catalog-review2.json",
+      "bytes": 3613,
+      "sha256": "af6fedc7e57b55e5b41fcdfa919430ee73b18f814219dfd8cc3628a455c542f5",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "verification-summary-final.json",
+      "bytes": 2969,
+      "sha256": "a7fe2845171e95ef11cf20c1ff073bfc8e8cc7d589e9b6e3a2b3b876763f25ed",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    },
+    {
+      "path": "verification-summary.json",
+      "bytes": 2860,
+      "sha256": "8d1dd39c1d24449b1422d1bb1dba0df40557e02bc2867be507f43cc41e383919",
+      "role": "Retained stage evidence or reproducibility source; final admission is described in verification-summary-final.json."
+    }
+  ],
+  "scope": "Byte inventory only. Preserve historical failures and stage snapshots; not a performance/operational admission."
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "tzudong-review-food-photo-verification/v1",
+  "startedAt": "2026-10-18T14:30:30.323127+00:00",
+  "baseHead": "17eec51ae1f487d6e4445368cc2a7fead0dc8911",
+  "sourceIntegrity": {
+    "apps/web/app/api/ocr/reviews/save/route.ts": "a1ee27c435f4d6e6edc37758a2c846d8b7bfb713c915c51e3a5bfef623b32e11",
+    "apps/web/components/reviews/ReviewModal.tsx": "5f3a8d01974db645edf9ff6c413a6c877991925c35ed6719a6b6044f2cacf050",
+    "apps/web/lib/reviews/review-save-operation.ts": "8c3d5e85e7068f2295ba2fb4c957676e5aff341562f9c686eb12ef7cefb920ad",
+    "apps/web/tests-unit/review-save-operation.test.ts": "037f2d2edc4d5d4fce96bb719d770a3b25278d401d1ad40adf7affc1e0f8fc3b",
+    "apps/web/tests-unit/review-save-submit.test.ts": "92e84d24d46c323a7b4bf178e28d67f9b7c9832623cb63011a02ca12a9a8635a",
+    "apps/web/tests-unit/review-upload-uncertainty.test.ts": "569edc7db091e94a872cb12079c62553972564c4b94dc9400c0de0e2c80c9584"
+  },
+  "environment": {
+    "node": "24.22.0",
+    "npmReleaseAuthority": "11.6.2",
+    "dotenvAutoLoad": false,
+    "credentialInputs": "none supplied",
+    "outboundNetwork": "not instrumented"
+  },
+  "checks": {
+    "compiler-parity": {
+      "exitCode": 0,
+      "elapsedSeconds": 19.977,
+      "artifact": "apps/web/performance/cross-audit-20261018/review-food-photo-verification/compiler-parity.txt",
+      "sha256": "f1acbd5f9aa6b1f8edc3539033f963f379848c753783d3339d23fd21219483cc"
+    },
+    "production-build": {
+      "exitCode": 0,
+      "elapsedSeconds": 64.334,
+      "artifact": "apps/web/performance/cross-audit-20261018/review-food-photo-verification/production-build.txt",
+      "sha256": "26e8cfeac70278bf08517aabe87d7876e506cf8fd4d30c11b4329418bb8fad37"
+    }
+  },
+  "limitations": [
+    "Local compiler and production-mode build only. No hosted runtime, provider billing, or deployment result is established.",
+    "Elapsed times are single uncontrolled observations; no performance comparison is admitted."
+  ],
+  "taskTsconfigIncludesRestored": true,
+  "sourceIntegrityUnchanged": true,
+  "finishedAt": "2026-10-18T14:31:54.648578+00:00"
+}

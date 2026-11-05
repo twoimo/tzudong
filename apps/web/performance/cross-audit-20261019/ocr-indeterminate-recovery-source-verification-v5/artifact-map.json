@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "scope": "receipt-ocr-recovery108-main-fixture-v11-fix",
+  "artifacts": [
+    {
+      "path": "compiler-check.json",
+      "sha256": "339e5c2326eb7ca1ffb72b08ddc4e2bd05e9d676741ea30b03ef39bb8c595563",
+      "bytes": 421
+    },
+    {
+      "path": "compiler-unit.txt",
+      "sha256": "bd556fa8dafe06e1899d32fa8005d66f6ac797e11856f48ffca86a2b5169a07a",
+      "bytes": 606
+    },
+    {
+      "path": "fixture-public-constraint-check.txt",
+      "sha256": "d61c713906118e21f3096a69d44bef3a6783658660e93d67fe6c9ac7b9484a6c",
+      "bytes": 109
+    },
+    {
+      "path": "source-hashes.txt",
+      "sha256": "f5c98cd364f608a176a41df7deb46ad831b1da3a6c68240fe4310a161164cca8",
+      "bytes": 974
+    },
+    {
+      "path": "untracked-whitespace-check.txt",
+      "sha256": "6bdb87985ec7d08b2f4e0aa5ec9126ae4036d9d7f40d5a276b4166968b233332",
+      "bytes": 34
+    }
+  ]
+}

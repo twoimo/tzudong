@@ -81,6 +81,70 @@ test('공개 경로는 세션 갱신을 건너뛴다', async () => {
     expect(updateSessionCalls).toBe(0)
 })
 
+test('production CSP admits the overseas tile service without widening script or other origin boundaries', async () => {
+    resetAdminBypassEnv()
+    process.env.NODE_ENV = 'production'
+    try {
+        const { proxy } = await loadProxyModule()
+        const response = await proxy(new NextRequest('https://www.tzudong.app/'))
+        const policy = response.headers.get('content-security-policy') ?? ''
+        const directives = new Map(policy.split(';').map((part) => {
+            const [name, ...sources] = part.trim().split(/\s+/)
+            return [name, sources] as const
+        }))
+        const connects = directives.get('connect-src') ?? []
+        expect(connects.filter((source) => source.includes('openfreemap'))).toEqual(['https://tiles.openfreemap.org'])
+        expect(connects).not.toContain('https:')
+        expect(connects).not.toContain('*')
+        expect(connects).not.toContain('http:')
+        expect(directives.get('script-src')).toContain("'strict-dynamic'")
+        expect(directives.get('script-src')).not.toContain("'unsafe-eval'")
+        expect(directives.get('script-src')).not.toContain("'unsafe-inline'")
+        expect(directives.get('worker-src')).toEqual(["'self'", 'blob:'])
+        expect(directives.get('frame-ancestors')).toEqual(["'none'"])
+        expect(directives.get('img-src')).not.toContain('https:')
+    } finally {
+        resetAdminBypassEnv()
+    }
+})
+
+test('production CSP binds local Auth connections to the explicitly enabled validated origin', async () => {
+    const oldUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const oldRuntime = process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME
+    resetAdminBypassEnv()
+    process.env.NODE_ENV = 'production'
+    try {
+        const { proxy } = await loadProxyModule()
+        for (const [runtime, url, allowed] of [
+            ['1', 'http://127.0.0.1:28000', true],
+            ['0', 'http://127.0.0.1:28000', false],
+            ['1', 'http://192.168.1.5:28000', false],
+            ['1', 'http://127.0.0.1:80', false],
+            ['1', 'http://127.0.0.1:28000/path', false],
+            ['1', 'http://127.0.0.1:28000/?allow=other', false],
+        ] as const) {
+            process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME = runtime
+            process.env.NEXT_PUBLIC_SUPABASE_URL = url
+            const response = await proxy(new NextRequest('http://127.0.0.1:18080/'))
+            const policy = response.headers.get('content-security-policy') ?? ''
+            const connects = policy.split(';').find(part => part.trim().startsWith('connect-src '))!.trim().split(/\s+/)
+            expect(connects.includes('http://127.0.0.1:28000')).toBe(allowed)
+            expect(connects.includes('ws://127.0.0.1:28000')).toBe(allowed)
+            expect(connects).not.toContain('http:')
+            expect(connects).not.toContain('ws:')
+            expect(connects).not.toContain('http://192.168.1.5:28000')
+            expect(policy).toContain("'strict-dynamic'")
+            expect(policy).not.toContain("'unsafe-eval'")
+        }
+    } finally {
+        if (oldUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL
+        else process.env.NEXT_PUBLIC_SUPABASE_URL = oldUrl
+        if (oldRuntime === undefined) delete process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME
+        else process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME = oldRuntime
+        resetAdminBypassEnv()
+    }
+})
+
 test('field POST omits Auth work only when credentialless and keeps mutation checks', async () => {
     resetAdminBypassEnv()
     let updateSessionCalls = 0

@@ -494,8 +494,8 @@ describe("admin pipeline control contract", () => {
     expect(route).toContain("readGithubCrawlerSnapshot");
     expect(route).toContain('source: "github_actions"');
     expect(route).toContain('source: "job_api"');
-    expect(dashboard).toContain("query.isError ? undefined : query.data");
-    expect(dashboard).toContain("manifestQuery.isError ? undefined : manifestQuery.data");
+    expect(dashboard).toContain("statusReadFailed ? undefined : query.data");
+    expect(dashboard).toContain("manifestReadFailed ? undefined : manifestQuery.data");
     expect(dashboard).toContain("pipelineJobsForDisplay(snapshot, manifest)");
   });
 });

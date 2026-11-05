@@ -264,20 +264,27 @@ const makeReadbackHarness = new Function('initialPending', 'getResult', 'selecte
     let pendingReadback = initialPending;
     let actionResult = { status: 'warning' };
     let editingBanner = selected;
+    let refreshConflict = null;
     let isEditorOpen = true;
     let pendingEditor = null;
     let editorTransitions = 0;
     let writes = 0;
     const isBusy = false;
     const isDirty = Boolean(dirty);
+    const hasRefreshConflict = false;
+    const liveEditorSnapshotRef = { current: { revision: 1, editingBanner, isDirty } };
     const bannersError = false;
+    const bannerReadFailed = false;
     const bannerToDelete = selected;
     const deleteConfirmation = '배너삭제';
-    const editorRef = { current: { focus() {} } };
+    const editorRef = { current: { focus() {}, contains: () => false } };
+    const document = { activeElement: null, body: {} };
+    const isNarrow = false;
     const requestAnimationFrame = (callback) => callback();
     const setPendingEditor = (value) => { pendingEditor = value; };
     const setActionResult = (value) => { actionResult = value; };
     const setPendingReadback = (value) => { pendingReadback = value; };
+    const setRefreshConflict = (value) => { refreshConflict = value; };
     const openEditPanel = (value) => { editingBanner = value; editorTransitions++; };
     const resetForm = () => { editingBanner = null; editorTransitions++; };
     const setIsEditorOpen = (value) => { isEditorOpen = value; };
@@ -300,10 +307,10 @@ const makeReadbackHarness = new Function('initialPending', 'getResult', 'selecte
     state: () => { pendingReadback: PendingBannerReadback | null; actionResult: { status: string } | null; editorTransitions: number; writes: number; isEditorOpen: boolean; pendingEditor: { banner: AdBanner | null; close?: boolean } | null };
 };
 
-describe('banner unresolved readback locks', () => {
+describe('banner pending readback reconciliation', () => {
     const saved = makeBanner({ id: 'synthetic-saved', title: 'expected title', media_type: 'none' });
     const other = makeBanner({ id: 'synthetic-other', title: 'other title', media_type: 'none' });
-    test('blocks new/edit/discard transitions and deletion until the expected saved fields match', async () => {
+    test('blocks transitions during readback, then accepts an authoritative newer saved row without another write', async () => {
         let result: BannerReadbackResult = { isError: false, data: [{ ...saved, title: 'old title' }, other] };
         const pending = { saved };
         const harness = makeReadbackHarness(pending, () => result, other);
@@ -313,19 +320,16 @@ describe('banner unresolved readback locks', () => {
         harness.closeEditor();
         await harness.handleDelete();
         await harness.refreshBannerList();
-        expect(harness.state()).toMatchObject({ pendingReadback: pending, actionResult: { status: 'warning' }, editorTransitions: 0, writes: 0, isEditorOpen: true });
-        result = { isError: false, data: [saved, other] };
-        await harness.refreshBannerList();
-        expect(harness.state()).toMatchObject({ pendingReadback: null, actionResult: { status: 'success' }, writes: 0 });
+        expect(harness.state()).toMatchObject({ pendingReadback: null, actionResult: { status: 'warning' }, editorTransitions: 1, writes: 0, isEditorOpen: true });
         const transitions = harness.state().editorTransitions;
         harness.applyEditor(null);
         expect(harness.state().editorTransitions).toBe(transitions + 1);
     });
-    test('does not confirm deletion from failed, absent or still-present list data', async () => {
+    test('keeps unreadable deletion pending but reopens an authoritative residual row and confirms absence', async () => {
         let result: BannerReadbackResult = { isError: true };
         const pending = { deletedId: saved.id, mediaCleanupFailed: false };
         const harness = makeReadbackHarness(pending, () => result, other);
-        for (const next of [{ isError: true }, { isError: false }, { isError: false, data: [saved] }]) {
+        for (const next of [{ isError: true }, { isError: false }]) {
             result = next;
             await harness.refreshBannerList();
             harness.applyEditor(null);
@@ -333,9 +337,13 @@ describe('banner unresolved readback locks', () => {
             await harness.handleDelete();
             expect(harness.state()).toMatchObject({ pendingReadback: pending, actionResult: { status: 'warning' }, editorTransitions: 0, writes: 0 });
         }
-        result = { isError: false, data: [other] };
+        result = { isError: false, data: [saved] };
         await harness.refreshBannerList();
-        expect(harness.state()).toMatchObject({ pendingReadback: null, actionResult: { status: 'success' }, writes: 0 });
+        expect(harness.state()).toMatchObject({ pendingReadback: null, actionResult: { status: 'warning' }, editorTransitions: 1, writes: 0 });
+
+        const confirmed = makeReadbackHarness(pending, () => ({ isError: false, data: [other] }), other);
+        await confirmed.refreshBannerList();
+        expect(confirmed.state()).toMatchObject({ pendingReadback: null, actionResult: { status: 'success' }, writes: 0, isEditorOpen: false });
     });
     test('keeps dirty editor open until discard confirmation closes it without writing', () => {
         const harness = makeReadbackHarness(null, () => ({ isError: false, data: [saved] }), saved, true);

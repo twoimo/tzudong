@@ -1,0 +1,21 @@
+{
+  "stage": "answering",
+  "progress_key": "592703a4660f570b257907645cf087d1bad6e2f6485244b5968ef1a05ed0a53e",
+  "intent_only": false,
+  "evidence": "Actual ordinary answer text progresses through evidence classes and substantive source sections3.1 public popularity route,3.2 actual frame parser/union/filter,3.3 detail hydration, matching delivered code. No new research tool card; streaming stop control. API completed alone is not terminal proof.",
+  "observed_at": "2026-10-22T20:19:05.691513+00:00",
+  "wait_minutes": 20,
+  "idle_minutes": 10,
+  "last_progress_at": "2026-10-22T20:19:05.691513+00:00",
+  "progress_stage": "answering",
+  "progress_digest": "592703a4660f570b257907645cf087d1bad6e2f6485244b5968ef1a05ed0a53e",
+  "foreground_wait": {
+    "status": "observe_original",
+    "reasons": [],
+    "foreground_deadline": "2026-10-22T20:39:05.553978+00:00",
+    "idle_deadline": "2026-10-22T20:29:05.691513+00:00",
+    "last_progress_at": "2026-10-22T20:19:05.691513+00:00",
+    "action": "Observe only on a meaningful checkpoint",
+    "remote_terminal": false
+  }
+}

@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T12:52:47.284398+00:00",
+  "repository": "twoimo/tzudong",
+  "pull_request": 3215,
+  "head": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "mergeable": "MERGEABLE",
+  "merge_state": "BLOCKED",
+  "checks": [
+    {
+      "name": "Freshness",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889397/job/117676765658"
+    },
+    {
+      "name": "Install",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889337/job/117676764433"
+    },
+    {
+      "name": "generate",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889362/job/117676764050"
+    },
+    {
+      "name": "Analyze (actions)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127884840/job/117676753537"
+    },
+    {
+      "name": "Promotion Path",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127885658/job/117676754456"
+    },
+    {
+      "name": "Promotion Path",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127966029/job/117676982652"
+    },
+    {
+      "name": "Release",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889344/job/117676764337"
+    },
+    {
+      "name": "npm-audit (apps/web)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764854"
+    },
+    {
+      "name": "Analyze (go)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127884840/job/117676753527"
+    },
+    {
+      "name": "npm-audit (backend)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764886"
+    },
+    {
+      "name": "Analyze (javascript-typescript)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127884840/job/117676753423"
+    },
+    {
+      "name": "Analyze (python)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127884840/job/117676753545"
+    },
+    {
+      "name": "Analyze (rust)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127884840/job/117676753610"
+    },
+    {
+      "name": "Analyze (swift)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127884840/job/117676753596"
+    },
+    {
+      "name": "hosted-migration-ledger",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889362/job/117676764961"
+    },
+    {
+      "name": "Ubuntu npm",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889337/job/117676764370"
+    },
+    {
+      "name": "pip-audit (backend/test-requirements.txt)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764908"
+    },
+    {
+      "name": "pip-audit (backend/pipeline/requirements.txt)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764899"
+    },
+    {
+      "name": "pip-audit (backend/restaurant-crawling/scripts/requirements.txt)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764916"
+    },
+    {
+      "name": "pip-audit (backend/supabase/scripts/g037-hosted-closure-requirements.txt)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764888"
+    },
+    {
+      "name": "pip-audit (backend/pipeline-control/requirements.txt)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764876"
+    },
+    {
+      "name": "Ubuntu Bun",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889337/job/117676764467"
+    },
+    {
+      "name": "orchestration-readiness",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764723"
+    },
+    {
+      "name": "Windows npm",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889337/job/117676764242"
+    },
+    {
+      "name": "rust-recovery",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764870"
+    },
+    {
+      "name": "Windows Bun",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889337/job/117676764436"
+    },
+    {
+      "name": "secret-pattern-scan",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764842"
+    },
+    {
+      "name": "Admin",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889337/job/117676764440"
+    },
+    {
+      "name": "sbom",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/39127889369/job/117676764912"
+    },
+    {
+      "name": "CodeQL",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://github.com/twoimo/tzudong/runs/117676876570"
+    },
+    {
+      "name": "GitGuardian Security Checks",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://dashboard.gitguardian.com"
+    },
+    {
+      "name": "Vercel",
+      "status": null,
+      "conclusion": "SUCCESS",
+      "url": "https://vercel.com/twoimos-projects/tzudong/EzxamhKxuAMYMg3yHqFqsrTXvZs7"
+    },
+    {
+      "name": "Vercel Preview Comments",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "url": "https://vercel.com/github"
+    }
+  ],
+  "limits": [
+    "Historical exact-head CI evidence; not validation of later uncommitted repairs.",
+    "Skipped hosted ledger check is not operating SQL evidence. Vercel status alone does not confirm deployment.",
+    "No workflow rerun, merge, deployment or operating mutation performed."
+  ]
+}

@@ -226,7 +226,7 @@ export function buildDeviceLocationMarkerHtml(location: Pick<DeviceMapLocation, 
         : `${Math.round(accuracyRadius)}m`;
 
     return `
-        <div style="position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+        <div data-tzudong-device-location-marker="true" style="position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center;pointer-events:none;">
             <div style="position:absolute;width:34px;height:34px;border-radius:9999px;background:rgba(37,99,235,0.14);border:1px solid rgba(37,99,235,0.25);"></div>
             ${showHeading ? `<div aria-hidden="true" style="position:absolute;left:50%;top:2px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:22px solid rgba(37,99,235,0.68);transform:translateX(-50%) rotate(${markerHeading}deg);transform-origin:50% 26px;filter:drop-shadow(0 2px 3px rgba(15,23,42,0.22));"></div>` : ''}
             <div style="position:relative;width:18px;height:18px;border-radius:9999px;background:#2563eb;border:3px solid white;box-shadow:0 4px 12px rgba(37,99,235,0.45),0 0 0 1px rgba(15,23,42,0.16);"></div>

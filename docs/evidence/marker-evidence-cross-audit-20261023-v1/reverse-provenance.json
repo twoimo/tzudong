@@ -1,0 +1,19 @@
+{
+  "at": "2026-10-22T21:22:35.309319+00:00",
+  "url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "turn": "0f58fac5-c067-4797-b937-a0652bb221ab",
+  "actual_ui_model": "GPT-6 / Pro",
+  "actual_research": "off",
+  "backend_identity": "UNVERIFIED",
+  "source_revision": "8d47c225afcff1aa1cc5d4a2d8578911c945e217",
+  "bundle_sha256": "518e75cc2d05ed2dc3dedfdd7e27a3c5d41dd053e460ab3897768f96f7b106b2",
+  "report": {
+    "path": "chatgpt_reverse_report.md",
+    "bytes": 9631,
+    "sha256": "8991d6769c60a3d0dc95d3756f698f69aa3101d4fa8625b3c4fac5650a96c05d",
+    "construction": "Exact official Copy clipboard through2losslessJSONsegments, hashmatchesCUAUTF8; formattingandcitationsretained"
+  },
+  "completion": "ActualUIfinalverdict/Copy/stopgone,notAPIflag",
+  "new_finding": "REV-M-01 externalmove coordinatevalidation; fix/native next",
+  "limits": "Conditional source/native acceptance, no newdeployment orphysical/fullhostedlocaldatapass. All7acceptedbytes independentlymatched."
+}

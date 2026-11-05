@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-23T10:12:27.571349+00:00",
+  "finding": "CI-F-01",
+  "failedHead": "62ef678465e9b3fd01cd84b42d09faa9fe918c97",
+  "testRevision": "1c0461bb114e9f6085d33c85a0eb911d0a98cab9",
+  "runtimeRevision": "a1dd40016ff7cf23055073c8637d5b3ee00d6781",
+  "actualCiObservation": {
+    "observedAt": "2026-10-23T10:07:54.805077+00:00",
+    "run": 39932624171,
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "id": 120344883881,
+        "name": "Admin",
+        "conclusion": "success",
+        "head_sha": "62ef678465e9b3fd01cd84b42d09faa9fe918c97",
+        "html_url": "https://github.com/twoimo/tzudong/actions/runs/39932624171/job/120344883881"
+      },
+      {
+        "id": 120344884219,
+        "name": "Ubuntu Bun",
+        "conclusion": "success",
+        "head_sha": "62ef678465e9b3fd01cd84b42d09faa9fe918c97",
+        "html_url": "https://github.com/twoimo/tzudong/actions/runs/39932624171/job/120344884219"
+      },
+      {
+        "id": 120344884220,
+        "name": "Ubuntu npm",
+        "conclusion": "failure",
+        "head_sha": "62ef678465e9b3fd01cd84b42d09faa9fe918c97",
+        "html_url": "https://github.com/twoimo/tzudong/actions/runs/39932624171/job/120344884220"
+      },
+      {
+        "id": 120344884264,
+        "name": "Windows Bun",
+        "conclusion": "success",
+        "head_sha": "62ef678465e9b3fd01cd84b42d09faa9fe918c97",
+        "html_url": "https://github.com/twoimo/tzudong/actions/runs/39932624171/job/120344884264"
+      },
+      {
+        "id": 120344884362,
+        "name": "Install",
+        "conclusion": "success",
+        "head_sha": "62ef678465e9b3fd01cd84b42d09faa9fe918c97",
+        "html_url": "https://github.com/twoimo/tzudong/actions/runs/39932624171/job/120344884362"
+      },
+      {
+        "id": 120344884443,
+        "name": "Windows npm",
+        "conclusion": "success",
+        "head_sha": "62ef678465e9b3fd01cd84b42d09faa9fe918c97",
+        "html_url": "https://github.com/twoimo/tzudong/actions/runs/39932624171/job/120344884443"
+      }
+    ],
+    "release": "success",
+    "codeql": "success"
+  },
+  "cause": "The reviewed builder emits video-views-20261023-v2; the frozen historical public publication remains video-views-20261022-v1. All other publication fields match.",
+  "decision": "Correct only the expected publication version in the existing exact-cohort equality assertion. Preserve full schema/source/member/count/tier equality, frozen artifacts and runtime.",
+  "localReproduction": {
+    "tests": 4,
+    "passed": 3,
+    "failed": 1,
+    "raw": "ci-publication-version-before.txt"
+  },
+  "localVerification": {
+    "tests": 23,
+    "files": 3,
+    "assertions": 903,
+    "failed": 0,
+    "raw": "ci-publication-version-after.txt",
+    "lint": "PASS; ESLint changed test only, Node24, zero warnings",
+    "parity": {
+      "diagnostics": 0,
+      "logicalInputs": 3382,
+      "raw": "ci-publication-version-parity.txt"
+    }
+  },
+  "frozenPublication": {
+    "path": "apps/web/lib/evidence-engineering/public-popularity-publication.json",
+    "sha256": "4292f73048150e1d13410e85acf220d786ddbffe0baac1d18a03588c89bbb93f",
+    "unchanged": true
+  },
+  "runtimeChanged": false,
+  "newExternalAuditRequired": false,
+  "auditRationale": "Routine test expectation correction for the already reviewed v2 policy; immutable external reports and original source bundles remain unchanged.",
+  "nextHeadCi": "PENDING; local tests do not prove the new delivery head CI",
+  "hostPreview": "NOT_PERFORMED; retained Vercel advisory hold",
+  "deployment": "NOT_PERFORMED",
+  "Nightly": "SEPARATE_HISTORICAL_FAILURE_39457197351_NO_RERUN"
+}

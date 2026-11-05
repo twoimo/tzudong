@@ -1,0 +1,110 @@
+{
+  "schema_version": "tzudong.cms-native-resolution-review.v1",
+  "captured_at": "2026-10-18T22:41:22+0900",
+  "repository_head": "86328a4c52a03e953519ea8d09b2672bef7eda57",
+  "reviewed_resolution": {
+    "path": "apps/web/performance/cross-audit-20261018/admin-users-banners-final-resolution.json",
+    "sha256": "9635c789bce58d6ed95ed94075f0cfb65ea860092e381b179796ffd9b1a5504a",
+    "raw_result_path": "apps/web/performance/cross-audit-20261018/admin-users-banners-fix-results.txt",
+    "raw_result_sha256": "4dff6133c0c3023f67099c3f4d483b3eb70a6ff6a9e579d414910802e67f64f1"
+  },
+  "source_binding": {
+    "owner_receipt_match_at_review_start": true,
+    "matched_owner_hashes": {
+      "apps/web/app/admin/banners/page.tsx": "7ea65f864dd14d36e8fec935843964e7f836ebe1f050f002ec53b313f41563fb",
+      "apps/web/app/api/admin/banners/route.ts": "5c2bb24c1f0b4c1e6cbff87bd12fd7e5ebb3716668933ed82990e27cd8bbf54e",
+      "apps/web/hooks/use-ad-banners.tsx": "b314ab92baf377b648e5ad80b9d6a6cd49579ea1e781b1a192b820e53b74f86f",
+      "apps/web/components/admin/AdminUsersPanel.tsx": "5685300df4b5d42f2bbf897c022ddf1e4032c114e1bfdb321050ad2976e21a7e",
+      "apps/web/styles/admin-ui.css": "936bbf3a6177fadc5bf063bb3a09c91e668786533cd29f7f8677f55be153c999",
+      "apps/web/app/api/admin/users/route.ts": "d5c7cd52e71968f8ffb03b2cb296b0f94620c0dc5991e93b1031b9170cc86da9",
+      "apps/web/tests-unit/admin-banners-functional-contract.test.ts": "244d696df6ef90aede9147150cd28e8d8cf26ffc63e6462e802928708db06070",
+      "apps/web/tests-unit/ad-banner-url-security.test.ts": "09a0935b913536aaa17250825413efd231f901e1f6369683d5d92f5daa31bbec",
+      "apps/web/tests-unit/admin-users-mutation-scope.test.ts": "d504bbb8c0f29629371da1adecfe37d1fe1b8f438fcacede848c43c8963ee309",
+      "apps/web/tests-unit/admin-user-management-source.test.ts": "1e287ffe7210d3c7f97543d62c0bb55d51a70ef16327758c167ed94ff04e8c19",
+      "apps/web/tests-unit/admin-console-uiux-source.test.ts": "9c0c97aece2729716f9d0e22034ac99cbeaa81b977fadccfcdb60ebca0e7b834"
+    },
+    "post_start_visual_delta": {
+      "path": "apps/web/app/admin/banners/page.tsx",
+      "current_sha256": "aecf8e2f611cfa3c3383df242cf0dcb88f67e12347993e54bc1d490bc497890c",
+      "observed_changes": [
+        "mobile active badge uses emerald and inactive badge uses neutral styling at line 1045",
+        "main table header uses bg-card at line 1060",
+        "table active badge uses emerald and inactive badge uses neutral styling at line 1069"
+      ],
+      "functional_review_status": "The CAS, pending readback, refresh conflict, save and delete control flow reviewed below remains present in the current bytes."
+    },
+    "all_other_owner_receipt_paths_still_match": true
+  },
+  "resolution_verdicts": [
+    {
+      "id": "CMS-FINAL-001",
+      "verdict": "closed_locally",
+      "phase": "banner update compare-and-swap",
+      "evidence": [
+        "The editor passes editingBanner.updated_at as expectedUpdatedAt.",
+        "The hook sends PATCH through the guarded admin route.",
+        "The route filters by both id and updated_at and returns the latest authoritative row with banner_revision_conflict on a miss.",
+        "The page preserves the stale form and blocks another save behind refreshConflict until explicit latest reopen."
+      ],
+      "remaining_condition": "Conflict detection after a successful prior update depends on updated_at advancing. The local baseline has the trigger, but hosted trigger presence is unverified."
+    },
+    {
+      "id": "CMS-FINAL-002",
+      "verdict": "closed_locally",
+      "phase": "banner delete compare-and-swap and media cleanup",
+      "evidence": [
+        "DELETE includes the observed updated_at and the route applies id plus updated_at predicates.",
+        "A CAS miss returns conflict or not-found without a deleted row.",
+        "A successful delete returns the deleted authoritative row.",
+        "Cleanup paths are derived from deletedBanner.image_url and deletedBanner.video_url, not the stale editor snapshot."
+      ],
+      "remaining_condition": "Detecting an intervening hosted update still depends on the hosted updated_at trigger, which was not read back."
+    },
+    {
+      "id": "CMS-FINAL-003",
+      "verdict": "closed",
+      "phase": "banner pending readback mismatch recovery",
+      "evidence": [
+        "Valid readback data is classified as confirmed or diverged for both save and delete.",
+        "A diverged saved row opens the latest row; a missing saved row closes the editor.",
+        "A residual row after delete opens that latest row; an absent row confirms deletion.",
+        "Each valid decision clears pendingReadback, while failed or unreadable readback remains retryable."
+      ]
+    },
+    {
+      "id": "CMS-FINAL-004",
+      "verdict": "closed",
+      "phase": "admin user exact readback conflict recovery",
+      "evidence": [
+        "A valid nonmatching exact row is retained as readbackConflict and merged into local row state.",
+        "The alert exposes an explicit latest-state acceptance action.",
+        "Acceptance clears pendingReadback and readbackConflict without invoking fetch or PATCH."
+      ]
+    }
+  ],
+  "targeted_native_verification": [
+    {
+      "command": "/Users/twoimo/.bun/bin/bun test tests-unit/admin-banners-functional-contract.test.ts --test-name-pattern 'pending readback accepts|banner callers send|banner PATCH and DELETE'",
+      "result": "3 pass, 0 fail, 26 expect calls",
+      "coverage": [
+        "CMS-FINAL-001",
+        "CMS-FINAL-002",
+        "CMS-FINAL-003"
+      ]
+    },
+    {
+      "command": "/Users/twoimo/.bun/bin/bun test tests-unit/admin-users-mutation-scope.test.ts --test-name-pattern 'missing and wrong exact results'",
+      "result": "1 pass, 0 fail, 13 expect calls",
+      "coverage": [
+        "CMS-FINAL-004"
+      ]
+    }
+  ],
+  "new_findings": [],
+  "release_constraints": [
+    "Hosted trigger_ad_banners_updated_at presence and behavior remain unverified.",
+    "Local baseline source proves intended trigger definition only; it is not hosted database readback.",
+    "No browser, hosted database, Storage, deployment, commit or push action was performed in this review.",
+    "Root is independently running final browser, parity and build verification."
+  ]
+}

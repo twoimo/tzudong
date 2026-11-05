@@ -1,0 +1,16 @@
+{
+  "provider": "chatgpt",
+  "model_label": "GPT-6",
+  "reasoning_label": "Pro",
+  "research_mode": "심층 리서치",
+  "conversation_url": "https://chatgpt.com/c/6ad4b1ad-fc10-83ec-bbd0-abd1dec881c4",
+  "report_path": "apps/web/performance/cross-audit-20261018/chatgpt-thesis-full-report.md",
+  "sha256": "4c5542b59d9bcb426eac29722b6da36c9c23337fa622bd9e822bd6b3ffe4ad82",
+  "bytes": 43130,
+  "completed_at": "2026-10-18T11:59:14.430564+00:00",
+  "source_revision": "b5d62c34f4a2e854ab10fd9f6741597b6081c43b",
+  "source_bundle_sha256": "bd8f5668b7a00d48a623471183863cda1ae9eb48c14a0d1dc569508e0f2058c3",
+  "completion_evidence": "UI: research complete9m,5sources,99searches; full Markdown exported by UI.",
+  "backend_identity": "UNVERIFIED",
+  "interpretation": "Report original preserved verbatim; claims require local adjudication and Gemini antithesis."
+}

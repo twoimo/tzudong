@@ -2,6 +2,7 @@ import { afterAll, beforeEach, expect, test } from 'bun:test';
 import { syncRetainedMarkerAccessibility } from '../lib/retained-marker-accessibility';
 
 class AppMarkerElement {
+    isConnected = true;
     attributes = new Map<string, string>();
     matches(selector: string) { return selector === '[data-testid="marker"]'; }
     querySelector() { return null; }
@@ -27,17 +28,28 @@ beforeEach(() => {
     globalThis.MutationObserver = FakeObserver as unknown as typeof MutationObserver;
 });
 afterAll(() => { globalThis.MutationObserver = savedObserver; });
-test('outside-padded mask is owned, reversible and has no geometry or focus changes', () => {
+test('outside-padded mask is owned and inert, preserving geometry and individual tabindex', () => {
     const root = new AppMarkerElement();root.setAttribute('role','button');root.setAttribute('style','width:28px');
     const marker = fixture(root);
     syncRetainedMarkerAccessibility(marker,false);
     expect(root.getAttribute('aria-hidden')).toBe('true');
     expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBe('true');
+    expect(root.getAttribute('inert')).toBe('');
     expect(root.getAttribute('role')).toBe('button');expect(root.getAttribute('style')).toBe('width:28px');
     expect(root.getAttribute('tabindex')).toBeNull();
     syncRetainedMarkerAccessibility(marker,true);
     expect(root.getAttribute('aria-hidden')).toBeNull();expect(root.getAttribute('data-tzudong-retained-marker-hidden')).toBeNull();
+    expect(root.getAttribute('inert')).toBeNull();
+    expect(root.getAttribute('data-tzudong-retained-marker-inert')).toBeNull();
     expect(marker.__tzudongRetainedMarkerAriaHidden).toBe(false);
+});
+test('does not remove an inert state owned by another source', () => {
+    const root = new AppMarkerElement();root.setAttribute('inert', '');
+    const marker=fixture(root);
+    syncRetainedMarkerAccessibility(marker,false);
+    expect(root.getAttribute('data-tzudong-retained-marker-inert')).toBeNull();
+    syncRetainedMarkerAccessibility(marker,true);
+    expect(root.getAttribute('inert')).toBe('');
 });
 test('does not remove a hidden state owned by another source', () => {
     const root = new AppMarkerElement();root.setAttribute('aria-hidden','true');const marker=fixture(root);
@@ -100,4 +112,21 @@ test('hides the app overlay anchor containing a sibling review button and restor
     syncRetainedMarkerAccessibility(marker,true);
     expect(anchor.getAttribute('aria-hidden')).toBeNull();
     expect(anchor.getAttribute('data-visible-marker-review-bubble-anchor')).toBe('true');
+});
+
+test('a disconnected old root stays pending and release cancels its insertion observer', () => {
+    for (const canceled of [false, true]) {
+        const target = {} as HTMLElement;
+        let root = new AppMarkerElement(); root.isConnected = false;
+        const marker = {getElement: () => root as unknown as HTMLElement};
+        syncRetainedMarkerAccessibility(marker, false, target);
+        const observer = FakeObserver.instances.at(-1)!;
+        expect(observer).toBeDefined();
+        expect(root.getAttribute('aria-hidden')).toBeNull();
+        if (canceled) syncRetainedMarkerAccessibility(marker, true);
+        root = new AppMarkerElement(); observer.fire();
+        expect(root.getAttribute('aria-hidden')).toBe(canceled ? null : 'true');
+        expect(observer.disconnected).toBe(true);
+        syncRetainedMarkerAccessibility(marker, true);
+    }
 });

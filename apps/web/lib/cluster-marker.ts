@@ -4,6 +4,7 @@
 
 import type { ClusterFeature } from 'supercluster';
 import type { ClusterProperties } from './clustering';
+import { publicPopularityTier } from './evidence-engineering/popularity-marker';
 import { escapeHtmlAttribute } from './html-escape';
 
 /**
@@ -135,6 +136,11 @@ const CATEGORY_IMAGES: Record<string, CategoryMarkerImage> = {
   '제철': createCategoryMarkerImage('seasonal'),
 };
 
+// One finite inventory shared by rendered pictures and the map-owned image primer.
+// Multiple category labels can point to the same asset (일식 / 돈까스·회).
+export const getCategoryMarkerImages = (): readonly CategoryMarkerImage[] =>
+  [...new Map(Object.values(CATEGORY_IMAGES).map(image => [image.webp, image])).values()];
+
 /**
  * 카테고리 이미지 경로 가져오기
  */
@@ -174,9 +180,11 @@ const createCategoryImageHTML = ({
 export const createClusterMarkerHTML = (
   cluster: ClusterFeature<ClusterProperties>,
   categories: string[],
-  currentIndex: number
+  currentIndex: number,
+  popularityTier: unknown = cluster.properties.popularityTier,
 ): string => {
   const count = cluster.properties.point_count || 0;
+  const safeTier = publicPopularityTier(popularityTier);
   const displayCategory = categories[currentIndex % categories.length] || '기타';
   const image = getCategoryImage(displayCategory);
 
@@ -204,8 +212,11 @@ export const createClusterMarkerHTML = (
   const zIndex = Math.min(100 + Math.floor(count / 5), 200);
 
   return `
-    <div
+    <button
+      type="button"
       class="cluster-marker-container"
+      aria-label="맛집 ${count}곳 모아보기, 지도 확대"
+      data-popularity-tier="${safeTier}"
       style="
         width: ${size}px;
         height: ${size}px;
@@ -220,19 +231,19 @@ export const createClusterMarkerHTML = (
       "
     >
       <!-- 카테고리 이미지 (애니메이션) -->
-      <div
+      <span
         class="cluster-icon"
         style="
           width: ${iconSize}px;
           height: ${iconSize}px;
         "
       >
-        ${createCategoryImageHTML({ image, alt: 'cluster' })}
-      </div>
+        ${createCategoryImageHTML({ image, alt: '' })}
+      </span>
 
       <!-- 맛집 개수 배지 (우측 하단) -->
       ${count > 0 ? `
-      <div
+      <span
         class="cluster-count-badge"
         style="
           position: absolute;
@@ -249,9 +260,9 @@ export const createClusterMarkerHTML = (
           z-index: ${zIndex + 1};
           border: 1px solid rgba(255,255,255,0.2);
         "
-      >${count >= 1000 ? '999+' : count}</div>
+      >${count >= 1000 ? '999+' : count}</span>
       ` : ''}
-    </div>
+    </button>
   `;
 };
 
@@ -266,7 +277,8 @@ export const createIndividualMarkerHTML = (
   category: string,
   isSelected: boolean,
   visitCount = 0,
-  restaurantId?: string | null
+  restaurantId?: string | null,
+  restaurantName?: string | null,
 ): string => {
   const image = getCategoryImage(category);
   // 이미지 마커: 선택 시 42px, 기본 32px
@@ -278,6 +290,9 @@ export const createIndividualMarkerHTML = (
   const visitBadgeOffset = isSelected ? -6 : -5;
   const displayVisitCount = normalizedVisitCount >= 100 ? '99+' : String(normalizedVisitCount);
   const safeRestaurantId = restaurantId ? escapeHtmlAttribute(restaurantId) : null;
+  const accessibleName = escapeHtmlAttribute(
+    `${restaurantName?.trim() || `${category} 맛집`} 상세 보기${shouldShowVisitBadge ? `, 쯔양 ${normalizedVisitCount}회 방문` : ''}`,
+  );
 
   const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
   const zIndex = isSelected ? '100' : '1';
@@ -285,8 +300,8 @@ export const createIndividualMarkerHTML = (
   const badge = shouldShowVisitBadge
     ? `<span class="tzuyang-visit-count-badge" data-tzuyang-visit-count-badge="true" aria-label="쯔양 ${normalizedVisitCount}회 방문" style="background-color: #dc2626; top: ${visitBadgeOffset}px; right: ${visitBadgeOffset}px; min-width: ${visitBadgeSize}px; height: ${visitBadgeSize}px; font-size: ${visitBadgeFontSize}px;">${displayVisitCount}</span>`
     : '';
-  const picture = `<picture class="tzudong-marker-picture"><source srcset="${image.webp}" type="image/webp" /><img class="tzudong-marker-image" src="${image.png}" alt="marker" draggable="false" decoding="sync" /></picture>`;
-  return `<div class="tzudong-individual-marker" style="width: ${size}px; height: ${size}px; transform: ${transform}; z-index: ${zIndex};" role="button" data-testid="marker"${safeRestaurantId ? ` data-restaurant-id="${safeRestaurantId}"` : ''}>${picture}${badge}</div>`;
+  const picture = `<picture class="tzudong-marker-picture"><source srcset="${image.webp}" type="image/webp" /><img class="tzudong-marker-image" src="${image.png}" alt="" draggable="false" decoding="sync" /></picture>`;
+  return `<button type="button" class="tzudong-individual-marker" style="width: ${size}px; height: ${size}px; transform: ${transform}; z-index: ${zIndex};" role="button" aria-label="${accessibleName}" data-testid="marker"${safeRestaurantId ? ` data-restaurant-id="${safeRestaurantId}"` : ''}>${picture}${badge}</button>`;
 };
 
 /**

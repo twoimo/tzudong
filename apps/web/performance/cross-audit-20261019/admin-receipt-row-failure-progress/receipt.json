@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-only-local-verification-receipt",
+  "createdAt": "2026-10-18T15:17:40.214040Z",
+  "status": "local_verified_external_cross_audit_blocked",
+  "sourceRevision": "b1c505cd4f065fac8a4ebefe235a85a5513acbd7",
+  "review": {
+    "pullRequest": 3215,
+    "thread": "PRRT_kwDOQGRyNc6tra7H",
+    "discussion": "https://github.com/twoimo/tzudong/pull/3215#discussion_r4307435746"
+  },
+  "counterexample": {
+    "before": "A deterministic oldest-row verification defect returned a non-OK response while the review remained pending, so created_at/id selection chose it again and starved later rows.",
+    "after": "Only confirmed missing, invalid, or absent verification-photo defects are quarantined as receipt_data.status=failed. Exact pending-state CAS plus mutation select and independent terminal readback are required before the batch advances."
+  },
+  "boundaries": {
+    "terminalRowDefects": [
+      "verification_photo_missing",
+      "verification_object_invalid",
+      "verification_object_missing"
+    ],
+    "remainPendingAndStop": [
+      "storage authentication or authorization failure",
+      "storage transport or read uncertainty",
+      "provider credential or quota unavailability",
+      "provider transport uncertainty",
+      "persistence or terminal readback uncertainty"
+    ],
+    "noExternalOperations": true,
+    "noSqlOrRetentionChange": true,
+    "rerunRecovery": "The existing guarded rerun path can CAS-reset a terminal failure after an operator replaces the verification photo."
+  },
+  "sourceHashesSha256": {
+    "apps/web/lib/ocr/admin-receipt-batch.ts": "f2ba1392b39990839b01baeaea6358d9e80b9397aa01ea4ec42c2b077ecbfaa2",
+    "apps/web/lib/ocr/admin-receipt-processor.ts": "c9a902b79a64b006adeda5c5f6356ad659bef806681f532d504b0d5009843be5",
+    "apps/web/lib/ocr/admin-receipt-row-failure.ts": "64dfbae0a221e54f50632c491d8765b2cd1ec429f52c9c38d82af2bafc5207eb",
+    "apps/web/scripts/run-admin-receipt-ocr-workflow.ts": "4da7cfecd87ef24161cdd5e97a63c20931a1f717bcb9828a2811f8f36c08a09a",
+    "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts": "f9094239047cb6378a1a6d7bcad72a46989f7e752463d3df3d96107297e1f6fc",
+    "apps/web/tests-unit/admin-receipt-processor-terminal-failure.test.ts": "fe91a675f8393b49fd53086362b485e68a399d9f85f9074ed1b7b2189c3fb937"
+  },
+  "baselineHashesSha256": {
+    "apps/web/lib/ocr/admin-receipt-processor.ts@b1c505cd": "462eae8188af7c26493ee85b3d4957f17a95ede67830d5e3bc9e7a4609e2f5be",
+    "apps/web/tests-unit/admin-receipt-ocr-workflow.test.ts@b1c505cd": "b53fa991c9a423b76b175b3d2efe7f55defb25feb9c65b15c92dfcf432a32f83"
+  },
+  "verification": [
+    {
+      "command": "bun test tests-unit/admin-receipt-ocr-workflow.test.ts tests-unit/admin-receipt-processor-terminal-failure.test.ts",
+      "workingDirectory": "apps/web",
+      "result": "pass",
+      "summary": "22 passed, 0 failed, 137 assertions"
+    },
+    {
+      "command": "bun test tests-unit/zz-ocr-route-contract.test.ts tests-unit/api-security-source.test.ts",
+      "workingDirectory": "apps/web",
+      "result": "pass",
+      "summary": "29 passed, 0 failed, 814 assertions"
+    },
+    {
+      "command": "bunx eslint lib/ocr/admin-receipt-batch.ts lib/ocr/admin-receipt-processor.ts lib/ocr/admin-receipt-row-failure.ts tests-unit/admin-receipt-ocr-workflow.test.ts tests-unit/admin-receipt-processor-terminal-failure.test.ts",
+      "workingDirectory": "apps/web",
+      "result": "pass"
+    },
+    {
+      "command": "git diff --check",
+      "workingDirectory": ".",
+      "result": "pass"
+    }
+  ],
+  "externalCrossAudit": {
+    "status": "not_dispatched",
+    "reason": "The required shared coordinator reported the Gemini lane occupied with an existing queue, while the ChatGPT primary readiness observation was false. No reservation, upload, or browser dispatch was attempted.",
+    "missingStages": [
+      "ChatGPT GPT-6 Pro Deep Research thesis",
+      "Gemini 4 Argon maximum Deep Research adversarial audit",
+      "ChatGPT GPT-6 Pro Deep Research reverse verification"
+    ]
+  },
+  "limitations": [
+    "Source-only local fixtures; no hosted database, provider, Storage, workflow dispatch, or deployment was exercised.",
+    "Repository-wide parity and build checks are intentionally delegated to the root after concurrent source work is frozen."
+  ]
+}

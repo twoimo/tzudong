@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 2,
+  "skill": {
+    "name": "taste-skill",
+    "upstream": "https://github.com/Leonxlnx/taste-skill",
+    "commit": "f624f37a8c650b9cc550253104925efe4c8de246",
+    "direction": "dense-tiles / The well-kept board",
+    "seed": 331628995,
+    "scopeAdaptation": "User explicitly requests an operational CMS; retain data tables, form boundaries, semantic status colors, accessible touch targets and functional density. Do not apply marketing imagery/hero/animation quotas to pass a heuristic."
+  },
+  "measurements": [
+    {
+      "metric": "page title font size",
+      "before": 16,
+      "after": 18,
+      "absoluteDelta": 2,
+      "percentChange": 12.5,
+      "unit": "px",
+      "n": 45,
+      "environment": "Same synthetic loopback,1440/834/390px,Chrome/Playwright1.63",
+      "confidenceInterval95": null,
+      "reason": "Deterministic geometry enumeration; not a sampled latency/usability claim."
+    },
+    {
+      "metric": "bright-green treemap label contrast",
+      "before": 2.1189735054122596,
+      "after": 7.717923428537454,
+      "absoluteDelta": 5.598949923125195,
+      "percentChange": 264.2293501463995,
+      "unit": "contrast ratio",
+      "input": {
+        "background": "#30cc5a",
+        "beforeForeground": "#ffffff",
+        "afterForeground": "#17202f"
+      },
+      "confidenceInterval95": null,
+      "reason": "Deterministic WCAG relative-luminance calculation,rounded.",
+      "display": {
+        "before": 2.12,
+        "after": 7.72
+      }
+    },
+    {
+      "metric": "dark-view low-contrast samples reported by taste probe",
+      "before": 12,
+      "after": 0,
+      "absoluteDelta": -12,
+      "percentChange": -100,
+      "n": 12,
+      "confidenceInterval95": null,
+      "reason": "Same12viewstates; probe sample count,not all application text or independent unique elements."
+    }
+  ],
+  "checks": {
+    "finalProductionViews": {
+      "report": "view-summary-final.json",
+      "sha256": "0f2045cdf150fe5670871290016861a51a2cfb12dcee18ff991f255c535bb8bb",
+      "lightViews": 45,
+      "darkViews": 12,
+      "successFixtureViews": 9,
+      "documentOverflow": 0,
+      "pageErrors": 0,
+      "lowContrastSamples": 0,
+      "boundary": "Local synthetic bundle; mixed states and explicit browser-only mock-origin CSP adaptation for13mobile captures. Not hosted/auth/CSP/provider correctness."
+    },
+    "canonicalUnitFinal": {
+      "report": "canonical-unit-final2.json",
+      "sha256": "875af132c41c986c4ab8c4fb5efafcef9c37a279b6de636869dfc2bbca106fbe",
+      "passed": 3815,
+      "failed": 0,
+      "skipped": 11,
+      "inventory": {
+        "testFiles": 466,
+        "generalFiles": 445,
+        "isolatedFiles": 21,
+        "expectedProcesses": 22,
+        "observedProcesses": 22,
+        "complete": true,
+        "parser": "anchored rows inside const isolated = new Set array only"
+      },
+      "runtime": {
+        "node": "24.21.0",
+        "bun": "1.4.0"
+      },
+      "overlap": "Supersedes local affected-test counts; do not sum them."
+    },
+    "productionBuildFinal": {
+      "report": "build-report-final.json",
+      "sha256": "8bec884d7cd13283b4e27c00fc63fdc54ae5ea54c7a7e064a829b6d97982a6d2",
+      "exitCode": 0,
+      "appManifestInputs": 1593,
+      "sourceDriftDuringBuild": [],
+      "cleanupFailures": [],
+      "cssBoundary": "passed",
+      "laterDifference": "Only excluded unit test admin-restaurant-modal-presentation-source.test.ts changed afterward; no product source changed. Additional performance-only audit scripts are excluded from the app manifest. This is an app manifest, not a claim of full repository transitive closure.",
+      "runtimeVerification": "Built fixture launcher verified1593 app manifest hashes before spawning; all owned fixture listeners terminated afterward."
+    },
+    "typecheckFinal": {
+      "report": "typecheck-delivery.json",
+      "sha256": "75874ffabb12cb367bfeb25cdb9b810f9fada172ebd4a992a7d3088e66fbe551",
+      "exitCode": 0,
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 3324,
+      "logicalInputNamesSha256": "4858633d19293e689a51ee0ea1cf5eed6a419a5d8148aaf6978eeee4fddfdb78",
+      "nonLibraryContentSha256": "59db7582f072f1b2fa0a55cf11e7fe746639d9f551157e5144a1352cbeb4ab5f",
+      "standardLibraryContentSha256": {
+        "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+        "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+      }
+    },
+    "eslintFinal": {
+      "reports": [
+        {
+          "path": "eslint-final.json",
+          "sha256": "7b99ed8caafd1b0e2ad3d6739c628b0e7ffd903ebd6ec7d2da92f1b949c20218",
+          "files": 52
+        },
+        {
+          "path": "eslint-modal-followup.json",
+          "sha256": "c1300089cd6f21983dd77856501d19eb601511d4fe3a5085e972b1a762302407",
+          "files": 1
+        }
+      ],
+      "exitCode": 0,
+      "uniqueChangedFiles": 53
+    },
+    "tasteSourceLint": {
+      "report": "taste-source-lint-current.json",
+      "classification": "taste-source-lint-classification.json",
+      "officialExitCode": 1,
+      "findings": 73,
+      "fail": 57,
+      "warn": 16,
+      "intentionalCms": 65,
+      "regexFalsePositive": 8,
+      "actualUnresolvedInManualReview": 0,
+      "boundary": "Manual classification preserves the official nonzero result. Not an all-pass or quantitative usability score."
+    }
+  },
+  "notClaimed": [
+    "Improved task completion time",
+    "Lower production latency or cost",
+    "Hosted correctness or deployment",
+    "Successful paid model/OCR operation",
+    "Global skill lint all-pass",
+    "All success-state provider/graph flows",
+    "Clean console/network runtime across every synthetic view",
+    "Production CSP or real authenticated task success",
+    "Exactly-once GitHub workflow delivery"
+  ],
+  "pending": [
+    "PR exact-head checks and review",
+    "Protected promotion and held/ready releases, fresh operating SQL capture/guards and live verification remain part of active long goal",
+    "Real provider/OCR/Storage/auto-approval and full longform independent verification are not established by this local design work"
+  ],
+  "createdAt": "2026-10-15T14:17:36.012683+00:00",
+  "ocrDeliveryBoundary": "Bounded50serial, snapshot CAS and pending-generation reuse are locally tested. GitHub204 proves acceptance only (workflowDeliveryVerified:false). Global concurrency may replace an older pending run; rows stay pending for explicit retry. No durable outbox/automatic continuation, provider execution or exactly-once end-to-end delivery claim.",
+  "historicalChecks": {
+    "light": {
+      "views": 45,
+      "modules": 15,
+      "widths": [
+        1440,
+        834,
+        390
+      ],
+      "documentOverflow": 0,
+      "pageErrors": 0,
+      "duplicateMain": 0,
+      "expectedTitleMismatch": 0
+    },
+    "dark": {
+      "views": 12,
+      "widths": [
+        1440,
+        390
+      ],
+      "actualDarkClassVerified": true,
+      "documentOverflow": 0,
+      "pageErrors": 0,
+      "lowContrastSamples": 0
+    },
+    "focusedUI": {
+      "passed": 79,
+      "failed": 0,
+      "assertions": 4122,
+      "files": 6,
+      "boundary": "Reported earlier affected run; no standalone result receipt was retained for its79count. The complete canonical final run now provides saved test evidence; do not sum counts."
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "sourceInputs": 1592,
+      "sourceDrift": [],
+      "cleanupFailures": [],
+      "cssBoundary": "passed",
+      "scope": "Exact pre-final OCR concurrency and batch-copy follow-up source; retained as historical if later source changes."
+    },
+    "successFixtures": {
+      "views": 9,
+      "modules": [
+        "pipeline",
+        "knowledge-graph",
+        "storyboard"
+      ],
+      "widths": [
+        1440,
+        834,
+        390
+      ],
+      "runner": "Bun 1.4.0 / Playwright 1.63 / Chrome; synthetic loopback fixture; no hosted API or provider calls",
+      "expectedTitleMismatch": 0,
+      "documentOverflow": 0,
+      "pageErrors": 0,
+      "lowContrastSamples": 0,
+      "providerCalls": 0,
+      "mutationsSent": 0,
+      "note": "Synthetic GET adapter; not production data, real generation or real graph-analysis evidence."
+    },
+    "readOnlyInteractions": {
+      "passed": true,
+      "broadRun": {
+        "passed": 22,
+        "failed": 3,
+        "note": "Preserved partial run; gaps were not counted as passed."
+      },
+      "focusedCompletion": {
+        "passed": 4,
+        "failed": 0,
+        "includesSyntheticAuthPrecondition": true
+      },
+      "coverage": "All15sidebar destinations,collapsedrail/focus,mobilemenu,pipelinekeyboard/detail,graphfilter/detail,user/submission/reviewfilter-inspectors,expliciterror/heldstates",
+      "sentNonReadRequests": 0,
+      "externalRequests": 0,
+      "reference": "interaction-audit-summary.json"
+    }
+  }
+}

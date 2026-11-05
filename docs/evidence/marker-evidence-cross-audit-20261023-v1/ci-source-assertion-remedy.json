@@ -1,0 +1,32 @@
+{
+  "failed_run": 39865965379,
+  "failed_revision": "0aa001d7e5f31c898c3cc34864c0f1fcf9b8b946",
+  "failed_job": "Ubuntu npm",
+  "code": "STALE_INLINE_CALLBACK_SOURCE_ASSERTION",
+  "test": "apps/web/tests-unit/mobile-home-map-regressions.test.ts",
+  "remedy_revision": "2e0f8dd97e24164425653b4f3ed3153016c0878a",
+  "remedy": "Remove two obsolete callback registration spelling requirements; retain routing/order checks and execute native retained-callback cancellation tests.",
+  "native": "25pass /3files /117assertions /0fail /0skip",
+  "corrected_full_ci_run": 39867375237,
+  "corrected_full_ci_status": "SUCCESS",
+  "nightly": false,
+  "corrected_full_ci_jobs": [
+    "Install",
+    "Windows npm",
+    "Windows Bun",
+    "Ubuntu npm",
+    "Ubuntu Bun",
+    "Admin"
+  ],
+  "followup": {
+    "review_ids": [
+      "PR3499-BLANK-WIRING",
+      "PR3499-INTERACTION-WIRING"
+    ],
+    "decision": "ACCEPT",
+    "test": "apps/web/tests-unit/naver-map-event-wiring.test.ts",
+    "method": "Execute the actual NaverMapView effect bodies with a synthetic SDK; observe actual registration, callback order, drag/pinch search release, synchronous delivery during teardown, retained-callback inactivity and DOM listener cleanup.",
+    "native": "23pass /3files /120assertions /0fail /0skip; scoped lint exit0",
+    "limit": "Source-effect integration with SDK/DOM doubles; not a mounted provider or physical-device test."
+  }
+}

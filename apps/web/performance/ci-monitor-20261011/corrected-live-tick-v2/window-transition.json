@@ -1,0 +1,20 @@
+{
+  "schema": "tzudong-ci-monitor-window-transition/v1",
+  "oldVersion": "v1",
+  "newVersion": "v2",
+  "oldBaselineChanged": false,
+  "oldCheckpointChanged": false,
+  "analysisCheckpointCopied": false,
+  "cacheBackup": {
+    "attempts": 65,
+    "runsSha256": "3196cdc041ad5a1d0a1d694ae7b07655d386bfe5f1b2a9974823dbc6e05d76bd",
+    "integrity": "ok"
+  },
+  "oldAlertKeysPreserved": true,
+  "archiveFileCount": 18,
+  "archiveManifestSha256": "2b495dbf5436533343f17046120ae2d04e706eb13fc692a0c7cb593ca74bbc3f",
+  "status": "first_live_tick_verified_not_activated",
+  "configSha256": "b036da0d92f6bc10589d82db3e75c3e23a030ef2ccd0bc9e317c63ca08d85370",
+  "firstTickId": "20261011T101040.095580Z",
+  "oldSourceRetainedForReplay": true
+}

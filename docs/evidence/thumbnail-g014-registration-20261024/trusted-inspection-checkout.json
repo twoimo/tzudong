@@ -1,0 +1,25 @@
+{
+  "schema": "thumbnail-inspection-trusted-checkout-v1",
+  "observedAt": "2026-10-24T12:08:28.731477+00:00",
+  "sourceBase": "369713cb69b42a38d08a936f7218ee8bf1f6940a",
+  "ciCheckRun": 120867805234,
+  "finding": "Two CodeQL high cache-poisoning annotations tainted checkout from workflow_dispatch inputs.source_sha.",
+  "change": "Use trusted github.sha directly at checkout; retain authenticated owner/protected-main and exact input-to-context equality guard.",
+  "workflowSha256": "b6245458f5dc7171ba712632bcb7d8746f0eb39b98e1594b145493f78e02f62d",
+  "yamlParsed": true,
+  "bashBlocks": 4,
+  "runtimeAndTestSourcesUnchanged": {
+    "apps/web/scripts/thumbnail-production-successor.mjs": "ba165e0da35e88ddc41969e2b4951d1e1b10097ca153df2d78fabec08b926475",
+    "apps/web/scripts/thumbnail-operating-collector.mjs": "044ab341deb437439327d4c9ae1a0cdab3035f9623e1bd87d5629fd36654d4b2",
+    "apps/web/scripts/thumbnail-local-owner.mjs": "1a6e45cd3af10084799f5c5b0824abc99057ecd8fa6484da5282d105bc73afca",
+    "apps/web/tests-unit/thumbnail-production-successor.test.ts": "0bea3a9e119d80aeb96ece9c84796a68979caf7499b0b3b4e13df661444475ec",
+    "apps/web/tests-unit/thumbnail-operating-collector.test.ts": "367f8836fdaa0d4573ecfb7a880bad42bf2fb7a691610264c1c9e0d80c2ffc1c",
+    "apps/web/tests-unit/thumbnail-local-owner.test.ts": "d9c46765a0875e52140f63ce2a6766e4f1ea002afcf35847b9655a954cefcace"
+  },
+  "priorFocusedTests": 51,
+  "priorAssertions": 687,
+  "remoteCodeqlResolution": "pending new-head analysis; no dismissal or scanner change",
+  "hostedWrites": 0,
+  "providerCalls": 0,
+  "workflowDispatches": 0
+}

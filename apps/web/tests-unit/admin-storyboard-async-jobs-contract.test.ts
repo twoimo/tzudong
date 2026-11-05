@@ -74,20 +74,19 @@ describe('admin storyboard async job control plane contract', () => {
     expect(migration).toContain("auth.role() = 'service_role'");
   });
 
-  test('admin storyboard UI preserves async job readback and stage/provider hooks', () => {
-    const ui = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
+  test('Gemini workspace reads worker and job state from the production control plane', () => {
+    const ui = source('components/admin/storyboard/LocalStoryboardWorkspace.tsx');
+    const alias = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
 
-    expect(ui).toContain('StoryboardJobAcceptedResponse');
-    expect(ui).toContain('isStoryboardJobAcceptedResponse');
-    expect(ui).toContain('async_job_control_plane');
-    expect(ui).toContain('storyboard-job-queued');
-    expect(ui).toContain('data-storyboard-job-status');
-    expect(ui).toContain('data-storyboard-stage-progress');
-    expect(ui).toContain('data-storyboard-provider-readiness');
-    expect(ui).toContain('getStoryboardJobStatus');
-    expect(ui).toContain('/api/admin/storyboard/jobs/${encodeURIComponent(jobId)}');
-    expect(ui).toContain('hydrateStoryboardJobResultForDisplay');
-    expect(ui).toContain('setAcceptedStoryboardJob(statusPayload.job)');
-    expect(ui).toContain('data-storyboard-job-readback');
+    expect(ui).toContain('const API = "/api/admin/storyboard/production"');
+    expect(ui).toContain('storyboardWorkerSupportsPair');
+    expect(ui).toContain('catalog.workers.map((worker)');
+    expect(ui).toContain('model.owned_by === "gemini-api"');
+    expect(ui).toContain('jobSchema');
+    expect(ui).toContain('job.stage');
+    expect(ui).toContain('job.errorCode');
+    expect(ui).toContain('cache: "no-store"');
+    expect(alias).toContain('export { AdminStoryboardGenerator }');
+    expect(alias).not.toMatch(/OpenAI API|Codex OAuth|\/v1\/storyboard\/images/);
   });
 });

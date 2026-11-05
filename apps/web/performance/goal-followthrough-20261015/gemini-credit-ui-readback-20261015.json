@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "gemini-credit-read-only-ui-observation",
+  "observedAt": "2026-10-15T08:38:21.222788+00:00",
+  "surface": "Google AI Studio billing",
+  "approvedCreditAccountMatched": true,
+  "linkedProject": "tzudong-free-zero",
+  "projectCount": 1,
+  "paidTierDisplay": "유료 1",
+  "availableGcpCreditsDisplay": "₩6.71만",
+  "exactUnroundedBalanceVerified": false,
+  "prepayBalanceReverified": false,
+  "automaticTopupReverified": false,
+  "actualInvoiceOrCreditDebitVerified": false,
+  "providerCalls": 0,
+  "paymentsOrTopups": 0,
+  "billingChanges": 0,
+  "limitation": "Rounded available GCP credit display is not cash balance, invoice verification, future spend approval, or evidence that any particular generated asset was charged against credits."
+}

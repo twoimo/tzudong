@@ -1,0 +1,14 @@
+{
+  "path": "/Users/twoimo/.codex/worktrees/marker-evidence-live-20261021/tzudong/docs/evidence/formal-map-invariants-20261023-v1/gpt6_pro_formal_reverse_report.visible.txt",
+  "sha256": "9b607abdc958702fdb1207b75b845dc469873cf998918f1758f4591ff171aeac",
+  "source_bundle": "f2e04bd7c76ed8f6aea4493f39bdf10d7f03761b570305b3c21d58865ead8ac2",
+  "kind": "audit",
+  "actual_model": "GPT-6 / Pro",
+  "actual_research": "off",
+  "original_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "report_url": "https://chatgpt.com/c/6ad4a98b-adcc-83ee-81bd-1ab4cf7c81a3",
+  "complete": true,
+  "evidence": "Full visible response body from data-chatgpt-selection-message-id c2311746-b78a-48ed-a4c4-39df12678365, 12553 UTF8 bytes, unedited rendered innerText. Seven sections including source samples, per-finding verdicts, bounded math, REV-F-01, explicit missing raw execution/map evidence and final conditional verdict. Official Copy produced empty browser clipboard; original HTML saved privately. No extra turn or resend.",
+  "saved_at": "2026-10-23T09:15:38.247360+00:00",
+  "bytes_verified": true
+}

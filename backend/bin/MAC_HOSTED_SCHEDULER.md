@@ -6,6 +6,11 @@ a bash wrapper under `~/Library/Application Support/tzudong`, puts logs under
 `~/Library/Logs/tzudong`, and registers one 05:15 calendar event. It does not
 kick-start the job, replay missed dates, or enable hosted publication approval.
 
+Set `CHROME_FOR_TESTING_EXECUTABLE` to the owned executable before installation.
+The installer and each generated invocation verify its product and exact build
+against `.github/chrome-for-testing.v1.json`; an absent or mismatched browser
+stops before the writer runs. Existing browser profiles are not used.
+
 `G037_WRITE_FREEZE` defaults to `active` during installation. The generated wrapper
 and plist still record that state. The pending-review pipeline does not stop on
 it. Account deletion, retention, migration apply, data-branch publication, and

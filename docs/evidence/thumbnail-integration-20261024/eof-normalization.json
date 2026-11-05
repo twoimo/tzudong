@@ -1,0 +1,17 @@
+{
+  "changes": [
+    {
+      "path": "apps/web/lib/admin/youtube-thumbnail-generator/gemini-chat-input.ts",
+      "beforeSha256": "b8e86fe162495f0ff3acfbb0dc22da5aaa508dc4391659c8328ea71c44b04ba4",
+      "afterSha256": "8bb424f7a39a84440590375c046cbf85011540eb072cd4758a31b047b523b3d4",
+      "onlyRemovedExtraEofNewline": true
+    },
+    {
+      "path": "apps/web/lib/admin/youtube-thumbnail-generator/gemini-image-input.ts",
+      "beforeSha256": "195f8c3b0756e60885ebf578b14e03d5485dbedf98f7dfc43a8648e6fd6de34a",
+      "afterSha256": "e2e2b11c2ee622714890f924c439ce36ed997a7a0cc7b7e2ec42d322ac16f1e7",
+      "onlyRemovedExtraEofNewline": true
+    }
+  ],
+  "scope": "Input comparison and full build receipts precede this EOF-only normalization; prior receipts preserved."
+}

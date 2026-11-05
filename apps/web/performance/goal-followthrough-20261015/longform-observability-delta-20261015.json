@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "longform-observability-delta",
+  "recordedAt": "2026-10-15T08:01:53.104772+00:00",
+  "sourceParentRevision": "3ca101f191a061d553972c2eea423d9e7f7fc4ef",
+  "sources": [
+    {
+      "path": "backend/knowledge_graph/longform_analysis.py",
+      "sha256": "913ad7aa7eba9c8c7ffa91eae62f99d6e0793f0239c0b5a9e8a22fbb4db9de8d"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_analysis.py",
+      "sha256": "5bdf046c66f7327d7331fe9a812c2f6121f2f00eb69e806574afeeeaa74594e2"
+    },
+    {
+      "path": "backend/knowledge_graph/tests/test_longform_segments.py",
+      "sha256": "1848ef09fb1bb8163af86137e14ccecddbe507fc5c856aa9c7705230a9d53e9d"
+    }
+  ],
+  "behavior": {
+    "semanticCompletenessCriteriaChanged": false,
+    "futurePartialReasons": [
+      "COVERAGE_START_MISMATCH",
+      "COVERAGE_END_MISMATCH",
+      "COVERAGE_INCOMPLETE",
+      "COVERAGE_LIMITATIONS_PRESENT",
+      "SUMMARY_EMPTY",
+      "SUMMARY_EVIDENCE_MISSING",
+      "UNKNOWN"
+    ],
+    "legacyMissingDiagnostics": "UNKNOWN; original bytes preserved",
+    "confirmedRejection": "terminal; no automatic provider GET or POST",
+    "transportUncertainty": "existing explicit response-identity readback only",
+    "successfulPredecessorReuse": "exact pinned source identity and full artifact validation; read-only"
+  },
+  "rootVerification": {
+    "command": "python3 -m unittest discover -s backend/knowledge_graph/tests -p 'test_*.py'",
+    "python": "3.14.8",
+    "testsRun": 154,
+    "testsPassed": 150,
+    "testsSkipped": 4,
+    "testsFailed": 0,
+    "reportedElapsedSeconds": 4.113,
+    "scope": "local deterministic tests; no hosted or provider behavior claim"
+  },
+  "outboundProviderRequestsDuringThisDelta": 0,
+  "operatingDatabaseChanged": false,
+  "deployed": false,
+  "pastPartialFailureReasonRecovered": false,
+  "limitations": [
+    "Existing ANALYSIS_PARTIAL output was not retained; its specific historical semantic cause remains unknown.",
+    "Local regression results are not independent factual validation of extracted video claims.",
+    "No full-channel performance, quality or monetary savings claim."
+  ]
+}

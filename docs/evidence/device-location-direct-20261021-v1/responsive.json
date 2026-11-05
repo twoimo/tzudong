@@ -1,0 +1,72 @@
+{
+  "observedAt": "2026-10-20T20:00:33.386Z",
+  "browser": "153.0.8010.12",
+  "scope": "Actual built app; synthetic public city-centre position, local Naver/data fixtures; no real user GPS or browser permission grant",
+  "baseline": false,
+  "results": [
+    {
+      "width": 320,
+      "disclosureFacts": {
+        "visible": true,
+        "withinViewport": true,
+        "overlapsFilterButton": false,
+        "pageOverflow": false
+      },
+      "dialogs": 0,
+      "readinessCalls": 1,
+      "counts": {
+        "getCalls": 1,
+        "watchCalls": 0,
+        "clearCalls": 0
+      }
+    },
+    {
+      "width": 497,
+      "disclosureFacts": {
+        "visible": true,
+        "withinViewport": true,
+        "overlapsFilterButton": false,
+        "pageOverflow": false
+      },
+      "dialogs": 0,
+      "readinessCalls": 1,
+      "counts": {
+        "getCalls": 1,
+        "watchCalls": 0,
+        "clearCalls": 0
+      }
+    },
+    {
+      "width": 768,
+      "disclosureFacts": {
+        "visible": true,
+        "withinViewport": true,
+        "overlapsFilterButton": false,
+        "pageOverflow": false
+      },
+      "dialogs": 0,
+      "readinessCalls": 1,
+      "counts": {
+        "getCalls": 1,
+        "watchCalls": 0,
+        "clearCalls": 0
+      }
+    },
+    {
+      "width": 1440,
+      "disclosureFacts": {
+        "visible": true,
+        "withinViewport": true,
+        "overlapsFilterButton": false,
+        "pageOverflow": false
+      },
+      "dialogs": 0,
+      "readinessCalls": 1,
+      "counts": {
+        "getCalls": 1,
+        "watchCalls": 0,
+        "clearCalls": 0
+      }
+    }
+  ]
+}

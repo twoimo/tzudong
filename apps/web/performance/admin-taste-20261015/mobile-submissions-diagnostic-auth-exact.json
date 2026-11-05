@@ -1,0 +1,21 @@
+{
+  "syntheticOnly": true,
+  "settled": true,
+  "metrics": {
+    "title": "제보 관리 - 관리자 콘솔 - 쯔동여지도",
+    "url": "/admin",
+    "theme": "light",
+    "activeModules": [
+      "submissions"
+    ],
+    "headers": [
+      {
+        "title": "제보 관리",
+        "visible": true
+      }
+    ],
+    "busy": [],
+    "text": "제보 관리 작업 화면으로 전환됨제보 관리제보/리뷰 대기: 제보 0건 | 추천 0건 | 리뷰 0건 | 전체 0건제보 수정신규 제보0수정 요청0쯔양 제보0리뷰0전체 상태 (0)대기 (0)승인 (0)거부 (0)부분 승인대기 우선최근 접수순오래된 접수순맛집 이름순신규 · 0건전체 조회전체0조회된 항목이 없습니다.0 / 0건조회된 목록 기준"
+  },
+  "responses": []
+}

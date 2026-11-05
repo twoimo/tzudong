@@ -1,0 +1,891 @@
+{
+  "environment": "Chrome CUA / Next16 dev / synthetic loopback fixture; no hosted data",
+  "cases": [
+    {
+      "mobileCards": 0,
+      "module": "restaurants",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "",
+              "width": 48.03125
+            },
+            {
+              "text": "식당 및 영상 근거",
+              "width": 280.234375
+            },
+            {
+              "text": "방문여부",
+              "width": 84.0625
+            },
+            {
+              "text": "추론합리",
+              "width": 84.0625
+            },
+            {
+              "text": "근거일치",
+              "width": 88.0625
+            },
+            {
+              "text": "리뷰충실",
+              "width": 84.0625
+            },
+            {
+              "text": "주소 확인",
+              "width": 88.0625
+            },
+            {
+              "text": "분류 유효",
+              "width": 96.078125
+            },
+            {
+              "text": "분류 일치",
+              "width": 96.078125
+            },
+            {
+              "text": "상태",
+              "width": 92.078125
+            },
+            {
+              "text": "액션",
+              "width": 136.1875
+            }
+          ],
+          "fullyVisibleRows": 14,
+          "ownerBottom": 1528.5,
+          "ownerWidth": 1177,
+          "rows": [
+            {
+              "bottom": 184.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 128.5
+            },
+            {
+              "bottom": 240.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 184.5
+            },
+            {
+              "bottom": 296.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 240.5
+            },
+            {
+              "bottom": 352.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 296.5
+            },
+            {
+              "bottom": 408.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 352.5
+            },
+            {
+              "bottom": 464.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 408.5
+            },
+            {
+              "bottom": 520.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 464.5
+            },
+            {
+              "bottom": 576.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 520.5
+            },
+            {
+              "bottom": 632.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 576.5
+            },
+            {
+              "bottom": 688.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 632.5
+            },
+            {
+              "bottom": 744.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 688.5
+            },
+            {
+              "bottom": 800.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 744.5
+            },
+            {
+              "bottom": 856.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 800.5
+            },
+            {
+              "bottom": 912.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 856.5
+            },
+            {
+              "bottom": 968.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 912.5
+            },
+            {
+              "bottom": 1024.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 968.5
+            },
+            {
+              "bottom": 1080.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1024.5
+            },
+            {
+              "bottom": 1136.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1080.5
+            },
+            {
+              "bottom": 1192.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1136.5
+            },
+            {
+              "bottom": 1248.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1192.5
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1177
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    },
+    {
+      "mobileCards": 0,
+      "module": "submissions",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "맛집 · 주소",
+              "width": 708
+            },
+            {
+              "text": "검수 신호",
+              "width": 176
+            },
+            {
+              "text": "작성자 · 접수",
+              "width": 160
+            },
+            {
+              "text": "처리 상태",
+              "width": 96
+            },
+            {
+              "text": "상세",
+              "width": 52
+            }
+          ],
+          "fullyVisibleRows": 1,
+          "ownerBottom": 905,
+          "ownerWidth": 1192,
+          "rows": [
+            {
+              "bottom": 411,
+              "buttons": 1,
+              "height": 61,
+              "top": 350
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1192
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    },
+    {
+      "mobileCards": 0,
+      "module": "reviews",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "맛집 · 리뷰",
+              "width": 708
+            },
+            {
+              "text": "검수 신호",
+              "width": 176
+            },
+            {
+              "text": "작성자 · 접수",
+              "width": 160
+            },
+            {
+              "text": "처리 상태",
+              "width": 96
+            },
+            {
+              "text": "상세",
+              "width": 52
+            }
+          ],
+          "fullyVisibleRows": 3,
+          "ownerBottom": 905,
+          "ownerWidth": 1192,
+          "rows": [
+            {
+              "bottom": 269.328125,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 213
+            },
+            {
+              "bottom": 325.65625,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 269.328125
+            },
+            {
+              "bottom": 381.984375,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 325.65625
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1192
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    },
+    {
+      "mobileCards": 0,
+      "module": "restaurants",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "",
+              "width": 48.03125
+            },
+            {
+              "text": "식당 및 영상 근거",
+              "width": 280.234375
+            },
+            {
+              "text": "방문여부",
+              "width": 84.0625
+            },
+            {
+              "text": "추론합리",
+              "width": 84.0625
+            },
+            {
+              "text": "근거일치",
+              "width": 88.0625
+            },
+            {
+              "text": "리뷰충실",
+              "width": 84.0625
+            },
+            {
+              "text": "주소 확인",
+              "width": 88.0625
+            },
+            {
+              "text": "분류 유효",
+              "width": 96.078125
+            },
+            {
+              "text": "분류 일치",
+              "width": 96.078125
+            },
+            {
+              "text": "상태",
+              "width": 92.078125
+            },
+            {
+              "text": "액션",
+              "width": 136.1875
+            }
+          ],
+          "fullyVisibleRows": 14,
+          "ownerBottom": 1528.5,
+          "ownerWidth": 1177,
+          "rows": [
+            {
+              "bottom": 184.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 128.5
+            },
+            {
+              "bottom": 240.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 184.5
+            },
+            {
+              "bottom": 296.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 240.5
+            },
+            {
+              "bottom": 352.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 296.5
+            },
+            {
+              "bottom": 408.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 352.5
+            },
+            {
+              "bottom": 464.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 408.5
+            },
+            {
+              "bottom": 520.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 464.5
+            },
+            {
+              "bottom": 576.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 520.5
+            },
+            {
+              "bottom": 632.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 576.5
+            },
+            {
+              "bottom": 688.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 632.5
+            },
+            {
+              "bottom": 744.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 688.5
+            },
+            {
+              "bottom": 800.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 744.5
+            },
+            {
+              "bottom": 856.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 800.5
+            },
+            {
+              "bottom": 912.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 856.5
+            },
+            {
+              "bottom": 968.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 912.5
+            },
+            {
+              "bottom": 1024.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 968.5
+            },
+            {
+              "bottom": 1080.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1024.5
+            },
+            {
+              "bottom": 1136.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1080.5
+            },
+            {
+              "bottom": 1192.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1136.5
+            },
+            {
+              "bottom": 1248.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1192.5
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1177
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    },
+    {
+      "mobileCards": 0,
+      "module": "submissions",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "맛집 · 주소",
+              "width": 708
+            },
+            {
+              "text": "검수 신호",
+              "width": 176
+            },
+            {
+              "text": "작성자 · 접수",
+              "width": 160
+            },
+            {
+              "text": "처리 상태",
+              "width": 96
+            },
+            {
+              "text": "상세",
+              "width": 52
+            }
+          ],
+          "fullyVisibleRows": 1,
+          "ownerBottom": 905,
+          "ownerWidth": 1192,
+          "rows": [
+            {
+              "bottom": 411,
+              "buttons": 1,
+              "height": 61,
+              "top": 350
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1192
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    },
+    {
+      "mobileCards": 0,
+      "module": "reviews",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "맛집 · 리뷰",
+              "width": 708
+            },
+            {
+              "text": "검수 신호",
+              "width": 176
+            },
+            {
+              "text": "작성자 · 접수",
+              "width": 160
+            },
+            {
+              "text": "처리 상태",
+              "width": 96
+            },
+            {
+              "text": "상세",
+              "width": 52
+            }
+          ],
+          "fullyVisibleRows": 3,
+          "ownerBottom": 905,
+          "ownerWidth": 1192,
+          "rows": [
+            {
+              "bottom": 269.328125,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 213
+            },
+            {
+              "bottom": 325.65625,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 269.328125
+            },
+            {
+              "bottom": 381.984375,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 325.65625
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1192
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    },
+    {
+      "mobileCards": 0,
+      "module": "restaurants",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "",
+              "width": 48.03125
+            },
+            {
+              "text": "식당 및 영상 근거",
+              "width": 280.234375
+            },
+            {
+              "text": "방문여부",
+              "width": 84.0625
+            },
+            {
+              "text": "추론합리",
+              "width": 84.0625
+            },
+            {
+              "text": "근거일치",
+              "width": 88.0625
+            },
+            {
+              "text": "리뷰충실",
+              "width": 84.0625
+            },
+            {
+              "text": "주소 확인",
+              "width": 88.0625
+            },
+            {
+              "text": "분류 유효",
+              "width": 96.078125
+            },
+            {
+              "text": "분류 일치",
+              "width": 96.078125
+            },
+            {
+              "text": "상태",
+              "width": 92.078125
+            },
+            {
+              "text": "액션",
+              "width": 136.1875
+            }
+          ],
+          "fullyVisibleRows": 14,
+          "ownerBottom": 1528.5,
+          "ownerWidth": 1177,
+          "rows": [
+            {
+              "bottom": 184.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 128.5
+            },
+            {
+              "bottom": 240.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 184.5
+            },
+            {
+              "bottom": 296.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 240.5
+            },
+            {
+              "bottom": 352.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 296.5
+            },
+            {
+              "bottom": 408.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 352.5
+            },
+            {
+              "bottom": 464.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 408.5
+            },
+            {
+              "bottom": 520.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 464.5
+            },
+            {
+              "bottom": 576.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 520.5
+            },
+            {
+              "bottom": 632.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 576.5
+            },
+            {
+              "bottom": 688.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 632.5
+            },
+            {
+              "bottom": 744.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 688.5
+            },
+            {
+              "bottom": 800.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 744.5
+            },
+            {
+              "bottom": 856.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 800.5
+            },
+            {
+              "bottom": 912.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 856.5
+            },
+            {
+              "bottom": 968.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 912.5
+            },
+            {
+              "bottom": 1024.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 968.5
+            },
+            {
+              "bottom": 1080.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1024.5
+            },
+            {
+              "bottom": 1136.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1080.5
+            },
+            {
+              "bottom": 1192.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1136.5
+            },
+            {
+              "bottom": 1248.5,
+              "buttons": 3,
+              "height": 56,
+              "top": 1192.5
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1177
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    },
+    {
+      "mobileCards": 0,
+      "module": "submissions",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "맛집 · 주소",
+              "width": 708
+            },
+            {
+              "text": "검수 신호",
+              "width": 176
+            },
+            {
+              "text": "작성자 · 접수",
+              "width": 160
+            },
+            {
+              "text": "처리 상태",
+              "width": 96
+            },
+            {
+              "text": "상세",
+              "width": 52
+            }
+          ],
+          "fullyVisibleRows": 1,
+          "ownerBottom": 905,
+          "ownerWidth": 1192,
+          "rows": [
+            {
+              "bottom": 411,
+              "buttons": 1,
+              "height": 61,
+              "top": 350
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1192
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    },
+    {
+      "mobileCards": 0,
+      "module": "reviews",
+      "pageOverflow": 0,
+      "tables": [
+        {
+          "columns": [
+            {
+              "text": "맛집 · 리뷰",
+              "width": 708
+            },
+            {
+              "text": "검수 신호",
+              "width": 176
+            },
+            {
+              "text": "작성자 · 접수",
+              "width": 160
+            },
+            {
+              "text": "처리 상태",
+              "width": 96
+            },
+            {
+              "text": "상세",
+              "width": 52
+            }
+          ],
+          "fullyVisibleRows": 3,
+          "ownerBottom": 905,
+          "ownerWidth": 1192,
+          "rows": [
+            {
+              "bottom": 269.328125,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 213
+            },
+            {
+              "bottom": 325.65625,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 269.328125
+            },
+            {
+              "bottom": 381.984375,
+              "buttons": 1,
+              "height": 56.328125,
+              "top": 325.65625
+            }
+          ],
+          "scrollExcess": 0,
+          "width": 1192
+        }
+      ],
+      "viewport": [
+        1440,
+        960
+      ]
+    }
+  ],
+  "limitations": [
+    "fullyVisibleRows ignores nested vertical clipping and is not an admitted density result",
+    "Final emulated viewport capture failed in browser tool; round1 screenshots and final native viewport capture are retained separately"
+  ]
+}

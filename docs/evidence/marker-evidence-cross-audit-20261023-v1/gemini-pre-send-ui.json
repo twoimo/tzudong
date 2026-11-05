@@ -1,0 +1,20 @@
+{
+  "observed_at": "2026-10-22T20:45:03.251652+00:00",
+  "account": "kss2740",
+  "url": "https://gemini.google.com/app/d33ca8e24b4acf9d",
+  "model": "4 Argon / 높음 (highest displayed level)",
+  "research": "off",
+  "composer_files": [
+    "chatgpt_master_plan",
+    "TXT source-cor...ntinuation",
+    "TXT source-remaining"
+  ],
+  "chooser_files": [
+    "chatgpt_master_plan.md",
+    "source-core-continuation.txt",
+    "source-remaining.txt"
+  ],
+  "upload_pending": false,
+  "send_button": "메시지 보내기 enabled",
+  "prompt_sha256": "178a542b8fd94867068f6cf9b6a2563a52a081c0be0191b175f6b99538d637fa"
+}

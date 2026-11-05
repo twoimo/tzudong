@@ -18,6 +18,7 @@ selection 데이터를 읽어와 카테고리 유효성 및 위치 정합성을 
 
 import os
 import json
+import html
 import re
 import math
 import unicodedata
@@ -43,11 +44,12 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
+from utils.pipeline_cache_contracts import stage_inputs
 from utils.jsonl_utils import load_last_jsonl_record
 from utils.gemini_model import DEFAULT_GEMINI_MODEL, migrate_deprecated_gemini_model
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.privacy_log import safe_error_name
-from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock, retire_outputs
+from utils.stage_cache import fingerprint, reusable, complete, atomic_write, stage_lock, retire_outputs, cache_batch_hits, read_cache_batch
 from utils.request_budget import ReadCoalescer, RequestPacer, retry_after_seconds
 
 # 한국 시간대
@@ -594,7 +596,9 @@ def _naver_local_search_uncached(query: str, display: int = 5) -> List[Dict[str,
             items = j.get("items", []) if isinstance(j, dict) else []
             results = []
             for it in items:
-                title = re.sub(r"</?b>", "", (it.get("title") or ""))
+                # Decode the provider's HTML once, after stripping its bold tags.
+                # Encoded literal business characters must survive name matching.
+                title = html.unescape(re.sub(r"</?b>", "", (it.get("title") or "")))
                 addr = it.get("address") or it.get("roadAddress") or ""
                 raddr = it.get("roadAddress") or ""
                 mapx = it.get("mapx")
@@ -1347,15 +1351,42 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def rule_inputs(evaluation, video):
+    return stage_inputs('rule', BACKEND_ROOT, evaluation, evaluation, video, {
+        'naverInterval': _naver_pacer.interval, 'ncpInterval': _ncp_pacer.interval,
+        'fallbackModel': GEMINI_MODEL, 'fallbackTimeout': GEMINI_TIMEOUT_SEC,
+    })
+
+
 def main():
     parser = argparse.ArgumentParser(description="Rule 기반 평가")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
     parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
     parser.add_argument("--video-id", default="", help="이 영상만 평가. 기존 rule_results가 있어도 다시 씀")
+    parser.add_argument("--cache-check", action="store_true")
+    parser.add_argument("--cache-check-many", action="store_true")
     args = parser.parse_args()
 
     channel = args.channel
     evaluation_path = Path(args.evaluation_path)
+
+    if args.cache_check_many:
+        def recipe(video):
+            output = evaluation_path / 'evaluation/rule_results' / (video + '.jsonl')
+            return output.parent / '.receipts' / (video + '.json'), [output], rule_inputs(evaluation_path, video)
+        try:
+            print(json.dumps({'cacheHits': cache_batch_hits(read_cache_batch(), recipe)}))
+            return 0
+        except (OSError, ValueError, TypeError):
+            return 1
+
+    if args.cache_check:
+        output = evaluation_path / 'evaluation/rule_results' / (args.video_id + '.jsonl')
+        receipt = output.parent / '.receipts' / (args.video_id + '.json')
+        try:
+            return 0 if reusable(receipt, fingerprint(**rule_inputs(evaluation_path, args.video_id)), [output]) else 1
+        except (OSError, ValueError, TypeError):
+            return 1
 
     print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Rule evaluation started")
 
@@ -1405,10 +1436,7 @@ def main():
                 continue
             if not any(value is True for value in data.get("evaluation_target", {}).values()):
                 continue
-            input_hash = fingerprint([input_file], assets=[Path(__file__), BACKEND_ROOT / "utils" / "gemini_model.py"], settings={
-                "naverInterval": _naver_pacer.interval, "ncpInterval": _ncp_pacer.interval,
-                "fallbackModel": GEMINI_MODEL, "fallbackTimeout": GEMINI_TIMEOUT_SEC,
-            })
+            input_hash = fingerprint(**rule_inputs(evaluation_path, video_id))
             if not requested and reusable(receipt, input_hash, [output_file]):
                 stats["skipped"] += 1
                 continue

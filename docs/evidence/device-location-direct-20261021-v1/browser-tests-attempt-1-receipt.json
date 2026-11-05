@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-10-20T20:00:30.298Z",
+  "finishedAt": "2026-10-20T20:01:23.493Z",
+  "phase": "browser-tests",
+  "exitCode": 1,
+  "distDir": ".next-device-location-20261021",
+  "localDatabaseStarted": false,
+  "deployed": false
+}
