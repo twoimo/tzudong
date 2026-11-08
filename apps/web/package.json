@@ -146,7 +146,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.2",
     "postcss": "^8.5.32",
-    "supabase": "^2.121.0",
+    "supabase": "^3.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.63.0",
