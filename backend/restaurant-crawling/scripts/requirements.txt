@@ -5,7 +5,7 @@ pyyaml==6.0.3
 tqdm==4.70.1
 openai==3.46.0
 requests==2.34.2
-langchain==1.4.7
+langchain==1.4.9
 langchain-community==0.4.2
 langchain-ollama==1.1.0
 langchain-openai==1.7.3
