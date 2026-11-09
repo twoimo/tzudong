@@ -3,7 +3,7 @@ python-dotenv==1.2.4
 yt-dlp[default]==2026.10.21
 pyyaml==6.0.3
 tqdm==4.70.1
-openai==3.41.0
+openai==3.46.0
 requests==2.34.2
 langchain==1.4.7
 langchain-community==0.4.2
@@ -11,5 +11,5 @@ langchain-ollama==1.1.0
 langchain-openai==1.7.3
 supabase==2.33.0
 curl_cffi==0.16.3
-scrapling[fetchers]==0.5
+scrapling[fetchers]==0.5.1
 playwright==1.64.1
