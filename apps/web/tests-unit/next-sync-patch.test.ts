@@ -37,11 +37,11 @@ function fixture() {
   const next = join(root, 'node_modules', 'next');
   const target = join(next, 'dist', 'server', 'dev', 'hot-middleware.js');
   mkdirSync(join(next, 'dist', 'server', 'dev'), { recursive: true });
-  writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.4.2' } }));
+  writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies: { next: '16.4.5' } }));
   writeFileSync(join(root, 'package-lock.json'), JSON.stringify({
-    packages: { '': { dependencies: { next: '16.4.2' } }, 'node_modules/next': { version: '16.4.2' } },
+    packages: { '': { dependencies: { next: '16.4.5' } }, 'node_modules/next': { version: '16.4.5' } },
   }));
-  writeFileSync(join(next, 'package.json'), JSON.stringify({ name: 'next', version: '16.4.2' }));
+  writeFileSync(join(next, 'package.json'), JSON.stringify({ name: 'next', version: '16.4.5' }));
   writeFileSync(target, originalNextModule());
   return { root, next, target };
 }
@@ -59,7 +59,7 @@ function rejects(action: () => unknown, code: string) {
   expect(observed).toBe(`NEXT_SYNC_PATCH_${code}`);
 }
 
-describe('Next 16.4.2 initial SYNC installer trust boundary', () => {
+describe('Next 16.4.5 initial SYNC installer trust boundary', () => {
   test('maps unexpected native errors to one fixed code', () => {
     expect(nextSyncPatchErrorCode(new Error('private/path or content'))).toBe('NEXT_SYNC_PATCH_FAILED');
   });
@@ -86,7 +86,7 @@ describe('Next 16.4.2 initial SYNC installer trust boundary', () => {
       writeFileSync(target, 'unknown module');
       rejects(() => applyNextSyncPatch(root), 'UNKNOWN_SOURCE');
       expect(readFileSync(target, 'utf8')).toBe('unknown module');
-      expect(readFileSync(join(root, 'package.json'), 'utf8')).toContain('16.4.2');
+      expect(readFileSync(join(root, 'package.json'), 'utf8')).toContain('16.4.5');
     });
     withFixture(({ root, target }) => {
       writeFileSync(target, Buffer.alloc(64 * 1024 + 1));
@@ -103,8 +103,8 @@ describe('Next 16.4.2 initial SYNC installer trust boundary', () => {
   test('rejects wrong manifest, npm lock, or installed package identity', () => {
     for (const [relative, body] of [
       ['package.json', JSON.stringify({ dependencies: { next: '16.3.9' } })],
-      ['package-lock.json', JSON.stringify({ packages: { '': { dependencies: { next: '16.4.2' } }, 'node_modules/next': { version: '16.3.9' } } })],
-      ['node_modules/next/package.json', JSON.stringify({ name: 'not-next', version: '16.4.2' })],
+      ['package-lock.json', JSON.stringify({ packages: { '': { dependencies: { next: '16.4.5' } }, 'node_modules/next': { version: '16.3.9' } } })],
+      ['node_modules/next/package.json', JSON.stringify({ name: 'not-next', version: '16.4.5' })],
     ] as const) {
       withFixture(({ root, target }) => {
         writeFileSync(join(root, relative), body);
