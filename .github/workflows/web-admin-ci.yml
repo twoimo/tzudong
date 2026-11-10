@@ -184,14 +184,10 @@ jobs:
       - name: Fail closed on benchmark evidence
         if: always() && steps.scope.outputs.benchmark != 'false'
         run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
+      # Chromium and the crawler browser-identity probe moved to the shard jobs,
+      # which are the only lanes that execute browser unit tests. Keeping them
+      # here cost 3 to 4 minutes on every run after the suite moved out.
       - run: npm run lint
-      - name: Install pinned Chrome for Testing for browser unit tests
-        run: npx playwright install --with-deps chromium
-      - name: Verify crawler browser identity against the web browser pin
-        run: |
-          set -euo pipefail
-          executable="$(node --input-type=module -e 'import {chromium} from "@playwright/test"; console.log(chromium.executablePath())')"
-          python3 ../../backend/bin/chrome_for_testing.py --executable "$executable" >/dev/null
 
   ubuntu-npm-unit:
     name: Ubuntu npm unit (shard ${{ matrix.shard }}/4)
