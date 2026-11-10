@@ -1,4 +1,4 @@
-// Next 16.4.2 broadcasts each new client's initial SYNC to existing clients.
+// Next 16.4.5 broadcasts each new client's initial SYNC to existing clients.
 // Keep this exact-byte dev-only fix until the pinned upstream version changes.
 import { createHash, randomBytes } from 'node:crypto';
 import {
@@ -8,7 +8,7 @@ import {
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VERSION = '16.4.2';
+const VERSION = '16.4.5';
 const ORIGINAL_SHA = 'c62af1c040758e369dbdefbf6df5782bfc77124c52ce7be7cd8885078731b2ca';
 const PATCHED_SHA = 'a63c95269e086c50988f86bf17af91da106b688ffab72aa12640cd72510f3e1a';
 const OLD = '                this.publish({\n                    type: _hotreloadertypes.HMR_MESSAGE_SENT_TO_BROWSER.SYNC,';
