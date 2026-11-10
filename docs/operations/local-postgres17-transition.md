@@ -31,6 +31,10 @@ Three supporting facts bound the design:
   `local_source_replay_windows.json` binding. Several PG15 ones reject any server
   major other than 15, so the whole mapping - not just the seven files - is the
   hand-maintained second copy of migration behaviour the transition has to retire.
+- There is a second unconditional replacement path next to it:
+  `_execution_body()`/`_apply_replay_verification` also serve
+  `_load_replay_contract().supported_sources()`. Retiring only
+  `_canonical_source_replay_bodies()` leaves those bodies rewritten on PG17.
 - `AGENTS.md` keeps applied migrations immutable, so no workstream may edit a
   migration body that has already been applied.
 
@@ -51,8 +55,12 @@ Each workstream lands as its own pull request and is gated by a dispatched
    `backend/supabase/local-inputs/manifest.v1.json`; `_stage_input_files()` copies
    that image's bundled initialisation scripts and migrations into the volumes,
    so the helper pin is part of the same change. Retire the whole
-   `_canonical_source_replay_bodies()` mapping here as well, not only the seven
-   PG15-named modules. They must move
+   `_canonical_source_replay_bodies()` mapping **and** the
+   `_load_replay_contract()` verification replacements, not only the seven
+   PG15-named modules. The nightly workflow pins the same image twice
+   (`.github/workflows/nightly-local-regression.yml` prefetch and its readiness
+   check) and `local-stack.py` pins it a third time, so all four pins move
+   together or the acceptance run cannot even create the PG17 database. They must move
    together: the transforms are applied unconditionally and several reject a
    server major other than 15, so a standalone server bump cannot reach a green
    nightly. Acceptance: the stack starts, `local-migrate.py manifest`/`verify`
