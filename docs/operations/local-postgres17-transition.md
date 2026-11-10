@@ -43,9 +43,12 @@ Each workstream lands as its own pull request and is gated by a dispatched
 `nightly-local-regression` run on `develop`, not by a local smoke test.
 
 1. **Server major and replay layer together.** Pin `supabase/postgres:17.*` in
-   `docker-compose.yml`, rebind the compose hashes in
-   `backend/supabase/local-inputs/manifest.v1.json`, and delete the seven PG15
-   transform scripts plus their call sites in the same change. They must move
+   `docker-compose.yml`, in `local-stack.py::_execute_volume_helper()` (which
+   pins the same image independently) and rebind the compose hashes in
+   `backend/supabase/local-inputs/manifest.v1.json`; `_stage_input_files()` copies
+   that image's bundled initialisation scripts and migrations into the volumes,
+   so the helper pin is part of the same change. Delete the seven PG15 transform
+   scripts plus their call sites here too. They must move
    together: the transforms are applied unconditionally and several reject a
    server major other than 15, so a standalone server bump cannot reach a green
    nightly. Acceptance: the stack starts, `local-migrate.py manifest`/`verify`
@@ -54,18 +57,27 @@ Each workstream lands as its own pull request and is gated by a dispatched
    the ledger/setup statements that still run as `supabase_admin` against the
    hosted path, statement by statement, and align the ones that demonstrably
    differ. Acceptance: catalogue ownership and ACL grantors match the generator.
-3. **File set.** Remove `apps/web/supabase/migrations` from the exclusions list,
-   regenerate the manifest, and fix any migration that only worked because it was
-   skipped. Acceptance: local `migrationCount` equals the generator's, nightly
-   green.
-4. **Ordering.** Keep the applied SQL bytes untouched. Replace the
-   `SERVICE_IDENTITY_PREDECESSOR` splice with a separately versioned bootstrap or
-   prerequisite contract that runs before the chain, then drop the constant from
-   `local-migrate.py` and `materialize_migration_workspace.py`. Editing the
-   already-applied migrations instead would leave existing databases on old
-   bodies while a fresh replay executes new ones, which destroys the parity this
-   transition exists to create. Acceptance: registry prerequisites apply without
-   a filename splice, generator parity holds, no applied migration body changes.
+3. **File set.** `exclusions` is descriptive output, not a filter: `build_manifest()`
+   enumerates `migration_files()` over `EXPECTED_SOURCE = backend/supabase/migrations`
+   only, and `_reject_path_custody()` rejects app paths outright. Including the app
+   directory therefore means changing the source enumeration and the custody rules,
+   then regenerating the manifest - not editing the exclusion list. Fix any
+   migration that only worked because it was skipped. Acceptance: local
+   `migrationCount` equals the generator's, nightly green.
+4. **Ordering.** Keep the applied SQL bytes untouched - editing an applied
+   migration would leave existing databases on old bodies while a fresh replay
+   executes new ones, destroying the parity this transition exists to create.
+
+   The current splice is structurally required and stays: on a fresh replay
+   `20260820040000_pipeline_batch_upsert.sql` revokes `service_role` access to the
+   three identity helpers, and `20261003065736_g014_current_service_rpc_registry.sql`
+   then checks those privileges and raises `G014_SERVICE_REGISTRY_*`. The
+   restoration (`20261003095444_restore_service_identity_helpers.sql`) has to run
+   between them, which a contract executed before the whole chain cannot do. The
+   work here is to keep the splice explicit and validated (constant, fidelity
+   check, receipt) and to document it as an ordering requirement rather than an
+   accident. Acceptance: the splice is covered by a test that fails if either
+   neighbour moves, generator parity holds, no applied migration body changes.
 
 ## Verification and rollback
 
