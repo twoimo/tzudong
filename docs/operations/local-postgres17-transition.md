@@ -23,11 +23,14 @@ Three supporting facts bound the design:
   and making `postgres` a superuser locally stays off the table: the G014
   workflow owner contract migration requires `rolname = 'postgres' AND NOT
   rolsuper`.
-- 7 `transform_*_pg15_replay.py` scripts exist only to make the PG15 replay
-  match PG17 semantics, and `_execution_body()` applies them unconditionally -
-  several of them reject any server major other than 15. They are a
-  hand-maintained second copy of migration behaviour and must be deleted by this
-  transition, not extended.
+- `_execution_body()` applies the replacement bodies from
+  `_canonical_source_replay_bodies()` unconditionally. That mapping is wider than
+  the seven `transform_*_pg15_replay` modules: it also loads
+  `verify_g026_reconstruction_bundle`, `transform_advisor_replay`,
+  `transform_registration_replay`, `transform_storyboard_owner_replay` and the
+  `local_source_replay_windows.json` binding. Several PG15 ones reject any server
+  major other than 15, so the whole mapping - not just the seven files - is the
+  hand-maintained second copy of migration behaviour the transition has to retire.
 - `AGENTS.md` keeps applied migrations immutable, so no workstream may edit a
   migration body that has already been applied.
 
@@ -47,8 +50,9 @@ Each workstream lands as its own pull request and is gated by a dispatched
    pins the same image independently) and rebind the compose hashes in
    `backend/supabase/local-inputs/manifest.v1.json`; `_stage_input_files()` copies
    that image's bundled initialisation scripts and migrations into the volumes,
-   so the helper pin is part of the same change. Delete the seven PG15 transform
-   scripts plus their call sites here too. They must move
+   so the helper pin is part of the same change. Retire the whole
+   `_canonical_source_replay_bodies()` mapping here as well, not only the seven
+   PG15-named modules. They must move
    together: the transforms are applied unconditionally and several reject a
    server major other than 15, so a standalone server bump cannot reach a green
    nightly. Acceptance: the stack starts, `local-migrate.py manifest`/`verify`
@@ -90,7 +94,9 @@ Each workstream lands as its own pull request and is gated by a dispatched
     leaves a PG15 server without the adapters its replay needs;
   - after workstream 2: revert the role alignment together with the statement
     change that motivated it;
-  - after workstream 3: restore the exclusion entry and the manifest digest;
+  - after workstream 3: restore the source enumeration, the custody rules and the
+    manifest digest together - the exclusion entry alone does not describe the
+    file set;
   - after workstream 4: restore the splice constant, which is one line in each of
     `local-migrate.py` and `materialize_migration_workspace.py`.
   The PG15 image stays published, so every stage remains revertible to the
