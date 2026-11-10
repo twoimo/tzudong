@@ -4,6 +4,9 @@ import path from 'node:path';
 import { parseShardArgument, selectShard } from './unit-test-shards.mjs';
 
 const root = path.resolve('tests-unit');
+// Optional `--shard i/n` runs one deterministic slice of the sorted inventory;
+// CI uses four shards. This script is not a typecheck benchmark input, so
+// changes here keep the diagnostic CI path.
 const isolated = new Set([
   // This partial React Query mock omits keepPreviousData and must not replace
   // the real module used by the lazy overlay import boundary test.
