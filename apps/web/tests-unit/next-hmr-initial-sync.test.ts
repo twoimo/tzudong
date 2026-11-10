@@ -178,7 +178,7 @@ const runProbe = () => {
   };
 };
 
-describe('Next 16.4.2 initial HMR SYNC targeting', () => {
+describe('Next 16.4.5 initial HMR SYNC targeting', () => {
   let result: ReturnType<typeof runProbe>;
   beforeAll(() => { result = runProbe(); });
 
