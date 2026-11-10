@@ -244,10 +244,13 @@ export async function applyReceiptOcrIndeterminateRecovery(
     } catch {
       throw new ReceiptOcrRecoveryPersistenceError();
     }
+    // Compare against the policy that was actually submitted (the clamped list):
+    // the RPC persists and returns that list, so comparing with the pre-clamp
+    // policy would reject every successful rotation.
     const returnedPolicyMatchesRequest = boundPolicy.inferenceConfig.thinkingLevel
       === policy.inferenceConfig.thinkingLevel
-      && boundPolicy.modelPolicy.length === policy.modelPolicy.length
-      && boundPolicy.modelPolicy.every((model, index) => model === policy.modelPolicy[index]);
+      && boundPolicy.modelPolicy.length === recoveryModelPolicy.length
+      && boundPolicy.modelPolicy.every((model, index) => model === recoveryModelPolicy[index]);
     if (!data.idempotent && !returnedPolicyMatchesRequest) {
       throw new ReceiptOcrRecoveryPersistenceError();
     }
