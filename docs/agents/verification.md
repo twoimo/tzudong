@@ -45,6 +45,25 @@ python backend/bin/check_env_contract.py --profile daily
 
 The environment-contract check is expected to fail closed when required operator secrets are absent; never add fake values to make it pass.
 
+The web unit suite runs in `apps/web/tests-unit` and can be sharded without
+changing what it covers:
+
+```text
+bun run test:unit -- --shard 2/4
+```
+
+Each shard receives a deterministic round-robin slice of the same sorted file
+inventory, so every file still runs exactly once and a file that needs its own
+Bun process stays isolated. CI runs four shards in parallel (`ubuntu-npm-unit`)
+instead of a single ~16 minute step.
+
+Whether a change runs the full typecheck benchmark or only the fast parity path
+is decided in `.github/scripts/classify-ci-benchmark.mjs`. The full benchmark is
+selected by dependency inputs, typecheck/measurement scripts and configuration,
+and `web-admin-ci.yml`; governance files, evidence receipts, other workflows and
+web scripts outside type checking keep the diagnostic path. Unknown roots still
+fail closed to the full proof.
+
 ## Evidence conventions
 
 - `apps/web/tests-unit` contains Bun unit and source-contract tests; copy, route wiring, security, and order changes often require paired assertions.
