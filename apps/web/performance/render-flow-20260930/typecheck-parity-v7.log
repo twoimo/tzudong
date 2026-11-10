@@ -1,5 +1,0 @@
-
-> web@1.2.4 typecheck:parity
-> node scripts/run-typecheck.mjs --compiler parity
-
-typecheck: error=Error
