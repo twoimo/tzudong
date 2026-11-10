@@ -17,7 +17,7 @@ const DEPENDENCY_INPUT = /(^|\/)(?:package(?:-lock)?\.json|bun\.lockb?|.*\.lock|
 const MEASUREMENT_INPUTS = [
   /^\.github\/workflows\/web-admin-ci\.yml$/,
   /^\.github\/scripts\/(?:classify-ci-benchmark(?:\.test)?\.mjs|prepare-ci-reference\.py|collect-ci-(?:monitor|performance)\.py|monitor-ci-performance\.py|test_collect_ci_(?:monitor|performance)\.py)$/,
-  /^apps\/web\/scripts\/(?:run-typecheck|measure-typecheck|verify-typescript-toolchain|verify-typecheck-benchmark-report)\.mjs$/,
+  /^apps\/web\/scripts\/(?:run-typecheck|measure-typecheck|verify-typescript-toolchain|verify-typecheck-benchmark-report|process-tree-rss-core|process-tree-rss-sampler|privacy-safe-cli-log)\.mjs$/,
   /^apps\/web\/(?:config|vendor|performance|fixtures\/typecheck-benchmark)\//,
   /(^|\/)(?:tsconfig[^/]*\.json|[^/]*\.config\.[^/]+|bunfig\.toml|next-env\.d\.ts|\.npmrc|\.node-version|\.nvmrc|\.tool-versions)$/,
   /^apps\/web\/tests-unit\/(?:typescript-toolchain|typecheck-benchmark|cross-platform-web-tooling|dependency-modernization)/,
