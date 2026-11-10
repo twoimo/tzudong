@@ -2782,6 +2782,18 @@ isOneToOne: false
 "resolve_restaurant_identity_name":
 { Args: { "p_approved_name": string,"p_google_name": string,"p_naver_name": string,"p_origin_name": string }; Returns: string
                            },
+"restaurant_evidence_recovery_admin":
+{ Args: { "p_actor": string,"p_confirmation"?: string,"p_input_sha256": string,"p_job_id": string,"p_operation_id": string,"p_phase": string,"p_policy_version": number,"p_preview_hash"?: string,"p_restaurant_id": string,"p_row_sha256": string }; Returns: Json
+                           },
+"restaurant_evidence_recovery_context":
+{ Args: { "p_actor": string,"p_restaurant_id": string }; Returns: Json
+                           },
+"restaurant_evidence_recovery_status":
+{ Args: { "p_actor": string,"p_restaurant_id": string }; Returns: Json
+                           },
+"restaurant_evidence_recovery_worker":
+{ Args: { "p_job_id": string,"p_phase": string,"p_result"?: Json,"p_token": string }; Returns: Json
+                           },
 "restaurant_review_automation_configure":
 { Args: { "action": string,"actor": string,"batch_size": number,"daily_limit": number,"expected_version": string,"preview_hash": string }; Returns: Json
                            },
