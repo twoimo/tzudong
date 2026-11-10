@@ -1,8 +1,12 @@
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { parseShardArgument, selectShard } from './unit-test-shards.mjs';
 
 const root = path.resolve('tests-unit');
+// Optional `--shard i/n` runs one deterministic slice of the sorted inventory;
+// CI uses four shards. This script is not a typecheck benchmark input, so
+// changes here keep the diagnostic CI path.
 const isolated = new Set([
   // This partial React Query mock omits keepPreviousData and must not replace
   // the real module used by the lazy overlay import boundary test.
@@ -124,9 +128,30 @@ function run(filesToRun) {
   return typeof result.status === 'number' ? result.status : 1;
 }
 
-const generalStatus = run(generalFiles);
+let shard;
+try {
+  shard = parseShardArgument(process.argv.slice(2));
+} catch (error) {
+  console.error(`[unit-tests] ${error instanceof Error ? error.message : 'SHARD_ARGUMENT_INVALID'}`);
+  process.exit(1);
+}
+
+let generalSelection = generalFiles;
+let isolatedSelection = isolatedFiles;
+if (shard) {
+  try {
+    generalSelection = selectShard(generalFiles, shard);
+    isolatedSelection = selectShard(isolatedFiles, shard);
+  } catch (error) {
+    console.error(`[unit-tests] ${error instanceof Error ? error.message : 'SHARD_EMPTY'}`);
+    process.exit(1);
+  }
+  console.log(`[unit-tests] shard ${shard.shard}/${shard.count}: ${generalSelection.length} general, ${isolatedSelection.length} isolated`);
+}
+
+const generalStatus = run(generalSelection);
 if (generalStatus !== 0) process.exit(generalStatus);
-for (const file of isolatedFiles) {
+for (const file of isolatedSelection) {
   const status = run([file]);
   if (status !== 0) process.exit(status);
 }
