@@ -8,6 +8,26 @@ export const ADMIN_RECEIPT_OCR_PROMPT_VERSION = 'admin-receipt-summary-v1';
 export const ADMIN_RECEIPT_OCR_PREPROCESS_VERSION = 'admin-canonical-jpeg-v2';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// The sealed reset catalog still guards `recover_review_receipt_ocr_indeterminate`
+// with a 1..3 model / 120-character policy (issue #3351). ocr_private.valid_model_policy
+// and both TypeScript resolvers allow 1..8 names of up to 160 characters, and the
+// sealed function definition cannot change without the held 107 -> 108 successor
+// transition. Clamping at the call boundary keeps indeterminate recovery available
+// for the models that fit instead of failing 503 and then 409 for the whole policy.
+export const RECEIPT_OCR_RECOVERY_MODEL_LIMIT = 3;
+export const RECEIPT_OCR_RECOVERY_MODEL_NAME_LIMIT = 120;
+
+export function clampReceiptOcrRecoveryModelPolicy(policy: readonly string[]): string[] {
+  const kept: string[] = [];
+  for (const model of policy) {
+    const normalized = model.trim();
+    if (normalized.length < 1 || normalized.length > RECEIPT_OCR_RECOVERY_MODEL_NAME_LIMIT) continue;
+    if (kept.length >= RECEIPT_OCR_RECOVERY_MODEL_LIMIT) break;
+    if (!kept.includes(normalized)) kept.push(normalized);
+  }
+  return kept;
+}
 const SHA256 = /^[0-9a-f]{64}$/;
 
 type SupabaseAdmin = ReturnType<typeof createSupabaseServiceRoleClient>;
@@ -176,6 +196,8 @@ export async function applyReceiptOcrIndeterminateRecovery(
   } catch {
     throw new ReceiptOcrRecoveryPersistenceError();
   }
+  const recoveryModelPolicy = clampReceiptOcrRecoveryModelPolicy(policy.modelPolicy);
+  if (recoveryModelPolicy.length === 0) throw new ReceiptOcrRecoveryPersistenceError();
   if (input.promptVersion !== ADMIN_RECEIPT_OCR_PROMPT_VERSION
     || input.preprocessVersion !== ADMIN_RECEIPT_OCR_PREPROCESS_VERSION
     || !/^receipt-normalization-v[1-9]\d*$/.test(input.normalizationVersion)) {
@@ -188,7 +210,7 @@ export async function applyReceiptOcrIndeterminateRecovery(
     p_recovery_operation_id: input.recoveryOperationId,
     p_expected_generation: input.expectedGeneration,
     p_input_snapshot_hash: input.inputSnapshotHash,
-    p_model_policy: policy.modelPolicy,
+    p_model_policy: recoveryModelPolicy,
     p_thinking_level: policy.inferenceConfig.thinkingLevel,
     p_prompt_version: input.promptVersion,
     p_preprocess_version: input.preprocessVersion,
