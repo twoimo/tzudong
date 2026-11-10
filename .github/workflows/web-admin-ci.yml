@@ -190,7 +190,7 @@ jobs:
       - run: npm run lint
 
   ubuntu-npm-unit:
-    name: Ubuntu npm unit (shard ${{ matrix.shard }}/4)
+    name: Ubuntu npm unit (shard ${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -198,7 +198,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
         working-directory: apps/web
@@ -225,7 +225,7 @@ jobs:
           set -euo pipefail
           executable="$(node --input-type=module -e 'import {chromium} from "@playwright/test"; console.log(chromium.executablePath())')"
           python3 ../../backend/bin/chrome_for_testing.py --executable "$executable" >/dev/null
-      - run: npm run test:unit -- --shard ${{ matrix.shard }}/4
+      - run: npm run test:unit -- --shard ${{ matrix.shard }}/8
 
   ubuntu-npm-build:
     name: Ubuntu npm build
