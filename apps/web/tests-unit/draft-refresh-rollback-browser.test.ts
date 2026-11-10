@@ -98,10 +98,15 @@ beforeAll(async()=>{
  capsuleParent=mkdtempSync(join(tmpdir(),'tzudong-draft-rollback-'));capsule=join(capsuleParent,'candidate');
  // Shallow CI checkouts (the nightly default) do not contain the pinned base commit; fetch exactly it when absent.
  const repoRoot=join(import.meta.dir,'../..'),rollbackBase='56427320a44fdd65a86dc49e7e63d80dd9935c2e';
- if(spawnSync('git',['rev-parse','--verify',`${rollbackBase}^{commit}`],{cwd:repoRoot,stdio:'ignore',timeout:10000}).status!==0){
-  // Hard-bound the one-time fetch so a hung network can never outlive the 20s hook budget.
-  const fetched=spawnSync('git',['fetch','--depth=1','origin',rollbackBase],{cwd:repoRoot,encoding:'utf8',timeout:10000,killSignal:'SIGKILL'});
-  expect(fetched.status,fetched.stderr||String(fetched.error??'')).toBe(0);
+ const hasRollbackBase=()=>spawnSync('git',['rev-parse','--verify',`${rollbackBase}^{commit}`],{cwd:repoRoot,stdio:'ignore',timeout:15000}).status===0;
+ if(!hasRollbackBase()){
+  // Each attempt is hard-bounded and the retries stay inside the hook budget below;
+  // a single 10s fetch intermittently hit spawnSync ETIMEDOUT on hosted runners.
+  for(const timeout of [20000,30000,45000]){
+   spawnSync('git',['fetch','--no-tags','--depth=1','origin',rollbackBase],{cwd:repoRoot,encoding:'utf8',timeout,killSignal:'SIGKILL'});
+   if(hasRollbackBase())break;
+  }
+  expect(hasRollbackBase(),'pinned rollback base commit must be fetchable').toBe(true);
  }
  const proc=Bun.spawn(['python3',join(import.meta.dir,'../scripts/prepare-draft-compatible-rollback.py'),'--base',rollbackBase,'--output',capsule],{stdout:'pipe',stderr:'pipe'});
  const stderr=await new Response(proc.stderr).text();expect(await proc.exited,stderr).toBe(0);
@@ -109,7 +114,7 @@ beforeAll(async()=>{
  for(const [path,hash] of Object.entries(manifest.files))expect(createHash('sha256').update(readFileSync(join(capsule,'files',path))).digest('hex')).toBe(hash);
  // The rollback must retain the real session and composer fences, not only a key decoder.
  for(const file of ['contexts/AuthContext.tsx','components/auth/AuthModal.tsx','components/reviews/ReviewModal.tsx','components/reviews/ReviewEditModal.tsx','components/modals/RestaurantSubmissionModal.tsx','components/modals/EditRestaurantModal.tsx'])expect(readFileSync(join(capsule,'files/apps/web',file),'utf8')).toBe(readFileSync(join(import.meta.dir,'..',file),'utf8'));
-},20000);
+},120000);
 afterAll(()=>{if(capsuleParent)rmSync(capsuleParent,{recursive:true,force:true});});
 test('compatible rollback retains the complete logout boundary and cancellation callers', () => {
  const manifest=JSON.parse(readFileSync(join(capsule,'manifest.json'),'utf8'));
