@@ -57,6 +57,9 @@ jobs:
       - name: Verify every local PostgreSQL image pin agrees
         run: python3 -m unittest backend.supabase.tests.test_local_postgres_image_pin
 
+      - name: Verify the PG15 replay adapter ledger matches the code
+        run: python3 -m unittest backend.supabase.tests.test_pg15_replay_adapter_ledger
+
       - name: Install Node 24
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
         with:
