@@ -320,6 +320,11 @@ jobs:
 
   windows-npm-tooling:
     name: Windows npm
+    # Windows parity is a merge-time gate, not a per-commit one: the lane is
+    # 12-14 minutes on a windows-latest runner, and nothing it checks is
+    # web-only. Pull requests keep the Ubuntu authority lanes; protected
+    # branch pushes and the schedule still prove Windows parity.
+    if: github.event_name != 'pull_request'
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
@@ -391,6 +396,11 @@ jobs:
 
   windows-bun-compatibility:
     name: Windows Bun
+    # Windows parity is a merge-time gate, not a per-commit one: the lane is
+    # 12-14 minutes on a windows-latest runner, and nothing it checks is
+    # web-only. Pull requests keep the Ubuntu authority lanes; protected
+    # branch pushes and the schedule still prove Windows parity.
+    if: github.event_name != 'pull_request'
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
