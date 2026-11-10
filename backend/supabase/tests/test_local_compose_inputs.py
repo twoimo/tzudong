@@ -222,6 +222,18 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertNotIn("strip_path: false", kong_source)
         self.assertEqual(kong_source.count("strip_path: true"), 5)
 
+    def test_local_services_cap_container_logs(self) -> None:
+        self.assertIn("x-local-service-logging: &local-service-logging", self.overlay_source)
+        self.assertIn("x-local-service-logging: &local-service-logging", self.mail_source)
+        for service in local_stack.EXPECTED_SERVICES:
+            source = self.mail_source if service == "mail" else self.overlay_source
+            block = _service_block(source, service)
+            self.assertIn("logging: *local-service-logging", block, service)
+
+    def test_db_declares_bounded_shared_memory(self) -> None:
+        block = _service_block(self.overlay_source, "db")
+        self.assertIn('shm_size: "512mb"', block)
+
     def test_kong_browser_cors_is_exact_local_only_and_manifest_bound(self) -> None:
         source_path = SUPABASE / "local-inputs" / "kong.yml"
         kong_source = source_path.read_text(encoding="utf-8")
