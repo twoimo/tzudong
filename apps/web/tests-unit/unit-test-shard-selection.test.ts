@@ -45,10 +45,10 @@ describe("unit test shard selection", () => {
     expect(() => selectShard(["only.test.ts"], { shard: 4, count: 4 })).toThrow("SHARD_EMPTY");
   });
 
-  test("CI runs the unit suite in four shards instead of one blocking step", () => {
+  test("CI runs the unit suite in eight shards instead of one blocking step", () => {
     expect(workflow).toContain("  ubuntu-npm-unit:\n");
-    expect(workflow).toContain("shard: [1, 2, 3, 4]");
-    expect(workflow).toContain("run: npm run test:unit -- --shard ${{ matrix.shard }}/4");
+    expect(workflow).toContain("shard: [1, 2, 3, 4, 5, 6, 7, 8]");
+    expect(workflow).toContain("run: npm run test:unit -- --shard ${{ matrix.shard }}/8");
     const authority = workflow.slice(workflow.indexOf("  ubuntu-npm-authority:\n"), workflow.indexOf("\n  ubuntu-npm-unit:\n"));
     expect(authority).not.toContain("npm run test:unit");
     expect(authority).not.toContain("npm run build");
