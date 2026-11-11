@@ -83,8 +83,8 @@
     }
   ],
   "openQuestions": [
-    "Objects created by a privileged run are still owned by supabase_admin, so the following bodies report 'must be owner of function ...' and 'must be owner of table ...' (27 of the 70 remaining failures). The next stage is an owner-transfer or per-object grant rule for those objects.",
-    "Which migrations require SET ROLE privacy_workflow_owner (3 remaining) and whether each can be replaced by a SECURITY DEFINER path instead of a privileged run?"
+    "The remaining 70 failures need the privileged-set expansion (the replacement bodies the adapter ledger lists) rather than an ownership or grant rule: re-owning objects is measured to be net-negative.",
+    "Which migrations require SET ROLE privacy_workflow_owner (3 remaining) and whether each can be replaced by a SECURITY DEFINER path?"
   ],
   "baselines": [
     "backend/supabase/baselines/local/pg15-chain-role-probe-20261111.json",
@@ -112,5 +112,17 @@
     ],
     "measured": "91 applied / 70 failed on PG15 (best of four profiles)",
     "tooling": "backend/supabase/scripts/chain_role_probe.py --gotrue-migrations ... --mixed-privileged --staged-grants --grant-file ..."
-  }
+  },
+  "rejectedOptions": [
+    {
+      "option": "Grant CREATEROLE to postgres and pre-create the NOLOGIN roles",
+      "measured": "70 applied / 91 failed - unchanged, because any statement mentioning SUPERUSER is superuser-only regardless of CREATEROLE or ownership",
+      "date": "2026-11-11"
+    },
+    {
+      "option": "Transfer ownership of every supabase_admin-created object to postgres",
+      "measured": "89 applied / 72 failed against 91 / 70: it fixed 1 migration and broke 3, including 'G014 SECURITY DEFINER owner mismatch', because the guards require ownership exactly as the migrations define it",
+      "date": "2026-11-11"
+    }
+  ]
 }

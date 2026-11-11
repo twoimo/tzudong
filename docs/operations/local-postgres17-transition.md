@@ -72,6 +72,7 @@ profile. Two PG15 baselines are committed:
 | `pg15-chain-role-probe-prereq-postgres-20261111.json` | `postgres` (continue on error) | 70 / 91 | postgres 129, supabase_admin 5 |
 | `pg15-chain-role-probe-mixed-20261111.json` | `postgres`, `SUPERUSER` files as `supabase_admin`, grant normalisation after each | 87 / 74 | see baseline |
 | `pg15-chain-role-probe-staged-20261111.json` | staged order: GoTrue bootstrap, mixed roles, grant normalisation before each body once the schema exists | **91 / 70** | see baseline |
+| ownership-transfer probe (rejected) | staged order plus transferring every privileged-created object to `postgres` | 89 / 72 | not committed: net-negative |
 
 Applying the prerequisite bundle as `postgres` fails on exactly one statement
 (`ALTER DEFAULT PRIVILEGES`, `must be member of role "supabase_admin"`) and moves
@@ -150,10 +151,18 @@ normalisation followed by the body - reaches **91 applied / 70 failed**, the bes
 of four profiles (54, 70, 87, 91). The probe implements that order behind
 `--gotrue-migrations`, `--mixed-privileged`, `--staged-grants` and `--grant-file`.
 
-What remains is ownership: 27 of the 70 failures are `must be owner of function ...`
-or `must be owner of table ...`, because a privileged run creates objects owned by
-`supabase_admin`. That needs an owner-transfer or per-object grant rule, which is
-the first open question in the model file.
+### Rejected: ownership transfer
+
+The obvious next lever - transfer every `supabase_admin`-created object to
+`postgres` - was measured and rejected: **89 applied / 72 failed** against 91 / 70.
+It fixed one migration and broke three, including `G014 SECURITY DEFINER owner
+mismatch`, because the guards require ownership exactly as the migrations define
+it. `privacy_retention` belongs to `privacy_workflow_owner` and that is not an
+accident to be normalised away.
+
+The same applies to granting `postgres` `CREATEROLE` (no effect at all: 70 / 91
+before and after). The remaining 70 failures therefore need the privileged-set
+expansion - the replacement bodies the adapter ledger lists - not another grant.
 
 ### The ordering is the open problem
 
