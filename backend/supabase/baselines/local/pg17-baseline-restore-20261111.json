@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-pg17-baseline-restore",
+  "measuredAt": "2026-11-11",
+  "question": "Does the schema the working local pipeline produces restore on PostgreSQL 17, so the adapter layer can stay and only the image changes?",
+  "target": "supabase/postgres:17.11.0.018",
+  "runs": [
+    {
+      "runId": 43023085171,
+      "restoreRole": "postgres",
+      "sourceObjects": 260,
+      "restoredObjects": 14,
+      "dumpBytes": 2111385,
+      "errorCount": 2603,
+      "errorClasses": {
+        "permission denied for database profile": 2603
+      },
+      "verdict": "invalid measurement: the supabase image does not give postgres DDL rights, so every statement failed"
+    },
+    {
+      "runId": 43029324112,
+      "restoreRole": "supabase_admin",
+      "sourceObjects": 260,
+      "restoredObjects": 259,
+      "dumpBytes": 2111385,
+      "errorCount": 172,
+      "errorClasses": {
+        "already exists": 172
+      },
+      "sample": [
+        "schema \"auth\" already exists",
+        "schema \"storage\" already exists",
+        "schema \"vault\" already exists",
+        "function \"email\" already exists with same argument types"
+      ],
+      "verdict": "the schema restores; every error is an object the supabase image seeds itself (auth, storage, vault, extensions, graphql, realtime, pgbouncer), not an incompatibility"
+    }
+  ],
+  "notYetMeasured": [
+    "Which single object is missing (260 source vs 259 restored). The refined probe compares object names on both sides and does not rely on the count.",
+    "Whether a --clean --if-exists dump removes the 172 already-exists errors, which would leave a genuine error count of zero."
+  ],
+  "blockedBy": "GitHub Actions runners failed to resolve archive.ubuntu.com / security.ubuntu.com on 2026-11-11 (steps 'Install Chromium for the browser lane'), so the refined probe (PR #3755) could not complete. Two dispatches and one rerun hit the same DNS failure.",
+  "conclusion": "The baseline-restore path is viable and much cheaper than rewriting the ~24 migrations the adapters replace: the working schema lands on PG17 with one object unaccounted for and no compatibility error observed. Confirmation needs one more nightly dispatch once runner DNS recovers.",
+  "evidence": "artifacts pg17-baseline-probe-43029324112 (record pg17-baseline.json) and nightly run logs"
+}
