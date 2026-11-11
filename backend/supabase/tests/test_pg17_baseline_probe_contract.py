@@ -22,16 +22,23 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
     def test_the_input_defaults_to_off(self) -> None:
         self.assertIn("      pg17_baseline:\n", self.workflow)
         self.assertIn("        default: false\n        type: boolean\n", self.workflow)
-        self.assertIn("if: ${{ inputs.pg17_baseline == true }}", self.workflow)
+        self.assertIn("if: ${{ always() && inputs.pg17_baseline == true }}", self.workflow)
 
     def test_the_step_resolves_its_own_container_and_database(self) -> None:
         self.assertIn('com.docker.compose.service=db', self.workflow)
         self.assertIn('"$LOCAL_STATE/stack.env"', self.workflow)
         self.assertNotIn('--database-container "$LOCAL_DB_CONTAINER"', self.workflow)
 
-    def test_the_probe_runs_before_the_stack_is_removed(self) -> None:
+    def test_the_probe_runs_while_the_stack_is_live_and_before_the_lanes(self) -> None:
+        # The stack must exist for the dump to mean anything, and a lane failure
+        # (measured: the Actions runners stopped resolving archive.ubuntu.com and the
+        # browser lane died before the probe) must not consume the measurement.
+        migrated = self.workflow.index("Verify generated Supabase types match the local catalog")
         probe = self.workflow.index("Probe the PostgreSQL 17 baseline restore")
+        lanes = self.workflow.index("Run local nightly unit regression")
         teardown = self.workflow.index("Stop and remove disposable local stack")
+        self.assertLess(migrated, probe)
+        self.assertLess(probe, lanes)
         self.assertLess(probe, teardown)
 
     def test_the_script_restores_into_a_disposable_container(self) -> None:
