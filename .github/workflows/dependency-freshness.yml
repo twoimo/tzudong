@@ -55,6 +55,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
 
       - name: Install Node 24
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
@@ -72,10 +73,13 @@ jobs:
         run: npm install --global npm@"${NPM_AUTHORITY}" && test "$(npm --version)" = "${NPM_AUTHORITY}"
 
       - name: Authoritative clean install
-        run: npm ci
+        # Security's independent npm audit remains the vulnerability gate.
+        run: npm ci --no-audit --fund=false
 
-      - name: Install pinned Chrome for Testing for browser unit tests
-        run: npx playwright install --with-deps chromium
+      - name: Verify pinned Chrome for Testing for browser unit tests
+        # Probe the locked full browser and headless shell before installing OS
+        # libraries; unrelated launch/download failures must still fail closed.
+        run: node ../../.github/scripts/ensure-ci-chromium.mjs
 
       - name: Collect current Dependabot candidates
         env:

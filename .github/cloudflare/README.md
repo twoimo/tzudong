@@ -12,7 +12,7 @@
 | [build-settings.json](build-settings.json) | develop branch, root directory, 명령과 빌드 변수의 검토 기준 |
 | [wrangler.jsonc](wrangler.jsonc) | 이 CI Worker의 명시적 배포 대상 |
 | [거버넌스 runner](../scripts/run-cloudflare-governance.mjs) | 원격 실행 정체성 확인, 실제 검사 실행, 해당 SHA 결과 생성 |
-| [배포 runner](../scripts/deploy-cloudflare-governance.mjs) | receipt·도구 버전 재검증, 잠긴 설치, 해당 Worker 배포 |
+| [배포 runner](../scripts/deploy-cloudflare-governance.mjs) | receipt·도구 버전 재검증, 잠긴 설치, 해당 Worker 배포와 공개 결과 대조 |
 
 ## Workers Builds 설정
 
@@ -43,8 +43,17 @@ node ../scripts/deploy-cloudflare-governance.mjs --branch develop
 
 배포 runner가 receipt를 검증한 뒤 `npm ci --ignore-scripts --no-audit --fund=false`로
 이 패키지만 설치하고, 설치된 Wrangler에 이 폴더의 config를 명시한다.
-거버넌스 검사 10분, 의존성 설치 4분, 배포 3분의 실행 상한을 두며 실패를
-성공으로 바꾸는 fallback은 사용하지 않는다.
+거버넌스 검사는 10분, 설치부터 공개 결과 대조까지는 합계 7분으로 제한한다.
+설치는 최대 4분, Wrangler는 최대 3분이지만 마지막 45초를 공개 결과 대조에
+남기도록 공통 마감 시각으로 제한한다. 실패를 성공으로 바꾸는 fallback은 없다.
+
+Wrangler 종료 코드가 0이어도 아직 성공으로 반환하지 않는다. 고정된 공개
+Worker의 receipt·health·artifact·checksum 네 응답을 최대 세 번 조회하고,
+이번 실행의 전체 receipt, commit·tree·branch·build ID, 산출물 바이트·해시와
+`no-store`를 대조한다. 요청에 토큰을 보내거나 redirect를 따라가지 않으며,
+응답 크기·요청 시간·전체 대조 시간을 제한한다. 이전 성공 배포, 누락·과대 응답,
+시간 초과 또는 취소는 이번 실행의 배포 확인 실패다. 이미 수행된 Wrangler
+배포를 자동으로 되돌렸다는 의미는 아니다.
 
 ## 로컬 진단
 
