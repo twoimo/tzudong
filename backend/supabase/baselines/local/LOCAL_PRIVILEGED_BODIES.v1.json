@@ -3,7 +3,7 @@
   "id": "local-privileged-bodies-v1",
   "role": "supabase_admin",
   "envFlag": "TZUDONG_LOCAL_PRIVILEGED_BODIES",
-  "purpose": "Migration bodies that cannot run as the migration role. PostgreSQL refuses any statement that mentions SUPERUSER for a non-superuser, even when it owns the role and holds CREATEROLE (measured 2026-11-11), so these bodies run as the privileged role instead.",
+  "purpose": "Migration bodies that cannot run as the migration role. PostgreSQL refuses any statement that mentions SUPERUSER for a non-superuser (measured 2026-11-11). Extending this list to the 37 SET ROLE migrations was measured to change nothing (91 applied / 70 failed before and after, zero churn), which is recorded in the role model.",
   "migrations": [
     "20260713000450_g013_address_admin_approval.sql",
     "20260713002000_g014_public_api_private_boundary.sql",
