@@ -58,6 +58,20 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertIn('"missingObjectCount": len(missing)', self.script)
         self.assertIn('"--clean", "--if-exists"', self.script)
 
+    def test_the_probe_prepares_roles_and_seeded_schemas(self) -> None:
+        # Measured: 119 of 120 genuine errors were 'role "privacy_workflow_owner" does
+        # not exist', because a schema-only dump carries no CREATE ROLE; the one
+        # remaining was --clean failing to drop a schema the image also seeds.
+        self.assertIn('ROLE_STATEMENTS_SQL', self.script)
+        self.assertIn("format('CREATE ROLE %I NOLOGIN', r.rolname)", self.script)
+        # Policies and default ACLs name roles that own nothing, so an owner-only
+        # query misses them (measured: 119 failures naming privacy_workflow_owner).
+        self.assertIn('pg_catalog.pg_policy', self.script)
+        self.assertIn('pg_catalog.pg_default_acl', self.script)
+        self.assertIn('SEEDED_SCHEMAS', self.script)
+        self.assertIn('DROP SCHEMA IF EXISTS', self.script)
+        self.assertIn('"preparedRoleCount": len(role_statements)', self.script)
+
     def test_the_restore_uses_the_role_that_owns_the_catalog(self) -> None:
         # Measured: `postgres` in the supabase image has no DDL rights and fails every
         # statement with "permission denied for database", which reads as a schema
