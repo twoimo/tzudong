@@ -60,6 +60,34 @@ sequence, not PG15-versus-PG17 compatibility. That reorders the workstreams: the
 role, ownership and bootstrap sequence has to be reproduced first, and the image
 swap is the cheap step at the end.
 
+## Role probe (2026-11-11)
+
+`backend/supabase/scripts/chain_role_probe.py` reproduces a role sequence against a
+disposable container and records the applied/failed counts plus an ownership
+profile. Two PG15 baselines are committed:
+
+| Profile | Prerequisite role | Applied / failed | Owners |
+| --- | --- | --- | --- |
+| `pg15-chain-role-probe-20261111.json` | `supabase_admin` | 54 / 107 | postgres 87, supabase_admin 38 |
+| `pg15-chain-role-probe-prereq-postgres-20261111.json` | `postgres` (continue on error) | 70 / 91 | postgres 129, supabase_admin 5 |
+
+Applying the prerequisite bundle as `postgres` fails on exactly one statement
+(`ALTER DEFAULT PRIVILEGES`, `must be member of role "supabase_admin"`) and moves
+sixteen more migrations through, because the objects it creates are then owned by
+the role that later alters them. The remaining 91 failures cluster into three
+causes and nothing else:
+
+1. privileged role statements the migration bodies issue themselves
+   (`permission denied to alter role`, `role "privacy_workflow_owner" does not exist`);
+2. the GoTrue bootstrap (`supported GoTrue session tables are unavailable`);
+3. cascade from those (`G014-03/04/05/09 required ... dependencies are missing`,
+   `function public.extract_youtube_video_id(text) does not exist`).
+
+So the step-1 target is concrete: split the prerequisite bundle at the privileged
+statement, apply the rest as `postgres`, supply the GoTrue bootstrap, and move the
+handful of privileged role statements out of the migration bodies (that is what the
+adapter ledger lists). The image swap then has nothing left to compensate for.
+
 ## Target
 
 Local apply runs the same role, server major, file set and order as hosted, so a
