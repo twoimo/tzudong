@@ -23,5 +23,107 @@
     "transform_storyboard_history_replay",
     "transform_storyboard_owner_replay",
     "verify_g026_reconstruction_bundle"
-  ]
+  ],
+  "retirement": {
+    "why": "Deleting an adapter without deleting the tests that assert it leaves the suite red; this list is the paired worklist so the removal is mechanical.",
+    "tests": [
+      {
+        "test": "test_advisor_replay.py",
+        "asserts": [
+          "transform_advisor_replay"
+        ]
+      },
+      {
+        "test": "test_feature_rpc_catalog_pg15_replay.py",
+        "asserts": [
+          "transform_feature_rpc_catalog_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_g014_guardian_replay.py",
+        "asserts": [
+          "transform_g014_guardian_replay"
+        ]
+      },
+      {
+        "test": "test_g026_reconstruction_bundle.py",
+        "asserts": [
+          "verify_g026_reconstruction_bundle"
+        ]
+      },
+      {
+        "test": "test_hosted_pending_custody_pg15_replay.py",
+        "asserts": [
+          "transform_hosted_pending_custody_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_local_migration_contract.py",
+        "asserts": [
+          "transform_hosted_pending_custody_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_receipt_ocr_acl_admission_pg15_replay.py",
+        "asserts": [
+          "transform_receipt_ocr_acl_admission_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_receipt_ocr_credential_release_pg15_replay.py",
+        "asserts": [
+          "transform_receipt_ocr_credential_release_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_receipt_ocr_indeterminate_recovery_pg15_replay.py",
+        "asserts": [
+          "transform_receipt_ocr_indeterminate_recovery_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_registration_replay.py",
+        "asserts": [
+          "transform_registration_replay"
+        ]
+      },
+      {
+        "test": "test_review_storage_pg15_replay.py",
+        "asserts": [
+          "transform_review_storage_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_review_verification_readiness_pg15_replay.py",
+        "asserts": [
+          "transform_review_verification_readiness_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_service_invoker_contract.py",
+        "asserts": [
+          "transform_service_invoker_replay"
+        ]
+      },
+      {
+        "test": "test_service_invoker_replay.py",
+        "asserts": [
+          "transform_service_invoker_replay"
+        ]
+      },
+      {
+        "test": "test_storyboard_history.py",
+        "asserts": [
+          "transform_storyboard_history_replay"
+        ]
+      },
+      {
+        "test": "test_storyboard_owner_replay.py",
+        "asserts": [
+          "transform_storyboard_owner_replay"
+        ]
+      }
+    ],
+    "testCount": 16
+  }
 }

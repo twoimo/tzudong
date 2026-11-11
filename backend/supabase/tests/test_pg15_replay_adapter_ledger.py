@@ -54,6 +54,16 @@ class Pg15ReplayAdapterLedgerTests(unittest.TestCase):
             self.assertTrue((SCRIPTS / binding).is_file(), binding)
         self.assertTrue((ROOT / ledger["transactionContract"]).is_file())
 
+    def test_every_adapter_has_a_paired_retirement_test(self) -> None:
+        ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
+        retirement = ledger.get("retirement")
+        self.assertIsNotNone(retirement, "the ledger must list the tests to delete with the adapters")
+        self.assertEqual(retirement["testCount"], len(retirement["tests"]))
+        asserted = {module for row in retirement["tests"] for module in row["asserts"]}
+        self.assertTrue(asserted <= set(ledger["modules"]), asserted - set(ledger["modules"]))
+        for row in retirement["tests"]:
+            self.assertTrue((ROOT / "backend/supabase/tests" / row["test"]).is_file(), row["test"])
+
     def test_the_landed_pin_guard_knows_the_same_adapter_layer(self) -> None:
         """The image-pin guard fails a major bump while this layer exists."""
         migrate = MIGRATE.read_text(encoding="utf-8")

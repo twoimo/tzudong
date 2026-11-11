@@ -2682,7 +2682,20 @@ def _privileged_body_role() -> str | None:
     migrations = document.get("migrations")
     if not isinstance(migrations, list) or not all(isinstance(name, str) for name in migrations):
         raise LocalMigrationError("privileged_bodies_manifest_invalid")
+    if _adapter_layer_active():
+        # The adapters replace the bodies these privileges apply to, so enabling
+        # this flag first would run replacement bodies under the wrong role.
+        raise LocalMigrationError("privileged_bodies_require_adapter_retirement")
     return role
+
+
+def _adapter_layer_active() -> bool:
+    """True while the PG15 replay adapters still rewrite migration bodies."""
+    try:
+        source = Path(__file__).read_text(encoding="utf-8")
+    except OSError:
+        return True
+    return "_canonical_source_replay_bodies" in source
 
 
 def _privileged_bodies() -> frozenset[str]:
