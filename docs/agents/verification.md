@@ -68,7 +68,7 @@ Exact repository documentation entry points (`README`, `CHANGELOG`,
 `CONTRIBUTING.md`, `SECURITY.md`, `TASKS.md`, and `scripts/README.md`) use the
 diagnostic path; the classifier lists their supported filenames explicitly.
 Dependency/toolchain inputs take precedence, and protected promotions still run
-the full benchmark. The [Cloudflare governance pilot](../operations/cloudflare-ci.md)
+the full benchmark. The [Cloudflare governance CI](../operations/cloudflare-ci.md)
 is a separate execution of scoped checks and does not replace GitHub's full suite.
 
 ## Evidence conventions

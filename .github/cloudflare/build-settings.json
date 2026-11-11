@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "workerName": "tzudong-ci-governance",
   "repository": "twoimo/tzudong",
-  "productionBranch": "ci/cloudflare-free-migration-20261112",
+  "productionBranch": "develop",
   "previewsEnabled": false,
   "rootDirectory": "/.github/cloudflare",
-  "buildCommand": "node ../scripts/run-cloudflare-governance.mjs --branch ci/cloudflare-free-migration-20261112",
-  "deployCommand": "node ../scripts/deploy-cloudflare-governance.mjs --branch ci/cloudflare-free-migration-20261112",
+  "buildCommand": "node ../scripts/run-cloudflare-governance.mjs --branch develop",
+  "deployCommand": "node ../scripts/deploy-cloudflare-governance.mjs --branch develop",
   "pathIncludes": [
     "*"
   ],

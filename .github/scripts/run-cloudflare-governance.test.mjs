@@ -144,11 +144,28 @@ test('command timeout kills the entire process group including a TERM-resistant 
   const root = mkdtempSync(join(tmpdir(), 'cloudflare-timeout-'));
   const pidPath = join(root, 'child.pid');
   const marker = join(root, 'orphan-survived');
+  const leaderPath = join(root, 'leader.mjs');
+  const descendantPath = join(root, 'descendant.mjs');
   let descendant;
   try {
-    const source = `const {spawn}=require('node:child_process'); const fs=require('node:fs'); process.on('SIGTERM',()=>{}); const c=spawn(process.execPath,['-e',${JSON.stringify("const fs=require('node:fs'); process.on('SIGTERM',()=>{}); setTimeout(()=>fs.writeFileSync(process.argv[1],'survived'),1600); setInterval(()=>{},1000);")},${JSON.stringify(marker)}],{stdio:'ignore'}); fs.writeFileSync(${JSON.stringify(pidPath)},String(c.pid)); setInterval(()=>{},1000);`;
+    // Keep executable fixtures constant. Runtime paths remain argv data and
+    // never become JavaScript source or node --eval input.
+    writeFileSync(descendantPath, `
+import { writeFileSync } from 'node:fs';
+process.on('SIGTERM', () => {});
+setTimeout(() => writeFileSync(process.argv[2], 'survived'), 1600);
+setInterval(() => {}, 1000);
+`);
+    writeFileSync(leaderPath, `
+import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+process.on('SIGTERM', () => {});
+const child = spawn(process.execPath, [process.argv[2], process.argv[3]], { stdio: 'ignore' });
+writeFileSync(process.argv[4], String(child.pid));
+setInterval(() => {}, 1000);
+`);
     const started = performance.now();
-    await assert.rejects(runCommand({ command: process.execPath, args: ['-e', source], cwd: root, env: cleanEnv, timeoutMs: 500 }), { code: 'COMMAND_TIMEOUT' });
+    await assert.rejects(runCommand({ command: process.execPath, args: [leaderPath, descendantPath, marker, pidPath], cwd: root, env: cleanEnv, timeoutMs: 500 }), { code: 'COMMAND_TIMEOUT' });
     assert.ok(performance.now() - started < 3_000);
     descendant = Number(readFileSync(pidPath, 'utf8'));
     await new Promise((resolve) => setTimeout(resolve, 1_100));

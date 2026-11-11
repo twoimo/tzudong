@@ -1,4 +1,4 @@
-# Cloudflare Builds 거버넌스 병행 검증
+# Cloudflare Builds 거버넌스 CI
 
 기준일: **2026-11-12 KST**. 같은 작업 시점은 UTC로 2026-11-11이다.
 
@@ -46,20 +46,24 @@ Cloudflare Workers Builds에서 GitHub `Release`의 실제 거버넌스 검사�
 설치 없이 실행할 수 있다. 이 작은 실제 검사 묶음을 먼저 비교한다. Cloudflare
 실행이 생긴 뒤 같은 SHA에서 checkout, 검사, 배포, 대기 시간을 구분해 측정한다.
 
-## 고정할 Cloudflare 설정
+## develop 연결 설정
 
 설정 파일과 명령은 [.github/cloudflare/](../../.github/cloudflare/README.md)에 있다.
 Workers Builds는 build와 deploy 명령을 별도 단계로 실행한다.
+아래는 PR 검증과 보호된 develop 병합 후 적용할 연속 실행 설정이다.
+병합 전에는 작업 브랜치 `ci/cloudflare-free-migration-20261112`만 연결하고,
+두 명령의 `--branch`도 그 작업 브랜치와 일치시킨다. 설정 파일 변경만으로
+원격 전환을 완료했다고 보지 않으며 최종 원격 상태는 PR의 실행 기록을 따른다.
 ([공식 설정 문서](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/))
 
 | 설정 | 값 |
 | --- | --- |
 | Worker | `tzudong-ci-governance` |
 | Git repository | `twoimo/tzudong` |
-| Production branch | `ci/cloudflare-free-migration-20261112` — pilot Worker의 기준 브랜치 |
+| Production branch | `develop` — 거버넌스 Worker의 기준 브랜치 |
 | Root directory | `/.github/cloudflare` |
-| Build command | `node ../scripts/run-cloudflare-governance.mjs --branch ci/cloudflare-free-migration-20261112` |
-| Deploy command | `node ../scripts/deploy-cloudflare-governance.mjs --branch ci/cloudflare-free-migration-20261112` |
+| Build command | `node ../scripts/run-cloudflare-governance.mjs --branch develop` |
+| Deploy command | `node ../scripts/deploy-cloudflare-governance.mjs --branch develop` |
 | Preview builds | `false` |
 | `NODE_VERSION` | `24.22.1` |
 | `BUN_VERSION` | `1.4.0` |
@@ -95,7 +99,7 @@ Free 기준은 계정당 월 **3,000분**, 동시 실행 **1개**, 실행당 **2
 **2 vCPU / 8 GB RAM / 20 GB 디스크**다. 같은 계정의 Bitcoin 관련 프로젝트와
 다른 Workers Builds도 이 시간과 동시 실행 슬롯을 공유한다.
 
-| 구분 | 이 pilot의 기준 |
+| 구분 | 거버넌스 빌드의 기준 |
 | --- | --- |
 | 거버넌스 runner | 최대 10분; 시간 초과는 실패 |
 | 잠긴 npm 설치 | 최대 4분 |
@@ -112,7 +116,7 @@ runner의 시간 제한은 한 번의 실행을 제한한다. 계정 월간 사�
 월간 계산은 `tzudong 사용분 + Bitcoin 프로젝트 사용분 + 기타 사용분`으로 한다.
 다른 사용량이 없다고 가정해 평균 5분이면 2,100분 안에 420회, 평균 8분이면
 262회가 들어간다. 이는 계산 예시이며 호스팅 실측치가 아니다. 재시도도 사용량에
-포함해 기록하고, pilot에 불필요한 예약 실행이나 모든 브랜치 preview를 추가하지 않는다.
+포함해 기록하고, 불필요한 예약 실행이나 모든 브랜치 preview를 추가하지 않는다.
 
 ## 자격 증명과 브랜치 경계
 
@@ -131,8 +135,8 @@ API 권한과 실제 배포용 build token은 구분한다. 토큰 값은 저장
 거버넌스 검사와 npm 설치의 자식 프로세스에는 필요한 도구·경로 변수만 전달한다.
 runner가 실행하는 자식 프로세스 중 Wrangler에만 배포 자격 증명을 전달한다.
 이 환경 변수 제한은 토큰 자체의 계정 권한 축소를 뜻하지 않는다.
-preview는 비활성화하고 지정한 저장소와
-pilot branch만 연결한다. fork PR이나 임의 branch의 코드를 배포 토큰이 있는
+preview는 비활성화하고 지정한 저장소의 단일 신뢰 브랜치만 연결한다.
+최초 검증은 작업 브랜치로 실행하고, 보호된 병합 후에는 develop만 연결한다. fork PR이나 임의 branch의 코드를 배포 토큰이 있는
 경로에서 실행하지 않는다.
 
 ## GitHub에서 계속 맡는 검사
@@ -155,6 +159,18 @@ Cloudflare의 의존성 캐시는 설치 최적화용이다. 캐시 복구는 �
 3. scorer 출력과 해시, 검사 목록·결과, 도구 버전을 대조한다. 이전 실행의 성공이나 캐시만으로 현재 검사를 생략하지 않는다.
 4. GitHub branch protection/ruleset을 읽을 수 있는 권한으로 실제 required-check 이름을 확인한다. 필요 변경은 승인된 범위에서 하고 다시 읽어 확인한다.
 5. 이 단계의 증거가 쌓이기 전까지는 병행 검증으로 유지한다. 전환 중 문제가 생기면 새 pilot 연결을 중단하고 기존 GitHub 검사를 계속 사용한다.
+
+### develop 연속 실행으로 전환하는 순서
+
+1. PR의 실제 검사와 CodeQL 결과를 확인하고 보호 규칙을 통과하는 정상 PR 병합으로 develop에 반영한다.
+2. Workers Builds의 기존 trigger 하나에서 branch를 `develop`으로, build/deploy 명령의 `--branch`도 `develop`으로 함께 바꾼다. Preview는 계속 끈다.
+3. 변경한 trigger와 Worker의 production branch를 다시 읽어 설정 파일과 비교한다. 다른 브랜치와 다른 Worker는 변경하지 않는다.
+4. 병합 SHA의 develop build를 실행하고 native GitHub check, 공개 receipt, 산출물 checksum, 배포 version을 같은 SHA로 대조한다.
+5. 이후 develop push가 동일 trigger로 자동 실행된다. GitHub 필수 검사 교체는 보호 규칙을 확인할 수 있을 때 별도로 수행한다.
+
+병합 또는 원격 변경이 차단되면 현재 동작하는 작업 브랜치 연결을 유지하고,
+PR에 차단된 단계와 원인을 기록한다. 원격 설정을 바꾼 뒤 실패하면 앞서 확인한
+branch와 명령으로 trigger를 복구하며, 실패한 커밋을 성공으로 표시하지 않는다.
 
 전환 완료 기록에는 실제 SHA, GitHub run URL, Cloudflare build URL/ID,
 Worker version, 비교 결과와 보호 규칙 readback을 남긴다. 이 문서의 초기 상태는

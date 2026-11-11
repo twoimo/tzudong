@@ -9,7 +9,7 @@
 | 파일 | 역할 |
 | --- | --- |
 | [package.json](package.json) · [package-lock.json](package-lock.json) | npm `11.6.2`와 정확한 Wrangler 의존성의 설치 기준 |
-| [build-settings.json](build-settings.json) | pilot branch, root directory, 명령과 빌드 변수의 검토 기준 |
+| [build-settings.json](build-settings.json) | develop branch, root directory, 명령과 빌드 변수의 검토 기준 |
 | [wrangler.jsonc](wrangler.jsonc) | 이 CI Worker의 명시적 배포 대상 |
 | [거버넌스 runner](../scripts/run-cloudflare-governance.mjs) | 원격 실행 정체성 확인, 실제 검사 실행, 해당 SHA 결과 생성 |
 | [배포 runner](../scripts/deploy-cloudflare-governance.mjs) | receipt·도구 버전 재검증, 잠긴 설치, 해당 Worker 배포 |
@@ -17,20 +17,22 @@
 ## Workers Builds 설정
 
 Root directory는 **`/.github/cloudflare`**, production branch는
-**`ci/cloudflare-free-migration-20261112`**, preview builds는 **비활성화**한다.
-여기서 production branch는 pilot Worker의 배포 기준이며 서비스 앱의 `main`
-승격을 뜻하지 않는다.
+**`develop`**, preview builds는 **비활성화**한다.
+여기서 production branch는 이 CI Worker의 배포 기준이며 서비스 앱의 `main`
+승격을 뜻하지 않는다. 아래 설정은 PR의 보호된 develop 병합 후 적용한다.
+병합 전 검증은 지정한 작업 브랜치와 같은 이름의 `--branch` 인자로 실행하며,
+활성 설정과 최종 전환 결과는 [PR #3764](https://github.com/twoimo/tzudong/pull/3764)에서 확인한다.
 
 Build command:
 
 ```sh
-node ../scripts/run-cloudflare-governance.mjs --branch ci/cloudflare-free-migration-20261112
+node ../scripts/run-cloudflare-governance.mjs --branch develop
 ```
 
 Deploy command:
 
 ```sh
-node ../scripts/deploy-cloudflare-governance.mjs --branch ci/cloudflare-free-migration-20261112
+node ../scripts/deploy-cloudflare-governance.mjs --branch develop
 ```
 
 빌드 변수는 `NODE_VERSION=24.22.1`, `BUN_VERSION=1.4.0`,
@@ -56,7 +58,7 @@ node .github/scripts/run-cloudflare-governance.mjs --local --commit "$(git rev-p
 변경 중인 tracked 파일이 있는 로컬 결과도 진단에만 사용한다. 원격 모드는 실제
 HEAD·tree·branch와 공급자 실행 정보를 대조하고 tracked worktree가 깨끗해야 한다.
 기본 원격 모드의 `WORKERS_CI_*` 값을 수동으로 만들어 로컬 실행을 원격 실행처럼
-보이게 하지 않는다. 원격 연결·성공 여부는 [운영 문서의 현재 상태](../../docs/operations/cloudflare-ci.md#현재-상태)에
+보이게 하지 않는다. 원격 연결·성공 여부는 [운영 문서의 현재 상태](../../docs/operations/cloudflare-ci.md#구성-및-검증-기록)에
 실제 공급자 확인 결과로 기록한다.
 
 ## 결과 확인
