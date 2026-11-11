@@ -36,6 +36,21 @@ SELECT pg_catalog.count(*) FROM pg_catalog.pg_class c
 JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE c.relkind IN ('r','p','v','m','S') AND n.nspname NOT IN ('pg_catalog','information_schema','pg_toast');
 """
+# A schema-only dump carries no CREATE ROLE, so every statement that names a
+# project role fails on a fresh cluster. Measured: 119 of 120 genuine errors were
+# 'role "privacy_workflow_owner" does not exist'.
+ROLE_STATEMENTS_SQL = """
+SELECT format('CREATE ROLE %I NOLOGIN', rolname) FROM pg_catalog.pg_roles
+WHERE rolname NOT LIKE 'pg\\_%'
+  AND rolname NOT IN ('postgres','supabase_admin','supabase_auth_admin','supabase_storage_admin',
+                      'authenticator','dashboard_user','anon','authenticated','service_role')
+ORDER BY 1;
+"""
+# The supabase image seeds schemas this project also creates, and --clean cannot drop
+# them because the image's own objects depend on them. Drop them first so the dump
+# owns the state it describes.
+SEEDED_SCHEMAS = ("auth", "storage", "vault", "extensions", "graphql", "graphql_public",
+                  "pgbouncer", "realtime", "cron", "net", "pgsodium", "pgtle")
 OBJECT_NAMES_SQL = """
 SELECT n.nspname || '.' || c.relname FROM pg_catalog.pg_class c
 JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -95,6 +110,20 @@ def main() -> int:
             if ready.returncode == 0:
                 break
             time.sleep(2)
+        role_statements = [
+            line for line in psql(args.database_container, "postgres", ROLE_STATEMENTS_SQL).decode().splitlines() if line
+        ]
+        setup_statements = role_statements + [
+            f"DROP SCHEMA IF EXISTS {schema} CASCADE;" for schema in SEEDED_SCHEMAS
+        ]
+        setup_path = args.output.with_suffix(".setup.sql")
+        setup_path.write_text("\n".join(setup_statements) + "\n", encoding="utf-8")
+        run(["docker", "cp", str(setup_path), f"{RESTORE_CONTAINER}:/tmp/setup.sql"])
+        run([
+            "docker", "exec", "-i", RESTORE_CONTAINER,
+            "psql", "-U", args.restore_role, "-d", "profile", "-q", "-v", "ON_ERROR_STOP=0", "-f", "/tmp/setup.sql",
+        ], check=False, capture=True)
+        setup_path.unlink(missing_ok=True)
         run(["docker", "cp", str(dump_path), f"{RESTORE_CONTAINER}:/tmp/dump.sql"])
         restore = run([
             "docker", "exec", "-i", RESTORE_CONTAINER,
@@ -121,6 +150,7 @@ def main() -> int:
             "sourceImage": "local stack (working schema, adapters applied)",
             "targetImage": PG17_IMAGE,
             "restoreRole": args.restore_role,
+            "preparedRoleCount": len(role_statements),
             "sourceObjects": source_objects,
             "restoredObjects": restored_objects,
             "dumpBytes": len(dump),
