@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "workerName": "tzudong-ci-governance",
+  "repository": "twoimo/tzudong",
+  "productionBranch": "ci/cloudflare-free-migration-20261112",
+  "previewsEnabled": false,
+  "rootDirectory": "/.github/cloudflare",
+  "buildCommand": "node ../scripts/run-cloudflare-governance.mjs --branch ci/cloudflare-free-migration-20261112",
+  "deployCommand": "node ../scripts/deploy-cloudflare-governance.mjs --branch ci/cloudflare-free-migration-20261112",
+  "pathIncludes": ["*"],
+  "pathExcludes": [],
+  "buildCachingEnabled": true,
+  "environmentVariables": {
+    "NODE_VERSION": "24.22.1",
+    "BUN_VERSION": "1.4.0",
+    "PYTHON_VERSION": "3.12.12",
+    "SKIP_DEPENDENCY_INSTALL": "1",
+    "WRANGLER_SEND_METRICS": "false"
+  },
+  "budget": {
+    "providerMonthlyAccountMinutes": 3000,
+    "planningTargetMonthlyMinutes": 2100,
+    "planningReserveMonthlyMinutes": 900,
+    "providerConcurrentAccountBuilds": 1,
+    "providerBuildTimeoutMinutes": 20,
+    "governanceDeadlineMinutes": 10,
+    "deploymentDeadlineMinutes": 7,
+    "planningTargetIsEnforced": false
+  }
+}

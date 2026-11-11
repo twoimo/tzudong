@@ -21,6 +21,8 @@ artifacts/
 apps/artifacts/
 apps/web/artifacts/
 nightly-artifacts/
+/.github/cloudflare/generated/
+/.github/cloudflare/.wrangler/
 apps/.release-visual-protected-replay/
 
 # ── 로그 / Logs ──────────────────────────────────────────

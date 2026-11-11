@@ -85,6 +85,18 @@ def replay_payloads():
 
 
 class CollectorAdmissionTests(unittest.TestCase):
+    def test_npm_ci_flags_keep_install_attribution_without_matching_other_commands(self):
+        for name in (
+            "Run npm ci",
+            "Run npm ci --no-audit --fund=false",
+            "Run npm ci --fund=false --no-audit",
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(M.classify_step(name), "install")
+        for name in ("Run npm cider", "Run npm ci-other", "Run npm cache verify"):
+            with self.subTest(name=name):
+                self.assertEqual(M.classify_step(name), "other")
+
     def test_online_collection_rejects_incomplete_or_malformed_job_counts(self):
         source_runs = [complete_run(run_id, run_id) for run_id in range(1, 8)]
         api_runs = []

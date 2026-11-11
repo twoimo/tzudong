@@ -161,7 +161,7 @@ class SupplyChainContractTests(unittest.TestCase):
         cargo_manifests = tuple(ROOT.glob("backend/rust/**/Cargo.toml"))
         expected = BASE_DEPENDENCY_UNITS + (
             (("cargo", "/backend/rust"),) if cargo_manifests else ()
-        )
+        ) + (("npm", "/.github/cloudflare"),)
         self.assertEqual(actual, expected)
         self.assertTrue(cargo_manifests)
         self.assertIn(("cargo", "/backend/rust"), actual)

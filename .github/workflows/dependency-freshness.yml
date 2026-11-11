@@ -82,8 +82,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/collect-dependency-candidates.mjs "$RUNNER_TEMP/dependency-candidates.json"
 
-      - name: Assert governance invariants and enumerate the seven units
-        # Requirements 4.1, 4.2, 4.9, 5.6: seven units (cargo 7th), develop-only,
+      - name: Assert governance invariants and enumerate dependency units
+        # Original units plus Cloudflare CI (8th), develop-only,
         # <=5 open per unit, never merged. Fails closed if the contract drifts.
         run: node scripts/verify-dependency-freshness.mjs --candidates "$RUNNER_TEMP/dependency-candidates.json" > "$RUNNER_TEMP/dependency-freshness-units.json"
 

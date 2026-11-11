@@ -7,6 +7,8 @@ on:
       - '.github/workflows/**'
       - '.github/scripts/*ci*.py'
       - '.github/dependabot.yml'
+      - '.github/cloudflare/**'
+      - '.github/scripts/*cloudflare*'
       - '.github/hosted-pending-custody-install.v1.json'
       - '.kiro/specs/crawler-pipeline-*/**'
       - 'apps/web/package.json'
@@ -232,6 +234,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  cloudflare-toolchain-audit:
+    name: Cloudflare toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .github/cloudflare
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: .github/cloudflare/package-lock.json
+      - name: Pin authoritative npm
+        run: npm install --global npm@11.6.2
+      - name: Install locked deployment tools without lifecycle scripts
+        run: timeout --signal=TERM --kill-after=10s 4m npm ci --ignore-scripts --no-audit --fund=false
+      - name: Audit the complete Cloudflare dependency graph
+        run: timeout --signal=TERM --kill-after=10s 4m npm audit --audit-level=moderate
+      - name: Exercise Cloudflare failure paths
+        run: npm test
+      - name: Validate the fail-closed Worker with pinned Wrangler
+        run: node node_modules/wrangler/bin/wrangler.js deploy worker.mjs --config wrangler.jsonc --dry-run
+
   npm-audit:
     runs-on: ubuntu-latest
     # Two 20-minute audits, bounded termination and shared setup.
