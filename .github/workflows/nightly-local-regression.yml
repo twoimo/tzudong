@@ -63,6 +63,9 @@ jobs:
       - name: Verify the committed chain role-probe baselines
         run: python3 -m unittest backend.supabase.tests.test_chain_role_probe_baseline
 
+      - name: Verify the local role model matches the migrations
+        run: python3 -m unittest backend.supabase.tests.test_local_role_model
+
       - name: Install Node 24
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
         with:
