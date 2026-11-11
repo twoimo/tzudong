@@ -87,6 +87,16 @@ def main() -> int:
     parser.add_argument("--migration-role", default="postgres")
     parser.add_argument("--keep", action="store_true", help="keep the container for inspection")
     parser.add_argument(
+        "--mixed-privileged",
+        action="store_true",
+        help="run migrations that mention SUPERUSER as the privileged role and everything else as the migration role",
+    )
+    parser.add_argument(
+        "--grant-file",
+        default=None,
+        help="SQL file applied as the privileged role after every migration (ownership normalisation)",
+    )
+    parser.add_argument(
         "--privileged-role",
         default="supabase_admin",
         help="role that replays the statements the prerequisite bundle cannot run as the migration role",
@@ -156,10 +166,20 @@ def main() -> int:
         applied: list[str] = []
         failed: list[dict[str, str]] = []
         listing = run(["docker", "exec", container, "sh", "-c", "ls /probe/migrations/*.sql | sort"]).stdout.decode().split()
+        grant_sql: bytes | None = None
+        if args.grant_file:
+            grant_sql = Path(args.grant_file).read_bytes()
         for path in listing:
             # A failed migration is data, not a probe failure: it is what the
             # profile is meant to show.
-            result = psql(container, args.migration_role, file=path, check=False)
+            role = args.migration_role
+            if args.mixed_privileged:
+                text = subprocess.run(["docker", "exec", container, "cat", path], capture_output=True).stdout.decode("utf-8", "replace")
+                if "SUPERUSER" in text:
+                    role = args.privileged_role
+            result = psql(container, role, file=path, check=False)
+            if grant_sql is not None and role != args.migration_role:
+                psql(container, args.privileged_role, grant_sql, check=False)
             name = Path(path).name
             if result.returncode == 0:
                 applied.append(name)
@@ -178,6 +198,8 @@ def main() -> int:
             "prerequisiteApplied": prerequisite_ok,
             "prerequisiteContinue": bool(args.prerequisite_continue),
             "privilegedReplay": privileged_replay,
+            "mixedPrivileged": bool(args.mixed_privileged),
+            "grantFile": args.grant_file,
             "prerequisiteErrors": prerequisite_error,
             "migrationCount": len(listing),
             "appliedCount": len(applied),
