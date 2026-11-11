@@ -1,0 +1,21 @@
+# Formats GitHub's manually generated release notes; this does not publish them.
+# Keep the catch-all so unlabeled PRs remain visible.
+changelog:
+  categories:
+    - title: Features
+      labels:
+        - enhancement
+        - feature
+    - title: Fixes
+      labels:
+        - bug
+        - fix
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Dependencies
+      labels:
+        - dependencies
+    - title: Other changes
+      labels:
+        - "*"

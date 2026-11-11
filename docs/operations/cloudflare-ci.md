@@ -7,20 +7,20 @@ Cloudflare Workers Builds에서 GitHub `Release`의 실제 거버넌스 검사�
 웹 앱 배포와 전체 CI 이전은 이 단계의 범위가 아니다. GitHub의 기존 필수
 검사는 동일 SHA 비교와 보호 규칙 확인이 끝날 때까지 유지한다.
 
-## 현재 상태
+## 구성 및 검증 기록
 
-아래 표는 **2026-11-11 UTC의 초기 연결 시점** 기록이다. 이후의 실제 실행과
-전환 증거는 해당 PR의 검증 기록, 공급자의 build 결과 및 GitHub native checks로
-확인한다.
+아래 표는 **2026-11-11 UTC**에 확인한 구성이다. 최신 커밋의 실행 결과는
+[PR #3764의 검사](https://github.com/twoimo/tzudong/pull/3764/checks),
+공급자의 build 결과 및 GitHub native checks에서 확인한다.
 
 | 항목 | 상태 |
 | --- | --- |
-| GitHub 기준 소스 | `develop`의 `7f8352578fea7dc62d7ee550f1dda4d9e38d4e84`를 기준으로 준비한 `ci/cloudflare-free-migration-20261112` |
+| GitHub 기준 소스 | `develop`의 `87abce4cf85f4c4f0d2763ec5449ee573fb17b95` 정리 작업까지 통합한 `ci/cloudflare-free-migration-20261112` |
 | Cloudflare 대상 | `tzudong-ci-governance` Worker 생성 확인. Worker tag: `76d391fe6f524121b3b9d74f1b3fa24c` |
 | Git repository 연결 | 연결 UUID: `e00c02fa-0913-4361-bd2b-56a017f441a3` 생성 확인 |
-| Workers Builds 설정·실행 | 초기 연결 시점에는 커밋 준비 중이며 Builds 설정과 실제 성공 실행은 아직 확인하지 않음 |
+| Workers Builds 설정·실행 | 지정 branch의 native push trigger와 실제 검사·배포·HTTP 조회 성공 확인. 아래 첫 원격 실행 기록 참조 |
 | GitHub 보호 규칙 | 현재 연결의 branch-protection 조회가 HTTP 403. 기존 required checks 변경 안 함 |
-| 이전 저장소 정리 | [PR #3759](https://github.com/twoimo/tzudong/pull/3759)는 열린 별도 작업으로 취급. 병합됐다고 가정하지 않음 |
+| 이전 저장소 정리 | [PR #3759](https://github.com/twoimo/tzudong/pull/3759)의 develop 병합을 확인하고 README·문서 구조와 CI 소유권을 함께 통합 |
 
 설정 파일이 존재하거나 로컬 테스트가 통과한 것만으로 Cloudflare 검사가 실행된
 것은 아니다. Worker·저장소 연결 생성과 해당 SHA의 실제 build 성공을 구분한다.
@@ -159,3 +159,25 @@ Cloudflare의 의존성 캐시는 설치 최적화용이다. 캐시 복구는 �
 전환 완료 기록에는 실제 SHA, GitHub run URL, Cloudflare build URL/ID,
 Worker version, 비교 결과와 보호 규칙 readback을 남긴다. 이 문서의 초기 상태는
 그 완료 기록을 대신하지 않는다.
+
+## 확인된 첫 원격 실행
+
+2026-11-11 UTC의 커밋 `d4eda9434f6ca7fc106767f664d79b1f185add37`에서
+Cloudflare native push trigger, 실제 검사, 배포, HTTP 결과까지 확인했다.
+이 기록은 해당 커밋의 거버넌스 범위이며 최신 HEAD의 전체 CI 통과를 대신하지 않는다.
+
+| 관측 | 결과 |
+| --- | --- |
+| [Cloudflare native GitHub check](https://github.com/twoimo/tzudong/runs/130718748336) | `Workers Builds: tzudong-ci-governance`, success |
+| Build ID | `3fd4f72b-4f1d-4bce-9f90-607b823e114e` |
+| 생성부터 종료까지 | 146.516초 |
+| 거버넌스 검사 | 5개 단계 모두 통과, 94.715초 |
+| 실제 도구 | Node 24.22.1, Bun 1.4.0, Python 3.14.8, Git 2.43.0 |
+| [공개 receipt](https://tzudong-ci-governance.twoimo.workers.dev/receipt) | HTTP 200, 같은 commit/tree/build ID, `no-store` |
+| Scored fixture | 22,002바이트, receipt·실제 바이트·checksum의 SHA-256 일치 |
+
+GitHub [같은 후보의 CI 실행](https://github.com/twoimo/tzudong/actions/runs/43076461540)에서
+8개 shard의 브라우저 준비 단계 합계는 72초였다. 앞선 두 후보 실행에서는
+78초와 74초였으며, 기준 실행의 945초보다 짧았다. 이 값은 브라우저 준비 단계의
+병렬 작업 합계다. 큐 대기·전체 compiler benchmark를 포함한 전체 CI 개선율로
+환산하지 않는다. 마지막 커밋의 통과 여부는 해당 SHA의 필수 검사에서 확인한다.

@@ -28,6 +28,7 @@
         "GitHub Actions 워크플로",
         "dependabot 설정",
         "CODEOWNERS와 거버넌스 매니페스트",
+        "기여 양식과 릴리스 노트 분류",
         "CI 보조 스크립트",
         "CI 검사 결과를 제공하는 Cloudflare Worker와 고정된 배포 도구"
       ],
@@ -52,6 +53,20 @@
         "제품 애플리케이션·DB 런타임",
         "시크릿 값 리터럴",
         "추적되는 생성 결과·의존성 폴더"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE",
+      "depth": 2,
+      "ownership": "공개 버그 제보·기능 제안 양식",
+      "allowedContents": [
+        "GitHub 이슈 양식 YAML과 문서·보안 안내 링크"
+      ],
+      "forbiddenContents": [
+        "런타임 애플리케이션 소스",
+        "시크릿 값과 개인정보"
       ],
       "classification": "source",
       "vcsTracked": true
@@ -619,6 +634,21 @@
       ],
       "forbiddenContents": [
         "실행 소스",
+        "시크릿 값 리터럴"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/releases",
+      "depth": 2,
+      "ownership": "릴리스 채널·작성 절차·노트 양식",
+      "allowedContents": [
+        "정식·로컬 검증 릴리스 안내",
+        "릴리스 노트 양식과 게시 기록 링크"
+      ],
+      "forbiddenContents": [
+        "배포·태그 게시 실행 소스",
         "시크릿 값 리터럴"
       ],
       "classification": "source",

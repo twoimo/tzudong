@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 문서 안내 / Documentation
+    url: https://github.com/twoimo/tzudong/blob/main/docs/README.md
+    about: 개발 환경, 운영 절차, 릴리스 안내를 확인하세요.
+  - name: 보안 제보 / Security reporting
+    url: https://github.com/twoimo/tzudong/blob/main/SECURITY.md
+    about: 보안 문제는 저장소의 보안 제보 절차를 따라 주세요.

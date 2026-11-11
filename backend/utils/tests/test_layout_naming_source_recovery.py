@@ -80,7 +80,7 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
         result = layout.run_check(root=ROOT, manifest_path=LAYOUT_MANIFEST)
         self.assertEqual(result["errorCode"], None, result)
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["trackedDirectoryCount"], 43)
+        self.assertEqual(result["trackedDirectoryCount"], 45)
         self.assertEqual(result["checks"]["moves"], [])
 
     def test_existing_rename_ledger_is_complete_without_aliases(self) -> None:

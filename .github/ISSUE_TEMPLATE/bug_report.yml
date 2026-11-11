@@ -1,0 +1,46 @@
+name: 버그 제보 / Bug report
+description: 재현 가능한 오류를 알려 주세요. Report a reproducible problem.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        한국어 또는 English로 작성해 주세요.
+        보안 취약점은 [SECURITY.md](https://github.com/twoimo/tzudong/blob/main/SECURITY.md)를 따라 제보하세요.
+        첨부할 화면과 로그에서 계정 정보, 쿠키, 토큰을 제거해 주세요.
+  - type: input
+    id: area
+    attributes:
+      label: 화면 또는 명령 / Page or command
+      placeholder: "예: 모바일 홈 지도 / npm run dev"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 재현 순서 / Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대한 결과 / Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 결과 / Actual behavior
+      description: 필요한 경우 개인정보를 가린 화면이나 짧은 오류 메시지를 첨부해 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 실행 환경 / Environment
+      description: 브라우저·OS·화면 크기 또는 Node/Python 버전, 알고 있다면 커밋이나 릴리스를 적어 주세요.
+    validations:
+      required: true
