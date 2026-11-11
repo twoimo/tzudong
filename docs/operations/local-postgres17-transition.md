@@ -38,6 +38,28 @@ Three supporting facts bound the design:
 - `AGENTS.md` keeps applied migrations immutable, so no workstream may edit a
   migration body that has already been applied.
 
+## Measured baseline (2026-11-11)
+
+Two disposable containers, same prerequisites file and the same 161 migrations, no
+adapter layer, no GoTrue/storage bootstrap:
+
+| Probe | Prerequisites role | Migration role | Result |
+| --- | --- | --- | --- |
+| `supabase/postgres:17.11.0.018` | `postgres` | `postgres` | prerequisites stop at `ALTER DEFAULT PRIVILEGES` (permission denied); chain 53 ok / 108 fail |
+| `supabase/postgres:17.11.0.018` | `supabase_admin` | `supabase_admin` | chain 90 ok / 71 fail |
+| `supabase/postgres:15.8.1.085` | `supabase_admin` | `postgres` | chain 54 ok / 107 fail |
+
+The failures are the same class on both majors: `must be owner of table ...`,
+`permission denied to alter role`, `role "privacy_workflow_owner" does not exist`,
+`supported GoTrue session tables are unavailable`, and cascading `G014-xx
+required ... dependencies are missing`. The PG15 and PG17 totals differ by one
+migration, so **the server major is not the blocking axis**.
+
+What the adapter layer actually supplies is the missing bootstrap and ownership
+sequence, not PG15-versus-PG17 compatibility. That reorders the workstreams: the
+role, ownership and bootstrap sequence has to be reproduced first, and the image
+swap is the cheap step at the end.
+
 ## Target
 
 Local apply runs the same role, server major, file set and order as hosted, so a
@@ -49,7 +71,12 @@ digest contract; the PG15 replay layer disappears.
 Each workstream lands as its own pull request and is gated by a dispatched
 `nightly-local-regression` run on `develop`, not by a local smoke test.
 
-1. **Server major and replay layer together.** Pin `supabase/postgres:17.*` in
+1. **Role, ownership and bootstrap sequence.** Reproduce what the pipeline
+   supplies today: prerequisites as `supabase_admin`, migration bodies as
+   `postgres`, the GoTrue/storage bootstrap bundles, and object ownership read
+   back per object. Acceptance: the chain reaches the same object count and
+   ownership profile it reaches on PG15 today.
+2. **Server major and replay layer.** Pin `supabase/postgres:17.*` in
    `docker-compose.yml`, in `local-stack.py::_execute_volume_helper()` (which
    pins the same image independently) and rebind the compose hashes in
    `backend/supabase/local-inputs/manifest.v1.json`; `_stage_input_files()` copies
@@ -65,18 +92,18 @@ Each workstream lands as its own pull request and is gated by a dispatched
    server major other than 15, so a standalone server bump cannot reach a green
    nightly. Acceptance: the stack starts, `local-migrate.py manifest`/`verify`
    pass, the 14 `current_user` migrations pass, nightly is green.
-2. **Remaining role difference.** Only after the replay layer is gone, compare
-   the ledger/setup statements that still run as `supabase_admin` against the
-   hosted path, statement by statement, and align the ones that demonstrably
-   differ. Acceptance: catalogue ownership and ACL grantors match the generator.
-3. **File set.** `exclusions` is descriptive output, not a filter: `build_manifest()`
+3. **Role parity with hosted.** Only after the sequence is reproduced, compare
+   the statements that still run as `supabase_admin` against the hosted path,
+   statement by statement, and align the ones that demonstrably differ.
+   Acceptance: catalogue ownership and ACL grantors match the generator.
+4. **File set.** `exclusions` is descriptive output, not a filter: `build_manifest()`
    enumerates `migration_files()` over `EXPECTED_SOURCE = backend/supabase/migrations`
    only, and `_reject_path_custody()` rejects app paths outright. Including the app
    directory therefore means changing the source enumeration and the custody rules,
    then regenerating the manifest - not editing the exclusion list. Fix any
    migration that only worked because it was skipped. Acceptance: local
    `migrationCount` equals the generator's, nightly green.
-4. **Ordering.** Keep the applied SQL bytes untouched - editing an applied
+5. **Ordering.** Keep the applied SQL bytes untouched - editing an applied
    migration would leave existing databases on old bodies while a fresh replay
    executes new ones, destroying the parity this transition exists to create.
 
