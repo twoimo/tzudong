@@ -9,25 +9,6 @@ export const ADMIN_RECEIPT_OCR_PREPROCESS_VERSION = 'admin-canonical-jpeg-v2';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-// The sealed reset catalog still guards `recover_review_receipt_ocr_indeterminate`
-// with a 1..3 model / 120-character policy (issue #3351). ocr_private.valid_model_policy
-// and both TypeScript resolvers allow 1..8 names of up to 160 characters, and the
-// sealed function definition cannot change without the held 107 -> 108 successor
-// transition. Clamping at the call boundary keeps indeterminate recovery available
-// for the models that fit instead of failing 503 and then 409 for the whole policy.
-export const RECEIPT_OCR_RECOVERY_MODEL_LIMIT = 3;
-export const RECEIPT_OCR_RECOVERY_MODEL_NAME_LIMIT = 120;
-
-export function clampReceiptOcrRecoveryModelPolicy(policy: readonly string[]): string[] {
-  const kept: string[] = [];
-  for (const model of policy) {
-    const normalized = model.trim();
-    if (normalized.length < 1 || normalized.length > RECEIPT_OCR_RECOVERY_MODEL_NAME_LIMIT) continue;
-    if (kept.length >= RECEIPT_OCR_RECOVERY_MODEL_LIMIT) break;
-    if (!kept.includes(normalized)) kept.push(normalized);
-  }
-  return kept;
-}
 const SHA256 = /^[0-9a-f]{64}$/;
 
 type SupabaseAdmin = ReturnType<typeof createSupabaseServiceRoleClient>;
@@ -196,7 +177,11 @@ export async function applyReceiptOcrIndeterminateRecovery(
   } catch {
     throw new ReceiptOcrRecoveryPersistenceError();
   }
-  const recoveryModelPolicy = clampReceiptOcrRecoveryModelPolicy(policy.modelPolicy);
+  // The recovery guard and the persist table share ocr_private.valid_model_policy
+  // with the rest of the OCR contract, so the resolved policy is submitted as-is
+  // (issue #3351). parseReceiptOcrWorkflowPolicy already rejected anything the
+  // guard would refuse, and an empty policy still fails closed below.
+  const recoveryModelPolicy = policy.modelPolicy;
   if (recoveryModelPolicy.length === 0) throw new ReceiptOcrRecoveryPersistenceError();
   if (input.promptVersion !== ADMIN_RECEIPT_OCR_PROMPT_VERSION
     || input.preprocessVersion !== ADMIN_RECEIPT_OCR_PREPROCESS_VERSION
@@ -244,9 +229,9 @@ export async function applyReceiptOcrIndeterminateRecovery(
     } catch {
       throw new ReceiptOcrRecoveryPersistenceError();
     }
-    // Compare against the policy that was actually submitted (the clamped list):
-    // the RPC persists and returns that list, so comparing with the pre-clamp
-    // policy would reject every successful rotation.
+    // Compare against the policy that was actually submitted: the RPC persists
+    // and returns that list, so comparing with a locally rewritten policy would
+    // reject every successful rotation.
     const returnedPolicyMatchesRequest = boundPolicy.inferenceConfig.thinkingLevel
       === policy.inferenceConfig.thinkingLevel
       && boundPolicy.modelPolicy.length === recoveryModelPolicy.length
