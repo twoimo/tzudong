@@ -6,6 +6,7 @@
 | --- | --- |
 | [workflows/](workflows/) | CI, scheduled jobs, and explicit operator workflows |
 | [scripts/](scripts/) | Workflow support and verification tools |
+| [cloudflare/](cloudflare/README.md) | Bounded Workers Builds governance and verified receipt deployment |
 | [PROMOTION_POLICY.md](PROMOTION_POLICY.md) | Protected feature → develop → data → main promotion |
 | [CODEOWNERS](CODEOWNERS) | Ownership of security-sensitive automation |
 | [dependabot.yml](dependabot.yml) | Dependency update configuration |

@@ -53,7 +53,7 @@ export const COMMAND_TIMEOUT_MINUTES = 30;
 export const MAX_RUN_INTERVAL_DAYS = 7;
 
 /**
- * Requirement 4.1 + 4.9 + 5.6 + design C2: seven update units.
+ * Original seven update units plus the isolated Cloudflare CI toolchain.
  *
  * Unit 5 remains `/backend/pipeline-control`. The parked P5 move into
  * `/backend/deploy/pipeline-control` was rejected during recovery so one
@@ -67,6 +67,7 @@ export const UNITS = Object.freeze([
   Object.freeze({ number: 5, ecosystem: 'pip', directory: '/backend/pipeline-control' }),
   Object.freeze({ number: 6, ecosystem: 'github-actions', directory: '/' }),
   Object.freeze({ number: 7, ecosystem: 'cargo', directory: '/backend/rust' }),
+  Object.freeze({ number: 8, ecosystem: 'npm', directory: '/.github/cloudflare' }),
 ]);
 
 /**
@@ -322,7 +323,7 @@ export function bindVerificationToCommit(candidates, results, checkedCommit) {
 
 /** Fails closed if the governance constants ever drift from the contract. */
 export const assertGovernanceInvariants = () => {
-  if (UNITS.length !== 7) throw Object.assign(new Error('unit_count_invalid'), { code: 'unit_count_invalid' });
+  if (UNITS.length !== 8) throw Object.assign(new Error('unit_count_invalid'), { code: 'unit_count_invalid' });
   if (HOLD_LIST.length !== 3) throw Object.assign(new Error('hold_count_invalid'), { code: 'hold_count_invalid' });
   if (VERIFICATION_COMMANDS.length !== 4) {
     throw Object.assign(new Error('command_count_invalid'), { code: 'command_count_invalid' });
