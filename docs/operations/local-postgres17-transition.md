@@ -173,7 +173,8 @@ Two nightly runs of `pg17_baseline_probe.py` (record:
 | 43023085171 | `postgres` | 260 | 14 | - | 2603, all `permission denied for database` |
 | 43029324112 | `supabase_admin` | 260 | 259 | - | 172, all `already exists` |
 | 43062413888 | `supabase_admin` | 260 | 260 | **0** | 120 |
-| 43072708471 | `supabase_admin` | 260 | 260 | **0** | 119, all `role "privacy_workflow_owner" does not exist` |
+| 43072708471 | `supabase_admin` | 260 | 260 | **0** | 119, all one role reference |
+| 43091959049 | `supabase_admin` | 260 | 260 | **0** | **0 - restored** |
 
 The first run is not a schema result: that image gives `postgres` no DDL rights, so
 every statement failed. Once the restore runs as `supabase_admin` the schema lands,
@@ -184,6 +185,15 @@ So the transition does not need the ~24 migrations rewritten. It needs the adapt
 layer kept, and the last version of the probe lands **260 of 260 objects with none
 missing** - the residual is one role the schema dump names but does not create, which
 is a role reference rather than a schema problem.
+
+The path to that number is worth keeping, because three of the four failures looked
+like version incompatibility and were not:
+
+* restoring as `postgres` fails everything - that image gives it no DDL rights;
+* the image seeds `auth`, `storage`, `vault`, `extensions`, `graphql`, `realtime` and
+  `pgbouncer`, so a naive restore reports 172 `already exists` errors;
+* a schema-only dump carries no `CREATE ROLE`, and the role statements were joined
+  without semicolons, so `psql` read them as one broken statement and created nothing.
 
 Two workflow fixes came out of this and apply beyond the probe: the Chromium install
 now retries (six dispatches died on runner DNS before the stack was ever started),
