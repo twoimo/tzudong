@@ -176,7 +176,20 @@ jobs:
       - name: Install Chromium for the browser lane
         if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'e2e' }}
         working-directory: apps/web
-        run: bunx playwright install --with-deps chromium
+        run: |
+          set -uo pipefail
+          # --with-deps shells out to apt, and the hosted runners intermittently fail
+          # to resolve archive.ubuntu.com / security.ubuntu.com; three consecutive
+          # nightly runs died here on 2026-11-11 before the stack was ever started.
+          # Retry a few times before failing the job.
+          for attempt in 1 2 3 4; do
+            if bunx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "playwright install attempt ${attempt} failed; retrying in 45s" >&2
+            sleep 45
+          done
+          exit 1
 
       - name: Pull pinned Compose images
         shell: bash
