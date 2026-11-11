@@ -12,7 +12,13 @@ const regular = (reason) => ({ benchmark: false, reason });
 // scripts that take no part in type checking stay on the fast parity path; the
 // four diagnostic lanes still run for every change.
 const KNOWN_ROOTS = /^(?:apps\/web\/|backend\/|docs\/|\.github\/|\.kiro\/|\.agents\/)/;
-const ROOT_DOCUMENT = /^(?:README[^/]*|AGENTS\.md|LICENSE[^/]*|\.gitignore)$/;
+// Exact entry points only: a new executable or dependency file named after a
+// README/changelog must still take the full-proof path.
+const DOCUMENTATION_INPUTS = new Set([
+  'README.md', 'README.ko.md', 'CHANGELOG.md', 'CHANGELOG.ko.md',
+  'CONTRIBUTING.md', 'SECURITY.md', 'TASKS.md', 'AGENTS.md',
+  'LICENSE', 'LICENSE.md', 'LICENSE.txt', '.gitignore', 'scripts/README.md',
+]);
 const DEPENDENCY_INPUT = /(^|\/)(?:package(?:-lock)?\.json|bun\.lockb?|.*\.lock|[^/]*requirements[^/]*\.txt|pyproject\.toml|Cargo\.toml|go\.mod|go\.sum)$/;
 const MEASUREMENT_INPUTS = [
   /^\.github\/workflows\/web-admin-ci\.yml$/,
@@ -29,12 +35,12 @@ const MEASUREMENT_INPUTS = [
 export function classifyPaths(paths) {
   if (!Array.isArray(paths) || paths.length === 0 || paths.length > 20_000) return full('DIFF_UNAVAILABLE');
   for (const file of paths) {
-    if (typeof file !== 'string' || !file || file.startsWith('/') || file.includes('\\') || file.split('/').includes('..')) return full('PATH_INVALID');
+    if (typeof file !== 'string' || !file || file.startsWith('/') || file.includes('\\') || file.includes('\0') || file.split('/').includes('..')) return full('PATH_INVALID');
     if (DEPENDENCY_INPUT.test(file)) return full('DEPENDENCY_CHANGE');
     if (MEASUREMENT_INPUTS.some((pattern) => pattern.test(file))) return full('TOOLCHAIN_OR_MEASUREMENT_CHANGE');
     // Unrecognised roots are intentionally full: new build inputs need an explicit
     // classification instead of silently losing performance coverage.
-    if (!KNOWN_ROOTS.test(file) && !ROOT_DOCUMENT.test(file)) return full('UNKNOWN_INPUT');
+    if (!KNOWN_ROOTS.test(file) && !DOCUMENTATION_INPUTS.has(file)) return full('UNKNOWN_INPUT');
   }
   return regular('FEATURE_DIAGNOSTICS_ONLY');
 }

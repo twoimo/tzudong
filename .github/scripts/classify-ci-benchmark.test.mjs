@@ -43,6 +43,33 @@ test('governance, evidence and unrelated CI metadata keep the fast parity path',
   }
 });
 
+test('exact repository documentation entry points use parity without broad name exemptions', () => {
+  const documents = ['README.md', 'README.ko.md', 'CHANGELOG.md', 'CHANGELOG.ko.md', 'CONTRIBUTING.md', 'SECURITY.md', 'TASKS.md', 'AGENTS.md', 'LICENSE', 'LICENSE.md', 'LICENSE.txt', '.gitignore', 'scripts/README.md'];
+  for (const file of documents) {
+    assert.deepEqual(classifyPaths([file]), { benchmark: false, reason: 'FEATURE_DIAGNOSTICS_ONLY' }, file);
+    // A documentation-only promotion still verifies the protected source tree.
+    for (const ref of ['data', 'main']) {
+      assert.equal(classifyEvent({ eventName: 'pull_request', event: { pull_request: { ...pr.pull_request, base: { sha: base, ref } } }, head, changedPaths: [file] }).reason, 'PROTECTED_PROMOTION', file);
+      assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, ref: `refs/heads/${ref}`, head, changedPaths: [file] }).reason, 'PROTECTED_PUSH', file);
+    }
+  }
+  for (const file of ['README.mjs', 'README-runner.sh', 'LICENSE-loader.js', 'CHANGELOG/notes.md', 'scripts/README.mjs', 'scripts/README.md/child', 'scripts//README.md']) {
+    assert.deepEqual(classifyPaths([file]), { benchmark: true, reason: 'UNKNOWN_INPUT' }, file);
+  }
+});
+
+test('documentation names cannot hide dependency, compiler or invalid path inputs', () => {
+  for (const file of ['README.md/package.json', 'scripts/README.md/package-lock.json', 'CHANGELOG.lock', 'SECURITY/requirements-dev.txt', 'TASKS.md/bun.lock']) {
+    assert.deepEqual(classifyPaths(['CONTRIBUTING.md', file]), { benchmark: true, reason: 'DEPENDENCY_CHANGE' }, file);
+  }
+  for (const file of ['CONTRIBUTING.config.js', 'TASKS.md/tsconfig.json', 'scripts/README.md/.npmrc']) {
+    assert.deepEqual(classifyPaths(['README.ko.md', file]), { benchmark: true, reason: 'TOOLCHAIN_OR_MEASUREMENT_CHANGE' }, file);
+  }
+  for (const file of ['scripts/../README.md', '/CHANGELOG.md', 'scripts\\README.md', 'docs/README.md\0package.json']) {
+    assert.deepEqual(classifyPaths(['SECURITY.md', file]), { benchmark: true, reason: 'PATH_INVALID' }, file);
+  }
+});
+
 test('uncertain and hostile inputs fail closed', () => {
   for (const paths of [undefined, [], ['new-build-root/runner.mjs'], ['/absolute'], ['apps/web/../package.json'], ['apps\\web\\x.ts'], [null], Array(20_001).fill(feature[0])]) assert.equal(classifyPaths(paths).benchmark, true);
   for (const eventName of ['pull_request_target', 'unknown']) assert.equal(classifyEvent({ eventName, head, event: pr, changedPaths: feature }).benchmark, true);
