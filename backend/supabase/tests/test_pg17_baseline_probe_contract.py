@@ -63,7 +63,11 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         # not exist', because a schema-only dump carries no CREATE ROLE; the one
         # remaining was --clean failing to drop a schema the image also seeds.
         self.assertIn('ROLE_STATEMENTS_SQL', self.script)
-        self.assertIn("format('CREATE ROLE %I NOLOGIN', rolname)", self.script)
+        self.assertIn("format('CREATE ROLE %I NOLOGIN', r.rolname)", self.script)
+        # Policies and default ACLs name roles that own nothing, so an owner-only
+        # query misses them (measured: 119 failures naming privacy_workflow_owner).
+        self.assertIn('pg_catalog.pg_policy', self.script)
+        self.assertIn('pg_catalog.pg_default_acl', self.script)
         self.assertIn('SEEDED_SCHEMAS', self.script)
         self.assertIn('DROP SCHEMA IF EXISTS', self.script)
         self.assertIn('"preparedRoleCount": len(role_statements)', self.script)

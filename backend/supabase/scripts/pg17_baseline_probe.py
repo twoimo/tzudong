@@ -38,12 +38,23 @@ WHERE c.relkind IN ('r','p','v','m','S') AND n.nspname NOT IN ('pg_catalog','inf
 """
 # A schema-only dump carries no CREATE ROLE, so every statement that names a
 # project role fails on a fresh cluster. Measured: 119 of 120 genuine errors were
-# 'role "privacy_workflow_owner" does not exist'.
+# 'role "privacy_workflow_owner" does not exist' - a row-level security policy
+# naming the role, which the owner-only query did not cover.
 ROLE_STATEMENTS_SQL = """
-SELECT format('CREATE ROLE %I NOLOGIN', rolname) FROM pg_catalog.pg_roles
-WHERE rolname NOT LIKE 'pg\\_%'
-  AND rolname NOT IN ('postgres','supabase_admin','supabase_auth_admin','supabase_storage_admin',
-                      'authenticator','dashboard_user','anon','authenticated','service_role')
+WITH referenced AS (
+  SELECT unnest(polroles) AS oid FROM pg_catalog.pg_policy WHERE polroles <> '{0}'
+  UNION
+  SELECT defaclrole FROM pg_catalog.pg_default_acl
+  UNION
+  SELECT relowner FROM pg_catalog.pg_class
+  UNION
+  SELECT proowner FROM pg_catalog.pg_proc
+)
+SELECT format('CREATE ROLE %I NOLOGIN', r.rolname) FROM pg_catalog.pg_roles r
+WHERE r.rolname NOT LIKE 'pg\\_%'
+  AND r.rolname NOT IN ('postgres','supabase_admin','supabase_auth_admin','supabase_storage_admin',
+                        'authenticator','dashboard_user','anon','authenticated','service_role')
+  AND (r.oid IN (SELECT oid FROM referenced) OR r.rolname LIKE 'privacy\\_%')
 ORDER BY 1;
 """
 # The supabase image seeds schemas this project also creates, and --clean cannot drop
