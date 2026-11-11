@@ -29,6 +29,21 @@ class ExplosiveError(Exception):
 
 
 class PrivacyLogTests(unittest.TestCase):
+    def test_unlabelled_sensitive_text_still_runs_the_other_redactors(self) -> None:
+        cases = [
+            ("person@example.com", REDACTED),
+            ("010-1234-5678", REDACTED),
+            ("Bearer fixture-only-token", f"Bearer {REDACTED}"),
+            ("ghp_" + "A" * 24, REDACTED),
+        ]
+        for value, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(redact_log_text(value), expected)
+
+    def test_long_plain_text_without_field_or_url_literals_is_preserved(self) -> None:
+        text = "B" * 4000
+        self.assertEqual(redact_log_text(text), text)
+
     def test_redact_log_text_removes_supported_sensitive_values(self) -> None:
         secret_values = [
             "person@example.com",

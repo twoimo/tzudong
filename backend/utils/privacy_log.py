@@ -112,7 +112,10 @@ def _redact_text(text: str) -> str:
     text = _PRIVATE_KEY_RE.sub(REDACTED, text)
     text = _COOKIE_HEADER_RE.sub(lambda match: f"{match.group(1)}{REDACTED}", text)
     text = _RAW_OCR_RE.sub(lambda match: f"{match.group(1)}{REDACTED}", text)
-    text = _URL_USERINFO_RE.sub(lambda match: f"{match.group(1)}{REDACTED}@", text)
+    # Every match requires these ASCII literals. Check the current text before
+    # asking the regex to backtrack across long strings that cannot match.
+    if "://" in text and "@" in text:
+        text = _URL_USERINFO_RE.sub(lambda match: f"{match.group(1)}{REDACTED}@", text)
     text = _SECRET_QUERY_RE.sub(lambda match: f"{match.group(1).split('=', 1)[0]}={REDACTED}", text)
     text = _BEARER_RE.sub(f"Bearer {REDACTED}", text)
     text = _JWT_RE.sub(REDACTED, text)
@@ -122,7 +125,10 @@ def _redact_text(text: str) -> str:
         quote = match.group("quote")
         return f"{match.group('label')}{match.group('separator')}{quote}{REDACTED}{quote}"
 
-    text = _SENSITIVE_FIELD_RE.sub(redact_field, text)
+    # The field separator is necessarily ':' or '='; the remaining redactors
+    # still run when neither is present (for example, bare email or phone data).
+    if ":" in text or "=" in text:
+        text = _SENSITIVE_FIELD_RE.sub(redact_field, text)
     text = _RRN_RE.sub(REDACTED, text)
     text = _KOREAN_PHONE_RE.sub(REDACTED, text)
     text = _INTERNATIONAL_PHONE_RE.sub(REDACTED, text)

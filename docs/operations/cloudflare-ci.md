@@ -192,6 +192,39 @@ GitHub `Release`, 전체 8-shard 단위 테스트, 앱 build/lint/typecheck, 플
 실패 처리한다. 설치 단계의 중복 npm audit만 제거하며 Security의 독립 감사와
 Freshness의 lint·전체 unit·typecheck parity·build 네 검사는 유지한다.
 
+### 로그 경계 검사의 불필요한 정규식 탐색
+
+후속 PR의 [Security 실행](https://github.com/twoimo/tzudong/actions/runs/43092578870/job/130773156365)에서
+`test_serialized_over_65536_is_reduced_with_marker` 한 건이 약 172초를 소비했다.
+원인은 직렬화 크기 검사 앞에서 구분자가 없는 긴 문자열에 URL userinfo와
+민감 필드 정규식을 반복 적용하는 경로였다.
+
+`backend/utils/privacy_log.py`는 해당 정규식 직전의 문자열에 필수 구분자가
+존재하는지 먼저 확인한다. URL 정규식은 `://`와 `@`, 민감 필드 정규식은
+`:` 또는 `=`가 반드시 필요하다. 이 조건이 없을 때만 탐색을 생략하며
+기존 정규식·치환 순서·표식·길이와 깊이 제한은 유지한다. 이메일·전화번호·Bearer
+등 다른 마스킹 단계는 계속 실행한다.
+
+| 동일 로컬 fixture 관측 | 결과 |
+| --- | ---: |
+| 변경 전, 4,000문자 문자열 100개 | 127.973초 |
+| 실제 변경 소스, 같은 fixture | 0.150초 |
+| 두 출력 | 모두 165바이트, SHA-256 일치 |
+| 소스 편집 전 메모리 내 prototype 동등성 대조 | 합성 입력 542건의 JSON 바이트 일치 |
+
+출력 SHA-256은 `21a953e737b2fa5c5598cbea3f5d14f8ef523e0258afbbeeef25fefc73ffcf4f`다.
+도구 stdout에서 옮긴 정확한 수치·소스 blob·관측 한계는
+[진단 영수증](../../apps/web/performance/ci-redaction-diagnostic-20261112/receipt.json)과
+[artifact map](../../apps/web/performance/ci-redaction-diagnostic-20261112/artifact-map.json)에 보존한다.
+전후 각각 1회 관측이며 원본에만 호출 수 계측 wrapper가 있다. 계측 당시 Python
+정확한 버전은 기록하지 않았고 원본 스크립트·raw 파일도 따로 보존하지 않았다.
+542건은 소스 편집 전 prototype 비교이며 실제 수정 소스의 재실행 결과로 취급하지 않는다.
+절대·상대·노이즈 예산은 지정하지 않았고 노이즈 분포도 측정하지 않았다.
+이는 해당 fixture의 진단 기록이며 정식 benchmark나 전체 CI 개선 주장에 해당하지 않고,
+G003 admitted slice는 0개다. 구분자가 있는 모든 입력의 선형 실행 시간을 보장하지 않는다.
+기존 큰 fixture와 보안 검사는 그대로 유지하고, separator가 없는 민감값도 계속
+마스킹되는 회귀 검사를 추가했다.
+
 ### 기본 브랜치 활성화 의존성
 
 시작 시점의 기본 브랜치 `main`은 `98f774346c477ac74058cdcbdf8636b0aff8b54c`다.

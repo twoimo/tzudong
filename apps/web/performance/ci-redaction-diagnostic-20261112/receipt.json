@@ -1,0 +1,87 @@
+{
+  "claimLimits": {
+    "absoluteBudget": null,
+    "admittedG003Slices": 0,
+    "budgetStatus": "not-specified",
+    "formalBenchmarkClaim": false,
+    "limitations": [
+      "One timing sample per implementation; counting wrappers differ.",
+      "Timing-time Python version and exact timestamps were not recorded.",
+      "No controlled-load or noise-distribution measurement.",
+      "The 542-case comparison measured an in-memory prototype, not a rerun of the modified source.",
+      "The original large fixture, regexes, output markers and bounds were unchanged.",
+      "No worst-case linear-time or whole-CI performance conclusion."
+    ],
+    "noiseBudget": null,
+    "noiseDistributionMeasured": false,
+    "relativeBudget": null,
+    "wholeCiImprovementClaim": false
+  },
+  "fixture": {
+    "modified": false,
+    "serialization": "json.dumps(result, sort_keys=True, separators=(\",\", \":\")).encode()",
+    "sourcePath": "backend/pipeline_control/test_log_redaction_unittest.py",
+    "statusEntryCount": 100,
+    "statusValue": "B repeated 4000 times",
+    "test": "backend.pipeline_control.test_log_redaction_unittest.BoundsTests.test_serialized_over_65536_is_reduced_with_marker"
+  },
+  "observations": {
+    "baseline": {
+      "instrumentation": "Wrapper counts _redact_text calls and delegates every call to the original function; time.perf_counter surrounds redact_record.",
+      "sampleCount": 1,
+      "stdout": {
+        "bytes": 165,
+        "calls": {
+          "repeated_value": 94,
+          "total": 199
+        },
+        "mode": "baseline",
+        "seconds": 127.97299665900209,
+        "sha256": "21a953e737b2fa5c5598cbea3f5d14f8ef523e0258afbbeeef25fefc73ffcf4f"
+      }
+    },
+    "modifiedSource": {
+      "instrumentation": "No counting wrapper; time.perf_counter surrounds the actual modified redact_record.",
+      "sampleCount": 1,
+      "stdout": {
+        "byte_equal_to_measured_baseline": true,
+        "mode": "actual_two_literal_guards",
+        "seconds": 0.15036946200052625,
+        "serialized_bytes": 165,
+        "sha256": "21a953e737b2fa5c5598cbea3f5d14f8ef523e0258afbbeeef25fefc73ffcf4f"
+      }
+    },
+    "prototypeEquivalence": {
+      "actualModifiedSourceComparison": false,
+      "manualSyntheticCases": 30,
+      "method": "Original redaction sequence versus proxies adding only the two required-literal guards to the original regex sub calls; compare JSON bytes with ensure_ascii=True.",
+      "randomSeed": 20261112,
+      "scriptRetained": false,
+      "seededSyntheticCases": 512,
+      "status": "in-memory-prototype-comparison-before-source-edit",
+      "stdout": {
+        "byte_equal": true,
+        "differential_cases": 542,
+        "seconds": 3.4909178689995315
+      }
+    }
+  },
+  "provenance": {
+    "exactTimingTimestamp": null,
+    "executionMethod": "Python here-document through exec_command",
+    "kind": "tool_stdout_transcription",
+    "originalMeasurementScriptRetained": false,
+    "originalRawFileRetained": false,
+    "pythonInvocation": "python3",
+    "pythonVersionAtTiming": null,
+    "sourceBlobBindingMethod": "Git object lookup after measurement; no baseline rerun"
+  },
+  "schema": "ci-redaction-diagnostic/v1",
+  "scope": "single-synthetic-fixture-diagnostic-only",
+  "sourceBindings": {
+    "baselineGitBlob": "9e1992ec57048d53ebd9333719e210a212919905",
+    "baselineLookupCommit": "4becfc06c2b9c9246f3f8ba0fa1f46b61cc45ecc",
+    "modifiedGitBlob": "7fe1f8c2ed658e31f756eabbc27af08359a5223a",
+    "path": "backend/utils/privacy_log.py"
+  }
+}

@@ -190,6 +190,26 @@ now retries (six dispatches died on runner DNS before the stack was ever started
 and the probe runs before the regression lanes so a lane failure cannot consume the
 measurement.
 
+### What the pin actually requires
+
+`backend/supabase/tests/test_local_postgres_image_pin.py` refuses a major above 15
+while the adapter layer exists, and the adapters exist because the historical chain
+replays at 91 of 161 migrations on 17. Those two facts make a pin swap on its own
+wrong: `local-migrate.py apply` replays the chain, so moving the pin without changing
+how the stack is provisioned turns a working local stack into a 91/161 stack.
+
+The measured baseline restore gives the other order:
+
+1. keep the replay adapters, and build a canonical baseline from a verified stack;
+2. provision a new stack by creating the referenced roles and restoring the baseline
+   instead of replaying 161 migrations;
+3. retire the replay adapters, because nothing replays the chain any more;
+4. only then move the pin, which the pin test permits once the adapters are gone.
+
+Step 2 is the missing piece of machinery: the applier has no baseline mode. Until it
+does, the pin stays at 15 and the adapters stay load-bearing, which is the current,
+measured state rather than a stalled one.
+
 ### Applier support (default off)
 
 `backend/supabase/scripts/local-migrate.py` can now run the migration bodies that
