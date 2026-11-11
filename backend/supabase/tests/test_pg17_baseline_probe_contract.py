@@ -24,6 +24,11 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertIn("        default: false\n        type: boolean\n", self.workflow)
         self.assertIn("if: ${{ inputs.pg17_baseline == true }}", self.workflow)
 
+    def test_the_step_resolves_its_own_container_and_database(self) -> None:
+        self.assertIn('com.docker.compose.service=db', self.workflow)
+        self.assertIn('"$LOCAL_STATE/stack.env"', self.workflow)
+        self.assertNotIn('--database-container "$LOCAL_DB_CONTAINER"', self.workflow)
+
     def test_the_probe_runs_before_the_stack_is_removed(self) -> None:
         probe = self.workflow.index("Probe the PostgreSQL 17 baseline restore")
         teardown = self.workflow.index("Stop and remove disposable local stack")

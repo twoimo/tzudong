@@ -1864,9 +1864,12 @@ jobs:
         if: ${{ inputs.pg17_baseline == true }}
         run: |
           set -euo pipefail
+          container="$(docker ps --filter label=com.docker.compose.service=db --format '{{.Names}}' | head -n 1)"
+          test -n "$container"
+          database="$(sed -n 's/^POSTGRES_DB=//p' "$LOCAL_STATE/stack.env" | head -n 1)"
           python3 backend/supabase/scripts/pg17_baseline_probe.py \
-            --database-container "$LOCAL_DB_CONTAINER" \
-            --database "$POSTGRES_DB" \
+            --database-container "$container" \
+            --database "${database:-postgres}" \
             --output "$RUNNER_TEMP/pg17-baseline.json"
 
       - name: Upload the PostgreSQL 17 baseline probe record
