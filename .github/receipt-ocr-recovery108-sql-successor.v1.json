@@ -34,18 +34,18 @@
     "version": "20261019130000",
     "name": "receipt_ocr_indeterminate_recovery",
     "path": "backend/supabase/migrations/20261019130000_receipt_ocr_indeterminate_recovery.sql",
-    "sha256": "d3258b679cbf42ecd97edeab941a5bbaf30fa7b15d968081b60b8b600a3ecd1a",
+    "sha256": "daeb7ec9df5ce81a9608f53bbb38fdbc658d9fecc0211ef7be4ca233377df939",
     "statementCount": 83,
-    "statementVectorSha256": "3d0bfeb1229b194f818b95a1b4b1ba50609770a93afd8e3c67daabd513c0bd56"
+    "statementVectorSha256": "289c8a02d796f318e934f6826850151f052926e1bb1c4f3b5f958999d841c574"
   },
   "operatingIdentity": {
-    "migrationIdentityRoot": "0f6f764cb097b9ae1e5387a395411ea6fcd98cd5286bace4542901a1c08f3f6e",
+    "migrationIdentityRoot": "6559dad9dba717354a6e9579f01ec9dc59194feaeb4c52882b6687f3cad3e79d",
     "predecessorIdentityRoot": "cd04aebfc1efcc5588486adf3b7ba47fc5b5b76e39a9c23e316768f2919d9d9e",
-    "targetIdentityRoot": "2c7b7fff113a68ad4b73a8ebb005296ddd1344de5fa09fcf828b905e4517bb1d"
+    "targetIdentityRoot": "68680fe2183aaff2b01e527ecac68aca3b546786c04cd29356c39a113dbf6668"
   },
   "fixture": {
     "path": "backend/supabase/tests/receipt_ocr_indeterminate_recovery.sql",
-    "sha256": "01766da42c73195925c4fdcf3dbbdcf1efb651b947e3087481306f86179e76c2"
+    "sha256": "1e6c71105dcd5af31ea211b3051d4a4955009f17f63bdfec456d39ca4afc79be"
   },
   "aclInitialDefaultFixture": {
     "path": "backend/supabase/tests/receipt_ocr_indeterminate_recovery_acl_initial_default.sql",
