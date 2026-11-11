@@ -71,6 +71,7 @@ profile. Two PG15 baselines are committed:
 | `pg15-chain-role-probe-20261111.json` | `supabase_admin` | 54 / 107 | postgres 87, supabase_admin 38 |
 | `pg15-chain-role-probe-prereq-postgres-20261111.json` | `postgres` (continue on error) | 70 / 91 | postgres 129, supabase_admin 5 |
 | `pg15-chain-role-probe-mixed-20261111.json` | `postgres`, `SUPERUSER` files as `supabase_admin`, grant normalisation after each | 87 / 74 | see baseline |
+| `pg15-chain-role-probe-staged-20261111.json` | staged order: GoTrue bootstrap, mixed roles, grant normalisation before each body once the schema exists | **91 / 70** | see baseline |
 
 Applying the prerequisite bundle as `postgres` fails on exactly one statement
 (`ALTER DEFAULT PRIVILEGES`, `must be member of role "supabase_admin"`) and moves
@@ -140,6 +141,19 @@ renders the image's 65 `text/template` migrations (their only variable is
 `{{ index .Options "Namespace" }}`) into plain SQL, and applying them as
 `supabase_auth_admin` creates `auth.sessions` and `auth.refresh_tokens`. Verified
 65/65 on PG15.
+
+### Staged order (best measured profile)
+
+Running the stages in order - prerequisite as the migration role, privileged
+prerequisite replay, GoTrue bootstrap, then per migration a conditional grant
+normalisation followed by the body - reaches **91 applied / 70 failed**, the best
+of four profiles (54, 70, 87, 91). The probe implements that order behind
+`--gotrue-migrations`, `--mixed-privileged`, `--staged-grants` and `--grant-file`.
+
+What remains is ownership: 27 of the 70 failures are `must be owner of function ...`
+or `must be owner of table ...`, because a privileged run creates objects owned by
+`supabase_admin`. That needs an owner-transfer or per-object grant rule, which is
+the first open question in the model file.
 
 ### The ordering is the open problem
 
