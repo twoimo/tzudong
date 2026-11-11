@@ -171,6 +171,18 @@ modules that assert each adapter, so deleting an adapter means deleting its list
 tests in the same change. Twenty-four test modules in total depend on the replay
 layer, which is why this is a dedicated change and not a line in another one.
 
+### Rejected: extending the privileged set
+
+Widening the privileged bodies from the 4 `SUPERUSER` migrations to all 41 that also
+`SET ROLE` changed nothing: 91 applied / 70 failed before and after, with zero churn
+in the failing set. The `SET ROLE` bodies already behave correctly, so the remaining
+failures are structural rather than role assignment.
+
+That closes the role-assignment line of enquiry: privileged set (4 and 41),
+`CREATEROLE`, pre-created roles and ownership transfer are all measured ineffective.
+The remaining 70 failures are the semantics of the adapter replacement bodies
+themselves.
+
 ### Rejected: ownership transfer
 
 The obvious next lever - transfer every `supabase_admin`-created object to

@@ -2704,8 +2704,12 @@ def _privileged_bodies() -> frozenset[str]:
         document = json.loads(candidate.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return frozenset()
-    migrations = document.get("migrations")
-    return frozenset(item for item in migrations if isinstance(item, str)) if isinstance(migrations, list) else frozenset()
+    names: list[str] = []
+    for key in ("migrations", "roleScopedMigrations"):
+        entries = document.get(key)
+        if isinstance(entries, list):
+            names.extend(item for item in entries if isinstance(item, str))
+    return frozenset(names)
 
 
 def _execution_body(item: Mapping[str, Any]) -> bytes:

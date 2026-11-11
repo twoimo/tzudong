@@ -187,6 +187,18 @@ def main() -> int:
         if args.grant_file:
             grant_sql = Path(args.grant_file).read_bytes()
 
+        privileged_names: set[str] = set()
+        if args.mixed_privileged:
+            manifest_path = REPOSITORY_ROOT / "backend/supabase/baselines/local/LOCAL_PRIVILEGED_BODIES.v1.json"
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                for key in ("migrations", "roleScopedMigrations"):
+                    entries = manifest.get(key)
+                    if isinstance(entries, list):
+                        privileged_names.update(item for item in entries if isinstance(item, str))
+            except (OSError, ValueError):
+                privileged_names = set()
+
         gotrue: dict[str, Any] = {"applied": 0, "failed": 0}
         if args.gotrue_migrations:
             run(["docker", "exec", container, "mkdir", "-p", "/probe/gotrue"])
@@ -208,8 +220,10 @@ def main() -> int:
             # profile is meant to show.
             role = args.migration_role
             if args.mixed_privileged:
-                text = subprocess.run(["docker", "exec", container, "cat", path], capture_output=True).stdout.decode("utf-8", "replace")
-                if "SUPERUSER" in text:
+                # The manifest is the single source of truth for which bodies the
+                # migration role cannot run (SUPERUSER statements and SET ROLE to a
+                # principal it is not a member of).
+                if Path(path).name in privileged_names:
                     role = args.privileged_role
             if grant_sql is not None:
                 if args.staged_grants:
