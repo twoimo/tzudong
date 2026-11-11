@@ -124,16 +124,26 @@ def main() -> int:
         role_statements = [
             line for line in psql(args.database_container, "postgres", ROLE_STATEMENTS_SQL).decode().splitlines() if line
         ]
-        setup_statements = role_statements + [
+        # psql needs one terminated statement per line: joined without ';' the file
+        # parses as a single broken statement and only the first line runs, which is
+        # exactly how 7 prepared roles became 0 created roles.
+        setup_statements = [f"{statement.rstrip(';')};" for statement in role_statements] + [
             f"DROP SCHEMA IF EXISTS {schema} CASCADE;" for schema in SEEDED_SCHEMAS
         ]
         setup_path = args.output.with_suffix(".setup.sql")
         setup_path.write_text("\n".join(setup_statements) + "\n", encoding="utf-8")
         run(["docker", "cp", str(setup_path), f"{RESTORE_CONTAINER}:/tmp/setup.sql"])
-        run([
+        setup = run([
             "docker", "exec", "-i", RESTORE_CONTAINER,
             "psql", "-U", args.restore_role, "-d", "profile", "-q", "-v", "ON_ERROR_STOP=0", "-f", "/tmp/setup.sql",
         ], check=False, capture=True)
+        # Silence here is what hid a missing semicolon: the setup reported a syntax
+        # error while the restore below simply kept failing on the same role.
+        setup_errors = [
+            line.split("ERROR:")[-1].strip()[:200]
+            for line in setup.stderr.decode("utf-8", "replace").splitlines()
+            if "ERROR:" in line
+        ]
         setup_path.unlink(missing_ok=True)
         run(["docker", "cp", str(dump_path), f"{RESTORE_CONTAINER}:/tmp/dump.sql"])
         restore = run([
@@ -162,6 +172,8 @@ def main() -> int:
             "targetImage": PG17_IMAGE,
             "restoreRole": args.restore_role,
             "preparedRoleCount": len(role_statements),
+            "setupErrorCount": len(setup_errors),
+            "setupErrors": setup_errors[:10],
             "sourceObjects": source_objects,
             "restoredObjects": restored_objects,
             "dumpBytes": len(dump),
@@ -171,7 +183,7 @@ def main() -> int:
             "restoreErrors": restore_errors[:50],
             "missingObjectCount": len(missing),
             "missingObjects": missing[:50],
-            "restored": source_objects > 0 and not restore_errors and not missing,
+            "restored": source_objects > 0 and not restore_errors and not missing and not setup_errors,
         }
     finally:
         run(["docker", "rm", "-f", RESTORE_CONTAINER], check=False)

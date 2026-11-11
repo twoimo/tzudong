@@ -72,6 +72,12 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertIn('DROP SCHEMA IF EXISTS', self.script)
         self.assertIn('"preparedRoleCount": len(role_statements)', self.script)
 
+    def test_every_setup_statement_is_terminated(self) -> None:
+        # Measured: joined with newlines only, psql read the whole role block as one
+        # statement, reported a syntax error at the second line, and created nothing.
+        self.assertIn("f\"{statement.rstrip(';')};\"", self.script)
+        self.assertIn('"setupErrorCount": len(setup_errors)', self.script)
+
     def test_the_restore_uses_the_role_that_owns_the_catalog(self) -> None:
         # Measured: `postgres` in the supabase image has no DDL rights and fails every
         # statement with "permission denied for database", which reads as a schema
