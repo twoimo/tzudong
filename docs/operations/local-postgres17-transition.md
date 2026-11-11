@@ -74,8 +74,24 @@ profile. Two PG15 baselines are committed:
 Applying the prerequisite bundle as `postgres` fails on exactly one statement
 (`ALTER DEFAULT PRIVILEGES`, `must be member of role "supabase_admin"`) and moves
 sixteen more migrations through, because the objects it creates are then owned by
-the role that later alters them. The remaining 91 failures cluster into three
-causes and nothing else:
+the role that later alters them. The probe replays that one statement as
+`supabase_admin` afterwards (`privilegedReplay` in the baseline), which leaves the
+bundle complete and `postgres` owning everything it created.
+
+The remaining 91 failures break down by root cause, not by surface:
+
+| Root cause | Migrations |
+| --- | --- |
+| Privileged role statements inside migration bodies (`permission denied to alter role`, `role "privacy_workflow_owner" does not exist`) | 24 |
+| Missing GoTrue bootstrap (`supported GoTrue session tables are unavailable`) | 1 |
+| Cascade from those two (`G014-xx required ... dependencies are missing` and friends) | 65 |
+| Ownership or permission | 1 |
+
+Twenty-five statements are the whole problem; the other sixty-five clear themselves
+once those succeed. The list of the 24 is what the adapter ledger in
+`backend/supabase/baselines/local/PG15_REPLAY_ADAPTERS.v1.json` describes, so the
+two can be reconciled directly. The remaining failures cluster as follows, and
+nothing else:
 
 1. privileged role statements the migration bodies issue themselves
    (`permission denied to alter role`, `role "privacy_workflow_owner" does not exist`);
