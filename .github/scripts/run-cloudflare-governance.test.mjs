@@ -5,11 +5,25 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { CHECK_NAMES, EXPECTED_ARTIFACT_SHA256, TOTAL_BUDGET_MS, createWorker, validateReceipt } from '../cloudflare/worker.mjs';
 import { GovernanceError, checkPlan, childEnvironment, executeCheckPlan, identifyCheckout, parseArguments, runCommand, runGovernance } from './run-cloudflare-governance.mjs';
 
 const buildId = '12345678-1234-4234-8234-123456789abc';
 const cleanEnv = childEnvironment(process.env);
+
+test('deployment inputs and the authoritative lock are present in the Git source', () => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const paths = ['.github/cloudflare/package.json', '.github/cloudflare/package-lock.json', '.github/cloudflare/wrangler.jsonc'];
+  const tracked = spawnSync('git', ['-C', root, 'ls-files', '--error-unmatch', '--', ...paths], { encoding: 'utf8', env: cleanEnv });
+  assert.equal(tracked.status, 0, 'required deployment input is absent from the tracked source');
+  assert.deepEqual(tracked.stdout.trim().split('\n').sort(), [...paths].sort());
+  const manifest = JSON.parse(readFileSync(join(root, paths[0]), 'utf8'));
+  const lock = JSON.parse(readFileSync(join(root, paths[1]), 'utf8'));
+  assert.equal(lock.packages[''].devDependencies.wrangler, manifest.devDependencies.wrangler);
+  assert.equal(lock.packages['node_modules/wrangler'].version, manifest.devDependencies.wrangler);
+});
+
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'cloudflare-governance-test-'));
   const git = (...args) => {
