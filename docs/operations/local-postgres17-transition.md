@@ -163,6 +163,25 @@ disposable `supabase/postgres:17.11.0.018` container, counts objects on both sid
 and reports the restore errors. It is gated behind the `pg17_baseline` dispatch
 input (default `false`), so the nightly is unchanged unless it is requested.
 
+### Measured: the working schema does restore on PG17
+
+Two nightly runs of `pg17_baseline_probe.py` (record:
+`backend/supabase/baselines/local/pg17-baseline-restore-20261111.json`):
+
+| Run | Restore role | Source | Restored | Errors |
+| --- | --- | --- | --- | --- |
+| 43023085171 | `postgres` | 260 | 14 | 2603, all `permission denied for database` |
+| 43029324112 | `supabase_admin` | 260 | 259 | 172, all `already exists` |
+
+The first run is not a schema result: that image gives `postgres` no DDL rights, so
+every statement failed. Once the restore runs as `supabase_admin` the schema lands,
+and every remaining error names an object the image seeds itself (`auth`, `storage`,
+`vault`, `extensions`, `graphql`, `realtime`, `pgbouncer`).
+
+So the transition does not need the ~24 migrations rewritten. It needs the adapter
+layer kept and one object explained: a count of 259 against 260 is not a verdict,
+which is why the probe now compares object names instead of totals.
+
 ### Applier support (default off)
 
 `backend/supabase/scripts/local-migrate.py` can now run the migration bodies that
