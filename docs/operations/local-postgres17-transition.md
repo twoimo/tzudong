@@ -151,6 +151,15 @@ normalisation followed by the body - reaches **91 applied / 70 failed**, the bes
 of four profiles (54, 70, 87, 91). The probe implements that order behind
 `--gotrue-migrations`, `--mixed-privileged`, `--staged-grants` and `--grant-file`.
 
+### Applier support (default off)
+
+`backend/supabase/scripts/local-migrate.py` can now run the migration bodies that
+PostgreSQL refuses for the migration role as `supabase_admin`, driven by
+`backend/supabase/baselines/local/LOCAL_PRIVILEGED_BODIES.v1.json` and gated by
+`TZUDONG_LOCAL_PRIVILEGED_BODIES`. It stays off by default, so the local stack
+keeps the adapter path and the nightly is unaffected until the switch is made on
+purpose.
+
 ### Rejected: ownership transfer
 
 The obvious next lever - transfer every `supabase_admin`-created object to
