@@ -16,8 +16,6 @@
   </p>
 </div>
 
-[Features](#features) · [Preview](#preview) · [Local development](#local-development) · [Repository](#repository) · [Documentation](#documentation)
-
 ## Features
 
 - **Discover restaurants:** browse domestic and overseas maps, search and filter places, and open restaurant details with video sources.
