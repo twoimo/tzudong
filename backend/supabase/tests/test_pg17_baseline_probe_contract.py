@@ -42,6 +42,14 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertIn('docker", "rm", "-f", RESTORE_CONTAINER', self.script)
         self.assertNotIn("docker rm -f {args.database_container}", self.script)
 
+    def test_the_restore_uses_the_role_that_owns_the_catalog(self) -> None:
+        # Measured: `postgres` in the supabase image has no DDL rights and fails every
+        # statement with "permission denied for database", which reads as a schema
+        # incompatibility but is not one.
+        self.assertIn('RESTORE_ROLE = "supabase_admin"', self.script)
+        self.assertIn('"psql", "-U", args.restore_role', self.script)
+        self.assertNotIn('"psql", "-U", "postgres", "-d", "profile"', self.script)
+
 
 if __name__ == "__main__":
     unittest.main()

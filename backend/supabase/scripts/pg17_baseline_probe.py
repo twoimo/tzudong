@@ -26,6 +26,10 @@ from typing import Any, Sequence
 
 PG17_IMAGE = "supabase/postgres:17.11.0.018"
 RESTORE_CONTAINER = "tzudong-pg17-baseline"
+# The supabase image does not give `postgres` DDL rights: restoring as it fails with
+# "permission denied for database <name>" on every statement. supabase_admin owns the
+# catalogue, so the restore and the object count both run as that role.
+RESTORE_ROLE = "supabase_admin"
 SCHEMAS = ("public", "privacy_retention", "ocr_private", "private", "storage", "auth")
 OBJECT_COUNT_SQL = """
 SELECT pg_catalog.count(*) FROM pg_catalog.pg_class c
@@ -53,6 +57,7 @@ def main() -> int:
     parser.add_argument("--database-container", required=True)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--database", default="postgres")
+    parser.add_argument("--restore-role", default=RESTORE_ROLE)
     args = parser.parse_args()
 
     source_objects = int(psql(args.database_container, "postgres", OBJECT_COUNT_SQL).decode().strip() or 0)
@@ -83,19 +88,20 @@ def main() -> int:
         run(["docker", "cp", str(dump_path), f"{RESTORE_CONTAINER}:/tmp/dump.sql"])
         restore = run([
             "docker", "exec", "-i", RESTORE_CONTAINER,
-            "psql", "-U", "postgres", "-d", "profile", "-q", "-v", "ON_ERROR_STOP=0", "-f", "/tmp/dump.sql",
+            "psql", "-U", args.restore_role, "-d", "profile", "-q", "-v", "ON_ERROR_STOP=0", "-f", "/tmp/dump.sql",
         ], check=False, capture=True)
         restore_errors = [
             line.split("ERROR:")[-1].strip()[:160]
             for line in restore.stderr.decode("utf-8", "replace").splitlines()
             if "ERROR:" in line
         ]
-        restored_objects = int(psql(RESTORE_CONTAINER, "postgres", OBJECT_COUNT_SQL, database="profile").decode().strip() or 0)
+        restored_objects = int(psql(RESTORE_CONTAINER, args.restore_role, OBJECT_COUNT_SQL, database="profile").decode().strip() or 0)
         record: dict[str, Any] = {
             "schemaVersion": 1,
             "kind": "local-pg17-baseline-probe",
             "sourceImage": "local stack (working schema, adapters applied)",
             "targetImage": PG17_IMAGE,
+            "restoreRole": args.restore_role,
             "sourceObjects": source_objects,
             "restoredObjects": restored_objects,
             "dumpBytes": len(dump),
