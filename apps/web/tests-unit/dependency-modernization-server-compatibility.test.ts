@@ -73,9 +73,9 @@ describe('dependency modernization release authority', () => {
     expect(installJob).not.toMatch(/^\s*npm run test:dependency-modernization\s*$/m);
     expect(installJob).not.toMatch(/^\s*npm run build\s*$/m);
     for (const token of [
-      'npm ci',
+      'npm ci --no-audit --fund=false',
       'sha256sum package-lock.json bun.lock',
-      'npx playwright install --with-deps chromium',
+      'node ../../.github/scripts/ensure-ci-chromium.mjs',
       'TZUDONG_DEPENDENCY_PROOF_ROOT="$root"',
       'TZUDONG_NODE24_EXECUTABLE="$node_bin"',
       'TZUDONG_NPM_11_EXECUTABLE="$npm_bin"',

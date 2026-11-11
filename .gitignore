@@ -21,6 +21,8 @@ artifacts/
 apps/artifacts/
 apps/web/artifacts/
 nightly-artifacts/
+/.github/cloudflare/generated/
+/.github/cloudflare/.wrangler/
 apps/.release-visual-protected-replay/
 
 # ── 로그 / Logs ──────────────────────────────────────────
@@ -130,6 +132,7 @@ g028-quality-gate.json
 
 # Root has no package.json; keep accidental root npm lockfiles out of public branches.
 package-lock.json
+!/.github/cloudflare/package-lock.json
 
 # ── 크롤링 데이터 무시 ────────────────────────────────────
 backend/restaurant-crawling/data/*/frames/

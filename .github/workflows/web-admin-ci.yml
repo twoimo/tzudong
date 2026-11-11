@@ -93,9 +93,9 @@ jobs:
           test "${npm_bin#/}" != "$npm_bin"
           (
             cd "$root"
-            npm ci
+            npm ci --no-audit --fund=false
             sha256sum package-lock.json bun.lock > dependency-modernization-lock-hashes-npm.txt
-            npx playwright install --with-deps chromium
+            node ../../.github/scripts/ensure-ci-chromium.mjs
             TZUDONG_DEPENDENCY_PROOF_ROOT="$root" \
               TZUDONG_NODE24_EXECUTABLE="$node_bin" \
               TZUDONG_NPM_11_EXECUTABLE="$npm_bin" \
@@ -149,7 +149,10 @@ jobs:
           bun-version: '1.4.0'
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
-      - run: npm ci
+      - run: npm ci --no-audit --fund=false
+      - name: Verify browser setup failure paths
+        working-directory: ${{ github.workspace }}
+        run: node --test .github/scripts/ensure-ci-chromium.test.mjs
       - name: Verify compiler scope classifier
         working-directory: ${{ github.workspace }}
         run: node --test .github/scripts/classify-ci-benchmark.test.mjs
@@ -217,9 +220,9 @@ jobs:
           bun-version: '1.4.0'
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
-      - run: npm ci
-      - name: Install pinned Chrome for Testing for browser unit tests
-        run: npx playwright install --with-deps chromium
+      - run: npm ci --no-audit --fund=false
+      - name: Install and launch pinned Chrome for Testing
+        run: node ../../.github/scripts/ensure-ci-chromium.mjs
       - name: Verify crawler browser identity against the web browser pin
         run: |
           set -euo pipefail
@@ -251,7 +254,7 @@ jobs:
           bun-version: '1.4.0'
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
-      - run: npm ci
+      - run: npm ci --no-audit --fund=false
       - run: npm run build
 
   ubuntu-bun-compatibility:
@@ -344,7 +347,7 @@ jobs:
         run: |
           npm install --global npm@11.6.2
           if ($LASTEXITCODE -ne 0 -or (npm --version) -ne '11.6.2') { exit 1 }
-      - run: npm ci
+      - run: npm ci --no-audit --fund=false
       - run: npm run lint
       - name: Verify compiler scope classifier
         working-directory: ${{ github.workspace }}/web-npm
@@ -482,7 +485,7 @@ jobs:
           bun-version: '1.4.0'
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
-      - run: npm ci
+      - run: npm ci --no-audit --fund=false
       - name: Install backend dependencies with bounded network retry
         run: bash ../../.github/scripts/install-backend-npm-dependencies.sh
       - run: npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0

@@ -49,8 +49,8 @@ describe('Dependency_Freshness_Workflow governance contract', () => {
     expect(() => bindVerificationToCommit(candidates, results, null)).toThrow('checked_commit_invalid');
     expect(workflow).toContain('ref: ${{ github.event.pull_request.head.sha || github.sha }}');
   });
-  test('enumerates exactly seven units including the cargo unit (design C2)', () => {
-    expect(UNITS).toHaveLength(7);
+  test('enumerates the seven original units and the isolated Cloudflare toolchain', () => {
+    expect(UNITS).toHaveLength(8);
     const directories = UNITS.map((unit) => unit.directory);
     expect(directories).toEqual([
       '/apps/web',
@@ -60,16 +60,17 @@ describe('Dependency_Freshness_Workflow governance contract', () => {
       '/backend/pipeline-control',
       '/',
       '/backend/rust',
+      '/.github/cloudflare',
     ]);
     const cargo = UNITS.find((unit) => unit.ecosystem === 'cargo');
     expect(cargo?.number).toBe(7);
     expect(cargo?.directory).toBe('/backend/rust');
-    expect(UNITS.filter((unit) => unit.ecosystem === 'npm')).toHaveLength(2);
+    expect(UNITS.filter((unit) => unit.ecosystem === 'npm')).toHaveLength(3);
     expect(UNITS.filter((unit) => unit.ecosystem === 'pip')).toHaveLength(3);
     expect(UNITS.filter((unit) => unit.ecosystem === 'github-actions')).toHaveLength(1);
   });
 
-  test('all seven units mirror the current dependabot.yml directories', () => {
+  test('all units mirror the current dependabot.yml directories', () => {
     for (const unit of UNITS) {
       expect(dependabot).toContain(`directory: "${unit.directory}"`);
     }
@@ -270,8 +271,8 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
       ],
     });
     expect(receipt.runAtUtc).toBe('2026-01-05T06:00:00Z');
-    expect(receipt.unitCount).toBe(7);
-    expect(receipt.units).toHaveLength(7);
+    expect(receipt.unitCount).toBe(8);
+    expect(receipt.units).toHaveLength(8);
     const web = receipt.units.find((u) => u.directory === '/apps/web');
     expect(web?.candidateCount).toBe(2);
     const cargo = receipt.units.find((u) => u.directory === '/backend/rust');
