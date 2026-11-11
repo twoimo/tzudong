@@ -26,7 +26,19 @@ test('promotion, protected push, scheduled and manual runs always benchmark', ()
 });
 
 test('every dependency, toolchain, measurement and CI input requires full proof', () => {
-  for (const file of ['.github/workflows/web-admin-ci.yml', '.github/scripts/classify-ci-benchmark.mjs', '.github/dependabot.yml', '.kiro/specs/receipt.json', '.agents/skills/ci/SKILL.md', 'apps/web/package.json', 'apps/web/package-lock.json', 'apps/web/bun.lock', 'apps/web/bunfig.toml', 'apps/web/tsconfig.json', 'apps/web/tsconfig.compat.json', 'apps/web/next.config.ts', 'apps/web/scripts/run-typecheck.mjs', 'apps/web/config/pins.json', 'apps/web/vendor/typescript/a.js', 'apps/web/performance/ts7/report.json', 'apps/web/tests-unit/typecheck-benchmark-source.test.ts', 'backend/package-lock.json', 'backend/requirements.txt', 'backend/test-requirements.txt', 'go.mod', '.nvmrc']) {
+  for (const file of ['.github/workflows/web-admin-ci.yml', '.github/scripts/classify-ci-benchmark.mjs', 'apps/web/package.json', 'apps/web/package-lock.json', 'apps/web/bun.lock', 'apps/web/bunfig.toml', 'apps/web/tsconfig.json', 'apps/web/tsconfig.compat.json', 'apps/web/next.config.ts', 'apps/web/scripts/run-typecheck.mjs', 'apps/web/scripts/measure-typecheck.mjs', 'apps/web/scripts/verify-typecheck-benchmark-report.mjs', 'apps/web/scripts/process-tree-rss-sampler.mjs', 'apps/web/scripts/process-tree-rss-core.mjs', 'apps/web/scripts/privacy-safe-cli-log.mjs', 'apps/web/config/pins.json', 'apps/web/vendor/typescript/a.js', 'apps/web/performance/ts7/report.json', 'apps/web/tests-unit/typecheck-benchmark-source.test.ts', 'backend/package-lock.json', 'backend/requirements.txt', 'backend/test-requirements.txt', 'go.mod', '.nvmrc']) {
+    assert.equal(classifyPaths([...feature, file]).benchmark, true, file);
+  }
+});
+
+test('governance, evidence and unrelated CI metadata keep the fast parity path', () => {
+  for (const file of ['.github/dependabot.yml', '.github/workflows/security-audit.yml', '.github/nightly-local-publication-allowlist.txt', '.kiro/specs/receipt.json', '.agents/skills/ci/SKILL.md', 'apps/web/scripts/run-unit-tests.mjs', 'apps/web/scripts/vercel-ignore-build.mjs', 'apps/web/scripts/benchmark-admin-evaluation-browser.mjs', 'docs/operations/release.md', 'README.md']) {
+    const decision = classifyPaths([...feature, file]);
+    assert.equal(decision.benchmark, false, file);
+    assert.equal(decision.reason, 'FEATURE_DIAGNOSTICS_ONLY', file);
+  }
+  // The measurement inputs themselves still request the full proof.
+  for (const file of ['.github/workflows/web-admin-ci.yml', '.github/scripts/classify-ci-benchmark.mjs', '.github/scripts/monitor-ci-performance.py', 'apps/web/scripts/measure-typecheck.mjs']) {
     assert.equal(classifyPaths([...feature, file]).benchmark, true, file);
   }
 });

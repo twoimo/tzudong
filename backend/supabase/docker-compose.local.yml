@@ -2,8 +2,19 @@
 # This file deliberately excludes docker-compose.override.yml and dev/docker-compose.dev.yml.
 name: !reset null
 
+# Every local service writes through Docker's `local` log driver with a fixed
+# budget. Without it a chatty service (realtime, analytics) grows its JSON log
+# for the lifetime of the container and can fill the shared Docker VM disk
+# across nightly runs. Keep this identical to docker-compose.mail.yml.
+x-local-service-logging: &local-service-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   studio: !override
+    logging: *local-service-logging
     image: supabase/studio:2025.12.17-sha-43f4f7f
     restart: unless-stopped
     ports: !override
@@ -40,6 +51,7 @@ services:
       NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
 
   kong:
+    logging: *local-service-logging
     container_name: !reset null
     # The local config is already rendered and hash-bound during staging. Run
     # the image entrypoint directly so the read-only volume is never rewritten.
@@ -54,15 +66,18 @@ services:
       - "local-kong-config:/home/kong:ro"
 
   auth:
+    logging: *local-service-logging
     container_name: !reset null
     environment:
       # Verification links must reach GoTrue through Kong, while redirects use SITE_URL.
       API_EXTERNAL_URL: ${API_EXTERNAL_URL}
 
   rest:
+    logging: *local-service-logging
     container_name: !reset null
 
   realtime:
+    logging: *local-service-logging
     container_name: !reset null
     networks:
       default:
@@ -70,6 +85,7 @@ services:
           - realtime-dev.supabase-realtime
 
   storage:
+    logging: *local-service-logging
     container_name: !reset null
     environment:
       # Storage's internal completion transaction must run as the owner of its
@@ -80,26 +96,35 @@ services:
       - "local-storage-data:/var/lib/storage"
 
   imgproxy:
+    logging: *local-service-logging
     container_name: !reset null
     volumes: !override
       - "local-storage-data:/var/lib/storage"
 
   meta:
+    logging: *local-service-logging
     container_name: !reset null
     ports: !override
       - "127.0.0.1:${META_PORT}:8080/tcp"
 
   functions:
+    logging: *local-service-logging
     container_name: !reset null
     volumes: !override
       - "local-functions:/home/deno/functions:ro"
 
   analytics:
+    logging: *local-service-logging
     container_name: !reset null
     ports: !override
       - "127.0.0.1:${ANALYTICS_PORT}:4000/tcp"
 
   db:
+    logging: *local-service-logging
+    # Postgres parallel workers size their dynamic shared memory segment at runtime.
+    # Docker's 64 MiB /dev/shm default is the usual cause of "could not resize
+    # shared memory segment" during concurrent nightly assertions.
+    shm_size: "512mb"
     container_name: !reset null
     volumes: !override
       - "local-db-init-migrations:/docker-entrypoint-initdb.d/migrations:ro"
@@ -108,11 +133,13 @@ services:
       - "local-db-config:/etc/postgresql-custom"
 
   vector:
+    logging: *local-service-logging
     container_name: !reset null
     volumes: !override
       - "local-vector-config:/etc/vector:ro"
 
   supavisor:
+    logging: *local-service-logging
     container_name: !reset null
     # GitHub-hosted Docker denies Tini's subreaper setup; the image's limits
     # wrapper preserves bounded startup without requiring that capability.

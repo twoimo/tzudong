@@ -445,6 +445,8 @@ describe("release workflow governance source contracts", () => {
       ".github/workflows/web-admin-ci.yml": {
         "dependency-modernization-proof": ["contents: read"],
         "ubuntu-npm-authority": ["contents: read"],
+        "ubuntu-npm-unit": ["contents: read"],
+        "ubuntu-npm-build": ["contents: read"],
         "ubuntu-bun-compatibility": ["contents: read"],
         "windows-npm-tooling": ["contents: read"],
         "windows-bun-compatibility": ["contents: read"],

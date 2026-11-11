@@ -1,0 +1,59 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main, develop, data]
+  pull_request:
+    branches: [main, develop, data]
+  schedule:
+    - cron: '23 19 * * 2'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Swift is deliberately absent: the repository has Package.swift plus two
+        # crawler scripts, and a macOS Swift extraction cost 15.7 minutes on every
+        # pull request. Rust stays because CodeQL supports it in advanced setup;
+        # the default-setup language API rejects the rust value even though the
+        # analyzer supports it.
+        include:
+          - language: actions
+            build-mode: none
+          # Go needs the compiler to extract call graphs; every other language
+          # here is database-only.
+          - language: go
+            build-mode: autobuild
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+          - language: rust
+            build-mode: none
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9418214df1f2c4b8128c770156c409013b07d6b9 # v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - name: Analyze
+        uses: github/codeql-action/analyze@9418214df1f2c4b8128c770156c409013b07d6b9 # v3
+        with:
+          category: '/language:${{ matrix.language }}'

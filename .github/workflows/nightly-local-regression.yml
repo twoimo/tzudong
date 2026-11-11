@@ -15,6 +15,11 @@ on:
           - all
           - unit
           - e2e
+      pg17_baseline:
+        description: Also probe whether the working schema restores on PostgreSQL 17
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: nightly-regression-local-canonical
@@ -53,6 +58,27 @@ jobs:
 
       - name: Verify publication boundary implementation
         run: python3 -m unittest backend.supabase.tests.test_local_publication_verifier
+
+      - name: Verify every local PostgreSQL image pin agrees
+        run: python3 -m unittest backend.supabase.tests.test_local_postgres_image_pin
+
+      - name: Verify the PG15 replay adapter ledger matches the code
+        run: python3 -m unittest backend.supabase.tests.test_pg15_replay_adapter_ledger
+
+      - name: Verify the committed chain role-probe baselines
+        run: python3 -m unittest backend.supabase.tests.test_chain_role_probe_baseline
+
+      - name: Verify the local role model matches the migrations
+        run: python3 -m unittest backend.supabase.tests.test_local_role_model
+
+      - name: Verify the GoTrue migration renderer
+        run: python3 -m unittest backend.supabase.tests.test_render_gotrue_migrations
+
+      - name: Verify the privileged-body manifest
+        run: python3 -m unittest backend.supabase.tests.test_privileged_bodies_manifest
+
+      - name: Verify the PG17 baseline probe contract
+        run: python3 -m unittest backend.supabase.tests.test_pg17_baseline_probe_contract
 
       - name: Install Node 24
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
@@ -150,7 +176,20 @@ jobs:
       - name: Install Chromium for the browser lane
         if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'e2e' }}
         working-directory: apps/web
-        run: bunx playwright install --with-deps chromium
+        run: |
+          set -uo pipefail
+          # --with-deps shells out to apt, and the hosted runners intermittently fail
+          # to resolve archive.ubuntu.com / security.ubuntu.com; three consecutive
+          # nightly runs died here on 2026-11-11 before the stack was ever started.
+          # Retry a few times before failing the job.
+          for attempt in 1 2 3 4; do
+            if bunx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "playwright install attempt ${attempt} failed; retrying in 45s" >&2
+            sleep 45
+          done
+          exit 1
 
       - name: Pull pinned Compose images
         shell: bash
@@ -913,6 +952,27 @@ jobs:
           set -euo pipefail
           bun run supabase:gen-types:local
           git diff --exit-code -- integrations/supabase/database.types.ts
+
+      - name: Probe the PostgreSQL 17 baseline restore
+        if: ${{ always() && inputs.pg17_baseline == true }}
+        run: |
+          set -euo pipefail
+          container="$(docker ps --filter label=com.docker.compose.service=db --format '{{.Names}}' | head -n 1)"
+          test -n "$container"
+          database="$(sed -n 's/^POSTGRES_DB=//p' "$LOCAL_STATE/stack.env" | head -n 1)"
+          python3 backend/supabase/scripts/pg17_baseline_probe.py \
+            --database-container "$container" \
+            --database "${database:-postgres}" \
+            --output "$RUNNER_TEMP/pg17-baseline.json"
+
+      - name: Upload the PostgreSQL 17 baseline probe record
+        if: ${{ always() && inputs.pg17_baseline == true }}
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: pg17-baseline-probe-${{ github.run_id }}
+          path: ${{ runner.temp }}/pg17-baseline.json
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Run local nightly unit regression
         id: nightly-unit
