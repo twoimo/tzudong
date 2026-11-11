@@ -42,6 +42,15 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertIn('docker", "rm", "-f", RESTORE_CONTAINER', self.script)
         self.assertNotIn("docker rm -f {args.database_container}", self.script)
 
+    def test_preexisting_image_objects_are_not_counted_as_failures(self) -> None:
+        # Measured: the first successful restore reported 172 errors that were all
+        # "already exists" - the supabase image seeds auth/storage/vault/extensions.
+        # Counting those as incompatibilities would report a false negative.
+        self.assertIn('def _is_already_exists(error: str) -> bool:', self.script)
+        self.assertIn('"preexistingObjectCount": len(preexisting)', self.script)
+        self.assertIn('"missingObjectCount": len(missing)', self.script)
+        self.assertIn('"--clean", "--if-exists"', self.script)
+
     def test_the_restore_uses_the_role_that_owns_the_catalog(self) -> None:
         # Measured: `postgres` in the supabase image has no DDL rights and fails every
         # statement with "permission denied for database", which reads as a schema

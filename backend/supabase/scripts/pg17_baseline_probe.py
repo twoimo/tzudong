@@ -36,6 +36,12 @@ SELECT pg_catalog.count(*) FROM pg_catalog.pg_class c
 JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE c.relkind IN ('r','p','v','m','S') AND n.nspname NOT IN ('pg_catalog','information_schema','pg_toast');
 """
+OBJECT_NAMES_SQL = """
+SELECT n.nspname || '.' || c.relname FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE c.relkind IN ('r','p','v','m','S') AND n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+ORDER BY 1;
+"""
 
 
 def run(command: Sequence[str], *, check: bool = True, capture: bool = False) -> subprocess.CompletedProcess[bytes]:
@@ -43,6 +49,10 @@ def run(command: Sequence[str], *, check: bool = True, capture: bool = False) ->
     if check and result.returncode != 0:
         raise SystemExit(f"probe step failed: {' '.join(command)}")
     return result
+
+
+def _is_already_exists(error: str) -> bool:
+    return "already exists" in error
 
 
 def psql(container: str, role: str, sql: str, *, database: str = "postgres") -> bytes:
@@ -66,7 +76,7 @@ def main() -> int:
     dump = run([
         "docker", "exec", args.database_container,
         "pg_dump", "-U", "postgres", "-d", args.database, "--schema-only",
-        "--no-owner", "--no-privileges",
+        "--no-owner", "--no-privileges", "--clean", "--if-exists",
     ], capture=True).stdout
     dump_path.write_bytes(dump)
 
@@ -90,11 +100,20 @@ def main() -> int:
             "docker", "exec", "-i", RESTORE_CONTAINER,
             "psql", "-U", args.restore_role, "-d", "profile", "-q", "-v", "ON_ERROR_STOP=0", "-f", "/tmp/dump.sql",
         ], check=False, capture=True)
-        restore_errors = [
-            line.split("ERROR:")[-1].strip()[:160]
+        all_errors = [
+            line.split("ERROR:")[-1].strip()[:200]
             for line in restore.stderr.decode("utf-8", "replace").splitlines()
             if "ERROR:" in line
         ]
+        # The supabase image ships its own auth, storage, vault, extensions, graphql,
+        # realtime and pgbouncer schemas, so a restore into it reports "already exists"
+        # for objects this project also creates. Those are not incompatibilities and
+        # must not be counted as such.
+        preexisting = [error for error in all_errors if _is_already_exists(error)]
+        restore_errors = [error for error in all_errors if not _is_already_exists(error)]
+        source_names = {line for line in psql(args.database_container, "postgres", OBJECT_NAMES_SQL).decode().splitlines() if line}
+        restored_names = {line for line in psql(RESTORE_CONTAINER, args.restore_role, OBJECT_NAMES_SQL, database="profile").decode().splitlines() if line}
+        missing = sorted(source_names - restored_names)
         restored_objects = int(psql(RESTORE_CONTAINER, args.restore_role, OBJECT_COUNT_SQL, database="profile").decode().strip() or 0)
         record: dict[str, Any] = {
             "schemaVersion": 1,
@@ -106,9 +125,12 @@ def main() -> int:
             "restoredObjects": restored_objects,
             "dumpBytes": len(dump),
             "restoreExitCode": restore.returncode,
+            "preexistingObjectCount": len(preexisting),
             "restoreErrorCount": len(restore_errors),
-            "restoreErrors": restore_errors[:20],
-            "restored": source_objects > 0 and restored_objects == source_objects and not restore_errors,
+            "restoreErrors": restore_errors[:50],
+            "missingObjectCount": len(missing),
+            "missingObjects": missing[:50],
+            "restored": source_objects > 0 and not restore_errors and not missing,
         }
     finally:
         run(["docker", "rm", "-f", RESTORE_CONTAINER], check=False)
@@ -116,7 +138,9 @@ def main() -> int:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({key: record[key] for key in ("sourceObjects", "restoredObjects", "restoreErrorCount", "restored")}))
+    print(json.dumps({key: record[key] for key in (
+        "sourceObjects", "restoredObjects", "preexistingObjectCount", "restoreErrorCount",
+        "missingObjectCount", "restored")}))
     return 0
 
 
