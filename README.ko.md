@@ -4,19 +4,14 @@
   <p>쯔양 영상에 등장한 맛집을 지도에서 찾고, 방문 경험을 나누는 서비스입니다.</p>
   <p>
     <a href="https://www.tzudong.app">지도 둘러보기</a> ·
-    <a href="README.md">English</a> ·
     <a href="docs/README.md">문서 안내</a> ·
-    <a href="CHANGELOG.ko.md">변경 기록</a>
-  </p>
-  <p>
-    <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs" />
-    <img alt="React 19" src="https://img.shields.io/badge/React-19-149eca?logo=react&amp;logoColor=white" />
-    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&amp;logoColor=white" />
-    <img alt="Supabase" src="https://img.shields.io/badge/Supabase-PostgreSQL%20%2B%20Auth-3ecf8e?logo=supabase&amp;logoColor=white" />
+    <a href="CONTRIBUTING.md">기여 안내</a> ·
+    <a href="https://github.com/twoimo/tzudong/releases/latest">최신 정식 릴리스</a> ·
+    <a href="README.md">English</a>
   </p>
 </div>
 
-[기능](#기능) · [미리보기](#미리보기) · [로컬 개발](#로컬-개발) · [저장소 구성](#저장소-구성) · [문서 안내](#문서-안내)
+[기능](#기능) · [미리보기](#미리보기) · [로컬 개발](#로컬-개발) · [저장소 구성](#저장소-구성) · [문서 안내](#문서-안내) · [릴리스](#릴리스)
 
 ## 기능
 
@@ -59,7 +54,7 @@
 1. 저장소를 복제하고 웹 의존성을 설치합니다.
 
    ```sh
-   git clone https://github.com/twoimo/tzudong.git
+   git clone --branch develop https://github.com/twoimo/tzudong.git
    cd tzudong/apps/web
    npm ci
    ```
@@ -73,23 +68,19 @@
 
 [http://127.0.0.1:3000](http://127.0.0.1:3000)을 엽니다. 실행기는 생성된 로컬 환경, 서비스 준비 상태, 브라우저 origin, 마이그레이션 대장을 확인한 뒤 Next.js를 시작합니다. Hosted 디버깅과 지도 공급자 설정은 [웹 개발 안내](apps/web/README.md)를 참고하세요.
 
-일상 개발에는 Bun도 사용할 수 있습니다. 릴리스 패키지의 기준은 npm manifest와 lockfile입니다. `apps/web`에서 사용하는 주요 검사 명령은 다음과 같습니다.
-
-```sh
-npm run lint
-npm run test:unit
-npm run typecheck:parity
-```
-
-변경한 동작에 필요한 검사는 [검증 안내](docs/agents/verification.md)에 따라 선택합니다.
+일상 개발에는 Bun도 사용할 수 있으며, 웹 단위 테스트 실행기에는 Bun이 필요합니다. 릴리스 패키지의 기준은 npm manifest와 lockfile입니다. 작업 브랜치, 도구 버전, 구성 요소별 검사 명령은 [기여 안내](CONTRIBUTING.md)에 모았습니다.
 
 ## 저장소 구성
 
 | 경로 | 역할 |
 | --- | --- |
-| [apps/web/](apps/web/) | Next.js 공개 앱, 맛집 지도, 커뮤니티, 보호된 관리자 콘솔. |
-| [backend/](backend/) | 파이프라인 제어, 크롤러, 평가, 미디어 워커, Supabase 마이그레이션. |
-| [docs/](docs/) | 제품 설계, 아키텍처, 운영과 릴리스 안내. |
+| [apps/web/](apps/web/README.md) | Next.js 공개 앱, 맛집 지도, 커뮤니티, 보호된 관리자 콘솔. |
+| [backend/](backend/README.md) | 파이프라인 제어, 크롤러, 평가, 미디어 워커, Supabase 마이그레이션. |
+| [docs/](docs/README.md) | 제품 설계, 아키텍처, 운영, 릴리스 안내와 과거 검증 근거. |
+| [scripts/](scripts/README.md) | 저장소 공통 운영 도구와 보안 검사. |
+| [.github/](.github/README.md) | CI, 승격 정책, 기여 양식, 릴리스 노트 분류. |
+
+새 파일의 위치, 패키지별 문서, 자산과 검증 근거의 보관 위치는 [저장소 지도](docs/repository-layout.md)에서 확인할 수 있습니다.
 
 웹 앱과 백엔드 워커는 Supabase를 데이터 저장 경계로 사용합니다. 오래 걸리는 크롤링·미디어 처리는 백엔드 워커가 맡습니다. 상세 흐름은 [백엔드 아키텍처](backend/ARCHITECTURE.md)와 [데이터 계약](backend/DATA_CONTRACTS.md)에 있습니다.
 
@@ -105,15 +96,19 @@ npm run typecheck:parity
 
 | 시작점 | 내용 |
 | --- | --- |
-| [문서 색인](docs/README.md) | 공통 안내와 문서별 위치. |
+| [문서 색인](docs/README.md) | 개발·운영·릴리스·검증 근거 등 목적별 안내. |
+| [기여 안내](CONTRIBUTING.md) | 작업 브랜치, 변경 범위별 검사, 버그 제보와 PR. |
 | [웹 개발](apps/web/README.md) | 로컬·Hosted 개발, 환경 설정, 웹 명령. |
 | [백엔드 운영](backend/README.md) | 파이프라인 진입점, 환경변수 계약, 실행 요약. |
-| [제품 설계](docs/product/DESIGN.md) · [아키텍처 도식](docs/architecture/) | 제품 화면과 시스템 구조. |
-| [검증](docs/agents/verification.md) · [Nightly 운영](docs/operations/nightly-regression.md) | 변경 범위별 검사와 독립 회귀 검사. |
-| [릴리스 안내](docs/agents/release.md) | 보호된 승격, 롤백, 배포 후 확인. |
-| [성능 근거](apps/web/performance/) · [변경 기록](CHANGELOG.ko.md) | 측정 시점·범위·한계와 변경 이력. |
+| [제품 설계](docs/product/README.md) · [아키텍처 도식](docs/architecture/README.md) | 제품 화면과 시스템 구조. |
+| [운영](docs/operations/README.md) · [검증](docs/agents/verification.md) | 운영 절차, Nightly 회귀 검사, 변경 범위별 검사. |
+| [검증 근거](docs/evidence/README.md) · [보관 문서](docs/archive/README.md) | 측정 시점·범위·한계와 과거 기록. |
 
-변경은 보호된 `develop → data → main` 순서로 승격합니다. 운영 배포에는 릴리스 안내에 따른 커밋 승인과 배포 후 확인이 필요합니다. CI, Nightly 회귀 검사, 운영 배포 상태는 각각 기록합니다.
+## 릴리스
+
+게시된 변경은 [최신 정식 소스 릴리스](https://github.com/twoimo/tzudong/releases/latest)와 [변경 기록](CHANGELOG.ko.md)에서 확인합니다. [릴리스 안내](docs/releases/README.md)에는 정식·Nightly·로컬 스택 채널의 용도와 릴리스 노트 양식이 있습니다.
+
+변경은 보호된 `develop → data → main` 순서로 승격합니다. Nightly·로컬 스택 prerelease는 로컬 검증을 기록합니다. 운영 배포의 커밋과 배포 후 확인은 [릴리스 정책](docs/agents/release.md)에 따라 별도로 기록합니다.
 
 ## 보안과 라이선스
 
