@@ -6,7 +6,8 @@
     "measuredOn": "2026-11-11",
     "baselines": [
       "backend/supabase/baselines/local/pg15-chain-role-probe-20261111.json",
-      "backend/supabase/baselines/local/pg15-chain-role-probe-prereq-postgres-20261111.json"
+      "backend/supabase/baselines/local/pg15-chain-role-probe-prereq-postgres-20261111.json",
+      "backend/supabase/baselines/local/pg15-chain-role-probe-mixed-20261111.json"
     ]
   },
   "roles": [
@@ -68,10 +69,25 @@
       "id": "R4",
       "rule": "A migration that mixes role statements with object DDL keeps a replacement body until it is split; that is exactly what PG15_REPLAY_ADAPTERS.v1.json lists.",
       "verifiedBy": "adapter ledger"
+    },
+    {
+      "id": "R5",
+      "rule": "privacy_retention is owned by privacy_workflow_owner. postgres reaches it through explicit schema/table/function grants only: role membership is forbidden, because the g013/g014 guards raise 'privacy_workflow_owner role attributes are incompatible' when the role has any membership.",
+      "verifiedBy": "mixed probe 2026-11-11 with role-grant-normalisation.v1.sql: 87 applied, and privacy_workflow_owner reports 0 memberships"
+    },
+    {
+      "id": "R6",
+      "rule": "Migrations that SET ROLE privacy_workflow_owner cannot run as postgres (that would need the forbidden membership) and belong to the privileged set.",
+      "verifiedBy": "mixed probe 2026-11-11: 'must be member of role \"privacy_workflow_owner\"' after the grant normalisation"
     }
   ],
   "openQuestions": [
-    "Which role should own privacy_retention and its objects in the target model: postgres (keeps later migrations working) or privacy_workflow_owner (keeps RLS semantics)?",
-    "Does the GoTrue bootstrap create privacy_workflow_owner with attributes that the g013/g014 guards reject?"
+    "Which migrations require SET ROLE privacy_workflow_owner, and can each be replaced by a SECURITY DEFINER path instead of a privileged run?",
+    "The GoTrue bootstrap: 20260711000100 requires auth.sessions and auth.refresh_tokens to exist before it runs; the probe cannot supply them without the gotrue image's staged migrations."
+  ],
+  "baselines": [
+    "backend/supabase/baselines/local/pg15-chain-role-probe-20261111.json",
+    "backend/supabase/baselines/local/pg15-chain-role-probe-prereq-postgres-20261111.json",
+    "backend/supabase/baselines/local/pg15-chain-role-probe-mixed-20261111.json"
   ]
 }

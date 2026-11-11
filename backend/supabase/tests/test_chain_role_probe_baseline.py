@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[3]
 BASELINES = ROOT / "backend/supabase/baselines/local"
 ADMIN = BASELINES / "pg15-chain-role-probe-20261111.json"
 POSTGRES = BASELINES / "pg15-chain-role-probe-prereq-postgres-20261111.json"
+MIXED = BASELINES / "pg15-chain-role-probe-mixed-20261111.json"
 
 
 def load(path: Path) -> dict:
@@ -22,10 +23,10 @@ def load(path: Path) -> dict:
 
 class ChainRoleProbeBaselineTests(unittest.TestCase):
     def test_baselines_describe_the_same_migration_set(self) -> None:
-        admin, postgres = load(ADMIN), load(POSTGRES)
-        self.assertEqual(admin["migrationCount"], postgres["migrationCount"])
-        self.assertEqual(admin["image"], postgres["image"])
-        for record in (admin, postgres):
+        records = [load(ADMIN), load(POSTGRES), load(MIXED)]
+        self.assertEqual(len({r["migrationCount"] for r in records}), 1)
+        self.assertEqual(len({r["image"] for r in records}), 1)
+        for record in records:
             self.assertEqual(record["schemaVersion"], 1)
             self.assertEqual(record["kind"], "local-chain-role-probe")
             self.assertTrue(record["prerequisiteApplied"])
@@ -33,6 +34,13 @@ class ChainRoleProbeBaselineTests(unittest.TestCase):
                 record["appliedCount"] + record["failedCount"], record["migrationCount"]
             )
             self.assertEqual(len(record["failed"]), record["failedCount"])
+
+    def test_mixed_privileged_execution_improves_on_the_postgres_baseline(self) -> None:
+        postgres, mixed = load(POSTGRES), load(MIXED)
+        self.assertTrue(mixed["mixedPrivileged"])
+        self.assertTrue(mixed["grantFile"].endswith("role-grant-normalisation.v1.sql"))
+        self.assertGreater(mixed["appliedCount"], postgres["appliedCount"])
+        self.assertLess(mixed["failedCount"], postgres["failedCount"])
 
     def test_prerequisite_role_moves_ownership_onto_postgres(self) -> None:
         admin, postgres = load(ADMIN), load(POSTGRES)

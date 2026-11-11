@@ -70,6 +70,7 @@ profile. Two PG15 baselines are committed:
 | --- | --- | --- | --- |
 | `pg15-chain-role-probe-20261111.json` | `supabase_admin` | 54 / 107 | postgres 87, supabase_admin 38 |
 | `pg15-chain-role-probe-prereq-postgres-20261111.json` | `postgres` (continue on error) | 70 / 91 | postgres 129, supabase_admin 5 |
+| `pg15-chain-role-probe-mixed-20261111.json` | `postgres`, `SUPERUSER` files as `supabase_admin`, grant normalisation after each | 87 / 74 | see baseline |
 
 Applying the prerequisite bundle as `postgres` fails on exactly one statement
 (`ALTER DEFAULT PRIVILEGES`, `must be member of role "supabase_admin"`) and moves
@@ -115,6 +116,8 @@ assumes, with each rule tied to the measurement that established it:
 | R2 | Object DDL runs as `postgres`. Objects created by a privileged run are owned by `supabase_admin`, and the following `postgres` migrations cannot use them. | mixed-role probe 2026-11-11: 74 applied, then `permission denied for schema privacy_retention` |
 | R3 | The privileged pre-pass creates and normalizes roles only: no schemas, tables, functions or grants. | R2 |
 | R4 | A migration that mixes role statements with object DDL keeps a replacement body until it is split - exactly the list in `PG15_REPLAY_ADAPTERS.v1.json`. | adapter ledger |
+| R5 | `privacy_retention` is owned by `privacy_workflow_owner`; `postgres` reaches it through explicit grants only, because the g013/g014 guards reject any membership on that role. | mixed probe: 87 applied, `privacy_workflow_owner` reports 0 memberships |
+| R6 | Migrations that `SET ROLE privacy_workflow_owner` belong to the privileged set - running them as `postgres` needs the forbidden membership. | mixed probe: `must be member of role "privacy_workflow_owner"` |
 
 Four migrations contain `SUPERUSER` (`20260713000450`, `20260713002000`,
 `20260713002400`, `20260804000500`) and five contain `CREATE ROLE`/`ALTER ROLE`;
