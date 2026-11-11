@@ -38,6 +38,14 @@ class PrivilegedBodiesManifestTests(unittest.TestCase):
         self.assertIn('body_role = "postgres"', source)
         self.assertIn("if privileged_role is not None and migration_id in _privileged_bodies():", source)
 
+    def test_the_flag_refuses_to_run_while_the_adapters_exist(self) -> None:
+        """Enabling the flag before the adapter retirement would run replacement
+        bodies under the wrong role, so the applier fails closed."""
+        source = APPLIER.read_text(encoding="utf-8")
+        self.assertIn("privileged_bodies_require_adapter_retirement", source)
+        self.assertIn("def _adapter_layer_active() -> bool:", source)
+        self.assertIn('return "_canonical_source_replay_bodies" in source', source)
+
     def test_manifest_stays_inside_the_migration_directory(self) -> None:
         for name in self.manifest["migrations"]:
             self.assertIn(name, self.sources)

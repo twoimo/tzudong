@@ -160,6 +160,17 @@ PostgreSQL refuses for the migration role as `supabase_admin`, driven by
 keeps the adapter path and the nightly is unaffected until the switch is made on
 purpose.
 
+Turning the flag on before the adapters are gone fails closed with
+`privileged_bodies_require_adapter_retirement`: the adapters replace the very
+bodies the flag would run under another role, so the order is retirement first,
+flag second.
+
+The retirement itself is now a paired worklist rather than a guess:
+`PG15_REPLAY_ADAPTERS.v1.json` carries a `retirement` section listing the 16 test
+modules that assert each adapter, so deleting an adapter means deleting its listed
+tests in the same change. Twenty-four test modules in total depend on the replay
+layer, which is why this is a dedicated change and not a line in another one.
+
 ### Rejected: ownership transfer
 
 The obvious next lever - transfer every `supabase_admin`-created object to
