@@ -151,6 +151,18 @@ normalisation followed by the body - reaches **91 applied / 70 failed**, the bes
 of four profiles (54, 70, 87, 91). The probe implements that order behind
 `--gotrue-migrations`, `--mixed-privileged`, `--staged-grants` and `--grant-file`.
 
+### Baseline restore instead of an adapter rewrite
+
+Rewriting the ~24 migrations the adapters replace collides with applied-migration
+immutability, so the transition has a cheaper candidate: keep the working schema
+and move it to PG17 as a baseline.
+
+`backend/supabase/scripts/pg17_baseline_probe.py` measures exactly that inside the
+nightly local regression - it dumps the live schema read-only, restores it into a
+disposable `supabase/postgres:17.11.0.018` container, counts objects on both sides
+and reports the restore errors. It is gated behind the `pg17_baseline` dispatch
+input (default `false`), so the nightly is unchanged unless it is requested.
+
 ### Applier support (default off)
 
 `backend/supabase/scripts/local-migrate.py` can now run the migration bodies that
