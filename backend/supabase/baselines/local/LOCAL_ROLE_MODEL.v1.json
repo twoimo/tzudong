@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "id": "local-role-model-v1",
+  "purpose": "Which role owns what during the local migration replay, and which statements must run privileged. The PostgreSQL 17 transition needs this written down: the chain is sensitive to the role model in both directions, and no grant short of SUPERUSER can reproduce the privileged statements.",
+  "evidence": {
+    "measuredOn": "2026-11-11",
+    "baselines": [
+      "backend/supabase/baselines/local/pg15-chain-role-probe-20261111.json",
+      "backend/supabase/baselines/local/pg15-chain-role-probe-prereq-postgres-20261111.json"
+    ]
+  },
+  "roles": [
+    {
+      "name": "supabase_admin",
+      "attributes": "SUPERUSER",
+      "createdBy": "image",
+      "privileged": true
+    },
+    {
+      "name": "postgres",
+      "attributes": "NOSUPERUSER (required by the G014 owner contract)",
+      "createdBy": "image",
+      "migrationRole": true
+    },
+    {
+      "name": "privacy_workflow_owner",
+      "attributes": "NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS",
+      "createdBy": "migration",
+      "ownerRule": "created and normalized by a privileged statement"
+    },
+    {
+      "name": "privacy_auth_bridge",
+      "attributes": "NOLOGIN bridge principal",
+      "createdBy": "migration",
+      "ownerRule": "same privileged path as privacy_workflow_owner"
+    }
+  ],
+  "privilegedFiles": [
+    "20260713000450_g013_address_admin_approval.sql",
+    "20260713002000_g014_public_api_private_boundary.sql",
+    "20260713002400_g014_retention_adapters_receipts.sql",
+    "20260804000500_g041_auth_workflow_bridge.sql"
+  ],
+  "roleStatementFiles": [
+    "20260713000450_g013_address_admin_approval.sql",
+    "20260713002000_g014_public_api_private_boundary.sql",
+    "20260713002400_g014_retention_adapters_receipts.sql",
+    "20260728000100_g038_deterministic_contract.sql",
+    "20260804000500_g041_auth_workflow_bridge.sql"
+  ],
+  "rules": [
+    {
+      "id": "R1",
+      "rule": "Role attribute statements (anything mentioning SUPERUSER) run as supabase_admin; PostgreSQL refuses them for a non-superuser even when it created the role and holds CREATEROLE.",
+      "verifiedBy": "probe 2026-11-11: CREATE ROLE ok, ALTER ROLE refused with 'Only roles with the SUPERUSER attribute may alter roles with the SUPERUSER attribute'"
+    },
+    {
+      "id": "R2",
+      "rule": "Object DDL runs as postgres. Objects created by a privileged run are owned by supabase_admin and the following postgres migrations cannot use them ('permission denied for schema privacy_retention' after the mixed-role probe).",
+      "verifiedBy": "mixed-role probe 2026-11-11: 74 applied, new failure class"
+    },
+    {
+      "id": "R3",
+      "rule": "The privileged pre-pass creates and normalizes roles only; it never creates schemas, tables, functions or grants.",
+      "verifiedBy": "R2"
+    },
+    {
+      "id": "R4",
+      "rule": "A migration that mixes role statements with object DDL keeps a replacement body until it is split; that is exactly what PG15_REPLAY_ADAPTERS.v1.json lists.",
+      "verifiedBy": "adapter ledger"
+    }
+  ],
+  "openQuestions": [
+    "Which role should own privacy_retention and its objects in the target model: postgres (keeps later migrations working) or privacy_workflow_owner (keeps RLS semantics)?",
+    "Does the GoTrue bootstrap create privacy_workflow_owner with attributes that the g013/g014 guards reject?"
+  ]
+}

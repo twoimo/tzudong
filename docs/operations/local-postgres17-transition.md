@@ -104,6 +104,37 @@ statement, apply the rest as `postgres`, supply the GoTrue bootstrap, and move t
 handful of privileged role statements out of the migration bodies (that is what the
 adapter ledger lists). The image swap then has nothing left to compensate for.
 
+## Role model and privileged pre-pass
+
+`backend/supabase/baselines/local/LOCAL_ROLE_MODEL.v1.json` records what the chain
+assumes, with each rule tied to the measurement that established it:
+
+| Rule | Statement | Evidence |
+| --- | --- | --- |
+| R1 | Statements that mention `SUPERUSER` run as `supabase_admin`. `postgres` is refused even when it created the role and holds `CREATEROLE`. | probe 2026-11-11 |
+| R2 | Object DDL runs as `postgres`. Objects created by a privileged run are owned by `supabase_admin`, and the following `postgres` migrations cannot use them. | mixed-role probe 2026-11-11: 74 applied, then `permission denied for schema privacy_retention` |
+| R3 | The privileged pre-pass creates and normalizes roles only: no schemas, tables, functions or grants. | R2 |
+| R4 | A migration that mixes role statements with object DDL keeps a replacement body until it is split - exactly the list in `PG15_REPLAY_ADAPTERS.v1.json`. | adapter ledger |
+
+Four migrations contain `SUPERUSER` (`20260713000450`, `20260713002000`,
+`20260713002400`, `20260804000500`) and five contain `CREATE ROLE`/`ALTER ROLE`;
+a test keeps those lists equal to the sources.
+
+The pre-pass this model implies, which is what the adapters already do, is:
+
+1. run the prerequisite bundle as `postgres` and replay its single
+   `ALTER DEFAULT PRIVILEGES` statement as `supabase_admin`;
+2. run the role statements of the four privileged migrations as `supabase_admin`
+   before their bodies;
+3. run every body as `postgres`, with the privileged statements removed from the
+   body (replacement body) so nothing is applied twice;
+4. keep the objects those bodies create owned by `postgres`.
+
+Two questions stay open and are recorded in the model file rather than guessed:
+which role should own `privacy_retention` in the target model, and whether the
+GoTrue bootstrap creates `privacy_workflow_owner` with attributes that the g013
+and g014 guards reject.
+
 ## Target
 
 Local apply runs the same role, server major, file set and order as hosted, so a
