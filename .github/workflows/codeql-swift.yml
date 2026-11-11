@@ -1,0 +1,42 @@
+name: CodeQL Swift
+
+# Swift extraction needs a macOS runner and an autobuild, which measured 13m47s
+# of build work for 1 minute of actual analysis on every pull request. It is
+# kept, but only when Swift sources change and on the weekly schedule, so the
+# coverage exists without sitting on the pull request critical path.
+on:
+  push:
+    paths:
+      - 'Package.swift'
+      - 'Package.resolved'
+      - '**/*.swift'
+  schedule:
+    - cron: '41 20 * * 3'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-swift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (swift)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9418214df1f2c4b8128c770156c409013b07d6b9 # v3
+        with:
+          languages: swift
+          build-mode: autobuild
+      - name: Analyze
+        uses: github/codeql-action/analyze@9418214df1f2c4b8128c770156c409013b07d6b9 # v3
+        with:
+          category: '/language:swift'

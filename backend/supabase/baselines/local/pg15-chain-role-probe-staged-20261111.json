@@ -1,0 +1,1433 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-chain-role-probe",
+  "image": "supabase/postgres:15.8.1.085",
+  "prerequisiteRole": "postgres",
+  "migrationRole": "postgres",
+  "prerequisiteApplied": true,
+  "prerequisiteContinue": true,
+  "privilegedReplay": {
+    "statements": 1,
+    "role": "supabase_admin",
+    "applied": true
+  },
+  "mixedPrivileged": true,
+  "stagedGrants": true,
+  "gotrue": {
+    "applied": 65,
+    "failed": 0
+  },
+  "grantFile": "backend/supabase/baselines/local/role-grant-normalisation.v1.sql",
+  "prerequisiteErrors": [
+    "must be member of role \"supabase_admin\""
+  ],
+  "migrationCount": 161,
+  "appliedCount": 91,
+  "failedCount": 70,
+  "failed": [
+    {
+      "migration": "20260417_harden_submission_identity_duplicate_checks.sql",
+      "error": "function public.extract_youtube_video_id(text) does not exist"
+    },
+    {
+      "migration": "20260713002100_g014_privacy_workflows.sql",
+      "error": "must be member of role \"privacy_workflow_owner\""
+    },
+    {
+      "migration": "20260713002200_g014_marketing_state_machine.sql",
+      "error": "G014-03 required privacy evaluator identity is missing"
+    },
+    {
+      "migration": "20260713002300_g014_account_deletion_state_machine.sql",
+      "error": "must be owner of function privacy_reject_immutable_mutation"
+    },
+    {
+      "migration": "20260713002400_g014_retention_adapters_receipts.sql",
+      "error": "G014-05 required G010/G014 retention dependencies are missing"
+    },
+    {
+      "migration": "20260713002500_g014_catalog_contract.sql",
+      "error": "must be owner of table g014_public_rpc_allowlist"
+    },
+    {
+      "migration": "20260713002600_g014_account_deletion_receipt_parity.sql",
+      "error": "function public.read_current_account_deletion_status(uuid, text, text) does not exist"
+    },
+    {
+      "migration": "20260801000100_g016_privacy_audit_owner_policy.sql",
+      "error": "relation \"privacy_retention.g014_catalog_contract_manifest\" does not exist"
+    },
+    {
+      "migration": "20260801000300_g016_onboarding_allowlist_freshness.sql",
+      "error": "G014 public RPC effective grantee matrix does not match the allowlist"
+    },
+    {
+      "migration": "20260804000100_g041_privacy_audit_lock_privilege.sql",
+      "error": "relation \"privacy_retention.g014_catalog_contract_manifest\" does not exist"
+    },
+    {
+      "migration": "20260804000200_g041_privacy_onboarding_workflow_privileges.sql",
+      "error": "relation \"privacy_retention.g014_catalog_contract_manifest\" does not exist"
+    },
+    {
+      "migration": "20260804000300_g041_auth_boundary_runtime_repairs.sql",
+      "error": "g041_auth_boundary_prerequisite_missing"
+    },
+    {
+      "migration": "20260804000500_g041_auth_workflow_bridge.sql",
+      "error": "g041_definer_owner_contract_drift"
+    },
+    {
+      "migration": "20260812000100_local_runtime_schema_convergence.sql",
+      "error": "column \"public\" of relation \"buckets\" does not exist"
+    },
+    {
+      "migration": "20260812000200_local_public_read_policy_convergence.sql",
+      "error": "must be member of role \"privacy_workflow_owner\""
+    },
+    {
+      "migration": "20260812000300_local_admin_data_boundary_convergence.sql",
+      "error": "must be owner of function privacy_incident_require_admin"
+    },
+    {
+      "migration": "20260812000400_local_admin_map_overlay_boundary_convergence.sql",
+      "error": "must be member of role \"privacy_workflow_owner\""
+    },
+    {
+      "migration": "20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql",
+      "error": "local_youtube_thumbnail_rpc_allowlist_prerequisite_missing"
+    },
+    {
+      "migration": "20260812000600_local_profile_read_boundary_convergence.sql",
+      "error": "local_profile_read_boundary_prerequisite_missing"
+    },
+    {
+      "migration": "20260812000700_local_profile_leaderboard_page_convergence.sql",
+      "error": "local_profile_leaderboard_page_prerequisite_missing"
+    },
+    {
+      "migration": "20260813085342_current_profile_mutation_boundary.sql",
+      "error": "current_profile_mutation_prerequisite_missing"
+    },
+    {
+      "migration": "20260820040000_pipeline_batch_upsert.sql",
+      "error": "G014 public RPC effective grantee matrix does not match the allowlist"
+    },
+    {
+      "migration": "20260820050000_pipeline_outbox.sql",
+      "error": "G014 public RPC effective grantee matrix does not match the allowlist"
+    },
+    {
+      "migration": "20260827084200_g014_8_guardian_provider_verification.sql",
+      "error": "G014 public RPC effective grantee matrix does not match the allowlist"
+    },
+    {
+      "migration": "20260901000200_pipeline_batch_upsert_publication_allowlist.sql",
+      "error": "G014 public RPC effective grantee matrix does not match the allowlist"
+    },
+    {
+      "migration": "20260903174413_advisor_followup_hardening.sql",
+      "error": "advisor_hardening_function_missing"
+    },
+    {
+      "migration": "20260905015816_publication_nullable_trace_cas.sql",
+      "error": "G014 public RPC effective grantee matrix does not match the allowlist"
+    },
+    {
+      "migration": "20260906040116_admin_user_ids_catalog_slice.sql",
+      "error": "syntax error at or near \"SET\""
+    },
+    {
+      "migration": "20260906053936_admin_management_group_catalog_slice.sql",
+      "error": "syntax error at or near \"SET\""
+    },
+    {
+      "migration": "20260906064252_g014_pg17_workflow_owner_contract.sql",
+      "error": "syntax error at or near \"SET\""
+    },
+    {
+      "migration": "20260918021531_storyboard_mlx_worker.sql",
+      "error": "column \"public\" of relation \"buckets\" does not exist"
+    },
+    {
+      "migration": "20260920021531_storyboard_historical_restore.sql",
+      "error": "relation \"public.admin_storyboard_production_projects\" does not exist"
+    },
+    {
+      "migration": "20260921123000_g041_privacy_consent_lock_privilege.sql",
+      "error": "relation \"privacy_retention.g014_catalog_contract_manifest\" does not exist"
+    },
+    {
+      "migration": "20261003000812_storyboard_gemini_only.sql",
+      "error": "type \"public.admin_storyboard_production_projects\" does not exist"
+    },
+    {
+      "migration": "20261003065736_g014_current_service_rpc_registry.sql",
+      "error": "G014_SERVICE_REGISTRY_PREREQUISITE_UNAVAILABLE"
+    },
+    {
+      "migration": "20261003113923_g014_service_invoker_contract.sql",
+      "error": "G014_SERVICE_INVOKER_SOURCE_DRIFT"
+    },
+    {
+      "migration": "20261003172126_restaurant_review_manual_invoker_contract.sql",
+      "error": "G014_MANUAL_INVOKER_SOURCE_DRIFT"
+    },
+    {
+      "migration": "20261003182338_storyboard_service_role_bridge.sql",
+      "error": "STORYBOARD_BRIDGE_PREREQUISITE_MISSING"
+    },
+    {
+      "migration": "20261003205335_storyboard_uncertain_lease_recovery.sql",
+      "error": "relation \"public.admin_storyboard_production_jobs\" does not exist"
+    },
+    {
+      "migration": "20261003220841_admin_evaluation_page_invoker_contract.sql",
+      "error": "G014_PAGE_INVOKER_SOURCE_DRIFT"
+    },
+    {
+      "migration": "20261004023841_storyboard_claim_capability_order.sql",
+      "error": "STORYBOARD_CLAIM_CAPABILITY_SOURCE_DRIFT"
+    },
+    {
+      "migration": "20261004050600_admin_evaluation_warning_invoker_contract.sql",
+      "error": "G014_WARNING_INVOKER_SOURCE_DRIFT"
+    },
+    {
+      "migration": "20261004190259_admin_record_guarded_actions.sql",
+      "error": "column \"inherit_option\" does not exist"
+    },
+    {
+      "migration": "20261004194715_admin_evaluation_raw_warning_invoker_contract.sql",
+      "error": "column \"inherit_option\" does not exist"
+    },
+    {
+      "migration": "20261008084856_public_profile_leaderboard_read_boundary.sql",
+      "error": "public_profile_leaderboard_table_acl_drift"
+    },
+    {
+      "migration": "20261008200719_review_verification_private.sql",
+      "error": "column \"public\" of relation \"buckets\" does not exist"
+    },
+    {
+      "migration": "20261008201635_review_media_catalog_integration.sql",
+      "error": "review_media_catalog_source_drift"
+    },
+    {
+      "migration": "20261009091342_admin_record_private_verification_cleanup.sql",
+      "error": "relation \"pipeline_control.admin_record_media_cleanup\" does not exist"
+    },
+    {
+      "migration": "20261009101645_admin_user_management_rpc_forward.sql",
+      "error": "syntax error at or near \"FALSE\""
+    },
+    {
+      "migration": "20261011072824_admin_review_media_completion.sql",
+      "error": "function \"public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)\" does not exist"
+    },
+    {
+      "migration": "20261011085342_review_legacy_shared_cleanup.sql",
+      "error": "REVIEW_SHARED_SOURCE_DRIFT"
+    },
+    {
+      "migration": "20261011094346_admin_evaluation_revision_safeupdate.sql",
+      "error": "relation \"privacy_retention.g014_catalog_contract_manifest\" does not exist"
+    },
+    {
+      "migration": "20261011100730_admin_record_expired_preview_readback.sql",
+      "error": "function \"public.admin_record_action(uuid,text,uuid,text,uuid[],jsonb,text)\" does not exist"
+    },
+    {
+      "migration": "20261011103501_admin_verification_durable_staging.sql",
+      "error": "function \"public.admin_review_verification_cleanup(uuid,text,text[])\" does not exist"
+    },
+    {
+      "migration": "20261011105114_review_media_storage_retirement_fence.sql",
+      "error": "REVIEW_SHARED_SOURCE_DRIFT"
+    },
+    {
+      "migration": "20261011110108_review_storage_caller_bound_admin_policy.sql",
+      "error": "relation \"privacy_retention.g014_catalog_contract_manifest\" does not exist"
+    },
+    {
+      "migration": "20261011175912_review_owner_cleanup_completion.sql",
+      "error": "REVIEW_SHARED_SOURCE_DRIFT"
+    },
+    {
+      "migration": "20261013093518_storyboard_gemini_execution_v1.sql",
+      "error": "relation \"public.admin_storyboard_production_projects\" does not exist"
+    },
+    {
+      "migration": "20261013190100_g014_feature_rpc_catalog_contract.sql",
+      "error": "G014_FEATURE_RPC_EXECUTOR_DENIED"
+    },
+    {
+      "migration": "20261013190200_review_verification_immutable_key_fence.sql",
+      "error": "REVIEW_VERIFICATION_UPDATE_POLICY_BASELINE_DRIFT"
+    },
+    {
+      "migration": "20261016090000_review_verification_delete_guard_readiness.sql",
+      "error": "FEATURE_RUNTIME_STORAGE_FENCE_PREREQUISITE_MISSING"
+    },
+    {
+      "migration": "20261018152032_receipt_ocr_definitive_credential_rejection_release.sql",
+      "error": "RECEIPT_OCR_CREDENTIAL_RELEASE_PREREQUISITE_DRIFT"
+    },
+    {
+      "migration": "20261019120000_receipt_ocr_credential_release_acl_admission_v2.sql",
+      "error": "relation \"ocr_private.receipt_credential_release_catalog_contract\" does not exist"
+    },
+    {
+      "migration": "20261019130000_receipt_ocr_indeterminate_recovery.sql",
+      "error": "RECEIPT_OCR_RECOVERY108_PREREQUISITE_MISSING"
+    },
+    {
+      "migration": "20261025063810_hosted_pending_atomic_delivery.sql",
+      "error": "pending_custody_install_executor_denied"
+    },
+    {
+      "migration": "20261026120000_atomic_edit_submission_request.sql",
+      "error": "edit_request_install_outer_transaction_required"
+    },
+    {
+      "migration": "20261026130000_atomic_edit_public_business_phone.sql",
+      "error": "edit_phone_install_outer_transaction_required"
+    },
+    {
+      "migration": "20261026140000_g014_guardian_auth_fk_lock_privilege.sql",
+      "error": "relation \"privacy_retention.g014_catalog_contract_manifest\" does not exist"
+    },
+    {
+      "migration": "20261028195647_sponsorship_base_metadata_manual_confirmation.sql",
+      "error": "LOCK TABLE can only be used in transaction blocks"
+    },
+    {
+      "migration": "20261103171649_restaurant_evidence_recovery.sql",
+      "error": "relation \"pipeline_control.admin_record_operations\" does not exist"
+    }
+  ],
+  "ownership": [
+    {
+      "schema": "account_deletion_private",
+      "name": "reauth_proofs",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "audit_log_entries",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "flow_state",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "identities",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "instances",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "mfa_amr_claims",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "mfa_challenges",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "mfa_factors",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "oauth_authorizations",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "oauth_client_states",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "oauth_clients",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "oauth_consents",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "one_time_tokens",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "refresh_tokens",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "refresh_tokens_id_seq",
+      "owner": "supabase_auth_admin",
+      "kind": "sequence"
+    },
+    {
+      "schema": "auth",
+      "name": "saml_providers",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "saml_relay_states",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "schema_migrations",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "sessions",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "sso_domains",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "sso_providers",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "auth",
+      "name": "users",
+      "owner": "supabase_auth_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "extensions",
+      "name": "pg_stat_statements",
+      "owner": "supabase_admin",
+      "kind": "view"
+    },
+    {
+      "schema": "extensions",
+      "name": "pg_stat_statements_info",
+      "owner": "supabase_admin",
+      "kind": "view"
+    },
+    {
+      "schema": "graphql",
+      "name": "seq_schema_version",
+      "owner": "supabase_admin",
+      "kind": "sequence"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "agent_action_budget_claims",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "agent_action_records",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "agent_action_results",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "agent_action_state",
+      "owner": "postgres",
+      "kind": "view"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "agent_approval_pending_decisions",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "benchmark_runs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "benchmark_runs_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "crawl_evidence",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "crawl_evidence_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "parity_results",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "parity_results_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "phase_reports",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "phase_reports_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "publish_audit_events",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "publish_audit_events_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "publish_history",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "publish_jobs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "staging_restaurants",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "staging_restaurants_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "staging_videos",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "local_analytics",
+      "name": "staging_videos_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "ocr_private",
+      "name": "feature_runtime_capability",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "ocr_private",
+      "name": "ocr_daily_quota_reservations",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "ocr_private",
+      "name": "receipt_results",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "ocr_private",
+      "name": "review_generations",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "admin_evaluation_catalog_revision",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "admin_evaluation_read_index",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "audit",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "audit_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "control_requests",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "control_requests_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "job_steps",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "jobs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "locks",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "outbox",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "outbox_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "restaurant_review_items",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "restaurant_review_policy",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "restaurant_review_policy_events",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "pipeline_control",
+      "name": "restaurant_review_runs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_adapter_registry",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_admin_guard",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_admin_reservations",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_client_cleanup_contracts",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_evidence_cleanup_leases",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_evidence_separations",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_external_phase_leases",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_hold_class_map",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_policy_activation_history",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_policy_publications",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_provider_receipt_proofs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_source_manifest",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_storage_objects",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "account_deletion_storage_receipts",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "g014_nested_helper_allowlist",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "g014_public_rpc_allowlist",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_age_profiles",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_audit_events",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_consent_events",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_guardian_verifications",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_legal_holds",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_onboarding_challenges",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_policy_versions",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_retained_records",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_retention_class_sources",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_retention_classes",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_retention_run_items",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_retention_runs",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "privacy_retention_work_items",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "privacy_retention",
+      "name": "tzuyang_address_evidence_admin_approval_receipts",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "provider_budget_private",
+      "name": "admin_provider_budget_counters",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "provider_budget_private",
+      "name": "admin_provider_budget_decisions",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "provider_budget_private",
+      "name": "admin_provider_budget_policies",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "account_deletion_data_classes",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "account_deletion_policies",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "account_deletion_request_items",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "account_deletion_requests",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "ad_banners",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_ai_leaderboard_snapshots",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_ai_provider_keys",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_ai_settings",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_audit_events",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_evaluation_related_rows",
+      "owner": "postgres",
+      "kind": "view"
+    },
+    {
+      "schema": "public",
+      "name": "admin_restaurant_map_overlay_audit_events",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_restaurant_map_overlay_proposal_review_events",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_restaurant_map_overlay_proposals",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_restaurant_map_overlays",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_storyboard_jobs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_trend_job_requests",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_trend_signal_observations",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_trend_signal_runs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_user_preferences",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_workflow_runs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_workflow_signals",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "admin_workflow_signals_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "public",
+      "name": "admin_workflow_steps",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "announcements",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "app_web_vitals_histogram",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "app_web_vitals_ingest_budget",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "document_embeddings",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "document_embeddings_bge",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "document_embeddings_bge_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "public",
+      "name": "document_embeddings_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "public",
+      "name": "documents",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "g038_deletion_commitment",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "g038_deletion_route",
+      "owner": "privacy_workflow_owner",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "marketing_campaign_batches",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "marketing_campaign_operations",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "marketing_campaign_recipients",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "mv_popular_reviews",
+      "owner": "postgres",
+      "kind": "matview"
+    },
+    {
+      "schema": "public",
+      "name": "mv_restaurant_stats",
+      "owner": "postgres",
+      "kind": "matview"
+    },
+    {
+      "schema": "public",
+      "name": "mv_user_leaderboard",
+      "owner": "postgres",
+      "kind": "matview"
+    },
+    {
+      "schema": "public",
+      "name": "notifications",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "ocr_logs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "privacy_consent_state",
+      "owner": "privacy_workflow_owner",
+      "kind": "view"
+    },
+    {
+      "schema": "public",
+      "name": "privacy_incident_actions",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "privacy_incident_notices",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "privacy_incident_transition_previews",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "privacy_incidents",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "profiles",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "release_auth_identities",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "release_auth_revocation_receipts",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "release_auth_session_leases",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_admin_destructive_audit_events",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_evidence_frames",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_popular_rank_snapshots",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_popularity_metrics",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_popularity_shadow",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_refresh_candidates",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_refresh_runs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_request_review_audit",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_requests",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_submission_items",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurant_submissions",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurants",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurants_backup",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "restaurants_duplicate",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "review_likes",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "reviews",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "search_logs",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "short_urls",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "transcript_embeddings_bge",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "transcript_embeddings_bge_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "public",
+      "name": "user_account_status",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "user_bookmarks",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "user_roles",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "user_stats",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "video_frame_captions",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "video_frame_captions_id_seq",
+      "owner": "postgres",
+      "kind": "sequence"
+    },
+    {
+      "schema": "public",
+      "name": "videos",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "youtube_channel_kpi_snapshots",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "youtube_thumbnail_releases",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "public",
+      "name": "youtube_video_kpi_snapshots",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "review_media_private",
+      "name": "cleanup",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "review_media_private",
+      "name": "commits",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "shortener_private",
+      "name": "short_url_rate_limit_counters",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "shortener_private",
+      "name": "short_url_rate_limit_policies",
+      "owner": "postgres",
+      "kind": "table"
+    },
+    {
+      "schema": "storage",
+      "name": "buckets",
+      "owner": "supabase_storage_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "storage",
+      "name": "migrations",
+      "owner": "supabase_storage_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "storage",
+      "name": "objects",
+      "owner": "supabase_storage_admin",
+      "kind": "table"
+    },
+    {
+      "schema": "vault",
+      "name": "decrypted_secrets",
+      "owner": "supabase_admin",
+      "kind": "view"
+    },
+    {
+      "schema": "vault",
+      "name": "secrets",
+      "owner": "supabase_admin",
+      "kind": "table"
+    }
+  ]
+}

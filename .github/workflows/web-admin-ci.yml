@@ -184,7 +184,40 @@ jobs:
       - name: Fail closed on benchmark evidence
         if: always() && steps.scope.outputs.benchmark != 'false'
         run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
+      # Chromium and the crawler browser-identity probe moved to the shard jobs,
+      # which are the only lanes that execute browser unit tests. Keeping them
+      # here cost 3 to 4 minutes on every run after the suite moved out.
       - run: npm run lint
+
+  ubuntu-npm-unit:
+    name: Ubuntu npm unit (shard ${{ matrix.shard }}/8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.0'
+      - name: Pin npm authority
+        run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
+      - run: npm ci
       - name: Install pinned Chrome for Testing for browser unit tests
         run: npx playwright install --with-deps chromium
       - name: Verify crawler browser identity against the web browser pin
@@ -192,7 +225,33 @@ jobs:
           set -euo pipefail
           executable="$(node --input-type=module -e 'import {chromium} from "@playwright/test"; console.log(chromium.executablePath())')"
           python3 ../../backend/bin/chrome_for_testing.py --executable "$executable" >/dev/null
-      - run: npm run test:unit
+      - run: npm run test:unit -- --shard ${{ matrix.shard }}/8
+
+  ubuntu-npm-build:
+    name: Ubuntu npm build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.0'
+      - name: Pin npm authority
+        run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
+      - run: npm ci
       - run: npm run build
 
   ubuntu-bun-compatibility:

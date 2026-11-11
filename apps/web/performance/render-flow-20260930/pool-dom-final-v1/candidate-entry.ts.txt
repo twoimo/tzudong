@@ -1,3 +1,0 @@
-import { createIndividualMarkerHTML } from "../../../lib/cluster-marker";
-import { MarkerPool } from './candidate-pool';
-globalThis.__poolDOMProbe={MarkerPool,createIndividualMarkerHTML};
