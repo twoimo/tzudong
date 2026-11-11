@@ -6,6 +6,11 @@
   "migrationRole": "postgres",
   "prerequisiteApplied": true,
   "prerequisiteContinue": true,
+  "privilegedReplay": {
+    "statements": 1,
+    "role": "supabase_admin",
+    "applied": true
+  },
   "prerequisiteErrors": [
     "must be member of role \"supabase_admin\""
   ],

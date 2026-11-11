@@ -87,6 +87,11 @@ def main() -> int:
     parser.add_argument("--migration-role", default="postgres")
     parser.add_argument("--keep", action="store_true", help="keep the container for inspection")
     parser.add_argument(
+        "--privileged-role",
+        default="supabase_admin",
+        help="role that replays the statements the prerequisite bundle cannot run as the migration role",
+    )
+    parser.add_argument(
         "--prerequisite-continue",
         action="store_true",
         help="apply the prerequisite bundle with ON_ERROR_STOP=0 and record the statements that need a privileged role",
@@ -115,6 +120,31 @@ def main() -> int:
             prerequisite = run(command, check=False)
         else:
             prerequisite = psql(container, args.prerequisite_role, file="/probe/prerequisites.sql")
+        privileged_replay: dict[str, Any] = {"statements": 0, "role": args.privileged_role, "applied": False}
+        if args.prerequisite_continue:
+            # Statements that need membership in a privileged role cannot run as the
+            # migration role. Replay them as that role so the rest of the bundle keeps
+            # postgres ownership of everything it creates.
+            privileged_lines = [
+                index for index, line in enumerate(Path(PREREQUISITES).read_text(encoding="utf-8").splitlines(), start=1)
+                if line.lstrip().upper().startswith("ALTER DEFAULT PRIVILEGES")
+            ]
+            if privileged_lines:
+                source = Path(PREREQUISITES).read_text(encoding="utf-8").splitlines()
+                statements = []
+                for index in privileged_lines:
+                    block = [source[index - 1]]
+                    cursor = index
+                    while not block[-1].rstrip().endswith(";") and cursor < len(source):
+                        block.append(source[cursor])
+                        cursor += 1
+                    statements.append("\n".join(block))
+                replay = psql(container, args.privileged_role, ("\n".join(statements) + "\n").encode(), check=False)
+                privileged_replay = {
+                    "statements": len(statements),
+                    "role": args.privileged_role,
+                    "applied": replay.returncode == 0,
+                }
         prerequisite_ok = prerequisite.returncode == 0
         prerequisite_errors = [
             line.split("ERROR:")[-1].strip()[:160]
@@ -147,6 +177,7 @@ def main() -> int:
             "migrationRole": args.migration_role,
             "prerequisiteApplied": prerequisite_ok,
             "prerequisiteContinue": bool(args.prerequisite_continue),
+            "privilegedReplay": privileged_replay,
             "prerequisiteErrors": prerequisite_error,
             "migrationCount": len(listing),
             "appliedCount": len(applied),
