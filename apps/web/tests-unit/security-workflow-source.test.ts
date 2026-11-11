@@ -111,7 +111,7 @@ describe('security audit workflow source contract', () => {
     }
 
     const checkoutCount = uses.filter((value) => value.startsWith('actions/checkout@')).length;
-    expect(checkoutCount).toBe(6);
+    expect(checkoutCount).toBe(7);
     expect(source.match(/persist-credentials: false/g)).toHaveLength(checkoutCount);
     expect(source.match(/ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g)).toHaveLength(checkoutCount);
     expect(source.match(/fetch-depth: 0/g)).toHaveLength(1);
@@ -119,7 +119,7 @@ describe('security audit workflow source contract', () => {
 
   test('keeps every security job least-privilege and time-bounded', () => {
     expect(source).toContain("- '.github/scripts/*ci*.py'");
-    for (const name of ['npm-audit', 'pip-audit', 'orchestration-readiness', 'rust-recovery', 'secret-pattern-scan', 'sbom']) {
+    for (const name of ['cloudflare-toolchain-audit', 'npm-audit', 'pip-audit', 'orchestration-readiness', 'rust-recovery', 'secret-pattern-scan', 'sbom']) {
       const block = jobBlock(name);
       expect(block).toMatch(/\n    timeout-minutes: [1-9][0-9]*\n/);
       expect(block).toContain('    permissions:\n      contents: read\n');

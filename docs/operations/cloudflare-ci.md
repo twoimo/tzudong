@@ -63,7 +63,7 @@ Workers Builds는 build와 deploy 명령을 별도 단계로 실행한다.
 | Preview builds | `false` |
 | `NODE_VERSION` | `24.22.1` |
 | `BUN_VERSION` | `1.4.0` |
-| `PYTHON_VERSION` | `3.12.12` |
+| Python | 빌드 이미지의 `python3` 사용, 3.11 이상 검증 및 실제 버전 기록 |
 | `SKIP_DEPENDENCY_INSTALL` | `1` |
 | `WRANGLER_SEND_METRICS` | `false` |
 
@@ -72,6 +72,10 @@ Cloudflare의 npm 선택은 프로젝트 루트 `package.json`의 `packageManage
 `npm@11.6.2`, Node `24.x`, 정확한 Wrangler 버전과 lockfile을 관리한다.
 `NPM_VERSION`이라는 임의 변수를 만들어 버전 고정을 대신하지 않는다.
 ([빌드 이미지와 버전 선택](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/))
+
+Python은 표준 라이브러리 문서 검사에만 사용한다. 별도 `PYTHON_VERSION` 선택으로
+오래 걸리는 런타임 설치를 추가하지 않고, 빌드 이미지의 `python3`가 3.11 이상인지
+확인한 뒤 실제 버전을 receipt에 기록한다. 실행 파일 부재나 검사 실패는 실패로 처리한다.
 
 검사 runner는 기본적으로 원격 환경을 요구한다. 공급자가 주입한
 `WORKERS_CI`, `WORKERS_CI_BUILD_UUID`, `WORKERS_CI_COMMIT_SHA`,

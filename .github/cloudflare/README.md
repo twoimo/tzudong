@@ -34,7 +34,7 @@ node ../scripts/deploy-cloudflare-governance.mjs --branch ci/cloudflare-free-mig
 ```
 
 빌드 변수는 `NODE_VERSION=24.22.1`, `BUN_VERSION=1.4.0`,
-`PYTHON_VERSION=3.12.12`, `SKIP_DEPENDENCY_INSTALL=1`,
+`SKIP_DEPENDENCY_INSTALL=1`,
 `WRANGLER_SEND_METRICS=false`다. npm은 이 폴더의 `packageManager`에서
 `npm@11.6.2`를 선택한다. [공식 버전 선택 규칙](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/#package-manager-versions)을
 따르며 임의 `NPM_VERSION` 변수로 대체하지 않는다.
@@ -86,3 +86,5 @@ Wrangler 변경은 이 패키지의 manifest와 lockfile을 함께 갱신하고 
 검증을 통과시킨다. 캐시나 이전 성공 영수증은 현재 SHA의 검사 결과를 대신할 수
 없다. 이 Worker에 앱의 Supabase/Vercel 자격 증명이나 기존 서비스의 bindings를
 추가하지 않는다. GitHub의 전체 검사와 필수 상태는 별도 전환 검증 전까지 유지한다.
+
+Python 문서 검사는 외부 패키지를 설치하지 않는다. 빌드 이미지의 `python3`(3.11 이상)를 사용하고 실제 버전을 receipt에 기록한다. `PYTHON_VERSION`으로 별도 런타임 설치를 강제하지 않는다.
