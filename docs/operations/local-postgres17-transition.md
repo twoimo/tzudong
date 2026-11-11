@@ -168,10 +168,12 @@ input (default `false`), so the nightly is unchanged unless it is requested.
 Two nightly runs of `pg17_baseline_probe.py` (record:
 `backend/supabase/baselines/local/pg17-baseline-restore-20261111.json`):
 
-| Run | Restore role | Source | Restored | Errors |
-| --- | --- | --- | --- | --- |
-| 43023085171 | `postgres` | 260 | 14 | 2603, all `permission denied for database` |
-| 43029324112 | `supabase_admin` | 260 | 259 | 172, all `already exists` |
+| Run | Restore role | Source | Restored | Missing | Errors |
+| --- | --- | --- | --- | --- | --- |
+| 43023085171 | `postgres` | 260 | 14 | - | 2603, all `permission denied for database` |
+| 43029324112 | `supabase_admin` | 260 | 259 | - | 172, all `already exists` |
+| 43062413888 | `supabase_admin` | 260 | 260 | **0** | 120 |
+| 43072708471 | `supabase_admin` | 260 | 260 | **0** | 119, all `role "privacy_workflow_owner" does not exist` |
 
 The first run is not a schema result: that image gives `postgres` no DDL rights, so
 every statement failed. Once the restore runs as `supabase_admin` the schema lands,
@@ -179,8 +181,14 @@ and every remaining error names an object the image seeds itself (`auth`, `stora
 `vault`, `extensions`, `graphql`, `realtime`, `pgbouncer`).
 
 So the transition does not need the ~24 migrations rewritten. It needs the adapter
-layer kept and one object explained: a count of 259 against 260 is not a verdict,
-which is why the probe now compares object names instead of totals.
+layer kept, and the last version of the probe lands **260 of 260 objects with none
+missing** - the residual is one role the schema dump names but does not create, which
+is a role reference rather than a schema problem.
+
+Two workflow fixes came out of this and apply beyond the probe: the Chromium install
+now retries (six dispatches died on runner DNS before the stack was ever started),
+and the probe runs before the regression lanes so a lane failure cannot consume the
+measurement.
 
 ### Applier support (default off)
 

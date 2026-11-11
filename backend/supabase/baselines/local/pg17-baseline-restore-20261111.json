@@ -34,13 +34,39 @@
         "function \"email\" already exists with same argument types"
       ],
       "verdict": "the schema restores; every error is an object the supabase image seeds itself (auth, storage, vault, extensions, graphql, realtime, pgbouncer), not an incompatibility"
+    },
+    {
+      "runId": 43062413888,
+      "restoreRole": "supabase_admin",
+      "sourceObjects": 260,
+      "restoredObjects": 260,
+      "missingObjectCount": 0,
+      "errorCount": 120,
+      "errorClasses": {
+        "role \"privacy_workflow_owner\" does not exist": 119,
+        "cannot drop schema graphql_public because other objects depend on it": 1
+      },
+      "verdict": "every object lands and none is missing; the residual is a role the schema dump names but does not create, plus one --clean artefact"
+    },
+    {
+      "runId": 43072708471,
+      "restoreRole": "supabase_admin",
+      "preparedRoleCount": 7,
+      "sourceObjects": 260,
+      "restoredObjects": 260,
+      "missingObjectCount": 0,
+      "errorCount": 119,
+      "errorClasses": {
+        "role \"privacy_workflow_owner\" does not exist": 119
+      },
+      "verdict": "the graphql_public clean error is gone; the 119 role errors remain because that role is not in the source cluster's pg_roles even though the dump names it"
     }
   ],
   "notYetMeasured": [
-    "Which single object is missing (260 source vs 259 restored). The refined probe compares object names on both sides and does not rely on the count.",
-    "Whether a --clean --if-exists dump removes the 172 already-exists errors, which would leave a genuine error count of zero."
+    "Why the dump names privacy_workflow_owner while that role is absent from the source cluster's pg_roles. With all 260 objects present and nothing missing, this affects policy ownership only, not the schema.",
+    "A run that reports restored=true, which needs the role reference resolved rather than worked around."
   ],
-  "blockedBy": "GitHub Actions runners failed to resolve archive.ubuntu.com / security.ubuntu.com on 2026-11-11 (steps 'Install Chromium for the browser lane'), so the refined probe (PR #3755) could not complete. Two dispatches and one rerun hit the same DNS failure.",
-  "conclusion": "The baseline-restore path is viable and much cheaper than rewriting the ~24 migrations the adapters replace: the working schema lands on PG17 with one object unaccounted for and no compatibility error observed. Confirmation needs one more nightly dispatch once runner DNS recovers.",
+  "blockedBy": "GitHub Actions runner DNS failures (archive.ubuntu.com, security.ubuntu.com) aborted six nightly dispatches on 2026-11-11 at 'Install Chromium'. The workflow now retries that step four times and the probe runs before the lanes, so the measurement no longer depends on the browser lane.",
+  "conclusion": "The baseline-restore path is viable: the working schema lands on PG17 with 260 of 260 objects and none missing, and no version-incompatibility error has been observed. The switch does not need the ~24 migrations the adapters replace to be rewritten. The open item is a single role reference in the dump, not the schema.",
   "evidence": "artifacts pg17-baseline-probe-43029324112 (record pg17-baseline.json) and nightly run logs"
 }
