@@ -133,10 +133,22 @@ The pre-pass this model implies, which is what the adapters already do, is:
    body (replacement body) so nothing is applied twice;
 4. keep the objects those bodies create owned by `postgres`.
 
-Two questions stay open and are recorded in the model file rather than guessed:
-which role should own `privacy_retention` in the target model, and whether the
-GoTrue bootstrap creates `privacy_workflow_owner` with attributes that the g013
-and g014 guards reject.
+### Bootstraps
+
+The GoTrue bootstrap is reproducible: `backend/supabase/scripts/render_gotrue_migrations.py`
+renders the image's 65 `text/template` migrations (their only variable is
+`{{ index .Options "Namespace" }}`) into plain SQL, and applying them as
+`supabase_auth_admin` creates `auth.sessions` and `auth.refresh_tokens`. Verified
+65/65 on PG15.
+
+### The ordering is the open problem
+
+Combining the pieces is not additive. Bootstrapping GoTrue first and then running
+the mixed chain measured **78 applied**, against 87 without the bootstrap, because
+the grant normalisation runs before `privacy_retention` exists in that order. The
+replay engine therefore needs a defined order - bootstrap, privileged roles,
+grant normalisation per schema as it appears, then bodies - instead of more probe
+permutations. That is recorded as the first open question in the model file.
 
 ## Target
 

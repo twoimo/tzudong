@@ -82,12 +82,23 @@
     }
   ],
   "openQuestions": [
-    "Which migrations require SET ROLE privacy_workflow_owner, and can each be replaced by a SECURITY DEFINER path instead of a privileged run?",
-    "The GoTrue bootstrap: 20260711000100 requires auth.sessions and auth.refresh_tokens to exist before it runs; the probe cannot supply them without the gotrue image's staged migrations."
+    "Ordering: the GoTrue bootstrap, the privileged pre-pass and the grant normalisation interact. Bootstrapping GoTrue first and then running the mixed chain measured 78 applied (against 87 without it), because privacy_retention permissions are granted before the schema exists in that order. The replay engine needs a defined order rather than more probes.",
+    "Which migrations require SET ROLE privacy_workflow_owner, and can each be replaced by a SECURITY DEFINER path instead of a privileged run?"
   ],
   "baselines": [
     "backend/supabase/baselines/local/pg15-chain-role-probe-20261111.json",
     "backend/supabase/baselines/local/pg15-chain-role-probe-prereq-postgres-20261111.json",
     "backend/supabase/baselines/local/pg15-chain-role-probe-mixed-20261111.json"
-  ]
+  ],
+  "bootstrap": {
+    "gotrue": {
+      "image": "supabase/gotrue:v2.184.0",
+      "migrationCount": 65,
+      "templateVariables": [
+        "{{ index .Options \"Namespace\" }}"
+      ],
+      "renderer": "backend/supabase/scripts/render_gotrue_migrations.py",
+      "verified": "65/65 applied against PG15 after rendering to schema auth; auth.sessions and auth.refresh_tokens then exist"
+    }
+  }
 }
