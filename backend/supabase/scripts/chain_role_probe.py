@@ -57,11 +57,13 @@ def run(command: Sequence[str], *, check: bool = True, stdin: bytes | None = Non
     return result
 
 
-def psql(container: str, role: str, sql: bytes | None = None, *, file: str | None = None, check: bool = True) -> subprocess.CompletedProcess[bytes]:
+def psql(container: str, role: str, sql: bytes | None = None, *, file: str | None = None, check: bool = True, tcp: bool = False) -> subprocess.CompletedProcess[bytes]:
     command = [
         "docker", "exec", "-i", "-e", "PGPASSWORD=probe", container,
         "psql", "-U", role, "-d", "postgres", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
     ]
+    if tcp:
+        command.extend(["-h", "localhost"])
     if file is not None:
         command.extend(["-f", file])
     return run(command, check=check, stdin=sql)
@@ -90,6 +92,21 @@ def main() -> int:
         "--mixed-privileged",
         action="store_true",
         help="run migrations that mention SUPERUSER as the privileged role and everything else as the migration role",
+    )
+    parser.add_argument(
+        "--gotrue-migrations",
+        default=None,
+        help="host directory of rendered GoTrue migrations, applied before the chain",
+    )
+    parser.add_argument(
+        "--gotrue-role",
+        default="supabase_auth_admin",
+        help="role that applies the GoTrue bootstrap",
+    )
+    parser.add_argument(
+        "--staged-grants",
+        action="store_true",
+        help="apply --grant-file before each migration whenever the guarded schema exists (stage ordering)",
     )
     parser.add_argument(
         "--grant-file",
@@ -169,6 +186,23 @@ def main() -> int:
         grant_sql: bytes | None = None
         if args.grant_file:
             grant_sql = Path(args.grant_file).read_bytes()
+
+        gotrue: dict[str, Any] = {"applied": 0, "failed": 0}
+        if args.gotrue_migrations:
+            run(["docker", "exec", container, "mkdir", "-p", "/probe/gotrue"])
+            run(["docker", "cp", f"{args.gotrue_migrations}/.", f"{container}:/probe/gotrue"])
+            gotrue_listing = run(["docker", "exec", container, "sh", "-c", "ls /probe/gotrue/*.sql | sort"]).stdout.decode().split()
+            for path in gotrue_listing:
+                result = psql(container, args.gotrue_role, file=path, check=False, tcp=True)
+                if result.returncode == 0:
+                    gotrue["applied"] += 1
+                else:
+                    gotrue["failed"] += 1
+
+        schema_present = (
+            "SELECT to_regclass('privacy_retention.g014_catalog_contract_manifest') IS NOT NULL"
+            " OR to_regnamespace('privacy_retention') IS NOT NULL;"
+        )
         for path in listing:
             # A failed migration is data, not a probe failure: it is what the
             # profile is meant to show.
@@ -177,9 +211,16 @@ def main() -> int:
                 text = subprocess.run(["docker", "exec", container, "cat", path], capture_output=True).stdout.decode("utf-8", "replace")
                 if "SUPERUSER" in text:
                     role = args.privileged_role
+            if grant_sql is not None:
+                if args.staged_grants:
+                    # Stage ordering: normalise ownership whenever the guarded schema
+                    # exists, before the body that needs it runs.
+                    exists = psql(container, args.migration_role, schema_present.encode(), check=False, tcp=True)
+                    if b"t" in exists.stdout:
+                        psql(container, args.privileged_role, grant_sql, check=False)
+                elif role != args.migration_role:
+                    psql(container, args.privileged_role, grant_sql, check=False)
             result = psql(container, role, file=path, check=False)
-            if grant_sql is not None and role != args.migration_role:
-                psql(container, args.privileged_role, grant_sql, check=False)
             name = Path(path).name
             if result.returncode == 0:
                 applied.append(name)
@@ -199,6 +240,8 @@ def main() -> int:
             "prerequisiteContinue": bool(args.prerequisite_continue),
             "privilegedReplay": privileged_replay,
             "mixedPrivileged": bool(args.mixed_privileged),
+            "stagedGrants": bool(args.staged_grants),
+            "gotrue": gotrue,
             "grantFile": args.grant_file,
             "prerequisiteErrors": prerequisite_error,
             "migrationCount": len(listing),
