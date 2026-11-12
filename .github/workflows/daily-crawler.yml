@@ -121,6 +121,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           REF_PROTECTED: ${{ github.ref_protected }}
           TARGET_BRANCH: data
+          TZUDONG_DATA_BRANCH_PUBLISH: ${{ vars.TZUDONG_DATA_BRANCH_PUBLISH }}
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = "$CANONICAL_REPOSITORY"
@@ -130,14 +131,20 @@ jobs:
           authorization="$(printf 'x-access-token:%s' "$READ_TOKEN" | base64 -w0)"
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $authorization" \
             fetch --no-tags origin \
-            "refs/heads/$DEFAULT_BRANCH:refs/remotes/origin/$DEFAULT_BRANCH" \
-            "refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH"
+            "refs/heads/$DEFAULT_BRANCH:refs/remotes/origin/$DEFAULT_BRANCH"
           test "$(git rev-parse HEAD)" = "$TRIGGER_SHA"
           git merge-base --is-ancestor "$TRIGGER_SHA" "origin/$DEFAULT_BRANCH"
-          base_sha="$(git rev-parse "origin/$TARGET_BRANCH")"
-          base_tree="$(git rev-parse "origin/$TARGET_BRANCH^{tree}")"
-          printf 'base_sha=%s\n' "$base_sha" >> "$GITHUB_OUTPUT"
-          printf 'base_tree=%s\n' "$base_tree" >> "$GITHUB_OUTPUT"
+          # Only legacy Git publication needs a data-branch base. Compute still
+          # binds to the protected default branch when that opt-in is absent.
+          if [ "${TZUDONG_DATA_BRANCH_PUBLISH:-}" = "1" ]; then
+            git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $authorization" \
+              fetch --no-tags origin \
+              "refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH"
+            base_sha="$(git rev-parse "origin/$TARGET_BRANCH")"
+            base_tree="$(git rev-parse "origin/$TARGET_BRANCH^{tree}")"
+            printf 'base_sha=%s\n' "$base_sha" >> "$GITHUB_OUTPUT"
+            printf 'base_tree=%s\n' "$base_tree" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Guard manual default-branch budget posture
         if: github.event_name == 'workflow_dispatch'

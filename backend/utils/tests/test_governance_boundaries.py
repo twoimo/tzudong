@@ -1,12 +1,13 @@
-"""Governance-boundary source-contract tests.
+"""Governance-boundary source contracts and executable workflow tests.
 
 Feature: crawler-pipeline-orchestration
 
-These are read-only source-contract tests for Requirement 9 (governance-consistent
-change and reflection boundaries). Each test class maps to exactly one implementation
-task and its cited requirement(s). No source file is modified by these tests.
+These tests cover Requirement 9 (governance-consistent change and reflection
+boundaries). Compute-binding cases execute the workflow shell against isolated
+local Git repositories; no repository source file is modified by these tests.
 
   * GovernanceBackendOnlyLongRunningWorkTest  -> Task 11.1 (R9.1)
+  * GovernanceComputeBindingTest             -> Task 11.3 (R9.5)
   * GovernanceWorkflowRefGuardTest            -> Task 11.3 (R9.5, R5.3)
   * GovernanceAppliedMigrationImmutabilityTest -> Task 11.4 (R9.7)
 
@@ -15,7 +16,11 @@ Run with:  python3 -m unittest backend.utils.tests.test_governance_boundaries
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -201,6 +206,236 @@ def _entry_jobs(doc: dict) -> dict[str, dict]:
         if not needs:  # None, missing, or empty list -> entry job
             entry[name] = spec
     return entry
+
+
+class GovernanceComputeBindingTest(unittest.TestCase):
+    """Execute the workflow's source/data binding against local Git repositories."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.git_bin = shutil.which("git")
+        cls.bash_bin = shutil.which("bash")
+        if not cls.git_bin or not cls.bash_bin:
+            raise unittest.SkipTest("compute binding requires Git and Bash")
+        compute = _load_workflow(DAILY_CRAWLER_WORKFLOW)["jobs"]["daily-compute"]
+        matches = [step for step in compute["steps"] if step.get("id") == "bind"]
+        if len(matches) != 1:
+            raise AssertionError("expected exactly one daily compute binding step")
+        cls.bind_step = matches[0]
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name).resolve()
+        self.origin = self.root / "origin.git"
+        self.origin.mkdir()
+        self.checkout = self.root / "checkout"
+        self.output_path = self.root / "github-output"
+        # Only local file transport is allowed. Ignore operator Git configuration
+        # and use fixture identities/token without inheriting credentials.
+        self.command_env = {
+            "PATH": os.environ.get("PATH", os.defpath),
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_TERMINAL_PROMPT": "0",
+            "GIT_ALLOW_PROTOCOL": "file",
+            "GIT_AUTHOR_NAME": "Compute Binding Test",
+            "GIT_AUTHOR_EMAIL": "compute-binding@example.invalid",
+            "GIT_COMMITTER_NAME": "Compute Binding Test",
+            "GIT_COMMITTER_EMAIL": "compute-binding@example.invalid",
+        }
+        for name in ("SYSTEMROOT", "WINDIR", "TMP", "TEMP"):
+            if name in os.environ:
+                self.command_env[name] = os.environ[name]
+        self._git("init", "--bare", "--initial-branch=main", repository=self.origin)
+        self.trigger_sha, _ = self._origin_commit("trusted compute source\n")
+        self._git("update-ref", "refs/heads/main", self.trigger_sha, repository=self.origin)
+        self._git(
+            "clone", "--single-branch", "--branch", "main",
+            str(self.origin), str(self.checkout), repository=self.root,
+        )
+        self._git("checkout", "--detach", self.trigger_sha)
+
+    def _git(
+        self,
+        *arguments: str,
+        repository: Path | None = None,
+        input_text: str | None = None,
+        check: bool = True,
+    ) -> subprocess.CompletedProcess[str]:
+        result = subprocess.run(
+            [self.git_bin, "-C", str(repository or self.checkout), *arguments],
+            input=input_text,
+            capture_output=True,
+            text=True,
+            env=self.command_env,
+            timeout=10,
+            check=False,
+        )
+        if check:
+            self.assertEqual(result.returncode, 0, result.stderr)
+        return result
+
+    def _origin_commit(self, contents: str, *, parent: str | None = None) -> tuple[str, str]:
+        blob = self._git(
+            "hash-object", "-w", "--stdin", repository=self.origin, input_text=contents,
+        ).stdout.strip()
+        tree = self._git(
+            "mktree", repository=self.origin,
+            input_text=f"100644 blob {blob}\tfixture.txt\n",
+        ).stdout.strip()
+        arguments = ["commit-tree", tree, "-m", "local workflow fixture"]
+        if parent is not None:
+            arguments.extend(("-p", parent))
+        commit = self._git(*arguments, repository=self.origin).stdout.strip()
+        return commit, tree
+
+    def _run_bind(
+        self,
+        *,
+        flag: str | None = None,
+        overrides: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        self.output_path.write_text("", encoding="utf-8")
+        env = {
+            **self.command_env,
+            "READ_TOKEN": "local-binding-test-token",
+            "GITHUB_REPOSITORY": "twoimo/tzudong",
+            "CANONICAL_REPOSITORY": "twoimo/tzudong",
+            "DEFAULT_BRANCH": "main",
+            "TRIGGER_SHA": self.trigger_sha,
+            "REF_NAME": "main",
+            "REF_PROTECTED": "true",
+            "TARGET_BRANCH": "data",
+            "GITHUB_OUTPUT": str(self.output_path),
+        }
+        if flag is not None:
+            env["TZUDONG_DATA_BRANCH_PUBLISH"] = flag
+        env.update(overrides or {})
+        return subprocess.run(
+            [self.bash_bin, "-c", self.bind_step["run"]],
+            cwd=self.checkout,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=10,
+            check=False,
+        )
+
+    def _assert_no_binding_outputs(self) -> None:
+        self.assertEqual(self.output_path.read_text(encoding="utf-8"), "")
+
+    def _assert_head(self, expected: str) -> None:
+        self.assertEqual(self._git("rev-parse", "HEAD").stdout.strip(), expected)
+
+    def test_binding_uses_repository_opt_in_without_skipping_source_verification(self) -> None:
+        self.assertNotIn("if", self.bind_step)
+        self.assertEqual(self.bind_step["name"], "Bind trusted compute source and data base")
+        self.assertEqual(self.bind_step["env"], {
+            "READ_TOKEN": "${{ github.token }}",
+            "CANONICAL_REPOSITORY": "${{ github.event.repository.full_name }}",
+            "DEFAULT_BRANCH": "${{ github.event.repository.default_branch }}",
+            "TRIGGER_SHA": "${{ github.sha }}",
+            "REF_NAME": "${{ github.ref_name }}",
+            "REF_PROTECTED": "${{ github.ref_protected }}",
+            "TARGET_BRANCH": "data",
+            "TZUDONG_DATA_BRANCH_PUBLISH": "${{ vars.TZUDONG_DATA_BRANCH_PUBLISH }}",
+        })
+
+    def test_disabled_publication_needs_no_data_branch_or_binding_outputs(self) -> None:
+        for flag in (None, "", "0", "01", "1 ", " 1", "true", "TRUE", "yes", "enabled"):
+            with self.subTest(flag=flag):
+                # Require a fresh default-branch fetch on every invocation; no
+                # remote or cached data ref exists to satisfy an accidental read.
+                self._git("update-ref", "-d", "refs/remotes/origin/main")
+                result = self._run_bind(flag=flag)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self._assert_no_binding_outputs()
+                self._assert_head(self.trigger_sha)
+                self.assertEqual(
+                    self._git("rev-parse", "origin/main").stdout.strip(), self.trigger_sha,
+                )
+                self.assertNotEqual(
+                    self._git("show-ref", "--verify", "refs/remotes/origin/data", check=False).returncode,
+                    0,
+                )
+
+    def test_enabled_publication_requires_remote_data_even_when_a_stale_ref_is_cached(self) -> None:
+        for cached in (False, True):
+            with self.subTest(cached=cached):
+                if cached:
+                    stale_sha, _ = self._origin_commit("stale data snapshot\n")
+                    self._git("update-ref", "refs/heads/data", stale_sha, repository=self.origin)
+                    self._git("fetch", "origin", "refs/heads/data:refs/remotes/origin/data")
+                    self._git("update-ref", "-d", "refs/heads/data", repository=self.origin)
+                result = self._run_bind(flag="1")
+                self.assertNotEqual(result.returncode, 0, result.stderr)
+                self._assert_no_binding_outputs()
+                self._assert_head(self.trigger_sha)
+
+    def test_enabled_publication_binds_fresh_data_sha_tree_without_changing_source(self) -> None:
+        stale_sha, _ = self._origin_commit("previous independent data snapshot\n")
+        self._git("update-ref", "refs/heads/data", stale_sha, repository=self.origin)
+        self._git("fetch", "origin", "refs/heads/data:refs/remotes/origin/data")
+        data_sha, data_tree = self._origin_commit("current data snapshot\n", parent=stale_sha)
+        self._git("update-ref", "refs/heads/data", data_sha, repository=self.origin)
+
+        result = self._run_bind(flag="1")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            self.output_path.read_text(encoding="utf-8"),
+            f"base_sha={data_sha}\nbase_tree={data_tree}\n",
+        )
+        self.assertEqual(self._git("rev-parse", "origin/data").stdout.strip(), data_sha)
+        self._assert_head(self.trigger_sha)
+
+    def test_disabled_publication_still_rejects_source_identity_mismatches(self) -> None:
+        mismatches = {
+            "GITHUB_REPOSITORY": "untrusted/repository",
+            "CANONICAL_REPOSITORY": "untrusted/repository",
+            "REF_NAME": "data",
+            "REF_PROTECTED": "false",
+            "TRIGGER_SHA": "0" * 40,
+        }
+        for name, value in mismatches.items():
+            with self.subTest(environment=name):
+                result = self._run_bind(overrides={name: value})
+                self.assertNotEqual(result.returncode, 0, result.stderr)
+                self._assert_no_binding_outputs()
+                self._assert_head(self.trigger_sha)
+
+    def test_disabled_publication_rejects_trigger_outside_default_branch_history(self) -> None:
+        untrusted_sha, _ = self._origin_commit("untrusted source outside main\n")
+        self._git("update-ref", "refs/heads/untrusted", untrusted_sha, repository=self.origin)
+        self._git("fetch", "origin", "refs/heads/untrusted")
+        self._git("checkout", "--detach", untrusted_sha)
+
+        result = self._run_bind(overrides={"TRIGGER_SHA": untrusted_sha})
+
+        self.assertNotEqual(result.returncode, 0, result.stderr)
+        self._assert_no_binding_outputs()
+        self._assert_head(untrusted_sha)
+
+    def test_disabled_publication_requires_remote_default_branch_despite_cached_ref(self) -> None:
+        self._git("update-ref", "-d", "refs/heads/main", repository=self.origin)
+
+        result = self._run_bind()
+
+        self.assertNotEqual(result.returncode, 0, result.stderr)
+        self._assert_no_binding_outputs()
+        self._assert_head(self.trigger_sha)
+
+    def test_disabled_publication_accepts_trigger_ancestor_of_fresh_default_tip(self) -> None:
+        default_sha, _ = self._origin_commit("advanced trusted source\n", parent=self.trigger_sha)
+        self._git("update-ref", "refs/heads/main", default_sha, repository=self.origin)
+
+        result = self._run_bind()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self._assert_no_binding_outputs()
+        self.assertEqual(self._git("rev-parse", "origin/main").stdout.strip(), default_sha)
+        self._assert_head(self.trigger_sha)
 
 
 class GovernanceWorkflowRefGuardTest(unittest.TestCase):
