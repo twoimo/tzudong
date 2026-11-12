@@ -32,60 +32,52 @@ def _tags(pattern: re.Pattern[str], text: str) -> list[str]:
 
 
 class LocalPostgresImagePinTests(unittest.TestCase):
-    def test_every_pin_uses_the_same_image_tag(self) -> None:
-        compose = _tags(IMAGE, COMPOSE.read_text(encoding="utf-8"))
-        helper = _tags(IMAGE, LOCAL_STACK.read_text(encoding="utf-8"))
-        nightly = _tags(IMAGE, NIGHTLY.read_text(encoding="utf-8"))
-        bootstrap = json.loads(BOOTSTRAP.read_text(encoding="utf-8"))
-        bootstrap_image = str(bootstrap["platformAuthBootstrap"]["ociImage"])
+    def test_the_application_stack_pins_seventeen(self) -> None:
+        compose = COMPOSE.read_text(encoding="utf-8")
+        self.assertIn("${POSTGRES_IMAGE:-supabase/postgres:17.11.0.018}", compose)
+        stack = LOCAL_STACK.read_text(encoding="utf-8")
+        self.assertIn('APPLICATION_IMAGE = "supabase/postgres:17.11.0.018"', stack)
+        # The volume helper must run the image of the service it prepares.
+        self.assertIn("                _postgres_image(),", stack)
 
-        self.assertTrue(compose, "docker-compose.yml must pin supabase/postgres")
-        self.assertEqual(len(set(compose)), 1, compose)
-        self.assertEqual(len(set(helper)), 1, helper)
-        self.assertEqual(len(set(nightly)), 1, nightly)
-        self.assertTrue(bootstrap_image.startswith(DOCKER_HUB_PREFIX), bootstrap_image)
-        bootstrap_tag = bootstrap_image[len(DOCKER_HUB_PREFIX):]
+    def test_the_replay_lane_pins_fifteen(self) -> None:
+        stack = LOCAL_STACK.read_text(encoding="utf-8")
+        self.assertIn('REPLAY_IMAGE = "supabase/postgres:15.8.1.085"', stack)
+        self.assertIn('REPLAY_STACK_ENV = "LOCAL_STACK_REPLAY_STACK"', stack)
+        local_job = NIGHTLY.read_text(encoding="utf-8").split("  pg17-provision:")[0]
+        pins = _tags(IMAGE, local_job)
+        self.assertTrue(pins, "the replay lane prefetches and probes the 15 image")
+        self.assertEqual(set(pins), {"15.8.1.085"}, pins)
 
-        pinned = f"supabase/postgres:{compose[0]}"
-        pins = {
-            "backend/supabase/docker-compose.yml": pinned,
-            "backend/supabase/scripts/local-stack.py": f"supabase/postgres:{helper[0]}",
-            ".github/workflows/nightly-local-regression.yml (prefetch + readiness probe)": f"supabase/postgres:{nightly[0]}",
-            "backend/supabase/volumes/db/BOOTSTRAP_SOURCES.v1.json": bootstrap_tag,
-        }
-        self.assertEqual(
-            set(pins.values()),
-            {pinned},
-            "Update every local PostgreSQL pin together: " + json.dumps(pins, sort_keys=True),
-        )
+    def test_the_provisioning_lane_pins_the_application_image(self) -> None:
+        workflow = NIGHTLY.read_text(encoding="utf-8")
+        lane = workflow.split("  pg17-provision:")[1] if "  pg17-provision:" in workflow else ""
+        self.assertEqual(set(_tags(IMAGE, lane)), {"17.11.0.018"}, lane[:200])
 
-    def test_the_nightly_pins_both_the_prefetch_and_the_probe(self) -> None:
-        nightly = NIGHTLY.read_text(encoding="utf-8")
-        self.assertGreaterEqual(
-            len(_tags(IMAGE, nightly)),
-            2,
-            "nightly-local-regression.yml must pin the prefetch list and the readiness probe",
-        )
-
-    def test_a_major_change_is_declared_with_its_adapter_layer(self) -> None:
-        """A PG17 pin only works after the PG15 replay adapters are retired.
-
-        This documents the coupling rather than enforcing a version: the plan
-        document owns the ordering, and the guard above keeps the pins aligned.
-        """
+    def test_the_applier_accepts_only_these_two_images(self) -> None:
         migrate = (ROOT / "backend/supabase/scripts/local-migrate.py").read_text(encoding="utf-8")
-        has_adapters = "_canonical_source_replay_bodies" in migrate
-        tag = _tags(IMAGE, COMPOSE.read_text(encoding="utf-8"))[0]
-        major = int(tag.split(".")[0])
-        if has_adapters:
-            self.assertEqual(
-                major,
-                15,
-                "PG15 replay adapters are still wired in local-migrate.py; retire them "
-                "(and regenerate the BOOTSTRAP_SOURCES hashes) before pinning a newer major",
-            )
+        for image in ("supabase/postgres:17.11.0.018", "supabase/postgres:15.8.1.085"):
+            self.assertIn(f'"{image}"', migrate)
+    def test_the_bootstrap_inventory_describes_the_replay_image(self) -> None:
+        bootstrap = json.loads(BOOTSTRAP.read_text(encoding="utf-8"))
+        image = str(bootstrap["platformAuthBootstrap"]["ociImage"])
+        self.assertTrue(image.startswith(DOCKER_HUB_PREFIX), image)
+        self.assertEqual(
+            image[len(DOCKER_HUB_PREFIX):],
+            "supabase/postgres:15.8.1.085",
+            "the bootstrap inventory records upstream sources of the 15 image; regenerate "
+            "it before claiming it describes another tag",
+        )
+
+    def test_a_replay_pin_requires_the_adapter_layer(self) -> None:
+        """The replay lane may only exist while the adapters it depends on do."""
+        migrate = (ROOT / "backend/supabase/scripts/local-migrate.py").read_text(encoding="utf-8")
+        stack = LOCAL_STACK.read_text(encoding="utf-8")
+        replay = re.search(r'REPLAY_IMAGE = "supabase/postgres:(\d+\.\d+\.\d+\.\d+)"', stack).group(1)
+        if "_canonical_source_replay_bodies" in migrate:
+            self.assertEqual(int(replay.split(".")[0]), 15, "the replay adapters only accept 15")
         else:
-            self.assertNotEqual(major, 15, "the PG15 adapter layer is gone, so the pin must move off 15")
+            self.fail("the replay adapters are gone, so the replay image constant has nothing left to pin")
 
 
 if __name__ == "__main__":
