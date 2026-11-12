@@ -52,7 +52,7 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
     def test_the_probe_keeps_the_baseline_it_captured(self) -> None:
         # The captured baseline is the artifact a provisioned stack needs, so the run
         # keeps it and the workflow uploads it with the record.
-        self.assertIn('"--baseline-output"', self.workflow)
+        self.assertIn("--baseline-output", self.workflow)
         self.assertIn("pg17-baseline/", self.workflow)
         self.assertIn('args.baseline_output if args.baseline_output', self.probe)
 
