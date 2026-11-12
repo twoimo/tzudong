@@ -13,6 +13,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 from backend.supabase.scripts import transform_hosted_pending_custody_pg15_replay as custody_replay
+from backend.supabase.scripts import transform_public_index_dedup_pg15_replay as index_dedup_replay
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -274,6 +275,43 @@ class LocalMigrationContractTests(unittest.TestCase):
         self.assertIn(b"PENDING_CUSTODY_SUPERSEDED_INDEX_PREIMAGE", body)
         self.assertNotIn(b"CREATE UNIQUE INDEX", body.upper())
         self.assertNotIn(b"DROP INDEX", body.upper())
+
+    def test_index_dedup_registry_keeps_source_identity_and_the_complete_pg15_body(self) -> None:
+        path = "backend/supabase/migrations/" + index_dedup_replay.NAME
+        item = next(row for row in local_migrate.build_manifest()["source"]["files"]
+                    if row["path"] == path)
+        original = (ROOT / path).read_bytes()
+        adapted = index_dedup_replay.transform(original)
+        self.assertEqual(local_migrate._canonical_source_replay_bodies()[path], (original, adapted))
+        self.assertEqual(item["sha256"], index_dedup_replay.SHA256)
+        self.assertEqual(item["byteLength"], index_dedup_replay.BYTE_LENGTH)
+        self.assertEqual(local_migrate._execution_body(item), adapted)
+        _, executed = local_migrate._source_execution_parts(item, item["ordinal"] - 1)
+        self.assertEqual(executed, adapted)
+        self.assertEqual(executed.count(b"BEGIN;"), original.count(b"BEGIN;"))
+        self.assertEqual(executed.count(b"COMMIT;"), original.count(b"COMMIT;"))
+        self.assertEqual(
+            executed.replace(index_dedup_replay.PG15_VERSION_GUARD,
+                             index_dedup_replay.PG17_VERSION_GUARD, 1),
+            original,
+        )
+        with patch.object(local_migrate, "_verified_migration_bytes", return_value=original + b"\n"):
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "^migration_source_mismatch$"):
+                local_migrate._execution_body(item)
+
+    def test_index_dedup_registry_rejects_drift_in_the_immutable_source(self) -> None:
+        read_bytes = Path.read_bytes
+        target = ROOT / "backend/supabase/migrations" / index_dedup_replay.NAME
+        def changed(path):
+            data = read_bytes(path)
+            return data + b"\n" if path == target else data
+        try:
+            local_migrate._canonical_source_replay_bodies.cache_clear()
+            with patch.object(Path, "read_bytes", changed):
+                with self.assertRaisesRegex(local_migrate.LocalMigrationError, "^source_replay_invalid$"):
+                    local_migrate._canonical_source_replay_bodies()
+        finally:
+            local_migrate._canonical_source_replay_bodies.cache_clear()
 
     def test_custody_registry_rejects_drift_in_either_immutable_source(self) -> None:
         read_bytes = Path.read_bytes
