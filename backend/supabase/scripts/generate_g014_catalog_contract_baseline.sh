@@ -1736,8 +1736,11 @@ SQL
       index_prerequisite_receipt="$staging_dir/public-index-dedup-prerequisites.json"
       python3 "$script_dir/recover_public_index_dedup_replay_prerequisites.py" \
         --source "$baselines_dir/local/application-prerequisites.sql" \
+        --roles-source "$script_dir/../migrations/20260514_00_admin_user_management_hardening.sql" \
         --output "$index_prerequisites" --receipt "$index_prerequisite_receipt"
       g026_chain_apply 'public-index-dedup-prerequisite-source' "$baselines_dir/local/application-prerequisites.sql"
+      g026_chain_apply 'public-index-dedup-prerequisite-roles-source' \
+        "$script_dir/../migrations/20260514_00_admin_user_management_hardening.sql"
       g026_chain_apply 'public-index-dedup-prerequisite-generator' \
         "$script_dir/recover_public_index_dedup_replay_prerequisites.py"
       g026_chain_apply 'public-index-dedup-prerequisite-sql' "$index_prerequisites"

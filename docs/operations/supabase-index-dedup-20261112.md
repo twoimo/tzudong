@@ -159,12 +159,19 @@ An independent disposable PostgreSQL 17.6 fixture passed all five cases on
 | Apply once | Target index family reduced from 14 to 6; all eight intended objects removed; six keepers and six separate primary-key indexes retained with unchanged metadata/OIDs; rows and lookup results unchanged; both surviving UNIQUE constraints reject duplicates |
 | Repeat | No-op with identical catalog and rows |
 | Rollback | The test copy's final COMMIT was replaced with ROLLBACK; original catalog and rows restored |
-| Keeper drift | A descending keeper fails with `public_index_dedup_index_drift` before any DROP attempt |
-| FK dependency | A real FK depending on the old short URL index fails with `public_index_dedup_dependency_denied` before any DROP attempt |
+| Keeper drift | A descending keeper produces `public_index_dedup_index_drift`; before/after catalog and rows are unchanged |
+| FK dependency | A real FK depending on the old short URL index produces `public_index_dedup_dependency_denied`; before/after catalog and rows are unchanged |
 
 The fixture used PostgreSQL single-user mode and synthetic rows. It verifies DDL,
 catalog state, row results and constraints. It does not prove hosted application
 behavior, RLS behavior, concurrent workload behavior or latency improvement.
+
+The original fixture report inferred zero DROP attempts from an event-trigger
+notice. PostgreSQL disables event triggers in standalone single-user mode, so
+those attempt counts have been corrected to unknown in the evidence JSON.
+Both observed errors are raised in the reviewed SQL preflight before its DROP
+loop; that control-flow conclusion is separate from runtime attempt counting.
+The five cases' catalog, row, uniqueness and rollback results remain valid.
 
 ## PostgreSQL 15 catalog replay compatibility
 
@@ -197,7 +204,7 @@ historical reconstruction inputs create five of the six keeper indexes, but
 omit `idx_transcript_embeddings_bge_video_id`. The runtime error does not name
 the missing index; that identification comes from the source comparison.
 
-The canonical generator therefore restores that one prerequisite from the
+The canonical generator first restored that prerequisite from the
 already pinned `baselines/local/application-prerequisites.sql`, following the
 existing bounded prerequisite-recovery pattern. The 210,720-byte input has
 SHA-256 `c4fce4f7ddaf6315474cb3a3d408eef1fb7ff538af7f39183ebdc46828630356`.
@@ -209,12 +216,72 @@ CREATE INDEX idx_transcript_embeddings_bge_video_id ON public.transcript_embeddi
 
 Its SHA-256 is
 `cb2c3de6ec909e758c0a791404c406cad4f622123f180be4b29ddc46beb29ed2`.
-The original CREATE statement is preserved without `IF NOT EXISTS`; unexpected
-existing state must fail. Source, recovery code, generated prerequisite and
-receipt participate in the canonical evidence chain. Recovery runs only in the
-isolated PG15 canonical generator immediately before this migration. The local
-replay applier already uses the full prerequisite input and does not run this
-extra recovery. No original keeper or dependency guard is relaxed.
+The original keeper CREATE statement is preserved without `IF NOT EXISTS`;
+unexpected existing state must fail.
+
+[Catalog run 43213090094](https://github.com/twoimo/tzudong/actions/runs/43213090094)
+then passed the 271-test unit stage (204 passed, 67 skipped), executed the keeper recovery, and
+stopped in the first full replay at `public_index_dedup_index_drift`, before the
+dedup DROP phase. The runtime error does not identify an index or field. A full
+source comparison found two additional reconstruction differences:
+
+| Index | Historical canonical input | Intended source definition |
+| --- | --- | --- |
+| `idx_bge_embeddings_video_id` | The January archive creates it on `document_embeddings_bge`; G026 creates `transcript_embeddings_bge` separately | The pinned prerequisite defines it on `public.transcript_embeddings_bge(video_id)` |
+| `user_roles_user_id_role_idx` | The May 6 web migration creates a nonunique index; the May 14 backend `CREATE UNIQUE INDEX IF NOT EXISTS` skips that existing name | The May 14 backend migration requires a unique index on `public.user_roles(user_id, role)` |
+
+The canonical-only recovery therefore also normalizes these two known legacy
+indexes before running the unchanged dedup body. It validates all legacy
+definitions, absence of constraints/dependencies and exclusion from the exact
+source-bound declared protected-relation list, then uses
+`DROP INDEX ... RESTRICT` and the exact intended source CREATE
+statements. The BGE definition comes from the same pinned prerequisite. The
+roles definition comes from the separately pinned 7,436-byte
+`20260514_00_admin_user_management_hardening.sql`, SHA-256
+`da60b7b3fdcd623213d204d076a26dba41d4d1d60486afe62d7a84e077e1445b`.
+It is not attributed to the prerequisite file, which does not define that index.
+
+All preconditions are checked before the first DDL in a single bounded
+transaction. An unexpected definition, dependency, protected relation, existing
+keeper or non-isolated executor state aborts instead of accepting drift. Both
+source files, individual definitions, recovery code, generated SQL and receipt
+participate in the evidence chain. The receipt is included in both clean replay
+artifact manifests and their comparison.
+
+The protected-list check uses public `pg_catalog` metadata, following the
+existing `local_catalog_readback.sql` pattern. It binds the function's exact
+3,673-byte body SHA-256
+`20acd5742d891cf8a33b265a3a1298c65dd9646402c58391cd17829951cf92f2`
+and its signature, owner, language, volatility, security mode and search path.
+The fixed 61-relation list excludes the three normalization tables. The helper
+also checks the manifest's owner, forced RLS and immutable trigger metadata.
+It does not invoke the private function, read manifest rows, grant privileges or
+switch roles. Manifest row absence or whole-manifest content equality is not
+asserted by this check; the generator's existing final G014 assertion gate
+remains in place.
+
+Recovery runs only in the isolated PG15 canonical generator immediately before
+this migration. The local replay applier uses the full prerequisite first and
+only the backend migration directory, so the earlier web nonunique-index
+creation is absent from that path. Its BGE index already belongs to transcript,
+and the May 14 backend migration creates the roles index as UNIQUE. The extra
+canonical recovery is not registered with the local applier. The production
+migration, its one-byte PG15 adapter, original source inputs, and original
+keeper/dependency checks remain unchanged.
+
+The final normalization code passed 10 source/generator tests, and the driver
+integration plus artifact-comparison modules passed 31 tests. An independent
+review verified the source bindings, protection boundary and preflight order.
+The separate
+[`supabase-index-dedup-pg15-tests-20261112.json`](evidence/supabase-index-dedup-pg15-tests-20261112.json)
+records 13/13 real PostgreSQL 15.8 synthetic single-user cases: full recovery
+followed by the unchanged adapter and idempotent repeat, transaction rollback,
+and rejection of drifted indexes, protection metadata, an actual extension
+dependency, a hosted migration schema, or a PostgreSQL 17 executor. The positive
+case preserves 21 synthetic rows, retained index/primary-key metadata and both
+UNIQUE constraints. These tests do not establish role privileges, RLS execution,
+concurrency, full canonical replay or hosted results. Event-trigger attempt
+counts are not measured in single-user mode.
 
 PG15 reconstruction, the original PG17.6 five-case fixture, and the hosted
 apply/readback are separate evidence. A passing PG15 catalog check must not be

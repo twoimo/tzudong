@@ -64,17 +64,23 @@
       "name": "keeper_drift",
       "pass": true,
       "expected_error": "public_index_dedup_index_drift",
-      "drop_attempts": 0,
+      "drop_attempts": null,
       "catalog_equal": true,
-      "rows_equal": true
+      "rows_equal": true,
+      "drop_attempt_instrumentation_validated": false,
+      "preflight_error_before_drop_phase": true,
+      "preflight_order_basis": "Observed expected error and reviewed immutable SQL control flow; not event-trigger instrumentation."
     },
     {
       "name": "fk_dependency",
       "pass": true,
       "expected_error": "public_index_dedup_dependency_denied",
-      "drop_attempts": 0,
+      "drop_attempts": null,
       "catalog_equal": true,
-      "rows_equal": true
+      "rows_equal": true,
+      "drop_attempt_instrumentation_validated": false,
+      "preflight_error_before_drop_phase": true,
+      "preflight_order_basis": "Observed expected error and reviewed immutable SQL control flow; not event-trigger instrumentation."
     }
   ],
   "environment": "Disposable vanilla PostgreSQL 17.6 single-user mode; synthetic data only.",
@@ -137,5 +143,14 @@
       "The public health endpoint establishes its response only, not authenticated end-to-end database workflows.",
       "No latency, throughput or billing reduction was measured."
     ]
+  },
+  "instrumentation_clarification": {
+    "date": "2026-11-12",
+    "original_claim": "The original fixture report recorded drop_attempts=0 from absence of a sql_drop event-trigger notice in single-user mode.",
+    "correction": "PostgreSQL disables event triggers in standalone single-user mode. The absence of those notices does not measure DROP attempts; the two fields are now null.",
+    "remaining_evidence": "The expected preflight errors, unchanged before/after catalog and rows, immutable SQL ordering, successful apply/repeat/rollback, keeper OIDs and UNIQUE behavior remain verified.",
+    "attempt_count_measured": false,
+    "database_or_migration_changed": false,
+    "source_reference": "PostgreSQL 15.8 and 17.6 src/backend/commands/event_trigger.c; EventTriggerSQLDrop and the documented standalone-mode early-return behavior."
   }
 }

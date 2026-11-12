@@ -98,7 +98,8 @@ class PublicIndexDedupPg15ReplayTests(unittest.TestCase):
         self.assertIn("backend/supabase/scripts/recover_public_index_dedup_replay_prerequisites.py", relevant)
 
     def _dispatch(self, *, source: bytes | None = None, psql_exit: int = 0,
-                  fail_call: int = 2, prerequisite_source: bytes | None = None):
+                  fail_call: int = 2, prerequisite_source: bytes | None = None,
+                  roles_source: bytes | None = None):
         """Run the real shell dispatch with a recording, database-free psql boundary."""
         case = self.driver.split('  case "${migration##*/}" in\n', 1)[1].split(
             "  esac\n  previous_effective_filename=", 1
@@ -114,6 +115,15 @@ class PublicIndexDedupPg15ReplayTests(unittest.TestCase):
                 baselines = root / "baselines"
                 (baselines / "local").mkdir(parents=True)
                 (baselines / "local/application-prerequisites.sql").write_bytes(prerequisite_source)
+            scripts = SCRIPT.parent
+            if roles_source is not None:
+                scripts = root / "backend/supabase/scripts"
+                scripts.mkdir(parents=True)
+                for script in (SCRIPT, SCRIPT.parent / "recover_public_index_dedup_replay_prerequisites.py"):
+                    (scripts / script.name).write_bytes(script.read_bytes())
+                roles_path = scripts.parent / "migrations" / Path(recovery.ROLES_SOURCE_PATH).name
+                roles_path.parent.mkdir()
+                roles_path.write_bytes(roles_source)
             argv = root / "argv"
             sql = root / "stdin.sql"
             chain = root / "chain.tsv"
@@ -136,7 +146,7 @@ compose() {
             result = subprocess.run(
                 ["bash", "-c", stub + 'case "${migration##*/}" in\n' + case + "esac\n"],
                 env={"PATH": os.environ.get("PATH", os.defpath), "migration": str(migration),
-                     "work_dir": str(root), "script_dir": str(SCRIPT.parent),
+                     "work_dir": str(root), "script_dir": str(scripts),
                      "staging_dir": str(staging), "baselines_dir": str(baselines),
                      "TEST_ARGV": str(argv), "TEST_SQL": str(sql),
                      "TEST_CHAIN": str(chain), "TEST_PSQL_EXIT": str(psql_exit),
@@ -158,13 +168,17 @@ compose() {
         expected_args = ["exec", "-T", "db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
                          "-h", "127.0.0.1", "-p", "5432", "-U", "postgres", "-d", "postgres"]
         self.assertEqual(arguments, [expected_args, expected_args])
-        prerequisites, receipt = recovery.recover((ROOT / recovery.SOURCE_PATH).read_bytes())
+        prerequisites, receipt = recovery.recover(
+            (ROOT / recovery.SOURCE_PATH).read_bytes(),
+            (ROOT / recovery.ROLES_SOURCE_PATH).read_bytes(),
+        )
         self.assertEqual(sql, [prerequisites, replay.transform(self.source)])
         self.assertEqual(source, self.source)
         receipt_bytes = (json.dumps(receipt, sort_keys=True, indent=2) + "\n").encode()
         recovery_script = ROOT / "backend/supabase/scripts/recover_public_index_dedup_replay_prerequisites.py"
         self.assertEqual(chain, [
             "public-index-dedup-prerequisite-source\t" + recovery.SOURCE_SHA256,
+            "public-index-dedup-prerequisite-roles-source\t" + recovery.ROLES_SOURCE_SHA256,
             "public-index-dedup-prerequisite-generator\t" + hashlib.sha256(recovery_script.read_bytes()).hexdigest(),
             "public-index-dedup-prerequisite-sql\t" + hashlib.sha256(prerequisites).hexdigest(),
             "public-index-dedup-prerequisite-receipt\t" + hashlib.sha256(receipt_bytes).hexdigest(),
@@ -177,14 +191,17 @@ compose() {
         self.assertEqual(result.returncode, 3)
         self.assertEqual(len(arguments), 2)
         self.assertEqual(sql[-1], replay.transform(self.source))
-        self.assertEqual(len(chain), 6)
+        self.assertEqual(len(chain), 7)
         self.assertEqual(source, self.source)
 
     def test_generator_stops_before_dedup_when_prerequisite_execution_fails(self) -> None:
         result, arguments, sql, _, source = self._dispatch(psql_exit=7, fail_call=1)
         self.assertEqual(result.returncode, 7)
         self.assertEqual(len(arguments), 1)
-        prerequisites, _ = recovery.recover((ROOT / recovery.SOURCE_PATH).read_bytes())
+        prerequisites, _ = recovery.recover(
+            (ROOT / recovery.SOURCE_PATH).read_bytes(),
+            (ROOT / recovery.ROLES_SOURCE_PATH).read_bytes(),
+        )
         self.assertEqual(sql, [prerequisites])
         self.assertEqual(source, self.source)
 
@@ -203,6 +220,16 @@ compose() {
         result, arguments, sql, chain, source = self._dispatch(prerequisite_source=baseline + b"\n")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(b"PUBLIC_INDEX_DEDUP_REPLAY_PREREQUISITE_SOURCE_DRIFT", result.stderr)
+        self.assertEqual(arguments, [])
+        self.assertEqual(sql, [])
+        self.assertEqual(chain, [])
+        self.assertEqual(source, self.source)
+
+    def test_generator_rejects_roles_source_drift_before_any_psql_execution(self) -> None:
+        roles_source = (ROOT / recovery.ROLES_SOURCE_PATH).read_bytes()
+        result, arguments, sql, chain, source = self._dispatch(roles_source=roles_source + b"\n")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"PUBLIC_INDEX_DEDUP_REPLAY_PREREQUISITE_ROLES_SOURCE_DRIFT", result.stderr)
         self.assertEqual(arguments, [])
         self.assertEqual(sql, [])
         self.assertEqual(chain, [])
