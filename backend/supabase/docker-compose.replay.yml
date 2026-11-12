@@ -1,9 +1,0 @@
-# PostgreSQL 15 database for the migration replay lane.
-#
-# The application stack pins 17 and is provisioned from
-# backend/supabase/baselines/local/schema. The historical chain only replays on 15,
-# so the nightly replay lane opts into this override with LOCAL_STACK_REPLAY_STACK=1
-# instead of editing the pinned Compose file.
-services:
-  db:
-    image: supabase/postgres:15.8.1.085
