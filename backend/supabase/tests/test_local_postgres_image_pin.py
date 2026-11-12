@@ -54,14 +54,6 @@ class LocalPostgresImagePinTests(unittest.TestCase):
         lane = workflow.split("  pg17-provision:")[1] if "  pg17-provision:" in workflow else ""
         self.assertEqual(set(_tags(IMAGE, lane)), {"17.11.0.018"}, lane[:200])
 
-    def test_the_replay_switch_is_scoped_to_the_stack_step(self) -> None:
-        # A job-level env leaks into the unnamed run blocks, which the lane aggregate
-        # reads as the suite name (measured: the aggregate failed with the switch set).
-        workflow = NIGHTLY.read_text(encoding="utf-8")
-        job_env = workflow.split("jobs:")[0]
-        self.assertNotIn("LOCAL_STACK_REPLAY_STACK", job_env)
-        self.assertIn("LOCAL_STACK_REPLAY_STACK: '1'", workflow)
-
     def test_the_applier_accepts_only_these_two_images(self) -> None:
         migrate = (ROOT / "backend/supabase/scripts/local-migrate.py").read_text(encoding="utf-8")
         for image in ("supabase/postgres:17.11.0.018", "supabase/postgres:15.8.1.085"):

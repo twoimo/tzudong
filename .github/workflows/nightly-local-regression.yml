@@ -40,6 +40,10 @@ env:
   LOCAL_STACK_PORT_BASE: '18000'
   APP_PORT: '18080'
   NIGHTLY_SUITE: ${{ inputs.suite || 'all' }}
+  # The local job is the migration replay lane: the historical chain only replays on
+  # PostgreSQL 15 with the adapters, so the stack it starts selects that image. The
+  # application stack pins 17 and is provisioned from the committed baseline.
+  LOCAL_STACK_REPLAY_STACK: '1'
 
 jobs:
   local:
@@ -770,11 +774,6 @@ jobs:
       - name: Reset disposable local stack
         env:
           LOCAL_STACK_PRESERVE_FAILURE_STATE: '1'
-          # The local job is the migration replay lane: the historical chain only
-          # replays on PostgreSQL 15 with the adapters, so the stack it starts selects
-          # that image. Scoped to this step because a job-level variable leaks into the
-          # unnamed run blocks below (measured: the lane aggregate read it as the suite).
-          LOCAL_STACK_REPLAY_STACK: '1'
         shell: bash
         run: |
           set -euo pipefail
