@@ -40,6 +40,10 @@ env:
   LOCAL_STACK_PORT_BASE: '18000'
   APP_PORT: '18080'
   NIGHTLY_SUITE: ${{ inputs.suite || 'all' }}
+  # The local job is the migration replay lane: the historical chain only replays on
+  # PostgreSQL 15 with the adapters, so the stack it starts selects that image. The
+  # application stack pins 17 and is provisioned from the committed baseline.
+  LOCAL_STACK_REPLAY_STACK: '1'
 
 jobs:
   local:
@@ -85,6 +89,9 @@ jobs:
 
       - name: Verify the committed local baseline
         run: python3 -m unittest backend.supabase.tests.test_committed_local_baseline
+
+      - name: Verify the stack env matches the applier contract
+        run: python3 -m unittest backend.supabase.tests.test_local_env_contract
 
       - name: Install Node 24
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
