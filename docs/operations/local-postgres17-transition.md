@@ -253,11 +253,26 @@ database.
 The next attempt therefore has one extra step: teach `LOCAL_ENV_KEYS` the new key in
 the same change. `test_local_env_contract` now fails in seconds with the offending key
 if that is forgotten, instead of after a stack start - which is what the second attempt
-did, and the nightly that followed it ran the replay lane on 15 without incident.
+did. The second attempt passed migration replay, but its full nightly did not pass.
+
+### Preserve the replay selection across the browser admission boundary
+
+[Nightly 43178975663 attempt 1](https://github.com/twoimo/tzudong/actions/runs/43178975663/attempts/1)
+on `1514d85b` completed a 5,842-test unit lane without failures (six skips), then rejected the browser lane
+before Playwright started. The runner's bounded subprocess environment omitted
+`LOCAL_STACK_REPLAY_STACK=1`, so the Python validator compared the generated PG15
+`POSTGRES_IMAGE` with its default PG17 image and rejected the provenance contract.
+
+The runner preserves only the exact replay selector `1` for local stack children.
+It does not pass an ambient `POSTGRES_IMAGE` or widen the browser/unit runtime
+environment. The regression test invokes the real Python validator through that
+child environment: PG15 replay and the PG17 default pass, while a PG15 environment
+without the replay selector is still rejected. A passing source test does not replace
+the actual browser lane and sanitized diagnostics/cleanup checks on the fixed source.
 
 ### What the pin actually requires
 
-`backend/supabase/tests/test_local_postgres_image_pin.py` refuses a major above 15
+`backend/supabase/tests/test_local_postgres_image_pin.py` refuses a replay major above 15
 while the adapter layer exists, and the adapters exist because the historical chain
 replays at 91 of 161 migrations on 17. Those two facts make a pin swap on its own
 wrong: `local-migrate.py apply` replays the chain, so moving the pin without changing
