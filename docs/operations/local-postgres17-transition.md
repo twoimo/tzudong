@@ -219,25 +219,73 @@ Two properties matter more than the number. `provision` refuses to report succes
 without object parity, and the manifest hashes the schema, the object names and the
 roles, so a baseline cannot be used after any of them changed.
 
+### The baseline is committed, and drift fails the nightly
+
+`backend/supabase/baselines/local/schema/` holds the captured baseline: `schema.sql`
+(2.3MB), `objects.txt`, `roles.sql` and `manifest.json`, which hashes all three. It is
+the artifact a provisioned stack boots from, so it lives with the code instead of in a
+CI upload nobody can point at.
+
+The nightly step *Verify the committed local baseline matches the stack* compares a
+fresh capture against that manifest and fails with the regeneration command when the
+object set moved:
+
+    local_baseline.py capture --container <db> --output backend/supabase/baselines/local/schema
+
+The gate reads the object set - count, names digest, role count - and not the dump
+hash, because `pg_dump` output can differ without the schema differing and a gate that
+fires on formatting gets switched off rather than fixed. Nightly run 43156573526
+passed the gate against the committed baseline.
+
+### Why the first pin attempt failed
+
+Measured 2026-11-12, after reverting the attempt: `local-migrate.py` validates the whole
+key set of the generated stack env (`set(values) != LOCAL_ENV_KEYS`) before it touches
+the database, and exits 2 with `local_env_provenance` when the env grew a key it does
+not know.
+
+The attempt added `POSTGRES_IMAGE` to the generated env so Compose could select the
+image per lane. Stages 1 to 3 never read the env and passed; stage 4
+(`prerequisite_apply`) was the first to open it and died, which is exactly what the
+nightly reported. The stack had started cleanly - the failure was a contract, not the
+database.
+
+The next attempt therefore has one extra step: teach `LOCAL_ENV_KEYS` the new key in
+the same change. `test_local_env_contract` now fails in seconds with the offending key
+if that is forgotten, instead of after a stack start - which is what the second attempt
+did. The second attempt passed migration replay, but its full nightly did not pass.
+
+### Preserve the replay selection across the browser admission boundary
+
+[Nightly 43178975663 attempt 1](https://github.com/twoimo/tzudong/actions/runs/43178975663/attempts/1)
+on `1514d85b` completed a 5,842-test unit lane without failures (six skips), then rejected the browser lane
+before Playwright started. The runner's bounded subprocess environment omitted
+`LOCAL_STACK_REPLAY_STACK=1`, so the Python validator compared the generated PG15
+`POSTGRES_IMAGE` with its default PG17 image and rejected the provenance contract.
+
+The runner preserves only the exact replay selector `1` for local stack children.
+It does not pass an ambient `POSTGRES_IMAGE` or widen the browser/unit runtime
+environment. The regression test invokes the real Python validator through that
+child environment: PG15 replay and the PG17 default pass, while a PG15 environment
+without the replay selector is still rejected. A passing source test does not replace
+the actual browser lane and sanitized diagnostics/cleanup checks on the fixed source.
+
 ### What the pin actually requires
 
-`backend/supabase/tests/test_local_postgres_image_pin.py` refuses a major above 15
+`backend/supabase/tests/test_local_postgres_image_pin.py` refuses a replay major above 15
 while the adapter layer exists, and the adapters exist because the historical chain
 replays at 91 of 161 migrations on 17. Those two facts make a pin swap on its own
 wrong: `local-migrate.py apply` replays the chain, so moving the pin without changing
 how the stack is provisioned turns a working local stack into a 91/161 stack.
 
-The measured baseline restore gives the other order:
+The application stack now does that second step itself. After the database is ready,
+`local-stack.py start` calls `local_baseline.ensure_present` unless
+`LOCAL_STACK_REPLAY_STACK=1`. A database that already matches the committed baseline is
+left alone, so a second start does not wipe local rows. The nightly local job sets the
+replay selector and still applies the historical chain, which is why the adapters stay.
 
-1. keep the replay adapters, and build a canonical baseline from a verified stack;
-2. provision a new stack by creating the referenced roles and restoring the baseline
-   instead of replaying 161 migrations;
-3. retire the replay adapters, because nothing replays the chain any more;
-4. only then move the pin, which the pin test permits once the adapters are gone.
-
-Step 2 is the missing piece of machinery: the applier has no baseline mode. Until it
-does, the pin stays at 15 and the adapters stay load-bearing, which is the current,
-measured state rather than a stalled one.
+Retiring the adapters is the remaining step, and it waits until nothing replays the
+chain. The pin test still refuses a replay major above 15 while they exist.
 
 ### Applier support (default off)
 
@@ -378,3 +426,12 @@ Each workstream lands as its own pull request and is gated by a dispatched
 Local apply still cannot prove hosted behaviour for extensions, ACL defaults or
 role inheritance that the image configures differently. This plan removes the
 structural divergence; it does not turn local runs into hosted evidence.
+
+## Measured application boot (2026-11-12)
+
+A fresh `local-stack.py start` on `supabase/postgres:17.11.0.018` reaches 14/14 healthy only when the image-owned schemas are left alone. Restoring the privilege-less dump over `auth`, `storage` and `realtime` removes grants and service migration history, and those services restart. Preserving those schemas and restoring the project objects reaches the committed 260-object list.
+
+The start command now does that itself: services migrate the platform schemas first, then the project objects are restored. A fresh run on 2026-11-12 returned 14/14 healthy, and `local_baseline.py check` was 260/260 with `matches: true`. The same probes passed again after that check. Fifty-five foreign keys into `users` can still fail during the restore; the object-name gate does not treat that as a missing table.
+
+Hosted `aqlcofblfxdrjhhdmarw` was read on 2026-11-12. It is PostgreSQL 17.6 with 209 objects. The local baseline has 260. The shared names are 191. Local-only is 69 (`local_analytics` 21, `public` 12, `pipeline_control` 9, `ocr_private` 8, `_tzudong_local` 4, and 15 others). Hosted-only is 18 (`auth` 7 for OAuth, MFA, SCIM and WebAuthn, `public` thumbnail 4, `realtime` partitions 2, and 5 others). The baseline is not a hosted replica, so #3323 does not close on this comparison.
+

@@ -104,6 +104,37 @@ class LoadTests(unittest.TestCase):
                 lb.load_baseline(path)
 
 
+class CheckTests(unittest.TestCase):
+    def _baseline(self, tmp: Path, names) -> lb.Baseline:
+        return lb.capture("db", "postgres", tmp, source_image="img",
+                          runner=make_runner(names=names, roles=[]))
+
+    def test_an_identical_database_matches(self) -> None:
+        names = ["public.a", "public.b"]
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), names)
+            record = lb.check(baseline, "target", "profile",
+                              runner=make_runner(names=names, roles=[]))
+            self.assertTrue(record["matches"])
+            self.assertEqual(record["missingObjectCount"], 0)
+
+    def test_a_missing_object_does_not_match(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), ["public.a", "public.b"])
+            record = lb.check(baseline, "target", "profile",
+                              runner=make_runner(names=["public.a"], roles=[]))
+            self.assertFalse(record["matches"])
+            self.assertEqual(record["missingObjects"], ["public.b"])
+
+    def test_an_extra_object_does_not_match(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), ["public.a"])
+            record = lb.check(baseline, "target", "profile",
+                              runner=make_runner(names=["public.a", "public.stray"], roles=[]))
+            self.assertFalse(record["matches"])
+            self.assertEqual(record["unexpectedObjects"], ["public.stray"])
+
+
 class ProvisionTests(unittest.TestCase):
     def _baseline(self, tmp: Path, names) -> lb.Baseline:
         return lb.capture("db", "postgres", tmp, source_image="img",
@@ -176,11 +207,55 @@ class ProvisionTests(unittest.TestCase):
             runner = make_runner(names=["public.a"], roles=[], restored=["public.a"])
             record = lb.provision(baseline, "target", "profile", runner=runner)
             setup = runner.captured["baseline-setup.sql"]
-            statements = [line for line in setup.splitlines() if line.startswith("CREATE ROLE")]
+            statements = [line for line in setup.splitlines() if "CREATE ROLE" in line]
             self.assertTrue(statements)
             for statement in statements:
                 self.assertTrue(statement.endswith(";"), statement)
+                # A booted stack may already own the role: that is success, not error.
+                self.assertIn("EXCEPTION WHEN duplicate_object THEN NULL", statement)
             self.assertTrue(record["provisioned"])
+
+    def test_platform_preserving_restore_keeps_project_objects_only(self) -> None:
+        sample = """
+DROP SCHEMA IF EXISTS auth;
+DROP SCHEMA IF EXISTS local_analytics;
+ALTER TABLE IF EXISTS ONLY realtime.messages DROP CONSTRAINT IF EXISTS messages_pkey;
+--
+-- Name: users; Type: TABLE; Schema: auth; Owner: -
+--
+CREATE TABLE auth.users (id uuid);
+--
+-- Name: restaurants; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.restaurants (id uuid);
+"""
+        filtered = lb.platform_preserving_schema(sample)
+        self.assertNotIn("DROP SCHEMA IF EXISTS auth", filtered)
+        self.assertNotIn("CREATE TABLE auth.users", filtered)
+        self.assertNotIn("realtime.messages", filtered)
+        self.assertIn("DROP SCHEMA IF EXISTS local_analytics", filtered)
+        self.assertIn("CREATE TABLE public.restaurants", filtered)
+
+        names = ["public.a"]
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), names)
+            runner = make_runner(
+                names=names, roles=[], restored=names,
+                restore_stderr=b"psql: ERROR: there is no unique constraint matching given keys\n",
+            )
+            record = lb.provision(
+                baseline, "target", "profile", runner=runner, preserve_platform=True,
+            )
+            self.assertTrue(record["provisioned"])
+            self.assertNotIn("DROP SCHEMA IF EXISTS auth", runner.captured["baseline-setup.sql"])
+            strict = lb.provision(
+                baseline, "target", "profile",
+                runner=make_runner(
+                    names=names, roles=[], restored=names,
+                    restore_stderr=b"psql: ERROR: there is no unique constraint matching given keys\n",
+                ),
+            )
+            self.assertFalse(strict["provisioned"])
 
     def test_provisioning_leaves_no_scratch_in_the_baseline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -198,3 +273,42 @@ class ProvisionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EnsurePresentTests(unittest.TestCase):
+    def _baseline(self, tmp: Path, names):
+        return lb.capture(
+            "db", "postgres", tmp, source_image="img",
+            runner=make_runner(names=names, roles=["CREATE ROLE privacy_workflow_owner NOLOGIN"]),
+        )
+
+    def test_replay_does_not_inspect_or_restore(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), ["public.a"])
+            calls = []
+
+            def runner(command, capture_output=True):
+                calls.append(command)
+                return completed()
+
+            record = lb.ensure_present(baseline.directory, "target", "postgres", replay=True, runner=runner)
+            self.assertEqual(record["action"], "skipped")
+            self.assertEqual(calls, [])
+
+    def test_a_matching_database_is_left_alone(self) -> None:
+        names = ["public.a"]
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), names)
+            runner = make_runner(names=names, roles=[])
+            record = lb.ensure_present(baseline.directory, "target", "postgres", runner=runner)
+            self.assertEqual(record["action"], "present")
+            self.assertNotIn("baseline-setup.sql", runner.captured)
+
+    def test_a_missing_schema_is_provisioned(self) -> None:
+        names = ["public.a"]
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), names)
+            runner = make_runner(names=[], roles=[], restored=names)
+            record = lb.ensure_present(baseline.directory, "target", "postgres", runner=runner)
+            self.assertEqual(record["action"], "provisioned")
+            self.assertIn("baseline-schema.sql", runner.captured)
