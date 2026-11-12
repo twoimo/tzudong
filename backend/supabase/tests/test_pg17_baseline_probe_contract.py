@@ -56,6 +56,13 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertIn("pg17-baseline/", self.workflow)
         self.assertIn('args.baseline_output if args.baseline_output', self.probe)
 
+    def test_drift_is_gated_against_the_committed_baseline(self) -> None:
+        # The committed baseline is what a provisioned stack boots from, so the stack
+        # that captured it has to keep matching it or say so.
+        self.assertIn("Verify the committed local baseline matches the stack", self.workflow)
+        self.assertIn("local_baseline.py compare", self.workflow)
+        self.assertIn("backend/supabase/baselines/local/schema", self.workflow)
+
     def test_the_probe_restores_into_a_disposable_container(self) -> None:
         self.assertIn('PG17_IMAGE = "supabase/postgres:17.11.0.018"', self.probe)
         self.assertIn('RESTORE_CONTAINER = "tzudong-pg17-baseline"', self.probe)
