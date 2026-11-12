@@ -131,7 +131,12 @@ class ComposeRenderTests(unittest.TestCase):
         services = model["services"]
         self.assertEqual(set(services), expected)
         self.assertEqual(model["name"], "tzudong-pipeline-control")
-        self.assertEqual(model["networks"]["supabase_network_local"], {"name": "fixture-local-supabase", "external": True})
+        network = model["networks"]["supabase_network_local"]
+        self.assertEqual(network["name"], "fixture-local-supabase")
+        self.assertIs(network["external"], True)
+        # Compose may materialize its default empty IPAM object. Any explicit
+        # network allocation remains forbidden for this external local network.
+        self.assertFalse(network.get("ipam"))
         for name, service in services.items():
             if name == "otel-storage-init":
                 self.assertEqual(service["network_mode"], "none")
