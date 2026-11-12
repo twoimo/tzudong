@@ -49,6 +49,7 @@ relevant_sources=(
   'backend/supabase/scripts/transform_receipt_ocr_indeterminate_recovery_pg15_replay.py'
   'backend/supabase/scripts/transform_review_verification_readiness_pg15_replay.py'
   'backend/supabase/scripts/transform_public_index_dedup_pg15_replay.py'
+  'backend/supabase/scripts/recover_public_index_dedup_replay_prerequisites.py'
   'backend/supabase/scripts/transform_hosted_pending_custody_pg15_replay.py'
   'backend/supabase/scripts/transform_registration_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
@@ -1731,9 +1732,20 @@ SQL
       transformed_migration="$work_dir/public-index-dedup-pg15-${migration##*/}"
       python3 "$script_dir/transform_public_index_dedup_pg15_replay.py" \
         --source "$migration" --output "$transformed_migration"
+      index_prerequisites="$work_dir/public-index-dedup-prerequisites.sql"
+      index_prerequisite_receipt="$staging_dir/public-index-dedup-prerequisites.json"
+      python3 "$script_dir/recover_public_index_dedup_replay_prerequisites.py" \
+        --source "$baselines_dir/local/application-prerequisites.sql" \
+        --output "$index_prerequisites" --receipt "$index_prerequisite_receipt"
+      g026_chain_apply 'public-index-dedup-prerequisite-source' "$baselines_dir/local/application-prerequisites.sql"
+      g026_chain_apply 'public-index-dedup-prerequisite-generator' \
+        "$script_dir/recover_public_index_dedup_replay_prerequisites.py"
+      g026_chain_apply 'public-index-dedup-prerequisite-sql' "$index_prerequisites"
+      g026_chain_apply 'public-index-dedup-prerequisite-receipt' "$index_prerequisite_receipt"
       g026_chain_apply 'public-index-dedup-pg15-replay-transformer' \
         "$script_dir/transform_public_index_dedup_pg15_replay.py"
       g026_chain_apply "public-index-dedup-pg15-replay:${migration##*/}" "$transformed_migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$index_prerequisites"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     20261026120000_atomic_edit_submission_request.sql|20261026130000_atomic_edit_public_business_phone.sql|20261028195647_sponsorship_base_metadata_manual_confirmation.sql)
@@ -2016,6 +2028,7 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     admin-user-rpc-forward-overlap-verification.sql admin-user-rpc-forward-overlap-receipt.json \
     hosted-pending-custody-pg15-replay.sql hosted-pending-custody-pg15-replay.json \
     hosted-pending-custody-pg15-assertions.json hosted-pending-candidate-index-disposition.json \
+    public-index-dedup-prerequisites.json \
     g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
     g014-owner-final-pg15-verification.sql g014-owner-final-pg15-receipt.json \
     g016-identity-pg15-verification.sql g016-identity-pg15-receipt.json \

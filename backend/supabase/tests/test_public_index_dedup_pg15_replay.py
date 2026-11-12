@@ -1,6 +1,7 @@
 """Exact-source and dispatch checks for the isolated PG15 index cleanup replay."""
 
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -10,6 +11,7 @@ import tempfile
 import unittest
 
 from backend.supabase.scripts import transform_public_index_dedup_pg15_replay as replay
+from backend.supabase.scripts import recover_public_index_dedup_replay_prerequisites as recovery
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -93,8 +95,10 @@ class PublicIndexDedupPg15ReplayTests(unittest.TestCase):
         self.assertEqual(sum(replay.NAME in value.split("|") for value in branches), 1)
         relevant = self.driver.split("relevant_sources=(", 1)[1].split("\n)", 1)[0]
         self.assertIn("backend/supabase/scripts/transform_public_index_dedup_pg15_replay.py", relevant)
+        self.assertIn("backend/supabase/scripts/recover_public_index_dedup_replay_prerequisites.py", relevant)
 
-    def _dispatch(self, *, source: bytes | None = None, psql_exit: int = 0):
+    def _dispatch(self, *, source: bytes | None = None, psql_exit: int = 0,
+                  fail_call: int = 2, prerequisite_source: bytes | None = None):
         """Run the real shell dispatch with a recording, database-free psql boundary."""
         case = self.driver.split('  case "${migration##*/}" in\n', 1)[1].split(
             "  esac\n  previous_effective_filename=", 1
@@ -103,32 +107,47 @@ class PublicIndexDedupPg15ReplayTests(unittest.TestCase):
             root = Path(temporary)
             migration = root / replay.NAME
             migration.write_bytes(self.source if source is None else source)
+            staging = root / "evidence"
+            staging.mkdir()
+            baselines = ROOT / "backend/supabase/baselines"
+            if prerequisite_source is not None:
+                baselines = root / "baselines"
+                (baselines / "local").mkdir(parents=True)
+                (baselines / "local/application-prerequisites.sql").write_bytes(prerequisite_source)
             argv = root / "argv"
             sql = root / "stdin.sql"
             chain = root / "chain.tsv"
             stub = r'''
 set -euo pipefail
+test_call_index=0
 g026_chain_apply() {
   printf '%s\t%s\n' "$1" "$(sha256sum -- "$2" | cut -d' ' -f1)" >> "$TEST_CHAIN"
 }
 compose() {
-  printf '%s\0' "$@" >> "$TEST_ARGV"
-  cat >> "$TEST_SQL"
-  return "$TEST_PSQL_EXIT"
+  test_call_index=$((test_call_index + 1))
+  printf '%s\0' "$@" > "$TEST_ARGV.$test_call_index"
+  cat > "$TEST_SQL.$test_call_index"
+  if [[ "$test_call_index" == "$TEST_FAIL_CALL" ]]; then
+    return "$TEST_PSQL_EXIT"
+  fi
+  return 0
 }
 '''
             result = subprocess.run(
                 ["bash", "-c", stub + 'case "${migration##*/}" in\n' + case + "esac\n"],
                 env={"PATH": os.environ.get("PATH", os.defpath), "migration": str(migration),
                      "work_dir": str(root), "script_dir": str(SCRIPT.parent),
+                     "staging_dir": str(staging), "baselines_dir": str(baselines),
                      "TEST_ARGV": str(argv), "TEST_SQL": str(sql),
-                     "TEST_CHAIN": str(chain), "TEST_PSQL_EXIT": str(psql_exit)},
+                     "TEST_CHAIN": str(chain), "TEST_PSQL_EXIT": str(psql_exit),
+                     "TEST_FAIL_CALL": str(fail_call)},
                 capture_output=True, timeout=5,
             )
             return (
                 result,
-                argv.read_bytes().decode().rstrip("\0").split("\0") if argv.exists() else None,
-                sql.read_bytes() if sql.exists() else None,
+                [path.read_bytes().decode().rstrip("\0").split("\0")
+                 for path in sorted(root.glob("argv.*"))],
+                [path.read_bytes() for path in sorted(root.glob("stdin.sql.*"))],
                 chain.read_text().splitlines() if chain.exists() else [],
                 migration.read_bytes(),
             )
@@ -136,11 +155,19 @@ compose() {
     def test_generator_executes_the_complete_replay_once_and_hashes_both_inputs(self) -> None:
         result, arguments, sql, chain, source = self._dispatch()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(arguments, ["exec", "-T", "db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
-                                     "-h", "127.0.0.1", "-p", "5432", "-U", "postgres", "-d", "postgres"])
-        self.assertEqual(sql, replay.transform(self.source))
+        expected_args = ["exec", "-T", "db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
+                         "-h", "127.0.0.1", "-p", "5432", "-U", "postgres", "-d", "postgres"]
+        self.assertEqual(arguments, [expected_args, expected_args])
+        prerequisites, receipt = recovery.recover((ROOT / recovery.SOURCE_PATH).read_bytes())
+        self.assertEqual(sql, [prerequisites, replay.transform(self.source)])
         self.assertEqual(source, self.source)
+        receipt_bytes = (json.dumps(receipt, sort_keys=True, indent=2) + "\n").encode()
+        recovery_script = ROOT / "backend/supabase/scripts/recover_public_index_dedup_replay_prerequisites.py"
         self.assertEqual(chain, [
+            "public-index-dedup-prerequisite-source\t" + recovery.SOURCE_SHA256,
+            "public-index-dedup-prerequisite-generator\t" + hashlib.sha256(recovery_script.read_bytes()).hexdigest(),
+            "public-index-dedup-prerequisite-sql\t" + hashlib.sha256(prerequisites).hexdigest(),
+            "public-index-dedup-prerequisite-receipt\t" + hashlib.sha256(receipt_bytes).hexdigest(),
             "public-index-dedup-pg15-replay-transformer\t" + hashlib.sha256(SCRIPT.read_bytes()).hexdigest(),
             "public-index-dedup-pg15-replay:" + replay.NAME + "\t" + REPLAY_SHA256,
         ])
@@ -148,9 +175,17 @@ compose() {
     def test_generator_preserves_psql_failure_instead_of_skipping_the_body(self) -> None:
         result, arguments, sql, chain, source = self._dispatch(psql_exit=3)
         self.assertEqual(result.returncode, 3)
-        self.assertIsNotNone(arguments)
-        self.assertEqual(sql, replay.transform(self.source))
-        self.assertEqual(len(chain), 2)
+        self.assertEqual(len(arguments), 2)
+        self.assertEqual(sql[-1], replay.transform(self.source))
+        self.assertEqual(len(chain), 6)
+        self.assertEqual(source, self.source)
+
+    def test_generator_stops_before_dedup_when_prerequisite_execution_fails(self) -> None:
+        result, arguments, sql, _, source = self._dispatch(psql_exit=7, fail_call=1)
+        self.assertEqual(result.returncode, 7)
+        self.assertEqual(len(arguments), 1)
+        prerequisites, _ = recovery.recover((ROOT / recovery.SOURCE_PATH).read_bytes())
+        self.assertEqual(sql, [prerequisites])
         self.assertEqual(source, self.source)
 
     def test_generator_rejects_source_drift_before_any_psql_execution(self) -> None:
@@ -158,10 +193,20 @@ compose() {
         result, arguments, sql, chain, source = self._dispatch(source=changed)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(b"PUBLIC_INDEX_DEDUP_PG15_REPLAY_SOURCE_DRIFT", result.stderr)
-        self.assertIsNone(arguments)
-        self.assertIsNone(sql)
+        self.assertEqual(arguments, [])
+        self.assertEqual(sql, [])
         self.assertEqual(chain, [])
         self.assertEqual(source, changed)
+
+    def test_generator_rejects_baseline_drift_before_any_psql_execution(self) -> None:
+        baseline = (ROOT / recovery.SOURCE_PATH).read_bytes()
+        result, arguments, sql, chain, source = self._dispatch(prerequisite_source=baseline + b"\n")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b"PUBLIC_INDEX_DEDUP_REPLAY_PREREQUISITE_SOURCE_DRIFT", result.stderr)
+        self.assertEqual(arguments, [])
+        self.assertEqual(sql, [])
+        self.assertEqual(chain, [])
+        self.assertEqual(source, self.source)
 
 
 if __name__ == "__main__":

@@ -191,6 +191,31 @@ inside its existing isolated PG15 environment. The local PG15 replay registry
 uses the same adapter. No image, role, isolation or application-mode selection
 is changed.
 
+The next Catalog replay passed the version check and stopped before any DROP
+with `public_index_dedup_keeper_missing`. Source inspection found that the
+historical reconstruction inputs create five of the six keeper indexes, but
+omit `idx_transcript_embeddings_bge_video_id`. The runtime error does not name
+the missing index; that identification comes from the source comparison.
+
+The canonical generator therefore restores that one prerequisite from the
+already pinned `baselines/local/application-prerequisites.sql`, following the
+existing bounded prerequisite-recovery pattern. The 210,720-byte input has
+SHA-256 `c4fce4f7ddaf6315474cb3a3d408eef1fb7ff538af7f39183ebdc46828630356`.
+Exactly one 112-byte index definition, including its final LF, is selected:
+
+```sql
+CREATE INDEX idx_transcript_embeddings_bge_video_id ON public.transcript_embeddings_bge USING btree (video_id);
+```
+
+Its SHA-256 is
+`cb2c3de6ec909e758c0a791404c406cad4f622123f180be4b29ddc46beb29ed2`.
+The original CREATE statement is preserved without `IF NOT EXISTS`; unexpected
+existing state must fail. Source, recovery code, generated prerequisite and
+receipt participate in the canonical evidence chain. Recovery runs only in the
+isolated PG15 canonical generator immediately before this migration. The local
+replay applier already uses the full prerequisite input and does not run this
+extra recovery. No original keeper or dependency guard is relaxed.
+
 PG15 reconstruction, the original PG17.6 five-case fixture, and the hosted
 apply/readback are separate evidence. A passing PG15 catalog check must not be
 reported as PG17 permission, workload or production verification. Current CI
