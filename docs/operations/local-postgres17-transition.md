@@ -237,29 +237,6 @@ hash, because `pg_dump` output can differ without the schema differing and a gat
 fires on formatting gets switched off rather than fixed. Nightly run 43156573526
 passed the gate against the committed baseline.
 
-### The pins are split by lane
-
-| Lane | PostgreSQL | Selected by |
-| --- | --- | --- |
-| application stack | **17.11.0.018** | `APPLICATION_IMAGE`, the Compose default |
-| replay lane | 15.8.1.085 | `LOCAL_STACK_REPLAY_STACK=1`, which the nightly local job sets |
-| `BOOTSTRAP_SOURCES.v1.json` | 15.8.1.085 | records the upstream sources the auth bootstrap was generated from |
-
-The image reaches Compose through `POSTGRES_IMAGE` in the generated env, and the
-volume helper runs the same image, so the stack the job starts and the stack it
-verifies cannot disagree.
-
-Starting the stack a developer uses and provisioning it:
-
-    python3 backend/supabase/scripts/local-stack.py start --repository-root .
-    python3 backend/supabase/scripts/local_baseline.py provision \
-        --container "$(docker ps --filter label=com.docker.compose.service=db --format '{{.Names}}')" \
-        --baseline backend/supabase/baselines/local/schema
-
-The nightly local job sets `LOCAL_STACK_REPLAY_STACK=1`, so it keeps 15 and its
-migration coverage while the application stack runs 17. A stack started with one
-setting and verified against the other fails provenance instead of drifting.
-
 ### What the pin actually requires
 
 `backend/supabase/tests/test_local_postgres_image_pin.py` refuses a major above 15

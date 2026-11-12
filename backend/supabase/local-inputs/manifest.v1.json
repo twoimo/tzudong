@@ -207,7 +207,7 @@
   "compose_files": [
     {
       "path": "backend/supabase/docker-compose.yml",
-      "sha256": "851953ab77ce2cb2b0eaa3b874c06eba5737a78d54b2a0f35a4ae1fc060fdd56"
+      "sha256": "5ec5ef85c420c1195dc707042be90613fda8bd395c5d6f4bd8499591106e6c8b"
     },
     {
       "path": "backend/supabase/docker-compose.local.yml",

@@ -1,18 +1,16 @@
-"""Keep each local PostgreSQL image pin on the tag its lane actually needs.
+"""Keep every local PostgreSQL image pin on the same tag.
 
-There are two axes now, and they must not drift:
+The local stack pins the database image in four places: the Compose service, the
+volume helper in ``local-stack.py``, the nightly prefetch list and the nightly
+readiness probe. ``volumes/db/BOOTSTRAP_SOURCES.v1.json`` records the same image
+for the bootstrap manifest, and the PG15 replay adapters in ``local-migrate.py``
+only accept server major 15.
 
-* the **application** stack pins 17 in the Compose service and in the volume helper
-  of ``local-stack.py``; it is provisioned from ``baselines/local/schema``;
-* the **replay** lane pins 15 in the committed replay override, in the nightly
-  prefetch list and readiness probe, and in ``BOOTSTRAP_SOURCES.v1.json``, whose
-  upstream digests describe the 15 image the auth bootstrap was generated from.
-
-The PG15 replay adapters in ``local-migrate.py`` only accept major 15, which is why
-the replay lane keeps 15 rather than the application moving backwards. A change to
-one pin without its lane produces a stack that starts on one image and is verified
-against another. The ordering of a major move is described in
-``docs/operations/local-postgres17-transition.md``.
+A change to one pin without the others produces a stack that starts on one image
+and is verified against another, or a nightly run that cannot create the database
+at all. The transition plan in ``docs/operations/local-postgres17-transition.md``
+describes what else has to move with a major bump; this test only guarantees that
+the pins never drift apart silently.
 """
 import json
 import re
@@ -26,7 +24,6 @@ NIGHTLY = ROOT / ".github/workflows/nightly-local-regression.yml"
 BOOTSTRAP = ROOT / "backend/supabase/volumes/db/BOOTSTRAP_SOURCES.v1.json"
 
 IMAGE = re.compile(r"supabase/postgres:(?P<tag>\d+\.\d+\.\d+\.\d+)")
-COMPOSE_APP_DEFAULT = "${POSTGRES_IMAGE:-supabase/postgres:17.11.0.018}"
 DOCKER_HUB_PREFIX = "docker.io/"
 
 
@@ -35,38 +32,37 @@ def _tags(pattern: re.Pattern[str], text: str) -> list[str]:
 
 
 class LocalPostgresImagePinTests(unittest.TestCase):
-    def test_the_application_stack_defaults_to_seventeen(self) -> None:
-        compose = COMPOSE.read_text(encoding="utf-8")
-        self.assertIn(COMPOSE_APP_DEFAULT, compose)
-        stack = LOCAL_STACK.read_text(encoding="utf-8")
-        self.assertIn('APPLICATION_IMAGE = "supabase/postgres:17.11.0.018"', stack)
-        # The volume helper must run the same image as the service it prepares.
-        self.assertIn("                _postgres_image(),", stack)
-
-    def test_the_replay_lane_selects_fifteen_explicitly(self) -> None:
-        stack = LOCAL_STACK.read_text(encoding="utf-8")
-        self.assertIn('REPLAY_IMAGE = "supabase/postgres:15.8.1.085"', stack)
-        self.assertIn('REPLAY_STACK_ENV = "LOCAL_STACK_REPLAY_STACK"', stack)
-        # The nightly local job is the replay lane; the provisioning job is the app one.
-        local_job = NIGHTLY.read_text(encoding="utf-8").split("  pg17-provision:")[0]
-        pins = _tags(IMAGE, local_job)
-        self.assertTrue(pins, "the replay lane prefetches and probes the 15 image")
-        self.assertEqual(set(pins), {"15.8.1.085"}, pins)
-
-    def test_the_provisioning_lane_pins_the_application_image(self) -> None:
-        workflow = NIGHTLY.read_text(encoding="utf-8")
-        lane = workflow.split("  pg17-provision:")[1] if "  pg17-provision:" in workflow else ""
-        self.assertEqual(set(_tags(IMAGE, lane)), {"17.11.0.018"}, lane[:200])
-
-    def test_the_bootstrap_inventory_still_describes_the_replay_image(self) -> None:
+    def test_every_pin_uses_the_same_image_tag(self) -> None:
+        compose = _tags(IMAGE, COMPOSE.read_text(encoding="utf-8"))
+        helper = _tags(IMAGE, LOCAL_STACK.read_text(encoding="utf-8"))
+        nightly = _tags(IMAGE, NIGHTLY.read_text(encoding="utf-8").split("  pg17-provision:")[0])
         bootstrap = json.loads(BOOTSTRAP.read_text(encoding="utf-8"))
-        image = str(bootstrap["platformAuthBootstrap"]["ociImage"])
-        self.assertTrue(image.startswith(DOCKER_HUB_PREFIX), image)
+        bootstrap_image = str(bootstrap["platformAuthBootstrap"]["ociImage"])
+
+        self.assertTrue(compose, "docker-compose.yml must pin supabase/postgres")
+        self.assertEqual(len(set(compose)), 1, compose)
+        self.assertEqual(len(set(helper)), 1, helper)
+        # The local job runs the stack, so it must pin what the stack pins. The
+        # provisioning lane pins its own image on purpose: it is the measurement that
+        # gates a future major move, not the stack.
+        local_job = NIGHTLY.read_text(encoding="utf-8").split("  pg17-provision:")[0]
+        local_pins = _tags(IMAGE, local_job)
+        self.assertTrue(local_pins, "the nightly local job prefetches and probes the stack image")
+        self.assertEqual(set(local_pins), set(compose), local_pins)
+        self.assertTrue(bootstrap_image.startswith(DOCKER_HUB_PREFIX), bootstrap_image)
+        bootstrap_tag = bootstrap_image[len(DOCKER_HUB_PREFIX):]
+
+        pinned = f"supabase/postgres:{compose[0]}"
+        pins = {
+            "backend/supabase/docker-compose.yml": pinned,
+            "backend/supabase/scripts/local-stack.py": f"supabase/postgres:{helper[0]}",
+            ".github/workflows/nightly-local-regression.yml (prefetch + readiness probe)": f"supabase/postgres:{nightly[0]}",
+            "backend/supabase/volumes/db/BOOTSTRAP_SOURCES.v1.json": bootstrap_tag,
+        }
         self.assertEqual(
-            image[len(DOCKER_HUB_PREFIX):],
-            "supabase/postgres:15.8.1.085",
-            "the bootstrap inventory records upstream sources of the 15 image; regenerate "
-            "it before claiming it describes another tag",
+            set(pins.values()),
+            {pinned},
+            "Update every local PostgreSQL pin together: " + json.dumps(pins, sort_keys=True),
         )
 
     def test_the_nightly_pins_both_the_prefetch_and_the_probe(self) -> None:
@@ -77,23 +73,25 @@ class LocalPostgresImagePinTests(unittest.TestCase):
             "nightly-local-regression.yml must pin the prefetch list and the readiness probe",
         )
 
-    def test_a_replay_pin_requires_the_adapter_layer(self) -> None:
-        """The replay lane may only exist while the adapters it depends on do."""
+    def test_a_major_change_is_declared_with_its_adapter_layer(self) -> None:
+        """A PG17 pin only works after the PG15 replay adapters are retired.
+
+        This documents the coupling rather than enforcing a version: the plan
+        document owns the ordering, and the guard above keeps the pins aligned.
+        """
         migrate = (ROOT / "backend/supabase/scripts/local-migrate.py").read_text(encoding="utf-8")
         has_adapters = "_canonical_source_replay_bodies" in migrate
-        stack = LOCAL_STACK.read_text(encoding="utf-8")
-        replay_tag = re.search(r'REPLAY_IMAGE = "supabase/postgres:(\d+\.\d+\.\d+\.\d+)"', stack).group(1)
+        tag = _tags(IMAGE, COMPOSE.read_text(encoding="utf-8"))[0]
+        major = int(tag.split(".")[0])
         if has_adapters:
             self.assertEqual(
-                int(replay_tag.split(".")[0]),
+                major,
                 15,
-                "the replay adapters only accept server major 15",
+                "PG15 replay adapters are still wired in local-migrate.py; retire them "
+                "(and regenerate the BOOTSTRAP_SOURCES hashes) before pinning a newer major",
             )
         else:
-            self.fail(
-                "the replay adapters are gone, so the replay image constant and the "
-                "nightly replay lane have nothing left to pin"
-            )
+            self.assertNotEqual(major, 15, "the PG15 adapter layer is gone, so the pin must move off 15")
 
 
 if __name__ == "__main__":
