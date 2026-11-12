@@ -116,6 +116,72 @@ IMAGE_MIGRATION_SHA256 = (
     ("20250417190610_update_pgbouncer_get_auth.sql", "c7a26bdcb8b48941bbe5ead7c347a06b9261f7a461abeeea0bfe129f20625745"),
     ("20250421084701_revoke_admin_roles_from_postgres.sql", "3cf67f8694599dc69c763181c830fa7c967643e7fbc16360f23ad0719385398c"),
 )
+APPLICATION_IMAGE_INIT_SCRIPT_SHA256 = (
+    ("00-schema.sql", "494270a846feefa9a9e1462496b1bb707e617341a12344cbe9f3d2e8d8a0aac8"),
+    ("00000000000000-initial-schema.sql", "84588fff60ff3cadcd361c820fe502052f4c5fd5aa273740e0690c5ee59ec813"),
+    ("00000000000001-auth-schema.sql", "65a4a55ba3248716eb4946a8677be41c94bc90eafaa22c0eb95b09908f96fa4f"),
+    ("00000000000002-storage-schema.sql", "1071677a0f0a57e35dc7cb62aeae4fd5417b2e9b7e58be5fd212749dff357f02"),
+    ("00000000000003-post-setup.sql", "f38552008ac577b3e65fbcab784a612b72d079f6695871c84b045a1a921f7096"),
+    ("README.md", "9f9d3306727cca8561912551bc98d78042e0dae2c74f89601e113317cbb87522"),
+)
+APPLICATION_IMAGE_MIGRATION_SHA256 = (
+    ("00-extension.sql", "a12e0eb4192d188e0dc5058e888ec981c1fd619d5542235d5b692ea0a1d751b2"),
+    ("10000000000000_demote-postgres.sql", "581edb76cba2aaf848585be462d07bff7182aa6c638f9365f08dd0c1fb1142ab"),
+    ("20211115181400_update-auth-permissions.sql", "bbaa44bc707538e6c67ae8c71a386c41e136cd30fcde563db39c9d0fbde9bdcb"),
+    ("20211118015519_create-realtime-schema.sql", "1d6cd4858a0fa50bf910bfd6c11a3436941a5fecdc4bdc02b9b067e8e0b7f566"),
+    ("20211122051245_update-realtime-permissions.sql", "9fd431e8f1a3fc0f2e1e427d4f526562c1fe8627e12302974215373885b5254b"),
+    ("20211124212715_update-auth-owner.sql", "9698f481ad9cb159df6cefd5cc4b94f4b9db0eda475317aaa057b1e9a54409e0"),
+    ("20211130151719_update-realtime-permissions.sql", "6b5d190c93b35a2f804703ed7872946b51fded3272bed0ef9a6585187b0dc2b4"),
+    ("20220118070449_enable-safeupdate-postgrest.sql", "2bffffbf1e5a677ef8c8cbba9afc5a66bc77113ee9b2e2b4d2a56629a381cea4"),
+    ("20220126121436_finer-postgrest-triggers.sql", "85dc26173d7254490d0c20389bc7e3ac7f7752b872c99bb714167cb01b231312"),
+    ("20220224211803_fix-postgrest-supautils.sql", "744ed5c5ae1527c6c73ad4214c11d903eafdc5803eb69183b3b3325b7a65c5bc"),
+    ("20220317095840_pg_graphql.sql", "31f5b997cba8d74936203a78613b5bda9b51e339c6c14f80c203440f82e95cf9"),
+    ("20220321174452_fix-postgrest-alter-type-event-trigger.sql", "674bfe11a9cb828c55ca7c9e00d4f4edcbcb0003d956d8866c9563810e7f0f0e"),
+    ("20220322085208_gotrue-session-limit.sql", "ab2f834addee3115c96edddda927ef9f5d8641c3939d2be82b8ce1e890cf4921"),
+    ("20220404205710_pg_graphql-on-by-default.sql", "02ef3e3e6c03032a6ccb828ef1e1b297d9b34ad1947a673756c3c95dd86a01d1"),
+    ("20220609081115_grant-supabase-auth-admin-and-supabase-storage-admin-to-postgres.sql", "ff540703d411416925a21553bead344a9cebdec4cb0e53fb93f99973874f1e59"),
+    ("20220613123923_pg_graphql-pg-dump-perms.sql", "ab244687d0123859d9d9c6a79b34897e8cdd8f1698bdccd1bef7f7e0ced82334"),
+    ("20220713082019_pg_cron-pg_net-temp-perms-fix.sql", "143d6e664f2f508f76964fbaaa018c6ee262464c8c7a881201ae56e025787c94"),
+    ("20221028101028_set_authenticator_timeout.sql", "393dd66aee71a99d3956c6c6655e3c010afe9bd3f9a819b03746850ba70f9680"),
+    ("20221103090837_revoke_admin.sql", "8fff945cd6f11ab68b2f300c64d43a38ef69d61987aaf596a1d00bfa225234e8"),
+    ("20221207154255_create_pgsodium_and_vault.sql", "cb8877c69b6913153776b865093e85768053daed283dec6835fdac728978d76c"),
+    ("20230201083204_grant_auth_roles_to_postgres.sql", "b06d2bdfe4d60e9e2183c2296511a4b83d97cebb71cb2d714cd863081990857e"),
+    ("20230224042246_grant_extensions_perms_for_postgres.sql", "9e1e777fb8317dcccdb88ead19201a5670c890fa69dfc51c8d7b369229c3ca8d"),
+    ("20230306081037_grant_pg_monitor_to_postgres.sql", "5d80fb49faaf96712ecb23896a36a03122ca352b5046ab8480fee914a054cdec"),
+    ("20230327032006_grant_auth_roles_to_supabase_storage_admin.sql", "9f8985b3676ff2c3709b3193736e17fcfd20264953eba7dcbc94056ea26bac0e"),
+    ("20230529180330_alter_api_roles_for_inherit.sql", "e78a67f8e6ae847765a80898824d404ab370daa3d6f6dbf61ea6d9e0a69144f3"),
+    ("20231013070755_grant_authenticator_to_supabase_storage_admin.sql", "48d9feb2734125f79eb67bd0522fee9ad3916888172c7023a84241260687620f"),
+    ("20231017062225_grant_pg_graphql_permissions_for_custom_roles.sql", "1833af7170c97bc444cfe9f823be73d3ff3f9b18e47c2ee1181ff33a1fbbb673"),
+    ("20231020085357_revoke_writes_on_cron_job_from_postgres.sql", "6c37208218a84c3ab40e5e0369b86d31a6ddc56fbfe95c03800776b3fa9ce4b7"),
+    ("20231130133139_set_lock_timeout_to_authenticator_role.sql", "5d2cc80fdb26cbda32d8398bf8486cccc4e2f6b911b5719f146d0167551f6a00"),
+    ("20240124080435_alter_lo_export_lo_import_owner.sql", "1060763d9f69d39c5027c632aa634b3b8d9d021dd7150f6efdbe1d9d7679e655"),
+    ("20240606060239_grant_predefined_roles_to_postgres.sql", "11b87064890ffe3f3d14336b712c310966d09458c5eef7203e7251cc9156f59e"),
+    ("20241031003909_create_orioledb.sql", "119405b66ee3c57cb81849e0cb20423ca059d9f54a4ef8607313ff4db48c8082"),
+    ("20241215003910_backfill_pgmq_metadata.sql", "4220830feda72a98a2ec804a6ef9250507ca22cd4ccf4f17a0036c4d771e6adf"),
+    ("20250205060043_disable_log_statement_on_internal_roles.sql", "720d2ecb3ae5d43eb8d0e071fa489dec472d54ff27e4fa46f8d17c8070cbb13f"),
+    ("20250205144616_move_orioledb_to_extensions_schema.sql", "9ea55607791aa8c8b55982cee9f006129149e3f4e10bd320bfedcbeb945e5230"),
+    ("20250218031949_pgsodium_mask_role.sql", "24cf783d3c039d90a67225eef1fbfe688fda8b3fd88610bea59abc6590db3382"),
+    ("20250220051611_pg_net_perms_fix.sql", "7e700959a7583b857a5738c71777682e509f4414272390f20ac5d86f999ae6c1"),
+    ("20250312095419_pgbouncer_ownership.sql", "fd95765def92461de68b550eb65587babd9944cee142cac0bec4df3c277adec8"),
+    ("20250402065937_alter_internal_event_triggers_owner_to_supabase_admin.sql", "1197d727fb7a8ddf8a61c992ff5698d81a5e908e677cc3a4d835b079aeacb8f1"),
+    ("20250402093753_grant_subscription_to_postgres_16_and_above.sql", "8232eb5b1d0d9e0e45dd58d18083f3dd03f0bd792cfa16ee0ec5e05ae2cb2a97"),
+    ("20250417190610_update_pgbouncer_get_auth.sql", "c7a26bdcb8b48941bbe5ead7c347a06b9261f7a461abeeea0bfe129f20625745"),
+    ("20250421084701_revoke_admin_roles_from_postgres.sql", "77679a5c54d2baccc445d79d3b66429181d37937c1c05627742d205e580441f6"),
+    ("20250605172253_grant_with_admin_to_postgres_16_and_above.sql", "1daa645828b02f85325a563c6a0b3d81e15e729fa3de442c8cdf9e43c174acf8"),
+    ("20250623125453_tmp_grant_storage_tables_to_postgres_with_grant_option.sql", "1289f81f7111147fc334fa44ec00c31c871f5ba325c16cc205646ff07507cf04"),
+    ("20250709135250_grant_storage_schema_to_postgres_with_grant_option.sql", "b0b7091cb8bddfb3c9c6794f3b2a70ecf3b51b1827d79bdbc4f34d4331937641"),
+    ("20250710151649_supabase_read_only_user_default_transaction_read_only.sql", "7d2d0e770b5198f5bbc571210a1afaf03ed6421d3cfeee85c694832f2582dc19"),
+    ("20251001204436_predefined_role_grants.sql", "46b35cd58c43d73d58242a3dfeb8a8c31b0a4981a7a609b043361dd304cfe886"),
+    ("20251105172723_grant_pg_reload_conf_to_postgres.sql", "d46bb05f79fc895f0a50b8a42e8507136c367bb67c03d7080ae7fd21680abc38"),
+    ("20251121132723_correct_search_path_pgbouncer.sql", "27293b64d94e42e3d4f2410c914c38a059f9df7bc5e287cf76c055e3bf822119"),
+    ("20260211120934_supabase_privileged_role.sql", "ebbb7a055ecf767568d6e9035f32f93397922e43ecabd0c588593ec3f8c5974f"),
+    ("20260413000000_fix-authenticator-session-preload-libraries.sql", "eee2f692ec9b1b9fea425b616761d5f6369b9c70148e58eaa186d3638d6efcbe"),
+    ("20260421000000_pg_graphql-off-by-default.sql", "17e120888bec3a4131959e39012c2a68b0eb0206805f4aa624cca8d9b6c1fb0b"),
+    ("20260421000001_rescope_pg_graphql_access_trigger.sql", "c9c3986d040d8f2545c5faf97ce57804408bf2465105cb8c7c6a6dcea8ec6535"),
+    ("20260730000000_revoke_trigger_on_cron_tables_from_postgres.sql", "22422fd6d7ef1ef888b3c89adb15cc895989ad482a2ce21b7113675066dca71b"),
+    ("20260923021047_update_pgrst_watch_triggers.sql", "dea2c1d4d9881a8692b4b6c31a41eec35cbff95f0b29e72b6a4727144939b168"),
+    ("20261016000001_search_path_for_supa_functions.sql", "ca312626320cd78dcdfc3ca89a61194ab34e651dc94d3f576a71cd2d56510f83"),
+)
 STAGED_VOLUME_PATHS = {
     "kong-config": "/kong",
     "vector-config": "/vector",
@@ -606,6 +672,7 @@ def _env_values(root: Path, project: str, state: Path) -> dict[str, str]:
         "SECRET_KEY_BASE": secrets.token_hex(48),
         "VAULT_ENC_KEY": secrets.token_hex(16),
         "PG_META_CRYPTO_KEY": secrets.token_hex(16),
+        "POSTGRES_IMAGE": _postgres_image(),
         "POSTGRES_HOST": "db",
         "POSTGRES_DB": "postgres",
         "POSTGRES_PORT": "5432",
@@ -726,6 +793,7 @@ def _validate_env(values: dict[str, str], project: str, state: Path) -> None:
             _fail("non_loopback_url")
     fixed_values = {
         "PROJECT_NAME": project,
+        "POSTGRES_IMAGE": _postgres_image(),
         "POSTGRES_HOST": "db",
         "POSTGRES_DB": "postgres",
         "POSTGRES_PORT": "5432",
@@ -1299,6 +1367,19 @@ def _ensure_inputs(root: Path, project: str, state: Path) -> dict[str, Any]:
 def _state(root: Path) -> tuple[str, Path]:
     project = _project_name(root)
     return project, _state_root(root, project)
+
+
+# The application stack runs PostgreSQL 17 and is provisioned from
+# backend/supabase/baselines/local/schema. The replay lane still needs 15 because the
+# historical chain only replays there with the adapters; it selects that image with
+# LOCAL_STACK_REPLAY_STACK=1, which lands in the generated env Compose reads.
+APPLICATION_IMAGE = "supabase/postgres:17.11.0.018"
+REPLAY_IMAGE = "supabase/postgres:15.8.1.085"
+REPLAY_STACK_ENV = "LOCAL_STACK_REPLAY_STACK"
+
+
+def _postgres_image() -> str:
+    return REPLAY_IMAGE if os.environ.get(REPLAY_STACK_ENV) == "1" else APPLICATION_IMAGE
 
 
 def _compose_files(root: Path) -> tuple[Path, Path, Path]:
@@ -2435,7 +2516,10 @@ SELECT pg_catalog.count(*)
     result = _run(
         command + [
             "exec", "-T", "db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
-            "-U", "postgres", "-d", "postgres", "-Atqc", sql,
+            # PG17 demotes postgres, so it cannot create the namespace. The owner
+            # stays postgres either way; only the session role changes.
+            "-U", "supabase_admin" if _postgres_image() == APPLICATION_IMAGE else "postgres",
+            "-d", "postgres", "-Atqc", sql,
         ],
         timeout=30,
         error_code="compose_local_analytics_namespace",
@@ -2791,19 +2875,27 @@ def _assert_project_resources_absent(project: str) -> None:
         _fail("reset_cleanup_residue")
 
 
+
+def _image_init_inventory() -> tuple[tuple[tuple[str, str], ...], tuple[tuple[str, str], ...]]:
+    if _postgres_image() == APPLICATION_IMAGE:
+        return APPLICATION_IMAGE_INIT_SCRIPT_SHA256, APPLICATION_IMAGE_MIGRATION_SHA256
+    return IMAGE_INIT_SCRIPT_SHA256, IMAGE_MIGRATION_SHA256
+
+
 def _expected_staged_files(state: Path) -> tuple[tuple[str, str, str], ...]:
     records: list[tuple[str, str, str]] = []
     for source_name, volume_suffix, destination_name in STAGED_INPUT_FILES:
         source = state / "inputs" / source_name
         _regular_owned(source, mode=0o600)
         records.append((volume_suffix, destination_name, _hash_file(source)))
+    scripts, migrations = _image_init_inventory()
     records.extend(
         ("db-init-scripts", destination_name, digest)
-        for destination_name, digest in IMAGE_INIT_SCRIPT_SHA256
+        for destination_name, digest in scripts
     )
     records.extend(
         ("db-init-migrations", destination_name, digest)
-        for destination_name, digest in IMAGE_MIGRATION_SHA256
+        for destination_name, digest in migrations
     )
     return tuple(sorted(records))
 
@@ -2835,7 +2927,7 @@ def _staged_verification_commands(
                 f"test -f {destination}",
                 f"test -r {destination}",
                 f'test "$(stat -c %a {destination})" = "644"',
-                f"printf '%s  %s\\n' {shlex.quote(digest)} {destination} | sha256sum --check --status",
+                f'sum=$(sha256sum {destination}); test "${{sum%% *}}" = {shlex.quote(digest)}',
             ))
     return commands
 
@@ -2895,7 +2987,7 @@ def _execute_volume_helper(
                 "--entrypoint", "sh",
                 *input_args,
                 *volume_args,
-                "supabase/postgres:15.8.1.085",
+                _postgres_image(),
                 "-c", "; ".join(("set -eu", *commands)),
             ],
             error_code=error_code,
@@ -2970,6 +3062,54 @@ def _action_render(root: Path, project: str, state: Path) -> dict[str, Any]:
     )
 
 
+def _baseline_api():
+    import importlib.util
+    path = Path(__file__).resolve().parent / "local_baseline.py"
+    name = "tzudong_local_baseline"
+    cached = sys.modules.get(name)
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        _fail("baseline_module")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _ensure_application_baseline(command: list[str], values: dict[str, str]) -> None:
+    """Provision the committed baseline once the application database is up.
+
+    The replay lane applies the historical chain itself, so it must not also restore
+    the baseline. A matching database is left untouched.
+    """
+    if os.environ.get(REPLAY_STACK_ENV) == "1":
+        return
+    result = _run(command + ["ps", "-q", "db"], timeout=30, error_code="baseline_db_identity")
+    ids = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if len(ids) != 1 or re.fullmatch(r"[0-9a-f]{12,64}", ids[0]) is None:
+        _fail("baseline_db_identity")
+    baseline = Path(__file__).resolve().parents[1] / "baselines" / "local" / "schema"
+    try:
+        record = _baseline_api().ensure_present(baseline, ids[0], values["POSTGRES_DB"])
+    except SystemExit:
+        _fail("baseline_provision")
+    if record.get("action") == "failed":
+        _fail("baseline_provision")
+    # A schema-only restore runs as supabase_admin, so schemas it creates are owned
+    # by that role. The analytics bridge requires postgres. Reassign before it runs.
+    _run(
+        command + [
+            "exec", "-T", "db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
+            "-U", "supabase_admin", "-d", values["POSTGRES_DB"], "-c",
+            "DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname = 'local_analytics') THEN EXECUTE 'ALTER SCHEMA local_analytics OWNER TO postgres'; END IF; END $$;",
+        ],
+        timeout=30,
+        error_code="baseline_analytics_owner",
+    )
+
+
 def _start_core_services(command: list[str], values: dict[str, str]) -> None:
     for services, wait_for in CORE_START_PHASES:
         for service in services:
@@ -2991,6 +3131,8 @@ def _start_core_services(command: list[str], values: dict[str, str]) -> None:
                 required=wait_for,
             )
             if wait_for == ("db",):
+                # Platform tables do not exist until auth, storage and realtime
+                # migrate. Restore project objects only after those services are up.
                 _ensure_local_analytics_namespace(command)
 
 
@@ -3015,6 +3157,8 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
         )
         _stage_input_files(project, state)
         _start_core_services(command, values)
+        _wait_ready(command, values, required=CORE_REQUIRED)
+        _ensure_application_baseline(command, values)
         _wait_ready(command, values, required=CORE_REQUIRED)
         _run(
             command + ["up", "--no-deps", "--no-start", "--force-recreate", "--pull=missing", "studio"],
