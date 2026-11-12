@@ -1,0 +1,81 @@
+{
+  "status": "passed",
+  "version": "17.6",
+  "scope": "DDL, catalog, row results and constraints only",
+  "tables": [
+    "profiles",
+    "restaurant_submission_items",
+    "short_urls",
+    "transcript_embeddings_bge",
+    "user_bookmarks",
+    "user_roles"
+  ],
+  "candidate_indexes": 14,
+  "primary_indexes_preserved": 6,
+  "removals": [
+    "idx_bge_embeddings_video_id",
+    "idx_short_urls_code",
+    "profiles_user_id_idx",
+    "restaurant_submission_items_submission_idx",
+    "short_urls_code_idx",
+    "short_urls_code_key",
+    "user_bookmarks_restaurant_idx",
+    "user_roles_user_id_role_idx"
+  ],
+  "keepers": [
+    "idx_profiles_user_id",
+    "idx_submission_items_submission_id",
+    "idx_transcript_embeddings_bge_video_id",
+    "idx_user_bookmarks_restaurant_id",
+    "short_urls_code_unique",
+    "user_roles_user_id_role_key"
+  ],
+  "rls_validated": false,
+  "concurrency_validated": false,
+  "latency_claims": false,
+  "migration_path": "backend/supabase/migrations/20261112105200_deduplicate_equivalent_public_indexes.sql",
+  "migration_sha256": "600a236aa10eba6b3c5ab96932fb575867a12cf84bfc9ff03974746339fe59e1",
+  "cases": [
+    {
+      "name": "apply_once",
+      "pass": true,
+      "candidate_indexes_before": 14,
+      "after": 6,
+      "removed": 8,
+      "rows_equal": true,
+      "unique_constraints_enforced": true,
+      "keeper_metadata_equal": true,
+      "primary_metadata_equal": true
+    },
+    {
+      "name": "idempotent_repeat",
+      "pass": true,
+      "catalog_equal": true,
+      "rows_equal": true
+    },
+    {
+      "name": "rollback",
+      "pass": true,
+      "original_catalog_restored": true,
+      "rows_equal": true,
+      "transport_change": "final COMMIT replaced with ROLLBACK in test copy only"
+    },
+    {
+      "name": "keeper_drift",
+      "pass": true,
+      "expected_error": "public_index_dedup_index_drift",
+      "drop_attempts": 0,
+      "catalog_equal": true,
+      "rows_equal": true
+    },
+    {
+      "name": "fk_dependency",
+      "pass": true,
+      "expected_error": "public_index_dedup_dependency_denied",
+      "drop_attempts": 0,
+      "catalog_equal": true,
+      "rows_equal": true
+    }
+  ],
+  "environment": "Disposable vanilla PostgreSQL 17.6 single-user mode; synthetic data only."
+}
