@@ -49,6 +49,13 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertNotIn("pg_dump", self.probe)
         self.assertNotIn("CREATE ROLE", self.probe)
 
+    def test_the_probe_keeps_the_baseline_it_captured(self) -> None:
+        # The captured baseline is the artifact a provisioned stack needs, so the run
+        # keeps it and the workflow uploads it with the record.
+        self.assertIn('"--baseline-output"', self.workflow)
+        self.assertIn("pg17-baseline/", self.workflow)
+        self.assertIn('args.baseline_output if args.baseline_output', self.probe)
+
     def test_the_probe_restores_into_a_disposable_container(self) -> None:
         self.assertIn('PG17_IMAGE = "supabase/postgres:17.11.0.018"', self.probe)
         self.assertIn('RESTORE_CONTAINER = "tzudong-pg17-baseline"', self.probe)

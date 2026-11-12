@@ -62,10 +62,14 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--database", default="postgres")
     parser.add_argument("--restore-role", default=RESTORE_ROLE)
+    # Keep the captured baseline instead of discarding it: this is the artifact a
+    # provisioned stack needs, and producing it is the same read-only capture.
+    parser.add_argument("--baseline-output", type=Path)
     args = parser.parse_args()
 
     with tempfile.TemporaryDirectory() as workspace:
-        baseline = lb.capture(args.database_container, args.database, Path(workspace) / "baseline",
+        target = args.baseline_output if args.baseline_output else Path(workspace) / "baseline"
+        baseline = lb.capture(args.database_container, args.database, target,
                               source_image="local stack (working schema, adapters applied)")
         _run(["docker", "rm", "-f", RESTORE_CONTAINER], check=False)
         _run(["docker", "run", "-d", "--name", RESTORE_CONTAINER,
@@ -93,6 +97,7 @@ def main() -> int:
         "missingObjectCount": provisioned["missingObjectCount"],
         "missingObjects": provisioned["missingObjects"],
         "restored": provisioned["provisioned"],
+        "baselineManifest": baseline.manifest,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
