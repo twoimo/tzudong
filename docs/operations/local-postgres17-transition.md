@@ -426,3 +426,12 @@ Each workstream lands as its own pull request and is gated by a dispatched
 Local apply still cannot prove hosted behaviour for extensions, ACL defaults or
 role inheritance that the image configures differently. This plan removes the
 structural divergence; it does not turn local runs into hosted evidence.
+
+## Measured application boot (2026-11-12)
+
+A fresh `local-stack.py start` on `supabase/postgres:17.11.0.018` reaches 14/14 healthy only when the image-owned schemas are left alone. Restoring the privilege-less dump over `auth`, `storage` and `realtime` removes grants and service migration history, and those services restart. Preserving those schemas and restoring the project objects reaches the committed 260-object list.
+
+The start command now does that itself: services migrate the platform schemas first, then the project objects are restored. A fresh run on 2026-11-12 returned 14/14 healthy, and `local_baseline.py check` was 260/260 with `matches: true`. The same probes passed again after that check. Fifty-five foreign keys into `users` can still fail during the restore; the object-name gate does not treat that as a missing table.
+
+Hosted `aqlcofblfxdrjhhdmarw` was read on 2026-11-12. It is PostgreSQL 17.6 with 209 objects. The local baseline has 260. The shared names are 191. Local-only is 69 (`local_analytics` 21, `public` 12, `pipeline_control` 9, `ocr_private` 8, `_tzudong_local` 4, and 15 others). Hosted-only is 18 (`auth` 7 for OAuth, MFA, SCIM and WebAuthn, `public` thumbnail 4, `realtime` partitions 2, and 5 others). The baseline is not a hosted replica, so #3323 does not close on this comparison.
+

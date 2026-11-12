@@ -215,6 +215,48 @@ class ProvisionTests(unittest.TestCase):
                 self.assertIn("EXCEPTION WHEN duplicate_object THEN NULL", statement)
             self.assertTrue(record["provisioned"])
 
+    def test_platform_preserving_restore_keeps_project_objects_only(self) -> None:
+        sample = """
+DROP SCHEMA IF EXISTS auth;
+DROP SCHEMA IF EXISTS local_analytics;
+ALTER TABLE IF EXISTS ONLY realtime.messages DROP CONSTRAINT IF EXISTS messages_pkey;
+--
+-- Name: users; Type: TABLE; Schema: auth; Owner: -
+--
+CREATE TABLE auth.users (id uuid);
+--
+-- Name: restaurants; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.restaurants (id uuid);
+"""
+        filtered = lb.platform_preserving_schema(sample)
+        self.assertNotIn("DROP SCHEMA IF EXISTS auth", filtered)
+        self.assertNotIn("CREATE TABLE auth.users", filtered)
+        self.assertNotIn("realtime.messages", filtered)
+        self.assertIn("DROP SCHEMA IF EXISTS local_analytics", filtered)
+        self.assertIn("CREATE TABLE public.restaurants", filtered)
+
+        names = ["public.a"]
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), names)
+            runner = make_runner(
+                names=names, roles=[], restored=names,
+                restore_stderr=b"psql: ERROR: there is no unique constraint matching given keys\n",
+            )
+            record = lb.provision(
+                baseline, "target", "profile", runner=runner, preserve_platform=True,
+            )
+            self.assertTrue(record["provisioned"])
+            self.assertNotIn("DROP SCHEMA IF EXISTS auth", runner.captured["baseline-setup.sql"])
+            strict = lb.provision(
+                baseline, "target", "profile",
+                runner=make_runner(
+                    names=names, roles=[], restored=names,
+                    restore_stderr=b"psql: ERROR: there is no unique constraint matching given keys\n",
+                ),
+            )
+            self.assertFalse(strict["provisioned"])
+
     def test_provisioning_leaves_no_scratch_in_the_baseline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             baseline = self._baseline(Path(tmp), ["public.a"])

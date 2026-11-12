@@ -1465,7 +1465,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
             [(("vector",), 300), (("db",), 900), (("analytics",), 300)],
         )
         namespace.assert_called_once_with(["docker", "compose"])
-        baseline.assert_called_once_with(["docker", "compose"], {"POSTGRES_DB": "postgres"})
+        baseline.assert_not_called()
 
     def test_replay_start_does_not_query_the_database_for_a_baseline(self) -> None:
         with patch.dict(os.environ, {"LOCAL_STACK_REPLAY_STACK": "1"}, clear=False):
@@ -1617,12 +1617,8 @@ class LocalComposeInputContractTests(unittest.TestCase):
             checksum_tool = tool_root / "sha256sum"
             checksum_tool.write_text(
                 "#!/bin/sh\n"
-                "test \"$1\" = --check && test \"$2\" = --status || exit 2\n"
-                "IFS= read -r line || exit 2\n"
-                "digest=${line%% *}\n"
-                "path=${line#*  }\n"
-                "actual=$(/usr/bin/shasum -a 256 \"$path\" | /usr/bin/cut -d ' ' -f 1)\n"
-                "test \"$digest\" = \"$actual\"\n",
+                "actual=$(/usr/bin/shasum -a 256 \"$1\" | /usr/bin/cut -d ' ' -f 1)\n"
+                "printf '%s  %s\\n' \"$actual\" \"$1\"\n",
                 encoding="utf-8",
             )
             checksum_tool.chmod(0o700)
