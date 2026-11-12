@@ -25,6 +25,7 @@ def make_runner(*, names, roles, restored=None, setup_stderr=b"", restore_stderr
                 setup_exit_code=0, restore_exit_code=0):
     """Answer docker calls by what they ask for, and switch names after the restore."""
     state = {"restored": False}
+    captured = {}
 
     def runner(command, capture_output=True):
         joined = " ".join(command)
@@ -41,9 +42,15 @@ def make_runner(*, names, roles, restored=None, setup_stderr=b"", restore_stderr
             state["restored"] = True
             return completed(stderr=restore_stderr, code=restore_exit_code)
         if command[:2] == ["docker", "cp"]:
+            # Keep what actually went to the container: the setup script is scratch,
+            # so the file is gone once provision returns.
+            source = Path(command[2])
+            if source.is_file():
+                captured[Path(command[3]).name] = source.read_text()
             return completed()
         raise AssertionError(f"unexpected command: {joined}")
 
+    runner.captured = captured
     return runner
 
 
@@ -166,12 +173,22 @@ class ProvisionTests(unittest.TestCase):
     def test_role_statements_are_terminated(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             baseline = self._baseline(Path(tmp), ["public.a"])
-            record = lb.provision(baseline, "target", "profile",
-                                  runner=make_runner(names=["public.a"], roles=[], restored=["public.a"]))
-            setup = (Path(tmp) / "provision-setup.sql").read_text()
-            statement = [line for line in setup.splitlines() if line.startswith("CREATE ROLE")][0]
-            self.assertTrue(statement.endswith(";"), statement)
+            runner = make_runner(names=["public.a"], roles=[], restored=["public.a"])
+            record = lb.provision(baseline, "target", "profile", runner=runner)
+            setup = runner.captured["baseline-setup.sql"]
+            statements = [line for line in setup.splitlines() if line.startswith("CREATE ROLE")]
+            self.assertTrue(statements)
+            for statement in statements:
+                self.assertTrue(statement.endswith(";"), statement)
             self.assertTrue(record["provisioned"])
+
+    def test_provisioning_leaves_no_scratch_in_the_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), ["public.a"])
+            lb.provision(baseline, "target", "profile",
+                         runner=make_runner(names=["public.a"], roles=[], restored=["public.a"]))
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()),
+                             ["manifest.json", "objects.txt", "roles.sql", "schema.sql"])
 
     def test_manifest_is_json_serialisable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

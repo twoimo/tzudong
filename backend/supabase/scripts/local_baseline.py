@@ -21,6 +21,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -188,6 +189,22 @@ def load_baseline(directory: Path) -> Baseline:
     return Baseline(directory, manifest)
 
 
+# The object set is the stable signal: it changes when a migration adds, drops or
+# renames a table, view, matview or sequence. The raw dump hash is recorded for
+# information but is not a gate, because pg_dump output can differ without the schema
+# differing.
+DRIFT_KEYS = ("objectCount", "objectNamesSha256", "roleStatementCount")
+
+
+def drift(committed: Baseline, live_manifest: dict[str, Any]) -> list[str]:
+    differences = [
+        f"{key}: committed {committed.manifest.get(key)!r} vs live {live_manifest.get(key)!r}"
+        for key in DRIFT_KEYS
+        if committed.manifest.get(key) != live_manifest.get(key)
+    ]
+    return differences
+
+
 def provision(baseline: Baseline, container: str, database: str, *,
               role: str = RESTORE_ROLE, runner: Runner = subprocess.run) -> dict[str, Any]:
     schema_bytes = baseline.schema_path.read_bytes()
@@ -196,7 +213,10 @@ def provision(baseline: Baseline, container: str, database: str, *,
     setup = role_lines + [
         f"DROP SCHEMA IF EXISTS {schema} CASCADE;" for schema in SEEDED_SCHEMAS
     ]
-    setup_path = baseline.directory / "provision-setup.sql"
+    # Scratch, not baseline content: a committed baseline directory must contain only
+    # the four captured files.
+    scratch = tempfile.TemporaryDirectory()
+    setup_path = Path(scratch.name) / "provision-setup.sql"
     setup_path.write_text("\n".join(setup) + "\n", encoding="utf-8")
     _run(["docker", "cp", str(setup_path), f"{container}:/tmp/baseline-setup.sql"], runner=runner)
     setup_result = _run(
@@ -274,6 +294,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     sub.add_parser("verify", help="validate a baseline directory").add_argument(
         "--baseline", required=True, type=Path)
 
+    cmp_parser = sub.add_parser("compare", help="report drift between a committed baseline and a live capture record")
+    cmp_parser.add_argument("--baseline", required=True, type=Path)
+    cmp_parser.add_argument("--record", required=True, type=Path,
+                            help="probe record JSON containing baselineManifest")
+
     args = parser.parse_args(argv)
     if args.command == "capture":
         baseline = capture(args.container, args.database, args.output,
@@ -290,6 +315,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             "baselineObjectCount", "restoredObjectCount", "missingObjectCount",
             "setupErrorCount", "restoreErrorCount", "provisioned")}))
         return 0 if record["provisioned"] else 1
+    if args.command == "compare":
+        committed = load_baseline(args.baseline)
+        record = json.loads(args.record.read_text(encoding="utf-8"))
+        live = record.get("baselineManifest") or {}
+        differences = drift(committed, live)
+        if differences:
+            print(json.dumps({"drift": differences}, indent=2))
+            print("regenerate the committed baseline: "
+                  f"local_baseline.py capture --container <db> --output {args.baseline}", file=sys.stderr)
+            return 1
+        print(json.dumps({"drift": [], "objectCount": committed.manifest.get("objectCount")}))
+        return 0
     baseline = load_baseline(args.baseline)
     print(json.dumps(baseline.manifest, indent=2))
     return 0

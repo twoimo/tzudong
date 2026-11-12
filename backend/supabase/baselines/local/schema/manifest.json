@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-baseline-manifest",
+  "capturedAt": "2026-11-12T04:22:54Z",
+  "sourceImage": "local stack (working schema, adapters applied)",
+  "database": "postgres",
+  "objectCount": 260,
+  "objectNamesSha256": "8528bfca0f04c680be6a7fee2345aa153c428d430945f3fc101a1d3290bbe72e",
+  "roleStatementCount": 7,
+  "rolesSha256": "28af1039d755616641afd6f54bdd2774840dc6b3a6e5a19bc9ea6aeff5ce16e3",
+  "schemaSha256": "ef1559485ba1e14f65a6e735d4718e31aad56cd82e976e9e1e03615db2fc9fda",
+  "schemaBytes": 2323008
+}

@@ -83,6 +83,9 @@ jobs:
       - name: Verify the local baseline provisioning contract
         run: python3 -m unittest backend.supabase.tests.test_local_baseline
 
+      - name: Verify the committed local baseline
+        run: python3 -m unittest backend.supabase.tests.test_committed_local_baseline
+
       - name: Install Node 24
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
         with:
@@ -968,6 +971,14 @@ jobs:
             --database "${database:-postgres}" \
             --baseline-output "$RUNNER_TEMP/pg17-baseline" \
             --output "$RUNNER_TEMP/pg17-baseline.json"
+
+      - name: Verify the committed local baseline matches the stack
+        if: ${{ always() && inputs.pg17_baseline == true }}
+        run: |
+          set -euo pipefail
+          python3 backend/supabase/scripts/local_baseline.py compare \
+            --baseline backend/supabase/baselines/local/schema \
+            --record "$RUNNER_TEMP/pg17-baseline.json"
 
       - name: Upload the PostgreSQL 17 baseline probe record
         if: ${{ always() && inputs.pg17_baseline == true }}
