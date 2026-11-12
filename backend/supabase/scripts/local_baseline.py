@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -35,6 +36,14 @@ RESTORE_ROLE = "supabase_admin"
 SEEDED_SCHEMAS = (
     "auth", "storage", "vault", "extensions", "graphql", "graphql_public",
     "pgbouncer", "realtime", "cron", "net", "pgsodium", "pgtle",
+)
+# The image and its service containers own these. Dropping them removes grants,
+# ownership and service migration history, so auth, storage and realtime never
+# become ready. Measured 2026-11-12: image init plus service migrations produced
+# 54 objects, all in this set, and all 54 were already in the 260-object baseline.
+PLATFORM_SCHEMAS = (
+    "auth", "storage", "vault", "extensions", "realtime", "net",
+    "_realtime", "supabase_functions",
 )
 EXCLUDED_ROLES = (
     "postgres", "supabase_admin", "supabase_auth_admin", "supabase_storage_admin",
@@ -220,26 +229,86 @@ def drift(committed: Baseline, live_manifest: dict[str, Any]) -> list[str]:
     return differences
 
 
+def platform_preserving_schema(sql: str) -> str:
+    """Drop statements that would recreate schemas the image and services own.
+
+    Project objects stay, including policies on storage.objects. Platform tables,
+    functions and the service migration history stay where the image left them.
+    """
+    protected = set(PLATFORM_SCHEMAS)
+    header = re.compile(r"^-- Name: (.*); Type: ([^;]+); Schema: ([^;]+); Owner:")
+    qualified = re.compile(
+        r"\b(?:" + "|".join(re.escape(name) for name in sorted(protected, key=len, reverse=True)) + r")\."
+    )
+    schema_drop = re.compile(r"^DROP SCHEMA IF EXISTS ([A-Za-z0-9_]+);")
+    lines = sql.splitlines(keepends=True)
+
+    def keep_preamble(line: str) -> bool:
+        stripped = line.strip()
+        if stripped.startswith(("DROP EVENT TRIGGER", "DROP PUBLICATION", "DROP EXTENSION")):
+            return False
+        match = schema_drop.match(stripped)
+        if match and match.group(1) in protected:
+            return False
+        if qualified.search(stripped) and stripped.startswith(("DROP ", "ALTER ", "CREATE ")):
+            return False
+        return True
+
+    kept: list[str] = []
+    index = 0
+    while index < len(lines) and not header.match(lines[index]):
+        if keep_preamble(lines[index]):
+            kept.append(lines[index])
+        index += 1
+    while index < len(lines):
+        match = header.match(lines[index])
+        if not match:
+            kept.append(lines[index])
+            index += 1
+            continue
+        name, kind, schema = match.group(1), match.group(2), match.group(3)
+        start = index
+        index += 1
+        while index < len(lines) and not header.match(lines[index]):
+            index += 1
+        skip = schema in protected and not (schema == "storage" and kind in {"POLICY", "ROW SECURITY"})
+        if kind == "SCHEMA" and name in protected:
+            skip = True
+        if kind in {"EVENT TRIGGER", "PUBLICATION"}:
+            skip = True
+        if kind == "PUBLICATION TABLE" and schema in protected:
+            skip = True
+        if not skip:
+            kept.extend(lines[start:index])
+    return "".join(kept)
+
+
 def provision(baseline: Baseline, container: str, database: str, *,
-              role: str = RESTORE_ROLE, runner: Runner = subprocess.run) -> dict[str, Any]:
+              role: str = RESTORE_ROLE, runner: Runner = subprocess.run,
+              preserve_platform: bool = False) -> dict[str, Any]:
     schema_bytes = baseline.schema_path.read_bytes()
     roles_sql = (baseline.directory / "roles.sql").read_text(encoding="utf-8")
     role_lines = [idempotent_role(line) for line in roles_sql.splitlines() if line.strip()]
-    setup = role_lines + [
-        f"DROP SCHEMA IF EXISTS {schema} CASCADE;" for schema in SEEDED_SCHEMAS
-    ]
+    setup = list(role_lines)
+    if not preserve_platform:
+        setup.extend(f"DROP SCHEMA IF EXISTS {schema} CASCADE;" for schema in SEEDED_SCHEMAS)
+    schema_sql = schema_bytes.decode("utf-8")
+    if preserve_platform:
+        schema_sql = platform_preserving_schema(schema_sql)
     # Scratch, not baseline content: a committed baseline directory must contain only
     # the four captured files.
-    scratch = tempfile.TemporaryDirectory()
-    setup_path = Path(scratch.name) / "provision-setup.sql"
-    setup_path.write_text("\n".join(setup) + "\n", encoding="utf-8")
-    _run(["docker", "cp", str(setup_path), f"{container}:/tmp/baseline-setup.sql"], runner=runner)
+    with tempfile.TemporaryDirectory() as scratch:
+        setup_path = Path(scratch) / "provision-setup.sql"
+        setup_path.write_text("\n".join(setup) + "\n", encoding="utf-8")
+        schema_path = Path(scratch) / "baseline-schema.sql"
+        schema_path.write_text(schema_sql, encoding="utf-8")
+        _run(["docker", "cp", str(setup_path), f"{container}:/tmp/baseline-setup.sql"], runner=runner)
+        _run(["docker", "cp", str(schema_path), f"{container}:/tmp/baseline-schema.sql"], runner=runner)
     setup_result = _run(
         ["docker", "exec", "-i", container, "psql", "-U", role, "-d", database,
          "-q", "-v", "ON_ERROR_STOP=0", "-f", "/tmp/baseline-setup.sql"],
         check=False, runner=runner,
     )
-    _run(["docker", "cp", str(baseline.schema_path), f"{container}:/tmp/baseline-schema.sql"], runner=runner)
     restore = _run(
         ["docker", "exec", "-i", container, "psql", "-U", role, "-d", database,
          "-q", "-v", "ON_ERROR_STOP=0", "-f", "/tmp/baseline-schema.sql"],
@@ -250,6 +319,22 @@ def provision(baseline: Baseline, container: str, database: str, *,
     restored_names = object_names(container, role, database, runner=runner)
     expected_names = _names_from_manifest(baseline)
     missing = sorted(set(expected_names) - set(restored_names))
+    unexpected = sorted(set(restored_names) - set(expected_names))
+    object_parity = (
+        not missing
+        and not unexpected
+        and len(restored_names) == baseline.manifest.get("objectCount")
+        and len(expected_names) == baseline.manifest.get("objectCount")
+    )
+    # Foreign keys into auth.users can fail without dropping the table. On the
+    # platform-preserving path the object list is the gate; the errors stay in
+    # the receipt. The destructive path still requires a clean log.
+    clean_log = (
+        setup_result.returncode == 0
+        and restore.returncode == 0
+        and not setup_errors
+        and not restore_errors
+    )
     record = {
         "schemaVersion": SCHEMA_VERSION,
         "kind": "local-baseline-provision",
@@ -267,15 +352,9 @@ def provision(baseline: Baseline, container: str, database: str, *,
         "restoredObjectCount": len(restored_names),
         "missingObjectCount": len(missing),
         "missingObjects": missing[:20],
-        "provisioned": (
-            setup_result.returncode == 0
-            and restore.returncode == 0
-            and not setup_errors
-            and not restore_errors
-            and not missing
-            and len(restored_names) == baseline.manifest.get("objectCount")
-            and len(expected_names) == baseline.manifest.get("objectCount")
-        ),
+        "unexpectedObjectCount": len(unexpected),
+        "preservePlatform": preserve_platform,
+        "provisioned": object_parity and setup_result.returncode == 0 and not setup_errors and (clean_log or preserve_platform),
         "schemaSha256": baseline.manifest.get("schemaSha256"),
         "verifiedSchemaBytes": len(schema_bytes),
     }
@@ -299,6 +378,39 @@ def check(baseline: Baseline, container: str, database: str, *,
         "unexpectedObjectCount": len(unexpected),
         "unexpectedObjects": unexpected[:20],
         "matches": not missing and len(expected) == len(actual),
+    }
+
+
+def ensure_present(
+    directory: Path,
+    container: str,
+    database: str,
+    *,
+    replay: bool = False,
+    role: str = RESTORE_ROLE,
+    runner: Runner = subprocess.run,
+) -> dict[str, Any]:
+    """Make an application database match the committed baseline.
+
+    The replay lane keeps applying migrations, so it must not restore over that work.
+    A database that already matches is left alone. An application start preserves
+    the image-owned schemas and restores only the project objects.
+    """
+    if replay:
+        return {"action": "skipped", "reason": "replay_lane"}
+    baseline = load_baseline(directory)
+    observed = check(baseline, container, database, role=role, runner=runner)
+    if observed["matches"]:
+        return {"action": "present", "baselineObjectCount": observed["baselineObjectCount"]}
+    provisioned = provision(
+        baseline, container, database, role=role, runner=runner, preserve_platform=True,
+    )
+    return {
+        "action": "provisioned" if provisioned["provisioned"] else "failed",
+        "provisioned": provisioned["provisioned"],
+        "missingObjectCount": provisioned["missingObjectCount"],
+        "restoreErrorCount": provisioned["restoreErrorCount"],
+        "setupErrorCount": provisioned["setupErrorCount"],
     }
 
 
