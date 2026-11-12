@@ -57,6 +57,13 @@ const isNextDevCommand = () => {
     return commandText.includes('node_modules/next/dist/bin/next') && commandArgs.includes('dev');
 };
 
+const commandExecutable = path.basename((commandArgs[0] ?? '').replaceAll('\\', '/'));
+const nextCliArgIndex = ['node', 'node.exe'].includes(commandExecutable) ? 1 : 0;
+const preserveVercelBuildCache = process.env.VERCEL === '1'
+    && !nightlyRun
+    && /(?:^|\/)node_modules\/next\/dist\/bin\/next$/.test((commandArgs[nextCliArgIndex] ?? '').replaceAll('\\', '/'))
+    && commandArgs[nextCliArgIndex + 1] === 'build';
+
 if (isNextDevCommand()) {
     try {
         applyNextSyncPatch(projectRoot, { verifyOnly: true });
@@ -96,6 +103,29 @@ const tryRemove = (targetPath) => {
         maxRetries: 3,
         retryDelay: 150,
     });
+};
+
+const cleanBuildOutput = () => {
+    const nextStat = fs.lstatSync(nextDir, { throwIfNoEntry: false });
+    if (!preserveVercelBuildCache || !nextStat?.isDirectory() || nextStat.isSymbolicLink()) {
+        tryRemove(nextDir);
+        return;
+    }
+
+    // Vercel restores Next's incremental cache before running this wrapper.
+    // Keep only that real directory; manifests, server bundles, and static
+    // output must be rebuilt so a deleted route cannot survive a deployment.
+    let preserved = false;
+    for (const entry of fs.readdirSync(nextDir, { withFileTypes: true })) {
+        if (entry.name === 'cache' && entry.isDirectory() && !entry.isSymbolicLink()) {
+            preserved = true;
+            continue;
+        }
+        tryRemove(path.join(nextDir, entry.name));
+    }
+    if (preserved) {
+        process.stdout.write('[clean-next] preserved Vercel build cache; removed previous build output\n');
+    }
 };
 
 const childOutputLimit = 4_096;
@@ -227,7 +257,7 @@ if (!skipClean) {
     purgeStaleCaches();
 
     try {
-        tryRemove(nextDir);
+        cleanBuildOutput();
     } catch (error) {
         if (verbose || !isLockLikeError(error)) {
             writeCliError('primary-cache-cleanup', error);
