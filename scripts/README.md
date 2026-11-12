@@ -7,7 +7,7 @@ These tools work across repository components. Package-specific tools stay in
 
 | Tool | Purpose | Related guide |
 | --- | --- | --- |
-| [sync-release-branches.mjs](sync-release-branches.mjs) | Coordinate source promotion between release branches | [Release policy](../docs/agents/release.md) |
+| [sync-release-branches.mjs](sync-release-branches.mjs) | Retired entrypoint; help only, all former execution arguments are rejected | [Protected promotion and staged release](../docs/operations/staged-production-transition.md) |
 | [pencil-storyboard-core.mjs](pencil-storyboard-core.mjs) | Shared storyboard/Pencil synchronization helpers | [Pencil synchronization](../apps/web/docs/pencil-storyboard-sync.md) |
 | [codex-imagegen-thumbnail-provider.py](codex-imagegen-thumbnail-provider.py) | Thumbnail provider bridge | [Thumbnail generator](../apps/web/docs/admin-youtube-thumbnail-generator.md) |
 | [seed-youtube-thumbnail-qa-cases.py](seed-youtube-thumbnail-qa-cases.py) | Thumbnail QA case seeding | [Thumbnail generator](../apps/web/docs/admin-youtube-thumbnail-generator.md) |
