@@ -21,6 +21,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -96,13 +97,28 @@ def object_names(container: str, role: str, database: str,
                                   runner=runner).splitlines() if line]
 
 
+def idempotent_role(statement: str) -> str:
+    """Make a CREATE ROLE tolerate an existing role.
+
+    A booted supabase stack already creates some of these roles, and "already exists"
+    is success: the role the dump needs is there. Measured on PostgreSQL 17 with the
+    stack's own init scripts (7 roles already present).
+    """
+    body = statement.strip().rstrip(";")
+    if not body.upper().startswith("CREATE ROLE"):
+        return f"{body};"
+    return f"DO $$ BEGIN {body}; EXCEPTION WHEN duplicate_object THEN NULL; END $$;"
+
+
 def role_statements(container: str, database: str,
                     runner: Runner = subprocess.run) -> list[str]:
     statements = [line for line in psql(container, "postgres", ROLE_STATEMENTS_SQL,
                                         database=database, runner=runner).splitlines() if line]
     # psql needs one terminated statement per line: joined without ';' the file parses
-    # as a single broken statement and only the first line runs.
-    return [f"{statement.rstrip(';')};" for statement in statements]
+    # as a single broken statement and only the first line runs. Creation is also made
+    # idempotent, because a booted supabase stack already creates some of these roles
+    # and "already exists" is a success, not a setup error.
+    return [idempotent_role(statement) for statement in statements]
 
 
 def schema_dump(container: str, database: str, runner: Runner = subprocess.run) -> bytes:
@@ -188,15 +204,34 @@ def load_baseline(directory: Path) -> Baseline:
     return Baseline(directory, manifest)
 
 
+# The object set is the stable signal: it changes when a migration adds, drops or
+# renames a table, view, matview or sequence. The raw dump hash is recorded for
+# information but is not a gate, because pg_dump output can differ without the schema
+# differing.
+DRIFT_KEYS = ("objectCount", "objectNamesSha256", "roleStatementCount")
+
+
+def drift(committed: Baseline, live_manifest: dict[str, Any]) -> list[str]:
+    differences = [
+        f"{key}: committed {committed.manifest.get(key)!r} vs live {live_manifest.get(key)!r}"
+        for key in DRIFT_KEYS
+        if committed.manifest.get(key) != live_manifest.get(key)
+    ]
+    return differences
+
+
 def provision(baseline: Baseline, container: str, database: str, *,
               role: str = RESTORE_ROLE, runner: Runner = subprocess.run) -> dict[str, Any]:
     schema_bytes = baseline.schema_path.read_bytes()
     roles_sql = (baseline.directory / "roles.sql").read_text(encoding="utf-8")
-    role_lines = [line for line in roles_sql.splitlines() if line.strip()]
+    role_lines = [idempotent_role(line) for line in roles_sql.splitlines() if line.strip()]
     setup = role_lines + [
         f"DROP SCHEMA IF EXISTS {schema} CASCADE;" for schema in SEEDED_SCHEMAS
     ]
-    setup_path = baseline.directory / "provision-setup.sql"
+    # Scratch, not baseline content: a committed baseline directory must contain only
+    # the four captured files.
+    scratch = tempfile.TemporaryDirectory()
+    setup_path = Path(scratch.name) / "provision-setup.sql"
     setup_path.write_text("\n".join(setup) + "\n", encoding="utf-8")
     _run(["docker", "cp", str(setup_path), f"{container}:/tmp/baseline-setup.sql"], runner=runner)
     setup_result = _run(
@@ -247,6 +282,26 @@ def provision(baseline: Baseline, container: str, database: str, *,
     return record
 
 
+def check(baseline: Baseline, container: str, database: str, *,
+          role: str = RESTORE_ROLE, runner: Runner = subprocess.run) -> dict[str, Any]:
+    """Verify an already-provisioned database against the baseline's object list."""
+    expected = _names_from_manifest(baseline)
+    actual = object_names(container, role, database, runner=runner)
+    missing = sorted(set(expected) - set(actual))
+    unexpected = sorted(set(actual) - set(expected))
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "kind": "local-baseline-check",
+        "baselineObjectCount": len(expected),
+        "observedObjectCount": len(actual),
+        "missingObjectCount": len(missing),
+        "missingObjects": missing[:20],
+        "unexpectedObjectCount": len(unexpected),
+        "unexpectedObjects": unexpected[:20],
+        "matches": not missing and len(expected) == len(actual),
+    }
+
+
 def _names_from_manifest(baseline: Baseline) -> list[str]:
     """Object names are captured with the baseline; the manifest stores their digest."""
     names_path = baseline.directory / "objects.txt"
@@ -274,6 +329,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     sub.add_parser("verify", help="validate a baseline directory").add_argument(
         "--baseline", required=True, type=Path)
 
+    chk = sub.add_parser("check", help="verify a provisioned database against a baseline")
+    chk.add_argument("--container", required=True)
+    chk.add_argument("--database", default="postgres")
+    chk.add_argument("--baseline", required=True, type=Path)
+    chk.add_argument("--role", default=RESTORE_ROLE)
+    chk.add_argument("--receipt", type=Path)
+
+    cmp_parser = sub.add_parser("compare", help="report drift between a committed baseline and a live capture record")
+    cmp_parser.add_argument("--baseline", required=True, type=Path)
+    cmp_parser.add_argument("--record", required=True, type=Path,
+                            help="probe record JSON containing baselineManifest")
+
     args = parser.parse_args(argv)
     if args.command == "capture":
         baseline = capture(args.container, args.database, args.output,
@@ -290,6 +357,28 @@ def main(argv: Sequence[str] | None = None) -> int:
             "baselineObjectCount", "restoredObjectCount", "missingObjectCount",
             "setupErrorCount", "restoreErrorCount", "provisioned")}))
         return 0 if record["provisioned"] else 1
+    if args.command == "check":
+        baseline = load_baseline(args.baseline)
+        record = check(baseline, args.container, args.database, role=args.role)
+        if args.receipt:
+            args.receipt.parent.mkdir(parents=True, exist_ok=True)
+            args.receipt.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps({key: record[key] for key in (
+            "baselineObjectCount", "observedObjectCount", "missingObjectCount",
+            "unexpectedObjectCount", "matches")}))
+        return 0 if record["matches"] else 1
+    if args.command == "compare":
+        committed = load_baseline(args.baseline)
+        record = json.loads(args.record.read_text(encoding="utf-8"))
+        live = record.get("baselineManifest") or {}
+        differences = drift(committed, live)
+        if differences:
+            print(json.dumps({"drift": differences}, indent=2))
+            print("regenerate the committed baseline: "
+                  f"local_baseline.py capture --container <db> --output {args.baseline}", file=sys.stderr)
+            return 1
+        print(json.dumps({"drift": [], "objectCount": committed.manifest.get("objectCount")}))
+        return 0
     baseline = load_baseline(args.baseline)
     print(json.dumps(baseline.manifest, indent=2))
     return 0

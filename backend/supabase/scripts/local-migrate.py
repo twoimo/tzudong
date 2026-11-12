@@ -187,6 +187,7 @@ LOCAL_ENV_KEYS = frozenset({
     "POSTGRES_PASSWORD", "NIGHTLY_ADMIN_EMAIL", "NIGHTLY_ADMIN_PASSWORD",
     "JWT_SECRET", "ANON_KEY", "SERVICE_ROLE_KEY", "STORAGE_SERVICE_KEY", "DASHBOARD_USERNAME",
     "DASHBOARD_PASSWORD", "SECRET_KEY_BASE", "VAULT_ENC_KEY", "PG_META_CRYPTO_KEY",
+    "POSTGRES_IMAGE",
     "POSTGRES_HOST", "POSTGRES_DB", "POSTGRES_PORT", "POSTGRES_HOST_PORT",
     "POOLER_PROXY_PORT_TRANSACTION", "POOLER_DEFAULT_POOL_SIZE", "POOLER_MAX_CLIENT_CONN",
     "POOLER_TENANT_ID", "POOLER_DB_POOL_SIZE", "KONG_HTTP_PORT", "KONG_HTTPS_PORT",
@@ -254,6 +255,12 @@ RECEIPT_ENV_CONTRACT_KEYS = (
     "LOCAL_STACK_GENERATOR_VERSION",
 )
 ENVIRONMENT_CONTRACT_SCHEMA = "local-stack-environment-contract-v1"
+# The stack may run either the application image (PostgreSQL 17, provisioned from the
+# committed baseline) or the replay image (15, where the historical chain replays).
+ALLOWED_POSTGRES_IMAGES = (
+    "supabase/postgres:17.11.0.018",
+    "supabase/postgres:15.8.1.085",
+)
 READBACK_SECTIONS = (
     "extensions",
     "roles",
@@ -1763,8 +1770,11 @@ class PsqlExecutor:
             raise LocalMigrationError("local_env_provenance")
         if set(values) != LOCAL_ENV_KEYS:
             raise LocalMigrationError("local_env_provenance")
+        if values["POSTGRES_IMAGE"] not in ALLOWED_POSTGRES_IMAGES:
+            raise LocalMigrationError("local_env_provenance")
         fixed_values = {
             "PROJECT_NAME": project,
+            "POSTGRES_IMAGE": values["POSTGRES_IMAGE"],
             "POSTGRES_HOST": "db",
             "POSTGRES_DB": self.database,
             "POSTGRES_PORT": "5432",
