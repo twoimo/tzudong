@@ -35,14 +35,20 @@ class LocalPostgresImagePinTests(unittest.TestCase):
     def test_every_pin_uses_the_same_image_tag(self) -> None:
         compose = _tags(IMAGE, COMPOSE.read_text(encoding="utf-8"))
         helper = _tags(IMAGE, LOCAL_STACK.read_text(encoding="utf-8"))
-        nightly = _tags(IMAGE, NIGHTLY.read_text(encoding="utf-8"))
+        nightly = _tags(IMAGE, NIGHTLY.read_text(encoding="utf-8").split("  pg17-provision:")[0])
         bootstrap = json.loads(BOOTSTRAP.read_text(encoding="utf-8"))
         bootstrap_image = str(bootstrap["platformAuthBootstrap"]["ociImage"])
 
         self.assertTrue(compose, "docker-compose.yml must pin supabase/postgres")
         self.assertEqual(len(set(compose)), 1, compose)
         self.assertEqual(len(set(helper)), 1, helper)
-        self.assertEqual(len(set(nightly)), 1, nightly)
+        # The local job runs the stack, so it must pin what the stack pins. The
+        # provisioning lane pins its own image on purpose: it is the measurement that
+        # gates a future major move, not the stack.
+        local_job = NIGHTLY.read_text(encoding="utf-8").split("  pg17-provision:")[0]
+        local_pins = _tags(IMAGE, local_job)
+        self.assertTrue(local_pins, "the nightly local job prefetches and probes the stack image")
+        self.assertEqual(set(local_pins), set(compose), local_pins)
         self.assertTrue(bootstrap_image.startswith(DOCKER_HUB_PREFIX), bootstrap_image)
         bootstrap_tag = bootstrap_image[len(DOCKER_HUB_PREFIX):]
 
