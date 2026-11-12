@@ -2985,6 +2985,43 @@ def _action_render(root: Path, project: str, state: Path) -> dict[str, Any]:
     )
 
 
+def _baseline_api():
+    import importlib.util
+    path = Path(__file__).resolve().parent / "local_baseline.py"
+    name = "tzudong_local_baseline"
+    cached = sys.modules.get(name)
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        _fail("baseline_module")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _ensure_application_baseline(command: list[str], values: dict[str, str]) -> None:
+    """Provision the committed baseline once the application database is up.
+
+    The replay lane applies the historical chain itself, so it must not also restore
+    the baseline. A matching database is left untouched.
+    """
+    if os.environ.get(REPLAY_STACK_ENV) == "1":
+        return
+    result = _run(command + ["ps", "-q", "db"], timeout=30, error_code="baseline_db_identity")
+    ids = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if len(ids) != 1 or re.fullmatch(r"[0-9a-f]{12,64}", ids[0]) is None:
+        _fail("baseline_db_identity")
+    baseline = Path(__file__).resolve().parents[1] / "baselines" / "local" / "schema"
+    try:
+        record = _baseline_api().ensure_present(baseline, ids[0], values["POSTGRES_DB"])
+    except SystemExit:
+        _fail("baseline_provision")
+    if record.get("action") == "failed":
+        _fail("baseline_provision")
+
+
 def _start_core_services(command: list[str], values: dict[str, str]) -> None:
     for services, wait_for in CORE_START_PHASES:
         for service in services:
@@ -3006,6 +3043,7 @@ def _start_core_services(command: list[str], values: dict[str, str]) -> None:
                 required=wait_for,
             )
             if wait_for == ("db",):
+                _ensure_application_baseline(command, values)
                 _ensure_local_analytics_namespace(command)
 
 

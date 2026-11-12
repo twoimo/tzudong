@@ -1449,8 +1449,9 @@ class LocalComposeInputContractTests(unittest.TestCase):
             patch.object(local_stack, "_run", side_effect=run),
             patch.object(local_stack, "_wait_ready", side_effect=wait_ready),
             patch.object(local_stack, "_ensure_local_analytics_namespace") as namespace,
+            patch.object(local_stack, "_ensure_application_baseline") as baseline,
         ):
-            local_stack._start_core_services(["docker", "compose"], {})
+            local_stack._start_core_services(["docker", "compose"], {"POSTGRES_DB": "postgres"})
 
         self.assertEqual(
             starts,
@@ -1464,6 +1465,16 @@ class LocalComposeInputContractTests(unittest.TestCase):
             [(("vector",), 300), (("db",), 900), (("analytics",), 300)],
         )
         namespace.assert_called_once_with(["docker", "compose"])
+        baseline.assert_called_once_with(["docker", "compose"], {"POSTGRES_DB": "postgres"})
+
+    def test_replay_start_does_not_query_the_database_for_a_baseline(self) -> None:
+        with patch.dict(os.environ, {"LOCAL_STACK_REPLAY_STACK": "1"}, clear=False):
+            with patch.object(local_stack, "_run") as run:
+                local_stack._ensure_application_baseline(
+                    ["docker", "compose"], {"POSTGRES_DB": "postgres"},
+                )
+        run.assert_not_called()
+
 
     def test_local_analytics_namespace_bridge_is_bounded_and_read_back(self) -> None:
         with patch.object(
