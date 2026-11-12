@@ -40,6 +40,10 @@ env:
   LOCAL_STACK_PORT_BASE: '18000'
   APP_PORT: '18080'
   NIGHTLY_SUITE: ${{ inputs.suite || 'all' }}
+  # The local job is the migration replay lane: the historical chain only replays on
+  # PostgreSQL 15 with the adapters, so the stack it starts opts into the committed
+  # replay override. The application pin is 17 and is provisioned from the baseline.
+  LOCAL_STACK_REPLAY_STACK: '1'
 
 jobs:
   local:
