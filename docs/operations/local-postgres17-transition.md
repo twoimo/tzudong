@@ -278,17 +278,14 @@ replays at 91 of 161 migrations on 17. Those two facts make a pin swap on its ow
 wrong: `local-migrate.py apply` replays the chain, so moving the pin without changing
 how the stack is provisioned turns a working local stack into a 91/161 stack.
 
-The measured baseline restore gives the other order:
+The application stack now does that second step itself. After the database is ready,
+`local-stack.py start` calls `local_baseline.ensure_present` unless
+`LOCAL_STACK_REPLAY_STACK=1`. A database that already matches the committed baseline is
+left alone, so a second start does not wipe local rows. The nightly local job sets the
+replay selector and still applies the historical chain, which is why the adapters stay.
 
-1. keep the replay adapters, and build a canonical baseline from a verified stack;
-2. provision a new stack by creating the referenced roles and restoring the baseline
-   instead of replaying 161 migrations;
-3. retire the replay adapters, because nothing replays the chain any more;
-4. only then move the pin, which the pin test permits once the adapters are gone.
-
-Step 2 is the missing piece of machinery: the applier has no baseline mode. Until it
-does, the pin stays at 15 and the adapters stay load-bearing, which is the current,
-measured state rather than a stalled one.
+Retiring the adapters is the remaining step, and it waits until nothing replays the
+chain. The pin test still refuses a replay major above 15 while they exist.
 
 ### Applier support (default off)
 

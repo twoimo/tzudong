@@ -230,10 +230,10 @@ def provision(baseline: Baseline, container: str, database: str, *,
     ]
     # Scratch, not baseline content: a committed baseline directory must contain only
     # the four captured files.
-    scratch = tempfile.TemporaryDirectory()
-    setup_path = Path(scratch.name) / "provision-setup.sql"
-    setup_path.write_text("\n".join(setup) + "\n", encoding="utf-8")
-    _run(["docker", "cp", str(setup_path), f"{container}:/tmp/baseline-setup.sql"], runner=runner)
+    with tempfile.TemporaryDirectory() as scratch:
+        setup_path = Path(scratch) / "provision-setup.sql"
+        setup_path.write_text("\n".join(setup) + "\n", encoding="utf-8")
+        _run(["docker", "cp", str(setup_path), f"{container}:/tmp/baseline-setup.sql"], runner=runner)
     setup_result = _run(
         ["docker", "exec", "-i", container, "psql", "-U", role, "-d", database,
          "-q", "-v", "ON_ERROR_STOP=0", "-f", "/tmp/baseline-setup.sql"],
@@ -299,6 +299,37 @@ def check(baseline: Baseline, container: str, database: str, *,
         "unexpectedObjectCount": len(unexpected),
         "unexpectedObjects": unexpected[:20],
         "matches": not missing and len(expected) == len(actual),
+    }
+
+
+def ensure_present(
+    directory: Path,
+    container: str,
+    database: str,
+    *,
+    replay: bool = False,
+    role: str = RESTORE_ROLE,
+    runner: Runner = subprocess.run,
+) -> dict[str, Any]:
+    """Make an application database match the committed baseline.
+
+    The replay lane keeps applying migrations, so it must not restore over that work.
+    A database that already matches is left alone: provisioning drops seeded schemas,
+    and repeating that on every start would wipe a developer's local rows.
+    """
+    if replay:
+        return {"action": "skipped", "reason": "replay_lane"}
+    baseline = load_baseline(directory)
+    observed = check(baseline, container, database, role=role, runner=runner)
+    if observed["matches"]:
+        return {"action": "present", "baselineObjectCount": observed["baselineObjectCount"]}
+    provisioned = provision(baseline, container, database, role=role, runner=runner)
+    return {
+        "action": "provisioned" if provisioned["provisioned"] else "failed",
+        "provisioned": provisioned["provisioned"],
+        "missingObjectCount": provisioned["missingObjectCount"],
+        "restoreErrorCount": provisioned["restoreErrorCount"],
+        "setupErrorCount": provisioned["setupErrorCount"],
     }
 
 
