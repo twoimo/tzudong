@@ -8,6 +8,8 @@ import re
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -284,7 +286,7 @@ class G037ReadonlyRoleCreatorMembershipDiagnosticSourceTests(unittest.TestCase):
     def test_no_automatic_execution_path_exists(self) -> None:
         diagnostic_relative = DIAGNOSTIC_PATH.relative_to(ROOT).as_posix()
         self.assertNotIn(diagnostic_relative, G037_WORKFLOW)
-        self.assertEqual(SECURITY_WORKFLOW.count(diagnostic_relative), 1)
+        assert_security_scope(self, [diagnostic_relative])
 
     def test_security_workflow_tracks_and_runs_focused_contract(self) -> None:
         for path in (
@@ -294,7 +296,7 @@ class G037ReadonlyRoleCreatorMembershipDiagnosticSourceTests(unittest.TestCase):
             "backend/supabase/scripts/g037_readonly_role_creator_membership_diagnostic_v3.sql",
             "backend/supabase/tests/test_g037_readonly_role_creator_membership_diagnostic_source.py",
         ):
-            self.assertIn(f"- '{path}'", SECURITY_WORKFLOW)
+            assert_security_scope(self, [path])
         self.assertIn(
             "backend.supabase.tests.test_g037_readonly_role_creator_membership_diagnostic_source",
             SECURITY_WORKFLOW,

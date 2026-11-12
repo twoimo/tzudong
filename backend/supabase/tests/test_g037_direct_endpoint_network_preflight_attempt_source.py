@@ -7,6 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -126,7 +128,7 @@ class G037DirectEndpointNetworkPreflightAttemptSourceTests(unittest.TestCase):
             self.assertIn(attempt_sha, normalized)
             self.assertIn("g037_direct_endpoint_tcp_unreachable", normalized)
         relative = ATTEMPT_PATH.relative_to(ROOT).as_posix()
-        self.assertEqual(SECURITY_WORKFLOW.count(f"- '{relative}'"), 1)
+        assert_security_scope(self, [relative])
         self.assertIn(
             "backend.supabase.tests.test_g037_direct_endpoint_network_preflight_attempt_source",
             SECURITY_WORKFLOW,

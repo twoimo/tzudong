@@ -7,6 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -168,7 +170,7 @@ class G037ReadonlyRoleV2SourceTests(unittest.TestCase):
         for path in (PROVISIONING_V2, READBACK_V2):
             relative = path.relative_to(ROOT).as_posix()
             self.assertNotIn(relative, WORKFLOW)
-            self.assertEqual(SECURITY_WORKFLOW.count(relative), 1)
+            assert_security_scope(self, [relative])
 
     def test_tasks_and_docs_preserve_failure_and_fresh_authorization(self) -> None:
         self.assertIn("- [x]! 7.188 ", TASKS)
@@ -203,7 +205,7 @@ class G037ReadonlyRoleV2SourceTests(unittest.TestCase):
             "backend/supabase/scripts/g037_readonly_role_readback_v2.sql",
             "backend/supabase/tests/test_g037_readonly_role_v2_source.py",
         ):
-            self.assertIn(f"- '{path}'", SECURITY_WORKFLOW)
+            assert_security_scope(self, [path])
         self.assertIn(
             "backend.supabase.tests.test_g037_readonly_role_v2_source",
             SECURITY_WORKFLOW,

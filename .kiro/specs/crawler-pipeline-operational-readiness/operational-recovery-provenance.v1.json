@@ -662,15 +662,15 @@
     },
     {
       "path": "apps/web/scripts/collect-dependency-candidates.mjs",
-      "gitBlobSha1": "5c25701f3eec31625f9edc1e8348294534a76c5d",
-      "sha256": "e7470bbf00d59cd2ca95d5657b64008c26fa8fb43de1c9c23e1a7bfc339ffb15",
-      "bytes": 26693
+      "gitBlobSha1": "3010558815f51eaa26c063ee6ea3f3f0f7385755",
+      "sha256": "b4bb512f411afddba8b1be9e61b0fb66791c2ebc61d8792a7844ab29e2d69e01",
+      "bytes": 30058
     },
     {
       "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
-      "gitBlobSha1": "cb24df4c62f040c08a3a2b6a5c0c95dc7c163fd0",
-      "sha256": "976b27b3483d79cf1694e8bbc55f547df776096a56e4ca1aeb879e6d145202ea",
-      "bytes": 37565
+      "gitBlobSha1": "1e8020ebb5b2e0dfb75c19893a154b803411d402",
+      "sha256": "60faf0aaed63c27b0b12f9cff631dffcf686f69707216a2f915b4528aabe4847",
+      "bytes": 44758
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
@@ -729,6 +729,33 @@
           },
           "sourceCommit": "48cc253e41abc7b590276280d4269969fe91d9e9",
           "reason": "Normal merge of protected develop PR #3543: exact governed companion version-pair admission. Source recovery commits remain unchanged."
+        }
+      ]
+    },
+    {
+      "baseCandidateCommit": "d7e5d34a54b45cb5838e7e26a0718fb191861a16",
+      "changes": [
+        {
+          "path": "apps/web/scripts/collect-dependency-candidates.mjs",
+          "previousBinding": {
+            "path": "apps/web/scripts/collect-dependency-candidates.mjs",
+            "gitBlobSha1": "5c25701f3eec31625f9edc1e8348294534a76c5d",
+            "sha256": "e7470bbf00d59cd2ca95d5657b64008c26fa8fb43de1c9c23e1a7bfc339ffb15",
+            "bytes": 26693
+          },
+          "sourceCommit": "906be35b93f768d149e9e86ff474fede487d0c30",
+          "reason": "PR #3810 candidate pins dependency collection to immutable event source identity and tests merged-PR races. Candidate binding only; no merge or hosted execution claim. Source recovery commits remain unchanged."
+        },
+        {
+          "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
+          "previousBinding": {
+            "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
+            "gitBlobSha1": "cb24df4c62f040c08a3a2b6a5c0c95dc7c163fd0",
+            "sha256": "976b27b3483d79cf1694e8bbc55f547df776096a56e4ca1aeb879e6d145202ea",
+            "bytes": 37565
+          },
+          "sourceCommit": "906be35b93f768d149e9e86ff474fede487d0c30",
+          "reason": "PR #3810 candidate pins dependency collection to immutable event source identity and tests merged-PR races. Candidate binding only; no merge or hosted execution claim. Source recovery commits remain unchanged."
         }
       ]
     }

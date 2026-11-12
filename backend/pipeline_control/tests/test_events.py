@@ -259,7 +259,7 @@ class EventSinkTests(unittest.TestCase):
         self.assertNotRegex(pipeline, r"(?im)^\s+postgres:")
         self.assertIn("unpublished outbox rows survive broker outage", contract)
         self.assertIn("29092", contract)
-        self.assertIn("kafka-python==3.0.11", reqs)
+        self.assertIn("kafka-python==3.0.13", reqs)
 
     def test_multi_token_bootstrap_admits_allowlisted_hosts(self) -> None:
         from backend.pipeline_control.events import admit_bootstrap
