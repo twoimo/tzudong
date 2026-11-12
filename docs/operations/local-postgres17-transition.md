@@ -200,6 +200,25 @@ now retries (six dispatches died on runner DNS before the stack was ever started
 and the probe runs before the regression lanes so a lane failure cannot consume the
 measurement.
 
+### Baseline provisioning exists and is measured
+
+`backend/supabase/scripts/local_baseline.py` owns both halves of the move:
+
+| Command | What it does |
+| --- | --- |
+| `capture` | writes `schema.sql`, `objects.txt`, `roles.sql` and a manifest hashing all three |
+| `provision` | creates the roles the dump names, resets the image-seeded schemas, restores, and proves object parity |
+| `verify` | validates a baseline directory against its manifest |
+
+The PG17 probe is a thin wrapper over that module, so the nightly exercises the real
+provisioning path. Nightly run 43152892877 produced a complete baseline and reported
+`restored: true`: 260 objects captured, 260 restored, no setup error, no restore
+error, no missing object, 7 roles, `schemaSha256 ef155948...`, 2,323,008 bytes.
+
+Two properties matter more than the number. `provision` refuses to report success
+without object parity, and the manifest hashes the schema, the object names and the
+roles, so a baseline cannot be used after any of them changed.
+
 ### What the pin actually requires
 
 `backend/supabase/tests/test_local_postgres_image_pin.py` refuses a major above 15
