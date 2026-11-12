@@ -28,6 +28,11 @@ PIPELINE_COMPOSE = ROOT / "pipeline-control" / "docker-compose.pipeline.yml"
 CONTRACT = ROOT.parent / "backend" / "DATA_CONTRACTS.md"
 
 
+class _SuccessfulDelivery:
+    def get(self, *, timeout: float) -> None:
+        return None
+
+
 def _run() -> RunRecord:
     return RunRecord(
         id="00000000-0000-4000-8000-0000000000e1",
@@ -154,13 +159,14 @@ class EventSinkTests(unittest.TestCase):
             def __init__(self, **_kwargs: object) -> None:
                 pass
 
-            def send(self, topic: str, value: bytes) -> None:
+            def send(self, topic: str, value: bytes) -> _SuccessfulDelivery:
                 sent.append((topic, value))
+                return _SuccessfulDelivery()
 
-            def flush(self) -> None:
+            def flush(self, **_kwargs: object) -> None:
                 return None
 
-            def close(self) -> None:
+            def close(self, **_kwargs: object) -> None:
                 sent.append(("closed", b""))
 
         events_mod._load_kafka_producer = lambda: FakeProducer  # type: ignore[method-assign]
@@ -296,13 +302,13 @@ class EventSinkTests(unittest.TestCase):
             def __init__(self, **_kwargs: object) -> None:
                 pass
 
-            def send(self, *_args: object, **_kwargs: object) -> None:
+            def send(self, *_args: object, **_kwargs: object) -> _SuccessfulDelivery:
+                return _SuccessfulDelivery()
+
+            def flush(self, **_kwargs: object) -> None:
                 return None
 
-            def flush(self) -> None:
-                return None
-
-            def close(self) -> None:
+            def close(self, **_kwargs: object) -> None:
                 raise RuntimeError("close-failed")
 
         events_mod._load_kafka_producer = lambda: CloseBoom  # type: ignore[method-assign]
@@ -324,10 +330,10 @@ class EventSinkTests(unittest.TestCase):
             def send(self, *_args: object, **_kwargs: object) -> None:
                 raise RuntimeError("send-failed")
 
-            def flush(self) -> None:
+            def flush(self, **_kwargs: object) -> None:
                 return None
 
-            def close(self) -> None:
+            def close(self, **_kwargs: object) -> None:
                 raise RuntimeError("close-failed")
 
         events_mod._load_kafka_producer = lambda: SendBoom  # type: ignore[method-assign]
@@ -516,13 +522,14 @@ class EventSinkTests(unittest.TestCase):
             def __init__(self, **_kwargs: object) -> None:
                 pass
 
-            def send(self, topic: str, value: bytes) -> None:
+            def send(self, topic: str, value: bytes) -> _SuccessfulDelivery:
                 sent.append(topic)
+                return _SuccessfulDelivery()
 
-            def flush(self) -> None:
+            def flush(self, **_kwargs: object) -> None:
                 return None
 
-            def close(self) -> None:
+            def close(self, **_kwargs: object) -> None:
                 return None
 
         events_mod._load_kafka_producer = lambda: FakeProducer  # type: ignore[method-assign]
@@ -546,14 +553,15 @@ class EventSinkTests(unittest.TestCase):
             def __init__(self, **_kwargs: object) -> None:
                 pass
 
-            def send(self, topic: str, _value: bytes) -> None:
+            def send(self, topic: str, _value: bytes) -> _SuccessfulDelivery:
                 if topic == "tzudong.pipeline.record.upserted.v1":
                     raise RuntimeError("upsert-send-failed")
+                return _SuccessfulDelivery()
 
-            def flush(self) -> None:
+            def flush(self, **_kwargs: object) -> None:
                 return None
 
-            def close(self) -> None:
+            def close(self, **_kwargs: object) -> None:
                 return None
 
         events_mod._load_kafka_producer = lambda: SelectiveBoom  # type: ignore[method-assign]
