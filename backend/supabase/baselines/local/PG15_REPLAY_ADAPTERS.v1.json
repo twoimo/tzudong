@@ -13,6 +13,7 @@
     "transform_feature_rpc_catalog_pg15_replay",
     "transform_g014_guardian_replay",
     "transform_hosted_pending_custody_pg15_replay",
+    "transform_public_index_dedup_pg15_replay",
     "transform_receipt_ocr_acl_admission_pg15_replay",
     "transform_receipt_ocr_credential_release_pg15_replay",
     "transform_receipt_ocr_indeterminate_recovery_pg15_replay",
@@ -60,7 +61,14 @@
       {
         "test": "test_local_migration_contract.py",
         "asserts": [
-          "transform_hosted_pending_custody_pg15_replay"
+          "transform_hosted_pending_custody_pg15_replay",
+          "transform_public_index_dedup_pg15_replay"
+        ]
+      },
+      {
+        "test": "test_public_index_dedup_pg15_replay.py",
+        "asserts": [
+          "transform_public_index_dedup_pg15_replay"
         ]
       },
       {
@@ -124,6 +132,6 @@
         ]
       }
     ],
-    "testCount": 16
+    "testCount": 17
   }
 }

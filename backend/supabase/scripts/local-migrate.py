@@ -2590,6 +2590,7 @@ def _canonical_source_replay_bodies() -> dict[str, tuple[bytes, bytes]]:
             "transform_receipt_ocr_acl_admission_pg15_replay": ("20261019120000_receipt_ocr_credential_release_acl_admission_v2.sql",),
             "transform_receipt_ocr_indeterminate_recovery_pg15_replay": ("20261019130000_receipt_ocr_indeterminate_recovery.sql",),
             "transform_review_verification_readiness_pg15_replay": ("20261016090000_review_verification_delete_guard_readiness.sql",),
+            "transform_public_index_dedup_pg15_replay": ("20261112111043_deduplicate_equivalent_public_indexes.sql",),
             "transform_hosted_pending_custody_pg15_replay": ("20261025063810_hosted_pending_atomic_delivery.sql",),
         }
         for module_name, names in adapters.items():
