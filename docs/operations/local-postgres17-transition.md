@@ -239,15 +239,11 @@ passed the gate against the committed baseline.
 
 ### The pins are split by lane
 
-| Lane | PostgreSQL | Selected by |
+| Lane | PostgreSQL | Why |
 | --- | --- | --- |
-| application stack | **17.11.0.018** | `APPLICATION_IMAGE`, the Compose default |
-| replay lane | 15.8.1.085 | `LOCAL_STACK_REPLAY_STACK=1`, which the nightly local job sets |
-| `BOOTSTRAP_SOURCES.v1.json` | 15.8.1.085 | records the upstream sources the auth bootstrap was generated from |
-
-The image reaches Compose through `POSTGRES_IMAGE` in the generated env, and the
-volume helper runs the same image, so the stack the job starts and the stack it
-verifies cannot disagree.
+| application stack (`docker-compose.yml`, `local-stack.py` volume helper) | **17.11.0.018** | provisioned from `baselines/local/schema` |
+| replay lane (`docker-compose.replay.yml`, nightly prefetch and readiness probe) | 15.8.1.085 | the historical chain only replays on 15 with the adapters |
+| `BOOTSTRAP_SOURCES.v1.json` | 15.8.1.085 | it records the upstream sources the auth bootstrap was generated from |
 
 Starting the stack a developer uses and provisioning it:
 
@@ -256,9 +252,9 @@ Starting the stack a developer uses and provisioning it:
         --container "$(docker ps --filter label=com.docker.compose.service=db --format '{{.Names}}')" \
         --baseline backend/supabase/baselines/local/schema
 
-The nightly local job sets `LOCAL_STACK_REPLAY_STACK=1`, so it keeps 15 and its
-migration coverage while the application stack runs 17. A stack started with one
-setting and verified against the other fails provenance instead of drifting.
+The nightly local job sets `LOCAL_STACK_REPLAY_STACK=1`, which adds the committed
+replay override, so it keeps 15 and its migration coverage while the application
+stack runs 17.
 
 ### What the pin actually requires
 
