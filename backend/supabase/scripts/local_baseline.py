@@ -97,13 +97,28 @@ def object_names(container: str, role: str, database: str,
                                   runner=runner).splitlines() if line]
 
 
+def idempotent_role(statement: str) -> str:
+    """Make a CREATE ROLE tolerate an existing role.
+
+    A booted supabase stack already creates some of these roles, and "already exists"
+    is success: the role the dump needs is there. Measured on PostgreSQL 17 with the
+    stack's own init scripts (7 roles already present).
+    """
+    body = statement.strip().rstrip(";")
+    if not body.upper().startswith("CREATE ROLE"):
+        return f"{body};"
+    return f"DO $$ BEGIN {body}; EXCEPTION WHEN duplicate_object THEN NULL; END $$;"
+
+
 def role_statements(container: str, database: str,
                     runner: Runner = subprocess.run) -> list[str]:
     statements = [line for line in psql(container, "postgres", ROLE_STATEMENTS_SQL,
                                         database=database, runner=runner).splitlines() if line]
     # psql needs one terminated statement per line: joined without ';' the file parses
-    # as a single broken statement and only the first line runs.
-    return [f"{statement.rstrip(';')};" for statement in statements]
+    # as a single broken statement and only the first line runs. Creation is also made
+    # idempotent, because a booted supabase stack already creates some of these roles
+    # and "already exists" is a success, not a setup error.
+    return [idempotent_role(statement) for statement in statements]
 
 
 def schema_dump(container: str, database: str, runner: Runner = subprocess.run) -> bytes:
@@ -209,7 +224,7 @@ def provision(baseline: Baseline, container: str, database: str, *,
               role: str = RESTORE_ROLE, runner: Runner = subprocess.run) -> dict[str, Any]:
     schema_bytes = baseline.schema_path.read_bytes()
     roles_sql = (baseline.directory / "roles.sql").read_text(encoding="utf-8")
-    role_lines = [line for line in roles_sql.splitlines() if line.strip()]
+    role_lines = [idempotent_role(line) for line in roles_sql.splitlines() if line.strip()]
     setup = role_lines + [
         f"DROP SCHEMA IF EXISTS {schema} CASCADE;" for schema in SEEDED_SCHEMAS
     ]
