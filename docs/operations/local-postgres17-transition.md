@@ -219,6 +219,24 @@ Two properties matter more than the number. `provision` refuses to report succes
 without object parity, and the manifest hashes the schema, the object names and the
 roles, so a baseline cannot be used after any of them changed.
 
+### The baseline is committed, and drift fails the nightly
+
+`backend/supabase/baselines/local/schema/` holds the captured baseline: `schema.sql`
+(2.3MB), `objects.txt`, `roles.sql` and `manifest.json`, which hashes all three. It is
+the artifact a provisioned stack boots from, so it lives with the code instead of in a
+CI upload nobody can point at.
+
+The nightly step *Verify the committed local baseline matches the stack* compares a
+fresh capture against that manifest and fails with the regeneration command when the
+object set moved:
+
+    local_baseline.py capture --container <db> --output backend/supabase/baselines/local/schema
+
+The gate reads the object set - count, names digest, role count - and not the dump
+hash, because `pg_dump` output can differ without the schema differing and a gate that
+fires on formatting gets switched off rather than fixed. Nightly run 43156573526
+passed the gate against the committed baseline.
+
 ### What the pin actually requires
 
 `backend/supabase/tests/test_local_postgres_image_pin.py` refuses a major above 15
