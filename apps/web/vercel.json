@@ -6,7 +6,7 @@
   "buildCommand": "npm run build",
   "git": {
     "deploymentEnabled": {
-      "*": false,
+      "**": false,
       "main": true,
       "develop": true
     }

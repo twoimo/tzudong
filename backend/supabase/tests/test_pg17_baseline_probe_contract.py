@@ -56,11 +56,33 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertIn("pg17-baseline/", self.workflow)
         self.assertIn('args.baseline_output if args.baseline_output', self.probe)
 
+    def test_drift_is_gated_against_the_committed_baseline(self) -> None:
+        # The committed baseline is what a provisioned stack boots from, so the stack
+        # that captured it has to keep matching it or say so.
+        self.assertIn("Verify the committed local baseline matches the stack", self.workflow)
+        self.assertIn("local_baseline.py compare", self.workflow)
+        self.assertIn("backend/supabase/baselines/local/schema", self.workflow)
+
     def test_the_probe_restores_into_a_disposable_container(self) -> None:
         self.assertIn('PG17_IMAGE = "supabase/postgres:17.11.0.018"', self.probe)
         self.assertIn('RESTORE_CONTAINER = "tzudong-pg17-baseline"', self.probe)
         self.assertIn('docker", "rm", "-f", RESTORE_CONTAINER', self.probe)
         self.assertNotIn("rm\", \"-f\", args.database_container", self.probe)
+
+
+class ProvisioningLaneTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    def test_the_lane_provisions_the_committed_baseline(self) -> None:
+        self.assertIn("  pg17-provision:\n", self.workflow)
+        self.assertIn("local_baseline.py provision", self.workflow)
+        self.assertIn("local_baseline.py check", self.workflow)
+        self.assertIn("backend/supabase/baselines/local/schema", self.workflow)
+
+    def test_the_lane_always_cleans_up(self) -> None:
+        self.assertIn("if: ${{ always() }}", self.workflow)
+        self.assertIn("docker rm -f tzudong-pg17-provision", self.workflow)
 
 
 class BaselineModuleContractTests(unittest.TestCase):
