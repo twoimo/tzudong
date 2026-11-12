@@ -21,7 +21,8 @@ def completed(stdout: bytes = b"", stderr: bytes = b"", code: int = 0) -> subpro
     return subprocess.CompletedProcess(args=[], returncode=code, stdout=stdout, stderr=stderr)
 
 
-def make_runner(*, names, roles, restored=None, setup_stderr=b"", restore_stderr=b""):
+def make_runner(*, names, roles, restored=None, setup_stderr=b"", restore_stderr=b"",
+                setup_exit_code=0, restore_exit_code=0):
     """Answer docker calls by what they ask for, and switch names after the restore."""
     state = {"restored": False}
 
@@ -35,10 +36,10 @@ def make_runner(*, names, roles, restored=None, setup_stderr=b"", restore_stderr
             pool = (restored if state["restored"] else names) or []
             return completed(stdout=("\n".join(pool) + ("\n" if pool else "")).encode())
         if "-f /tmp/baseline-setup.sql" in joined:
-            return completed(stderr=setup_stderr)
+            return completed(stderr=setup_stderr, code=setup_exit_code)
         if "-f /tmp/baseline-schema.sql" in joined:
             state["restored"] = True
-            return completed(stderr=restore_stderr)
+            return completed(stderr=restore_stderr, code=restore_exit_code)
         if command[:2] == ["docker", "cp"]:
             return completed()
         raise AssertionError(f"unexpected command: {joined}")
@@ -110,6 +111,37 @@ class ProvisionTests(unittest.TestCase):
             self.assertTrue(record["provisioned"])
             self.assertEqual(record["restoredObjectCount"], 2)
             self.assertEqual(record["preparedRoleCount"], 1)
+            self.assertEqual((record["setupExitCode"], record["restoreExitCode"]), (0, 0))
+
+    def test_nonzero_setup_exit_blocks_success_with_object_parity(self) -> None:
+        names = ["public.a", "public.b"]
+        for code, stderr in ((2, b"psql: FATAL: connection terminated\n"), (1, b"")):
+            with self.subTest(exit_code=code), tempfile.TemporaryDirectory() as tmp:
+                baseline = self._baseline(Path(tmp), names)
+                record = lb.provision(
+                    baseline, "target", "profile",
+                    runner=make_runner(names=names, roles=[], restored=names,
+                                       setup_exit_code=code, setup_stderr=stderr))
+                self.assertFalse(record["provisioned"])
+                self.assertEqual((record["setupExitCode"], record["restoreExitCode"]), (code, 0))
+                self.assertEqual((record["setupErrorCount"], record["restoreErrorCount"]), (0, 0))
+                self.assertEqual(record["restoredObjectCount"], len(names))
+                self.assertEqual(record["missingObjectCount"], 0)
+
+    def test_nonzero_restore_exit_blocks_success_with_object_parity(self) -> None:
+        names = ["public.a", "public.b"]
+        for code, stderr in ((2, b"psql: FATAL: connection terminated\n"), (-9, b"")):
+            with self.subTest(exit_code=code), tempfile.TemporaryDirectory() as tmp:
+                baseline = self._baseline(Path(tmp), names)
+                record = lb.provision(
+                    baseline, "target", "profile",
+                    runner=make_runner(names=names, roles=[], restored=names,
+                                       restore_exit_code=code, restore_stderr=stderr))
+                self.assertFalse(record["provisioned"])
+                self.assertEqual((record["setupExitCode"], record["restoreExitCode"]), (0, code))
+                self.assertEqual((record["setupErrorCount"], record["restoreErrorCount"]), (0, 0))
+                self.assertEqual(record["restoredObjectCount"], len(names))
+                self.assertEqual(record["missingObjectCount"], 0)
 
     def test_a_missing_object_blocks_success(self) -> None:
         names = ["public.a", "public.b"]

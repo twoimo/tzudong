@@ -26,6 +26,7 @@
     "providerBuildTimeoutMinutes": 20,
     "governanceDeadlineMinutes": 10,
     "deploymentDeadlineMinutes": 7,
+    "deploymentReadbackReserveSeconds": 45,
     "planningTargetIsEnforced": false
   }
 }

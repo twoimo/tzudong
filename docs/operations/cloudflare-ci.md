@@ -9,21 +9,37 @@ Cloudflare Workers Builds에서 GitHub `Release`의 실제 거버넌스 검사�
 
 ## 구성 및 검증 기록
 
-아래 표는 **2026-11-11 UTC**에 확인한 구성이다. 최신 커밋의 실행 결과는
+아래 표는 **2026-11-12 KST 후속 작업 시작 시점**에 확인한 구성이다. 최신 커밋의 실행 결과는
 [PR #3764의 검사](https://github.com/twoimo/tzudong/pull/3764/checks),
 공급자의 build 결과 및 GitHub native checks에서 확인한다.
 
 | 항목 | 상태 |
 | --- | --- |
-| GitHub 기준 소스 | `develop`의 `87abce4cf85f4c4f0d2763ec5449ee573fb17b95` 정리 작업까지 통합한 `ci/cloudflare-free-migration-20261112` |
+| GitHub 기준 소스 | `develop`의 `4becfc06c2b9c9246f3f8ba0fa1f46b61cc45ecc`; 정리 #3759와 이전 #3764 병합 포함 |
 | Cloudflare 대상 | `tzudong-ci-governance` Worker 생성 확인. Worker tag: `76d391fe6f524121b3b9d74f1b3fa24c` |
 | Git repository 연결 | 연결 UUID: `e00c02fa-0913-4361-bd2b-56a017f441a3` 생성 확인 |
-| Workers Builds 설정·실행 | 지정 branch의 native push trigger와 실제 검사·배포·HTTP 조회 성공 확인. 아래 첫 원격 실행 기록 참조 |
-| GitHub 보호 규칙 | 현재 연결의 branch-protection 조회가 HTTP 403. 기존 required checks 변경 안 함 |
+| Workers Builds 설정·실행 | 단일 production branch와 두 명령은 `develop`, root `/.github/cloudflare`, cache 활성, preview 비활성. 설정 API readback 및 후속 develop push 두 건 성공 |
+| GitHub 보호 규칙 | branch 응답에서 `Release`·`Promotion Path` 필수 상태 확인. 세부 branch-protection 조회는 이전에 HTTP 403; 기존 required checks 변경 안 함 |
 | 이전 저장소 정리 | [PR #3759](https://github.com/twoimo/tzudong/pull/3759)의 develop 병합을 확인하고 README·문서 구조와 CI 소유권을 함께 통합 |
 
 설정 파일이 존재하거나 로컬 테스트가 통과한 것만으로 Cloudflare 검사가 실행된
 것은 아니다. Worker·저장소 연결 생성과 해당 SHA의 실제 build 성공을 구분한다.
+
+### develop 자동 실행 확인
+
+#3764 병합 직후의 수동 실행과 다음의 **native push 실행**을 구분한다.
+
+| 소스 SHA | Cloudflare build ID | 생성 → 종료 | 결과 |
+| --- | --- | ---: | --- |
+| `6bab8a57037f3d79a1bc529a6e81af01fad48fb1` | `75f60b5f-bd7f-41c8-8699-baca7e2fa378` | 192.602초 | `push_event`, success |
+| `4becfc06c2b9c9246f3f8ba0fa1f46b61cc45ecc` | `0f7d3085-c275-4439-a39d-3658dd2d5ec0` | 202.400초 | `push_event`, success |
+
+두 번째 실행의 [native check](https://github.com/twoimo/tzudong/runs/130751575927)와
+[공개 receipt](https://tzudong-ci-governance.twoimo.workers.dev/receipt)의
+commit·tree(`96aaccb5c939e0ea2bbf6250e42e3bc9409c7926`)·build ID가 일치했다.
+실제 다섯 검사 단계는 146.137초다. 해당 SHA의 GitHub 체크 23개도 모두 성공했다.
+공개 URL은 계속 최신 성공 배포로 바뀌므로 이 기록의 SHA와 조회 시점의 SHA를
+구분한다. 아래에서 설명하는 자동 HTTP 대조는 이 확인 이후의 후속 변경이다.
 
 ## 왜 이 범위부터 옮기는가
 
@@ -92,6 +108,13 @@ Python은 표준 라이브러리 문서 검사에만 사용한다. 별도 `PYTHO
 대상은 항상 `.github/cloudflare/wrangler.jsonc`로 명시한다. 자동 프레임워크
 감지로 웹 앱이나 다른 Worker의 설정을 선택하지 않는다.
 
+Wrangler 성공 후에는 자격 증명 없는 고정 HTTPS 요청으로 `/receipt`, `/health`,
+artifact와 checksum을 읽는다. 전체 receipt와 health의 정체성, artifact의
+바이트 수·SHA-256, checksum, 네 응답의 `no-store`를 대조한 뒤에만 `deployed`를
+반환한다. redirect, 무제한 응답, 오래된 성공, 부분 응답은 허용하지 않는다.
+전파 지연을 위한 재시도는 최대 세 번이며 전체 배포 예산의 마지막 45초 안에
+끝나야 한다. 대조 실패는 실행 실패로 남기며 이미 수행한 배포를 자동 rollback하지 않는다.
+
 ## 무료 예산과 실행 상한
 
 [Workers Builds 공식 한도](https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/)의
@@ -103,7 +126,8 @@ Free 기준은 계정당 월 **3,000분**, 동시 실행 **1개**, 실행당 **2
 | --- | --- |
 | 거버넌스 runner | 최대 10분; 시간 초과는 실패 |
 | 잠긴 npm 설치 | 최대 4분 |
-| Wrangler 배포 | 최대 3분 |
+| 설치·Wrangler·HTTP 대조 합계 | 최대 7분; 마지막 45초를 HTTP 대조에 확보 |
+| Wrangler 배포 | 최대 3분이되 HTTP 대조 예비분을 제외한 남은 시간으로 제한 |
 | 공급자 전체 한도 | 20분; 위 단계 외 checkout·준비·정리 시간을 남겨 둠 |
 | 계정 월간 운영 목표 | 모든 프로젝트 합계 2,100분 이내 |
 | 계정 월간 예비분 | 나머지 900분 |
@@ -117,6 +141,21 @@ runner의 시간 제한은 한 번의 실행을 제한한다. 계정 월간 사�
 다른 사용량이 없다고 가정해 평균 5분이면 2,100분 안에 420회, 평균 8분이면
 262회가 들어간다. 이는 계산 예시이며 호스팅 실측치가 아니다. 재시도도 사용량에
 포함해 기록하고, 불필요한 예약 실행이나 모든 브랜치 preview를 추가하지 않는다.
+
+후속 작업 시작 시 계정의 Worker 다섯 개에서 11월 이력 210건을 조회했다.
+초기화(없으면 실행 시작)부터 종료까지 합계는 **약 2,123.77분**이고,
+그중 `tzudong-ci-governance`는 8건 **24.41분**이다. 시작 시각이 없는 11건은
+합계에서 제외했다. 이는 **공식 사용량·청구 분량·잔여 quota가 아닌 관측 시간**이다.
+2,100분 운영 목표는 넘었지만, 한도 API는
+`has_reached_build_minutes_limit: false`와 다음 갱신 시각
+**2026-12-01 08:59:59.999 KST**를 반환했다. API에는 2,100분 임계 설정이나
+누적·잔여 분량 필드가 없으므로 목표 자동 차단을 구현했다고 표시하지 않는다.
+
+Cloudflare Free의 한도 소진은 이 별도 검사 경로의 연속성을 제한할 수 있다.
+이 상태에서는 새 trigger·preview·중복 예약을 추가하지 않고 GitHub의 기존
+필수 검사 경로를 유지한다. 같은 trigger에 더 최신 빌드가 대기 중이면 이전
+대기 빌드를 생략하는 기능은 [공급자가 제공한다](https://developers.cloudflare.com/changelog/post/2026-07-24-skip-superseded-builds/).
+진행 중 빌드까지 자동 취소한다는 의미는 아니다.
 
 ## 자격 증명과 브랜치 경계
 
@@ -146,6 +185,60 @@ GitHub `Release`, 전체 8-shard 단위 테스트, 앱 build/lint/typecheck, 플
 `develop → data → main` 승격 경로를 유지한다. 기존 artifact 업로드와 보존
 계약도 유지한다. 별도 CI Worker가 성공했다는 사실로 이 작업들의 성공 상태를
 대신 만들지 않는다.
+
+주간 Dependency Freshness도 Web CI와 같은 고정 Chromium 준비 helper를 쓴다.
+실제 전체 브라우저·headless shell 실행을 확인하고 공유 라이브러리가 없다는
+진단이 있을 때만 OS 의존성을 설치한다. 일반 launch·download 실패는 그대로
+실패 처리한다. 설치 단계의 중복 npm audit만 제거하며 Security의 독립 감사와
+Freshness의 lint·전체 unit·typecheck parity·build 네 검사는 유지한다.
+
+### 로그 경계 검사의 불필요한 정규식 탐색
+
+후속 PR의 [Security 실행](https://github.com/twoimo/tzudong/actions/runs/43092578870/job/130773156365)에서
+`test_serialized_over_65536_is_reduced_with_marker` 한 건이 약 172초를 소비했다.
+원인은 직렬화 크기 검사 앞에서 구분자가 없는 긴 문자열에 URL userinfo와
+민감 필드 정규식을 반복 적용하는 경로였다.
+
+`backend/utils/privacy_log.py`는 해당 정규식 직전의 문자열에 필수 구분자가
+존재하는지 먼저 확인한다. URL 정규식은 `://`와 `@`, 민감 필드 정규식은
+`:` 또는 `=`가 반드시 필요하다. 이 조건이 없을 때만 탐색을 생략하며
+기존 정규식·치환 순서·표식·길이와 깊이 제한은 유지한다. 이메일·전화번호·Bearer
+등 다른 마스킹 단계는 계속 실행한다.
+
+| 동일 로컬 fixture 관측 | 결과 |
+| --- | ---: |
+| 변경 전, 4,000문자 문자열 100개 | 127.973초 |
+| 실제 변경 소스, 같은 fixture | 0.150초 |
+| 두 출력 | 모두 165바이트, SHA-256 일치 |
+| 소스 편집 전 메모리 내 prototype 동등성 대조 | 합성 입력 542건의 JSON 바이트 일치 |
+
+출력 SHA-256은 `21a953e737b2fa5c5598cbea3f5d14f8ef523e0258afbbeeef25fefc73ffcf4f`다.
+도구 stdout에서 옮긴 정확한 수치·소스 blob·관측 한계는
+[진단 영수증](../../apps/web/performance/ci-redaction-diagnostic-20261112/receipt.json)과
+[artifact map](../../apps/web/performance/ci-redaction-diagnostic-20261112/artifact-map.json)에 보존한다.
+전후 각각 1회 관측이며 원본에만 호출 수 계측 wrapper가 있다. 계측 당시 Python
+정확한 버전은 기록하지 않았고 원본 스크립트·raw 파일도 따로 보존하지 않았다.
+542건은 소스 편집 전 prototype 비교이며 실제 수정 소스의 재실행 결과로 취급하지 않는다.
+절대·상대·노이즈 예산은 지정하지 않았고 노이즈 분포도 측정하지 않았다.
+이는 해당 fixture의 진단 기록이며 정식 benchmark나 전체 CI 개선 주장에 해당하지 않고,
+G003 admitted slice는 0개다. 구분자가 있는 모든 입력의 선형 실행 시간을 보장하지 않는다.
+기존 큰 fixture와 보안 검사는 그대로 유지하고, separator가 없는 민감값도 계속
+마스킹되는 회귀 검사를 추가했다.
+
+### 기본 브랜치 활성화 의존성
+
+시작 시점의 기본 브랜치 `main`은 `98f774346c477ac74058cdcbdf8636b0aff8b54c`다.
+추가한 Cloudflare npm 단위는 develop에만 있어 기본 브랜치의 Dependabot는
+아직 일곱 단위다. 변경된 예약 Freshness·Security·Web CI·Nightly 정의도
+`main` 승격 전에는 예약 실행의 새 정의로 활성화되지 않는다.
+[Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/about-the-dependabot-yml-file)와
+[schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)은
+기본 브랜치에서 정의를 읽는다.
+
+현재 `Promotion Path`는 `develop → data → main`만 허용한다. 누적 앱·SQL·백엔드
+의존성 변경도 포함되므로 CI 파일만 직행시키거나 기본 브랜치를 바꿔 우회하지 않는다.
+승격 PR에서 실제 소스 SHA와 포함 범위를 검토하고, 기본 브랜치 반영 후 설정과
+예약 실행을 따로 확인한다. develop Worker 성공은 이 활성화의 증거가 아니다.
 
 Cloudflare의 의존성 캐시는 설치 최적화용이다. 캐시 복구는 검사를 실행한 증거나
 영수증 보관 수단이 아니다. 각 실행은 현재 SHA에 대해 다시 검사하고 새 결과를

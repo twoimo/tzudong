@@ -223,15 +223,19 @@ def provision(baseline: Baseline, container: str, database: str, *,
         "baselineObjectCount": baseline.manifest.get("objectCount"),
         "restoreRole": role,
         "preparedRoleCount": len(role_lines),
+        "setupExitCode": setup_result.returncode,
         "setupErrorCount": len(setup_errors),
         "setupErrors": setup_errors[:10],
+        "restoreExitCode": restore.returncode,
         "restoreErrorCount": len(restore_errors),
         "restoreErrors": restore_errors[:20],
         "restoredObjectCount": len(restored_names),
         "missingObjectCount": len(missing),
         "missingObjects": missing[:20],
         "provisioned": (
-            not setup_errors
+            setup_result.returncode == 0
+            and restore.returncode == 0
+            and not setup_errors
             and not restore_errors
             and not missing
             and len(restored_names) == baseline.manifest.get("objectCount")
