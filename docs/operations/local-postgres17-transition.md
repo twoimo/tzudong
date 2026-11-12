@@ -237,6 +237,24 @@ hash, because `pg_dump` output can differ without the schema differing and a gat
 fires on formatting gets switched off rather than fixed. Nightly run 43156573526
 passed the gate against the committed baseline.
 
+### Why the first pin attempt failed
+
+Measured 2026-11-12, after reverting the attempt: `local-migrate.py` validates the whole
+key set of the generated stack env (`set(values) != LOCAL_ENV_KEYS`) before it touches
+the database, and exits 2 with `local_env_provenance` when the env grew a key it does
+not know.
+
+The attempt added `POSTGRES_IMAGE` to the generated env so Compose could select the
+image per lane. Stages 1 to 3 never read the env and passed; stage 4
+(`prerequisite_apply`) was the first to open it and died, which is exactly what the
+nightly reported. The stack had started cleanly - the failure was a contract, not the
+database.
+
+The next attempt therefore has one extra step: teach `LOCAL_ENV_KEYS` the new key in
+the same change. `test_local_env_contract` now fails in seconds with the offending key
+if that is forgotten, instead of after a stack start - which is what the second attempt
+did, and the nightly that followed it ran the replay lane on 15 without incident.
+
 ### What the pin actually requires
 
 `backend/supabase/tests/test_local_postgres_image_pin.py` refuses a major above 15
