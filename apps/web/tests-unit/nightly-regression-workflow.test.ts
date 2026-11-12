@@ -63,6 +63,20 @@ function sourceBlock(source: string, startMarker: string, endMarker: string): st
   return source.slice(start, end);
 }
 
+function localStackChildEnvironment(environment: Record<string, string>): Record<string, string> {
+  const block = sourceBlock(
+    nightlyRunnerSource,
+    "const localDockerBaseEnvironmentKeys =",
+    "function localComposeArguments",
+  );
+  return new Function(
+    "pickEnvironment",
+    `${block}\nreturn localDockerEnvironment;`,
+  )((values: Record<string, string>, keys: string[]) => Object.fromEntries(
+    keys.flatMap((key) => values[key] === undefined ? [] : [[key, values[key]]]),
+  ))(environment);
+}
+
 function embeddedPython(block: string): string {
   const match = block.match(/python3 - <<'PY'\n([\s\S]*?)\n\s+PY/);
   expect(match).not.toBeNull();
@@ -128,18 +142,13 @@ describe("nightly regression package and source contracts", () => {
     ]);
   });
 
-  test("passes only validated GitHub socket admission context to local stack children", () => {
+  test("passes bounded socket admission and replay selection to local stack children", () => {
     const block = sourceBlock(
       nightlyRunnerSource,
       "const localDockerBaseEnvironmentKeys =",
       "function localComposeArguments",
     );
-    const buildEnvironment = new Function(
-      "pickEnvironment",
-      `${block}\nreturn localDockerEnvironment;`,
-    )((environment: Record<string, string>, keys: string[]) => Object.fromEntries(
-      keys.flatMap((key) => environment[key] === undefined ? [] : [[key, environment[key]]]),
-    )) as (environment: Record<string, string>) => Record<string, string>;
+    const buildEnvironment = localStackChildEnvironment;
     const admission = {
       CI: "true",
       GITHUB_ACTIONS: "true",
@@ -153,6 +162,8 @@ describe("nightly regression package and source contracts", () => {
       HOME: "/fixture/home",
       LANG: "C.UTF-8",
       ...admission,
+      LOCAL_STACK_REPLAY_STACK: "1",
+      POSTGRES_IMAGE: "untrusted-image",
       DOCKER_HOST: "tcp://hosted.invalid:2375",
       DOCKER_CONTEXT: "remote-context",
       COMPOSE_FILE: "/hosted/compose.yml",
@@ -167,11 +178,21 @@ describe("nightly regression package and source contracts", () => {
       HOME: "/fixture/home",
       LANG: "C.UTF-8",
       ...admission,
+      LOCAL_STACK_REPLAY_STACK: "1",
     });
 
     expect(buildEnvironment({ PATH: "/fixture/bin", CI: "true" })).toEqual({
       PATH: "/fixture/bin",
     });
+    expect(buildEnvironment({ PATH: "/fixture/bin", LOCAL_STACK_REPLAY_STACK: "1" })).toEqual({
+      PATH: "/fixture/bin",
+      LOCAL_STACK_REPLAY_STACK: "1",
+    });
+    for (const selector of ["", "0", "true", "15", "1 "]) {
+      expect(buildEnvironment({ PATH: "/fixture/bin", LOCAL_STACK_REPLAY_STACK: selector })).toEqual({
+        PATH: "/fixture/bin",
+      });
+    }
     for (const mutation of [
       { CI: "false" },
       { GITHUB_ACTIONS: "false" },
@@ -191,6 +212,8 @@ describe("nightly regression package and source contracts", () => {
       "GITHUB_RUN_ID",
       "GITHUB_RUN_ATTEMPT",
       "TZUDONG_DOCKER_SOCKET_ADMISSION_FILE",
+      "LOCAL_STACK_REPLAY_STACK",
+      "POSTGRES_IMAGE",
     ];
     const runtimeKeyBlock = sourceBlock(
       nightlyRunnerSource,
@@ -199,6 +222,54 @@ describe("nightly regression package and source contracts", () => {
     );
     for (const key of privateRuntimeKeys) expect(runtimeKeyBlock).not.toContain(`'${key}'`);
     expect(block.match(/'CI'|'GITHUB_ACTIONS'|'GITHUB_REPOSITORY'|'GITHUB_RUN_ID'|'GITHUB_RUN_ATTEMPT'|'TZUDONG_DOCKER_SOCKET_ADMISSION_FILE'/g)).toHaveLength(6);
+  });
+
+  test("keeps the generated PostgreSQL image contract across the actual Python child boundary", () => {
+    const verifier = [
+      "import importlib.util, json, os, pathlib, sys, tempfile",
+      "from unittest.mock import patch",
+      "root = pathlib.Path(sys.argv[1])",
+      "spec = importlib.util.spec_from_file_location('nightly_replay_contract', root / 'backend/supabase/scripts/local-stack.py')",
+      "module = importlib.util.module_from_spec(spec)",
+      "sys.modules[spec.name] = module",
+      "spec.loader.exec_module(module)",
+      "with tempfile.TemporaryDirectory() as temporary:",
+      "    state = pathlib.Path(temporary)",
+      "    project = 'nightly-replay-contract'",
+      "    with patch.dict(os.environ, {'LOCAL_STACK_REPLAY_STACK': sys.argv[2]}):",
+      "        values = module._env_values(root, project, state)",
+      "    outcome = 'accepted'",
+      "    try:",
+      "        module._validate_env(values, project, state)",
+      "    except module.LocalStackError as error:",
+      "        outcome = error.code",
+      "    print(json.dumps({'generated_major': values['POSTGRES_IMAGE'].split(':')[1].split('.')[0], 'selected_major': module._postgres_image().split(':')[1].split('.')[0], 'outcome': outcome}))",
+    ].join("\n");
+    const cases = [
+      { generated: "1", forwarded: "1", generatedMajor: "15", selectedMajor: "15", outcome: "accepted" },
+      { generated: "", forwarded: "", generatedMajor: "17", selectedMajor: "17", outcome: "accepted" },
+      { generated: "1", forwarded: "", generatedMajor: "15", selectedMajor: "17", outcome: "env_provenance" },
+    ];
+    for (const item of cases) {
+      const result = spawnSync("python3", ["-c", verifier, resolve(appRoot, "../.."), item.generated], {
+        cwd: appRoot,
+        encoding: "utf8",
+        timeout: 10_000,
+        env: localStackChildEnvironment({
+          PATH: process.env.PATH ?? "",
+          HOME: process.env.HOME ?? tmpdir(),
+          LOCAL_STACK_REPLAY_STACK: item.forwarded,
+          POSTGRES_IMAGE: "untrusted-image",
+        }),
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual({
+        generated_major: item.generatedMajor,
+        selected_major: item.selectedMajor,
+        outcome: item.outcome,
+      });
+    }
   });
 
   test("keeps hosted regression as an explicit manual fallback", () => {
