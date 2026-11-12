@@ -1,7 +1,56 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const PRODUCTION_BRANCHES = new Set(["main"]);
 const PREVIEW_BRANCHES = new Set(["develop"]);
+const NON_APP_PREVIEW_FILES = new Set([
+  "AGENTS.md", "README.md", "README.ko.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "TASKS.md",
+  ".github/dependabot.yml", ".github/CODEOWNERS", ".github/PROMOTION_POLICY.md",
+  ".github/PULL_REQUEST_TEMPLATE.md", ".github/pull_request_template.md",
+]);
+
+function isNonAppPreviewPath(filePath) {
+  if (!filePath || /[\\\x00-\x1f\x7f\ufffd]/.test(filePath)
+    || filePath.split("/").some((part) => !part || part === "." || part === "..")) return false;
+  // External backend sources participate in the web runtime/source binding.
+  // Every web path, other manifest, and unknown path must continue to build.
+  return NON_APP_PREVIEW_FILES.has(filePath)
+    || /^docs\/.+\.md$/.test(filePath)
+    || /^\.github\/workflows\/[^/]+\.ya?ml$/.test(filePath)
+    || /^\.github\/ISSUE_TEMPLATE\/.+\.(?:md|ya?ml)$/.test(filePath)
+    || /^\.github\/PULL_REQUEST_TEMPLATE\/.+\.md$/.test(filePath)
+    || filePath.startsWith(".github/cloudflare/");
+}
+
+function readPreviewChangedPaths(env) {
+  const previousSha = String(env.VERCEL_GIT_PREVIOUS_SHA ?? "");
+  const currentSha = String(env.VERCEL_GIT_COMMIT_SHA ?? "");
+  if (!/^[0-9a-f]{40}$/.test(previousSha) || !/^[0-9a-f]{40}$/.test(currentSha)
+    || previousSha === currentSha) return null;
+
+  const readGit = (args) => {
+    const result = spawnSync("git", args, {
+      cwd: fileURLToPath(new URL("../../../", import.meta.url)),
+      encoding: "utf8",
+      timeout: 2_000,
+      maxBuffer: 1024 * 1024,
+      windowsHide: true,
+    });
+    return !result.error && result.status === 0 ? result.stdout : null;
+  };
+  if (readGit(["rev-parse", "--verify", "HEAD"])?.trim() !== currentSha) return null;
+  // Vercel supplies the last successful deployment for this project/branch.
+  // HEAD^ would lose an earlier app change after a failed or skipped build.
+  if (readGit(["merge-base", "--is-ancestor", previousSha, currentSha]) === null) return null;
+  const output = readGit([
+    "diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--name-only", "-z",
+    previousSha, currentSha, "--",
+  ]);
+  if (!output || !output.endsWith("\0")) return null;
+  // NUL delimiters preserve filenames; --no-renames retains both changed paths.
+  return output.slice(0, -1).split("\0");
+}
 
 function productionGitDeploymentEnabled() {
   try {
@@ -81,6 +130,15 @@ function getVercelBuildDecision(env) {
   }
 
   if (PREVIEW_BRANCHES.has(ref)) {
+    const changedPaths = vercelEnv === "preview" ? readPreviewChangedPaths(env) : null;
+    if (changedPaths?.length && changedPaths.every(isNonAppPreviewPath)) {
+      return {
+        ignore: true,
+        ref,
+        reason: "only documentation or independent CI changes since the last successful preview",
+        vercelEnv,
+      };
+    }
     return {
       ignore: false,
       ref,
