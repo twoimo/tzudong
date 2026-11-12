@@ -1220,6 +1220,11 @@ function localDockerEnvironment(environment = process.env) {
   return {
     ...pickEnvironment(environment, localDockerBaseEnvironmentKeys),
     ...validatedLocalDockerSocketAdmissionEnvironment(environment),
+    // Keep the generated replay stack's image choice in its Python validators.
+    // The image itself remains bound to stack.env, never a host override.
+    ...(environment.LOCAL_STACK_REPLAY_STACK === '1'
+      ? { LOCAL_STACK_REPLAY_STACK: '1' }
+      : {}),
   };
 }
 
