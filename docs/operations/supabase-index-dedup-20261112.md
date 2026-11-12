@@ -6,9 +6,10 @@ operator to select that authenticated project. Database name and role checks do
 not authenticate a Supabase project ref.
 
 The migration is
-[`20261112105200_deduplicate_equivalent_public_indexes.sql`](../../backend/supabase/migrations/20261112105200_deduplicate_equivalent_public_indexes.sql),
-created with Supabase CLI 3.1.0. This document describes the implementation and
-verification procedure; it is not a receipt that hosted execution has occurred.
+[`20261112111043_deduplicate_equivalent_public_indexes.sql`](../../backend/supabase/migrations/20261112111043_deduplicate_equivalent_public_indexes.sql).
+Hosted application and a fresh catalog/ledger readback are confirmed below.
+Final scoped metadata comparisons, advisor readback and the public health
+response are also recorded below, with the limits of those checks stated.
 
 ## Exact scope
 
@@ -83,6 +84,70 @@ public_index_dedup_readback_failed
 A lost response is not proof of rollback. Read current catalog and migration
 ledger state before deciding whether any further execution is needed.
 
+## Hosted application and migration identity reconciliation
+
+The root operator completed Supabase `apply_migration` and observed the following
+fresh readback at **2026-11-12 11:11:18.059802 UTC (20:11:18 KST)**.
+
+| Item | Observed value |
+| --- | --- |
+| Project ref | `aqlcofblfxdrjhhdmarw` |
+| Supabase project status | `ACTIVE_HEALTHY` |
+| Migration ledger count | 101 |
+| Applied migration version | `20261112111043` |
+| Applied migration name | `deduplicate_equivalent_public_indexes` |
+| Stored statement count | 1 |
+| Applied SQL bytes | 14,263 |
+| Applied SQL SHA-256 | `600a236aa10eba6b3c5ab96932fb575867a12cf84bfc9ff03974746339fe59e1` |
+| Remaining removal names | Empty: all eight intended objects absent |
+| Retained valid/ready indexes | 6 |
+| Retained valid UNIQUE constraints | 2 |
+
+Supabase CLI 3.1.0 originally generated version **`20261112105200`**, which was
+the filename used by the local PostgreSQL tests. The provider assigned
+**`20261112111043`** when applying the identical SQL. The fresh hosted ledger's
+version, exact SQL hash, byte count and statement count establish that identity.
+The repository file was then renamed to the actual hosted version without
+changing a single SQL byte. No historical migration content or hosted ledger
+row was edited, and no migration repair was performed.
+
+The combined local-test and hosted-application evidence is retained in
+[`supabase-index-dedup-tests-20261112.json`](evidence/supabase-index-dedup-tests-20261112.json).
+This readback establishes migration application and the scoped index/constraint
+poststate. The separate final observations are retained in
+[`supabase-index-dedup-hosted-20261112.json`](evidence/supabase-index-dedup-hosted-20261112.json).
+
+## Final hosted verification
+
+| Check | Observed result |
+| --- | --- |
+| Six retained indexes and three protected `notifications` indexes | Nine metadata/OID comparisons; zero differences |
+| Policies captured before the migration | All 36 baseline policies compared; zero differences |
+| Wider after-query policy result | 65 policies returned; 29 are outside the baseline snapshot and have no before/after equality claim |
+| Relation owners | Seven relations compared; zero owner differences |
+| G014 manifest readback | 1,964 rows after application; `g014_catalog_manifest_immutable` trigger remains enabled (`O`) |
+| Duplicate Index advisor | Eight findings before, one after; the remaining finding is the deliberately preserved `public.notifications` group |
+| Other security advisor findings | The recorded before/after category counts are unchanged; this does not assert that every individual finding or ACL is identical |
+| Health advisor | Zero findings after application |
+| Supabase project | `ACTIVE_HEALTHY` |
+| Public application health | `https://www.tzudong.app/api/health` returned `ok: true` for `tzudong-web`, Git SHA `36a6a3b507dbdbef9afd11dafe73c0efc4e29c80`, deployment `dpl_FHYEeE4Ev5CAfYPfhqzxhE9CYsGK` |
+
+These are scoped checks. The policy result establishes equality only for the 36
+policies captured in the baseline, not all 65 policies returned by the later
+query. The time at which the other 29 policies were created is not established.
+The seven owner comparisons and policy checks do not constitute a full ACL audit.
+
+The exact SELECT serialization for the baseline whole-security and whole-manifest
+aggregate fingerprints was not retained, so equality of those full fingerprints
+is not asserted. The migration has no policy, grant, owner, manifest,
+producer-freeze or application-row mutation; the nine index comparisons and
+enabled manifest trigger provide the narrower recorded evidence.
+
+The public health response proves that endpoint's response, not authenticated
+end-to-end database workflows. No latency, throughput or billing reduction was
+measured. The local tests below used synthetic data and do not establish RLS or
+concurrent-load behavior.
+
 ## Local verification
 
 An independent disposable PostgreSQL 17.6 fixture passed all five cases on
@@ -101,10 +166,46 @@ The fixture used PostgreSQL single-user mode and synthetic rows. It verifies DDL
 catalog state, row results and constraints. It does not prove hosted application
 behavior, RLS behavior, concurrent workload behavior or latency improvement.
 
+## PostgreSQL 15 catalog replay compatibility
+
+The first Catalog CI run for PR #3808 failed at this migration with
+`public_index_dedup_executor_denied`. The isolated canonical catalog generator
+is intentionally pinned to PostgreSQL 15.8.1.085, whereas the hosted migration
+requires PostgreSQL 17. Its execution role and database already matched. This
+was a replay-environment mismatch, not a failed hosted migration.
+
+`transform_public_index_dedup_pg15_replay.py` follows the existing hash-bound
+compatibility adapter pattern. It accepts only the final migration filename,
+its exact 14,263-byte source and SHA-256. The generated private replay copy
+changes exactly one byte: the single PostgreSQL-major predicate changes from
+17 to 15. Reverse replacement must reproduce the immutable source bytes.
+The expected PG15 replay SHA-256 is
+`c97bd16d4336c92e7c3252fb08999f0f3fd2ba3936b9f66e8e7718732acfcd8c`.
+
+Database/current-user/session-user/read-only checks, transaction boundaries,
+locks, all catalog and dependency checks, every DROP and the final readback
+remain byte-identical. The generated copy only admits PG15; it is not placed
+in the migration directory or sent to the hosted project. The catalog driver
+records source, adapter and replay hashes and executes the whole replay body
+inside its existing isolated PG15 environment. The local PG15 replay registry
+uses the same adapter. No image, role, isolation or application-mode selection
+is changed.
+
+PG15 reconstruction, the original PG17.6 five-case fixture, and the hosted
+apply/readback are separate evidence. A passing PG15 catalog check must not be
+reported as PG17 permission, workload or production verification. Current CI
+results are attached to the exact head of
+[PR #3808](https://github.com/twoimo/tzudong/pull/3808).
+
+This change does not regenerate the separate committed PG17 application
+baseline. Its drift gate compares table/view/sequence names and role counts,
+not index definitions; it is not evidence that every restored local index
+matches the newly optimized hosted schema.
+
 ## Read-only verification
 
-Run the following on the intended authenticated project after transaction
-completion. Expected counts are `remaining_removal_names = 0`,
+The following query can reproduce the scoped catalog readback on the intended
+authenticated project. The observed poststate is `remaining_removal_names = 0`,
 `retained_valid_ready_indexes = 6`, `retained_unique_constraints = 2`, and
 `old_short_url_constraint_absent = true`. The full index definitions provide a
 metadata-only readback; they contain no application rows or credentials.
@@ -142,10 +243,11 @@ SELECT
 COMMIT;
 ```
 
-Separately compare the pre/post metadata for the three `notifications` indexes,
-G014 manifest, RLS policies and table grants. Re-run the relevant Supabase
-performance advisor and check the live application. Local PostgreSQL tests do
-not establish those hosted results or a measured latency improvement.
+The final hosted section records the completed index, baseline-policy, owner,
+advisor and public-health checks. A full ACL audit and whole-manifest aggregate
+fingerprint equality were not established by these checks. Local PostgreSQL
+tests are separate evidence and do not establish hosted results or a measured
+latency improvement.
 
 ## Rollback
 

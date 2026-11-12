@@ -33,7 +33,7 @@
   "rls_validated": false,
   "concurrency_validated": false,
   "latency_claims": false,
-  "migration_path": "backend/supabase/migrations/20261112105200_deduplicate_equivalent_public_indexes.sql",
+  "migration_path": "backend/supabase/migrations/20261112111043_deduplicate_equivalent_public_indexes.sql",
   "migration_sha256": "600a236aa10eba6b3c5ab96932fb575867a12cf84bfc9ff03974746339fe59e1",
   "cases": [
     {
@@ -77,5 +77,65 @@
       "rows_equal": true
     }
   ],
-  "environment": "Disposable vanilla PostgreSQL 17.6 single-user mode; synthetic data only."
+  "environment": "Disposable vanilla PostgreSQL 17.6 single-user mode; synthetic data only.",
+  "status_scope": "local_postgresql_fixture",
+  "migration_identity_reconciliation": {
+    "cli_version": "3.1.0",
+    "cli_generated_version": "20261112105200",
+    "cli_generated_path": "backend/supabase/migrations/20261112105200_deduplicate_equivalent_public_indexes.sql",
+    "local_tested_path": "backend/supabase/migrations/20261112105200_deduplicate_equivalent_public_indexes.sql",
+    "provider_assigned_version": "20261112111043",
+    "source_path_after_reconciliation": "backend/supabase/migrations/20261112111043_deduplicate_equivalent_public_indexes.sql",
+    "source_change": "Filename rename only; SQL bytes unchanged.",
+    "sql_bytes": 14263,
+    "sql_sha256": "600a236aa10eba6b3c5ab96932fb575867a12cf84bfc9ff03974746339fe59e1",
+    "basis": "Root observed a fresh hosted migration ledger readback with the provider-assigned version, matching SQL SHA-256, byte length, and one stored statement."
+  },
+  "hosted_apply": {
+    "status": "applied_catalog_readback_verified",
+    "observation_source": "Root Supabase apply_migration and fresh hosted catalog/ledger readback",
+    "observed_at_utc": "2026-11-12T11:11:18.059802Z",
+    "project_ref": "aqlcofblfxdrjhhdmarw",
+    "project_status": "ACTIVE_HEALTHY",
+    "ledger_count": 101,
+    "migration_version": "20261112111043",
+    "migration_name": "deduplicate_equivalent_public_indexes",
+    "statement_count": 1,
+    "sql_bytes": 14263,
+    "sql_sha256": "600a236aa10eba6b3c5ab96932fb575867a12cf84bfc9ff03974746339fe59e1",
+    "remaining_removal_names": [],
+    "retained_valid_ready_indexes": 6,
+    "retained_valid_unique_constraints": 2,
+    "final_security_and_application_health_validation": "completed_with_scoped_verification_limits",
+    "final_hosted_evidence_path": "docs/operations/evidence/supabase-index-dedup-hosted-20261112.json",
+    "final_verification": {
+      "retained_and_protected_indexes_compared": 9,
+      "index_metadata_or_oid_differences": 0,
+      "baseline_policies_compared": 36,
+      "after_query_policy_count": 65,
+      "policies_outside_baseline_snapshot": 29,
+      "baseline_policy_differences": 0,
+      "relation_owners_compared": 7,
+      "relation_owner_differences": 0,
+      "manifest_rows_after": 1964,
+      "manifest_immutable_trigger_enabled": "O",
+      "duplicate_index_advisor_before": 8,
+      "duplicate_index_advisor_after": 1,
+      "remaining_duplicate_index_relation": "public.notifications",
+      "health_advisor_findings_after": 0,
+      "project_status": "ACTIVE_HEALTHY",
+      "public_health_ok": true,
+      "full_acl_audit_completed": false,
+      "whole_security_aggregate_fingerprint_equality_asserted": false,
+      "whole_manifest_aggregate_fingerprint_equality_asserted": false,
+      "authenticated_end_to_end_database_workflows_validated": false
+    },
+    "verification_limitations": [
+      "Local tests used synthetic data and single-user PostgreSQL 17.6, not RLS/concurrent-load execution.",
+      "The 36 baseline policies and 7 relation owners were compared; this is not a before/after full ACL audit.",
+      "The baseline whole-security and whole-manifest fingerprint SELECT serialization was not retained, so equality of those full aggregate fingerprints is not asserted. The migration contains no policy, grant, owner, manifest, producer-freeze or application-row mutation; the 3 protected notifications indexes match their before OID and definition metadata, and the manifest immutable trigger remains enabled.",
+      "The public health endpoint establishes its response only, not authenticated end-to-end database workflows.",
+      "No latency, throughput or billing reduction was measured."
+    ]
+  }
 }

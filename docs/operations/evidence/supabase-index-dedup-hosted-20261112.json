@@ -1,0 +1,302 @@
+{
+  "status": "applied_and_read_back",
+  "project_ref": "aqlcofblfxdrjhhdmarw",
+  "migration_name": "deduplicate_equivalent_public_indexes",
+  "applied_version": "20261112111043",
+  "sql_sha256": "600a236aa10eba6b3c5ab96932fb575867a12cf84bfc9ff03974746339fe59e1",
+  "apply_response": {
+    "success": true
+  },
+  "requested_at_utc": "2026-11-12T11:09:20.150Z",
+  "returned_at_utc": "2026-11-12T11:10:44.075Z",
+  "catalog": {
+    "keepers": [
+      {
+        "oid": "32626",
+        "name": "idx_profiles_user_id",
+        "ready": true,
+        "valid": true,
+        "unique": false,
+        "definition": "CREATE INDEX idx_profiles_user_id ON public.profiles USING btree (user_id)"
+      },
+      {
+        "oid": "72745",
+        "name": "idx_submission_items_submission_id",
+        "ready": true,
+        "valid": true,
+        "unique": false,
+        "definition": "CREATE INDEX idx_submission_items_submission_id ON public.restaurant_submission_items USING btree (submission_id)"
+      },
+      {
+        "oid": "313028",
+        "name": "idx_transcript_embeddings_bge_video_id",
+        "ready": true,
+        "valid": true,
+        "unique": false,
+        "definition": "CREATE INDEX idx_transcript_embeddings_bge_video_id ON public.transcript_embeddings_bge USING btree (video_id)"
+      },
+      {
+        "oid": "165288",
+        "name": "idx_user_bookmarks_restaurant_id",
+        "ready": true,
+        "valid": true,
+        "unique": false,
+        "definition": "CREATE INDEX idx_user_bookmarks_restaurant_id ON public.user_bookmarks USING btree (restaurant_id)"
+      },
+      {
+        "oid": "1788574",
+        "name": "short_urls_code_unique",
+        "ready": true,
+        "valid": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX short_urls_code_unique ON public.short_urls USING btree (code)"
+      },
+      {
+        "oid": "32391",
+        "name": "user_roles_user_id_role_key",
+        "ready": true,
+        "valid": true,
+        "unique": true,
+        "definition": "CREATE UNIQUE INDEX user_roles_user_id_role_key ON public.user_roles USING btree (user_id, role)"
+      }
+    ],
+    "constraints": [
+      {
+        "oid": "1788575",
+        "name": "short_urls_code_unique",
+        "type": "u",
+        "table": "short_urls",
+        "index_oid": "1788574",
+        "validated": true,
+        "definition": "UNIQUE (code)"
+      },
+      {
+        "oid": "32392",
+        "name": "user_roles_user_id_role_key",
+        "type": "u",
+        "table": "user_roles",
+        "index_oid": "32391",
+        "validated": true,
+        "definition": "UNIQUE (user_id, role)"
+      }
+    ],
+    "ledger_count": 101,
+    "observed_at_utc": "2026-11-12T11:11:18.059802Z",
+    "database_size_bytes": 312290451,
+    "matching_migrations": [
+      {
+        "name": "deduplicate_equivalent_public_indexes",
+        "version": "20261112111043",
+        "sql_sha256": "600a236aa10eba6b3c5ab96932fb575867a12cf84bfc9ff03974746339fe59e1",
+        "statement_bytes": 14263,
+        "statement_count": 1
+      }
+    ],
+    "protected_notifications": [
+      {
+        "oid": "32675",
+        "name": "idx_notifications_user_created",
+        "ready": true,
+        "valid": true,
+        "definition": "CREATE INDEX idx_notifications_user_created ON public.notifications USING btree (user_id, created_at DESC)"
+      },
+      {
+        "oid": "1785809",
+        "name": "notifications_owner_created_at_idx",
+        "ready": true,
+        "valid": true,
+        "definition": "CREATE INDEX notifications_owner_created_at_idx ON public.notifications USING btree (user_id, created_at DESC)"
+      },
+      {
+        "oid": "1708137",
+        "name": "notifications_user_created_idx",
+        "ready": true,
+        "valid": true,
+        "definition": "CREATE INDEX notifications_user_created_idx ON public.notifications USING btree (user_id, created_at DESC)"
+      }
+    ],
+    "remaining_removal_names": []
+  },
+  "preserved_metadata": {
+    "index_comparison": {
+      "policiesEqual": true,
+      "beforePolicyCount": 36,
+      "afterPolicyCount": 65,
+      "indexMetadataCount": 9,
+      "indexDifferences": [],
+      "policyComparisonScope": "The 36 policies captured before the migration; the after query additionally returned 29 policies outside the baseline snapshot.",
+      "policyDifferences": []
+    },
+    "relation_owners_compared": 7,
+    "relation_owner_differences": [],
+    "manifest_rows_after": 1964,
+    "manifest_immutable_trigger_after": [
+      {
+        "name": "g014_catalog_manifest_immutable",
+        "enabled": "O"
+      }
+    ]
+  },
+  "advisors": {
+    "performance": {
+      "before": [
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "count": 65
+        },
+        {
+          "name": "auth_rls_initplan",
+          "level": "WARN",
+          "count": 30
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "count": 82
+        },
+        {
+          "name": "multiple_permissive_policies",
+          "level": "WARN",
+          "count": 160
+        },
+        {
+          "name": "duplicate_index",
+          "level": "WARN",
+          "count": 8
+        }
+      ],
+      "after": [
+        {
+          "name": "unindexed_foreign_keys",
+          "level": "INFO",
+          "count": 65
+        },
+        {
+          "name": "auth_rls_initplan",
+          "level": "WARN",
+          "count": 30
+        },
+        {
+          "name": "unused_index",
+          "level": "INFO",
+          "count": 81
+        },
+        {
+          "name": "multiple_permissive_policies",
+          "level": "WARN",
+          "count": 160
+        },
+        {
+          "name": "duplicate_index",
+          "level": "WARN",
+          "count": 1
+        }
+      ]
+    },
+    "security": {
+      "before": [
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "count": 40
+        },
+        {
+          "name": "security_definer_view",
+          "level": "ERROR",
+          "count": 1
+        },
+        {
+          "name": "extension_in_public",
+          "level": "WARN",
+          "count": 1
+        },
+        {
+          "name": "anon_security_definer_function_executable",
+          "level": "WARN",
+          "count": 3
+        },
+        {
+          "name": "authenticated_security_definer_function_executable",
+          "level": "WARN",
+          "count": 20
+        },
+        {
+          "name": "auth_leaked_password_protection",
+          "level": "WARN",
+          "count": 1
+        }
+      ],
+      "after": [
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "count": 40
+        },
+        {
+          "name": "security_definer_view",
+          "level": "ERROR",
+          "count": 1
+        },
+        {
+          "name": "extension_in_public",
+          "level": "WARN",
+          "count": 1
+        },
+        {
+          "name": "anon_security_definer_function_executable",
+          "level": "WARN",
+          "count": 3
+        },
+        {
+          "name": "authenticated_security_definer_function_executable",
+          "level": "WARN",
+          "count": 20
+        },
+        {
+          "name": "auth_leaked_password_protection",
+          "level": "WARN",
+          "count": 1
+        }
+      ]
+    },
+    "health": {
+      "before": [],
+      "after": []
+    }
+  },
+  "application_health": {
+    "url": "https://www.tzudong.app/api/health",
+    "observation_method": "authenticated cloud-browser navigation of the public endpoint after the migration",
+    "ok": true,
+    "service": "tzudong-web",
+    "releaseId": "5445fa71104b2408962c1c5d369babf3bb778838",
+    "gitSha": "36a6a3b507dbdbef9afd11dafe73c0efc4e29c80",
+    "deploymentId": "dpl_FHYEeE4Ev5CAfYPfhqzxhE9CYsGK"
+  },
+  "dashboard": {
+    "performance_url": "https://supabase.com/dashboard/project/aqlcofblfxdrjhhdmarw/advisors/performance?preset=WARN",
+    "filter": "Duplicate Index",
+    "remaining_rows": [
+      "public.notifications"
+    ],
+    "warning_count": 191,
+    "info_count": 146,
+    "error_count": 0
+  },
+  "limitations": [
+    "Local tests used synthetic data and single-user PostgreSQL 17.6, not RLS/concurrent-load execution.",
+    "The 36 baseline policies and 7 relation owners were compared; this is not a before/after full ACL audit.",
+    "The baseline whole-security and whole-manifest fingerprint SELECT serialization was not retained, so equality of those full aggregate fingerprints is not asserted. The migration contains no policy, grant, owner, manifest, producer-freeze or application-row mutation; the 3 protected notifications indexes match their before OID and definition metadata, and the manifest immutable trigger remains enabled.",
+    "The public health endpoint establishes its response only, not authenticated end-to-end database workflows.",
+    "No latency, throughput or billing reduction was measured."
+  ],
+  "postgres_upgrade": {
+    "status": "not_performed",
+    "current_version": "17.6.1.038",
+    "reviewed_target": "17.11.0.019",
+    "ui_maximum_downtime": "1 hour",
+    "ui_downgrade_to_previous_supported": false,
+    "ui_last_backup": "No backups"
+  }
+}

@@ -48,6 +48,7 @@ relevant_sources=(
   'backend/supabase/scripts/transform_receipt_ocr_acl_admission_pg15_replay.py'
   'backend/supabase/scripts/transform_receipt_ocr_indeterminate_recovery_pg15_replay.py'
   'backend/supabase/scripts/transform_review_verification_readiness_pg15_replay.py'
+  'backend/supabase/scripts/transform_public_index_dedup_pg15_replay.py'
   'backend/supabase/scripts/transform_hosted_pending_custody_pg15_replay.py'
   'backend/supabase/scripts/transform_registration_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
@@ -1724,6 +1725,16 @@ SQL
       g026_chain_apply 'hosted-pending-custody-pg15-replay-receipt' "$replay_receipt"
       compose exec -T db psql -X --single-transaction --file=- -v ON_ERROR_STOP=1 \
         -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
+      ;;
+    20261112111043_deduplicate_equivalent_public_indexes.sql)
+      # Source reconstruction only; the immutable PG17 apply source is unchanged.
+      transformed_migration="$work_dir/public-index-dedup-pg15-${migration##*/}"
+      python3 "$script_dir/transform_public_index_dedup_pg15_replay.py" \
+        --source "$migration" --output "$transformed_migration"
+      g026_chain_apply 'public-index-dedup-pg15-replay-transformer' \
+        "$script_dir/transform_public_index_dedup_pg15_replay.py"
+      g026_chain_apply "public-index-dedup-pg15-replay:${migration##*/}" "$transformed_migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     20261026120000_atomic_edit_submission_request.sql|20261026130000_atomic_edit_public_business_phone.sql|20261028195647_sponsorship_base_metadata_manual_confirmation.sql)
       # These immutable sources have no BEGIN/COMMIT. Their SET LOCAL, LOCK,
