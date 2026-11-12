@@ -102,13 +102,29 @@ The post-merge runs for `8a759654` also completed successfully:
 [CI](https://github.com/twoimo/tzudong/actions/runs/43259833379),
 [Release](https://github.com/twoimo/tzudong/actions/runs/43259833593), and
 [CodeQL](https://github.com/twoimo/tzudong/actions/runs/43259833260).
-The hosted documentation-only observation required above remains pending the
-actual PR carrying this record. Retain that PR's exact head and completed results
-before treating the documentation lane as verified.
+The documentation-only lane was subsequently verified in
+[#3814](https://github.com/twoimo/tzudong/pull/3814), exact head
+`592e713c6968e07c254aaf30a12787e173d02609`.
+Its [CI run](https://github.com/twoimo/tzudong/actions/runs/43266364981) succeeded
+in 32 seconds from run creation to the last job completion, with two successful
+and eight skipped job records. The skipped unit matrix is one unexpanded API
+record, not eight separately executed jobs. The PR body retains the timing
+definitions and observations; these are not a controlled speedup measurement.
 
-At this observation, `main` was `36a6a3b5` and `data` was `20fd13c9`; the four
-phases above had not yet been promoted through those branches. This record does
-not establish a production deployment, main-only activation, or Mac cleanup.
+At the earlier observation above, `main` was `36a6a3b5` and `data` was `20fd13c9`.
+Protected [#3815](https://github.com/twoimo/tzudong/pull/3815) then promoted
+`develop` to `data` after the full promotion checks passed, producing commit
+`8af98ee68890925dddc4f145911774b3e70fa0cf` and tree
+`f6853410d1b49deca57de9310281dfa470ba5bf3`.
+The `data -> main` [#3816](https://github.com/twoimo/tzudong/pull/3816) remains a
+draft at this record, pending the protected promotion conditions and fresh
+Vercel production and rollback identity.
+
+This documentation update accompanies a candidate reconciliation of the current
+`main`, `data`, and `develop` commit ancestry. Runtime, test, and configuration
+files retain their bytes from the tree recorded above. The existing strict
+protection and serial `develop -> data -> main` path remain in force. This record
+does not establish a production deployment, main-only activation, or Mac cleanup.
 The Vercel connection listed the `twoimos-projects` team with zero linked Git
 projects, and the known project lookup returned 404. That leaves the deployment
 identity unverified; it does not establish project deletion or a service outage.
