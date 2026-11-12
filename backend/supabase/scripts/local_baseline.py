@@ -267,6 +267,26 @@ def provision(baseline: Baseline, container: str, database: str, *,
     return record
 
 
+def check(baseline: Baseline, container: str, database: str, *,
+          role: str = RESTORE_ROLE, runner: Runner = subprocess.run) -> dict[str, Any]:
+    """Verify an already-provisioned database against the baseline's object list."""
+    expected = _names_from_manifest(baseline)
+    actual = object_names(container, role, database, runner=runner)
+    missing = sorted(set(expected) - set(actual))
+    unexpected = sorted(set(actual) - set(expected))
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "kind": "local-baseline-check",
+        "baselineObjectCount": len(expected),
+        "observedObjectCount": len(actual),
+        "missingObjectCount": len(missing),
+        "missingObjects": missing[:20],
+        "unexpectedObjectCount": len(unexpected),
+        "unexpectedObjects": unexpected[:20],
+        "matches": not missing and len(expected) == len(actual),
+    }
+
+
 def _names_from_manifest(baseline: Baseline) -> list[str]:
     """Object names are captured with the baseline; the manifest stores their digest."""
     names_path = baseline.directory / "objects.txt"
@@ -294,6 +314,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     sub.add_parser("verify", help="validate a baseline directory").add_argument(
         "--baseline", required=True, type=Path)
 
+    chk = sub.add_parser("check", help="verify a provisioned database against a baseline")
+    chk.add_argument("--container", required=True)
+    chk.add_argument("--database", default="postgres")
+    chk.add_argument("--baseline", required=True, type=Path)
+    chk.add_argument("--role", default=RESTORE_ROLE)
+    chk.add_argument("--receipt", type=Path)
+
     cmp_parser = sub.add_parser("compare", help="report drift between a committed baseline and a live capture record")
     cmp_parser.add_argument("--baseline", required=True, type=Path)
     cmp_parser.add_argument("--record", required=True, type=Path,
@@ -315,6 +342,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             "baselineObjectCount", "restoredObjectCount", "missingObjectCount",
             "setupErrorCount", "restoreErrorCount", "provisioned")}))
         return 0 if record["provisioned"] else 1
+    if args.command == "check":
+        baseline = load_baseline(args.baseline)
+        record = check(baseline, args.container, args.database, role=args.role)
+        if args.receipt:
+            args.receipt.parent.mkdir(parents=True, exist_ok=True)
+            args.receipt.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps({key: record[key] for key in (
+            "baselineObjectCount", "observedObjectCount", "missingObjectCount",
+            "unexpectedObjectCount", "matches")}))
+        return 0 if record["matches"] else 1
     if args.command == "compare":
         committed = load_baseline(args.baseline)
         record = json.loads(args.record.read_text(encoding="utf-8"))
