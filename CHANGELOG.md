@@ -1,83 +1,87 @@
 # Changelog
 
-Product-facing history for Tzudong Map. Newer entries first.
+Release highlights for Tzudong Map, newest first. Dates below are GitHub
+publication dates in **Asia/Seoul (KST)**. The linked release notes retain the
+full scope, verification records and limitations of each release.
 
-Promotion path is `develop -> data -> main`. SHAs below are `origin/main` merge commits unless noted. This file does not claim legal compliance, hosted apply of approved restaurants, or that a Mac was running.
+[한국어](CHANGELOG.ko.md) · [Latest stable release](https://github.com/twoimo/tzudong/releases/latest) · [Release guide](docs/releases/README.md)
 
-Korean: [CHANGELOG.ko.md](CHANGELOG.ko.md).
-
----
-## 2026-08-26 — Docs layout
-
-### Changed
-
-- Cross-cutting docs now live under `docs/product/`, `docs/operations/`, and `docs/archive/handoffs/`. Root keeps README, LICENSE, AGENTS, SECURITY, and changelogs. Index: `docs/README.md`.
-
-
-## 2026-08-25 — Hosted new-video pipeline
-
-**Main tip:** `64d669f6e1a3`  
-**Production (Vercel `tzudong`):** `64d669f6e1` succeeded at 2026-08-25 19:43 KST.  
-**Live app:** https://tzudong.app
-
-### Added
-
-- Daily `hosted-pending-apply` evaluates at most one Tzuyang YouTube ID that hosted restaurants do not already have, then pending-inserts only (`run_hosted_new_video_pipeline.py`).
-- Mac LaunchAgent `dev.tzudong.hosted-new-video` (local 05:00) uses the same entry as GitHub Actions. Install: `backend/bin/install_mac_hosted_pipeline_launchd.sh`.
-- Admin crawler panel falls back to the latest `main` Crawler run when `127.0.0.1:8091` is unreachable.
+## Unreleased
 
 ### Changed
 
-- Lite scheduled Crawler no longer hard-fails the job on Gemini auth (exit 43) or a missing/non-zero worker `exit_code`.
-- `hosted-pending-apply` no longer needs `daily-compute` to succeed.
-- Transcript-context (local OpenAI) is optional; chunk/eval continue if it is down.
-- LAAJ keeps absolute evaluation paths, continues on Node Gemini API without Gemini CLI, and accepts `--video-id`.
-- 09/10 accept `--video-id` and rewrite stale selection/rule files for that ID.
+- Organize repository and documentation entry points for users and contributors.
+- Restore the bilingual release chronology and preserve the original August
+  operational records in the [changelog archive](docs/archive/changelog/CHANGELOG.md).
+- Add release channels, a release-note template and GitHub note categories.
 
-### Fixed
+## [1.2.7](https://github.com/twoimo/tzudong/releases/tag/v1.2.7) — 2026-09-27
 
-- Production build: close `readGithubCrawlerSnapshot` before `GET` in `apps/web/app/api/admin/pipeline/route.ts` (#2735).
-- Hosted evaluate: install crawler PyYAML + `backend` `npm ci` on the apply job (#2732–#2739).
-- Preview write path `backend/log/cron/` created before apply.
-- Nightly local publication verifier/builder ledger count 78 → 82 to match `backend/supabase/migrations` (issue #2592).
+- Preserve the home page's child tree while its lazy provider initializes.
+- Reconcile Google map markers by ID and refine swipe ordering and search history.
+- The release notes retain synthetic benchmark results, a search-revisit
+  regression, and the deployment readback recorded at publication. Those records
+  do not establish current production performance or deployment state.
 
-### Operations (not in git)
+## [1.2.6](https://github.com/twoimo/tzudong/releases/tag/v1.2.6) — 2026-09-09
 
-- GitHub Actions variable `TZUDONG_HOSTED_DATA_PLANE_APPROVED=1`.
-- Secret `GEMINI_API_KEY` set to AI Studio free-tier key `tzudong-gemini-free` (project `tzudong-free-zero`). Values are not recorded here.
+- Promote recovery work through `develop → data → main`, including scoped agent
+  guidance, restaurant refresh, address merging and local database reconstruction.
+- This was a source release; the notes do not claim production cutover, hosted
+  apply, map publication or a passing Nightly run.
 
-### Still not automatic
+## [1.2.5](https://github.com/twoimo/tzudong/releases/tag/v1.2.5) — 2026-08-26
 
-- Map publication stays a human approve. `PIPELINE_HOSTED_APPLY_ENABLED` stays off.
-- Meatcreator, frame extract, visual-location, and multi-video GHA are not in this daily job.
-- A Mac that is asleep misses 05:00; GitHub 04:00 KST remains the unattended schedule.
-- Latest Crawler `32838239191` on `64d669f6`: `pipeline=ok`, `evaluate_exit=1`, `applyCandidateCount=0`. Discovery works; a new pending row is not guaranteed until 09/10 see the new chunk file.
+- Add the daily single-video pending-insert pipeline shared by GitHub Actions
+  and the Mac LaunchAgent, plus the admin crawler's GitHub fallback.
+- Harden crawler failure handling and the local regression stack. Automatic map
+  publication and a passing Nightly run were outside this release's claims.
 
-### Main merges this day (`develop -> data -> main` unless hotfix)
+## [1.2.4](https://github.com/twoimo/tzudong/releases/tag/v1.2.4) — 2026-08-16
 
-| KST | PR | SHA | Title |
-| --- | --- | --- | --- |
-| 19:43-class | #2754 | `64d669f6` | unify Mac and GHA hosted new-video pipeline |
-| ~19:15 | #2751 | `2f5aa570` | LAAJ `--video-id` only |
-| ~19:05 | #2748 | `6ab3e113` | LAAJ continues without Gemini CLI |
-| ~18:55 | #2745 | `4ccc0595` | LAAJ absolute evaluation path |
-| 18:48 | #2742 | `a3d68630` | optional transcript context |
-| 18:18 | #2739 | `fb2e4821` | Node deps on evaluate job |
-| 18:15 | #2735 | `07505d4f` | pipeline route brace (main hotfix) |
-| 18:03 | #2734 | `01857a3a` | PyYAML on evaluate job |
-| 17:08 | #2731 | `5edccbf2` | evaluate one new YouTube ID + admin GitHub fallback |
-| 15:50 | #2728 | `e7ee55e4` | create apply preview directory |
-| 15:45 | #2725 | `ce34b0e0` | lite compute stays green; apply independent |
-| 15:37 | #2722 | `a18354ec` | hosted pending-apply job |
+- Restore the then-deployable web lockfile after a Next.js upgrade broke builds.
+- Shorten the public README and separate live-app deployment records from
+  background operations; use prereleases for local Nightly evidence.
 
-Earlier same-day feature PRs on the path: #2720 / #2723 / #2726 / #2729 / #2732 / #2737 / #2740 / #2743 / #2746 / #2749 / #2752.
+## [1.2.3](https://github.com/twoimo/tzudong/releases/tag/v1.2.3) — 2026-07-07
 
----
+- Fix stale mobile map details after marker taps, search, swipes and cluster
+  expansion; add nearest-restaurant fallback for single-result swipes.
+- Open the restaurant sheet for visible mobile markers and prevent stale review
+  pages when changing restaurants.
 
-## How to add an entry
+## [1.2.2](https://github.com/twoimo/tzudong/releases/tag/v1.2.2) — 2026-07-05
 
-1. Put new work under `## YYYY-MM-DD — short title` (or `## Unreleased`).
-2. Use Added / Changed / Fixed / Operations / Still not automatic.
-3. Record `origin/main` SHA and Production deploy SHA separately when they differ.
-4. Mirror the same date block in [CHANGELOG.ko.md](CHANGELOG.ko.md).
-5. Do not paste secrets, cookies, or provider error bodies.
+- Restore desktop/mobile map history and Back navigation, align filter commits,
+  and improve the mobile detail action area.
+- Strengthen restaurant-submission idempotency and readback, admin destructive
+  actions, address presentation and image-provider readiness checks.
+
+## [1.2.1](https://github.com/twoimo/tzudong/releases/tag/v1.2.1) — 2026-07-04
+
+- Add five topic filters and make restaurant-detail close controls explicit Back
+  navigation on desktop and mobile.
+- Separate region/category controls from topic filters.
+
+## [1.2.0](https://github.com/twoimo/tzudong/releases/tag/v1.2.0) — 2026-07-04
+
+- Strengthen admin mutation, audit, readback and provider-readiness contracts.
+- Redact sensitive provider and OCR payloads from logs and public responses;
+  document the Preview → Confirm → Apply → Readback → Audit flow.
+
+## [1.1.1](https://github.com/twoimo/tzudong/releases/tag/v1.1.1) — 2026-06-29
+
+- Align README and storyboard/RAG claims with committed evidence and the web
+  runtime, and remove generated operational noise from the tracked tree.
+- Extend ignore rules for local QA, temporary tools and accidental root lockfiles.
+
+## Historical records and prereleases
+
+The [original August 2026 changelog](docs/archive/changelog/CHANGELOG.md) retains
+its dated operational detail and original date conventions. The concise entries
+above summarize published release notes; they are not a replacement for those
+records or a claim that every later commit has been released.
+
+Local Nightly and local-stack prereleases remain in the
+[GitHub Releases feed](https://github.com/twoimo/tzudong/releases). Their scope and
+tag conventions are explained in the [release guide](docs/releases/README.md).

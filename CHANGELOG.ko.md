@@ -1,83 +1,83 @@
 # 변경 기록
 
-쯔동여지도 제품 변경을 날짜 역순으로 적는다.
+쯔동여지도의 릴리스 주요 변경을 최신순으로 정리합니다. 아래 날짜는 GitHub
+공개 시각을 **한국 표준시(KST)**로 바꾼 날짜입니다. 각 릴리스 링크에 전체
+범위, 검증 기록과 한계가 보존되어 있습니다.
 
-승격 경로는 `develop -> data -> main`이다. 아래 SHA는 따로 적지 않으면 `origin/main` 머지 커밋이다. 이 파일은 법령 준수, 승인된 가게 hosted 덮어쓰기, 맥이 켜져 있었다는 주장을 하지 않는다.
+[English](CHANGELOG.md) · [최신 안정 릴리스](https://github.com/twoimo/tzudong/releases/latest) · [릴리스 안내](docs/releases/README.md)
 
-English: [CHANGELOG.md](CHANGELOG.md).
-
----
-## 2026-08-26 — 문서 배치
-
-### 변경
-
-- 공통 문서는 `docs/product/`, `docs/operations/`, `docs/archive/handoffs/`로 나눈다. 루트에는 README, LICENSE, AGENTS, SECURITY, 변경 기록만 둔다. 색인: `docs/README.md`.
-
-
-## 2026-08-25 — 호스티드 새 영상 파이프라인
-
-**main 팁:** `64d669f6e1a3`  
-**Production (Vercel `tzudong`):** `64d669f6e1` 성공, 2026-08-25 19:43 KST.  
-**라이브:** https://tzudong.app
-
-### 추가
-
-- 매일 `hosted-pending-apply`가 호스티드에 없는 쯔양 유튜브 ID를 최대 1개 평가한 뒤 **pending만** 넣는다 (`run_hosted_new_video_pipeline.py`).
-- 맥 LaunchAgent `dev.tzudong.hosted-new-video` (로컬 05:00)가 GitHub Actions와 같은 엔트리를 쓴다. 설치: `backend/bin/install_mac_hosted_pipeline_launchd.sh`.
-- 관리자 크롤러 화면은 `127.0.0.1:8091`이 없으면 `main` 최근 Crawler 런으로 폴백한다.
+## Unreleased
 
 ### 변경
 
-- 라이트 스케줄 크롤러는 Gemini 인증 실패(exit 43)나 워커 `exit_code` 공백/비0으로 잡을 죽이지 않는다.
-- `hosted-pending-apply`는 `daily-compute` 성공에 묶이지 않는다.
-- 자막 문맥(로컬 OpenAI)은 선택이다. 죽어도 청크/평가는 계속한다.
-- LAAJ는 절대 평가 경로를 다시 붙이지 않고, Gemini CLI 없이 Node Gemini API로 계속하며 `--video-id`를 받는다.
-- 09/10은 `--video-id`를 받고, 그 ID의 옛 selection/rule 파일을 다시 쓴다.
+- 사용자와 기여자가 필요한 경로를 찾도록 저장소와 문서 진입점을 정리합니다.
+- 두 언어의 릴리스 연표를 보완하고, 기존 8월 운영 기록은
+  [변경 기록 아카이브](docs/archive/changelog/CHANGELOG.ko.md)에 보존합니다.
+- 릴리스 채널 안내, 릴리스 노트 양식과 GitHub 변경 분류를 추가합니다.
 
-### 수정
+## [1.2.7](https://github.com/twoimo/tzudong/releases/tag/v1.2.7) — 2026-09-27
 
-- Production 빌드: `apps/web/app/api/admin/pipeline/route.ts`에서 GET 앞에 함수를 닫음 (#2735).
-- 호스티드 평가 잡에 크롤 PyYAML + `backend` `npm ci` (#2732–#2739).
-- apply 전에 `backend/log/cron/` 생성.
-- 나이트리 로컬 publication 검증기/빌더 원장 개수 78 → 82 (`backend/supabase/migrations`와 일치, 이슈 #2592).
+- 홈의 lazy provider가 준비될 때 기존 자식 트리를 유지합니다.
+- Google 지도 마커를 ID로 재조정하고 스와이프 순서와 검색 기록을 개선합니다.
+- 릴리스 노트에는 합성 벤치마크 결과, 검색 재방문 회귀와 공개 당시 배포 검증이
+  함께 남아 있습니다. 이 기록으로 현재 운영 성능이나 배포 상태를 판단하지 않습니다.
 
-### 운영 (깃에 없음)
+## [1.2.6](https://github.com/twoimo/tzudong/releases/tag/v1.2.6) — 2026-09-09
 
-- GitHub Actions 변수 `TZUDONG_HOSTED_DATA_PLANE_APPROVED=1`.
-- 시크릿 `GEMINI_API_KEY`를 AI Studio 무료 키 `tzudong-gemini-free`(프로젝트 `tzudong-free-zero`)로 갱신. 값은 여기에 적지 않는다.
+- 범위별 에이전트 안내, 맛집 갱신, 주소 병합, 로컬 데이터베이스 재구성을 포함한
+  복구 작업을 `develop → data → main`으로 승격합니다.
+- 소스 릴리스이며, 당시 노트는 운영 전환, 호스티드 적용, 지도 공개 또는
+  Nightly 통과를 주장하지 않습니다.
 
-### 아직 자동이 아닌 것
+## [1.2.5](https://github.com/twoimo/tzudong/releases/tag/v1.2.5) — 2026-08-26
 
-- 지도 공개는 사람 승인. `PIPELINE_HOSTED_APPLY_ENABLED`는 꺼둔다.
-- 정육왕, 프레임 추출, 시각 위치, 여러 영상은 이 매일 잡에 없다.
-- 맥이 꺼져 있으면 05:00은 안 돈다. 무인 스케줄 정본은 GitHub 04:00 KST.
-- 최근 Crawler `32838239191` (`64d669f6`): `pipeline=ok`, `evaluate_exit=1`, `applyCandidateCount=0`. 발견은 됨. 새 pending은 09/10이 새 청크 파일을 보기 전엔 보장되지 않는다.
+- GitHub Actions와 맥 LaunchAgent가 공유하는 일일 단일 영상 pending 등록
+  파이프라인과 관리자 크롤러의 GitHub 폴백을 추가합니다.
+- 크롤러 실패 처리와 로컬 회귀 스택을 보강합니다. 지도 자동 공개와 Nightly 통과는
+  이 릴리스가 완료했다고 주장하는 범위에 포함되지 않습니다.
 
-### 이날 main 머지 (`develop -> data -> main`, 핫픽스 제외)
+## [1.2.4](https://github.com/twoimo/tzudong/releases/tag/v1.2.4) — 2026-08-16
 
-| KST | PR | SHA | 제목 |
-| --- | --- | --- | --- |
-| 19:43 전후 | #2754 | `64d669f6` | 맥·GHA 호스티드 새 영상 파이프 통합 |
-| ~19:15 | #2751 | `2f5aa570` | LAAJ `--video-id`만 |
-| ~19:05 | #2748 | `6ab3e113` | Gemini CLI 없어도 LAAJ 계속 |
-| ~18:55 | #2745 | `4ccc0595` | LAAJ 절대 평가 경로 |
-| 18:48 | #2742 | `a3d68630` | 자막 문맥 선택 |
-| 18:18 | #2739 | `fb2e4821` | 평가 잡 Node 의존성 |
-| 18:15 | #2735 | `07505d4f` | 파이프라인 라우트 중괄호 (main 핫픽스) |
-| 18:03 | #2734 | `01857a3a` | 평가 잡 PyYAML |
-| 17:08 | #2731 | `5edccbf2` | 새 유튜브 1개 평가 + 관리자 GitHub 폴백 |
-| 15:50 | #2728 | `e7ee55e4` | apply 프리뷰 디렉터리 |
-| 15:45 | #2725 | `ce34b0e0` | 라이트 컴퓨트 유지, apply 독립 |
-| 15:37 | #2722 | `a18354ec` | hosted pending-apply 잡 |
+- Next.js 업그레이드로 빌드가 실패한 뒤 당시 배포 가능한 웹 잠금 파일을 복원합니다.
+- 공개 README를 줄이고 실제 앱 배포 기록과 백그라운드 작업을 구분합니다.
+  로컬 Nightly 증빙은 사전 릴리스로 공개합니다.
 
-같은 날 경로상의 기능 PR: #2720 / #2723 / #2726 / #2729 / #2732 / #2737 / #2740 / #2743 / #2746 / #2749 / #2752.
+## [1.2.3](https://github.com/twoimo/tzudong/releases/tag/v1.2.3) — 2026-07-07
 
----
+- 마커 클릭, 검색, 스와이프, 클러스터 확장 후 과거 모바일 상세가 다시 열리는 문제를
+  수정하고, 검색 결과가 하나일 때 인접 맛집으로 이동하는 스와이프 폴백을 추가합니다.
+- 모바일 마커에서 맛집 시트를 열고, 맛집을 바꿀 때 이전 리뷰 페이지가 남지 않게 합니다.
 
-## 항목 추가 방법
+## [1.2.2](https://github.com/twoimo/tzudong/releases/tag/v1.2.2) — 2026-07-05
 
-1. `## YYYY-MM-DD — 짧은 제목` (또는 `## Unreleased`) 아래에 적는다.
-2. 추가 / 변경 / 수정 / 운영 / 아직 자동이 아닌 것으로 나눈다.
-3. `origin/main` SHA와 Production 배포 SHA가 다르면 따로 적는다.
-4. 같은 날짜 블록을 [CHANGELOG.md](CHANGELOG.md)에도 맞춘다.
-5. 시크릿, 쿠키, 공급자 오류 본문은 붙이지 않는다.
+- 데스크톱·모바일 지도의 히스토리와 뒤로가기를 복원하고, 필터 반영 시점과 모바일
+  상세 화면의 하단 동작 영역을 정리합니다.
+- 맛집 제보의 멱등성·결과 확인, 관리자 파괴적 동작, 주소 표시와 이미지 공급자
+  준비 상태 검사를 보강합니다.
+
+## [1.2.1](https://github.com/twoimo/tzudong/releases/tag/v1.2.1) — 2026-07-04
+
+- 주제 필터 5개를 추가하고, 데스크톱·모바일 맛집 상세의 닫기를 명확한 뒤로가기로 바꿉니다.
+- 지역·카테고리 필터와 주제 필터를 분리합니다.
+
+## [1.2.0](https://github.com/twoimo/tzudong/releases/tag/v1.2.0) — 2026-07-04
+
+- 관리자 변경, 감사, 결과 확인과 공급자 준비 상태 계약을 강화합니다.
+- 로그와 공개 응답에서 민감한 공급자·OCR 내용을 제거하고,
+  Preview → Confirm → Apply → Readback → Audit 흐름을 문서화합니다.
+
+## [1.1.1](https://github.com/twoimo/tzudong/releases/tag/v1.1.1) — 2026-06-29
+
+- README와 스토리보드·RAG 설명을 커밋된 증빙 및 웹 실행 환경과 맞추고,
+  생성된 운영 산출물을 추적 대상에서 정리합니다.
+- 로컬 QA, 임시 도구와 실수로 생기는 루트 잠금 파일의 제외 규칙을 보완합니다.
+
+## 이전 기록과 사전 릴리스
+
+[기존 2026년 8월 변경 기록](docs/archive/changelog/CHANGELOG.ko.md)은 당시 운영 상세와
+원래 날짜 표기를 그대로 보존합니다. 위 항목은 공개된 릴리스 노트의 요약이며,
+이전 기록을 대체하거나 그 이후 모든 커밋이 릴리스되었다는 뜻은 아닙니다.
+
+로컬 Nightly와 로컬 스택 사전 릴리스는
+[GitHub Releases 목록](https://github.com/twoimo/tzudong/releases)에 남아 있습니다.
+범위와 태그 규칙은 [릴리스 안내](docs/releases/README.md)에서 확인할 수 있습니다.

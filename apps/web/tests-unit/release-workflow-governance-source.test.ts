@@ -191,8 +191,14 @@ describe("release workflow governance source contracts", () => {
       expect(lane).toContain("npm --version");
       expect(lane).toContain("11.6.2");
     }
-    expect(governanceCi.indexOf("npm install --global npm@11.6.2")).toBeLessThan(governanceCi.indexOf("npm ci"));
-    expect(governanceCi).toContain("npm --version");
+    // Governance executes the same scorer/source suites with built-in runtimes;
+    // it has no web-package install whose npm authority needs to be pinned.
+    expect(governanceCi).not.toMatch(/\b(?:npm|bun) (?:ci|install)\b/);
+    expect(governanceCi).not.toMatch(/\n\s+cache(?:-dependency-path)?:/);
+    expect(governanceCi).toContain("node-version: '24'");
+    expect(governanceCi).toContain("bun-version: '1.4.0'");
+    expect(governanceCi).toContain("run: bun test tests-unit/performance-backlog-governance.test.ts");
+    expect(governanceCi).toContain("run: bun test tests-unit/release-workflow-governance-source.test.ts");
   });
 
   it("rejects benchmark reports that are missing or bound to another lane", () => {
@@ -445,6 +451,8 @@ describe("release workflow governance source contracts", () => {
       ".github/workflows/web-admin-ci.yml": {
         "dependency-modernization-proof": ["contents: read"],
         "ubuntu-npm-authority": ["contents: read"],
+        "ubuntu-npm-unit": ["contents: read"],
+        "ubuntu-npm-build": ["contents: read"],
         "ubuntu-bun-compatibility": ["contents: read"],
         "windows-npm-tooling": ["contents: read"],
         "windows-bun-compatibility": ["contents: read"],

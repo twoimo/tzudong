@@ -279,4 +279,45 @@ describe('explicit receipt OCR indeterminate recovery', () => {
     expect(migration).toContain("status', 'stale_operation'");
     expect(migration).toContain("'provider_outcome_certain', false");
   });
+
+  test('submits the resolved five-model policy unchanged and returns it from the rotation', async () => {
+    // The recovery guard and the persist table now share ocr_private.valid_model_policy
+    // (issue #3351), so a five-model policy is neither clamped nor rejected.
+    const persisted = {
+      schema_version: 1,
+      status: 'rotated',
+      review_id: UUIDS.review,
+      operation_id: UUIDS.operation,
+      previous_generation: UUIDS.previousGeneration,
+      generation: UUIDS.generation,
+      input_snapshot_hash: snapshot,
+      idempotent: false,
+      provider_outcome_certain: false,
+      model_policy: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+      thinking_level: 'HIGH',
+    };
+    const fixture = client([{ data: ready, error: null }, { data: persisted, error: null }]);
+    const applied = await applyReceiptOcrIndeterminateRecovery(fixture as never, {
+      actorUserId: UUIDS.actor,
+      reviewId: UUIDS.review,
+      recoveryOperationId: UUIDS.operation,
+      expectedGeneration: UUIDS.previousGeneration,
+      inputSnapshotHash: snapshot,
+      modelPolicy: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+      thinkingLevel: 'HIGH',
+      promptVersion: 'admin-receipt-summary-v1',
+      preprocessVersion: 'admin-canonical-jpeg-v2',
+      normalizationVersion: 'receipt-normalization-v1',
+    });
+    expect(applied).toMatchObject({
+      status: 'rotated',
+      generation: UUIDS.generation,
+      modelPolicy: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+    });
+    const recoveryCall = fixture.calls.find((call) => call.name === 'recover_review_receipt_ocr_indeterminate');
+    expect(recoveryCall?.args).toMatchObject({
+      p_model_policy: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+    });
+  });
 });
+

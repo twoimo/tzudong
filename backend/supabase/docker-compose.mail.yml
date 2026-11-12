@@ -1,6 +1,15 @@
 # Local-only mail replacement. The dev overlay's Studio build is never selected.
+# Keep this log budget identical to docker-compose.local.yml so no local service
+# can grow its container log without a ceiling.
+x-local-service-logging: &local-service-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   mail: !override
+    logging: *local-service-logging
     image: inbucket/inbucket:3.0.3
     restart: unless-stopped
     ports: !override

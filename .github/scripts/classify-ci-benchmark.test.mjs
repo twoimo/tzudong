@@ -26,8 +26,47 @@ test('promotion, protected push, scheduled and manual runs always benchmark', ()
 });
 
 test('every dependency, toolchain, measurement and CI input requires full proof', () => {
-  for (const file of ['.github/workflows/web-admin-ci.yml', '.github/scripts/classify-ci-benchmark.mjs', '.github/dependabot.yml', '.kiro/specs/receipt.json', '.agents/skills/ci/SKILL.md', 'apps/web/package.json', 'apps/web/package-lock.json', 'apps/web/bun.lock', 'apps/web/bunfig.toml', 'apps/web/tsconfig.json', 'apps/web/tsconfig.compat.json', 'apps/web/next.config.ts', 'apps/web/scripts/run-typecheck.mjs', 'apps/web/config/pins.json', 'apps/web/vendor/typescript/a.js', 'apps/web/performance/ts7/report.json', 'apps/web/tests-unit/typecheck-benchmark-source.test.ts', 'backend/package-lock.json', 'backend/requirements.txt', 'backend/test-requirements.txt', 'go.mod', '.nvmrc']) {
+  for (const file of ['.github/workflows/web-admin-ci.yml', '.github/scripts/classify-ci-benchmark.mjs', 'apps/web/package.json', 'apps/web/package-lock.json', 'apps/web/bun.lock', 'apps/web/bunfig.toml', 'apps/web/tsconfig.json', 'apps/web/tsconfig.compat.json', 'apps/web/next.config.ts', 'apps/web/scripts/run-typecheck.mjs', 'apps/web/scripts/measure-typecheck.mjs', 'apps/web/scripts/verify-typecheck-benchmark-report.mjs', 'apps/web/scripts/process-tree-rss-sampler.mjs', 'apps/web/scripts/process-tree-rss-core.mjs', 'apps/web/scripts/privacy-safe-cli-log.mjs', 'apps/web/config/pins.json', 'apps/web/vendor/typescript/a.js', 'apps/web/performance/ts7/report.json', 'apps/web/tests-unit/typecheck-benchmark-source.test.ts', 'backend/package-lock.json', 'backend/requirements.txt', 'backend/test-requirements.txt', 'go.mod', '.nvmrc']) {
     assert.equal(classifyPaths([...feature, file]).benchmark, true, file);
+  }
+});
+
+test('governance, evidence and unrelated CI metadata keep the fast parity path', () => {
+  for (const file of ['.github/dependabot.yml', '.github/workflows/security-audit.yml', '.github/nightly-local-publication-allowlist.txt', '.kiro/specs/receipt.json', '.agents/skills/ci/SKILL.md', 'apps/web/scripts/run-unit-tests.mjs', 'apps/web/scripts/vercel-ignore-build.mjs', 'apps/web/scripts/benchmark-admin-evaluation-browser.mjs', 'docs/operations/release.md', 'README.md']) {
+    const decision = classifyPaths([...feature, file]);
+    assert.equal(decision.benchmark, false, file);
+    assert.equal(decision.reason, 'FEATURE_DIAGNOSTICS_ONLY', file);
+  }
+  // The measurement inputs themselves still request the full proof.
+  for (const file of ['.github/workflows/web-admin-ci.yml', '.github/scripts/classify-ci-benchmark.mjs', '.github/scripts/monitor-ci-performance.py', 'apps/web/scripts/measure-typecheck.mjs']) {
+    assert.equal(classifyPaths([...feature, file]).benchmark, true, file);
+  }
+});
+
+test('exact repository documentation entry points use parity without broad name exemptions', () => {
+  const documents = ['README.md', 'README.ko.md', 'CHANGELOG.md', 'CHANGELOG.ko.md', 'CONTRIBUTING.md', 'SECURITY.md', 'TASKS.md', 'AGENTS.md', 'LICENSE', 'LICENSE.md', 'LICENSE.txt', '.gitignore', 'scripts/README.md'];
+  for (const file of documents) {
+    assert.deepEqual(classifyPaths([file]), { benchmark: false, reason: 'FEATURE_DIAGNOSTICS_ONLY' }, file);
+    // A documentation-only promotion still verifies the protected source tree.
+    for (const ref of ['data', 'main']) {
+      assert.equal(classifyEvent({ eventName: 'pull_request', event: { pull_request: { ...pr.pull_request, base: { sha: base, ref } } }, head, changedPaths: [file] }).reason, 'PROTECTED_PROMOTION', file);
+      assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, ref: `refs/heads/${ref}`, head, changedPaths: [file] }).reason, 'PROTECTED_PUSH', file);
+    }
+  }
+  for (const file of ['README.mjs', 'README-runner.sh', 'LICENSE-loader.js', 'CHANGELOG/notes.md', 'scripts/README.mjs', 'scripts/README.md/child', 'scripts//README.md']) {
+    assert.deepEqual(classifyPaths([file]), { benchmark: true, reason: 'UNKNOWN_INPUT' }, file);
+  }
+});
+
+test('documentation names cannot hide dependency, compiler or invalid path inputs', () => {
+  for (const file of ['README.md/package.json', 'scripts/README.md/package-lock.json', 'CHANGELOG.lock', 'SECURITY/requirements-dev.txt', 'TASKS.md/bun.lock']) {
+    assert.deepEqual(classifyPaths(['CONTRIBUTING.md', file]), { benchmark: true, reason: 'DEPENDENCY_CHANGE' }, file);
+  }
+  for (const file of ['CONTRIBUTING.config.js', 'TASKS.md/tsconfig.json', 'scripts/README.md/.npmrc']) {
+    assert.deepEqual(classifyPaths(['README.ko.md', file]), { benchmark: true, reason: 'TOOLCHAIN_OR_MEASUREMENT_CHANGE' }, file);
+  }
+  for (const file of ['scripts/../README.md', '/CHANGELOG.md', 'scripts\\README.md', 'docs/README.md\0package.json']) {
+    assert.deepEqual(classifyPaths(['SECURITY.md', file]), { benchmark: true, reason: 'PATH_INVALID' }, file);
   }
 });
 

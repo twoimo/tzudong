@@ -110,6 +110,31 @@ existing bucket, own-UUID path, MIME, and size checks before Storage performs
 its internal completion work; this local boundary is not hosted configuration
 or production access evidence.
 
+## Local resource limits
+
+The overlay pins two container-level limits so a long-lived local stack cannot
+grow without a ceiling on a shared developer machine.
+
+- **Container logs** — every service writes through the `local` log driver with
+  `max-size: 10m` and `max-file: 3`, so the worst case is 30 MiB per container
+  instead of an unbounded log that grows for the lifetime of the container. The
+  anchor is repeated in `docker-compose.mail.yml` because YAML anchors are
+  scoped to one file.
+- **Database shared memory** — `db` sets `shm_size: "512mb"`. Postgres sizes its
+  dynamic shared memory segment at runtime, and Docker's 64 MiB `/dev/shm`
+  default is the usual cause of `could not resize shared memory segment` when
+  the nightly assertions run concurrently.
+
+`tests/test_local_compose_inputs.py` asserts both settings, and
+`local-inputs/manifest.v1.json` binds the three compose files by SHA-256; editing
+any of them requires recomputing the `compose_files` hashes in that manifest.
+
+Docker Desktop host settings are per-machine and deliberately not enforced by
+the repository: Resource Saver with a 120 s threshold, a 10 GiB VM memory limit,
+10 CPUs, an 8 GB BuildKit cache ceiling, and `max-concurrent-downloads: 8`. They
+keep an idle engine near 0 GB of host memory and stop the first pull of this
+stack from serialising.
+
 # Upstream self-hosted Supabase notes
 
 This is the official Docker Compose setup for self-hosted Supabase. It provides a complete stack with all Supabase services running locally or on your infrastructure.

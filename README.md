@@ -4,19 +4,12 @@
   <p>A restaurant map built around places featured in Tzuyang videos.</p>
   <p>
     <a href="https://www.tzudong.app">Explore the map</a> ·
-    <a href="README.ko.md">한국어</a> ·
     <a href="docs/README.md">Documentation</a> ·
-    <a href="CHANGELOG.md">Changelog</a>
-  </p>
-  <p>
-    <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs" />
-    <img alt="React 19" src="https://img.shields.io/badge/React-19-149eca?logo=react&amp;logoColor=white" />
-    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&amp;logoColor=white" />
-    <img alt="Supabase" src="https://img.shields.io/badge/Supabase-PostgreSQL%20%2B%20Auth-3ecf8e?logo=supabase&amp;logoColor=white" />
+    <a href="CONTRIBUTING.md">Contributing</a> ·
+    <a href="https://github.com/twoimo/tzudong/releases/latest">Latest stable release</a> ·
+    <a href="README.ko.md">한국어</a>
   </p>
 </div>
-
-[Features](#features) · [Preview](#preview) · [Local development](#local-development) · [Repository](#repository) · [Documentation](#documentation)
 
 ## Features
 
@@ -59,7 +52,7 @@ Use **Node.js 24.x** and **npm 11.6.2**, as declared in [apps/web/package.json](
 1. Clone the repository and install the web dependencies:
 
    ```sh
-   git clone https://github.com/twoimo/tzudong.git
+   git clone --branch develop https://github.com/twoimo/tzudong.git
    cd tzudong/apps/web
    npm ci
    ```
@@ -73,23 +66,19 @@ Use **Node.js 24.x** and **npm 11.6.2**, as declared in [apps/web/package.json](
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000). The runner checks the generated local environment, service readiness, browser origin, and migration ledger before starting Next.js. Hosted debugging and map-provider configuration have separate setup instructions in the [web development guide](apps/web/README.md).
 
-Bun is supported for everyday development. npm's manifest and lockfile remain the release package authority. Common checks from `apps/web` are:
-
-```sh
-npm run lint
-npm run test:unit
-npm run typecheck:parity
-```
-
-Choose checks for the affected behavior using the [verification guide](docs/agents/verification.md).
+Bun is supported for everyday development and is required by the web unit-test runner. npm's manifest and lockfile remain the release package authority. See [Contributing](CONTRIBUTING.md) for branch setup, tool versions, and checks for each component.
 
 ## Repository
 
 | Path | Responsibility |
 | --- | --- |
-| [apps/web/](apps/web/) | Next.js public app, restaurant maps, community features, and guarded admin console. |
-| [backend/](backend/) | Pipeline control, crawlers, evaluation, media workers, and Supabase migrations. |
-| [docs/](docs/) | Product design, architecture, operations, and release guidance. |
+| [apps/web/](apps/web/README.md) | Next.js public app, restaurant maps, community features, and guarded admin console. |
+| [backend/](backend/README.md) | Pipeline control, crawlers, evaluation, media workers, and Supabase migrations. |
+| [docs/](docs/README.md) | Product design, architecture, operations, release guidance, and historical evidence. |
+| [scripts/](scripts/README.md) | Repository-level operator tools and security checks. |
+| [.github/](.github/README.md) | CI, promotion policy, contribution templates, and release-note configuration. |
+
+The [repository map](docs/repository-layout.md) explains where new files belong, including package-local docs, assets, and retained evidence.
 
 The web app and backend workers share Supabase as their persistence boundary. Long-running crawling and media work belongs to backend workers. See the [backend architecture](backend/ARCHITECTURE.md) and [data contracts](backend/DATA_CONTRACTS.md) for the detailed flow.
 
@@ -105,15 +94,19 @@ Exact dependencies are in [package.json](apps/web/package.json) and [package-loc
 
 | Start here | Contents |
 | --- | --- |
-| [Documentation index](docs/README.md) | Cross-project guides and where documentation belongs. |
+| [Documentation index](docs/README.md) | Find a guide by task: develop, operate, release, or inspect evidence. |
+| [Contributing](CONTRIBUTING.md) | Development branches, scoped verification, bug reports, and pull requests. |
 | [Web development](apps/web/README.md) | Local and hosted development, configuration, and web commands. |
 | [Backend operations](backend/README.md) | Pipeline entry points, environment contracts, and run summaries. |
-| [Product design](docs/product/DESIGN.md) · [Architecture diagrams](docs/architecture/) | Product surfaces and system diagrams. |
-| [Verification](docs/agents/verification.md) · [Nightly operations](docs/operations/nightly-regression.md) | Scoped checks and the independent regression lane. |
-| [Release guide](docs/agents/release.md) | Protected promotion, rollback, and deployment readback. |
-| [Performance evidence](apps/web/performance/) · [Changelog](CHANGELOG.md) | Dated measurements, their scope and limits, and change history. |
+| [Product design](docs/product/README.md) · [Architecture diagrams](docs/architecture/README.md) | Product surfaces and system diagrams. |
+| [Operations](docs/operations/README.md) · [Verification](docs/agents/verification.md) | Runbooks, Nightly regression, and checks for the affected behavior. |
+| [Evidence](docs/evidence/README.md) · [Archive](docs/archive/README.md) | Dated measurements, preserved records, and their scope and limits. |
 
-Changes follow the protected `develop → data → main` path. A production release needs the approved commit and deployment readback described in the release guide. CI, Nightly regression, and production deployment are tracked separately.
+## Releases
+
+Use the [latest stable source release](https://github.com/twoimo/tzudong/releases/latest) and the [changelog](CHANGELOG.md) for published changes. The [release guide](docs/releases/README.md) explains stable, nightly, and local-stack channels and provides a release-note template.
+
+Changes follow the protected `develop → data → main` path. Nightly and local-stack prereleases describe local verification. Production deployment has its own commit and readback, recorded according to the [release policy](docs/agents/release.md).
 
 ## Security and license
 

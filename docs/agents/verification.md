@@ -45,6 +45,32 @@ python backend/bin/check_env_contract.py --profile daily
 
 The environment-contract check is expected to fail closed when required operator secrets are absent; never add fake values to make it pass.
 
+The web unit suite runs in `apps/web/tests-unit` and can be sharded without
+changing what it covers:
+
+```text
+bun run test:unit -- --shard 2/8
+```
+
+Each shard receives a deterministic round-robin slice of the same sorted file
+inventory, so every file still runs exactly once and a file that needs its own
+Bun process stays isolated. CI runs eight shards in parallel (`ubuntu-npm-unit`)
+instead of a single ~16 minute step.
+
+Whether a change runs the full typecheck benchmark or only the fast parity path
+is decided in `.github/scripts/classify-ci-benchmark.mjs`. The full benchmark is
+selected by dependency inputs, typecheck/measurement scripts and configuration,
+and `web-admin-ci.yml`; governance files, evidence receipts, other workflows and
+web scripts outside type checking keep the diagnostic path. Unknown roots still
+fail closed to the full proof.
+
+Exact repository documentation entry points (`README`, `CHANGELOG`,
+`CONTRIBUTING.md`, `SECURITY.md`, `TASKS.md`, and `scripts/README.md`) use the
+diagnostic path; the classifier lists their supported filenames explicitly.
+Dependency/toolchain inputs take precedence, and protected promotions still run
+the full benchmark. The [Cloudflare governance CI](../operations/cloudflare-ci.md)
+is a separate execution of scoped checks and does not replace GitHub's full suite.
+
 ## Evidence conventions
 
 - `apps/web/tests-unit` contains Bun unit and source-contract tests; copy, route wiring, security, and order changes often require paired assertions.

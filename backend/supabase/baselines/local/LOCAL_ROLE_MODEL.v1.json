@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "id": "local-role-model-v1",
+  "purpose": "Which role owns what during the local migration replay, and which statements must run privileged. The PostgreSQL 17 transition needs this written down: the chain is sensitive to the role model in both directions, and no grant short of SUPERUSER can reproduce the privileged statements.",
+  "evidence": {
+    "measuredOn": "2026-11-11",
+    "baselines": [
+      "backend/supabase/baselines/local/pg15-chain-role-probe-20261111.json",
+      "backend/supabase/baselines/local/pg15-chain-role-probe-prereq-postgres-20261111.json",
+      "backend/supabase/baselines/local/pg15-chain-role-probe-mixed-20261111.json",
+      "backend/supabase/baselines/local/pg15-chain-role-probe-staged-20261111.json"
+    ]
+  },
+  "roles": [
+    {
+      "name": "supabase_admin",
+      "attributes": "SUPERUSER",
+      "createdBy": "image",
+      "privileged": true
+    },
+    {
+      "name": "postgres",
+      "attributes": "NOSUPERUSER (required by the G014 owner contract)",
+      "createdBy": "image",
+      "migrationRole": true
+    },
+    {
+      "name": "privacy_workflow_owner",
+      "attributes": "NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS",
+      "createdBy": "migration",
+      "ownerRule": "created and normalized by a privileged statement"
+    },
+    {
+      "name": "privacy_auth_bridge",
+      "attributes": "NOLOGIN bridge principal",
+      "createdBy": "migration",
+      "ownerRule": "same privileged path as privacy_workflow_owner"
+    }
+  ],
+  "privilegedFiles": [
+    "20260713000450_g013_address_admin_approval.sql",
+    "20260713002000_g014_public_api_private_boundary.sql",
+    "20260713002400_g014_retention_adapters_receipts.sql",
+    "20260804000500_g041_auth_workflow_bridge.sql"
+  ],
+  "roleStatementFiles": [
+    "20260713000450_g013_address_admin_approval.sql",
+    "20260713002000_g014_public_api_private_boundary.sql",
+    "20260713002400_g014_retention_adapters_receipts.sql",
+    "20260728000100_g038_deterministic_contract.sql",
+    "20260804000500_g041_auth_workflow_bridge.sql"
+  ],
+  "rules": [
+    {
+      "id": "R1",
+      "rule": "Role attribute statements (anything mentioning SUPERUSER) run as supabase_admin; PostgreSQL refuses them for a non-superuser even when it created the role and holds CREATEROLE.",
+      "verifiedBy": "probe 2026-11-11: CREATE ROLE ok, ALTER ROLE refused with 'Only roles with the SUPERUSER attribute may alter roles with the SUPERUSER attribute'"
+    },
+    {
+      "id": "R2",
+      "rule": "Object DDL runs as postgres. Objects created by a privileged run are owned by supabase_admin and the following postgres migrations cannot use them ('permission denied for schema privacy_retention' after the mixed-role probe).",
+      "verifiedBy": "mixed-role probe 2026-11-11: 74 applied, new failure class"
+    },
+    {
+      "id": "R3",
+      "rule": "The privileged pre-pass creates and normalizes roles only; it never creates schemas, tables, functions or grants.",
+      "verifiedBy": "R2"
+    },
+    {
+      "id": "R4",
+      "rule": "A migration that mixes role statements with object DDL keeps a replacement body until it is split; that is exactly what PG15_REPLAY_ADAPTERS.v1.json lists.",
+      "verifiedBy": "adapter ledger"
+    },
+    {
+      "id": "R5",
+      "rule": "privacy_retention is owned by privacy_workflow_owner. postgres reaches it through explicit schema/table/function grants only: role membership is forbidden, because the g013/g014 guards raise 'privacy_workflow_owner role attributes are incompatible' when the role has any membership.",
+      "verifiedBy": "mixed probe 2026-11-11 with role-grant-normalisation.v1.sql: 87 applied, and privacy_workflow_owner reports 0 memberships"
+    },
+    {
+      "id": "R6",
+      "rule": "Migrations that SET ROLE privacy_workflow_owner cannot run as postgres (that would need the forbidden membership) and belong to the privileged set.",
+      "verifiedBy": "mixed probe 2026-11-11: 'must be member of role \"privacy_workflow_owner\"' after the grant normalisation"
+    }
+  ],
+  "openQuestions": [
+    "The remaining 70 failures are not reachable by role assignment: the privileged set (4 and then 41 migrations), CREATEROLE, pre-created roles and ownership transfer are all measured ineffective. Closing them means reproducing the semantics of the adapter replacement bodies, which is the adapter layer itself.",
+    "Therefore the PostgreSQL 17 swap is blocked on either keeping the adapters (and only moving the image, which the adapters reject above major 15) or rewriting the ~24 migrations the adapters replace."
+  ],
+  "baselines": [
+    "backend/supabase/baselines/local/pg15-chain-role-probe-20261111.json",
+    "backend/supabase/baselines/local/pg15-chain-role-probe-prereq-postgres-20261111.json",
+    "backend/supabase/baselines/local/pg15-chain-role-probe-mixed-20261111.json",
+    "backend/supabase/baselines/local/pg15-chain-role-probe-staged-20261111.json"
+  ],
+  "bootstrap": {
+    "gotrue": {
+      "image": "supabase/gotrue:v2.184.0",
+      "migrationCount": 65,
+      "templateVariables": [
+        "{{ index .Options \"Namespace\" }}"
+      ],
+      "renderer": "backend/supabase/scripts/render_gotrue_migrations.py",
+      "verified": "65/65 applied against PG15 after rendering to schema auth; auth.sessions and auth.refresh_tokens then exist"
+    }
+  },
+  "order": {
+    "stages": [
+      "prerequisite (migration role, continue)",
+      "privileged prerequisite replay",
+      "GoTrue bootstrap",
+      "per migration: conditional grant normalisation, then body (privileged when the file mentions SUPERUSER)"
+    ],
+    "measured": "91 applied / 70 failed on PG15 (best of four profiles)",
+    "tooling": "backend/supabase/scripts/chain_role_probe.py --gotrue-migrations ... --mixed-privileged --staged-grants --grant-file ..."
+  },
+  "rejectedOptions": [
+    {
+      "option": "Grant CREATEROLE to postgres and pre-create the NOLOGIN roles",
+      "measured": "70 applied / 91 failed - unchanged, because any statement mentioning SUPERUSER is superuser-only regardless of CREATEROLE or ownership",
+      "date": "2026-11-11"
+    },
+    {
+      "option": "Transfer ownership of every supabase_admin-created object to postgres",
+      "measured": "89 applied / 72 failed against 91 / 70: it fixed 1 migration and broke 3, including 'G014 SECURITY DEFINER owner mismatch', because the guards require ownership exactly as the migrations define it",
+      "date": "2026-11-11"
+    },
+    {
+      "option": "Extend the privileged-body set from the 4 SUPERUSER migrations to all 41 that also SET ROLE",
+      "measured": "91 applied / 70 failed, identical to the 4-migration set with zero churn: the SET ROLE bodies already behave correctly, and the remaining failures are structural rather than role-assignment",
+      "date": "2026-11-11"
+    }
+  ]
+}

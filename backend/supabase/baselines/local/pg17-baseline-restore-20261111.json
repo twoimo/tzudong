@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-pg17-baseline-restore",
+  "measuredAt": "2026-11-11",
+  "question": "Does the schema the working local pipeline produces restore on PostgreSQL 17, so the adapter layer can stay and only the image changes?",
+  "target": "supabase/postgres:17.11.0.018",
+  "runs": [
+    {
+      "runId": 43023085171,
+      "restoreRole": "postgres",
+      "sourceObjects": 260,
+      "restoredObjects": 14,
+      "dumpBytes": 2111385,
+      "errorCount": 2603,
+      "errorClasses": {
+        "permission denied for database profile": 2603
+      },
+      "verdict": "invalid measurement: the supabase image does not give postgres DDL rights, so every statement failed"
+    },
+    {
+      "runId": 43029324112,
+      "restoreRole": "supabase_admin",
+      "sourceObjects": 260,
+      "restoredObjects": 259,
+      "dumpBytes": 2111385,
+      "errorCount": 172,
+      "errorClasses": {
+        "already exists": 172
+      },
+      "sample": [
+        "schema \"auth\" already exists",
+        "schema \"storage\" already exists",
+        "schema \"vault\" already exists",
+        "function \"email\" already exists with same argument types"
+      ],
+      "verdict": "the schema restores; every error is an object the supabase image seeds itself (auth, storage, vault, extensions, graphql, realtime, pgbouncer), not an incompatibility"
+    },
+    {
+      "runId": 43062413888,
+      "restoreRole": "supabase_admin",
+      "sourceObjects": 260,
+      "restoredObjects": 260,
+      "missingObjectCount": 0,
+      "errorCount": 120,
+      "errorClasses": {
+        "role \"privacy_workflow_owner\" does not exist": 119,
+        "cannot drop schema graphql_public because other objects depend on it": 1
+      },
+      "verdict": "every object lands and none is missing; the residual is a role the schema dump names but does not create, plus one --clean artefact"
+    },
+    {
+      "runId": 43072708471,
+      "restoreRole": "supabase_admin",
+      "preparedRoleCount": 7,
+      "sourceObjects": 260,
+      "restoredObjects": 260,
+      "missingObjectCount": 0,
+      "errorCount": 119,
+      "errorClasses": {
+        "role \"privacy_workflow_owner\" does not exist": 119
+      },
+      "verdict": "the graphql_public clean error is gone; the 119 role errors remain because that role is not in the source cluster's pg_roles even though the dump names it"
+    },
+    {
+      "runId": 43091959049,
+      "restoreRole": "supabase_admin",
+      "preparedRoleCount": 7,
+      "setupErrorCount": 0,
+      "sourceObjects": 260,
+      "restoredObjects": 260,
+      "missingObjectCount": 0,
+      "errorCount": 0,
+      "restored": true,
+      "verdict": "confirmed: the working schema restores onto PostgreSQL 17 with every object present and no error"
+    }
+  ],
+  "notYetMeasured": [
+    "Provisioning a stack from a stored baseline instead of replaying the chain. The restore is proven; the applier has no baseline mode yet.",
+    "Behaviour under load on 17 (index plans, extension versions) - this record covers schema restore only."
+  ],
+  "blockedBy": null,
+  "conclusion": "Confirmed: the schema the working pipeline produces restores onto supabase/postgres:17.11.0.018 with 260 of 260 objects, none missing and zero errors, once the restore runs as supabase_admin and the referenced roles exist first. The transition does not need the ~24 migrations the adapters replace rewritten; it needs baseline provisioning, after which the adapters can be retired and the pin moved.",
+  "evidence": "artifacts pg17-baseline-probe-43029324112 (record pg17-baseline.json) and nightly run logs",
+  "rootCauses": [
+    "restoring as postgres fails everything: that image gives it no DDL rights",
+    "the image seeds auth, storage, vault, extensions, graphql, realtime and pgbouncer, so a naive restore reports 172 already-exists errors",
+    "a schema-only dump carries no CREATE ROLE, and the role statements were originally joined without semicolons, so psql read them as one broken statement and created nothing"
+  ]
+}

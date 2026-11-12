@@ -1,0 +1,18 @@
+{
+  "artifacts": [
+    {
+      "bytes": 3537,
+      "path": "apps/web/performance/ci-redaction-diagnostic-20261112/receipt.json",
+      "sha256": "108dbf3b982c222dcce89ce7e8c1c6476f72aa94252a4513d989d72889782393"
+    }
+  ],
+  "schema": "tzudong-artifact-map/v1",
+  "scope": "diagnostic-only; no formal benchmark claim; zero admitted G003 slices",
+  "sourceBindings": [
+    {
+      "afterGitBlob": "7fe1f8c2ed658e31f756eabbc27af08359a5223a",
+      "beforeGitBlob": "9e1992ec57048d53ebd9333719e210a212919905",
+      "path": "backend/utils/privacy_log.py"
+    }
+  ]
+}

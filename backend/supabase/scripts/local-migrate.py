@@ -2655,6 +2655,63 @@ SELECT pg_temp.g016_catalog_assertion_bridge();"""
     }
 
 
+PRIVILEGED_BODIES_MANIFEST = Path("backend/supabase/baselines/local/LOCAL_PRIVILEGED_BODIES.v1.json")
+PRIVILEGED_BODIES_ENV = "TZUDONG_LOCAL_PRIVILEGED_BODIES"
+
+
+def _privileged_body_role() -> str | None:
+    """Role for migration bodies that PostgreSQL refuses for the migration role.
+
+    Off by default: the adapters still supply replacement bodies for the local
+    stack. When TZUDONG_LOCAL_PRIVILEGED_BODIES=1 the listed migrations run as the
+    manifest's role instead, which is the staged replay the PostgreSQL 17
+    transition probes measure.
+    """
+    if os.environ.get(PRIVILEGED_BODIES_ENV, "").strip() not in {"1", "true", "yes"}:
+        return None
+    candidate = repository_root() / PRIVILEGED_BODIES_MANIFEST
+    try:
+        document = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        raise LocalMigrationError("privileged_bodies_manifest_invalid") from None
+    if document.get("schemaVersion") != 1 or document.get("id") != "local-privileged-bodies-v1":
+        raise LocalMigrationError("privileged_bodies_manifest_invalid")
+    role = document.get("role")
+    if role not in {"supabase_admin", "postgres"}:
+        raise LocalMigrationError("privileged_bodies_manifest_invalid")
+    migrations = document.get("migrations")
+    if not isinstance(migrations, list) or not all(isinstance(name, str) for name in migrations):
+        raise LocalMigrationError("privileged_bodies_manifest_invalid")
+    if _adapter_layer_active():
+        # The adapters replace the bodies these privileges apply to, so enabling
+        # this flag first would run replacement bodies under the wrong role.
+        raise LocalMigrationError("privileged_bodies_require_adapter_retirement")
+    return role
+
+
+def _adapter_layer_active() -> bool:
+    """True while the PG15 replay adapters still rewrite migration bodies."""
+    try:
+        source = Path(__file__).read_text(encoding="utf-8")
+    except OSError:
+        return True
+    return "_canonical_source_replay_bodies" in source
+
+
+def _privileged_bodies() -> frozenset[str]:
+    candidate = repository_root() / PRIVILEGED_BODIES_MANIFEST
+    try:
+        document = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return frozenset()
+    names: list[str] = []
+    for key in ("migrations", "roleScopedMigrations"):
+        entries = document.get(key)
+        if isinstance(entries, list):
+            names.extend(item for item in entries if isinstance(item, str))
+    return frozenset(names)
+
+
 def _execution_body(item: Mapping[str, Any]) -> bytes:
     body = _verified_migration_bytes(item)
     contract = _load_replay_contract()
@@ -5036,7 +5093,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                     # guarded registrations, session_user as well as current_user.
                     setup, body = _source_execution_parts(item, item["ordinal"] - 1)
                     executor.run(setup)
-                    executor.run(body, role="postgres")
+                    privileged_role = _privileged_body_role()
+                    body_role = "postgres"
+                    if privileged_role is not None and migration_id in _privileged_bodies():
+                        body_role = privileged_role
+                    executor.run(body, role=body_role)
                     evidence_sha256 = _unit_readback(executor, item)
                     _mark_applied(executor, migration_id, evidence_sha256)
                     _verify_applied_readback(executor, item, evidence_sha256)

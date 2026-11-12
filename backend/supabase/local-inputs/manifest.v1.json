@@ -211,11 +211,11 @@
     },
     {
       "path": "backend/supabase/docker-compose.local.yml",
-      "sha256": "b2421caca11682645be0915d3f4a1e44e6c50e620d1ae14a403ee8472c651d1f"
+      "sha256": "c51e42fc965b5e4249e010b2ca81383c55f4ab2ec966e5f60db3c7487065f245"
     },
     {
       "path": "backend/supabase/docker-compose.mail.yml",
-      "sha256": "8ffd827495d1253b9050497ea2c20dcd7a9509288d0dfe07100c921c6e4c023d"
+      "sha256": "3402f9f5c20c039b0ca9923f16179972f70c13d7aee7001615e5c8757f2163a1"
     }
   ]
 }

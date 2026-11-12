@@ -206,12 +206,7 @@ CREATE TABLE ocr_private.receipt_ocr_indeterminate_recoveries (
   input_snapshot_hash text NOT NULL CHECK (input_snapshot_hash ~ '^[0-9a-f]{64}$'),
   verification_photo_hash text NOT NULL CHECK (verification_photo_hash ~ '^[0-9a-f]{64}$'),
   expected_image_hash text NOT NULL CHECK (expected_image_hash ~ '^[0-9a-f]{64}$'),
-  model_policy jsonb NOT NULL CHECK (
-    CASE WHEN pg_catalog.jsonb_typeof(model_policy) = 'array'
-      THEN pg_catalog.jsonb_array_length(model_policy) BETWEEN 1 AND 3
-      ELSE false
-    END
-  ),
+  model_policy jsonb NOT NULL CHECK (ocr_private.valid_model_policy(model_policy)),
   thinking_level text NOT NULL CHECK (thinking_level IN ('LOW', 'MEDIUM', 'HIGH')),
   prompt_version text NOT NULL,
   preprocess_version text NOT NULL,
@@ -495,15 +490,7 @@ BEGIN
     OR p_recovery_operation_id IS NULL
     OR p_expected_generation IS NULL
     OR p_input_snapshot_hash !~ '^[0-9a-f]{64}$'
-    OR (CASE WHEN pg_catalog.jsonb_typeof(p_model_policy) = 'array' THEN
-      pg_catalog.jsonb_array_length(p_model_policy) NOT BETWEEN 1 AND 3
-      OR EXISTS (
-        SELECT 1 FROM pg_catalog.jsonb_array_elements(p_model_policy) AS model(value)
-        WHERE pg_catalog.jsonb_typeof(model.value) IS DISTINCT FROM 'string'
-          OR pg_catalog.length(model.value #>> '{}') NOT BETWEEN 1 AND 120
-      )
-      ELSE true
-    END)
+    OR NOT ocr_private.valid_model_policy(p_model_policy)
     OR p_thinking_level NOT IN ('LOW', 'MEDIUM', 'HIGH')
     OR p_prompt_version IS DISTINCT FROM 'admin-receipt-summary-v1'
     OR p_preprocess_version IS DISTINCT FROM 'admin-canonical-jpeg-v2'
