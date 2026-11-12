@@ -21,6 +21,7 @@ INDICES = {
 
 CONSUMER_GROUP = "pipeline-indexer"
 BULK_LIMIT = 50
+BULK_RESPONSE_MAX_BYTES = 1024 * 1024
 
 ALLOWED_MODES = frozenset({"noop", "es"})
 # Loki is the default local Log_Sink. Its admission deliberately reuses this
@@ -191,8 +192,26 @@ class _StdlibEsClient:
         try:
             with self._opener().open(request, timeout=5) as response:
                 code = int(getattr(response, "status", None) or response.getcode())
-                if 300 <= code < 400:
+                if not 200 <= code < 300:
                     raise EsIndexError("es_index_failed")
+                body = response.read(BULK_RESPONSE_MAX_BYTES + 1)
+                if len(body) > BULK_RESPONSE_MAX_BYTES:
+                    raise EsIndexError("es_index_failed")
+                result = json.loads(body)
+                if not isinstance(result, dict) or result.get("errors") is not False:
+                    raise EsIndexError("es_index_failed")
+                items = result.get("items")
+                if not isinstance(items, list) or len(items) != len(documents):
+                    raise EsIndexError("es_index_failed")
+                for item in items:
+                    if not isinstance(item, dict) or set(item) != {"index"}:
+                        raise EsIndexError("es_index_failed")
+                    indexed = item["index"]
+                    if not isinstance(indexed, dict) or "error" in indexed:
+                        raise EsIndexError("es_index_failed")
+                    status = indexed.get("status")
+                    if type(status) is not int or not 200 <= status < 300:
+                        raise EsIndexError("es_index_failed")
         except EsIndexError:
             raise
         except urllib.error.HTTPError as exc:
@@ -269,6 +288,21 @@ def _load_kafka_consumer() -> Any:
     return KafkaConsumer
 
 
+def _consumer_failure(error: Exception) -> EsIndexError:
+    """Keep client diagnostics private and retry only operational failures."""
+    retryable = isinstance(error, (ConnectionError, TimeoutError))
+    try:
+        from kafka.errors import CommitFailedError, KafkaError
+    except ImportError:
+        pass
+    else:
+        if isinstance(error, KafkaError):
+            # A fresh group member can retry after a rebalance/failed commit;
+            # authentication, configuration and unsupported versions cannot.
+            retryable = error.retriable or isinstance(error, CommitFailedError)
+    return EsIndexError("kafka_consumer_unavailable" if retryable else "kafka_consumer_failed")
+
+
 def consume_once(consumer: Any | None = None, limit: int = BULK_LIMIT) -> int:
     from backend.pipeline_control.events import TOPICS, admit_bootstrap
     from backend.pipeline_control.metrics import observe
@@ -276,6 +310,11 @@ def consume_once(consumer: Any | None = None, limit: int = BULK_LIMIT) -> int:
     mode = classify_es_mode(os.environ.get("TZUDONG_PIPELINE_ES"))
     if mode != "es":
         return 0
+    admit_es_url(
+        data_env=os.environ.get("TZUDONG_DATA_ENV", "local_db"),
+        url=os.environ.get("TZUDONG_ES_URL"),
+    )
+    owned = consumer is None
     handle = consumer
     if handle is None:
         bootstrap = os.environ.get("TZUDONG_KAFKA_BOOTSTRAP")
@@ -285,40 +324,71 @@ def consume_once(consumer: Any | None = None, limit: int = BULK_LIMIT) -> int:
         )
         try:
             consumer_cls = _load_kafka_consumer()
-        except ImportError as exc:
-            raise EsIndexError("es_client_missing") from exc
-        handle = consumer_cls(
-            *TOPICS.values(),
-            bootstrap_servers=str(bootstrap).strip(),
-            group_id=CONSUMER_GROUP,
-            enable_auto_commit=False,
-            consumer_timeout_ms=1000,
-        )
-    documents: list[dict[str, Any]] = []
-    lag = 0
-    for message in handle:
-        value = message.value
-        if isinstance(value, (bytes, bytearray)):
-            value = json.loads(value.decode("utf-8"))
-        elif isinstance(value, str):
-            value = json.loads(value)
-        if isinstance(value, dict):
-            documents.append(value)
-        high = getattr(message, "highwater", None) or getattr(message, "offset", 0)
-        offset = getattr(message, "offset", 0)
+        except ImportError:
+            raise EsIndexError("es_client_missing") from None
         try:
-            lag = max(lag, int(high) - int(offset))
-        except (TypeError, ValueError):
-            lag = max(lag, 0)
-        if len(documents) >= limit:
-            break
-    observe("tzudong_pipeline_kafka_lag", lag)
-    if documents:
-        index_bulk(documents)
-        commit = getattr(handle, "commit", None)
-        if commit is not None:
-            commit()
-    return len(documents)
+            handle = consumer_cls(
+                *TOPICS.values(),
+                bootstrap_servers=str(bootstrap).strip(),
+                group_id=CONSUMER_GROUP,
+                enable_auto_commit=False,
+                consumer_timeout_ms=1000,
+            )
+        except Exception as exc:
+            raise _consumer_failure(exc) from None
+    failed = False
+    try:
+        documents: list[dict[str, Any]] = []
+        lag = 0
+        try:
+            messages = iter(handle)
+        except Exception as exc:
+            raise _consumer_failure(exc) from None
+        while True:
+            try:
+                message = next(messages)
+            except StopIteration:
+                break
+            except Exception as exc:
+                raise _consumer_failure(exc) from None
+            # Decode/validation errors are not broker availability failures.
+            value = message.value
+            if isinstance(value, (bytes, bytearray)):
+                value = json.loads(value.decode("utf-8"))
+            elif isinstance(value, str):
+                value = json.loads(value)
+            if isinstance(value, dict):
+                documents.append(value)
+            high = getattr(message, "highwater", None) or getattr(message, "offset", 0)
+            offset = getattr(message, "offset", 0)
+            try:
+                lag = max(lag, int(high) - int(offset))
+            except (TypeError, ValueError):
+                lag = max(lag, 0)
+            if len(documents) >= limit:
+                break
+        observe("tzudong_pipeline_kafka_lag", lag)
+        if documents:
+            index_bulk(documents)
+            commit = getattr(handle, "commit", None)
+            if commit is not None:
+                try:
+                    commit()
+                except Exception as exc:
+                    raise _consumer_failure(exc) from None
+        return len(documents)
+    except BaseException:
+        failed = True
+        raise
+    finally:
+        if owned:
+            try:
+                # Never acknowledge offsets implicitly, including after an
+                # index failure. Injected consumers remain caller-owned.
+                handle.close(autocommit=False)
+            except Exception as exc:
+                if not failed:
+                    raise _consumer_failure(exc) from None
 
 
 def main() -> int:
@@ -336,8 +406,9 @@ def main() -> int:
         if classify_es_mode(os.environ.get("TZUDONG_PIPELINE_ES")) == "es":
             try:
                 consume_once()
-            except EsIndexError:
-                pass
+            except EsIndexError as exc:
+                if exc.code not in {"es_index_failed", "kafka_consumer_unavailable"}:
+                    raise
         if stop.wait(1.0):
             break
     return 0

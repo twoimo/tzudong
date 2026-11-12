@@ -192,6 +192,12 @@ jobs:
       - name: Install focused test dependencies
         run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
 
+      - name: Render selectable local pipeline modes
+        env:
+          REQUIRE_DOCKER_COMPOSE: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest backend.pipeline_control.tests.test_compose_modes
+
       - name: Verify shared pending custody and terminal cache
         run: |
           set -euo pipefail
@@ -259,6 +265,13 @@ jobs:
           export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
           test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
           python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests backend.supabase.tests.test_g037_readonly_transaction_postgres backend.supabase.tests.test_release_readiness_observation -v
+
+      - name: Verify local event delivery and recovery
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python -c 'import kafka, psycopg2'
+          python -m unittest backend.pipeline_control.tests.test_events backend.pipeline_control.tests.test_events_observability backend.pipeline_control.tests.test_metrics
 
       - name: Verify Collector crash recovery with disposable fixtures
         run: |
