@@ -9,25 +9,38 @@ const root = resolve(import.meta.dir, '../../..');
 const workflows = ['security-audit.yml', 'web-admin-ci.yml', 'release-governance-ci.yml'];
 const checkout = 'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd';
 
-test('only the six full-history checkouts filter blobs while preserving exact source and credential boundaries', () => {
-  let fullHistory = 0;
+test('history owners and scope selectors preserve ancestry, exact source and credential boundaries', () => {
+  const expectedHistory: Record<string, string[]> = {
+    'security-audit.yml': ['scope', 'orchestration-readiness'],
+    'web-admin-ci.yml': ['scope', 'ubuntu-npm-authority', 'ubuntu-bun-compatibility', 'windows-npm-tooling', 'windows-bun-compatibility'],
+    'release-governance-ci.yml': ['governance-contract'],
+  };
+  const fullHistory: string[] = [];
   for (const name of workflows) {
     const source = readFileSync(join(root, '.github/workflows', name), 'utf8').replace(/\r\n/g, '\n');
-    for (const step of source.split(/^ {6}- /m).slice(1)) {
-      if (!step.includes('uses: actions/checkout@')) continue;
-      expect(step).toContain(checkout);
-      if (!/^ {10}fetch-depth: 0$/m.test(step)) {
-        expect(step).not.toMatch(/^ {10}filter:/m);
-        continue;
+    const workflow = Bun.YAML.parse(source) as { jobs: Record<string, { steps: { uses?: string; with?: Record<string, unknown> }[] }> };
+    for (const [jobName, job] of Object.entries(workflow.jobs)) {
+      const checkouts = job.steps.filter((step) => step.uses?.startsWith('actions/checkout@'));
+      expect(checkouts).toHaveLength(1);
+      for (const step of checkouts) {
+        expect(step.uses).toBe(checkout);
+        expect(step.with?.ref).toBe('${{ github.event.pull_request.head.sha || github.sha }}');
+        expect(step.with?.['persist-credentials']).toBe(false);
+        if (!expectedHistory[name].includes(jobName)) {
+          expect(step.with?.['fetch-depth']).not.toBe(0);
+          expect(step.with?.filter).toBeUndefined();
+          continue;
+        }
+        fullHistory.push(`${name}:${jobName}`);
+        expect(step.with?.['fetch-depth']).toBe(0);
+        expect(step.with?.filter).toBe('blob:none');
+        expect(step.with?.['sparse-checkout']).toBeUndefined();
+        expect(step.with?.['fetch-tags']).toBeUndefined();
       }
-      fullHistory++;
-      expect(step).toMatch(/^ {10}filter: blob:none$/m);
-      expect(step).toMatch(/^ {10}persist-credentials: false$/m);
-      expect(step).toContain('ref: ${{ github.event.pull_request.head.sha || github.sha }}');
-      expect(step).not.toMatch(/^ {10}(sparse-checkout|fetch-tags):/m);
     }
   }
-  expect(fullHistory).toBe(6);
+  expect(fullHistory.sort()).toEqual(Object.entries(expectedHistory)
+    .flatMap(([workflow, jobs]) => jobs.map((job) => `${workflow}:${job}`)).sort());
 });
 
 test('file-only partial clone retains all ancestry/refs and current tree, then lazily reads a retained historical blob', () => {

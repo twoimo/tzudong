@@ -3,227 +3,6 @@ run-name: ${{ github.event.pull_request.title || format('Security · {0}', githu
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/**'
-      - '.github/scripts/*ci*.py'
-      - '.github/dependabot.yml'
-      - '.github/cloudflare/**'
-      - '.github/scripts/*cloudflare*'
-      - '.github/hosted-pending-custody-install.v1.json'
-      - '.kiro/specs/crawler-pipeline-*/**'
-      - 'apps/web/package.json'
-      - 'apps/web/package-lock.json'
-      - 'apps/web/bun.lock'
-      - 'apps/web/scripts/verify-pin-contract.mjs'
-      - 'apps/web/scripts/hosted-pending-custody-operation.mjs'
-      - 'apps/web/scripts/__tests__/hosted-pending-custody-operation.test.mjs'
-      - 'apps/web/scripts/collect-dependency-candidates.mjs'
-      - 'apps/web/app/api/admin/publish-jobs/**'
-      - 'apps/web/lib/admin-publish-jobs.ts'
-      - 'apps/web/tests-unit/publish-jobs-request-contract.test.ts'
-      - 'apps/web/tests-unit/dependency-candidate-collection.test.ts'
-      - 'backend/package.json'
-      - 'backend/package-lock.json'
-      - 'backend/**/requirements*.txt'
-      - 'backend/pipeline-control/Dockerfile'
-      - 'backend/pipeline-control/docker-compose*.yml'
-      - 'backend/pipeline-control/otel-collector.yaml'
-      - 'backend/pipeline-control/PUBLISH_QUEUE.md'
-      - 'backend/bin/check_deployment_descriptor_set.py'
-      - 'backend/bin/check_layout_manifest.py'
-      - 'backend/bin/check_rename_ledger.py'
-      - 'backend/bin/build_platform_modernization_reconciliation.py'
-      - 'backend/bin/check_local_runtime.py'
-      - 'backend/bin/metrics_contract_report.py'
-      - 'backend/bin/observability_up.py'
-      - 'backend/bin/schema_mirror_report.py'
-      - 'backend/bin/seed_fixture_guard.py'
-      - 'backend/bin/tests/**'
-      - 'backend/bin/apply_hosted_pending_candidates.py'
-      - 'backend/bin/evaluate_new_youtube_videos.py'
-      - 'backend/pipeline/validators.py'
-      - 'backend/pipeline/test_validators_unittest.py'
-      - 'backend/restaurant-crawling/scripts/01-collect-urls.py'
-      - 'backend/bin/terminal_completion_cache.py'
-      - 'backend/supabase/scripts/hosted_data_plane.py'
-      - 'backend/supabase/scripts/hosted_pending_*.py'
-      - 'backend/supabase/scripts/test_hosted_pending_*.py'
-      - 'backend/supabase/candidates/*hosted_pending*.sql'
-      - 'backend/supabase/migrations/*hosted_pending*.sql'
-      - 'backend/bin/run_parallel_laaj.py'
-      - 'backend/utils/**'
-      - 'backend/restaurant-evaluation/scripts/**'
-      - 'backend/utils/stage_cache.py'
-      - 'backend/utils/resource-budget.mjs'
-      - 'backend/utils/tests/test_stage_execution.py'
-      - 'backend/utils/tests/test_pipeline_restart_integration.py'
-      - 'backend/utils/tests/resource-budget.test.mjs'
-      - 'backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh'
-      - 'backend/restaurant-crawling/scripts/03-collect-transcript.js'
-      - 'backend/restaurant-crawling/scripts/tests/collect-transcript-env.test.mjs'
-      - 'backend/bin/tests/test_check_deployment_descriptor_set_unittest.py'
-      - 'backend/bin/tests/test_metrics_contract_report_unittest.py'
-      - 'backend/bin/tests/test_observability_up_unittest.py'
-      - 'backend/deploy/**'
-      - 'backend/deploy/phase-gates.v1.json'
-      - 'backend/layout-manifest.v1.json'
-      - 'backend/naming-renames.v1.json'
-      - 'backend/pipeline_control/**'
-      - 'backend/rust/**'
-      - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
-      - 'backend/supabase/scripts/g037_hosted_closure_executor.py'
-      - 'backend/supabase/scripts/release_readiness_observation.*'
-      - 'backend/supabase/scripts/release_readiness_receipt.py'
-      - 'backend/supabase/certificates/prod-ca-2021.crt'
-      - 'backend/supabase/tests/test_release_readiness_observation.py'
-      - 'backend/supabase/tests/test_g037_readonly_transaction_postgres.py'
-      - 'backend/supabase/tests/g037_reviewed_artifacts.py'
-      - 'backend/supabase/tests/test_g037_reviewed_artifacts.py'
-      - 'backend/supabase/g037-readonly-transaction-source-transition.v1.json'
-      - 'backend/supabase/migrations/*.sql'
-      - 'backend/supabase/scripts/g014_owner_recovery_plan.py'
-      - 'backend/supabase/scripts/verify_g014_owner_final_replay.py'
-      - 'backend/supabase/scripts/verify_g016_identity_correction_replay.py'
-      - 'backend/supabase/applied-receipts/owner-recovery-20261004/**'
-      - 'backend/supabase/scripts/operational_sql_receipts.py'
-      - 'backend/supabase/tests/test_operational_sql_receipts.py'
-      - 'backend/supabase/scripts/g016_onboarding_identity_correction.py'
-      - 'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
-      - 'backend/supabase/scripts/local_replay_contract.py'
-      - 'backend/supabase/tests/test_g014_owner_final_verifier.py'
-      - 'backend/supabase/tests/test_g014_owner_final_replay.py'
-      - 'backend/supabase/tests/test_local_replay_contract.py'
-      - 'backend/supabase/advisor-classification.v1.json'
-      - 'backend/supabase/auth-hardening-decision.v1.json'
-      - 'backend/supabase/hosted-db-access-decision.v1.json'
-      - 'backend/supabase/g037-preflight-attempt.v1.json'
-      - 'backend/supabase/g037-runtime-probe-attempt.v1.json'
-      - 'backend/supabase/g037-readonly-credential-contract.v1.json'
-      - 'backend/supabase/g037-readonly-role-apply-attempt.v1.json'
-      - 'backend/supabase/g037-readonly-role-apply-authorization.v2.json'
-      - 'backend/supabase/g037-readonly-role-apply-attempt.v2.json'
-      - 'backend/supabase/g037-readonly-role-provisioning-preview.v1.json'
-      - 'backend/supabase/g037-readonly-role-preview-approval.v1.json'
-      - 'backend/supabase/g037-readonly-role-provisioning-preview.v2.json'
-      - 'backend/supabase/g037-readonly-role-preview-approval.v2.json'
-      - 'backend/supabase/g037-readonly-role-postcondition-diagnostic-preview.v1.json'
-      - 'backend/supabase/g037-readonly-role-postcondition-diagnostic-approval.v1.json'
-      - 'backend/supabase/g037-readonly-role-postcondition-diagnostic-authorization.v1.json'
-      - 'backend/supabase/g037-readonly-role-postcondition-diagnostic-attempt.v1.json'
-      - 'backend/supabase/g037-readonly-role-membership-diagnostic-preview.v2.json'
-      - 'backend/supabase/g037-readonly-role-membership-diagnostic-approval.v2.json'
-      - 'backend/supabase/g037-readonly-role-membership-diagnostic-authorization.v2.json'
-      - 'backend/supabase/g037-readonly-role-membership-diagnostic-attempt.v2.json'
-      - 'backend/supabase/g037-readonly-role-creator-membership-diagnostic-preview.v3.json'
-      - 'backend/supabase/g037-readonly-role-creator-membership-diagnostic-approval.v3.json'
-      - 'backend/supabase/g037-readonly-role-creator-membership-diagnostic-authorization.v3.json'
-      - 'backend/supabase/g037-readonly-role-creator-membership-diagnostic-attempt.v3.json'
-      - 'backend/supabase/g037-readonly-role-provisioning-preview.v3.json'
-      - 'backend/supabase/g037-readonly-role-preview-approval.v3.json'
-      - 'backend/supabase/g037-readonly-role-apply-authorization-request.v3.json'
-      - 'backend/supabase/g037-readonly-role-apply-authorization.v3.json'
-      - 'backend/supabase/g037-readonly-role-apply-consumption.v3.json'
-      - 'backend/supabase/g037-readonly-role-apply-attempt.v3.json'
-      - 'backend/supabase/g037-readonly-credential-custody-preview.v1.json'
-      - 'backend/supabase/g037-readonly-credential-custody-preview-approval.v1.json'
-      - 'backend/supabase/g037-readonly-password-assignment-authorization-request.v1.json'
-      - 'backend/supabase/g037-direct-endpoint-network-preflight-attempt.v1.json'
-      - 'backend/supabase/g037-direct-endpoint-host-evidence-request.v1.json'
-      - 'backend/supabase/g037-session-pooler-alternative-preview.v1.json'
-      - 'backend/supabase/g037-session-pooler-alternative-preview-approval-request.v1.json'
-      - 'backend/supabase/g037-session-pooler-alternative-preview-approval-contract.v1.json'
-      - 'backend/supabase/g037-session-pooler-alternative-preview-approval.v1.json'
-      - 'backend/supabase/g037-session-pooler-metadata-readback-request.v1.json'
-      - 'backend/supabase/g037-session-pooler-metadata-readback-authorization.v1.json'
-      - 'backend/supabase/g037-session-pooler-metadata-readback-consumption.v1.json'
-      - 'backend/supabase/g037-session-pooler-metadata-readback-attempt.v1.json'
-      - 'backend/supabase/g037-session-pooler-metadata-receipt-contract.v1.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-request.v1.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v1.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-authorization.v1.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-consumption.v1.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-attempt.v1.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-request.v2.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v2.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-authorization-request.v2.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-authorization.v2.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-consumption.v2.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-attempt.v2.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-request.v3.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v3.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-authorization-request.v3.json'
-      - 'backend/supabase/g037-session-pooler-connect-control-map-attempt.v3.json'
-      - 'backend/supabase/docs/g037-hosted-closure-runbook.md'
-      - 'backend/supabase/scripts/g037_readonly_role_provisioning.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_readback.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_provisioning_v2.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_readback_v2.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_postcondition_diagnostic_v1.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_membership_diagnostic_v2.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_creator_membership_diagnostic_v3.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_readback_v3.sql'
-      - 'backend/supabase/scripts/g037_readonly_role_connection_readback_v1.sql'
-      - 'backend/supabase/scripts/g037_direct_endpoint_network_preflight.py'
-      - 'backend/supabase/scripts/g037_session_pooler_metadata_receipt.py'
-      - 'backend/supabase/scripts/g037_session_pooler_control_map_receipt.py'
-      - 'backend/supabase/scripts/g037_session_pooler_control_map_read_v2.mjs'
-      - 'backend/supabase/scripts/g037_session_pooler_control_map_receipt_v2.py'
-      - 'backend/supabase/scripts/g037_session_pooler_control_map_read_v3.mjs'
-      - 'backend/supabase/scripts/g037_session_pooler_control_map_stdout_filter_v3.py'
-      - 'backend/supabase/scripts/g037_session_pooler_control_map_receipt_v3.py'
-      - 'backend/supabase/scripts/local-stack.py'
-      - 'backend/supabase/docker-compose.s3.yml'
-      - 'backend/supabase/optional-s3-compatibility.v1.json'
-      - 'backend/supabase/tests/test_optional_s3_overlay.py'
-      - 'backend/supabase/tests/test_advisor_followup_source.py'
-      - 'backend/supabase/tests/test_advisor_replay.py'
-      - 'backend/supabase/scripts/transform_advisor_replay.py'
-      - 'backend/supabase/g037-dedicated-credential-readback.v2.json'
-      - 'backend/supabase/tests/test_g037_dedicated_credential_readback_source.py'
-      - 'backend/supabase/tests/test_auth_hardening_evidence_source.py'
-      - 'backend/supabase/tests/test_hosted_db_access_decision_source.py'
-      - 'backend/supabase/tests/test_g037_preflight_attempt_evidence_source.py'
-      - 'backend/supabase/tests/test_g037_runtime_probe_attempt_evidence_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_credential_contract_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_preview_approval_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_v2_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_v2_approval_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_postcondition_diagnostic_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_postcondition_diagnostic_approval_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_membership_diagnostic_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_membership_diagnostic_approval_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_creator_membership_diagnostic_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_creator_membership_diagnostic_approval_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_v3_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_v3_approval_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_v3_apply_request_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_v3_apply_authorization_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_role_v3_apply_attempt_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_credential_custody_preview_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_credential_custody_approval_source.py'
-      - 'backend/supabase/tests/test_g037_readonly_password_assignment_request_source.py'
-      - 'backend/supabase/tests/test_g037_direct_endpoint_network_preflight_attempt_source.py'
-      - 'backend/supabase/tests/test_g037_direct_endpoint_network_preflight.py'
-      - 'backend/supabase/tests/test_g037_direct_endpoint_host_evidence_request_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_alternative_preview_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_preview_approval_request_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_preview_approval_contract_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_preview_approval_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_metadata_request_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_metadata_attempt_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_metadata_receipt.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_control_map_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_control_map_v2_source.py'
-      - 'backend/supabase/tests/test_g037_session_pooler_control_map_v3_source.py'
-      - 'backend/supabase/tests/test_local_compose_inputs.py'
-      - 'backend/utils/tests/test_rust_source_recovery.py'
-      - 'backend/utils/tests/test_operational_source_recovery.py'
-      - 'backend/utils/tests/test_layout_naming_source_recovery.py'
-      - 'backend/utils/tests/test_platform_modernization_reconciliation.py'
-      - 'backend/utils/tests/test_supply_chain_contract.py'
-      - 'backend/utils/duplicate_checker.py'
-      - 'backend/utils/tests/test_duplicate_checker_jsonl.py'
   schedule:
     - cron: '0 17 * * 1'
   workflow_dispatch:
@@ -234,7 +13,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scope:
+    name: Security scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      security: ${{ steps.select.outputs.security }}
+      reason: ${{ steps.select.outputs.reason }}
+      fatal: ${{ steps.select.outputs.fatal }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+      - name: Verify security scope and required-result failure paths
+        run: node --test .github/scripts/classify-security-scope.test.mjs .github/scripts/verify-ci-results.test.mjs
+      - name: Select security checks for this exact source
+        id: select
+        run: node .github/scripts/classify-security-scope.mjs
+
   cloudflare-toolchain-audit:
+    needs: scope
+    if: needs.scope.outputs.security == 'true'
     name: Cloudflare toolchain
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -265,6 +72,8 @@ jobs:
         run: node node_modules/wrangler/bin/wrangler.js deploy worker.mjs --config wrangler.jsonc --dry-run
 
   npm-audit:
+    needs: scope
+    if: needs.scope.outputs.security == 'true'
     runs-on: ubuntu-latest
     # Two 20-minute audits, bounded termination and shared setup.
     timeout-minutes: 50
@@ -306,6 +115,8 @@ jobs:
           exit "$status"
 
   pip-audit:
+    needs: scope
+    if: needs.scope.outputs.security == 'true'
     runs-on: ubuntu-latest
     # Five 20-minute audits, bounded termination and shared setup.
     timeout-minutes: 110
@@ -343,6 +154,8 @@ jobs:
           exit "$status"
 
   orchestration-readiness:
+    needs: scope
+    if: needs.scope.outputs.security == 'true'
     runs-on: ubuntu-latest
     # Include retained-source verification and descriptor tooling after checkout.
     timeout-minutes: 20
@@ -609,6 +422,8 @@ jobs:
             backend.supabase.tests.test_g037_session_pooler_control_map_v3_source
 
   rust-recovery:
+    needs: scope
+    if: needs.scope.outputs.security == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -660,6 +475,8 @@ jobs:
           "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.rust.tests.test_visit_enum_compiled_parity
 
   secret-pattern-scan:
+    needs: scope
+    if: needs.scope.outputs.security == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -675,6 +492,8 @@ jobs:
         run: python3 scripts/security/scan_tracked_secrets.py
 
   sbom:
+    needs: scope
+    if: needs.scope.outputs.security == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -716,3 +535,25 @@ jobs:
             ${{ runner.temp }}/security-evidence/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
+
+  security-result:
+    name: Security
+    if: ${{ always() }}
+    needs: [scope, cloudflare-toolchain-audit, npm-audit, pip-audit, orchestration-readiness, rust-recovery, secret-pattern-scan, sbom]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+      - name: Require all applicable security checks to finish successfully
+        env:
+          CI_RESULTS_MODE: security
+          CI_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: node .github/scripts/verify-ci-results.mjs

@@ -7,6 +7,13 @@ import { UNITS } from './verify-dependency-freshness.mjs';
 
 const VERSION = /^[~^<>=v ]*\d+(?:\.\d+){1,3}(?:[-+][\w.-]+)?$/;
 const LOCKFILE_LIMIT = 10 * 1024 * 1024;
+const canonicalRepository = (value) => typeof value === 'string' && /^[\w.-]+\/[\w.-]+$/.test(value)
+  && value.split('/').every((part) => part !== '.' && part !== '..');
+const boundedBranchRef = (value) => typeof value === 'string' && value.length > 0
+  && Buffer.byteLength(value) <= 1024 && value !== '@' && value !== 'HEAD'
+  && !value.startsWith('-') && !value.endsWith('.') && !value.includes('..') && !value.includes('@{')
+  && !/[\x00-\x20\x7f~^:?*\[\]\\]/.test(value)
+  && value.split('/').every((part) => part !== '' && !part.startsWith('.') && !part.endsWith('.lock'));
 export function lockfileChanges(before, after) {
   const valid = (lock) => [2, 3].includes(lock?.lockfileVersion)
     && lock.packages && typeof lock.packages === 'object' && !Array.isArray(lock.packages);
@@ -370,37 +377,75 @@ export function descriptor(pr, files, lockfiles = {}, companionContents = {}) {
     metadataIncomplete: incomplete || units.size !== 1 || packages.length === 0 };
 }
 
-export async function collectCandidates(request, checkedCommit = null) {
+const PINNED_CANDIDATE_ERRORS = new Set([
+  'checked_pull_request_invalid', 'checked_candidate_source_mismatch',
+]);
+const pinnedCandidateError = (code) => Object.assign(new Error(code), { code });
+
+const assertPinnedCandidate = (pr, checkedCommit, checkedPullRequest) => {
+  if (pr?.number !== checkedPullRequest.number || pr.user?.login !== 'dependabot[bot]'
+    || pr.head?.sha !== checkedCommit
+    || pr.head?.repo?.full_name !== checkedPullRequest.repository
+    || pr.base?.repo?.full_name !== checkedPullRequest.repository
+    || pr.base?.ref !== checkedPullRequest.baseRef)
+    throw pinnedCandidateError('checked_candidate_source_mismatch');
+};
+
+export async function collectCandidates(request, checkedCommit = null, checkedPullRequest = null) {
   if (checkedCommit !== null && !/^[0-9a-f]{40}$/.test(checkedCommit))
     throw new Error('checked_commit_invalid');
+  if (checkedPullRequest !== null && (checkedCommit === null
+    || !Number.isSafeInteger(checkedPullRequest?.number) || checkedPullRequest.number < 1
+    || !canonicalRepository(checkedPullRequest.repository)
+    || !boundedBranchRef(checkedPullRequest.baseRef)
+    || !/^[0-9a-f]{40}$/.test(checkedPullRequest.baseSha ?? '')))
+    throw pinnedCandidateError('checked_pull_request_invalid');
   const candidates = [];
   for (let page = 1; page <= 10; page++) {
-    const prs = await request(`/pulls?state=open&per_page=100&page=${page}`);
+    // A PR run belongs to its event's number/base and checked-out head, even
+    // when that PR merges before this step starts. Scheduled discovery keeps
+    // using the open list and its existing pagination/limit contract.
+    const prs = checkedPullRequest === null
+      ? await request(`/pulls?state=open&per_page=100&page=${page}`)
+      : [await request(`/pulls/${checkedPullRequest.number}`)];
     if (!Array.isArray(prs) || prs.length > 100) throw new Error('candidate_metadata_unavailable');
     for (const pr of prs) {
+      if (checkedPullRequest !== null) assertPinnedCandidate(pr, checkedCommit, checkedPullRequest);
       if (pr.user?.login !== 'dependabot[bot]') continue;
       if (checkedCommit !== null && pr.head?.sha !== checkedCommit) continue;
       const files = [];
-      for (let fp = 1; fp <= 3; fp++) {
-        const batch = await request(`/pulls/${pr.number}/files?per_page=100&page=${fp}`);
-        if (!Array.isArray(batch) || batch.length > 100) throw new Error('candidate_metadata_unavailable');
-        files.push(...batch);
-        if (batch.length < 100) break;
-        if (fp === 3) throw new Error('candidate_metadata_limit');
-      }
       const lockfiles = {};
       let mergeBase = null;
+      let comparison = null;
+      const baseSha = checkedPullRequest?.baseSha ?? pr.base?.sha;
       const ensureMergeBase = async () => {
         if (mergeBase !== null) return mergeBase;
-        if (![pr.base?.sha, pr.head?.sha].every((sha) => /^[0-9a-f]{40}$/.test(sha ?? '')))
+        if (![baseSha, pr.head?.sha].every((sha) => /^[0-9a-f]{40}$/.test(sha ?? '')))
           throw new Error('candidate_metadata_unavailable');
-        const comparison = await request(`/compare/${pr.base.sha}...${pr.head.sha}?per_page=1`);
-        if (comparison?.base_commit?.sha !== pr.base.sha
+        comparison = await request(`/compare/${baseSha}...${pr.head.sha}?per_page=1`);
+        if (comparison?.base_commit?.sha !== baseSha
           || !/^[0-9a-f]{40}$/.test(comparison?.merge_base_commit?.sha ?? ''))
           throw new Error('candidate_metadata_unavailable');
         mergeBase = comparison.merge_base_commit.sha;
         return mergeBase;
       };
+      if (checkedPullRequest !== null) {
+        // /pulls/{number}/files is mutable while the head/base changes. The
+        // first compare page carries the files for these immutable inputs.
+        // GitHub caps that list at 300; reaching the cap is not completeness.
+        await ensureMergeBase();
+        if (!Array.isArray(comparison.files)) throw new Error('candidate_metadata_unavailable');
+        if (comparison.files.length >= 300) throw new Error('candidate_metadata_limit');
+        files.push(...comparison.files);
+      } else {
+        for (let fp = 1; fp <= 3; fp++) {
+          const batch = await request(`/pulls/${pr.number}/files?per_page=100&page=${fp}`);
+          if (!Array.isArray(batch) || batch.length > 100) throw new Error('candidate_metadata_unavailable');
+          files.push(...batch);
+          if (batch.length < 100) break;
+          if (fp === 3) throw new Error('candidate_metadata_limit');
+        }
+      }
       const fetchVerifiedBytes = async (filename, sha) => {
         if (!/^[0-9a-f]{40}$/.test(sha ?? '')) throw new Error('candidate_metadata_unavailable');
         const blob = await request(`/contents/${filename}?ref=${sha}`);
@@ -454,6 +499,10 @@ export async function collectCandidates(request, checkedCommit = null) {
         }
         companionContents[file.filename] = content;
       }
+      if (checkedPullRequest !== null) {
+        const readback = await request(`/pulls/${checkedPullRequest.number}`);
+        assertPinnedCandidate(readback, checkedCommit, checkedPullRequest);
+      }
       candidates.push(descriptor(pr, files, lockfiles, companionContents));
     }
     if (prs.length < 100) return candidates;
@@ -463,10 +512,16 @@ export async function collectCandidates(request, checkedCommit = null) {
 
 async function main() {
   const repository = process.env.GITHUB_REPOSITORY;
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repository ?? '') || !process.env.GH_TOKEN)
+  if (!canonicalRepository(repository) || !process.env.GH_TOKEN)
     throw new Error('candidate_metadata_unavailable');
   const checkedCommit = process.env.GITHUB_EVENT_NAME === 'pull_request'
     ? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() : null;
+  const checkedPullRequest = checkedCommit === null ? null : {
+    number: /^[1-9]\d*$/.test(process.env.CHECKED_PR_NUMBER ?? '') ? Number(process.env.CHECKED_PR_NUMBER) : null,
+    repository,
+    baseSha: process.env.CHECKED_PR_BASE_SHA,
+    baseRef: process.env.CHECKED_PR_BASE_REF,
+  };
   const candidates = await collectCandidates(async (path) => {
     const response = await fetch(`https://api.github.com/repos/${repository}${path}`, {
       headers: { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json',
@@ -474,10 +529,12 @@ async function main() {
     });
     if (!response.ok) throw new Error('candidate_metadata_unavailable');
     return response.json();
-  }, checkedCommit);
+  }, checkedCommit, checkedPullRequest);
   if (!process.argv[2]) throw new Error('candidate_output_required');
   await writeFile(process.argv[2], `${JSON.stringify(candidates)}\n`, { mode: 0o600 });
 }
-if (import.meta.url === `file://${process.argv[1]}`) main().catch(() => {
-  process.stderr.write('candidate_metadata_unavailable\n'); process.exitCode = 1;
+if (import.meta.url === `file://${process.argv[1]}`) main().catch((error) => {
+  const code = Object.getOwnPropertyDescriptor(error ?? {}, 'code')?.value;
+  process.stderr.write(`${PINNED_CANDIDATE_ERRORS.has(code) ? code : 'candidate_metadata_unavailable'}\n`);
+  process.exitCode = 1;
 });

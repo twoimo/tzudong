@@ -10,7 +10,7 @@ const regular = (reason) => ({ benchmark: false, reason });
 // Only inputs that can move the measured typecheck result select the full
 // benchmark. Governance files, evidence receipts, unrelated workflows and web
 // scripts that take no part in type checking stay on the fast parity path; the
-// four diagnostic lanes still run for every change.
+// scope selector retains all four profile owners whenever this proof is selected.
 const KNOWN_ROOTS = /^(?:apps\/web\/|backend\/|docs\/|\.github\/|\.kiro\/|\.agents\/)/;
 // Exact entry points only: a new executable or dependency file named after a
 // README/changelog must still take the full-proof path.
@@ -29,8 +29,8 @@ const MEASUREMENT_INPUTS = [
   /^apps\/web\/tests-unit\/(?:typescript-toolchain|typecheck-benchmark|cross-platform-web-tooling|dependency-modernization)/,
 ];
 
-// Ordinary feature changes retain all four diagnostic/platform lanes. Full-program
-// performance is checked weekly and before data/main promotion, as well as on
+// The scope selector narrows ordinary feature jobs. Full-program performance
+// retains all four profiles weekly and before data/main promotion, as well as on
 // changes to compiler, dependency, configuration and measurement inputs.
 export function classifyPaths(paths) {
   if (!Array.isArray(paths) || paths.length === 0 || paths.length > 20_000) return full('DIFF_UNAVAILABLE');

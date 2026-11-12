@@ -138,6 +138,143 @@ describe('real dependency candidate ingestion', () => {
   });
 });
 
+describe('PR collection remains pinned across merge and metadata races', () => {
+  const repository = 'twoimo/tzudong';
+  const baseSha = 'b'.repeat(40);
+  const mergeBase = 'c'.repeat(40);
+  const pinned = { number: pr.number, repository, baseSha, baseRef: 'develop' };
+  const closed = { ...pr, state: 'closed', merged: true,
+    base: { ...pr.base, sha: 'd'.repeat(40), repo: { full_name: repository } },
+    head: { ...pr.head, repo: { full_name: repository } } };
+  const comparison = (files = [file('test-package', '16.2.1')]) => ({
+    base_commit: { sha: baseSha }, merge_base_commit: { sha: mergeBase }, files,
+  });
+
+  test('collects the merged PR by number and uses event base/head instead of the live open list', async () => {
+    const calls: string[] = [];
+    const candidates = await collectCandidates(async (path: string) => {
+      calls.push(path);
+      if (path === `/pulls/${pr.number}`) return closed;
+      if (path === `/compare/${baseSha}...${pr.head.sha}?per_page=1`) return comparison();
+      throw new Error('mutable_candidate_source_requested');
+    }, pr.head.sha, pinned);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({ number: pr.number, headSha: pr.head.sha, metadataIncomplete: false });
+    expect(buildPreflightReceipt(candidates, pr.head.sha).candidates[0].code).toBeNull();
+    expect(calls).toEqual([`/pulls/${pr.number}`, `/compare/${baseSha}...${pr.head.sha}?per_page=1`, `/pulls/${pr.number}`]);
+  });
+
+  test('uses the pre-merge base for a merged lockfile-only candidate', async () => {
+    const calls: string[] = [];
+    const lock = (version: string) => ({ lockfileVersion: 3, packages: {
+      '': { name: 'fixture' }, 'node_modules/test-package': { version },
+    } });
+    const blob = (value: object) => {
+      const bytes = Buffer.from(JSON.stringify(value));
+      return { encoding: 'base64', content: bytes.toString('base64'), size: bytes.length,
+        sha: createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex') };
+    };
+    const candidates = await collectCandidates(async (path: string) => {
+      calls.push(path);
+      if (path === `/pulls/${pr.number}`) return closed;
+      if (path === `/compare/${baseSha}...${pr.head.sha}?per_page=1`)
+        return comparison([{ filename: 'apps/web/package-lock.json', status: 'modified' } as ReturnType<typeof file>]);
+      if (path === `/contents/apps/web/package-lock.json?ref=${mergeBase}`) return blob(lock('1.2.3'));
+      if (path === `/contents/apps/web/package-lock.json?ref=${pr.head.sha}`) return blob(lock('1.2.4'));
+      throw new Error('mutable_base_or_files_requested');
+    }, pr.head.sha, pinned);
+    expect(candidates[0].metadataIncomplete).toBe(false);
+    expect(candidates[0].packages).toEqual([{ name: 'test-package', fromVersion: '1.2.3', toVersion: '1.2.4' }]);
+    expect(calls.some((path) => path.includes(closed.base.sha))).toBe(false);
+  });
+
+  test('rejects an unbound number, author, source or repository before collecting files', async () => {
+    for (const metadata of [
+      { ...closed, number: 99 },
+      { ...closed, user: { login: 'human' } },
+      { ...closed, head: { ...closed.head, sha: 'e'.repeat(40) } },
+      { ...closed, head: { ...closed.head, repo: { full_name: 'someone/tzudong' } } },
+      { ...closed, base: { ...closed.base, repo: { full_name: 'someone/tzudong' } } },
+      { ...closed, base: { ...closed.base, ref: 'main' } },
+      { ...closed, base: undefined },
+      null,
+    ]) {
+      const calls: string[] = [];
+      await expect(collectCandidates(async (path: string) => {
+        calls.push(path); return metadata;
+      }, pr.head.sha, pinned)).rejects.toMatchObject({ code: 'checked_candidate_source_mismatch' });
+      expect(calls).toEqual([`/pulls/${pr.number}`]);
+    }
+  });
+
+  test('rejects source or target movement during collection', async () => {
+    for (const moved of [
+      { ...closed, head: { ...closed.head, sha: 'e'.repeat(40) } },
+      { ...closed, base: { ...closed.base, ref: 'main' } },
+    ]) {
+      let metadataReads = 0;
+      await expect(collectCandidates(async (path: string) => {
+        if (path.startsWith('/compare/')) return comparison();
+        metadataReads += 1; return metadataReads === 1 ? closed : moved;
+      }, pr.head.sha, pinned)).rejects.toThrow('checked_candidate_source_mismatch');
+      expect(metadataReads).toBe(2);
+    }
+  });
+
+  test('does not accept an incomplete, capped or mismatched immutable diff', async () => {
+    for (const diff of [
+      { ...comparison(), files: undefined },
+      comparison(Array.from({ length: 300 }, () => file())),
+      { ...comparison(), base_commit: { sha: closed.base.sha } },
+      { ...comparison(), merge_base_commit: { sha: 'bad' } },
+    ]) {
+      await expect(collectCandidates(async (path: string) => path.startsWith('/compare/') ? diff : closed,
+        pr.head.sha, pinned)).rejects.toThrow(/candidate_metadata_(unavailable|limit)/);
+    }
+  });
+
+  test('requires a valid pinned PR identity before any network call', async () => {
+    for (const input of [
+      { ...pinned, number: 0 }, { ...pinned, number: 1.5 },
+      { ...pinned, number: Number.MAX_SAFE_INTEGER + 1 },
+      { ...pinned, repository: '../tzudong' }, { ...pinned, baseSha: undefined },
+      ...[undefined, '', 'x'.repeat(1025), 'base\nbranch', '../develop', 'base//branch',
+        'base branch', 'base@{old}', 'base.lock', 'base:branch', 'base?branch', 'base[branch]', '-base']
+        .map((baseRef) => ({ ...pinned, baseRef })),
+    ]) {
+      let requested = false;
+      await expect(collectCandidates(async () => { requested = true; return []; }, pr.head.sha, input))
+        .rejects.toThrow('checked_pull_request_invalid');
+      expect(requested).toBe(false);
+    }
+    await expect(collectCandidates(async () => [], null, pinned)).rejects.toThrow('checked_pull_request_invalid');
+  });
+
+  test('binds valid target names without imposing a develop-only policy in collection', async () => {
+    for (const baseRef of ['main', 'release/2026.11', '개발/다음']) {
+      const metadata = { ...closed, base: { ...closed.base, ref: baseRef } };
+      const candidates = await collectCandidates(async (path: string) =>
+        path.startsWith('/compare/') ? comparison() : metadata, pr.head.sha, { ...pinned, baseRef });
+      expect(candidates[0].targetBranch).toBe(baseRef);
+    }
+  });
+
+  test('scheduled discovery continues to paginate the open list without a pinned PR', async () => {
+    const calls: string[] = [];
+    const candidates = await collectCandidates(async (path: string) => {
+      calls.push(path);
+      if (path === '/pulls?state=open&per_page=100&page=1')
+        return Array.from({ length: 100 }, (_, number) => ({ ...pr, number, user: { login: 'human' } }));
+      if (path === '/pulls?state=open&per_page=100&page=2') return [pr];
+      if (path === `/pulls/${pr.number}/files?per_page=100&page=1`) return [file('test-package', '16.2.1')];
+      throw new Error('unexpected_pinned_request');
+    });
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].metadataIncomplete).toBe(false);
+    expect(calls).toHaveLength(3);
+  });
+});
+
 describe('governed companion file narrow admission', () => {
   const COMPANION = 'apps/web/tests-unit/nightly-regression-workflow.test.ts';
   const manifest = () => ({

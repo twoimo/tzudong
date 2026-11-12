@@ -449,6 +449,7 @@ describe("release workflow governance source contracts", () => {
         retain: ["contents: read"],
       },
       ".github/workflows/web-admin-ci.yml": {
+        scope: ["contents: read"],
         "dependency-modernization-proof": ["contents: read"],
         "ubuntu-npm-authority": ["contents: read"],
         "ubuntu-npm-unit": ["contents: read"],
@@ -457,6 +458,7 @@ describe("release workflow governance source contracts", () => {
         "windows-npm-tooling": ["contents: read"],
         "windows-bun-compatibility": ["contents: read"],
         "admin-address-consistency": ["contents: read"],
+        "ci-result": ["contents: read"],
       },
     };
 
