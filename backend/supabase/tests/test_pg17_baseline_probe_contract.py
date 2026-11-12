@@ -70,6 +70,21 @@ class Pg17BaselineProbeContractTests(unittest.TestCase):
         self.assertNotIn("rm\", \"-f\", args.database_container", self.probe)
 
 
+class ProvisioningLaneTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    def test_the_lane_provisions_the_committed_baseline(self) -> None:
+        self.assertIn("  pg17-provision:\n", self.workflow)
+        self.assertIn("local_baseline.py provision", self.workflow)
+        self.assertIn("local_baseline.py check", self.workflow)
+        self.assertIn("backend/supabase/baselines/local/schema", self.workflow)
+
+    def test_the_lane_always_cleans_up(self) -> None:
+        self.assertIn("if: ${{ always() }}", self.workflow)
+        self.assertIn("docker rm -f tzudong-pg17-provision", self.workflow)
+
+
 class BaselineModuleContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.module = MODULE.read_text(encoding="utf-8")

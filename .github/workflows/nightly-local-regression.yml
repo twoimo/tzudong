@@ -2156,6 +2156,67 @@ jobs:
         if: ${{ always() && steps.nightly-cleanup.outcome != 'success' }}
         shell: bash
         run: exit 1
+  # Proves the provisioning path the PostgreSQL 17 transition depends on: a fresh
+  # cluster with nothing but the committed baseline, restored and verified. It runs
+  # beside the replay lane rather than replacing it, so migration coverage stays where
+  # it is until this lane has been green.
+  pg17-provision:
+    name: PG17 provisioning
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Verify the committed baseline holds together
+        run: python3 -m unittest backend.supabase.tests.test_committed_local_baseline
+
+      - name: Provision the committed baseline onto PostgreSQL 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=supabase/postgres:17.11.0.018
+          name=tzudong-pg17-provision
+          docker pull "$image"
+          docker run -d --name "$name" \
+            -e POSTGRES_DB=profile -e POSTGRES_HOST_AUTH_METHOD=trust "$image"
+          for _ in $(seq 1 60); do
+            if docker exec "$name" pg_isready -U postgres -h localhost >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec "$name" pg_isready -U postgres -h localhost
+          python3 backend/supabase/scripts/local_baseline.py provision \
+            --container "$name" \
+            --database profile \
+            --baseline backend/supabase/baselines/local/schema \
+            --receipt "$RUNNER_TEMP/pg17-provision.json"
+          python3 backend/supabase/scripts/local_baseline.py check \
+            --container "$name" \
+            --database profile \
+            --baseline backend/supabase/baselines/local/schema \
+            --receipt "$RUNNER_TEMP/pg17-check.json"
+
+      - name: Upload the provisioning receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: pg17-provision-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/pg17-provision.json
+            ${{ runner.temp }}/pg17-check.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Remove the provisioning container
+        if: ${{ always() }}
+        run: docker rm -f tzudong-pg17-provision || true
+
   publish:
     name: Publish
     needs: local

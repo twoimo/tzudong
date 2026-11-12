@@ -104,6 +104,37 @@ class LoadTests(unittest.TestCase):
                 lb.load_baseline(path)
 
 
+class CheckTests(unittest.TestCase):
+    def _baseline(self, tmp: Path, names) -> lb.Baseline:
+        return lb.capture("db", "postgres", tmp, source_image="img",
+                          runner=make_runner(names=names, roles=[]))
+
+    def test_an_identical_database_matches(self) -> None:
+        names = ["public.a", "public.b"]
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), names)
+            record = lb.check(baseline, "target", "profile",
+                              runner=make_runner(names=names, roles=[]))
+            self.assertTrue(record["matches"])
+            self.assertEqual(record["missingObjectCount"], 0)
+
+    def test_a_missing_object_does_not_match(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), ["public.a", "public.b"])
+            record = lb.check(baseline, "target", "profile",
+                              runner=make_runner(names=["public.a"], roles=[]))
+            self.assertFalse(record["matches"])
+            self.assertEqual(record["missingObjects"], ["public.b"])
+
+    def test_an_extra_object_does_not_match(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp), ["public.a"])
+            record = lb.check(baseline, "target", "profile",
+                              runner=make_runner(names=["public.a", "public.stray"], roles=[]))
+            self.assertFalse(record["matches"])
+            self.assertEqual(record["unexpectedObjects"], ["public.stray"])
+
+
 class ProvisionTests(unittest.TestCase):
     def _baseline(self, tmp: Path, names) -> lb.Baseline:
         return lb.capture("db", "postgres", tmp, source_image="img",
