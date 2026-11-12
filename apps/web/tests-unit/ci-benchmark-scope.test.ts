@@ -1,20 +1,68 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { classifyPaths, SCOPE_FLAGS } from "../../../.github/scripts/classify-ci-scope.mjs";
+import { WEB_JOB_SCOPES } from "../../../.github/scripts/verify-ci-results.mjs";
 
 const root = resolve(import.meta.dir, "../../..");
 const workflow = Bun.YAML.parse(readFileSync(resolve(root, ".github/workflows/web-admin-ci.yml"), "utf8")) as {
-  on: { pull_request: { paths: string[] }; push: { paths: string[] } };
-  jobs: Record<string, { steps: { id?: string; name?: string; if?: string; run?: string; uses?: string; with?: Record<string, unknown>; "continue-on-error"?: boolean; "working-directory"?: string }[] }>;
+  on: { pull_request: null | { paths?: string[] }; push: { paths?: string[]; branches: string[] }; schedule: unknown[] };
+  jobs: Record<string, {
+    name?: string; needs?: string | string[]; if?: string; outputs?: Record<string, string>; "continue-on-error"?: boolean;
+    steps: { id?: string; name?: string; if?: string; run?: string; uses?: string; env?: Record<string, string>; with?: Record<string, unknown>; "continue-on-error"?: boolean; "working-directory"?: string }[];
+  }>;
 };
 
 describe("compiler CI coverage routing", () => {
-  test("compact trigger lists preserve public/admin, schema and publication inputs", () => {
-    expect(workflow.on.pull_request.paths).toEqual(workflow.on.push.paths);
-    expect(workflow.on.pull_request.paths).toHaveLength(16);
-    const matches = (file: string) => workflow.on.pull_request.paths.some((pattern) => new Bun.Glob(pattern).match(file));
-    for (const file of ["apps/web/app/admin/page.tsx", "apps/web/app/api/admin/evaluations/route.ts", "apps/web/tsconfig.json", "apps/web/package-lock.json", "apps/web/scripts/run-typecheck.mjs", "apps/web/tests-unit/typecheck-benchmark-source.test.ts", "apps/web/supabase/migrations/change.sql", "backend/supabase/migrations/change.sql", "backend/test-requirements.txt", "backend/bin/build_tzuyang_case_review_pack.mjs", "backend/bin/tests/node-dependency-compatibility.test.mjs", "backend/restaurant-crawling/scripts/worker.py", ".github/scripts/classify-ci-benchmark.mjs", ".github/dependabot.yml", ".github/nightly-local-publication-allowlist.txt", ".kiro/specs/receipt.json", ".agents/skills/ci/SKILL.md"]) expect(matches(file)).toBe(true);
-    expect(matches("docs/example.md")).toBe(false);
+  test("always emits the CI gate while the selector preserves schema, publication and source-contract coverage", () => {
+    expect(Object.hasOwn(workflow.on, "pull_request")).toBe(true);
+    expect(workflow.on.pull_request?.paths).toBeUndefined();
+    expect(workflow.on.push.paths).toBeUndefined();
+    expect(workflow.on.push.branches).toEqual(["main", "develop", "data"]);
+    expect(workflow.on.schedule.length).toBeGreaterThan(0);
+    for (const file of ["apps/web/app/admin/page.tsx", "apps/web/app/api/admin/evaluations/route.ts", "apps/web/tsconfig.json", "apps/web/package-lock.json", "apps/web/scripts/run-typecheck.mjs", "apps/web/tests-unit/typecheck-benchmark-source.test.ts", "apps/web/supabase/migrations/change.sql", "backend/supabase/migrations/change.sql", "backend/test-requirements.txt", "backend/bin/build_tzuyang_case_review_pack.mjs", "backend/bin/tests/node-dependency-compatibility.test.mjs", "backend/restaurant-crawling/scripts/worker.py", ".github/scripts/classify-ci-benchmark.mjs", ".github/dependabot.yml", ".github/nightly-local-publication-allowlist.txt", ".kiro/specs/receipt.json", ".agents/skills/ci/SKILL.md"]) {
+      const selected = classifyPaths([file]);
+      expect(selected.unit).toBe(true);
+      expect(selected.admin).toBe(true);
+    }
+    const docs = classifyPaths(["docs/example.md"]);
+    for (const flag of SCOPE_FLAGS) expect(docs[flag]).toBe(false);
+  });
+
+  test("connects every conditional lane and its complete result to the always-run aggregate", () => {
+    const scope = workflow.jobs.scope;
+    expect(scope.if).toBeUndefined();
+    expect(scope.needs).toBeUndefined();
+    expect(scope["continue-on-error"]).not.toBe(true);
+    const select = scope.steps.find((step) => step.id === "select");
+    expect(select?.run).toBe("node .github/scripts/classify-ci-scope.mjs");
+    expect(select?.if).toBeUndefined();
+    expect(select?.["continue-on-error"]).not.toBe(true);
+    for (const flag of [...SCOPE_FLAGS, "reason", "fatal"])
+      expect(scope.outputs?.[flag]).toBe("${{ steps.select.outputs." + flag + " }}");
+    const proof = scope.steps.find((step) => step.run?.includes("classify-ci-scope.test.mjs"));
+    expect(proof?.run).toContain("verify-ci-results.test.mjs");
+    expect(proof?.if).toBeUndefined();
+    expect(proof?.["continue-on-error"]).not.toBe(true);
+    expect(scope.steps.indexOf(proof!)).toBeLessThan(scope.steps.indexOf(select!));
+
+    for (const [name, flag] of Object.entries(WEB_JOB_SCOPES)) {
+      const job = workflow.jobs[name];
+      expect([job.needs].flat()).toEqual(["scope"]);
+      expect(job.if).toBe(`needs.scope.outputs.${flag} == 'true'`);
+      expect(job["continue-on-error"]).not.toBe(true);
+    }
+    const result = workflow.jobs["ci-result"];
+    expect(Object.keys(workflow.jobs).sort()).toEqual(["scope", ...Object.keys(WEB_JOB_SCOPES), "ci-result"].sort());
+    expect(result.name).toBe("CI");
+    expect(result.if).toBe("${{ always() }}");
+    expect(result["continue-on-error"]).not.toBe(true);
+    expect(result.needs).toEqual(["scope", ...Object.keys(WEB_JOB_SCOPES)]);
+    const verifier = result.steps.filter((step) => step.run === "node .github/scripts/verify-ci-results.mjs");
+    expect(verifier).toHaveLength(1);
+    expect(verifier[0].if).toBeUndefined();
+    expect(verifier[0]["continue-on-error"]).not.toBe(true);
+    expect(verifier[0].env).toEqual({ CI_RESULTS_MODE: "web", CI_NEEDS_JSON: "${{ toJSON(needs) }}" });
   });
 
   test("all four platform lanes choose exactly one parity owner and bind benchmark evidence to that choice", () => {
@@ -75,7 +123,7 @@ describe("compiler CI coverage routing", () => {
     expect(benchmark).toContain("runProcess(process.execPath, [PARITY, 'parity'])");
     expect(benchmark).toContain("const receipts = await preflight(stage)");
     for (const id of ["ubuntu-npm-authority", "ubuntu-bun-compatibility", "windows-npm-tooling", "windows-bun-compatibility"]) {
-      // Existing lint/unit/build/platform probes stay unconditional.
+      // A selected lane still executes all its lint/unit/build/platform probes.
       for (const step of workflow.jobs[id].steps.filter((step) => /run (lint|test:unit|build)$|bun test /.test(step.run ?? ""))) expect(step.if).toBeUndefined();
     }
   });

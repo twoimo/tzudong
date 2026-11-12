@@ -49,6 +49,24 @@ describe('Dependency_Freshness_Workflow governance contract', () => {
     expect(() => bindVerificationToCommit(candidates, results, null)).toThrow('checked_commit_invalid');
     expect(workflow).toContain('ref: ${{ github.event.pull_request.head.sha || github.sha }}');
   });
+  test('the PR collector receives immutable event identity even after the PR closes', () => {
+    const parsed = Bun.YAML.parse(workflow) as { jobs: { freshness: { steps: {
+      name?: string; uses?: string; with?: Record<string, unknown>; env?: Record<string, string>; run?: string; if?: string;
+    }[] } } };
+    const steps = parsed.jobs.freshness.steps;
+    const checkout = steps.find((step) => step.uses?.startsWith('actions/checkout@'));
+    expect(checkout?.with?.ref).toBe('${{ github.event.pull_request.head.sha || github.sha }}');
+    expect(checkout?.with?.['persist-credentials']).toBe(false);
+    const collector = steps.filter((step) => step.run?.includes('scripts/collect-dependency-candidates.mjs'));
+    expect(collector).toHaveLength(1);
+    expect(collector[0].if).toBeUndefined();
+    expect(collector[0].env).toMatchObject({
+      CHECKED_PR_NUMBER: '${{ github.event.pull_request.number }}',
+      CHECKED_PR_BASE_SHA: '${{ github.event.pull_request.base.sha }}',
+      CHECKED_PR_BASE_REF: '${{ github.event.pull_request.base.ref }}',
+    });
+    expect(steps.indexOf(checkout!)).toBeLessThan(steps.indexOf(collector[0]));
+  });
   test('enumerates the seven original units and the isolated Cloudflare toolchain', () => {
     expect(UNITS).toHaveLength(8);
     const directories = UNITS.map((unit) => unit.directory);

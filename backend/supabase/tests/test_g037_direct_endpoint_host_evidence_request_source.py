@@ -7,6 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -151,7 +153,7 @@ class G037DirectEndpointHostEvidenceRequestSourceTests(unittest.TestCase):
             REQUEST_PATH.relative_to(ROOT).as_posix(),
             REQUEST["probeArtifact"]["path"],
         ):
-            self.assertEqual(SECURITY_WORKFLOW.count(f"- '{relative}'"), 1)
+            assert_security_scope(self, [relative])
         for module in (
             "backend.supabase.tests.test_g037_direct_endpoint_network_preflight",
             "backend.supabase.tests.test_g037_direct_endpoint_host_evidence_request_source",

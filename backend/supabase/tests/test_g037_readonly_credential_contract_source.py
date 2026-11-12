@@ -8,6 +8,8 @@ import re
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -235,7 +237,7 @@ class G037ReadonlyCredentialContractSourceTests(unittest.TestCase):
         for source_path in (PROVISIONING_PATH, READBACK_PATH):
             relative = source_path.relative_to(ROOT).as_posix()
             self.assertNotIn(relative, WORKFLOW)
-            self.assertEqual(SECURITY_WORKFLOW.count(relative), 1)
+            assert_security_scope(self, [relative])
         readback_without_comments = re.sub(r"(?m)^\s*--.*$", "", READBACK)
         self.assertRegex(readback_without_comments.lstrip(), r"^WITH\s")
         readback_without_literals = re.sub(
@@ -268,7 +270,7 @@ class G037ReadonlyCredentialContractSourceTests(unittest.TestCase):
             "backend/supabase/scripts/g037_readonly_role_readback.sql",
             "backend/supabase/tests/test_g037_readonly_credential_contract_source.py",
         ):
-            self.assertIn(f"- '{path}'", SECURITY_WORKFLOW)
+            assert_security_scope(self, [path])
         self.assertIn(
             "backend.supabase.tests.test_g037_readonly_credential_contract_source",
             SECURITY_WORKFLOW,

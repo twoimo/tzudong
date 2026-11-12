@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-import fnmatch
 import hashlib
 import re
 import unittest
 import yaml
 from pathlib import Path
+
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -224,17 +225,31 @@ class AdvisorFollowUpSourceTests(unittest.TestCase):
     def test_security_workflow_runs_this_contract(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         workflow = yaml.safe_load(source)
-        triggers = workflow.get('on', workflow.get(True))['pull_request']['paths']
+        events = workflow.get("on", workflow.get(True))
+        self.assertIn("pull_request", events)
+        self.assertIsNone(events["pull_request"])
         self.assertEqual(
             source.count("backend.supabase.tests.test_advisor_followup_source"),
             1,
         )
-        for trigger in (
+        paths = (
             "backend/supabase/advisor-classification.v1.json",
             "backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
             "backend/supabase/tests/test_advisor_followup_source.py",
-        ):
-            self.assertTrue(any(fnmatch.fnmatchcase(trigger, pattern) for pattern in triggers), trigger)
+        )
+        assert_security_scope(self, paths)
+        job = workflow["jobs"]["orchestration-readiness"]
+        self.assertEqual(job["needs"], "scope")
+        self.assertEqual(job["if"], "needs.scope.outputs.security == 'true'")
+        self.assertIsNot(job.get("continue-on-error"), True)
+        self.assertTrue(any(
+            "backend.supabase.tests.test_advisor_followup_source" in step.get("run", "")
+            and "if" not in step and step.get("continue-on-error") is not True
+            for step in job["steps"]
+        ))
+        result = workflow["jobs"]["security-result"]
+        self.assertEqual(result["if"], "${{ always() }}")
+        self.assertIn("orchestration-readiness", result["needs"])
 
 
 if __name__ == "__main__":

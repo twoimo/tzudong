@@ -84,6 +84,9 @@ jobs:
       - name: Collect current Dependabot candidates
         env:
           GH_TOKEN: ${{ github.token }}
+          CHECKED_PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHECKED_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CHECKED_PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: node scripts/collect-dependency-candidates.mjs "$RUNNER_TEMP/dependency-candidates.json"
 
       - name: Assert governance invariants and enumerate dependency units

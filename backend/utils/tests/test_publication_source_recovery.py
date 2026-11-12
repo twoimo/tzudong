@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import ast
-import fnmatch
 import json
 import unittest
 import yaml
 from pathlib import Path
+
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -145,15 +146,31 @@ class PublicationSourceRecoveryTests(unittest.TestCase):
             source,
         )
         workflow = yaml.safe_load(source)
-        triggers = workflow.get('on', workflow.get(True))['pull_request']['paths']
-        for trigger in (
-            "apps/web/app/api/admin/publish-jobs/**",
+        events = workflow.get("on", workflow.get(True))
+        self.assertIn("pull_request", events)
+        self.assertIsNone(events["pull_request"])
+        paths = (
+            "apps/web/app/api/admin/publish-jobs/route.ts",
+            "apps/web/app/api/admin/publish-jobs/[jobId]/route.ts",
             "apps/web/lib/admin-publish-jobs.ts",
             "backend/supabase/migrations/20260901000100_local_analytics_schema.sql",
             "backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql",
             "backend/supabase/tests/test_local_compose_inputs.py",
-        ):
-            self.assertTrue(any(fnmatch.fnmatchcase(trigger, pattern) for pattern in triggers), trigger)
+        )
+        assert_security_scope(self, paths)
+        job = workflow["jobs"]["orchestration-readiness"]
+        self.assertEqual(job["needs"], "scope")
+        self.assertEqual(job["if"], "needs.scope.outputs.security == 'true'")
+        self.assertIsNot(job.get("continue-on-error"), True)
+        for module in PUBLICATION_MODULES:
+            self.assertTrue(any(
+                module in step.get("run", "") and "if" not in step
+                and step.get("continue-on-error") is not True
+                for step in job["steps"]
+            ), module)
+        result = workflow["jobs"]["security-result"]
+        self.assertEqual(result["if"], "${{ always() }}")
+        self.assertIn("orchestration-readiness", result["needs"])
         self.assertNotIn("continue-on-error: true", source)
 
 

@@ -68,8 +68,23 @@ Exact repository documentation entry points (`README`, `CHANGELOG`,
 `CONTRIBUTING.md`, `SECURITY.md`, `TASKS.md`, and `scripts/README.md`) use the
 diagnostic path; the classifier lists their supported filenames explicitly.
 Dependency/toolchain inputs take precedence, and protected promotions still run
-the full benchmark. The [Cloudflare governance CI](../operations/cloudflare-ci.md)
-is a separate execution of scoped checks and does not replace GitHub's full suite.
+the full benchmark. `.github/scripts/classify-ci-scope.mjs` separately selects the
+web jobs: ordinary web changes keep the Linux authority, all unit shards, build,
+Install browser proof, and Admin checks; Windows/Bun compatibility remains for
+its relevant tooling/dependency inputs and full-proof events. Backend/governance
+changes retain the unit and Admin source contracts. Explicit documentation-only
+changes retain the always-running scope/result jobs and Release governance.
+
+The stable `CI` and `Security` result jobs must run with `always()` and validate
+all selected dependencies. A failed, cancelled, missing, or unexpectedly skipped
+selected job is not success. Security uses the retained path policy in
+`.github/ci-security-paths.json`; its workflow itself is never path-filtered.
+Unknown or unavailable scope expands checks. Neither result stands in for the
+other workflow, CodeQL, or production readback. See the
+[CI simplification rollout](../operations/cicd-simplification.md) for activation.
+
+The [Cloudflare governance CI](../operations/cloudflare-ci.md) is a separate
+execution of scoped checks and does not replace GitHub's full suite.
 
 ## Evidence conventions
 

@@ -7,6 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -181,9 +183,9 @@ class G037SessionPoolerMetadataAttemptSourceTests(unittest.TestCase):
             )
         for path in (AUTHORIZATION_PATH, CONSUMPTION_PATH, ATTEMPT_PATH):
             relative = path.relative_to(ROOT).as_posix()
-            self.assertEqual(SECURITY_WORKFLOW.count(f"- '{relative}'"), 1)
+            assert_security_scope(self, [relative])
         test_relative = Path(__file__).relative_to(ROOT).as_posix()
-        self.assertEqual(SECURITY_WORKFLOW.count(f"- '{test_relative}'"), 1)
+        assert_security_scope(self, [test_relative])
         self.assertIn(
             "backend.supabase.tests.test_g037_session_pooler_metadata_attempt_source",
             SECURITY_WORKFLOW,

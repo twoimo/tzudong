@@ -7,6 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -141,7 +143,7 @@ class G037ReadonlyRoleV2ApprovalSourceTests(unittest.TestCase):
             "backend/supabase/g037-readonly-role-preview-approval.v2.json",
             "backend/supabase/tests/test_g037_readonly_role_v2_approval_source.py",
         ):
-            self.assertIn(f"- '{path}'", SECURITY_WORKFLOW)
+            assert_security_scope(self, [path])
         self.assertIn(
             "backend.supabase.tests.test_g037_readonly_role_v2_approval_source",
             SECURITY_WORKFLOW,

@@ -7,6 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -142,8 +144,8 @@ class G037SessionPoolerPreviewApprovalContractSourceTests(unittest.TestCase):
             self.assertIn(statement, normalized)
         relative = CONTRACT_PATH.relative_to(ROOT).as_posix()
         test_relative = Path(__file__).relative_to(ROOT).as_posix()
-        self.assertEqual(SECURITY_WORKFLOW.count(f"- '{relative}'"), 1)
-        self.assertEqual(SECURITY_WORKFLOW.count(f"- '{test_relative}'"), 1)
+        assert_security_scope(self, [relative])
+        assert_security_scope(self, [test_relative])
         self.assertIn(
             "backend.supabase.tests.test_g037_session_pooler_preview_approval_contract_source",
             SECURITY_WORKFLOW,

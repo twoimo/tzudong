@@ -53,11 +53,11 @@ DASHBOARD = (
 
 PINNED_REQUIREMENTS = "\n".join(
     [
-        "kafka-python==3.0.11",
+        "kafka-python==3.0.13",
         "psycopg2-binary==2.9.13",
-        "opentelemetry-api==1.45.1",
-        "opentelemetry-sdk==1.45.1",
-        "opentelemetry-exporter-otlp-proto-http==1.45.1",
+        "opentelemetry-api==1.45.2",
+        "opentelemetry-sdk==1.45.2",
+        "opentelemetry-exporter-otlp-proto-http==1.45.2",
     ]
 )
 
@@ -100,8 +100,8 @@ class MetricNameFreezeTests(unittest.TestCase):
         requirements = REQUIREMENTS.read_text(encoding="utf-8")
         dockerfile = DOCKERFILE.read_text(encoding="utf-8")
         self.assertEqual(requirements.strip(), PINNED_REQUIREMENTS)
-        self.assertIn("opentelemetry-sdk==1.45.1", requirements)
-        self.assertIn("opentelemetry-exporter-otlp-proto-http==1.45.1", requirements)
+        self.assertIn("opentelemetry-sdk==1.45.2", requirements)
+        self.assertIn("opentelemetry-exporter-otlp-proto-http==1.45.2", requirements)
         self.assertIn("opentelemetry", requirements.lower())
         self.assertNotIn("prometheus_client", requirements)
         self.assertNotIn("opentelemetry-exporter-otlp\n", requirements)
