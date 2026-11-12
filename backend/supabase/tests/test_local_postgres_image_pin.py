@@ -26,7 +26,7 @@ NIGHTLY = ROOT / ".github/workflows/nightly-local-regression.yml"
 BOOTSTRAP = ROOT / "backend/supabase/volumes/db/BOOTSTRAP_SOURCES.v1.json"
 
 IMAGE = re.compile(r"supabase/postgres:(?P<tag>\d+\.\d+\.\d+\.\d+)")
-REPLAY_OVERRIDE = ROOT / "backend/supabase/docker-compose.replay.yml"
+COMPOSE_APP_DEFAULT = "${POSTGRES_IMAGE:-supabase/postgres:17.11.0.018}"
 DOCKER_HUB_PREFIX = "docker.io/"
 
 
@@ -35,25 +35,22 @@ def _tags(pattern: re.Pattern[str], text: str) -> list[str]:
 
 
 class LocalPostgresImagePinTests(unittest.TestCase):
-    def test_the_application_stack_pins_one_tag(self) -> None:
-        compose = _tags(IMAGE, COMPOSE.read_text(encoding="utf-8"))
-        helper = _tags(IMAGE, LOCAL_STACK.read_text(encoding="utf-8"))
-        self.assertTrue(compose, "docker-compose.yml must pin supabase/postgres")
-        self.assertEqual(len(set(compose)), 1, compose)
-        self.assertEqual(len(set(helper)), 1, helper)
-        self.assertEqual(
-            set(compose) | set(helper),
-            {"17.11.0.018"},
-            "the application stack pins PostgreSQL 17 in Compose and in the volume helper",
-        )
+    def test_the_application_stack_defaults_to_seventeen(self) -> None:
+        compose = COMPOSE.read_text(encoding="utf-8")
+        self.assertIn(COMPOSE_APP_DEFAULT, compose)
+        stack = LOCAL_STACK.read_text(encoding="utf-8")
+        self.assertIn('APPLICATION_IMAGE = "supabase/postgres:17.11.0.018"', stack)
+        # The volume helper must run the same image as the service it prepares.
+        self.assertIn("                _postgres_image(),", stack)
 
-    def test_the_replay_lane_pins_one_tag(self) -> None:
-        override = _tags(IMAGE, REPLAY_OVERRIDE.read_text(encoding="utf-8"))
-        self.assertEqual(set(override), {"15.8.1.085"}, override)
-        # The local job is the replay lane; the provisioning job is the application one.
+    def test_the_replay_lane_selects_fifteen_explicitly(self) -> None:
+        stack = LOCAL_STACK.read_text(encoding="utf-8")
+        self.assertIn('REPLAY_IMAGE = "supabase/postgres:15.8.1.085"', stack)
+        self.assertIn('REPLAY_STACK_ENV = "LOCAL_STACK_REPLAY_STACK"', stack)
+        # The nightly local job is the replay lane; the provisioning job is the app one.
         local_job = NIGHTLY.read_text(encoding="utf-8").split("  pg17-provision:")[0]
         pins = _tags(IMAGE, local_job)
-        self.assertTrue(pins, "the nightly must pin the prefetch list and readiness probe")
+        self.assertTrue(pins, "the replay lane prefetches and probes the 15 image")
         self.assertEqual(set(pins), {"15.8.1.085"}, pins)
 
     def test_the_provisioning_lane_pins_the_application_image(self) -> None:
@@ -84,7 +81,8 @@ class LocalPostgresImagePinTests(unittest.TestCase):
         """The replay lane may only exist while the adapters it depends on do."""
         migrate = (ROOT / "backend/supabase/scripts/local-migrate.py").read_text(encoding="utf-8")
         has_adapters = "_canonical_source_replay_bodies" in migrate
-        replay_tag = _tags(IMAGE, REPLAY_OVERRIDE.read_text(encoding="utf-8"))[0]
+        stack = LOCAL_STACK.read_text(encoding="utf-8")
+        replay_tag = re.search(r'REPLAY_IMAGE = "supabase/postgres:(\d+\.\d+\.\d+\.\d+)"', stack).group(1)
         if has_adapters:
             self.assertEqual(
                 int(replay_tag.split(".")[0]),
@@ -93,8 +91,8 @@ class LocalPostgresImagePinTests(unittest.TestCase):
             )
         else:
             self.fail(
-                "the replay adapters are gone, so backend/supabase/docker-compose.replay.yml "
-                "and the nightly replay lane have nothing left to pin"
+                "the replay adapters are gone, so the replay image constant and the "
+                "nightly replay lane have nothing left to pin"
             )
 
 
