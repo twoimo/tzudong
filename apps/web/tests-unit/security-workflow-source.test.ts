@@ -3,9 +3,20 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
+import { classifyPaths } from '../../../.github/scripts/classify-security-scope.mjs';
+import { SECURITY_JOBS } from '../../../.github/scripts/verify-ci-results.mjs';
 
 const workflowPath = join(import.meta.dir, '..', '..', '..', '.github', 'workflows', 'security-audit.yml');
 const source = readFileSync(workflowPath, 'utf8').replace(/\r\n/g, '\n');
+const policy = JSON.parse(readFileSync(join(workflowPath, '../../ci-security-paths.json'), 'utf8')) as { paths: string[] };
+const auditJobs = ['cloudflare-toolchain-audit', 'npm-audit', 'pip-audit', 'orchestration-readiness', 'rust-recovery', 'secret-pattern-scan', 'sbom'];
+const workflow = Bun.YAML.parse(source) as {
+  on: { pull_request: null | { paths?: string[] }; schedule: unknown[] };
+  jobs: Record<string, {
+    name?: string; if?: string; needs?: string | string[]; outputs?: Record<string, string>; "continue-on-error"?: boolean;
+    steps: { id?: string; if?: string; run?: string; env?: Record<string, string>; "continue-on-error"?: boolean }[];
+  }>;
+};
 
 function jobBlock(name: string) {
   const marker = `  ${name}:\n`;
@@ -111,20 +122,69 @@ describe('security audit workflow source contract', () => {
     }
 
     const checkoutCount = uses.filter((value) => value.startsWith('actions/checkout@')).length;
-    expect(checkoutCount).toBe(7);
+    expect(checkoutCount).toBe(auditJobs.length + 2);
     expect(source.match(/persist-credentials: false/g)).toHaveLength(checkoutCount);
     expect(source.match(/ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g)).toHaveLength(checkoutCount);
-    expect(source.match(/fetch-depth: 0/g)).toHaveLength(1);
+    expect(source.match(/fetch-depth: 0/g)).toHaveLength(2);
   });
 
   test('keeps every security job least-privilege and time-bounded', () => {
-    expect(source).toContain("- '.github/scripts/*ci*.py'");
-    for (const name of ['cloudflare-toolchain-audit', 'npm-audit', 'pip-audit', 'orchestration-readiness', 'rust-recovery', 'secret-pattern-scan', 'sbom']) {
+    expect(policy.paths).toContain('.github/scripts/*ci*.py');
+    for (const name of ['scope', ...auditJobs, 'security-result']) {
       const block = jobBlock(name);
       expect(block).toMatch(/\n    timeout-minutes: [1-9][0-9]*\n/);
       expect(block).toContain('    permissions:\n      contents: read\n');
       expect(block).not.toMatch(/(?:id-token|attestations|packages|actions):\s*write/);
     }
+  });
+
+  test('always emits the Security gate and retains real database and policy coverage', () => {
+    expect(Object.hasOwn(workflow.on, 'pull_request')).toBe(true);
+    expect(workflow.on.pull_request?.paths).toBeUndefined();
+    expect(workflow.on.schedule.length).toBeGreaterThan(0);
+    for (const file of [
+      'backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql',
+      'backend/pipeline-control/requirements.txt', '.github/scripts/collect-ci-monitor.py',
+      '.github/ci-security-paths.json', '.github/scripts/classify-ci-scope.mjs',
+      '.github/scripts/classify-security-scope.mjs', '.github/scripts/verify-ci-results.mjs',
+    ]) expect(classifyPaths([file]).security).toBe(true);
+    expect(classifyPaths(['docs/example.md']).security).toBe(false);
+  });
+
+  test('waits for every selected audit and fails closed when scope or audit results are missing', () => {
+    expect(SECURITY_JOBS).toEqual(auditJobs);
+    expect(Object.keys(workflow.jobs).sort()).toEqual(['scope', ...auditJobs, 'security-result'].sort());
+    const scope = workflow.jobs.scope;
+    expect(scope.if).toBeUndefined();
+    expect(scope.needs).toBeUndefined();
+    expect(scope['continue-on-error']).not.toBe(true);
+    const select = scope.steps.find((step) => step.id === 'select');
+    expect(select?.run).toBe('node .github/scripts/classify-security-scope.mjs');
+    expect(select?.if).toBeUndefined();
+    expect(select?.['continue-on-error']).not.toBe(true);
+    for (const key of ['security', 'reason', 'fatal'])
+      expect(scope.outputs?.[key]).toBe('${{ steps.select.outputs.' + key + ' }}');
+    const proof = scope.steps.find((step) => step.run?.includes('classify-security-scope.test.mjs'));
+    expect(proof?.run).toContain('verify-ci-results.test.mjs');
+    expect(proof?.if).toBeUndefined();
+    expect(proof?.['continue-on-error']).not.toBe(true);
+    expect(scope.steps.indexOf(proof!)).toBeLessThan(scope.steps.indexOf(select!));
+    for (const name of auditJobs) {
+      const job = workflow.jobs[name];
+      expect([job.needs].flat()).toEqual(['scope']);
+      expect(job.if).toBe("needs.scope.outputs.security == 'true'");
+      expect(job['continue-on-error']).not.toBe(true);
+    }
+    const result = workflow.jobs['security-result'];
+    expect(result.name).toBe('Security');
+    expect(result.if).toBe('${{ always() }}');
+    expect(result.needs).toEqual(['scope', ...auditJobs]);
+    expect(result['continue-on-error']).not.toBe(true);
+    const verifier = result.steps.filter((step) => step.run === 'node .github/scripts/verify-ci-results.mjs');
+    expect(verifier).toHaveLength(1);
+    expect(verifier[0].if).toBeUndefined();
+    expect(verifier[0]['continue-on-error']).not.toBe(true);
+    expect(verifier[0].env).toEqual({ CI_RESULTS_MODE: 'security', CI_NEEDS_JSON: '${{ toJSON(needs) }}' });
   });
 
   test('runs current bounded audits and commit-bound SBOM evidence', () => {

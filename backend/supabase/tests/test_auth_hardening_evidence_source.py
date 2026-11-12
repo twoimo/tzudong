@@ -6,6 +6,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -132,11 +134,8 @@ class AuthHardeningEvidenceSourceTests(unittest.TestCase):
 
     def test_security_workflow_runs_this_contract(self) -> None:
         path = "backend/supabase/tests/test_auth_hardening_evidence_source.py"
-        self.assertIn(f"- '{path}'", WORKFLOW)
-        self.assertIn(
-            "- 'backend/supabase/auth-hardening-decision.v1.json'",
-            WORKFLOW,
-        )
+        assert_security_scope(self, [path])
+        assert_security_scope(self, ['backend/supabase/auth-hardening-decision.v1.json'])
         self.assertIn(
             "backend.supabase.tests.test_auth_hardening_evidence_source",
             WORKFLOW,

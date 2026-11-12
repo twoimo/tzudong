@@ -1,0 +1,28 @@
+# Opt-in event transport. Combine with the base and --profile events.
+# Uses the existing local Supabase outbox; it does not change the job store.
+# Local outbox migrations and DB readiness are prerequisites (LOCAL_MODES.md).
+services:
+  pipeline-api:
+    environment:
+      TZUDONG_PIPELINE_EVENTS: kafka
+      TZUDONG_PIPELINE_OUTBOX: postgres
+      TZUDONG_KAFKA_BOOTSTRAP: kafka:9092
+    # Refuse an incomplete selection with a disabled publisher profile.
+    depends_on: [pipeline-publisher]
+
+  pipeline-worker:
+    environment:
+      TZUDONG_PIPELINE_EVENTS: kafka
+      TZUDONG_PIPELINE_OUTBOX: postgres
+      TZUDONG_KAFKA_BOOTSTRAP: kafka:9092
+    depends_on: [pipeline-publisher]
+
+  kafka:
+    extends:
+      file: docker-compose.kafka.yml
+      service: kafka
+
+  kafka-ui:
+    extends:
+      file: docker-compose.kafka.yml
+      service: kafka-ui

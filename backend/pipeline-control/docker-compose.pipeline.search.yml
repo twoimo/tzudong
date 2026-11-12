@@ -1,0 +1,17 @@
+# Opt-in search diagnostics. Combine with base + events and both
+# --profile events --profile search. Elasticsearch is never job state.
+services:
+  pipeline-api:
+    # Refuse an incomplete selection with a disabled indexer profile.
+    depends_on: [pipeline-indexer]
+
+  pipeline-worker:
+    environment:
+      TZUDONG_PIPELINE_ES: es
+      TZUDONG_ES_URL: http://elasticsearch:9200
+    depends_on: [pipeline-indexer]
+
+  elasticsearch:
+    extends:
+      file: docker-compose.elasticsearch.yml
+      service: elasticsearch

@@ -6,7 +6,10 @@ import json
 import unittest
 from pathlib import Path
 
+import yaml
+
 from backend.bin.phase_gate import PHASE_IDS, validate_phase_assignment
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -90,10 +93,27 @@ class PhaseGateSourceRecoveryTests(unittest.TestCase):
             self.assertIn(f'"{forbidden}"', source)
 
     def test_security_workflow_runs_all_phase_contracts(self) -> None:
-        workflow = (ROOT / ".github/workflows/security-audit.yml").read_text(encoding="utf-8")
+        source = (ROOT / ".github/workflows/security-audit.yml").read_text(encoding="utf-8")
         for module in PHASE_TEST_MODULES:
-            self.assertEqual(workflow.count(module), 1, module)
-        self.assertIn("backend/deploy/phase-gates.v1.json", workflow)
+            self.assertEqual(source.count(module), 1, module)
+        workflow = yaml.safe_load(source)
+        events = workflow.get("on", workflow.get(True))
+        self.assertIn("pull_request", events)
+        self.assertIsNone(events["pull_request"])
+        assert_security_scope(self, ["backend/deploy/phase-gates.v1.json"])
+        job = workflow["jobs"]["orchestration-readiness"]
+        self.assertEqual(job["needs"], "scope")
+        self.assertEqual(job["if"], "needs.scope.outputs.security == 'true'")
+        self.assertIsNot(job.get("continue-on-error"), True)
+        for module in PHASE_TEST_MODULES:
+            self.assertTrue(any(
+                module in step.get("run", "") and "if" not in step
+                and step.get("continue-on-error") is not True
+                for step in job["steps"]
+            ), module)
+        result = workflow["jobs"]["security-result"]
+        self.assertEqual(result["if"], "${{ always() }}")
+        self.assertIn("orchestration-readiness", result["needs"])
 
 
 if __name__ == "__main__":

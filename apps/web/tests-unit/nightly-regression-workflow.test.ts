@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { classifyEvent as classifyCiEvent } from "../../../.github/scripts/classify-ci-scope.mjs";
 
 const appRoot = resolve(import.meta.dir, "..");
 const read = (relativePath: string) => readFileSync(resolve(appRoot, relativePath), "utf8");
@@ -47,6 +48,13 @@ const hostedWorkflowSource = readFileSync(
   "utf8",
 );
 const webAdminWorkflowSource = read("../../.github/workflows/web-admin-ci.yml");
+const webAdminWorkflow = Bun.YAML.parse(webAdminWorkflowSource) as {
+  on: { pull_request: null; push: { branches: string[] } };
+  jobs: Record<string, {
+    name?: string; needs?: string | string[]; if?: string; outputs?: Record<string, string>; "continue-on-error"?: boolean;
+    steps: { id?: string; if?: string; run?: string; env?: Record<string, string>; "continue-on-error"?: boolean }[];
+  }>;
+};
 const curatedSpecs = [
   "tests/smoke.spec.ts",
   "tests/navigation.spec.ts",
@@ -61,6 +69,22 @@ function sourceBlock(source: string, startMarker: string, endMarker: string): st
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);
   return source.slice(start, end);
+}
+
+function classifyWebCiPath(path: string) {
+  const head = "a".repeat(40);
+  const base = "b".repeat(40);
+  return [
+    classifyCiEvent({
+      eventName: "pull_request",
+      event: { pull_request: { head: { sha: head }, base: { sha: base, ref: "develop" } } },
+      ref: "refs/pull/42/merge", head, changedPaths: [path],
+    }),
+    classifyCiEvent({
+      eventName: "push", event: { before: base, after: head },
+      ref: "refs/heads/develop", head, changedPaths: [path],
+    }),
+  ];
 }
 
 function localStackChildEnvironment(environment: Record<string, string>): Record<string, string> {
@@ -312,10 +336,40 @@ describe("nightly regression package and source contracts", () => {
   });
 
   test("routes GitHub workflow inputs through web admin pull and push CI", () => {
-    const pullPaths = sourceBlock(webAdminWorkflowSource, "  pull_request:", "  push:");
-    const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
-    expect(pullPaths).toContain("      - '.github/**'");
-    expect(pushPaths).toContain("      - '.github/**'");
+    expect(Object.hasOwn(webAdminWorkflow.on, "pull_request")).toBe(true);
+    expect(webAdminWorkflow.on.pull_request).toBeNull();
+    expect(webAdminWorkflow.on.push).toEqual({ branches: ["main", "develop", "data"] });
+    const scope = webAdminWorkflow.jobs.scope;
+    expect(scope.if).toBeUndefined();
+    expect(scope.needs).toBeUndefined();
+    expect(scope["continue-on-error"]).not.toBe(true);
+    const select = scope.steps.find((step) => step.id === "select");
+    expect(select?.run).toBe("node .github/scripts/classify-ci-scope.mjs");
+    expect(select?.if).toBeUndefined();
+    expect(select?.["continue-on-error"]).not.toBe(true);
+    const result = webAdminWorkflow.jobs["ci-result"];
+    expect(result.name).toBe("CI");
+    expect(result.if).toBe("${{ always() }}");
+    expect(result.needs).toContain("scope");
+    expect(result["continue-on-error"]).not.toBe(true);
+    const verifier = result.steps.filter((step) => step.run === "node .github/scripts/verify-ci-results.mjs");
+    expect(verifier).toHaveLength(1);
+    expect(verifier[0].if).toBeUndefined();
+    expect(verifier[0]["continue-on-error"]).not.toBe(true);
+    expect(verifier[0].env).toEqual({ CI_RESULTS_MODE: "web", CI_NEEDS_JSON: "${{ toJSON(needs) }}" });
+
+    for (const path of [
+      ".github/workflows/nightly-regression.yml",
+      ".github/workflows/nightly-local-regression.yml",
+      ".github/nightly-local-publication-allowlist.txt",
+      ".github/scripts/build-nightly-local-publication.py",
+      ".github/scripts/verify-nightly-local-publication.py",
+      ".github/scripts/write-nightly-lifecycle-stage.py",
+    ]) {
+      for (const selected of classifyWebCiPath(path)) {
+        expect(selected).toMatchObject({ unit: true, admin: true, reason: "SOURCE_CONTRACT_CHANGE", fatal: false });
+      }
+    }
   });
 
   test("parses local and hosted mode only from explicit command arguments", () => {
@@ -1759,9 +1813,20 @@ describe("nightly regression package and source contracts", () => {
   });
 
   test("routes public web and local Supabase changes into Web Admin CI", () => {
-    const workflow = Bun.YAML.parse(webAdminWorkflowSource) as {
-      on: { pull_request: { paths: string[] }; push: { paths: string[] } };
-    };
+    for (const [jobName, flag] of [
+      ["ubuntu-npm-authority", "authority"],
+      ["ubuntu-npm-unit", "unit"],
+      ["ubuntu-npm-build", "build"],
+      ["dependency-modernization-proof", "install"],
+      ["admin-address-consistency", "admin"],
+    ]) {
+      const job = webAdminWorkflow.jobs[jobName];
+      expect(webAdminWorkflow.jobs.scope.outputs?.[flag]).toBe("${{ steps.select.outputs." + flag + " }}");
+      expect(job.needs).toBe("scope");
+      expect(job.if).toBe(`needs.scope.outputs.${flag} == 'true'`);
+      expect(job["continue-on-error"]).not.toBe(true);
+      expect(webAdminWorkflow.jobs["ci-result"].needs).toContain(jobName);
+    }
     for (const path of [
       "apps/web/app/page.tsx",
       "apps/web/app/admin/page.tsx",
@@ -1776,8 +1841,13 @@ describe("nightly regression package and source contracts", () => {
       ".github/workflows/nightly-local-regression.yml",
       ".github/nightly-local-publication-allowlist.txt",
     ]) {
-      for (const paths of [workflow.on.pull_request.paths, workflow.on.push.paths]) {
-        expect(paths.some((pattern) => new Bun.Glob(pattern).match(path))).toBe(true);
+      for (const selected of classifyWebCiPath(path)) {
+        expect(selected).toMatchObject({ unit: true, admin: true, fatal: false });
+        if (path.startsWith("apps/web/")) {
+          expect(selected).toMatchObject({ authority: true, build: true, install: true, reason: "WEB_CHANGE" });
+        } else {
+          expect(selected.reason).toBe("SOURCE_CONTRACT_CHANGE");
+        }
       }
     }
   });

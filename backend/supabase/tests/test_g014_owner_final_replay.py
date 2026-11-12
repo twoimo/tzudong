@@ -8,6 +8,7 @@ import unittest
 from backend.supabase.scripts import local_replay_contract as contract
 from backend.supabase.scripts import verify_g014_owner_final_replay as replay
 from backend.supabase.tests import test_g014_pg17_owner_contract as legacy_fixture
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE_PATH = 'backend/supabase/applied-receipts/owner-recovery-20261004/20261004115554_g014_pg17_owner_final_verifier.sql'
@@ -43,8 +44,13 @@ class SourceContract(unittest.TestCase):
         self.assertNotIn('<"$migration"', branch)
         for workflow in ['g014-catalog-contract-baseline.yml', 'security-audit.yml']:
             text = (ROOT / '.github/workflows' / workflow).read_text()
-            self.assertIn('backend/supabase/scripts/verify_g014_owner_final_replay.py', text)
             self.assertIn('backend.supabase.tests.test_g014_owner_final_replay', text)
+            if workflow == 'g014-catalog-contract-baseline.yml':
+                self.assertIn('backend/supabase/scripts/verify_g014_owner_final_replay.py', text)
+        assert_security_scope(self, [
+            'backend/supabase/scripts/verify_g014_owner_final_replay.py',
+            'backend/supabase/tests/test_g014_owner_final_replay.py',
+        ])
 
 
 @unittest.skipUnless(os.environ.get('TZUDONG_ADMIN_IDS_LOCAL_PG') == '1', 'private PG15 opt-in required')

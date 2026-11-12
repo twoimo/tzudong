@@ -3,42 +3,8 @@ run-name: ${{ github.event.pull_request.title || format('CI · {0}', github.ref_
 
 on:
   pull_request:
-    paths:
-      - '.github/**'
-      - '.kiro/**'
-      - '.agents/**'
-      - 'apps/web/**'
-      - 'backend/supabase/**'
-      - 'backend/package.json'
-      - 'backend/package-lock.json'
-      - 'backend/**/*requirements*.txt'
-      - 'backend/bin/tests/node-dependency-compatibility.test.mjs'
-      - 'backend/bin/*.mjs'
-      - 'backend/restaurant-crawling/scripts/**'
-      - 'backend/bin/naver_scrapling_fetch.py'
-      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
-      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
-      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
-      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
   push:
     branches: [main, develop, data]
-    paths:
-      - '.github/**'
-      - '.kiro/**'
-      - '.agents/**'
-      - 'apps/web/**'
-      - 'backend/supabase/**'
-      - 'backend/package.json'
-      - 'backend/package-lock.json'
-      - 'backend/**/*requirements*.txt'
-      - 'backend/bin/tests/node-dependency-compatibility.test.mjs'
-      - 'backend/bin/*.mjs'
-      - 'backend/restaurant-crawling/scripts/**'
-      - 'backend/bin/naver_scrapling_fetch.py'
-      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
-      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
-      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
-      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
   schedule:
     - cron: '17 18 * * 0'
   workflow_dispatch:
@@ -51,7 +17,40 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
+  scope:
+    name: CI scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      authority: ${{ steps.select.outputs.authority }}
+      unit: ${{ steps.select.outputs.unit }}
+      build: ${{ steps.select.outputs.build }}
+      compatibility: ${{ steps.select.outputs.compatibility }}
+      install: ${{ steps.select.outputs.install }}
+      admin: ${{ steps.select.outputs.admin }}
+      reason: ${{ steps.select.outputs.reason }}
+      fatal: ${{ steps.select.outputs.fatal }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+      - name: Verify scope and required-result failure paths
+        run: node --test .github/scripts/classify-ci-scope.test.mjs .github/scripts/verify-ci-results.test.mjs
+      - name: Select checks for this exact source
+        id: select
+        run: node .github/scripts/classify-ci-scope.mjs
+
   dependency-modernization-proof:
+    needs: scope
+    if: needs.scope.outputs.install == 'true'
     name: Install
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -124,6 +123,8 @@ jobs:
           if-no-files-found: error
           retention-days: 90
   ubuntu-npm-authority:
+    needs: scope
+    if: needs.scope.outputs.authority == 'true'
     name: Ubuntu npm
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -193,6 +194,8 @@ jobs:
       - run: npm run lint
 
   ubuntu-npm-unit:
+    needs: scope
+    if: needs.scope.outputs.unit == 'true'
     name: Ubuntu npm unit (shard ${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -231,6 +234,8 @@ jobs:
       - run: npm run test:unit -- --shard ${{ matrix.shard }}/8
 
   ubuntu-npm-build:
+    needs: scope
+    if: needs.scope.outputs.build == 'true'
     name: Ubuntu npm build
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -258,6 +263,8 @@ jobs:
       - run: npm run build
 
   ubuntu-bun-compatibility:
+    needs: scope
+    if: needs.scope.outputs.compatibility == 'true'
     name: Ubuntu Bun
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -318,6 +325,8 @@ jobs:
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts tests-unit/next-sync-patch.test.ts tests-unit/next-hmr-initial-sync.test.ts
 
   windows-npm-tooling:
+    needs: scope
+    if: needs.scope.outputs.compatibility == 'true'
     name: Windows npm
     runs-on: windows-latest
     timeout-minutes: 45
@@ -389,6 +398,8 @@ jobs:
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts tests-unit/next-sync-patch.test.ts tests-unit/next-hmr-initial-sync.test.ts
 
   windows-bun-compatibility:
+    needs: scope
+    if: needs.scope.outputs.compatibility == 'true'
     name: Windows Bun
     runs-on: windows-latest
     timeout-minutes: 45
@@ -452,6 +463,8 @@ jobs:
         run: if ('${{ steps.benchmark.outcome }}' -ne 'success' -or '${{ steps.report.outcome }}' -ne 'success') { exit 1 }
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts tests-unit/next-sync-patch.test.ts tests-unit/next-hmr-initial-sync.test.ts
   admin-address-consistency:
+    needs: scope
+    if: needs.scope.outputs.admin == 'true'
     name: Admin
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -493,3 +506,25 @@ jobs:
       - run: cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs
       - run: cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=${{ github.run_id }} SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
       - run: bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
+
+  ci-result:
+    name: CI
+    if: ${{ always() }}
+    needs: [scope, dependency-modernization-proof, ubuntu-npm-authority, ubuntu-npm-unit, ubuntu-npm-build, ubuntu-bun-compatibility, windows-npm-tooling, windows-bun-compatibility, admin-address-consistency]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+      - name: Require every selected check to finish successfully
+        env:
+          CI_RESULTS_MODE: web
+          CI_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: node .github/scripts/verify-ci-results.mjs

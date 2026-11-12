@@ -7,6 +7,10 @@ import json
 import unittest
 from pathlib import Path
 
+import yaml
+
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 LAYOUT_CHECKER = ROOT / "backend/bin/check_layout_manifest.py"
@@ -105,13 +109,30 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="utf-8")
         for module in LAYOUT_MODULES:
             self.assertEqual(source.count(module), 1, module)
-        for trigger in (
+        workflow = yaml.safe_load(source)
+        events = workflow.get("on", workflow.get(True))
+        self.assertIn("pull_request", events)
+        self.assertIsNone(events["pull_request"])
+        paths = (
             "backend/layout-manifest.v1.json",
             "backend/naming-renames.v1.json",
             "backend/bin/check_layout_manifest.py",
             "backend/bin/check_rename_ledger.py",
-        ):
-            self.assertIn(trigger, source)
+        )
+        assert_security_scope(self, paths)
+        job = workflow["jobs"]["orchestration-readiness"]
+        self.assertEqual(job["needs"], "scope")
+        self.assertEqual(job["if"], "needs.scope.outputs.security == 'true'")
+        self.assertIsNot(job.get("continue-on-error"), True)
+        for module in LAYOUT_MODULES:
+            self.assertTrue(any(
+                module in step.get("run", "") and "if" not in step
+                and step.get("continue-on-error") is not True
+                for step in job["steps"]
+            ), module)
+        result = workflow["jobs"]["security-result"]
+        self.assertEqual(result["if"], "${{ always() }}")
+        self.assertIn("orchestration-readiness", result["needs"])
 
 
 if __name__ == "__main__":

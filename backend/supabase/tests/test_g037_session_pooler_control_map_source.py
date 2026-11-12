@@ -12,6 +12,8 @@ import unittest
 import uuid
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC_ROOT = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -248,9 +250,9 @@ class G037SessionPoolerControlMapSourceTests(unittest.TestCase):
             self.assertIn("control-only", normalized)
         for path in (REQUEST_PATH, CONTRACT_PATH, SCRIPT_PATH):
             relative = path.relative_to(ROOT).as_posix()
-            self.assertEqual(SECURITY_WORKFLOW.count(f"- '{relative}'"), 1)
+            assert_security_scope(self, [relative])
         test_relative = Path(__file__).relative_to(ROOT).as_posix()
-        self.assertEqual(SECURITY_WORKFLOW.count(f"- '{test_relative}'"), 1)
+        assert_security_scope(self, [test_relative])
         self.assertIn(
             "backend.supabase.tests.test_g037_session_pooler_control_map_source",
             SECURITY_WORKFLOW,

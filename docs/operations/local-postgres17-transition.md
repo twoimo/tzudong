@@ -278,17 +278,14 @@ replays at 91 of 161 migrations on 17. Those two facts make a pin swap on its ow
 wrong: `local-migrate.py apply` replays the chain, so moving the pin without changing
 how the stack is provisioned turns a working local stack into a 91/161 stack.
 
-The measured baseline restore gives the other order:
+The application stack now does that second step itself. After the database is ready,
+`local-stack.py start` calls `local_baseline.ensure_present` unless
+`LOCAL_STACK_REPLAY_STACK=1`. A database that already matches the committed baseline is
+left alone, so a second start does not wipe local rows. The nightly local job sets the
+replay selector and still applies the historical chain, which is why the adapters stay.
 
-1. keep the replay adapters, and build a canonical baseline from a verified stack;
-2. provision a new stack by creating the referenced roles and restoring the baseline
-   instead of replaying 161 migrations;
-3. retire the replay adapters, because nothing replays the chain any more;
-4. only then move the pin, which the pin test permits once the adapters are gone.
-
-Step 2 is the missing piece of machinery: the applier has no baseline mode. Until it
-does, the pin stays at 15 and the adapters stay load-bearing, which is the current,
-measured state rather than a stalled one.
+Retiring the adapters is the remaining step, and it waits until nothing replays the
+chain. The pin test still refuses a replay major above 15 while they exist.
 
 ### Applier support (default off)
 
@@ -429,3 +426,12 @@ Each workstream lands as its own pull request and is gated by a dispatched
 Local apply still cannot prove hosted behaviour for extensions, ACL defaults or
 role inheritance that the image configures differently. This plan removes the
 structural divergence; it does not turn local runs into hosted evidence.
+
+## Measured application boot (2026-11-12)
+
+A fresh `local-stack.py start` on `supabase/postgres:17.11.0.018` reaches 14/14 healthy only when the image-owned schemas are left alone. Restoring the privilege-less dump over `auth`, `storage` and `realtime` removes grants and service migration history, and those services restart. Preserving those schemas and restoring the project objects reaches the committed 260-object list.
+
+The start command now does that itself: services migrate the platform schemas first, then the project objects are restored. A fresh run on 2026-11-12 returned 14/14 healthy, and `local_baseline.py check` was 260/260 with `matches: true`. The same probes passed again after that check. Fifty-five foreign keys into `users` can still fail during the restore; the object-name gate does not treat that as a missing table.
+
+Hosted `aqlcofblfxdrjhhdmarw` was read on 2026-11-12. It is PostgreSQL 17.6 with 209 objects. The local baseline has 260. The shared names are 191. Local-only is 69 (`local_analytics` 21, `public` 12, `pipeline_control` 9, `ocr_private` 8, `_tzudong_local` 4, and 15 others). Hosted-only is 18 (`auth` 7 for OAuth, MFA, SCIM and WebAuthn, `public` thumbnail 4, `realtime` partitions 2, and 5 others). The baseline is not a hosted replica, so #3323 does not close on this comparison.
+

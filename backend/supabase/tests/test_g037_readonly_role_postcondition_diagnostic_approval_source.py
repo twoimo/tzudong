@@ -7,6 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -170,14 +172,14 @@ class G037ReadonlyRolePostconditionDiagnosticApprovalSourceTests(unittest.TestCa
     def test_diagnostic_remains_outside_automatic_workflow_execution(self) -> None:
         diagnostic_relative = APPROVAL["approvedArtifacts"][1]["path"]
         self.assertNotIn(diagnostic_relative, G037_WORKFLOW)
-        self.assertEqual(SECURITY_WORKFLOW.count(diagnostic_relative), 1)
+        assert_security_scope(self, [diagnostic_relative])
 
     def test_security_workflow_tracks_and_runs_approval_contract(self) -> None:
         for path in (
             "backend/supabase/g037-readonly-role-postcondition-diagnostic-approval.v1.json",
             "backend/supabase/tests/test_g037_readonly_role_postcondition_diagnostic_approval_source.py",
         ):
-            self.assertIn(f"- '{path}'", SECURITY_WORKFLOW)
+            assert_security_scope(self, [path])
         self.assertIn(
             "backend.supabase.tests.test_g037_readonly_role_postcondition_diagnostic_approval_source",
             SECURITY_WORKFLOW,
