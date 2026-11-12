@@ -606,6 +606,7 @@ def _env_values(root: Path, project: str, state: Path) -> dict[str, str]:
         "SECRET_KEY_BASE": secrets.token_hex(48),
         "VAULT_ENC_KEY": secrets.token_hex(16),
         "PG_META_CRYPTO_KEY": secrets.token_hex(16),
+        "POSTGRES_IMAGE": _postgres_image(),
         "POSTGRES_HOST": "db",
         "POSTGRES_DB": "postgres",
         "POSTGRES_PORT": "5432",
@@ -726,6 +727,7 @@ def _validate_env(values: dict[str, str], project: str, state: Path) -> None:
             _fail("non_loopback_url")
     fixed_values = {
         "PROJECT_NAME": project,
+        "POSTGRES_IMAGE": _postgres_image(),
         "POSTGRES_HOST": "db",
         "POSTGRES_DB": "postgres",
         "POSTGRES_PORT": "5432",
@@ -1100,15 +1102,13 @@ def _load_input_manifest(root: Path) -> tuple[Path, dict[str, Any]]:
     if not isinstance(inputs, list) or not isinstance(mounts, list) or not isinstance(functions, dict):
         _fail("input_manifest")
     compose_files = document.get("compose_files")
+    if not isinstance(compose_files, list) or len(compose_files) != 3:
+        _fail("input_manifest")
     expected_compose_files = {
         "backend/supabase/docker-compose.yml",
         "backend/supabase/docker-compose.local.yml",
         "backend/supabase/docker-compose.mail.yml",
     }
-    if isinstance(compose_files, list) and len(compose_files) == 4:
-        expected_compose_files.add("backend/supabase/docker-compose.replay.yml")
-    if not isinstance(compose_files, list) or len(compose_files) != len(expected_compose_files):
-        _fail("input_manifest")
     seen_compose_files: set[str] = set()
     for entry in compose_files:
         if (
@@ -1303,23 +1303,26 @@ def _state(root: Path) -> tuple[str, Path]:
     return project, _state_root(root, project)
 
 
-# The application stack pins PostgreSQL 17 and is provisioned from the committed
-# baseline. The replay lane still needs 15 with the adapters, so it opts into this
-# committed override instead of editing the pinned Compose file.
-REPLAY_OVERRIDE_FILE = "docker-compose.replay.yml"
-REPLAY_OVERRIDE_ENV = "LOCAL_STACK_REPLAY_STACK"
+# The application stack runs PostgreSQL 17 and is provisioned from
+# backend/supabase/baselines/local/schema. The replay lane still needs 15 because the
+# historical chain only replays there with the adapters; it selects that image with
+# LOCAL_STACK_REPLAY_STACK=1, which lands in the generated env the Compose file reads.
+APPLICATION_IMAGE = "supabase/postgres:17.11.0.018"
+REPLAY_IMAGE = "supabase/postgres:15.8.1.085"
+REPLAY_STACK_ENV = "LOCAL_STACK_REPLAY_STACK"
+
+
+def _postgres_image() -> str:
+    return REPLAY_IMAGE if os.environ.get(REPLAY_STACK_ENV) == "1" else APPLICATION_IMAGE
 
 
 def _compose_files(root: Path) -> tuple[Path, ...]:
     supabase = root / "backend" / "supabase"
-    files = [
+    return (
         supabase / "docker-compose.yml",
         supabase / "docker-compose.local.yml",
         supabase / "docker-compose.mail.yml",
-    ]
-    if os.environ.get(REPLAY_OVERRIDE_ENV) == "1":
-        files.append(supabase / REPLAY_OVERRIDE_FILE)
-    return tuple(files)
+    )
 
 
 def _compose(project: str, env: Path, files: Iterable[Path], *args: str) -> list[str]:
@@ -2911,7 +2914,7 @@ def _execute_volume_helper(
                 "--entrypoint", "sh",
                 *input_args,
                 *volume_args,
-                "supabase/postgres:17.11.0.018",
+                _postgres_image(),
                 "-c", "; ".join(("set -eu", *commands)),
             ],
             error_code=error_code,
