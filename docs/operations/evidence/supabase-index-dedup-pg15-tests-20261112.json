@@ -1,0 +1,127 @@
+{
+  "scope": "Synthetic single-user PostgreSQL 15.8 DDL/catalog/dependency/transaction checks; no role-privilege/RLS/concurrency/performance/full-canonical/hosted claims.",
+  "recovery_sql_sha256": "5469840dd8c99ace6fcac6bedcd17af4465da7d66d2ace72b9a5e0f80806797f",
+  "recovery_helper_sha256": "870e3c1189e2f9ce2fd55d3d0e893fb7d29f4e8a889ffdd7d04ddbabfc25784f",
+  "original_migration_sha256": "600a236aa10eba6b3c5ab96932fb575867a12cf84bfc9ff03974746339fe59e1",
+  "protected_function_body_sha256": "20acd5742d891cf8a33b265a3a1298c65dd9646402c58391cd17829951cf92f2",
+  "source_preflight_before_all_ddl_verified": true,
+  "event_triggers_disabled_in_single_user": true,
+  "ddl_attempt_count_measured": false,
+  "harness_notes": [
+    "Positive sanity check showed event triggers are disabled in standalone mode; no zero-attempt claim is made.",
+    "The extension dependency fixture uses supported ALTER INDEX DEPENDS ON EXTENSION; ALTER EXTENSION ADD INDEX is unsupported."
+  ],
+  "cases": [
+    {
+      "name": "recovery_then_full_immutable_pg15_adapter",
+      "pass": true,
+      "source_recovery_drop_statements": 2,
+      "source_recovery_create_statements": 3,
+      "expected_two_index_oids_replaced": true,
+      "new_keeper_created": true,
+      "dedup_remaining_removal_names": [],
+      "keepers": 6,
+      "unique_constraints_enforced": 2,
+      "synthetic_rows_unchanged": 21,
+      "keeper_primary_metadata_preserved": true,
+      "protection_metadata_equal": true,
+      "adapter_repeat_idempotent": true
+    },
+    {
+      "name": "recovery_rollback",
+      "pass": true,
+      "catalog_rows_protection_equal": true,
+      "transport_change": "terminal COMMIT to ROLLBACK in test copy only"
+    },
+    {
+      "name": "bge_desc",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_LEGACY_INDEX_DRIFT",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "bge_already_on_transcript",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_LEGACY_INDEX_DRIFT",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "roles_already_unique",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_LEGACY_INDEX_DRIFT",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "roles_reversed_keys",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_LEGACY_INDEX_DRIFT",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "protected_body_adds_target",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_PROTECTION_SOURCE_DRIFT",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "protected_function_security_invoker",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_PROTECTION_SOURCE_DRIFT",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "manifest_force_rls_disabled",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_MANIFEST_METADATA_DRIFT",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "manifest_immutable_trigger_disabled",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_MANIFEST_TRIGGER_DRIFT",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "hosted_schema_present",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_PREREQUISITE_EXECUTOR_DENIED",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "extension_dependency",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_DEPENDENCY_DENIED",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    },
+    {
+      "name": "pg17_rejected",
+      "pass": true,
+      "expected_error": "PUBLIC_INDEX_DEDUP_REPLAY_PREREQUISITE_EXECUTOR_DENIED",
+      "preflight_error_in_first_do_block": true,
+      "ddl_attempt_count_measured": false,
+      "catalog_rows_protection_equal": true
+    }
+  ],
+  "status": "passed",
+  "case_count": 13
+}
