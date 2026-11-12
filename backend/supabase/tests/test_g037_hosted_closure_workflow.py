@@ -11,6 +11,8 @@ import unittest
 
 import yaml
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).parents[3]
 SCRIPTS = ROOT / "backend" / "supabase" / "scripts"
@@ -157,9 +159,28 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
             self.assertIn(package, self.requirements)
         self.assertGreaterEqual(self.requirements.count("--hash=sha256:"), 5)
     def test_security_audit_trigger_covers_nonstandard_g037_manifest(self):
-        workflow = (ROOT / ".github/workflows/security-audit.yml").read_text(encoding="utf8")
-        self.assertIn("backend/supabase/scripts/g037-hosted-closure-requirements.txt", workflow)
-        self.assertIn("backend/pipeline-control/requirements.txt", workflow)
+        workflow = load_workflow("security-audit.yml")
+        events = workflow.get("on", workflow.get(True))
+        self.assertIn("pull_request", events)
+        self.assertIsNone(events["pull_request"])
+        paths = (
+            "backend/supabase/scripts/g037-hosted-closure-requirements.txt",
+            "backend/pipeline-control/requirements.txt",
+        )
+        assert_security_scope(self, paths)
+        job = workflow["jobs"]["pip-audit"]
+        self.assertEqual(job["needs"], "scope")
+        self.assertEqual(job["if"], "needs.scope.outputs.security == 'true'")
+        self.assertIsNot(job.get("continue-on-error"), True)
+        for path in paths:
+            self.assertTrue(any(
+                path in step.get("run", "") and "pip_audit" in step.get("run", "")
+                and "if" not in step and step.get("continue-on-error") is not True
+                for step in job["steps"]
+            ), path)
+        result = workflow["jobs"]["security-result"]
+        self.assertEqual(result["if"], "${{ always() }}")
+        self.assertIn("pip-audit", result["needs"])
 
     def test_read_only_workflow_argv_matches_imported_executor_parser_contract(self):
         remediation = types.ModuleType("g037_remediation_authorization")

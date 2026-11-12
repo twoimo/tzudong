@@ -17,6 +17,7 @@ TOPICS = {
 
 ALLOWED_MODES = frozenset({"noop", "kafka"})
 ALLOWED_BOOTSTRAP_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "kafka"})
+PUBLISH_TIMEOUT_SECONDS = 5.0
 ENVELOPE_ALLOWLIST = frozenset(
     {
         "type",
@@ -118,8 +119,11 @@ def publish_bytes(topic: str, payload: bytes) -> None:
     caught: KafkaPublishError | None = None
     try:
         producer = producer_cls(bootstrap_servers=str(bootstrap).strip())
-        producer.send(topic, payload)
-        producer.flush()
+        delivery = producer.send(topic, payload)
+        # flush() waits for completion, including failed deliveries. The
+        # individual result must succeed before the publisher may ack its row.
+        delivery.get(timeout=PUBLISH_TIMEOUT_SECONDS)
+        producer.flush(timeout=PUBLISH_TIMEOUT_SECONDS)
     except KafkaPublishError as exc:
         caught = exc
         raise
@@ -131,7 +135,7 @@ def publish_bytes(topic: str, payload: bytes) -> None:
             try:
                 closer = getattr(producer, "close", None)
                 if closer is not None:
-                    closer()
+                    closer(timeout=PUBLISH_TIMEOUT_SECONDS)
             except KafkaPublishError:
                 if caught is None:
                     raise

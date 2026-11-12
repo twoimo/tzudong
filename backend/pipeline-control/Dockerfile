@@ -1,5 +1,5 @@
 # Harbor-ready multi-stage image. Tags: image.registry/tzudong/pipeline-{api,worker,indexer}:<gitsha>
-# Bakes kafka-python==3.0.11 plus the pinned OpenTelemetry SDK and OTLP HTTP exporter from requirements.txt.
+# Bakes kafka-python==3.0.13 plus the pinned OpenTelemetry SDK and OTLP HTTP exporter from requirements.txt.
 # Native arm64 and amd64 via buildx. Harbor push is out of this slice.
 # Official Node 24.20.0 bookworm-slim multi-architecture index.
 FROM node@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS performance-node

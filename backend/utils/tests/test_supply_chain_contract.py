@@ -97,12 +97,36 @@ class SupplyChainContractTests(unittest.TestCase):
         workflow = yaml.safe_load((ROOT / '.github/workflows/security-audit.yml').read_text())
         event = workflow.get('on', workflow.get(True))
         migration = 'backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql'
+        self.assertIn('pull_request', event)
+        self.assertIsNone(event['pull_request'])
+        policy = json.loads((ROOT / '.github/ci-security-paths.json').read_text())
         self.assertTrue(any(fnmatch.fnmatchcase(migration, pattern)
-                            for pattern in event['pull_request']['paths']))
+                            for pattern in policy['paths']))
+        classified = subprocess.run(
+            ['node', '--input-type=module', '-e',
+             "import { classifyPaths } from './.github/scripts/classify-security-scope.mjs'; "
+             "process.stdout.write(JSON.stringify(classifyPaths([process.argv[1]])));", migration],
+            cwd=ROOT, capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(classified.returncode, 0, classified.stderr)
+        self.assertIs(json.loads(classified.stdout)['security'], True)
+        scope = workflow['jobs']['scope']
+        self.assertNotIn('if', scope)
+        self.assertEqual(scope['outputs']['security'], '${{ steps.select.outputs.security }}')
+        self.assertTrue(any(step.get('id') == 'select'
+                            and step.get('run') == 'node .github/scripts/classify-security-scope.mjs'
+                            for step in scope['steps']))
         job = workflow['jobs']['orchestration-readiness']
-        self.assertNotIn('if', job)
+        self.assertEqual(job['needs'], 'scope')
+        self.assertEqual(job['if'], "needs.scope.outputs.security == 'true'")
+        self.assertIsNot(job.get('continue-on-error'), True)
         self.assertTrue(any('backend.pipeline_control.test_publication_cas_postgres' in step.get('run', '')
                             for step in job['steps']))
+        result = workflow['jobs']['security-result']
+        self.assertEqual(result['if'], '${{ always() }}')
+        self.assertIn('scope', result['needs'])
+        self.assertIn('orchestration-readiness', result['needs'])
+        self.assertIsNot(result.get('continue-on-error'), True)
 
     def test_pin_contract_is_read_only_and_has_six_closed_items(self) -> None:
         verifier = (WEB / "scripts/verify-pin-contract.mjs").read_text(encoding="utf-8")

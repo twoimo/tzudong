@@ -12,6 +12,8 @@ import unittest
 import uuid
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC_ROOT = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -224,7 +226,7 @@ class G037SessionPoolerControlMapV3SourceTests(unittest.TestCase):
     def test_consumed_task_authorization_records_denial_without_a_success_receipt(self) -> None:
         attempt_path = ROOT / "backend/supabase/g037-session-pooler-connect-control-map-attempt.v3.json"
         attempt = json.loads(attempt_path.read_text(encoding="utf-8"))
-        self.assertIn(attempt_path.relative_to(ROOT).as_posix(), WORKFLOW)
+        assert_security_scope(self, [attempt_path.relative_to(ROOT).as_posix()])
         self.assertEqual(attempt["authorization"]["basis"], "current_user_task_transcript")
         self.assertIs(attempt["authorization"]["historicalExactStatementClaimed"], False)
         self.assertIs(attempt["authorization"]["consumedBeforeExecution"], True)
@@ -257,7 +259,7 @@ class G037SessionPoolerControlMapV3SourceTests(unittest.TestCase):
         )
         for path in paths:
             relative = path.relative_to(ROOT).as_posix()
-            self.assertEqual(WORKFLOW.count(f"- '{relative}'"), 1)
+            assert_security_scope(self, [relative])
         for path in paths[:-1]:
             raw = path.read_text(encoding="utf-8").lower()
             for forbidden in ("postgres://", "postgresql://", "@aws-", ".pooler.supabase.com", "access_token", "refresh_token", "service_role_key", "database_password", "-----begin"):

@@ -9,6 +9,10 @@ import subprocess
 import unittest
 from pathlib import Path, PurePosixPath
 
+import yaml
+
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 PROVENANCE = (
@@ -172,51 +176,29 @@ class OperationalRecoveryProvenanceTests(unittest.TestCase):
         self.assertFalse((ROOT / "backend/deploy/pipeline-control").exists())
 
     def test_security_workflow_trigger_covers_every_pinned_candidate(self) -> None:
-        workflow = (
+        workflow = yaml.safe_load((
             ROOT / ".github/workflows/security-audit.yml"
-        ).read_text(encoding="utf-8").splitlines()
-        patterns = []
-        collecting = False
-        for line in workflow:
-            if collecting:
-                entry = re.match(r"^      - '(.+)'\s*$", line)
-                if entry:
-                    patterns.append(entry.group(1))
-                    continue
-                break
-            if line == "    paths:":
-                collecting = True
-        self.assertTrue(patterns)
-
-        def _matches(pattern: str, path: str) -> bool:
-            out = []
-            i = 0
-            while i < len(pattern):
-                if pattern.startswith("**/", i):
-                    out.append("(?:.*/)?")
-                    i += 3
-                elif pattern.startswith("**", i):
-                    out.append(".*")
-                    i += 2
-                elif pattern[i] == "*":
-                    out.append("[^/]*")
-                    i += 1
-                elif pattern[i] == "?":
-                    out.append("[^/]")
-                    i += 1
-                else:
-                    out.append(re.escape(pattern[i]))
-                    i += 1
-            return re.match("^" + "".join(out) + "$", path) is not None
-
+        ).read_text(encoding="utf-8"))
+        events = workflow.get("on", workflow.get(True))
+        self.assertIn("pull_request", events)
+        self.assertIsNone(events["pull_request"])
         pinned = {entry["candidatePath"] for entry in self.document["files"]}
         pinned |= {entry["path"] for entry in self.document["candidateOnlyFiles"]}
-        uncovered = sorted(
-            path
-            for path in pinned
-            if not any(_matches(pattern, path) for pattern in patterns)
-        )
-        self.assertEqual(uncovered, [])
+        paths = sorted(pinned)
+        self.assertTrue(paths)
+        assert_security_scope(self, paths)
+        job = workflow["jobs"]["orchestration-readiness"]
+        self.assertEqual(job["needs"], "scope")
+        self.assertEqual(job["if"], "needs.scope.outputs.security == 'true'")
+        self.assertIsNot(job.get("continue-on-error"), True)
+        self.assertTrue(any(
+            "backend.utils.tests.test_operational_source_recovery" in step.get("run", "")
+            and "if" not in step and step.get("continue-on-error") is not True
+            for step in job["steps"]
+        ))
+        result = workflow["jobs"]["security-result"]
+        self.assertEqual(result["if"], "${{ always() }}")
+        self.assertIn("orchestration-readiness", result["needs"])
 
 
 if __name__ == "__main__":

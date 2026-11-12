@@ -27,6 +27,7 @@ OBS = ROOT / "pipeline-control" / "docker-compose.observability.yml"
 OTEL = ROOT / "pipeline-control" / "otel-collector.yaml"
 PROM = ROOT / "pipeline-control" / "prometheus.yml"
 PIPELINE = ROOT / "pipeline-control" / "docker-compose.pipeline.yml"
+TELEMETRY = ROOT / "pipeline-control" / "docker-compose.pipeline.telemetry.yml"
 WORKFLOW = ROOT.parent / ".github" / "workflows" / "daily-crawler.yml"
 CONTRACT = ROOT / "DATA_CONTRACTS.md"
 EVENTS = ROOT / "pipeline-control" / "events.v1.json"
@@ -53,11 +54,11 @@ DASHBOARD = (
 
 PINNED_REQUIREMENTS = "\n".join(
     [
-        "kafka-python==3.0.11",
+        "kafka-python==3.0.13",
         "psycopg2-binary==2.9.13",
-        "opentelemetry-api==1.45.1",
-        "opentelemetry-sdk==1.45.1",
-        "opentelemetry-exporter-otlp-proto-http==1.45.1",
+        "opentelemetry-api==1.45.2",
+        "opentelemetry-sdk==1.45.2",
+        "opentelemetry-exporter-otlp-proto-http==1.45.2",
     ]
 )
 
@@ -100,8 +101,8 @@ class MetricNameFreezeTests(unittest.TestCase):
         requirements = REQUIREMENTS.read_text(encoding="utf-8")
         dockerfile = DOCKERFILE.read_text(encoding="utf-8")
         self.assertEqual(requirements.strip(), PINNED_REQUIREMENTS)
-        self.assertIn("opentelemetry-sdk==1.45.1", requirements)
-        self.assertIn("opentelemetry-exporter-otlp-proto-http==1.45.1", requirements)
+        self.assertIn("opentelemetry-sdk==1.45.2", requirements)
+        self.assertIn("opentelemetry-exporter-otlp-proto-http==1.45.2", requirements)
         self.assertIn("opentelemetry", requirements.lower())
         self.assertNotIn("prometheus_client", requirements)
         self.assertNotIn("opentelemetry-exporter-otlp\n", requirements)
@@ -188,6 +189,7 @@ class MetricNameFreezeTests(unittest.TestCase):
         otel = OTEL.read_text(encoding="utf-8")
         prom = PROM.read_text(encoding="utf-8")
         pipeline = PIPELINE.read_text(encoding="utf-8")
+        telemetry = TELEMETRY.read_text(encoding="utf-8")
         workflow = WORKFLOW.read_text(encoding="utf-8")
         contract = CONTRACT.read_text(encoding="utf-8")
         events = EVENTS.read_text(encoding="utf-8")
@@ -208,8 +210,10 @@ class MetricNameFreezeTests(unittest.TestCase):
         self.assertIn('targets: ["otel-collector:8889"]', prom)
         self.assertNotIn("pipeline-api:8091", prom)
         self.assertNotIn("pipeline-worker", prom)
-        self.assertIn("OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318", pipeline)
-        self.assertIn("OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf", pipeline)
+        self.assertNotIn("OTEL_EXPORTER_OTLP_ENDPOINT", pipeline)
+        self.assertNotIn("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", pipeline)
+        self.assertIn("OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318", telemetry)
+        self.assertIn("OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf", telemetry)
         self.assertIn("OTEL_SERVICE_NAME: pipeline-api", pipeline)
         self.assertIn("OTEL_SERVICE_NAME: pipeline-worker", pipeline)
         self.assertNotIn("--metrics-bind", pipeline)

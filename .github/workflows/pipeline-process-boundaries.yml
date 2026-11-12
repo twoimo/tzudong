@@ -6,7 +6,8 @@ on:
       - '.github/workflows/pipeline-process-boundaries.yml'
       - 'backend/bin/check_pipeline_process_boundaries.py'
       - 'backend/pipeline/**'
-      - 'backend/pipeline-control/docker-compose.pipeline.yml'
+      - 'backend/pipeline-control/docker-compose*.yml'
+      - 'backend/pipeline_control/tests/test_compose_modes.py'
       - 'backend/pipeline-control/Dockerfile'
       - 'backend/utils/privacy_log.py'
   push:
@@ -15,7 +16,8 @@ on:
       - '.github/workflows/pipeline-process-boundaries.yml'
       - 'backend/bin/check_pipeline_process_boundaries.py'
       - 'backend/pipeline/**'
-      - 'backend/pipeline-control/docker-compose.pipeline.yml'
+      - 'backend/pipeline-control/docker-compose*.yml'
+      - 'backend/pipeline_control/tests/test_compose_modes.py'
       - 'backend/pipeline-control/Dockerfile'
       - 'backend/utils/privacy_log.py'
   workflow_dispatch:
@@ -56,7 +58,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker compose -f backend/pipeline-control/docker-compose.pipeline.yml config --format json | python -c 'import json,sys;assert json.load(sys.stdin)["services"]["pipeline-worker"]["init"] is True'
+          docker compose -f backend/pipeline-control/docker-compose.pipeline.yml --profile batch config --format json | python -c 'import json,sys;assert json.load(sys.stdin)["services"]["pipeline-worker"]["init"] is True'
           image_ref="$(python -c 'from pathlib import Path;print(next(line.split()[1] for line in Path("backend/pipeline-control/Dockerfile").read_text().splitlines() if line.startswith("FROM python:")))')"
           docker pull "$image_ref" > /dev/null
           image_id="$(docker image inspect --format '{{.Id}}' "$image_ref")"

@@ -1,5 +1,7 @@
 import { createHash, createHmac, createPrivateKey, createPublicKey, sign } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "bun:test";
@@ -27,6 +29,55 @@ const governanceCi = workflowSources[".github/workflows/release-governance-ci.ym
 const evidenceCi = workflowSources[".github/workflows/ts7-release-evidence.yml"];
 const releaseConfig = read("apps/web/playwright.release.config.ts");
 const finalEvidenceValidator = read("apps/web/scripts/verify-final-release-evidence.mjs");
+
+it("keeps retired sync help inert and rejects legacy execution without process or network calls", () => {
+  const directory = mkdtempSync(resolve(tmpdir(), "tzudong-retired-sync-"));
+  const marker = resolve(directory, "operation-attempted");
+  const preload = resolve(directory, "reject-operations.cjs");
+  writeFileSync(preload, `
+const { appendFileSync } = require('node:fs');
+const reject = () => {
+  appendFileSync(${JSON.stringify(marker)}, 'operation\\n');
+  throw new Error('LEGACY_SYNC_OPERATION_ATTEMPTED');
+};
+const childProcess = require('node:child_process');
+for (const name of ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork']) childProcess[name] = reject;
+for (const name of ['node:http', 'node:https']) {
+  require(name).request = reject;
+  require(name).get = reject;
+}
+require('node:net').Socket.prototype.connect = reject;
+globalThis.fetch = reject;
+require('node:module').syncBuiltinESMExports();
+`);
+  try {
+    const cases = [
+      { args: ["--help"], status: 0 },
+      { args: ["-h"], status: 0 },
+      { args: [], status: 1 },
+      { args: ["--dry-run"], status: 1 },
+      { args: ["--title", "legacy sync", "--body", "legacy body", "--targets", "main,develop,data", "--prefix", "sync/release", "--remote", "origin", "--allow-dirty"], status: 1 },
+      { args: ["--title", "legacy sync", "--skip-merge"], status: 1 },
+      { args: ["--help", "--title", "legacy sync"], status: 1 },
+    ];
+    for (const { args, status } of cases) {
+      const result = spawnSync("node", ["--require", preload, resolve(root, "scripts/sync-release-branches.mjs"), ...args], {
+        cwd: directory,
+        env: { PATH: process.env.PATH ?? "", SYSTEMROOT: process.env.SYSTEMROOT ?? process.env.SystemRoot ?? "" },
+        encoding: "utf8",
+        timeout: 5_000,
+        maxBuffer: 8_192,
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(status);
+      expect(status === 0 ? result.stderr : result.stdout).toBe("");
+      expect(status === 0 ? result.stdout : result.stderr).toStartWith("LEGACY_RELEASE_SYNC_RETIRED\n");
+      expect(existsSync(marker)).toBe(false);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 function job(source: string, name: string) {
   const start = source.indexOf(`  ${name}:\n`);
@@ -449,6 +500,7 @@ describe("release workflow governance source contracts", () => {
         retain: ["contents: read"],
       },
       ".github/workflows/web-admin-ci.yml": {
+        scope: ["contents: read"],
         "dependency-modernization-proof": ["contents: read"],
         "ubuntu-npm-authority": ["contents: read"],
         "ubuntu-npm-unit": ["contents: read"],
@@ -457,6 +509,7 @@ describe("release workflow governance source contracts", () => {
         "windows-npm-tooling": ["contents: read"],
         "windows-bun-compatibility": ["contents: read"],
         "admin-address-consistency": ["contents: read"],
+        "ci-result": ["contents: read"],
       },
     };
 

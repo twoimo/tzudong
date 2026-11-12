@@ -1,0 +1,54 @@
+# Opt-in exporters and their collector in the same Compose selection.
+# Add to base, events, or search; it does not enable batch/events/search profiles.
+# The standalone observability file remains usable by observability_up.py.
+x-pipeline-telemetry: &pipeline-telemetry
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_METRIC_EXPORT_INTERVAL: "5000"
+  OTEL_TRACES_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+
+services:
+  pipeline-api:
+    environment: *pipeline-telemetry
+    depends_on: [otel-collector]
+
+  pipeline-worker:
+    environment: *pipeline-telemetry
+    depends_on: [otel-collector]
+
+  pipeline-publisher:
+    environment: *pipeline-telemetry
+    depends_on: [otel-collector]
+
+  pipeline-indexer:
+    environment: *pipeline-telemetry
+    depends_on: [otel-collector]
+
+  otel-storage-init:
+    extends:
+      file: docker-compose.observability.yml
+      service: otel-storage-init
+
+  otel-collector:
+    extends:
+      file: docker-compose.observability.yml
+      service: otel-collector
+
+  loki:
+    extends:
+      file: docker-compose.observability.yml
+      service: loki
+
+  prometheus:
+    extends:
+      file: docker-compose.observability.yml
+      service: prometheus
+
+  grafana:
+    extends:
+      file: docker-compose.observability.yml
+      service: grafana
+
+volumes:
+  otel-storage:

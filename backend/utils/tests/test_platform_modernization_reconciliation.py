@@ -118,10 +118,12 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
         self.assertEqual(dict(sorted(counts.items())), document["dispositionCounts"])
         self.assertEqual(dict(sorted(states.items())), document["contentStateCounts"])
         self.assertEqual(counts["source_exact_present"], 64)
-        self.assertEqual(counts["candidate_transformed_present"], 113)
+        self.assertEqual(counts["candidate_transformed_present"], 115)
         for path in (
             "backend/DATA_CONTRACTS.md",
             "backend/pipeline_control/tests/test_metrics.py",
+            "backend/pipeline_control/tests/test_events.py",
+            "backend/pipeline_control/tests/test_events_observability.py",
             "backend/bin/schema_mirror_report.py",
             "backend/bin/tests/test_schema_mirror_pbt.py",
             "backend/pipeline_control/log_retention.py",
@@ -138,7 +140,7 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
         descriptor = next(entry for entry in document["entries"]
                           if entry["sourcePath"] == "backend/bin/check_deployment_descriptor_set.py")
         self.assertEqual(descriptor["disposition"], "candidate_transformed_present")
-        self.assertEqual(counts["current_layout_adaptation_reviewed"], 6)
+        self.assertEqual(counts["current_layout_adaptation_reviewed"], 4)
         self.assertEqual(counts["current_layout_retained"], 16)
         self.assertEqual(
             sum(
@@ -201,8 +203,6 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
                 "backend/pipeline_control/dsn_guard.py",
                 "backend/pipeline_control/metrics.py",
                 "backend/pipeline_control/tests/test_container_runtime.py",
-                "backend/pipeline_control/tests/test_events.py",
-                "backend/pipeline_control/tests/test_events_observability.py",
                 "backend/utils/tests/test_tracked_document_integrity.py",
             },
         )

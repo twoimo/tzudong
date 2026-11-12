@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
 from backend.pipeline_control.readiness import (
     BLOCKER_ARTIFACT_MISSING,
     BLOCKER_DEPENDENCY_MISSING,
@@ -668,11 +669,24 @@ class CliContractTest(unittest.TestCase):
         self.assertIn('python -m pip_audit -r "$requirements" --strict', audit_steps[0])
 
     def test_security_runs_for_ledger_only_changes(self) -> None:
-        import fnmatch
         import yaml
-        workflow = yaml.safe_load(self.SECURITY_WORKFLOW.read_text())
-        paths = (workflow.get("on") or workflow[True])["pull_request"]["paths"]
-        self.assertTrue(any(fnmatch.fnmatch("backend/rust/migration-ledger.v1.json", pattern) for pattern in paths))
+        workflow = yaml.safe_load(self.SECURITY_WORKFLOW.read_text(encoding="utf-8"))
+        events = workflow.get("on", workflow.get(True))
+        self.assertIn("pull_request", events)
+        self.assertIsNone(events["pull_request"])
+        assert_security_scope(self, ["backend/rust/migration-ledger.v1.json"])
+        job = workflow["jobs"]["orchestration-readiness"]
+        self.assertEqual(job["needs"], "scope")
+        self.assertEqual(job["if"], "needs.scope.outputs.security == 'true'")
+        self.assertIsNot(job.get("continue-on-error"), True)
+        self.assertTrue(any(
+            step.get("run") == "python backend/bin/check_crawler_orchestration_readiness.py --run-tests --json"
+            and "if" not in step and step.get("continue-on-error") is not True
+            for step in job["steps"]
+        ))
+        result = workflow["jobs"]["security-result"]
+        self.assertEqual(result["if"], "${{ always() }}")
+        self.assertIn("orchestration-readiness", result["needs"])
 
 
 if __name__ == "__main__":

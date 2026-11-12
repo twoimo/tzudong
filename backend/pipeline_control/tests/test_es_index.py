@@ -311,11 +311,15 @@ class EsIndexTests(unittest.TestCase):
             self.assertNotRegex(text, r"(?m)^\s+TZUDONG_ES_URL\s*:", msg=path.name)
 
     def test_elasticsearch_fragment_owns_service(self) -> None:
+        import yaml
+
         ymls = list(COMPOSE_DIR.glob("*.yml"))
         owners = []
         for path in ymls:
-            text = path.read_text(encoding="utf-8")
-            if __import__("re").search(r"(?m)^\s+elasticsearch:", text):
+            services = yaml.safe_load(path.read_text(encoding="utf-8")).get("services", {})
+            # Selected overlays may extend the single image definition.
+            # A dependency or extension is not a second image owner.
+            if services.get("elasticsearch", {}).get("image"):
                 owners.append(path.name)
         self.assertEqual(owners, ["docker-compose.elasticsearch.yml"])
         es = (COMPOSE_DIR / "docker-compose.elasticsearch.yml").read_text(encoding="utf-8")

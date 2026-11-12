@@ -42,6 +42,7 @@ GENERATOR_ARTIFACTS = (
     "hosted-pending-custody-pg15-replay.sql", "hosted-pending-custody-pg15-replay.json",
     "hosted-pending-custody-pg15-assertions.json",
     "hosted-pending-candidate-index-disposition.json",
+    "public-index-dedup-prerequisites.json",
     "postgres-image-00000000000001-auth-schema.sql",
     "pre-20260214-overlap-classification.jsonl",
     "reconstruction-compatibility-exclusions.jsonl",

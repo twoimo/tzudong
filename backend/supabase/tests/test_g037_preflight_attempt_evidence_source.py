@@ -6,6 +6,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -133,7 +135,7 @@ class G037PreflightAttemptEvidenceSourceTests(unittest.TestCase):
             "backend/supabase/g037-preflight-attempt.v1.json",
             "backend/supabase/tests/test_g037_preflight_attempt_evidence_source.py",
         ):
-            self.assertIn(f"- '{path}'", SECURITY_WORKFLOW)
+            assert_security_scope(self, [path])
         self.assertIn(
             "backend.supabase.tests.test_g037_preflight_attempt_evidence_source",
             SECURITY_WORKFLOW,

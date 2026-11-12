@@ -9,16 +9,52 @@ import threading
 import time
 from typing import Any, Callable
 
-from backend.pipeline_control.events import classify_events_mode, publish_bytes
+from backend.pipeline_control.dsn_guard import DsnGuardError
+from backend.pipeline_control.events import KafkaPublishError, classify_events_mode, publish_bytes
 from backend.pipeline_control.metrics import observe, observe_process
 from backend.pipeline_control.outbox import (
     CLAIM_LIMIT,
+    OutboxError,
     ack_events,
     claim_events,
     unpublished_snapshot,
 )
+from backend.pipeline_control.pool import PoolError, close_pool
 
 SendFn = Callable[[str, bytes], None]
+RETRYABLE_STORAGE_CODES = frozenset(
+    {"pool_connect_failed", "outbox_read_failed", "outbox_claim_failed", "outbox_ack_failed"}
+)
+RETRYABLE_SQLSTATES = frozenset({"40001", "40P01", "53300", "57P01", "57P02", "57P03"})
+
+
+def _retryable_storage_error(error: PoolError | OutboxError) -> bool:
+    if error.code not in RETRYABLE_STORAGE_CODES:
+        return False
+    terminal_types = (DsnGuardError, ImportError, TypeError, ValueError)
+    try:
+        from psycopg2 import NotSupportedError, ProgrammingError
+    except ImportError:
+        pass
+    else:
+        # libpq option/DSN errors may have no SQLSTATE. Do not classify them
+        # as an unavailable database just because the pool wrapped the error.
+        terminal_types += (NotSupportedError, ProgrammingError)
+    cause: BaseException | None = error
+    seen: set[int] = set()
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        # The outbox adapter wraps admission errors as read/claim/ack failures.
+        # Preserve those terminal failures instead of retrying a forbidden DSN.
+        if isinstance(cause, terminal_types):
+            return False
+        if isinstance(cause, (PoolError, OutboxError)) and cause.code not in RETRYABLE_STORAGE_CODES:
+            return False
+        state = getattr(cause, "pgcode", None)
+        if state and not (state.startswith("08") or state in RETRYABLE_SQLSTATES):
+            return False
+        cause = cause.__cause__
+    return True
 
 
 def _payload_bytes(row: dict[str, Any]) -> bytes:
@@ -62,6 +98,9 @@ def drain_once(send: SendFn | None = None, limit: int = CLAIM_LIMIT) -> int:
         try:
             sender(str(row["topic"]), _payload_bytes(row))
             acked.append(int(row["id"]))
+        except KafkaPublishError as exc:
+            if exc.code != "kafka_publish_failed":
+                raise exc from None
         except Exception:
             continue
     if acked:
@@ -79,7 +118,14 @@ def main() -> int:
     signal.signal(signal.SIGTERM, _stop)
     signal.signal(signal.SIGINT, _stop)
     while not stop.is_set():
-        drain_once()
+        try:
+            drain_once()
+        except (PoolError, OutboxError) as exc:
+            if not _retryable_storage_error(exc):
+                raise exc from None
+            # A connection interrupted after startup may be cached in the
+            # process pool. Reconnect on the next stop-aware iteration.
+            close_pool()
         if stop.wait(1.0):
             break
     return 0

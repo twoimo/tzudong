@@ -7,6 +7,8 @@ import json
 import unittest
 from pathlib import Path
 
+from backend.utils.tests.ci_scope_assertions import assert_security_scope
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / ".kiro/specs/crawler-pipeline-operational-readiness"
@@ -180,7 +182,7 @@ class G037ReadonlyRoleV3ApplyAttemptSourceTests(unittest.TestCase):
         for path in (CONSUMPTION_PATH, ATTEMPT_PATH):
             relative = path.relative_to(ROOT).as_posix()
             self.assertNotIn(relative, G037_WORKFLOW)
-            self.assertEqual(SECURITY_WORKFLOW.count(f"- '{relative}'"), 1)
+            assert_security_scope(self, [relative])
         self.assertIn(
             "backend.supabase.tests.test_g037_readonly_role_v3_apply_attempt_source",
             SECURITY_WORKFLOW,
