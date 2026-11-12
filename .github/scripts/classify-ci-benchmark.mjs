@@ -7,21 +7,40 @@ const full = (reason) => ({ benchmark: true, reason });
 const invalidSource = (reason) => ({ benchmark: true, reason, fatal: true });
 const regular = (reason) => ({ benchmark: false, reason });
 
+// Only inputs that can move the measured typecheck result select the full
+// benchmark. Governance files, evidence receipts, unrelated workflows and web
+// scripts that take no part in type checking stay on the fast parity path; the
+// four diagnostic lanes still run for every change.
+const KNOWN_ROOTS = /^(?:apps\/web\/|backend\/|docs\/|\.github\/|\.kiro\/|\.agents\/)/;
+// Exact entry points only: a new executable or dependency file named after a
+// README/changelog must still take the full-proof path.
+const DOCUMENTATION_INPUTS = new Set([
+  'README.md', 'README.ko.md', 'CHANGELOG.md', 'CHANGELOG.ko.md',
+  'CONTRIBUTING.md', 'SECURITY.md', 'TASKS.md', 'AGENTS.md',
+  'LICENSE', 'LICENSE.md', 'LICENSE.txt', '.gitignore', 'scripts/README.md',
+]);
+const DEPENDENCY_INPUT = /(^|\/)(?:package(?:-lock)?\.json|bun\.lockb?|.*\.lock|[^/]*requirements[^/]*\.txt|pyproject\.toml|Cargo\.toml|go\.mod|go\.sum)$/;
+const MEASUREMENT_INPUTS = [
+  /^\.github\/workflows\/web-admin-ci\.yml$/,
+  /^\.github\/scripts\/(?:classify-ci-benchmark(?:\.test)?\.mjs|prepare-ci-reference\.py|collect-ci-(?:monitor|performance)\.py|monitor-ci-performance\.py|test_collect_ci_(?:monitor|performance)\.py)$/,
+  /^apps\/web\/scripts\/(?:run-typecheck|measure-typecheck|verify-typescript-toolchain|verify-typecheck-benchmark-report|process-tree-rss-core|process-tree-rss-sampler|privacy-safe-cli-log)\.mjs$/,
+  /^apps\/web\/(?:config|vendor|performance|fixtures\/typecheck-benchmark)\//,
+  /(^|\/)(?:tsconfig[^/]*\.json|[^/]*\.config\.[^/]+|bunfig\.toml|next-env\.d\.ts|\.npmrc|\.node-version|\.nvmrc|\.tool-versions)$/,
+  /^apps\/web\/tests-unit\/(?:typescript-toolchain|typecheck-benchmark|cross-platform-web-tooling|dependency-modernization)/,
+];
+
 // Ordinary feature changes retain all four diagnostic/platform lanes. Full-program
 // performance is checked weekly and before data/main promotion, as well as on
 // changes to compiler, dependency, configuration and measurement inputs.
 export function classifyPaths(paths) {
   if (!Array.isArray(paths) || paths.length === 0 || paths.length > 20_000) return full('DIFF_UNAVAILABLE');
   for (const file of paths) {
-    if (typeof file !== 'string' || !file || file.startsWith('/') || file.includes('\\') || file.split('/').includes('..')) return full('PATH_INVALID');
-    if (/^(\.github\/|\.kiro\/|\.agents\/)/.test(file)) return full('CI_OR_EVIDENCE_CHANGE');
-    if (/(^|\/)(package(?:-lock)?\.json|bun\.lockb?|.*\.lock|[^/]*requirements[^/]*\.txt|pyproject\.toml|Cargo\.toml|go\.mod|go\.sum)$/.test(file)) return full('DEPENDENCY_CHANGE');
-    if (/^(apps\/web\/(scripts|config|vendor|performance|fixtures\/typecheck-benchmark)\/)/.test(file)
-      || /(^|\/)(tsconfig[^/]*\.json|[^/]*\.config\.[^/]+|bunfig\.toml|next-env\.d\.ts|\.npmrc|\.node-version|\.nvmrc|\.tool-versions)$/.test(file)
-      || /^apps\/web\/tests-unit\/(typescript-toolchain|typecheck-benchmark|cross-platform-web-tooling|dependency-modernization)/.test(file)) return full('TOOLCHAIN_OR_MEASUREMENT_CHANGE');
+    if (typeof file !== 'string' || !file || file.startsWith('/') || file.includes('\\') || file.includes('\0') || file.split('/').includes('..')) return full('PATH_INVALID');
+    if (DEPENDENCY_INPUT.test(file)) return full('DEPENDENCY_CHANGE');
+    if (MEASUREMENT_INPUTS.some((pattern) => pattern.test(file))) return full('TOOLCHAIN_OR_MEASUREMENT_CHANGE');
     // Unrecognised roots are intentionally full: new build inputs need an explicit
     // classification instead of silently losing performance coverage.
-    if (!/^(apps\/web\/|backend\/|docs\/)/.test(file) && !/^(README[^/]*|AGENTS\.md|LICENSE[^/]*|\.gitignore)$/.test(file)) return full('UNKNOWN_INPUT');
+    if (!KNOWN_ROOTS.test(file) && !DOCUMENTATION_INPUTS.has(file)) return full('UNKNOWN_INPUT');
   }
   return regular('FEATURE_DIAGNOSTICS_ONLY');
 }

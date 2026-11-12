@@ -58,7 +58,7 @@ SETUP_STEP = re.compile(
     re.IGNORECASE,
 )
 INSTALL_STEP = re.compile(
-    r"^Run npm ci$|^Run bun install|^Install backend dependencies|"
+    r"^Run npm ci(?:\s|$)|^Run bun install|^Install backend dependencies|"
     r"^Supplemental Bun clean install",
     re.IGNORECASE,
 )

@@ -74,6 +74,101 @@ INSERT INTO public.reviews (
   ARRAY['fixture'], false, NULL, NULL, false, NULL
 );
 
+-- The recovery guard and the persist table share ocr_private.valid_model_policy
+-- (issue #3351), so the four- and eight-model policies the TypeScript resolvers
+-- already accept must round-trip here instead of failing 22023 or a CHECK.
+DO $model_policy_guard$
+DECLARE
+  four_models jsonb := '["gemini-3.8-flash","gemini-3.6-flash","gemini-3.0-flash","gemini-2.5-flash"]'::jsonb;
+  eight_models jsonb := '["gemini-3.8-flash","gemini-3.6-flash","gemini-3.0-flash","gemini-2.5-flash","gemini-2.5-pro","gemini-2.0-flash","gemini-2.0-pro","gemini-1.5-flash"]'::jsonb;
+  nine_models jsonb := '["gemini-3.8-flash","gemini-3.6-flash","gemini-3.0-flash","gemini-2.5-flash","gemini-2.5-pro","gemini-2.0-flash","gemini-2.0-pro","gemini-1.5-flash","gemini-1.5-pro"]'::jsonb;
+  rejected integer := 0;
+BEGIN
+  IF NOT ocr_private.valid_model_policy(four_models)
+    OR NOT ocr_private.valid_model_policy(eight_models)
+    OR ocr_private.valid_model_policy(nine_models)
+    OR ocr_private.valid_model_policy('"gemini-3.8-flash"'::jsonb)
+    OR ocr_private.valid_model_policy('["gemini-3.8-flash","gemini-3.8-flash"]'::jsonb)
+    OR ocr_private.valid_model_policy('[" gemini-3.8-flash"]'::jsonb)
+  THEN
+    RAISE EXCEPTION 'RECEIPT_OCR_RECOVERY108_MODEL_POLICY_PREDICATE_DRIFT';
+  END IF;
+
+  INSERT INTO ocr_private.receipt_ocr_indeterminate_recoveries (
+    operation_id, review_id, actor_user_id, expected_generation, recovery_generation,
+    input_snapshot_hash, verification_photo_hash, expected_image_hash, model_policy,
+    thinking_level, prompt_version, preprocess_version, normalization_version
+  ) VALUES (
+    'a8130000-0000-4000-8000-000000000004',
+    'a8120000-0000-4000-8000-000000000001',
+    'a8100000-0000-4000-8000-000000000001',
+    'a8140000-0000-4000-8000-000000000004',
+    'a8140000-0000-4000-8000-000000000005',
+    repeat('4', 64), repeat('5', 64), repeat('6', 64), four_models,
+    'LOW', 'admin-receipt-summary-v1', 'admin-canonical-jpeg-v2', 'receipt-normalization-v1'
+  );
+
+  INSERT INTO ocr_private.receipt_ocr_indeterminate_recoveries (
+    operation_id, review_id, actor_user_id, expected_generation, recovery_generation,
+    input_snapshot_hash, verification_photo_hash, expected_image_hash, model_policy,
+    thinking_level, prompt_version, preprocess_version, normalization_version
+  ) VALUES (
+    'a8130000-0000-4000-8000-000000000008',
+    'a8120000-0000-4000-8000-000000000002',
+    'a8100000-0000-4000-8000-000000000001',
+    'a8140000-0000-4000-8000-000000000008',
+    'a8140000-0000-4000-8000-000000000009',
+    repeat('7', 64), repeat('8', 64), repeat('9', 64), eight_models,
+    'LOW', 'admin-receipt-summary-v1', 'admin-canonical-jpeg-v2', 'receipt-normalization-v1'
+  );
+
+  BEGIN
+    INSERT INTO ocr_private.receipt_ocr_indeterminate_recoveries (
+      operation_id, review_id, actor_user_id, expected_generation, recovery_generation,
+      input_snapshot_hash, verification_photo_hash, expected_image_hash, model_policy,
+      thinking_level, prompt_version, preprocess_version, normalization_version
+    ) VALUES (
+      'a8130000-0000-4000-8000-000000000009',
+      'a8120000-0000-4000-8000-000000000001',
+      'a8100000-0000-4000-8000-000000000001',
+      'a8140000-0000-4000-8000-000000000010',
+      'a8140000-0000-4000-8000-000000000011',
+      repeat('a', 64), repeat('b', 64), repeat('c', 64), nine_models,
+      'LOW', 'admin-receipt-summary-v1', 'admin-canonical-jpeg-v2', 'receipt-normalization-v1'
+    );
+  EXCEPTION WHEN check_violation THEN
+    rejected := rejected + 1;
+  END;
+  IF rejected <> 1 THEN
+    RAISE EXCEPTION 'RECEIPT_OCR_RECOVERY108_NINE_MODEL_POLICY_NOT_REJECTED';
+  END IF;
+
+  SET LOCAL ROLE service_role;
+  BEGIN
+    PERFORM public.recover_review_receipt_ocr_indeterminate(
+      'a8100000-0000-4000-8000-000000000001',
+      'a8120000-0000-4000-8000-000000000001',
+      'a8130000-0000-4000-8000-000000000012',
+      'a8140000-0000-4000-8000-000000000013',
+      repeat('d', 64), nine_models, 'LOW',
+      'admin-receipt-summary-v1', 'admin-canonical-jpeg-v2', 'receipt-normalization-v1'
+    );
+    RAISE EXCEPTION 'RECEIPT_OCR_RECOVERY108_NINE_MODEL_RPC_NOT_REJECTED';
+  EXCEPTION WHEN SQLSTATE '22023' THEN
+    NULL;
+  END;
+  RESET ROLE;
+
+  DELETE FROM ocr_private.receipt_ocr_indeterminate_recoveries
+  WHERE operation_id IN (
+    'a8130000-0000-4000-8000-000000000004',
+    'a8130000-0000-4000-8000-000000000008'
+  );
+
+  RAISE NOTICE 'RECEIPT_OCR_RECOVERY108_MODEL_POLICY_GUARD=shared_valid_model_policy';
+END;
+$model_policy_guard$;
+
 DO $seed_durable_rows$
 DECLARE
   indeterminate_generation uuid;

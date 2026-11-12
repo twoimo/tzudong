@@ -1,22 +1,51 @@
-# Docs
+# Documentation
 
-Canonical writing lives next to the code it describes. This tree is the
-cross-cutting index.
+[Project overview](../README.md) · [한국어 소개](../README.ko.md) · [Contributing](../CONTRIBUTING.md) · [Repository layout](repository-layout.md)
 
-Keep at the repository root: `README.md`, `README.ko.md`, `LICENSE`,
-`AGENTS.md`, `SECURITY.md`, `CHANGELOG.md`, `CHANGELOG.ko.md`.
+Start with the task you want to complete. Package-specific setup and contracts
+live beside their code; this directory connects them with shared guides and
+dated records.
 
-## Layout
+## Start here
 
-| Path | What belongs here |
+| I want to… | Read |
 | --- | --- |
-| [agents/](agents/) | Conditional agent guidance for verification, privacy and hosted release work. |
-| [product/](product/) | Durable product/UX design. `DESIGN.md` is the public-surface contract. |
-| [architecture/](architecture/) | In-repo architecture diagrams generated with archify (HTML + workflow JSON). |
-| [operations/](operations/) | How we run Nightly, crawlers, and operator playbooks that are still current. |
-| [archive/handoffs/](archive/handoffs/) | Dated session notes. Not source of truth. |
-| `backend/ARCHITECTURE.md`, `backend/DATA_CONTRACTS.md` | Pipeline architecture and data contracts. Stay next to backend. |
-| `backend/docs/`, `apps/web/docs/` | Package-local how-tos. Stay next to that package. |
+| Run the web app locally | [Web setup](../apps/web/README.md), [local Supabase stack](../backend/supabase/README.md), then the [bootstrap runbook](operations/nightly-regression.md#local-compose-bootstrap). |
+| Make a change and choose checks | [Contributing](../CONTRIBUTING.md) and [verification by impact](agents/verification.md). |
+| Understand the UI and navigation | [Product guides](product/README.md). |
+| Understand the data pipeline | [Backend architecture](../backend/ARCHITECTURE.md), [data contracts](../backend/DATA_CONTRACTS.md), and [architecture diagrams](architecture/README.md). |
+| Work on restaurant evidence | [Evidence engineering contracts](evidence-engineering/README.md). |
+| Operate or diagnose the system | [Operations index](operations/README.md) and [backend operations](../backend/README.md). |
+| Find a release or prepare release notes | [Release channels and procedure](releases/README.md), [English changelog](../CHANGELOG.md), or [한국어 변경 기록](../CHANGELOG.ko.md). |
+| Check a claim or recover context | [Evidence index](evidence/README.md) and [historical records](archive/README.md). |
 
-Do not dump new session transcripts into `operations/`. Put them under
-`archive/handoffs/YYYY-MM-DD-…`.
+## Documentation map
+
+| Directory | Purpose |
+| --- | --- |
+| [product/](product/README.md) | Product design, navigation contracts, and app-submission preparation. |
+| [architecture/](architecture/README.md) | Diagram sources, HTML exports, and their rendering evidence. |
+| [operations/](operations/README.md) | Runbooks, transition plans, and dated operational investigations. |
+| [releases/](releases/README.md) | Release channels, note format, and links to published records. |
+| [evidence-engineering/](evidence-engineering/README.md) | Restaurant evidence, scoring, identity, and persistence contracts. |
+| [evidence/](evidence/README.md) | Dated reports, artifact maps, checksums, and verification receipts. |
+| [performance/](performance/) | Cross-project performance guidance; canonical measurements remain in [apps/web/performance/](../apps/web/performance/). |
+| [agents/](agents/) | Conditional [verification](agents/verification.md), [privacy](agents/privacy.md), and [release](agents/release.md) guidance. |
+| [archive/](archive/README.md) | Historical handoffs, changelog detail, and parked release-gate text. |
+| [build-ship/](build-ship/README.md) | A retained delivery record for one earlier change. |
+
+## Where new documentation belongs
+
+Keep component setup next to the component: [apps/web/docs/](../apps/web/docs/)
+and [backend/docs/](../backend/docs/). Update the existing canonical guide before
+creating another setup or operating procedure.
+
+Use descriptive lowercase names for new guides. Put dated session notes under
+`archive/handoffs/YYYY-MM-DD-topic.md`; put reproducible reports and their
+artifacts together under `evidence/topic-YYYYMMDD/`. Link the source commit and
+state what was actually checked. Keep current instructions separate from dated
+observations, and preserve paths and bytes referenced by existing artifact maps.
+
+Root-level entry points are the READMEs, contribution guide, license, security
+policy, agent guidance, and bilingual changelogs. See the [repository layout](repository-layout.md)
+for placement of source code, scripts, assets, and configuration.

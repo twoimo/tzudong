@@ -93,9 +93,9 @@ jobs:
           test "${npm_bin#/}" != "$npm_bin"
           (
             cd "$root"
-            npm ci
+            npm ci --no-audit --fund=false
             sha256sum package-lock.json bun.lock > dependency-modernization-lock-hashes-npm.txt
-            npx playwright install --with-deps chromium
+            node ../../.github/scripts/ensure-ci-chromium.mjs
             TZUDONG_DEPENDENCY_PROOF_ROOT="$root" \
               TZUDONG_NODE24_EXECUTABLE="$node_bin" \
               TZUDONG_NPM_11_EXECUTABLE="$npm_bin" \
@@ -149,7 +149,10 @@ jobs:
           bun-version: '1.4.0'
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
-      - run: npm ci
+      - run: npm ci --no-audit --fund=false
+      - name: Verify browser setup failure paths
+        working-directory: ${{ github.workspace }}
+        run: node --test .github/scripts/ensure-ci-chromium.test.mjs
       - name: Verify compiler scope classifier
         working-directory: ${{ github.workspace }}
         run: node --test .github/scripts/classify-ci-benchmark.test.mjs
@@ -184,15 +187,74 @@ jobs:
       - name: Fail closed on benchmark evidence
         if: always() && steps.scope.outputs.benchmark != 'false'
         run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
+      # Chromium and the crawler browser-identity probe moved to the shard jobs,
+      # which are the only lanes that execute browser unit tests. Keeping them
+      # here cost 3 to 4 minutes on every run after the suite moved out.
       - run: npm run lint
-      - name: Install pinned Chrome for Testing for browser unit tests
-        run: npx playwright install --with-deps chromium
+
+  ubuntu-npm-unit:
+    name: Ubuntu npm unit (shard ${{ matrix.shard }}/8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.0'
+      - name: Pin npm authority
+        run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
+      - run: npm ci --no-audit --fund=false
+      - name: Install and launch pinned Chrome for Testing
+        run: node ../../.github/scripts/ensure-ci-chromium.mjs
       - name: Verify crawler browser identity against the web browser pin
         run: |
           set -euo pipefail
           executable="$(node --input-type=module -e 'import {chromium} from "@playwright/test"; console.log(chromium.executablePath())')"
           python3 ../../backend/bin/chrome_for_testing.py --executable "$executable" >/dev/null
-      - run: npm run test:unit
+      - run: npm run test:unit -- --shard ${{ matrix.shard }}/8
+
+  ubuntu-npm-build:
+    name: Ubuntu npm build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.0'
+      - name: Pin npm authority
+        run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
+      - run: npm ci --no-audit --fund=false
       - run: npm run build
 
   ubuntu-bun-compatibility:
@@ -285,7 +347,7 @@ jobs:
         run: |
           npm install --global npm@11.6.2
           if ($LASTEXITCODE -ne 0 -or (npm --version) -ne '11.6.2') { exit 1 }
-      - run: npm ci
+      - run: npm ci --no-audit --fund=false
       - run: npm run lint
       - name: Verify compiler scope classifier
         working-directory: ${{ github.workspace }}/web-npm
@@ -423,7 +485,7 @@ jobs:
           bun-version: '1.4.0'
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
-      - run: npm ci
+      - run: npm ci --no-audit --fund=false
       - name: Install backend dependencies with bounded network retry
         run: bash ../../.github/scripts/install-backend-npm-dependencies.sh
       - run: npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0

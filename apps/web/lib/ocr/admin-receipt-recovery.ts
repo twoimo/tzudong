@@ -8,6 +8,7 @@ export const ADMIN_RECEIPT_OCR_PROMPT_VERSION = 'admin-receipt-summary-v1';
 export const ADMIN_RECEIPT_OCR_PREPROCESS_VERSION = 'admin-canonical-jpeg-v2';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 const SHA256 = /^[0-9a-f]{64}$/;
 
 type SupabaseAdmin = ReturnType<typeof createSupabaseServiceRoleClient>;
@@ -176,6 +177,12 @@ export async function applyReceiptOcrIndeterminateRecovery(
   } catch {
     throw new ReceiptOcrRecoveryPersistenceError();
   }
+  // The recovery guard and the persist table share ocr_private.valid_model_policy
+  // with the rest of the OCR contract, so the resolved policy is submitted as-is
+  // (issue #3351). parseReceiptOcrWorkflowPolicy already rejected anything the
+  // guard would refuse, and an empty policy still fails closed below.
+  const recoveryModelPolicy = policy.modelPolicy;
+  if (recoveryModelPolicy.length === 0) throw new ReceiptOcrRecoveryPersistenceError();
   if (input.promptVersion !== ADMIN_RECEIPT_OCR_PROMPT_VERSION
     || input.preprocessVersion !== ADMIN_RECEIPT_OCR_PREPROCESS_VERSION
     || !/^receipt-normalization-v[1-9]\d*$/.test(input.normalizationVersion)) {
@@ -188,7 +195,7 @@ export async function applyReceiptOcrIndeterminateRecovery(
     p_recovery_operation_id: input.recoveryOperationId,
     p_expected_generation: input.expectedGeneration,
     p_input_snapshot_hash: input.inputSnapshotHash,
-    p_model_policy: policy.modelPolicy,
+    p_model_policy: recoveryModelPolicy,
     p_thinking_level: policy.inferenceConfig.thinkingLevel,
     p_prompt_version: input.promptVersion,
     p_preprocess_version: input.preprocessVersion,
@@ -222,10 +229,13 @@ export async function applyReceiptOcrIndeterminateRecovery(
     } catch {
       throw new ReceiptOcrRecoveryPersistenceError();
     }
+    // Compare against the policy that was actually submitted: the RPC persists
+    // and returns that list, so comparing with a locally rewritten policy would
+    // reject every successful rotation.
     const returnedPolicyMatchesRequest = boundPolicy.inferenceConfig.thinkingLevel
       === policy.inferenceConfig.thinkingLevel
-      && boundPolicy.modelPolicy.length === policy.modelPolicy.length
-      && boundPolicy.modelPolicy.every((model, index) => model === policy.modelPolicy[index]);
+      && boundPolicy.modelPolicy.length === recoveryModelPolicy.length
+      && boundPolicy.modelPolicy.every((model, index) => model === recoveryModelPolicy[index]);
     if (!data.idempotent && !returnedPolicyMatchesRequest) {
       throw new ReceiptOcrRecoveryPersistenceError();
     }
