@@ -207,10 +207,12 @@ class ProvisionTests(unittest.TestCase):
             runner = make_runner(names=["public.a"], roles=[], restored=["public.a"])
             record = lb.provision(baseline, "target", "profile", runner=runner)
             setup = runner.captured["baseline-setup.sql"]
-            statements = [line for line in setup.splitlines() if line.startswith("CREATE ROLE")]
+            statements = [line for line in setup.splitlines() if "CREATE ROLE" in line]
             self.assertTrue(statements)
             for statement in statements:
                 self.assertTrue(statement.endswith(";"), statement)
+                # A booted stack may already own the role: that is success, not error.
+                self.assertIn("EXCEPTION WHEN duplicate_object THEN NULL", statement)
             self.assertTrue(record["provisioned"])
 
     def test_provisioning_leaves_no_scratch_in_the_baseline(self) -> None:
