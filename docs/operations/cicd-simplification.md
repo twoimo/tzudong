@@ -79,6 +79,42 @@ or retire the data-branch publisher and prepare staged production, its single
 promotion owner, and rollback. Do not enable feature-to-main before those
 conditions are verified.
 
+## Hosted rollout record: 2026-11-13 (KST)
+
+The following protected PRs were merged into `develop` after their applicable
+remote checks passed:
+
+| Phase | PR | Merge commit |
+| --- | --- | --- |
+| CI scope and result gates | [#3810](https://github.com/twoimo/tzudong/pull/3810) | `98642719` |
+| On-demand pipeline modes and delivery recovery | [#3811](https://github.com/twoimo/tzudong/pull/3811) | `8b5b6c22` |
+| Optional data-publication binding | [#3812](https://github.com/twoimo/tzudong/pull/3812) | `f764fd65` |
+| Retired release helper and staged-production preparation | [#3813](https://github.com/twoimo/tzudong/pull/3813) | `8a759654` |
+
+The saved `develop` protection was read back with GitHub Actions contexts
+`Release`, `Promotion Path`, `CI`, and `Security` required. Existing strict
+up-to-date and no-bypass settings were preserved. The backend changes in PRs
+#3811 and #3812 each skipped six unrelated web jobs while retaining their selected
+unit, Admin, and result checks. This is an observed job-selection result; no
+wall-time, summed-job-time, queue-time, or Mac memory saving is established here.
+
+The post-merge runs for `8a759654` also completed successfully:
+[CI](https://github.com/twoimo/tzudong/actions/runs/43259833379),
+[Release](https://github.com/twoimo/tzudong/actions/runs/43259833593), and
+[CodeQL](https://github.com/twoimo/tzudong/actions/runs/43259833260).
+The hosted documentation-only observation required above remains pending the
+actual PR carrying this record. Retain that PR's exact head and completed results
+before treating the documentation lane as verified.
+
+At this observation, `main` was `36a6a3b5` and `data` was `20fd13c9`; the four
+phases above had not yet been promoted through those branches. This record does
+not establish a production deployment, main-only activation, or Mac cleanup.
+The Vercel connection listed the `twoimos-projects` team with zero linked Git
+projects, and the known project lookup returned 404. That leaves the deployment
+identity unverified; it does not establish project deletion or a service outage.
+Actual Mac/Dots runtime access was also unavailable. Continue independent source
+promotion under the existing policy while those execution inputs are resolved.
+
 ## Rollback
 
 Revert this phase through a protected PR, keeping required contexts satisfiable
@@ -89,14 +125,18 @@ and deployment evidence; no force push or branch-protection bypass is needed.
 
 ## Later phases
 
-Pipeline diagnostic profiles and the local application mode are separate work.
-The current web app uses Auth, REST, Storage, Realtime, and Edge Functions, and
-its local development entrypoint requires a verified Supabase runtime. A minimal
-mode must preserve these features and cannot imply that the current `npm run dev`
-works without Docker. The full platform and historical replay modes retain
-their existing contracts. Actual Mac cleanup needs a measured inventory,
+The [on-demand pipeline modes](../../backend/pipeline-control/LOCAL_MODES.md)
+are implemented on `develop`; activation and measurement on the actual Mac are
+separate execution steps. The current web app uses Auth, REST, Storage, Realtime,
+and Edge Functions, and its local development entrypoint requires a verified
+Supabase runtime. A minimal mode must preserve these features and cannot imply
+that the current `npm run dev` works without Docker. The full platform and
+historical replay modes retain their existing contracts. Actual Mac cleanup needs a measured inventory,
 active-job/volume ownership, and restart verification before changing services.
 
-Data publication, main-only source flow, deployment ownership, and obsolete
-branch cleanup follow those prerequisites. Each phase gets its own relevant
-verification and remote readback.
+The [optional compute/data binding](daily-compute-data-binding.md) is also
+implemented on `develop`; it does not retire the publisher or its remaining
+consumers. Main-only source flow, deployment ownership, and obsolete branch
+cleanup follow the prerequisites in the
+[staged-production transition](staged-production-transition.md). Each phase gets
+its own relevant verification and remote readback.
