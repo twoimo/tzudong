@@ -33,7 +33,7 @@ describe("admin storyboard thinking trace source contract", () => {
     );
 
     expect(componentSource).toContain('data-admin-storyboard-toolbar="true"');
-    expect(componentSource).toContain('className="min-w-0 p-3 pb-24 sm:p-4 sm:pb-6"');
+    expect(componentSource).toContain('className="admin-storyboard-body min-w-0 p-3"');
     expect(componentSource).toContain('const panelClass = "min-w-0 rounded-none bg-card');
     expect(componentSource).not.toContain("StoryboardChat");
     expect(componentSource).not.toContain("browser-openai-api-key");
