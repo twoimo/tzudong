@@ -567,7 +567,7 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(models.isAllowedStoryboardGeminiModel('gemini-unapproved', 'text')).toBe(false);
   });
 
-  test('admin storyboard exposes only the server-owned Gemini production control plane', () => {
+  test('admin storyboard exposes only the server-owned API-provider production control plane', () => {
     const workspace = readFileSync(
       path.resolve('components/admin/storyboard/LocalStoryboardWorkspace.tsx'),
       'utf8',
@@ -577,12 +577,13 @@ describe('admin storyboard LangGraph replacement contracts', () => {
       'utf8',
     );
     expect(workspace).toContain('const API = "/api/admin/storyboard/production"');
-    expect(workspace).toContain('model.owned_by === "gemini-api"');
+    expect(workspace).toContain("['gemini-api', 'openai-api'].includes(model.owned_by ?? '')");
     expect(workspace).toContain('storyboardWorkerSupportsPair');
     expect(workspace).toContain('STORYBOARD_GEMINI_TEXT_MODEL');
     expect(workspace).toContain('STORYBOARD_GEMINI_IMAGE_MODELS');
-    expect(workspace).not.toMatch(/OpenAI API 키|browser-openai|local-codex|codex-oauth/);
-    expect(workspace).toContain('owned_by: z.enum(["gemini-api", "mlx-serve"]).optional()');
+    expect(workspace).toContain('OpenAI API 키는 서버 워커 환경에서만 읽습니다.');
+    expect(workspace).not.toMatch(/browser-openai|local-codex|codex-oauth/);
+    expect(workspace).toContain('owned_by: z.enum(["gemini-api", "openai-api", "mlx-serve"]).optional()');
     expect(alias.trim().endsWith('export { AdminStoryboardGenerator } from "./AdminStoryboardGenerator";')).toBe(true);
   });
 

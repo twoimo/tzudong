@@ -493,11 +493,11 @@ function AdminMapLoadingSkeleton() {
 
       <span className="sr-only">네이버 지도를 준비하고 있습니다.</span>
 
-      <div className="absolute left-3 top-3 space-y-1.5" aria-hidden="true">
+      <div className="absolute left-3 top-3 space-y-2" aria-hidden="true">
 
         <LoadingSurface label="관리자 네이버 지도 로딩">
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
 
             <p className="text-sm font-semibold">촬영 동선</p>
 
@@ -902,10 +902,10 @@ function AdminNaverMapSurface({
   const isMapPreparing = isLoading || isNaverLoading;
 
   return (
-    <div className="relative h-full min-h-[360px] overflow-hidden rounded-[24px] bg-muted/25">
+    <div className="relative h-full min-h-0 overflow-hidden rounded-none bg-muted/25">
       <div
         ref={mapContainerRef}
-        className="h-full min-h-[360px] w-full"
+        className="h-full min-h-0 w-full"
         aria-label="네이버 지도 맛집 마커와 클러스터"
       />
 
@@ -960,9 +960,9 @@ function AdminMapOverviewCanvas({
       aria-label="관리자 지도 운영"
       className="admin-surface relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-md bg-card shadow-none"
     >
-      <div className="min-h-0 flex-1 overflow-hidden p-1.5 sm:p-3">
+      <div className="min-h-0 flex-1 overflow-hidden p-2 sm:p-3">
         <div
-          className="relative h-full min-h-[320px] md:min-h-[360px]"
+          className="relative h-full min-h-0"
           data-admin-overview-map-canvas="true"
         >
           <AdminNaverMapSurface
@@ -976,20 +976,20 @@ function AdminMapOverviewCanvas({
             onViewportBboxChange={onViewportBboxChange}
           />
 
-          <div className="absolute left-2 right-2 top-2 z-20 flex flex-wrap items-center gap-1.5 sm:left-3 sm:right-auto sm:top-3 sm:gap-2">
+          <div className="absolute left-2 right-2 top-2 z-20 flex flex-wrap items-center gap-2 sm:left-3 sm:right-auto sm:top-3">
             <Button
               type="button"
               size="sm"
               variant={showAdminMapOverlays ? "default" : "secondary"}
-              className="h-8 rounded-md bg-card px-2.5 text-xs shadow-none sm:h-9 sm:text-sm"
+              className="min-h-11 rounded-none bg-card px-3 text-xs shadow-none sm:text-sm"
               aria-pressed={showAdminMapOverlays}
               data-admin-map-overlay-toggle="true"
               onClick={onToggleAdminMapOverlays}
             >
-              <Layers3 className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              <Layers3 className="mr-2 h-4 w-4" aria-hidden="true" />
               관리자 오버레이
               {showAdminMapOverlays && overlays.length > 0 ? (
-                <Badge variant="secondary" className="ml-1 rounded-full px-1.5">
+                <Badge variant="secondary" className="ml-1 rounded-full px-2">
                   {overlays.length}
                 </Badge>
               ) : null}
@@ -997,7 +997,7 @@ function AdminMapOverviewCanvas({
             {showAdminMapOverlays && (
               <span
                 className={cn(
-                  "rounded-sm border px-2 py-0.5 text-2xs font-semibold shadow-none sm:px-2.5 sm:py-1 sm:text-2xs",
+                  "rounded-sm border px-2 py-1 text-2xs font-semibold shadow-none sm:px-3 sm:py-1 sm:text-2xs",
                   hasOverlayError
                     ? "border-destructive/30 bg-destructive/10 text-destructive"
                     : "border-border/70 bg-card text-muted-foreground"
@@ -1020,13 +1020,13 @@ function AdminMapOverviewCanvas({
               className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex justify-center sm:inset-x-auto sm:left-3 sm:justify-start"
               data-admin-map-status-overlay="non-blocking"
             >
-              <div className="admin-empty-state pointer-events-auto min-h-0 max-w-sm items-start rounded-md bg-card p-3 text-left shadow-none">
+              <div className="admin-empty-state pointer-events-auto min-h-0 max-w-sm items-start rounded-none bg-card p-3 text-left shadow-none">
                 <p className="text-sm font-bold text-foreground">
                   {hasError
                     ? "좌표 맛집 목록을 불러오지 못했습니다."
                     : "표시할 좌표 맛집이 없습니다"}
                 </p>
-                <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
                   {hasError
                     ? "지도는 기본 위치로 유지합니다. 목록을 다시 읽기 전에는 맛집 수와 동선을 확정하지 않습니다."
                     : "운영 콘솔에서는 빈 실데이터 상태를 목업으로 대체하지 않습니다. 지도는 기본 위치로 유지하고 좌표가 있는 맛집만 표시합니다."}
@@ -1060,13 +1060,13 @@ function AdminMapInfoPanelSkeleton() {
       aria-label="관리자 지도 동선 추천 로딩"
     >
 
-      <section className="admin-surface shrink-0 rounded-md bg-card p-2 shadow-none">
+      <section className="admin-surface shrink-0 rounded-none bg-card p-2 shadow-none">
 
         <LoadingSurface label="선택한 맛집 정보 로딩 중">
 
           <div className="grid gap-2 sm:grid-cols-2">
 
-            <div className="rounded-xl bg-background/70 p-2">
+            <div className="rounded-none bg-background/70 p-2">
 
               <p className="text-xs">선택한 맛집</p>
 
@@ -1092,7 +1092,7 @@ function AdminMapInfoPanelSkeleton() {
 
       <section
         ref={routeSkeletonRef}
-        className="admin-surface rounded-md bg-card p-2.5 shadow-none lg:min-h-0 lg:flex-1"
+        className="admin-surface rounded-md bg-card p-3 shadow-none lg:min-h-0 lg:flex-1"
       >
 
         <LoadingPreview
@@ -1246,11 +1246,11 @@ function AdminMapInfoPanel({
   return (
     <aside className="flex min-h-0 min-w-0 flex-col gap-2 lg:h-full lg:overflow-hidden">
       <section
-        className="admin-surface shrink-0 rounded-md bg-card p-2 shadow-none"
+        className="admin-surface shrink-0 rounded-none bg-card p-2 shadow-none"
         aria-labelledby="admin-map-selected-title"
       >
         {selectedRestaurant ? (
-          <div className="overflow-hidden rounded-lg bg-background/70 md:rounded-xl">
+          <div className="overflow-hidden rounded-none bg-background/70">
             <a
               href={selectedYoutubeUrl ?? undefined}
               target={selectedYoutubeUrl ? "_blank" : undefined}
@@ -1295,34 +1295,34 @@ function AdminMapInfoPanel({
                 {hasError ? "확인 필요" : "선택됨"}
               </Badge>
 
-              <div className="absolute inset-x-0 bottom-0 bg-black/75 p-2.5 text-white">
+              <div className="absolute inset-x-0 bottom-0 bg-black/75 p-3 text-white">
                 <div className="min-w-0">
                   <p className="text-2xs font-bold tracking-[0.14em] text-white/75">
                     선택한 마커
                   </p>
                   <h2
                     id="admin-map-selected-title"
-                    className="mt-0.5 break-words text-xl font-bold tracking-[-0.04em] [overflow-wrap:anywhere]"
+                    className="mt-1 break-words text-xl font-bold tracking-[-0.04em] [overflow-wrap:anywhere]"
                   >
                     {selectedRestaurant.name}
                   </h2>
                 </div>
 
-                <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-white/80">
+                <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/80">
                   {selectedRestaurant.address ?? "주소 정보 확인 필요"}
                 </p>
 
-                <div className="mt-1.5 flex flex-wrap gap-1 text-2xs font-semibold">
-                  <span className="max-w-full break-words rounded-sm bg-white/20 px-2 py-0.5 text-white [overflow-wrap:anywhere]">
+                <div className="mt-2 flex flex-wrap gap-1 text-2xs font-semibold">
+                  <span className="max-w-full break-words rounded-sm bg-white/20 px-2 py-1 text-white [overflow-wrap:anywhere]">
                     {selectedRestaurant.category ?? "카테고리 확인"}
                   </span>
-                  <span className="rounded-sm bg-white/20 px-2 py-0.5 text-white/85">
+                  <span className="rounded-sm bg-white/20 px-2 py-1 text-white/85">
                     {selectedRestaurant.status ?? "상태 확인"}
                   </span>
-                  <span className="rounded-sm bg-black/60 px-2 py-0.5 text-white/85">
+                  <span className="rounded-sm bg-black/60 px-2 py-1 text-white/85">
                     {selectedCoordinateText}
                   </span>
-                  <span className="max-w-full break-all rounded-sm bg-black/60 px-2 py-0.5 text-white/85">
+                  <span className="max-w-full break-all rounded-sm bg-black/60 px-2 py-1 text-white/85">
                     {selectedRestaurant.videoId ?? "영상 ID 확인"}
                   </span>
                 </div>
@@ -1337,7 +1337,7 @@ function AdminMapInfoPanel({
               </p>
               <h2
                 id="admin-map-selected-title"
-                className="mt-0.5 truncate text-lg font-bold tracking-[-0.04em] text-foreground sm:text-xl"
+                className="mt-1 truncate text-lg font-bold tracking-[-0.04em] text-foreground sm:text-xl"
               >
                 마커를 선택하세요
               </h2>
@@ -1362,7 +1362,7 @@ function AdminMapInfoPanel({
       </section>
 
       <section
-        className="admin-surface scrollbar-hide min-w-0 rounded-md bg-card p-2 shadow-none lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:scroll-pb-3"
+        className="admin-surface scrollbar-hide min-w-0 rounded-none bg-card p-2 shadow-none lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:scroll-pb-3"
         aria-label="동선 추천 초안"
         data-layout-primitives="panel-layout list-detail step-nav cluster frame"
         data-scroll-owner="route-control-pane"
@@ -1392,7 +1392,7 @@ function AdminMapInfoPanel({
         </div>
 
         <div
-          className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-background/70 p-1"
+          className="mt-2 grid grid-cols-3 gap-1 rounded-none bg-background/70 p-1"
           data-admin-route-mode-controls="driving-walking-mixed"
           aria-label="동선 이동수단 선택"
         >
@@ -1401,7 +1401,7 @@ function AdminMapInfoPanel({
               key={option.id}
               type="button"
               className={cn(
-                "rounded-lg px-2 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "min-h-11 rounded-none px-2 py-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 routeMode === option.id
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -1415,7 +1415,7 @@ function AdminMapInfoPanel({
         </div>
 
         <div
-          className="mt-1.5 grid gap-1.5"
+          className="mt-2 grid gap-2"
           data-admin-route-planner-presets="true"
         >
           {ADMIN_ROUTE_PLANNER_PRESETS.map((preset) => (
@@ -1423,7 +1423,7 @@ function AdminMapInfoPanel({
               key={preset.id}
               type="button"
               className={cn(
-                "rounded-xl bg-background/70 p-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "min-h-11 rounded-none bg-background/70 p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 routeMode === preset.mode && routeStopLimit === preset.stopLimit
                   ? "bg-primary/5 shadow-none ring-1 ring-primary/20"
                   : "hover:bg-muted/60",
@@ -1436,7 +1436,7 @@ function AdminMapInfoPanel({
               <span className="block text-xs font-bold text-foreground">
                 {preset.label}
               </span>
-              <span className="mt-0.5 block text-2xs leading-4 text-muted-foreground">
+              <span className="mt-1 block text-2xs leading-4 text-muted-foreground">
                 {preset.description}
               </span>
             </button>
@@ -1444,7 +1444,7 @@ function AdminMapInfoPanel({
         </div>
 
         <div
-          className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-background/70 p-1"
+          className="mt-2 grid grid-cols-3 gap-1 rounded-none bg-background/70 p-1"
           data-admin-route-stop-limit-controls="true"
           aria-label="동선 방문 지점 수 선택"
         >
@@ -1453,7 +1453,7 @@ function AdminMapInfoPanel({
               key={limit}
               type="button"
               className={cn(
-                "rounded-lg px-2 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "min-h-11 rounded-none px-2 py-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 routeStopLimit === limit
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -1473,7 +1473,7 @@ function AdminMapInfoPanel({
         )}
 
         <div
-          className="mt-1.5 rounded-xl bg-primary/5 p-1.5"
+          className="mt-2 rounded-none bg-primary/5 p-2"
           data-admin-route-readiness-panel="local-heuristic"
         >
           <div className="flex items-center justify-between gap-2">
@@ -1500,7 +1500,7 @@ function AdminMapInfoPanel({
               : null}
           </p>
           {routeAhpAssessment.blockers.length > 0 && (
-            <ul className="mt-1.5 space-y-0.5 text-2xs leading-4 text-muted-foreground">
+            <ul className="mt-2 space-y-1 text-2xs leading-4 text-muted-foreground">
               {routeAhpAssessment.blockers.map((blocker) => (
                 <li key={blocker}>• {blocker}</li>
               ))}
@@ -1511,18 +1511,18 @@ function AdminMapInfoPanel({
         {routeCandidatesReadFailed ? (
           <div
             role="alert"
-            className="mt-1.5 rounded-xl border border-destructive/30 bg-destructive/5 p-2 text-2xs leading-4 text-destructive"
+            className="mt-2 rounded-none border border-destructive/30 bg-destructive/5 p-2 text-2xs leading-4 text-destructive"
             data-admin-route-candidates-read-failed="true"
           >
             <p className="font-bold">동선 후보를 불러오지 못했습니다.</p>
-            <p className="mt-0.5">
+            <p className="mt-1">
               아래 동선은 지도에 불러온 맛집만으로 만든 임시 순서이며, 후보 readback과 내보내기는 조회가 확인된 뒤 표시합니다.
             </p>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="mt-1.5 h-11 min-h-11 md:h-7 md:min-h-0"
+              className="mt-2 min-h-11"
               aria-disabled={isRouteCandidatesRetrying || undefined}
               aria-busy={isRouteCandidatesRetrying || undefined}
               onClick={retryRouteCandidates}
@@ -1536,7 +1536,7 @@ function AdminMapInfoPanel({
         <div
           ref={routeQualityPanelRef}
           tabIndex={-1}
-          className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-2xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="mt-2 grid grid-cols-2 gap-2 rounded-none bg-background/70 p-2 text-2xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary"
           data-admin-route-quality-panel="true"
         >
           <div>
@@ -1578,22 +1578,22 @@ function AdminMapInfoPanel({
 
         {directionsStatus === "fallback" && directionsFallbackMessage ? (
           <div
-            className="mt-1.5 rounded-xl border border-amber-200 bg-amber-50/80 p-2 text-2xs leading-4 text-amber-900"
+            className="mt-2 rounded-none border border-amber-200 bg-amber-50/80 p-2 text-2xs leading-4 text-amber-900"
             data-admin-directions-unavailable="true"
             role="status"
           >
             <p className="font-bold">도로 경로 대신 로컬 후보를 표시합니다.</p>
-            <p className="mt-0.5">{directionsFallbackMessage}</p>
+            <p className="mt-1">{directionsFallbackMessage}</p>
           </div>
         ) : null}
 
         {routePlan.warnings.length > 0 ? (
           <div
-            className="mt-1.5 rounded-xl bg-amber-50 p-1.5 text-2xs leading-4 text-amber-900"
+            className="mt-2 rounded-none bg-amber-50 p-2 text-2xs leading-4 text-amber-900"
             data-admin-route-warning-list="true"
           >
             <p className="font-bold">동선 주의사항</p>
-            <ul className="mt-1 space-y-0.5">
+            <ul className="mt-1 space-y-1">
               {routePlan.warnings.map((warning) => (
                 <li key={warning}>• {warning}</li>
               ))}
@@ -1604,13 +1604,13 @@ function AdminMapInfoPanel({
         <div>
           {routeStops.length > 1 ? (
             <ol
-              className="mt-1.5 space-y-1"
+              className="mt-2 space-y-1"
               data-admin-route-stop-list="ordered-shooting-plan"
             >
               {routeStops.map((restaurant, index) => (
                 <li
                   key={restaurant.id}
-                  className="rounded-xl bg-background/70 p-2"
+                  className="rounded-none bg-background/70 p-2"
                 >
                   <div className="flex items-start gap-2">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-xs font-bold text-primary">
@@ -1620,12 +1620,12 @@ function AdminMapInfoPanel({
                       <p className="break-words text-sm font-bold text-foreground [overflow-wrap:anywhere]">
                         {restaurant.name}
                       </p>
-                      <p className="mt-0.5 line-clamp-2 break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">
+                      <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">
                         {restaurant.address ?? "주소 미입력"} ·{" "}
                         {restaurant.category ?? "카테고리 확인"}
                       </p>
                       {index > 0 && routePlan.legs[index - 1] && (
-                        <p className="mt-0.5 text-2xs font-semibold text-primary">
+                        <p className="mt-1 text-2xs font-semibold text-primary">
                           이전 지점에서{" "}
                           {routePlan.legs[index - 1].distanceKm.toFixed(1)}km ·
                           약{" "}
@@ -1641,7 +1641,7 @@ function AdminMapInfoPanel({
               ))}
             </ol>
           ) : (
-            <p className="mt-2 rounded-2xl bg-muted/25 p-2.5 text-xs leading-5 text-muted-foreground">
+            <p className="mt-2 rounded-none bg-muted/25 p-3 text-xs leading-5 text-muted-foreground">
               추천 동선은 좌표가 있는 맛집이 2곳 이상 연결되면 표시합니다.
               데이터가 부족하면 임의 동선을 만들지 않습니다.
             </p>
@@ -1657,17 +1657,17 @@ function AdminMapInfoPanel({
           </p>
           {routeCandidateReadback ? (
           <div
-            className="mt-2 rounded-xl bg-background/70 p-2 text-2xs leading-4 text-muted-foreground"
+            className="mt-2 rounded-none bg-background/70 p-2 text-2xs leading-4 text-muted-foreground"
             data-admin-route-export="tzudong-json-v1"
             data-admin-route-provider-cache={routeDirectionsReadback.providerCache}
             data-admin-route-candidate-source={routeCandidateReadback.candidateSource}
           >
             <p className="font-bold text-foreground">Tzudong JSON/plain-text 내보내기</p>
-            <p className="mt-0.5">
+            <p className="mt-1">
               후보 readback과 Directions providerCache를 포함해 재현 가능한 동선
               패키지로 복사할 수 있습니다.
             </p>
-            <pre className="mt-1 break-words whitespace-pre-wrap rounded-lg bg-muted/30 p-1.5 [overflow-wrap:anywhere]">
+            <pre className="mt-1 break-words whitespace-pre-wrap rounded-none bg-muted/30 p-2 [overflow-wrap:anywhere]">
               {routePlainTextExport}
             </pre>
             <script
@@ -1678,7 +1678,7 @@ function AdminMapInfoPanel({
           </div>
           ) : (
             <p
-              className="mt-2 rounded-xl bg-background/70 p-2 text-2xs leading-4 text-muted-foreground"
+              className="mt-2 rounded-none bg-background/70 p-2 text-2xs leading-4 text-muted-foreground"
               data-admin-route-export="unavailable"
             >
               동선 후보 조회가 확인되면 Tzudong JSON/plain-text 내보내기를 표시합니다.
@@ -1934,7 +1934,7 @@ export function AdminOverviewDashboard({
       data-admin-overview-layout="two-pane"
     >
       <div
-        className="h-[340px] min-w-0 sm:h-[390px] overflow-visible lg:h-full lg:min-h-0"
+        className="h-[min(46vh,400px)] min-h-[300px] min-w-0 overflow-visible sm:h-[min(50vh,440px)] sm:min-h-[340px] lg:h-full lg:min-h-0"
         data-admin-map-pane="true"
         data-scroll-owner="map-canvas-none"
       >

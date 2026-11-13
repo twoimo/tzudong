@@ -1,5 +1,6 @@
 'use client';
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
@@ -38,7 +39,7 @@ export function RestaurantManagementWorkspace({ review, refresh }: { review: Rea
     router.replace(buildCanonicalAdminHrefFromSearchParams(next), { scroll: false });
   }
 
-  return <section className="flex h-full min-h-0 flex-col" aria-label="맛집 관리">
+  return <section className={`flex h-full min-h-0 flex-col ${featurePolish.polishedRoot}`} aria-label="맛집 관리">
     <RestaurantManagementHeaderContext.Provider value={headerTargets}>
       <Tabs value={view} onValueChange={select} className="flex h-full min-h-0 flex-col">
         <AdminPageHeader title={getAdminModuleTitle("restaurants")} icon={Store} className="admin-restaurant-primary-header" data-admin-restaurant-primary-header="true"

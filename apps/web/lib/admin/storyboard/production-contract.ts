@@ -5,6 +5,7 @@ import {
   STORYBOARD_GEMINI_TEXT_MODEL,
   isAllowedStoryboardGeminiModel,
 } from './gemini-models';
+import { STORYBOARD_OPENAI_PROVIDER_ID, isAllowedStoryboardOpenAIModel } from './openai-models';
 
 /** New execution is versioned separately from the readable legacy archive. */
 export const STORYBOARD_WORKFLOW = 'storyboard-gemini-v1' as const;
@@ -18,7 +19,7 @@ const providerShape = { model: z.string().trim().max(200).default('') };
 
 /** Executable provider input. No legacy provider identifier is admitted here. */
 export const storyboardProviderSchema = z.object({
-  id: z.literal(STORYBOARD_GEMINI_PROVIDER_ID),
+  id: z.enum([STORYBOARD_GEMINI_PROVIDER_ID, STORYBOARD_OPENAI_PROVIDER_ID]),
   ...providerShape,
 }).strict();
 export type StoryboardProvider = z.infer<typeof storyboardProviderSchema>;
@@ -65,7 +66,7 @@ export const storyboardProductionRequestSchema = z.object({
   }),
 }).strict().superRefine((request, context) => {
   for (const modality of ['text', 'image'] as const) {
-    if (!isAllowedStoryboardGeminiModel(request.providers[modality].model, modality)) {
+    if (!isAllowedStoryboardModel(request.providers[modality].id, request.providers[modality].model, modality)) {
       context.addIssue({ code: 'custom', path: ['providers', modality, 'model'], message: 'unsupported_storyboard_gemini_model' });
     }
   }
@@ -111,9 +112,10 @@ const provenanceFields = {
   responseId: z.string().min(1).max(200).nullable(),
   responseModel: z.string().max(200).nullable(),
   modelEvidence: z.enum(['response', 'installed-catalog-and-request', 'unverified']),
+  usage: z.object({ inputTokens: z.number().int().nonnegative().nullable(), outputTokens: z.number().int().nonnegative().nullable(), totalTokens: z.number().int().nonnegative().nullable() }).strict().optional(),
 };
 export const storyboardProvenanceSchema = z.object({
-  providerId: z.literal(STORYBOARD_GEMINI_PROVIDER_ID),
+  providerId: z.enum([STORYBOARD_GEMINI_PROVIDER_ID, STORYBOARD_OPENAI_PROVIDER_ID]),
   verification: z.literal('official-api'),
   ...provenanceFields,
 }).strict();
@@ -201,8 +203,14 @@ export class StoryboardProductionError extends Error {
   }
 }
 
+export function isAllowedStoryboardModel(provider: string, model: string, modality: 'text' | 'image'): boolean {
+  return provider === STORYBOARD_GEMINI_PROVIDER_ID ? isAllowedStoryboardGeminiModel(model, modality)
+    : provider === STORYBOARD_OPENAI_PROVIDER_ID ? isAllowedStoryboardOpenAIModel(model, modality) : false;
+}
 export function assertStoryboardProviderPolicy(policy: StoryboardProviderPolicy): void {
-  assertGeminiStoryboardExecutionPolicy(policy);
+  for (const modality of ['text', 'image'] as const) {
+    if (!isAllowedStoryboardModel(policy[modality].id, policy[modality].model, modality)) throw new StoryboardProductionError('provider_not_configured');
+  }
 }
 
 export function assertGeminiStoryboardExecutionPolicy(policy: StoryboardProviderPolicy): void {
@@ -225,7 +233,7 @@ export function assertExecutableStoryboardRequest(
   request: StoryboardStoredProductionRequest,
 ): asserts request is StoryboardProductionRequest {
   if (!isExecutableStoryboardRequest(request)) throw new StoryboardProductionError('archived_project_read_only');
-  assertGeminiStoryboardExecutionPolicy(request.providers);
+  assertStoryboardProviderPolicy(request.providers);
 }
 
 export function parseStoryboardDraft(
@@ -260,22 +268,22 @@ export function buildStoryboardDraftPrompt(request: StoryboardProductionRequest)
 export const STORYBOARD_PRODUCTION_MESSAGES: Record<string, string> = {
   feature_database_held: '데이터베이스 전환이 완료될 때까지 새 생성과 변경은 보류됩니다. 저장된 프로젝트와 이력은 계속 확인할 수 있습니다.',
   archived_project_read_only: '이전 공급자 프로젝트는 읽기 전용 기록입니다. 새 Gemini 프로젝트에서 생성하세요.',
-  external_ai_disabled: 'Gemini API 실행이 필요합니다.',
-  model_not_selected: '지원되는 Gemini 텍스트와 이미지 모델을 선택하세요.',
+  external_ai_disabled: '외부 API 실행이 필요합니다.',
+  model_not_selected: '지원되는 텍스트와 이미지 모델을 선택하세요.',
   model_capability_mismatch: '선택한 Gemini 모델이 이 생성 종류를 지원하지 않습니다.',
   invalid_structured_response: '모델 결과의 장면 수 또는 필드가 맞지 않습니다. 요청을 수정하거나 재시도하세요.',
   model_response_too_large: '모델 응답이 허용 크기를 넘었습니다.',
   invalid_image_response: '모델이 유효한 이미지 데이터를 반환하지 않았습니다.',
   invalid_image: 'Gemini가 반환한 PNG, JPEG, WebP 정지 이미지만 저장할 수 있습니다.',
   image_too_large: '이미지의 파일 크기 또는 픽셀 수가 허용 범위를 넘었습니다.',
-  provider_auth_failed: 'Gemini 인증에 실패했습니다. 자동 재시도하지 않습니다.',
-  provider_forbidden: '선택한 Gemini 모델을 사용할 권한이 없습니다.',
-  provider_rate_limited: 'Gemini 사용량 제한에 도달했습니다. 자동 결제나 공급자 전환은 하지 않습니다.',
-  provider_failed: 'Gemini 생성에 실패했습니다. 저장된 결과를 확인한 뒤 재시도하세요.',
-  provider_not_configured: 'Gemini 워커와 지원 모델 설정을 확인하세요.',
-  model_identity_mismatch: '응답 모델이 선택한 Gemini 모델과 일치하지 않아 결과를 반영하지 않았습니다.',
-  invalid_model_request: 'Gemini 요청의 형식이나 크기를 확인하세요.',
-  invalid_model_response: 'Gemini 응답 형식을 확인할 수 없습니다.',
+  provider_auth_failed: '선택한 공급자 인증에 실패했습니다. 자동 재시도하지 않습니다.',
+  provider_forbidden: '선택한 모델을 사용할 권한이 없습니다.',
+  provider_rate_limited: '공급자 사용량 제한에 도달했습니다. 자동 재시도·결제·공급자 전환은 하지 않습니다.',
+  provider_failed: '생성에 실패했습니다. 저장 상태를 확인한 뒤에만 다시 요청하세요.',
+  provider_not_configured: '선택한 공급자의 워커와 지원 모델 설정을 확인하세요.',
+  model_identity_mismatch: '응답 모델이 선택한 모델과 일치하지 않아 결과를 반영하지 않았습니다.',
+  invalid_model_request: '공급자 요청의 형식이나 크기를 확인하세요.',
+  invalid_model_response: '공급자 응답 형식을 확인할 수 없습니다.',
   revision_conflict: '다른 편집 또는 생성으로 장면이 변경되었습니다. 최신 결과를 불러오세요.',
   nothing_to_retry: '다시 생성할 장면이 없습니다. 모든 장면의 이미지가 이미 저장되어 있습니다.',
   project_busy: '이미 실행 중인 작업이 있습니다. 완료되거나 취소된 뒤 다시 시도하세요.',

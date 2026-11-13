@@ -9,7 +9,18 @@ if (!output) throw new Error('Expected the bundle output path');
 const result = await Bun.build({
     entrypoints: [join(root, 'entry.tsx')],
     target: 'browser',
-    define: { 'process.env.NODE_ENV': '"development"' },
+    define: {
+        'process.env.NODE_ENV': '"development"',
+        'process.env.NEXT_PUBLIC_SITE_URL': 'undefined',
+        'process.env.NEXT_PUBLIC_SUPPORT_EMAIL': 'undefined',
+        'process.env.NEXT_PUBLIC_OPERATOR_COMPANY_NAME': 'undefined',
+        'process.env.NEXT_PUBLIC_OPERATOR_REPRESENTATIVE': 'undefined',
+        'process.env.NEXT_PUBLIC_OPERATOR_BUSINESS_REGISTRATION_NUMBER': 'undefined',
+        'process.env.NEXT_PUBLIC_COPYRIGHT_LABEL': 'undefined',
+        'process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE': 'undefined',
+        'process.env.NEXT_PUBLIC_LIMITED_PUBLIC_MODE': 'undefined',
+        'process.env.NEXT_PUBLIC_LIMITED_PUBLIC_MODE_ALLOW_AUTH': 'undefined',
+    },
     plugins: [{
         name: 'insights-browser-boundaries',
         setup(build) {

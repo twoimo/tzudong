@@ -74,14 +74,14 @@ describe('admin storyboard async job control plane contract', () => {
     expect(migration).toContain("auth.role() = 'service_role'");
   });
 
-  test('Gemini workspace reads worker and job state from the production control plane', () => {
+  test('API-provider workspace reads worker and job state from the production control plane', () => {
     const ui = source('components/admin/storyboard/LocalStoryboardWorkspace.tsx');
     const alias = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
 
     expect(ui).toContain('const API = "/api/admin/storyboard/production"');
     expect(ui).toContain('storyboardWorkerSupportsPair');
     expect(ui).toContain('catalog.workers.map((worker)');
-    expect(ui).toContain('model.owned_by === "gemini-api"');
+    expect(ui).toContain("['gemini-api', 'openai-api'].includes(model.owned_by ?? '')");
     expect(ui).toContain('jobSchema');
     expect(ui).toContain('job.stage');
     expect(ui).toContain('job.errorCode');

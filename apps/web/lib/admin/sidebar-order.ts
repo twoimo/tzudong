@@ -1,17 +1,24 @@
-export const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"] as const;
+export const ADMIN_SIDEBAR_SECTIONS = [
+  "대시보드",
+  "검수·데이터",
+  "콘텐츠",
+  "사이트 운영",
+  "플랫폼 도구",
+] as const;
+
 export const ADMIN_SIDEBAR_ITEM_IDS = [
   "overview",
   "restaurants",
   "submissions",
   "reviews",
+  "insights",
+  "storyboard",
+  "youtube-thumbnail-generator",
   "users",
   "banners",
-  "insights",
   "pipeline",
   "knowledge-graph",
   "sentry",
-  "youtube-thumbnail-generator",
-  "storyboard",
   "routes",
   "llm",
   "audit",
@@ -28,73 +35,48 @@ export type AdminSidebarOrderPreference = {
 export const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference = {
   sections: [...ADMIN_SIDEBAR_SECTIONS],
   items: {
-    홈: ["overview"],
-    검수: ["restaurants", "submissions", "reviews"],
-    운영: ["users", "banners", "insights", "pipeline", "knowledge-graph", "sentry"],
-    실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"],
+    대시보드: ["overview"],
+    "검수·데이터": ["restaurants", "submissions", "reviews"],
+    콘텐츠: ["insights", "storyboard", "youtube-thumbnail-generator"],
+    "사이트 운영": ["users", "banners"],
+    "플랫폼 도구": ["pipeline", "knowledge-graph", "sentry", "routes", "llm", "audit"],
   },
 };
 
 const sectionSet = new Set<string>(ADMIN_SIDEBAR_SECTIONS);
 const itemSet = new Set<string>(ADMIN_SIDEBAR_ITEM_IDS);
+const sectionAliases: Record<string, AdminSidebarSectionLabel> = {
+  홈: "대시보드",
+  검수: "검수·데이터",
+  운영: "사이트 운영",
+  실험실: "플랫폼 도구",
+};
+const legacyItemSection: Record<string, AdminSidebarSectionLabel> = {
+  overview: "대시보드",
+  restaurants: "검수·데이터",
+  submissions: "검수·데이터",
+  reviews: "검수·데이터",
+  insights: "콘텐츠",
+  storyboard: "콘텐츠",
+  "youtube-thumbnail-generator": "콘텐츠",
+  users: "사이트 운영",
+  banners: "사이트 운영",
+  pipeline: "플랫폼 도구",
+  "knowledge-graph": "플랫폼 도구",
+  sentry: "플랫폼 도구",
+  routes: "플랫폼 도구",
+  llm: "플랫폼 도구",
+  audit: "플랫폼 도구",
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-function uniqueKnownSections(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-
-  const seen = new Set<string>();
-  return value.filter((section): section is AdminSidebarSectionLabel => {
-    if (
-      typeof section !== "string" ||
-      !sectionSet.has(section) ||
-      seen.has(section)
-    ) {
-      return false;
-    }
-
-    seen.add(section);
-    return true;
-  });
-}
-
-function uniqueKnownItems(
-  value: unknown,
-  usedItemIds: Set<string>,
-  allowedItemIds: ReadonlySet<string>,
-): AdminSidebarItemId[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.filter((item): item is AdminSidebarItemId => {
-    if (
-      typeof item !== "string" ||
-      !itemSet.has(item) ||
-      !allowedItemIds.has(item) ||
-      usedItemIds.has(item)
-    ) {
-      return false;
-    }
-
-    usedItemIds.add(item);
-    return true;
-  });
-}
-
-function hasItemsOutsideCurrentSection(value: Record<string, unknown>): boolean {
-  return DEFAULT_ADMIN_SIDEBAR_ORDER.sections.some((section) => {
-    const rawItems = value[section];
-    if (!Array.isArray(rawItems)) return false;
-
-    const allowedItemIds = new Set(DEFAULT_ADMIN_SIDEBAR_ORDER.items[section] ?? []);
-    return rawItems.some(
-      (item) =>
-        typeof item === "string" &&
-        itemSet.has(item) &&
-        !allowedItemIds.has(item as AdminSidebarItemId),
-    );
-  });
+function normalizeSection(value: unknown): AdminSidebarSectionLabel | null {
+  if (typeof value !== "string") return null;
+  if (sectionSet.has(value)) return value as AdminSidebarSectionLabel;
+  return sectionAliases[value] ?? null;
 }
 
 export function mergeSidebarItemsWithDefaultSlots<Item extends string>(
@@ -122,7 +104,6 @@ export function mergeSidebarItemsWithDefaultSlots<Item extends string>(
   }
 
   mergedItems.push(...preferredQueue);
-
   return mergedItems;
 }
 
@@ -131,35 +112,38 @@ export function normalizeAdminSidebarOrder(
 ): AdminSidebarOrderPreference {
   const record = isRecord(value) ? value : {};
   const itemRecord = isRecord(record.items) ? record.items : {};
-  if (hasItemsOutsideCurrentSection(itemRecord)) {
-    return DEFAULT_ADMIN_SIDEBAR_ORDER;
+  const preferredSections = Array.isArray(record.sections)
+    ? record.sections.map(normalizeSection).filter((item): item is AdminSidebarSectionLabel => item !== null)
+    : [];
+  const sections = [
+    ...preferredSections.filter((item, index) => preferredSections.indexOf(item) === index),
+    ...ADMIN_SIDEBAR_SECTIONS.filter((section) => !preferredSections.includes(section)),
+  ];
+
+  const preferredItemsBySection = new Map<AdminSidebarSectionLabel, AdminSidebarItemId[]>();
+  for (const section of ADMIN_SIDEBAR_SECTIONS) preferredItemsBySection.set(section, []);
+
+  for (const [sourceSection, rawItems] of Object.entries(itemRecord)) {
+    if (!Array.isArray(rawItems)) continue;
+    for (const rawItem of rawItems) {
+      if (typeof rawItem !== "string" || !itemSet.has(rawItem)) continue;
+      const destination = legacyItemSection[rawItem];
+      const items = preferredItemsBySection.get(destination);
+      if (items && !items.includes(rawItem as AdminSidebarItemId)) items.push(rawItem as AdminSidebarItemId);
+      // Section names are intentionally not used to relocate modules: old saved
+      // preferences remain valid after the navigation taxonomy changes.
+      void sourceSection;
+    }
   }
 
-  const preferredSections = uniqueKnownSections(record.sections);
-  const sections = [
-    ...preferredSections,
-    ...DEFAULT_ADMIN_SIDEBAR_ORDER.sections.filter(
-      (section) => !preferredSections.includes(section),
-    ),
-  ];
-  const usedItemIds = new Set<string>();
   const items = Object.fromEntries(
-    DEFAULT_ADMIN_SIDEBAR_ORDER.sections.map((section) => {
-      const defaultSectionItems = DEFAULT_ADMIN_SIDEBAR_ORDER.items[section] ?? [];
-      const sectionItemIds = new Set(defaultSectionItems);
-      const preferredItems = uniqueKnownItems(
-        itemRecord[section],
-        usedItemIds,
-        sectionItemIds,
-      );
-      const normalizedItems = mergeSidebarItemsWithDefaultSlots(
-        preferredItems,
-        defaultSectionItems,
-      );
-      normalizedItems.forEach((itemId) => usedItemIds.add(itemId));
-      return [section, normalizedItems];
-    }),
+    ADMIN_SIDEBAR_SECTIONS.map((section) => [
+      section,
+      mergeSidebarItemsWithDefaultSlots(
+        preferredItemsBySection.get(section) ?? [],
+        DEFAULT_ADMIN_SIDEBAR_ORDER.items[section] ?? [],
+      ),
+    ]),
   );
-
   return { sections, items };
 }

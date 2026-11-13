@@ -1,5 +1,6 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw, ShieldAlert } from 'lucide-react';
 
@@ -821,7 +822,7 @@ export default function PrivacyIncidentsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-muted/20" data-privacy-incident-workflow="true">
+    <main className={`min-h-screen bg-muted/20 ${featurePolish.polishedRoot}`} data-privacy-incident-workflow="true">
       <AdminPageHeader
         title="개인정보 사고 대응"
         titleId="admin-privacy-incidents-title"
@@ -830,7 +831,7 @@ export default function PrivacyIncidentsPage() {
         actions={(
           <button
             type="button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted aria-disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted aria-disabled:opacity-50"
             onClick={() => { if (!loading) void load(); }}
             aria-disabled={loading}
             aria-busy={loading}

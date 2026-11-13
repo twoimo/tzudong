@@ -1,9 +1,11 @@
 // Loopback-only visual fixture gateway. No request is forwarded to a hosted API.
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
+import { getAuthCookieContract } from '../lib/auth/session-cookies.ts';
 
 const upstream = 'http://127.0.0.1:18792';
 const origin = 'http://127.0.0.1:18794';
+const fixtureAuthCookies = getAuthCookieContract('http://127.0.0.1:18793');
 const stamp = '2026-10-03T00:00:00.000Z';
 const receiptOcrRecoveryFixture = process.env.TZUDONG_RECEIPT_OCR_RECOVERY_FIXTURE === '1';
 const storyboardProjects = ['gemini-api','manual'].map((provider,index) => {
@@ -120,7 +122,12 @@ function fixtureAutomationAction(body) {
 function api(pathname, params = new URLSearchParams()) {
   if (pathname === '/api/admin/sentry') return { state: 'not_configured', collection: { browser: false, server: false }, dashboardUrl: null, issues: [], nextCursor: null, fetchedAt: null };
   if (pathname === '/api/admin/knowledge-graph') {
-    const snapshot = JSON.parse(readFileSync('data/knowledge-graph/tzudong.json', 'utf8'));
+    // Synthetic graph, independent of the real export's single-file/sharded format.
+    const snapshot = { schemaVersion: 1, scope: 'tzudong', revision: 'f'.repeat(64), generatedAt: stamp,
+      coverage: { inventoryCount: 2, eligibleCount: 2, analyzedCount: 0, pendingCount: 2, failedCount: 0, excludedShortsCount: 0, asOf: stamp },
+      nodes: [{ id: 'fixture-video', label: '합성 영상', kind: 'video', summary: '실제 분석 결과가 아닌 UI 검증용 데이터', evidence: [] },
+        { id: 'fixture-restaurant', label: '합성 맛집', kind: 'restaurant', summary: '실제 식당 정보가 아닌 UI 검증용 데이터', evidence: [] }],
+      edges: [{ id: 'fixture-reference', source: 'fixture-video', target: 'fixture-restaurant', relation: 'references' }] };
     const q = (params.get('q') ?? '').normalize('NFKC').toLowerCase().trim(), kind = params.get('kind');
     const filtered = snapshot.nodes.filter(node => (!kind || node.kind === kind) && (!q || `${node.label} ${node.summary}`.normalize('NFKC').toLowerCase().includes(q)));
     const nodes = filtered.slice(0, 100), ids = new Set(nodes.map(node => node.id));
@@ -137,6 +144,7 @@ function api(pathname, params = new URLSearchParams()) {
   if (pathname === '/api/admin/pipeline') return {source:'github_actions',hardware:'합성 환경',dataEnv:'fixture',targets:[],jobs:[
     {id:'fixture-run-1',target:'tzuyang',profile:'lite_gha',status:'Succeeded',dry_run:true,adapter_index:6}],failures:[],failureFrames:[],gauges:{}};
   if (pathname.startsWith('/api/admin/evaluations/')) return {record:evaluations.find(row=>row.id===pathname.split('/').at(-1))??null,revision:'1'};
+  if (pathname === '/api/admin/privacy-incidents') return { ok:true,serverNow:stamp,incidents:[],notices:[],actions:[] };
   if (pathname === '/api/privacy/consents') return {
     policy:{policyVersionId:'00000000-0000-4000-8000-000000000001',version:'2026-08-04.1',contentSha256:'6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b'},
     consents:{ordinary:{email:false,sms:false,push:false},night:{email:false,sms:false,push:false}} };
@@ -151,6 +159,8 @@ function api(pathname, params = new URLSearchParams()) {
     stats: { total: 25, pending: 25, approved: 0, deleted: 0, hold: 0, db_conflict: 0, ready_for_approval: 0, unconfirmed_map: 0, missing: 0, not_selected: 0 },
     revision: '1', nextCursor: null, hasMore: false, filteredTotal: 25, totalCount: 25,
     warnings: Object.fromEntries(evaluations.map((row) => [row.id, { sameVideo: { count: 0, candidates: [], message: '' }, identity: [] }])) };
+  if (pathname === '/api/admin/submissions') return { submissions: fixtureSubmissions, items: fixtureSubmissionItems };
+  if (pathname === '/api/admin/restaurant-requests') return { requests: [] };
   if (pathname === '/api/admin/users') return { users: managedUsers,
     summary: { loadedUsers:3,adminUsers:1,disabledUsers:1,unconfirmedUsers:0 },page:1,perPage:120,total:3 };
   if (pathname === '/api/admin/restaurant-refresh-history') return {candidates:refreshCandidates,summary:{approved_restaurants_total:25,needs_review:3,approved:0,rejected:0,applied:0,last_checked_at:stamp}};
@@ -159,7 +169,11 @@ function api(pathname, params = new URLSearchParams()) {
     events: ['applied','intent','failed'].map((status,i)=>({id:`fixture-audit-${i+1}`,actorUserId:fixtureUser.id,targetUserId:fixtureProfiles[i].user_id,
       action:['admin_user_profile_updated','admin_user_role_granted','admin_user_disabled'][i],status,reasonCode:'operator-review',correlationId:`fixture-correlation-${i+1}`,
       appliedAt:status==='applied'?stamp:null,errorCode:status==='failed'?'FIXTURE_REJECTED':null,createdAt:stamp,counts:{},flags:{}})) };
-  if (pathname === '/api/admin/storyboard/production') return { ok: true, projects: storyboardProjects.map(project=>({id:project.id,revision:project.revision,status:project.status,title:project.document.title,createdAt:stamp,updatedAt:stamp})), workers: [] };
+  if (pathname === '/api/admin/youtube-thumbnail-generator/jobs') return { jobs:[] };
+  if (pathname === '/api/admin/youtube-thumbnail-generator/history') return { runs:[] };
+  if (pathname === '/api/admin/youtube-thumbnail-generator/release-candidates') return { candidates:[] };
+  if (pathname === '/api/admin/youtube-thumbnail-generator/releases/current') return { status:'empty',release:null };
+  if (pathname === '/api/admin/storyboard/production') return { ok: true, readiness: { schemaVersion: 1, status: 'held', code: 'FEATURE_DATABASE_HELD' }, projects: storyboardProjects.map(project=>({id:project.id,revision:project.revision,status:project.status,title:project.document.title,createdAt:stamp,updatedAt:stamp})), workers: [] };
   if (pathname.startsWith('/api/admin/storyboard/production/')) {const project=storyboardProjects.find(project=>project.id===pathname.split('/').at(-1));return project?{ok:true,project,job:null,events:[]}:{ok:false,error:'not_found'};}
   if (pathname === '/api/insights/treemap') return { asOf:stamp,videos,totalVideos:videos.length,period:'ALL',availablePeriods:['1M','ALL'],meta:{dataSource:'supabase-treemap'} };
   if (pathname.includes('banners')) return { banners: fixtureBanners, items: fixtureBanners };
@@ -178,7 +192,9 @@ const mockSupabase = http.createServer(async (req, res) => {
   if (path.endsWith('/rpc/get_current_privacy_eligibility')) return response(res,{
     schemaVersion:1,eligible:true,reasonCode:'PRIVACY_ELIGIBLE',policyVersionId:'00000000-0000-4000-8000-000000000001',
     policyVersion:'2026-08-04.1',contentSha256:'6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b' });
+  if (path.endsWith('/rpc/is_current_auth_session_active')) return response(res, true);
   if (path.endsWith('/user_roles')) return response(res,filteredRows(req,[{user_id:fixtureUser.id,role:'admin'}]));
+  if (path.endsWith('/user_account_status')) return response(res,filteredRows(req,[{user_id:fixtureUser.id,account_status:'active'}]));
   if (path.endsWith('/restaurant_submissions')) return response(res,filteredRows(req,fixtureSubmissions));
   if (path.endsWith('/restaurant_submission_items')) return response(res,filteredRows(req,fixtureSubmissionItems));
   if (path.endsWith('/user_bookmarks')) return response(res,filteredRows(req,restaurants.slice(0,3).map((restaurant,i)=>({
@@ -201,11 +217,16 @@ const preview = http.createServer(async (req, res) => {
   const url = new URL(req.url, origin);
   if (url.pathname === '/__fixture/session') {
     const cookie = `base64-${Buffer.from(JSON.stringify(fixtureSession())).toString('base64url')}`;
-    res.writeHead(303,{'Set-Cookie':`sb-127-auth-token=${cookie}; Path=/; SameSite=Lax; Max-Age=86400`,Location:'/mypage/profile','Cache-Control':'no-store'});
+    // Synthetic session only: use the application's current completed cookie generation.
+    res.writeHead(303,{'Set-Cookie':[
+      `${fixtureAuthCookies.key}=${cookie}; Path=/; SameSite=Lax; Max-Age=86400`,
+      `${fixtureAuthCookies.marker}=1; Path=/; SameSite=Lax; Max-Age=86400`,
+      ...[fixtureAuthCookies.legacyKey, fixtureAuthCookies.previousKey].map(key=>`${key}=; Path=/; SameSite=Lax; Max-Age=0`),
+    ],Location:'/mypage/profile','Cache-Control':'no-store'});
     return res.end();
   }
   if (url.pathname === '/__fixture/anonymous') {
-    res.writeHead(303,{'Set-Cookie':'sb-127-auth-token=; Path=/; SameSite=Lax; Max-Age=0',Location:'/','Cache-Control':'no-store'});
+    res.writeHead(303,{'Set-Cookie':[fixtureAuthCookies.key,fixtureAuthCookies.marker,fixtureAuthCookies.legacyKey,fixtureAuthCookies.previousKey,fixtureAuthCookies.previousMarker].map(key=>`${key}=; Path=/; SameSite=Lax; Max-Age=0`),Location:'/','Cache-Control':'no-store'});
     return res.end();
   }
   if (url.pathname === '/__fixture/start') {

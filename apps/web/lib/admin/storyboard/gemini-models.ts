@@ -15,7 +15,7 @@ const STORYBOARD_GEMINI_DECLARED_MODEL_SPECS = [
 export type StoryboardGeminiWorkerModel = {
   id: string;
   /** Legacy catalog ownership remains decodable; the policy check admits only gemini-api. */
-  owned_by?: 'gemini-api' | 'mlx-serve';
+  owned_by?: 'gemini-api' | 'openai-api' | 'mlx-serve';
   capabilities: string[];
   loaded: boolean;
   bytes_on_disk: number;

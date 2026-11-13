@@ -1,5 +1,6 @@
 'use client';
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
@@ -89,10 +90,10 @@ export function AdminOperationsPanel() {
   const stateClass = (row: (typeof rows)[number]) => row.priority === 'failure' ? 'border-destructive/25 bg-destructive/5 text-destructive' : row.priority === 'attention' ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200' : 'border-border text-muted-foreground';
   const inspector = selected ? <aside key={selected.id} ref={detailRef} tabIndex={-1} className={cn('h-full min-h-0 overflow-y-auto outline-none', inlineInspector ? 'admin-cms-inspector' : 'p-3')} aria-label="운영 항목 상세" data-operations-inspector onKeyDown={event => { if (inlineInspector && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeDetail(); } }}>
     <div className="flex items-start justify-between gap-2"><h2 className="min-w-0 text-base font-semibold leading-6">{selected.title}</h2><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label="운영 항목 상세 닫기" onClick={closeDetail}><X className="h-3.5 w-3.5" /></Button></div>
-    <span className={`mt-2 inline-flex rounded border px-1.5 py-0.5 text-[11px] ${stateClass(selected)}`}>{stateLabel(selected)}</span>
+    <span className={`mt-2 inline-flex rounded border px-2 py-1 text-[11px] ${stateClass(selected)}`}>{stateLabel(selected)}</span>
     <p className="mt-3 text-xs leading-5 text-muted-foreground">{selected.summary}</p>
     {selected.metrics.length > 0 ? <dl className="admin-detail-section mt-3 grid grid-cols-2 gap-x-4 gap-y-3 p-3">
-      {selected.metrics.map(item => <div key={item.id} className="min-w-0"><dt className="text-xs text-muted-foreground">{item.label}</dt><dd className="mt-0.5 break-words text-sm font-medium tabular-nums">{item.value === null ? '확인 불가' : `${number.format(item.value)}건`}</dd></div>)}
+      {selected.metrics.map(item => <div key={item.id} className="min-w-0"><dt className="text-xs text-muted-foreground">{item.label}</dt><dd className="mt-1 break-words text-sm font-medium tabular-nums">{item.value === null ? '확인 불가' : `${number.format(item.value)}건`}</dd></div>)}
     </dl> : null}
     <dl className="mt-3 space-y-3 text-xs leading-5">
       <div><dt className="text-muted-foreground">조회 출처</dt><dd>{SOURCE_LABELS[selected.sourceId]}</dd></div>
@@ -104,9 +105,9 @@ export function AdminOperationsPanel() {
     </div>
   </aside> : null;
 
-  return <section className="admin-surface flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background" aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
+  return <section className={`admin-surface flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background ${featurePolish.polishedRoot}`} aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
     <AdminPageHeader title={getAdminModuleTitle("llm")} icon={Bot} titleId="admin-operations-title" summary="읽기 전용" data-admin-module-header="compact" data-admin-module-header-module="llm"
-      actions={<Button variant="ghost" size="sm" aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => { if (!busy) refresh(); }} aria-label="운영 상태 새로고침" className="gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />새로고침</Button>}
+      actions={<Button variant="ghost" size="sm" aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => { if (!busy) refresh(); }} aria-label="운영 상태 새로고침" className="gap-2"><RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />새로고침</Button>}
     />
     <div className="flex shrink-0 flex-wrap gap-x-5 gap-y-1 bg-muted/30 px-3 py-2 text-xs" aria-label="운영 집계">
       {model.summaries.map(item => <span key={item.id} className="text-muted-foreground">{item.label} <strong className="font-medium tabular-nums text-foreground" data-operations-summary={item.id}>{item.value === null ? (snapshots[item.id as OperationsSourceId] ? '확인 불가' : '조회 중') : `${number.format(item.value)}건`}</strong></span>)}
@@ -120,9 +121,9 @@ export function AdminOperationsPanel() {
       <div ref={listRef} className="admin-cms-table-container flex-1">
         <table className="admin-cms-table table-fixed" aria-label="운영 우선순위 목록"><thead className="sticky top-0 z-10 bg-background"><tr><th scope="col">운영 항목</th><th scope="col" className="hidden w-52 xl:table-cell">주요 집계</th><th scope="col" className="w-28">상태</th></tr></thead><tbody>
           {rows.map(row => <tr key={row.id} data-operations-row={row.id} className={cn('cursor-pointer', selected?.id === row.id && 'admin-cms-row-selected')} onClick={event => { rowRef.current = event.currentTarget.querySelector('button'); setSelectedId(row.id); window.requestAnimationFrame(() => detailRef.current?.focus({ preventScroll: true })); }}>
-            <td><button type="button" aria-pressed={selected?.id === row.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className="block w-full min-w-0 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="block truncate text-sm font-medium">{row.title}</span><span className="mt-0.5 block text-[11px] text-muted-foreground">{SOURCE_LABELS[row.sourceId]}</span><span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] xl:hidden">{row.metrics.slice(0, 3).map(item => <span key={item.id}>{item.label} <strong className="font-medium tabular-nums">{item.value === null ? '미확인' : number.format(item.value)}</strong></span>)}</span></button></td>
+            <td><button type="button" aria-pressed={selected?.id === row.id} aria-haspopup={inlineInspector ? undefined : 'dialog'} className="block w-full min-w-0 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="block truncate text-sm font-medium">{row.title}</span><span className="mt-1 block text-[11px] text-muted-foreground">{SOURCE_LABELS[row.sourceId]}</span><span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] xl:hidden">{row.metrics.slice(0, 3).map(item => <span key={item.id}>{item.label} <strong className="font-medium tabular-nums">{item.value === null ? '미확인' : number.format(item.value)}</strong></span>)}</span></button></td>
             <td className="hidden xl:table-cell"><div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">{row.metrics.length ? row.metrics.slice(0, 3).map(item => <span key={item.id} className="text-muted-foreground">{item.label} <strong className="font-medium tabular-nums text-foreground">{item.value === null ? '미확인' : number.format(item.value)}</strong></span>) : <span className="text-muted-foreground">미확인</span>}</div></td>
-            <td><span className={`inline-flex rounded border px-1.5 py-0.5 text-[11px] ${stateClass(row)}`}>{stateLabel(row)}</span></td>
+            <td><span className={`inline-flex rounded border px-2 py-1 text-[11px] ${stateClass(row)}`}>{stateLabel(row)}</span></td>
           </tr>)}
         </tbody></table>
         {!rows.length ? <div role="status" className="admin-empty-state m-3 !min-h-0 !flex-row !items-center !justify-between gap-3 p-3 !text-left text-sm text-muted-foreground"><p>조건에 맞는 운영 항목이 없습니다.</p><Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatus('all'); }}>필터 초기화</Button></div> : null}

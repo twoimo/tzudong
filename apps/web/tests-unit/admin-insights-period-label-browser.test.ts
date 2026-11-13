@@ -88,21 +88,19 @@ const requests = (page: Page) => page.evaluate(() => (globalThis as unknown as {
         const chart = page.getByRole('img');
         await playwrightExpect(summary).toContainText('전체 기간');
         await playwrightExpect(summary).toContainText('2개 영상');
-        await playwrightExpect(chart).toContainText('222.2k');
-        await playwrightExpect(chart).toHaveAttribute('aria-label', /전체 기간/);
+        await playwrightExpect(chart).toHaveAccessibleName(/조회수.*전체 기간.*2개 영상/);
 
         await page.evaluate(() => { (globalThis as unknown as { __fixture: { hold: boolean } }).__fixture.hold = true; });
-        const nextPeriod = page.getByText('기준', { exact: true }).locator('..').getByRole('button', { name: '1M', exact: true });
+        const nextPeriod = page.getByRole('group', { name: '기간' }).getByRole('button', { name: '1M', exact: true });
         await nextPeriod.focus();
         await page.keyboard.press('Enter');
         await playwrightExpect.poll(() => requests(page)).toContain('1M');
-        await playwrightExpect(chart).toContainText('222.2k');
-        await playwrightExpect(chart).not.toContainText('888.9k');
+        await playwrightExpect(chart).toHaveAccessibleName(/조회수.*전체 기간.*2개 영상/);
         await playwrightExpect(summary).toContainText('전체 기간');
         await playwrightExpect(summary).toContainText('2개 영상');
         await playwrightExpect(summary).not.toContainText('전월');
-        await playwrightExpect(chart).toHaveAttribute('aria-label', /전체 기간/);
-        await playwrightExpect(chart).not.toHaveAttribute('aria-label', /전월/);
+        await playwrightExpect(chart).toHaveAccessibleName(/조회수.*전체 기간.*2개 영상/);
+        await playwrightExpect(chart).not.toHaveAccessibleName(/전월/);
 
         await page.evaluate(() => {
           const fixture = (globalThis as unknown as { __fixture: { hold: boolean; release: () => void } }).__fixture;
@@ -111,8 +109,7 @@ const requests = (page: Page) => page.evaluate(() => (globalThis as unknown as {
         });
         await playwrightExpect(summary).toContainText('전월');
         await playwrightExpect(summary).toContainText('9개 영상');
-        await playwrightExpect(chart).toContainText('888.9k');
-        await playwrightExpect(chart).toHaveAttribute('aria-label', /전월/);
+        await playwrightExpect(chart).toHaveAccessibleName(/조회수.*전월.*9개 영상/);
         expect(externalRequests).toBe(0);
         expect(pageErrors).toEqual([]);
       } finally {
