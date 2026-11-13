@@ -359,6 +359,7 @@ test.describe('Admin KPI dashboard runtime guard', () => {
 
     test('관리자 대시보드 모바일 헤더와 KPI 제목은 390/834/1423px에서 겹치지 않고 한 줄로 읽힌다', async ({ page }, testInfo) => {
         test.setTimeout(90_000);
+        await page.emulateMedia({ reducedMotion: 'reduce' });
         await page.setViewportSize({ width: 390, height: 844 });
         await installE2EAdminShellBypass(page);
         await page.setExtraHTTPHeaders({
@@ -393,12 +394,13 @@ test.describe('Admin KPI dashboard runtime guard', () => {
                     whiteSpace: title ? getComputedStyle(title).whiteSpace : '',
                     height: title?.getBoundingClientRect().height ?? 0,
                     lineHeight: title ? Number.parseFloat(getComputedStyle(title).lineHeight) : 0,
+                    clipped: Boolean(title && title.scrollWidth > title.clientWidth + 1),
                     actionsBelowTitle: Boolean(titlePart && actionBox && actionBox.y >= titlePart.bottom - 1),
                 };
             }));
             expect(observations.length).toBeGreaterThanOrEqual(5);
             expect(observations.every((item) => item.title.length > 0 && item.whiteSpace === 'nowrap'
-                && item.height <= item.lineHeight + 1)).toBe(true);
+                && item.height <= item.lineHeight + 1 && !item.clipped)).toBe(true);
             if (width === 390) expect(observations[0]?.actionsBelowTitle).toBe(true);
             await page.screenshot({
                 path: testInfo.outputPath(`admin-overview-mobile-polish-${width}.png`),

@@ -3168,7 +3168,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(queue).toContain("replacement: '/api/admin/youtube-thumbnail-generator/chat/jobs'");
   });
 
-  test("keeps historical storyboard decoding while all executable UI resolves to Gemini", () => {
+  test("keeps historical storyboard decoding while executable UI uses advertised Gemini or OpenAI capabilities", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const activeStoryboardSource = source(
       "components/admin/storyboard/AdminStoryboardGenerator.tsx",

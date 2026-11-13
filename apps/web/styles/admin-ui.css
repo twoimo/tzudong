@@ -172,11 +172,8 @@
 @container (max-width: 259px) {
   [data-admin-dashboard-kpi-title-row="single-line"] p { font-size: 0.6875rem; }
   [data-admin-dashboard-kpi-delta-label="full"] { display: none; }
-  [data-admin-dashboard-kpi-delta-label="compact"] { display: inline; }
-  [data-admin-dashboard-kpi-title-actions="single-line-scroll"] [data-slot="tooltip-trigger"] { padding-inline: 0.5rem; }
-}
-@container (max-width: 179px) {
   [data-admin-dashboard-kpi-delta-label="compact"] { display: none; }
+  [data-admin-dashboard-kpi-title-actions="single-line-scroll"] [data-slot="tooltip-trigger"] { padding-inline: 0.5rem; }
 }
 @media (max-width: 767px) {
   [data-admin-console-content="true"] { padding: 0.75rem; padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem) !important; }
