@@ -15,6 +15,12 @@ full scope, verification records and limitations of each release.
   operational records in the [changelog archive](docs/archive/changelog/CHANGELOG.md).
 - Add release channels, a release-note template and GitHub note categories.
 
+## [1.2.8](https://github.com/twoimo/tzudong/releases/tag/v1.2.8) — 2026-11-13
+
+- Compact the administrator dashboard and storyboard controls; add opt-in, ephemeral macOS receipt OCR with no automatic cloud fallback.
+- Simplify project guidance and preserve existing routes, data and fail-closed readiness.
+- Source publication only: production was not promoted because post-merge checks found a missing documentation ownership entry. The follow-up correction is tracked in PR #3831.
+
 ## [1.2.7](https://github.com/twoimo/tzudong/releases/tag/v1.2.7) — 2026-09-27
 
 - Preserve the home page's child tree while its lazy provider initializes.
