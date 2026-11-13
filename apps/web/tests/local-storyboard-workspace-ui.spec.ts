@@ -11,6 +11,8 @@ import {
   storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema,
 } from "../lib/admin/storyboard/production-contract";
+import { FEATURE_DATABASE_READY, FEATURE_DATABASE_HELD } from "../lib/runtime-feature-readiness-contract";
+import { STORYBOARD_OPENAI_TEXT_MODEL, STORYBOARD_OPENAI_IMAGE_MODEL } from "../lib/admin/storyboard/openai-models";
 import {
   STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL,
   STORYBOARD_GEMINI_TEXT_MODEL,
@@ -69,7 +71,8 @@ function activeJob(status = "queued") {
 }
 function summary(id: string, title: string) { return { id, title, revision: 4, status: "partial", createdAt: NOW, updatedAt: NOW }; }
 const CATALOG = {
-  ok: true, projects: [summary(ID, "UI 계약용 프로젝트"), summary(OTHER_ID, "다른 프로젝트")],
+  // Synthetic readiness is only for the isolated HTTP fixture, never hosted proof.
+  ok: true, readiness: FEATURE_DATABASE_READY, projects: [summary(ID, "UI 계약용 프로젝트"), summary(OTHER_ID, "다른 프로젝트")],
   workers: [{ id: "10000000-0000-4000-8000-000000000006", online: true, lastHeartbeat: NOW, models: [
     { id: STORYBOARD_GEMINI_TEXT_MODEL, owned_by: "gemini-api", capabilities: ["chat"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
     { id: STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, owned_by: "gemini-api", capabilities: ["image"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
@@ -142,7 +145,7 @@ test.afterEach(async ({ page }) => {
 });
 async function open(page: Page, id?: string) {
   await page.goto(`${origin}/admin?module=storyboard${id ? `&storyboardProject=${id}` : ""}#workspace`);
-  await expect(page.getByRole("heading", { name: "스토리보드", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "스토리보드 생성", exact: true })).toBeVisible();
   if (!id) await expect(page.locator(`#local-text-model option[value="${STORYBOARD_GEMINI_TEXT_MODEL}"]`)).toHaveCount(1);
   if (id) await expect(page.getByRole("heading", { name: "UI 계약용 프로젝트", exact: true })).toBeVisible();
 }
@@ -186,7 +189,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await page.reload();
     await expect(page.getByRole("heading", { name: "1. 이전 장면 제목", exact: true })).toBeVisible();
   });
-  test("exposes only the fixed Gemini execution models and no legacy workspace", async ({ page }) => {
+  test("exposes approved Gemini models and disables unavailable OpenAI providers",  async ({ page }) => {
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
     await page.clock.install();
@@ -195,14 +198,16 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await expect(page.getByLabel("이미지 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL);
     await expect(page.locator('#local-text-model option')).toHaveCount(1);
     await expect(page.locator('#local-image-model option')).toHaveCount(2);
-    await expect(page.getByText("Gemini API 지원 모델로만 생성합니다", { exact: false })).toBeVisible();
+    await expect(page.getByText("워커가 온라인으로 광고한 허용 모델만 선택할 수 있습니다.", { exact: false })).toBeVisible();
+    await expect(page.locator('#local-text-provider option[value="openai-api"]')).toBeDisabled();
+    await expect(page.locator('#local-image-provider option[value="openai-api"]')).toBeDisabled();
     await expect(page.locator('option[value="chatgpt-manual"], option[value="grok-manual"], option[value="local-mlx"]')).toHaveCount(0);
     await page.clock.fastForward(20_000);
     expect(requests.filter((url) => url.includes("/api/") || url.includes("/qa-history/"))).toEqual([`${origin}${API}`]);
     await expect(page.locator('[data-admin-storyboard-generator="true"]')).toHaveCount(0);
     await page.getByRole("button", { name: "연결 설정", exact: true }).click();
     await expect(page.getByRole("heading", { name: "제작 연결", exact: true })).toBeVisible();
-    await expect(page.getByText("Gemini API 확인됨", { exact: false })).toHaveCount(3);
+    await expect(page.getByText("워커 보고 · Gemini API", { exact: false })).toHaveCount(3);
     await expect(page.getByRole("button", { name: "이전 작업 공간 열기", exact: true })).toHaveCount(0);
   });
 
@@ -211,7 +216,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await page.getByLabel("이미지 모델", { exact: true }).selectOption("gemini-3-pro-image");
     await expect(page.getByLabel("텍스트 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_TEXT_MODEL);
     await expect(page.getByLabel("이미지 모델", { exact: true })).toHaveValue("gemini-3-pro-image");
-    await expect(page.locator('select[id$="provider"]')).toHaveCount(0);
+    await expect(page.locator('select[id$="provider"]')).toHaveCount(2);
     await expect(page.getByLabel("외부 AI 사용 허용", { exact: false })).toHaveCount(0);
   });
 
@@ -229,6 +234,62 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await open(page);
     await expect(page.getByLabel("텍스트 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_TEXT_MODEL);
     await expect(page.getByLabel("이미지 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL);
+    await expect(page.getByRole("button", { name: "프로젝트 만들기", exact: true })).toBeDisabled();
+  });
+
+  test("creates an OpenAI request only through the local queue and never sends credentials", async ({ page }) => {
+    const catalog = structuredClone(CATALOG);
+    catalog.workers[0].models.push(
+      { id: STORYBOARD_OPENAI_TEXT_MODEL, owned_by: "openai-api", capabilities: ["chat"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      { id: STORYBOARD_OPENAI_IMAGE_MODEL, owned_by: "openai-api", capabilities: ["image"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+    );
+    const posts: Record<string, unknown>[] = [];
+    const externalRequests: string[] = [];
+    page.on("request", request => { if (new URL(request.url()).origin !== origin) externalRequests.push(new URL(request.url()).origin); });
+    let created: unknown = saved();
+    await page.route(`**${API}`, async route => {
+      if (route.request().method() !== "POST") return fulfill(route, catalog);
+      const body = route.request().postDataJSON(); posts.push(body);
+      created = { ...saved(), project: { ...saved().project, request: storyboardProductionRequestSchema.parse(body), document: null, status: "waiting_worker" }, job: activeJob() };
+      return fulfill(route, created);
+    });
+    await page.route(`**${API}/${ID}`, route => fulfill(route, created));
+    await open(page);
+    await page.getByLabel("텍스트 공급자", { exact: true }).selectOption("openai-api");
+    await page.getByLabel("이미지 공급자", { exact: true }).selectOption("openai-api");
+    await expect(page.getByLabel("텍스트 모델", { exact: true })).toHaveValue(STORYBOARD_OPENAI_TEXT_MODEL);
+    await expect(page.getByLabel("이미지 모델", { exact: true })).toHaveValue(STORYBOARD_OPENAI_IMAGE_MODEL);
+    await page.getByLabel("제작 요청", { exact: true }).fill(REQUEST.prompt);
+    await page.getByLabel("장면 수 (5–12)", { exact: true }).fill("5");
+    await page.getByRole("button", { name: "프로젝트 만들기", exact: true }).click();
+    await expect.poll(() => posts.length).toBe(1);
+    expect(posts[0]).toMatchObject({ workflow: STORYBOARD_WORKFLOW, providers: { externalAI: true,
+      text: { id: "openai-api", model: STORYBOARD_OPENAI_TEXT_MODEL }, image: { id: "openai-api", model: STORYBOARD_OPENAI_IMAGE_MODEL } } });
+    expect(JSON.stringify(posts)).not.toMatch(/api_key|apiKey|OPENAI_API_KEY|Authorization|Bearer/);
+    expect(externalRequests).toEqual([]);
+    await expect(page).toHaveURL(new RegExp(`storyboardProject=${ID}`));
+  });
+
+  test("does not combine separate OpenAI workers into a fictitious executable pair", async ({ page }) => {
+    const catalog = structuredClone(CATALOG);
+    catalog.workers.push(
+      { ...catalog.workers[0], id: "10000000-0000-4000-8000-000000000026", models: [
+        { id: STORYBOARD_OPENAI_TEXT_MODEL, owned_by: "openai-api", capabilities: ["chat"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      ] },
+      { ...catalog.workers[0], id: "10000000-0000-4000-8000-000000000027", models: [
+        { id: STORYBOARD_OPENAI_IMAGE_MODEL, owned_by: "openai-api", capabilities: ["image"], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      ] },
+    );
+    await page.route(`**${API}`, route => fulfill(route, catalog));
+    await open(page);
+    await page.getByLabel("텍스트 공급자", { exact: true }).selectOption("openai-api");
+    await page.getByLabel("이미지 공급자", { exact: true }).selectOption("openai-api");
+    await expect(page.getByRole("button", { name: "프로젝트 만들기", exact: true })).toBeDisabled();
+  });
+
+  test("retains the database readiness hold even with an online provider worker", async ({ page }) => {
+    await page.route(`**${API}`, route => fulfill(route, { ...CATALOG, readiness: FEATURE_DATABASE_HELD }));
+    await open(page);
     await expect(page.getByRole("button", { name: "프로젝트 만들기", exact: true })).toBeDisabled();
   });
 
@@ -384,14 +445,15 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
       // Keep the readback pending for two frames so an early focus attempt cannot pass by timing luck.
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       await expect(page.getByRole("heading", { name: "UI 계약용 프로젝트", exact: true })).toBeFocused();
-      const exportButton = page.getByRole("button", { name: "내보내기", exact: true });
+      // The busy refresh action remains focusable via aria-disabled, before export.
+      const navigationTarget = page.getByRole("button", { name: "새로고침", exact: true });
       if (navigateDuringReadback) {
         await page.keyboard.press("Tab");
-        await expect(exportButton).toBeFocused();
+        await expect(navigationTarget).toBeFocused();
       }
       await fulfill(readback!, current);
       await expect(edit).toBeEnabled();
-      await expect(navigateDuringReadback ? exportButton : edit).toBeFocused();
+      await expect(navigateDuringReadback ? navigationTarget : edit).toBeFocused();
       await edit.click(); await page.keyboard.press("Escape");
       await expect(page.getByRole("form", { name: "장면 1 편집 양식" })).toHaveCount(0);
       await expect(edit).toBeFocused();

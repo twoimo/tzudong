@@ -12,10 +12,11 @@ import { GeminiStoryboardClient } from './gemini-client.ts';
 import {
   isAllowedStoryboardGeminiWorkerModel, storyboardGeminiDeclaredModels,
 } from './gemini-models.ts';
+import { isAllowedStoryboardOpenAIWorkerModel, storyboardOpenAIDeclaredModels } from './openai-models.ts';
 import type { ProductionModel as WorkerModel } from './production-worker-auth.ts';
 import {
   MAX_STORYBOARD_IMAGE_BYTES, MAX_STORYBOARD_IMAGE_PIXELS, STORYBOARD_PRODUCTION_MESSAGES,
-  StoryboardProductionError, assertGeminiStoryboardExecutionPolicy, parseStoryboardDraft,
+  StoryboardProductionError, assertStoryboardProviderPolicy, parseStoryboardDraft,
   type StoryboardDraft, type StoryboardProductionProvenance,
 } from './production-contract.ts';
 import { canAdmitStoryboardMemory } from './resource-invariants.ts';
@@ -189,21 +190,27 @@ export interface StoryboardWorkerApi {
   operation(value: Record<string, unknown>, signal?: AbortSignal): Promise<unknown>;
   image(lease: Lease, sceneNo: number, bytes: Buffer, proof: StoryboardProductionProvenance, signal?: AbortSignal): Promise<void>;
 }
-type GeminiModels = Pick<GeminiStoryboardClient, 'models' | 'draft' | 'image'>;
+type ProviderModels = {
+  models(signal?: AbortSignal): Promise<WorkerModel[]> | WorkerModel[];
+  draft(request: import('./production-contract.ts').StoryboardProductionRequest, signal?: AbortSignal): Promise<{ draft: StoryboardDraft; provenance: StoryboardProductionProvenance }> ;
+  image(request: import('./production-contract.ts').StoryboardProductionRequest, prompt: string, signal?: AbortSignal): Promise<{ bytes: Buffer; provenance: StoryboardProductionProvenance }> ;
+};
+function isAllowedWorkerModel(model: WorkerModel): boolean { return isAllowedStoryboardGeminiWorkerModel(model) || isAllowedStoryboardOpenAIWorkerModel(model); }
 
 function assertClaimedStoryboardModels(job: ClaimedStoryboardJob, models: WorkerModel[]): void {
   assertVerifiedStoryboardModels(models);
   for (const modality of ['text', 'image'] as const) {
     const selected = job.request.providers[modality].model;
     const capability = modality === 'text' ? 'chat' : 'image';
-    if (!models.some((model) => model.id === selected && model.capabilities.includes(capability))) {
+    const provider = job.request.providers[modality].id;
+    if (!models.some((model) => model.id === selected && model.owned_by === provider && model.capabilities.includes(capability))) {
       throw new StoryboardProductionError('provider_failed');
     }
   }
 }
 
 function assertVerifiedStoryboardModels(models: WorkerModel[]): void {
-  if (!models.length || models.some((model) => !isAllowedStoryboardGeminiWorkerModel(model))) {
+  if (!models.length || models.some((model) => !isAllowedWorkerModel(model))) {
     throw new StoryboardProductionError('provider_failed');
   }
 }
@@ -253,7 +260,8 @@ export function admitStoryboardWorkerMemory(
 /** One claimed project and one image at a time. SQL owns durable progress and retry leases. */
 export class OutboundStoryboardWorker {
   private readonly api: StoryboardWorkerApi;
-  private readonly gemini: GeminiModels;
+  private readonly gemini?: ProviderModels;
+  private readonly openai?: ProviderModels;
   private readonly heartbeatMs: number;
   private readonly onEvent: (event: WorkerEvent) => void;
   private readonly admitMemory: (models: WorkerModel[]) => boolean;
@@ -262,10 +270,10 @@ export class OutboundStoryboardWorker {
   private catalogRetryAfter = 0;
   private running = false;
   constructor(options: {
-    api: StoryboardWorkerApi; gemini?: GeminiModels; heartbeatMs?: number; onEvent?: (event: WorkerEvent) => void;
+    api: StoryboardWorkerApi; gemini?: ProviderModels; openai?: ProviderModels; heartbeatMs?: number; onEvent?: (event: WorkerEvent) => void;
     admitMemory?: (models: WorkerModel[]) => boolean; now?: () => number;
   }) {
-    this.api = options.api; this.gemini = options.gemini ?? new GeminiStoryboardClient();
+    this.api = options.api; this.gemini = options.gemini ?? (!options.openai ? new GeminiStoryboardClient() : undefined); this.openai = options.openai;
     this.heartbeatMs = options.heartbeatMs ?? 15_000;
     if (!Number.isInteger(this.heartbeatMs) || this.heartbeatMs < 1 || this.heartbeatMs > 30_000) {
       throw new StoryboardWorkerApiError('invalid_worker_timeout');
@@ -288,7 +296,7 @@ export class OutboundStoryboardWorker {
     if (this.catalogFailures > 0 && this.now() < this.catalogRetryAfter) return null;
     let models: WorkerModel[];
     try {
-      models = await this.gemini.models(signal);
+      models = [...(this.gemini ? await this.gemini.models(signal) : []), ...(this.openai ? await this.openai.models(signal) : [])];
     } catch (error) {
       const transient = error instanceof StoryboardProductionError && error.code === 'provider_failed';
       if (signal?.aborted || !transient) throw error;
@@ -338,7 +346,7 @@ export class OutboundStoryboardWorker {
         this.onEvent({ event: 'feature_held', code: readiness.code });
         return 'held';
       }
-      const declaredModels = storyboardGeminiDeclaredModels();
+      const declaredModels = [...(this.gemini ? storyboardGeminiDeclaredModels() : []), ...(this.openai ? storyboardOpenAIDeclaredModels() : [])];
       if (!this.admitMemory(declaredModels)) {
         this.onEvent({ event: 'memory_deferred' });
         return 'idle';
@@ -391,7 +399,7 @@ export class OutboundStoryboardWorker {
       check();
       await this.heartbeat(heartbeatModels, scope.signal, lease);
       check();
-      assertGeminiStoryboardExecutionPolicy(job.request.providers);
+      assertStoryboardProviderPolicy(job.request.providers);
       assertClaimedStoryboardModels(job, availableModels);
       if (job.document && (job.document.projectId !== job.projectId || job.document.revision !== job.revision
         || job.document.scenes.length !== job.request.sceneCount
@@ -400,11 +408,13 @@ export class OutboundStoryboardWorker {
       }
       let draft: StoryboardDraft;
       if (!job.document) {
-        if (job.kind !== 'generate' || job.request.providers.text.id !== 'gemini-api') {
+        if (job.kind !== 'generate') {
           throw new StoryboardProductionError('invalid_structured_response');
         }
         this.onEvent({ event: 'text_started', jobId: job.id });
-        const generated = await this.gemini.draft(job.request, scope.signal);
+        const textClient = job.request.providers.text.id === 'openai-api' ? this.openai : this.gemini;
+        if (!textClient) throw new StoryboardProductionError('provider_not_configured');
+        const generated = await textClient.draft(job.request, scope.signal);
         draft = parseStoryboardDraft(generated.draft, job.request);
         await operation({ action: 'draft', draft, provenance: generated.provenance });
         this.onEvent({ event: 'text_saved', jobId: job.id });
@@ -419,9 +429,11 @@ export class OutboundStoryboardWorker {
       for (const scene of scenes) {
         check();
         this.onEvent({ event: 'image_started', jobId: job.id, sceneNo: scene.sceneNo });
-        let generated: Awaited<ReturnType<GeminiModels['image']>>;
+        let generated: Awaited<ReturnType<ProviderModels['image']>>;
         try {
-          generated = await this.gemini.image(job.request, scene.imagePrompt, scope.signal);
+          const imageClient = job.request.providers.image.id === 'openai-api' ? this.openai : this.gemini;
+          if (!imageClient) throw new StoryboardProductionError('provider_not_configured');
+          generated = await imageClient.image(job.request, scene.imagePrompt, scope.signal);
           check();
           await validateWorkerImage(generated.bytes);
         }

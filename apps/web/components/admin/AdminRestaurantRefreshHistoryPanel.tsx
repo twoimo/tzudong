@@ -1,5 +1,6 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -273,7 +274,7 @@ function RefreshCandidateList({ candidates, isLoading, readFailed, selectedCandi
         <button type="button" className={cn("w-full min-w-0 px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary", selectedCandidateId === candidate.id && "admin-cms-row-selected")} aria-pressed={selectedCandidateId === candidate.id} aria-label={`${candidate.restaurant_name} 상세 보기`} disabled={disabled} onClick={event => onOpenReview(candidate, event.currentTarget)}>
           <span className="flex items-start justify-between gap-2"><span className="min-w-0 truncate text-sm font-medium">{candidate.restaurant_name}</span><Badge variant="outline" className={cn("shrink-0 text-2xs", statusTone[candidate.candidate_status])}>{statusLabels[candidate.candidate_status]}</Badge></span>
           <span className="mt-1 block truncate text-xs text-muted-foreground">{candidate.restaurant_address || "주소 없음"}</span>
-          <span className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"><span>{candidate.detected_change_types.map(changeTypeLabel).join(" · ") || "정보 변경"}</span><span className="ml-auto">{readbackLabel(candidate.readback_state)}</span></span>
+          <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{candidate.detected_change_types.map(changeTypeLabel).join(" · ") || "정보 변경"}</span><span className="ml-auto">{readbackLabel(candidate.readback_state)}</span></span>
         </button>
       </li>)}</ul>
       <table className="admin-cms-table hidden table-fixed md:table"><caption className="sr-only">최신화 후보 및 결정 이력</caption>
@@ -341,7 +342,7 @@ function RefreshCandidateDetailPanel({
               <h3 id="refresh-detail-heading" tabIndex={-1} className="admin-section-title truncate outline-none">
                 {selectedCandidate.restaurant_name}
               </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">운영자 결정 기록{readOnly && " · 읽기 전용"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">운영자 결정 기록{readOnly && " · 읽기 전용"}</p>
             </div>
             <Button
               variant="ghost"
@@ -419,7 +420,7 @@ function RefreshCandidateDetailPanel({
                   <li key={item}>{item}</li>
                 ))}
               </ul>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge
                   variant="outline"
                   className={cn(
@@ -472,7 +473,7 @@ function RefreshCandidateDetailPanel({
                 onChange={(event) =>
                   onApplyApprovedChange(event.target.checked)
                 }
-                className="mt-0.5 h-4 w-4"
+                className="mt-1 h-4 w-4"
               />
               <span>
                 승인과 동시에 맛집 정보 적용
@@ -807,7 +808,7 @@ export function AdminRestaurantRefreshHistoryPanel({
 
   return <section
     aria-labelledby="admin-restaurant-refresh-history-title"
-    className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
+    className={`flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground ${featurePolish.polishedRoot}`}
     data-admin-restaurant-refresh-history="true"
     data-admin-restaurant-refresh-management-structure="header-list-detail"
     data-admin-embedded-module-shell="true"

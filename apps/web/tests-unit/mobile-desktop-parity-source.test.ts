@@ -107,7 +107,7 @@ describe("mobile and desktop parity source contracts", () => {
       "grid-template-columns: 4.5rem minmax(0, 1fr);",
     );
     expect(consoleSource).toContain("md:w-full");
-    expect(consoleSource).toContain("md:items-center md:px-1.5");
+    expect(consoleSource).toContain("md:items-center md:px-2");
     expect(consoleSource).toContain(
       "overscroll-contain scrollbar-hide border-y border-border",
     );

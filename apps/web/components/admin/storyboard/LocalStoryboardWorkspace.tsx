@@ -10,7 +10,7 @@ import { Clapperboard } from "lucide-react";
 import {
   STORYBOARD_PRODUCTION_MESSAGES,
   STORYBOARD_WORKFLOW,
-  assertGeminiStoryboardExecutionPolicy,
+  assertStoryboardProviderPolicy,
   storyboardDraftSceneSchema,
   storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema,
@@ -30,9 +30,9 @@ import { FEATURE_DATABASE_HELD, parseFeatureDatabaseReadiness } from "@/lib/runt
 const API = "/api/admin/storyboard/production";
 const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
 const POLL_MS = 2500;
-const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:py-1.5";
-const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
-const panelClass = "min-w-0 rounded-xl bg-card admin-detail-section !rounded-lg p-3 text-card-foreground sm:p-4";
+const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-none border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:py-2";
+const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-none border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
+const panelClass = "min-w-0 rounded-none bg-card admin-detail-section !rounded-none p-3 text-card-foreground";
 
 const statusSchema = z.enum(["waiting_worker", "generating", "awaiting_import", "partial", "ready", "failed", "cancelled"]);
 // These are frontend HTTP views, deliberately independent of the server-only store.
@@ -59,7 +59,7 @@ const catalogSchema = z.object({
   workers: z.array(z.object({
     id: z.string(), online: z.boolean(), lastHeartbeat: z.string().nullable(),
     models: z.array(z.object({
-      id: z.string(), capabilities: z.array(z.string()), loaded: z.boolean(), owned_by: z.enum(["gemini-api", "mlx-serve"]).optional(),
+      id: z.string(), capabilities: z.array(z.string()), loaded: z.boolean(), owned_by: z.enum(["gemini-api", "openai-api", "mlx-serve"]).optional(),
       bytes_on_disk: z.number().nonnegative(), bytes_resident: z.number().nonnegative(),
     })),
   })),
@@ -171,14 +171,34 @@ function ProviderField({ kind, value, models, onChange }: {
   kind: "text" | "image"; value: StoryboardProvider; models: Model[];
   onChange: (provider: StoryboardProvider) => void;
 }) {
-  const label = kind === "text" ? "텍스트" : "이미지";
-  const choices = kind === "text" ? [{ id: STORYBOARD_GEMINI_TEXT_MODEL, label: "Gemini 3.8 Flash" }] : STORYBOARD_GEMINI_IMAGE_MODELS;
+  const isText = kind === 'text';
+  const choices = isText ? [
+    { id: STORYBOARD_GEMINI_TEXT_MODEL, provider: 'gemini-api', label: 'Gemini 3.8 Flash' },
+    { id: 'gpt-5.6-luna', provider: 'openai-api', label: 'GPT-5.6 Luna' },
+  ] as const : [
+    ...STORYBOARD_GEMINI_IMAGE_MODELS.map(model => ({ ...model, provider: 'gemini-api' as const })),
+    { id: 'gpt-image-2.6-flare', provider: 'openai-api' as const, label: 'GPT Image 2.6 Flare' },
+  ];
+  const providerReady = (provider: string) => models.some(model => model.owned_by === provider);
+  const available = choices.filter(item => item.provider === value.id && models.some(model => model.id === item.id));
+  const selection = available.find(item => item.id === value.model);
   return <fieldset className="min-w-0 space-y-2">
-    <label className="block text-sm font-medium" htmlFor={`local-${kind}-model`}>{label} 모델</label>
-    <select id={`local-${kind}-model`} className={inputClass} value={value.model} required
-      onChange={(event) => onChange({ id: "gemini-api", model: event.target.value })}>
-      {choices.map((model) => <option key={model.id} value={model.id} disabled={!models.some(available => available.id === model.id)}>{model.label}{models.some(available => available.id === model.id) ? '' : ' · 사용 불가'}</option>)}
+    <label className="block text-sm font-medium" htmlFor={`local-${kind}-provider`}>{isText ? '텍스트' : '이미지'} 공급자</label>
+    <select id={`local-${kind}-provider`} className={inputClass} value={value.id}
+      onChange={event => {
+        const provider = event.target.value as StoryboardProvider['id'];
+        const first = choices.find(item => item.provider === provider && models.some(model => model.id === item.id));
+        onChange({ id: provider, model: first?.id ?? '' });
+      }}>
+      <option value="gemini-api" disabled={!providerReady('gemini-api')}>Google Gemini API{providerReady('gemini-api') ? '' : ' · 워커 연결 필요'}</option>
+      <option value="openai-api" disabled={!providerReady('openai-api')}>OpenAI API{providerReady('openai-api') ? '' : ' · 워커 연결 필요'}</option>
     </select>
+    <label className="block text-sm font-medium" htmlFor={`local-${kind}-model`}>{isText ? '텍스트' : '이미지'} 모델</label>
+    <select id={`local-${kind}-model`} className={inputClass} value={selection?.id ?? ''} required
+      onChange={event => onChange({ id: value.id, model: event.target.value })}>
+      {available.length ? available.map(model => <option key={model.id} value={model.id}>{model.label}</option>) : <option value="" disabled>모델 준비 상태 확인 중</option>}
+    </select>
+    <p className="text-xs text-muted-foreground">{providerReady(value.id) ? `${available.length}개 허용 모델이 워커 카탈로그에서 확인됨` : '키는 서버 워커에만 저장됩니다. 브라우저에는 노출하지 않습니다.'}</p>
   </fieldset>;
 }
 
@@ -307,14 +327,18 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
       title: project.document?.title ?? project.request.prompt.slice(0, 120), createdAt: project.createdAt, updatedAt: project.updatedAt };
     setCatalog((previous) => ({ ...previous, projects: [item, ...previous.projects.filter((entry) => entry.id !== item.id)] }));
   }, []);
-  const textModels = storyboardModelsFor(catalog.workers, "chat");
-  const imageModels = storyboardModelsFor(catalog.workers, "image");
-  const geminiWorkers = catalog.workers.map((worker) => ({
-    ...worker,
-    models: worker.models.filter((model) => model.owned_by === "gemini-api"),
-  })).filter((worker) => worker.models.length > 0);
+  // Provider selectors need every eligible provider, not only the currently selected one.
+  const textModels = [
+    ...storyboardModelsFor(catalog.workers, "chat", "gemini-api"),
+    ...storyboardModelsFor(catalog.workers, "chat", "openai-api"),
+  ];
+  const imageModels = [
+    ...storyboardModelsFor(catalog.workers, "image", "gemini-api"),
+    ...storyboardModelsFor(catalog.workers, "image", "openai-api"),
+  ];
+  const supportedWorkers = catalog.workers.map((worker) => ({ ...worker, models: worker.models.filter((model) => ['gemini-api', 'openai-api'].includes(model.owned_by ?? '')) })).filter((worker) => worker.models.length > 0);
   const selectedModelsAvailable = storyboardWorkerSupportsPair(
-    catalog.workers, textProvider.model, imageProvider.model,
+    catalog.workers, textProvider.model, imageProvider.model, textProvider.id, imageProvider.id,
   );
   const featureHeld = catalogLoaded && catalog.readiness.status !== 'ready';
   // Readiness is unknown until a catalog read succeeds, so actions stay locked without claiming a database hold.
@@ -335,7 +359,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
     const parsed = storyboardProductionRequestSchema.safeParse({ ...fields, requestId: createAttempt.current.requestId });
     if (!parsed.success) { setCreateError(message("invalid_request")); return; }
     try {
-      assertGeminiStoryboardExecutionPolicy(parsed.data.providers);
+      assertStoryboardProviderPolicy(parsed.data.providers);
     } catch { setCreateError(message("invalid_request")); return; }
     const controller = new AbortController();
     createController.current = controller;
@@ -356,19 +380,9 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
     className="h-full min-h-0 min-w-0 overflow-y-auto bg-background text-foreground">
     <AdminPageHeader title={getAdminModuleTitle("storyboard")} titleId="local-storyboard-title" icon={Clapperboard}
-      actions={projectId ? <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => {
-        selectProject(null);
-        requestAnimationFrame(() => {
-          if ((document.getElementById("local-project-select") as HTMLSelectElement | null)?.value === "") {
-            document.getElementById("local-storyboard-prompt")?.focus();
-          }
-        });
-      }}>새 프로젝트</button> : undefined}
-    />
-    <div className="admin-cms-toolbar admin-toolbar shrink-0" data-admin-storyboard-toolbar="true">
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+      actions={<div className="flex min-w-0 items-center gap-2" data-admin-storyboard-toolbar="true">
         <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
-        <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-48`} value={projectId ?? ""}
+        <select id="local-project-select" className={inputClass + " !mt-0 admin-storyboard-project-switch"} value={projectId ?? ""}
           onChange={(event) => selectProject(event.target.value || null)}>
           <option value="">저장된 프로젝트 선택</option>
           {catalog.projects.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
@@ -376,16 +390,24 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
         {projectId && <button type="button" className={buttonClass} aria-expanded={showLibrary} aria-controls="local-storyboard-project-library"
           onClick={() => setShowLibrary((value) => !value)}>프로젝트 목록</button>}
         <button type="button" className={buttonClass} aria-expanded={showSetup} onClick={() => setShowSetup((value) => !value)}>연결 설정</button>
-      </div>
-    </div>
-    <div className="min-w-0 p-3 pb-24 sm:p-4 sm:pb-6">
+        {projectId && <button type="button" className={buttonClass + " !border-primary !bg-primary !text-primary-foreground"} onClick={() => {
+          selectProject(null);
+          requestAnimationFrame(() => {
+            if ((document.getElementById("local-project-select") as HTMLSelectElement | null)?.value === "") {
+              document.getElementById("local-storyboard-prompt")?.focus();
+            }
+          });
+        }}>새 프로젝트</button>}
+      </div>}
+    />
+    <div className="admin-storyboard-body min-w-0 p-3">
     {departureNotice && <p role="alert" className="mb-3 text-sm text-destructive">{departureNotice}</p>}
-    {featureHeld && <p role="status" className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">{message('feature_database_held')}</p>}
+    {featureHeld && <p role="status" className="mb-3 rounded-none border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">{message('feature_database_held')}</p>}
     {catalogError && projectId && !showLibrary && <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 text-sm text-destructive">
       <span>{catalogError}</span>
       <button type="button" className={`${buttonClass} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`} aria-disabled={catalogBusy || undefined} aria-busy={catalogBusy || undefined} onClick={() => { if (!catalogBusy) setCatalogTick((value) => value + 1); }}>목록 다시 불러오기</button>
     </div>}
-    <div className={`grid min-w-0 items-start gap-4 ${!projectId || showLibrary ? "lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)] lg:!grid-cols-[minmax(0,1fr)_minmax(240px,300px)]" : ""}`}>
+    <div className={`grid min-w-0 items-start gap-4 ${!projectId || showLibrary ? "lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]" : ""}`}>
       <div className="order-2 min-w-0" hidden={!!projectId && !showLibrary}>
         <StoryboardProjectLibrary projects={catalog.projects} selectedId={projectId} statusLabels={STATUSES}
           busy={catalogBusy} error={catalogError} countUnknown={!catalogLoaded} onRefresh={() => setCatalogTick((value) => value + 1)} onSelect={(id) => {
@@ -402,7 +424,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
             requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus());
           }} />
       </div>
-    <div className={`order-1 grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:!grid-cols-[minmax(0,1fr)_minmax(280px,320px)]" : ""}`}>
+    <div className={`order-1 grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]" : ""}`}>
       {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${projectId ? "order-2" : "order-1 w-full"}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
           <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>
@@ -411,9 +433,10 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
             <div className="text-sm">
               <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
               <textarea id="local-storyboard-prompt" className={`${inputClass} break-keep`} rows={4} required maxLength={8000}
-                placeholder="예: 매운 짜장라면 맛집 탐방. 가게 소개부터 첫 입, 맛 평가까지 생동감 있는 먹방 영상으로 구성해 주세요."
+                placeholder="예: 아침 빵을 준비하는 제빵사의 10초 장면. 동작과 카메라 구도를 구체적으로 작성해 주세요."
                 value={prompt} onChange={(event) => setPrompt(event.target.value)} />
             </div>
+            <p className="text-xs text-muted-foreground">프롬프트 기반 창작 초안입니다. 외부 검색, 영상 조회, 사실 확인은 수행하지 않으며 참고 자료는 아직 연결되지 않았습니다.</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="text-sm">
                 <label className="block" htmlFor="local-scene-count">장면 수 (5–12)</label>
@@ -427,7 +450,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
                 </select>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">서버가 사용 가능하다고 보고한 Gemini API 모델만 선택할 수 있습니다.</p>
+            <p className="text-xs text-muted-foreground">워커가 온라인으로 광고한 허용 모델만 선택할 수 있습니다. OpenAI API 키는 서버 워커 환경에서만 읽습니다.</p>
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <ProviderField kind="text" value={textProvider} models={textModels} onChange={setTextProvider} />
               <ProviderField kind="image" value={imageProvider} models={imageModels} onChange={setImageProvider} />
@@ -445,12 +468,12 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
           </div>
           {catalogBusy && !catalogError && !catalogLoaded && <p role="status" className="mt-2 text-sm">목록 확인 중…</p>}
           {catalogError && <p role="alert" className="mt-2 text-sm text-destructive">{catalogError}</p>}
-          {!catalogError && geminiWorkers.length === 0 && (catalogLoaded || !catalogBusy) && <p className="mt-2 text-sm text-muted-foreground">지원되는 Gemini 제작 워커가 없습니다. 연결 후 대기 중인 요청이 시작됩니다.</p>}
-          {geminiWorkers.map((worker) => <div key={worker.id} className="mt-3 break-words text-sm [overflow-wrap:anywhere]">
+          {!catalogError && supportedWorkers.length === 0 && (catalogLoaded || !catalogBusy) && <p className="mt-2 text-sm text-muted-foreground">지원되는 제작 워커가 없습니다. 연결 후 대기 중인 요청이 시작됩니다.</p>}
+          {supportedWorkers.map((worker) => <div key={worker.id} className="mt-3 break-words text-sm [overflow-wrap:anywhere]">
             <p className="font-medium">{worker.online ? "제작 워커 연결됨" : "제작 워커 연결 끊김"}</p>
             <p className="text-xs text-muted-foreground">마지막 연결: {when(worker.lastHeartbeat)}</p>
             {worker.models.map((model) => <p key={model.id} className="mt-1 text-xs text-muted-foreground">
-              {model.id} · 워커 보고 · Gemini API
+              {model.id} · 워커 보고 · {model.owned_by === 'openai-api' ? 'OpenAI API' : 'Gemini API'}
             </p>)}
           </div>)}
         </section>}
@@ -660,7 +683,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
         <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">제작 요청과 모델 정보</summary><p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{view.project.request.prompt}</p>
         <p className="mt-2 text-xs text-muted-foreground">{archived
           ? "이전 실행 기록 · 모델 실행과 수정이 보류된 읽기 전용 프로젝트"
-          : `텍스트: Gemini API ${view.project.request.providers.text.model} · 이미지: Gemini API ${view.project.request.providers.image.model}`}</p>
+          : `텍스트: ${view.project.request.providers.text.id} / ${view.project.request.providers.text.model} · 이미지: ${view.project.request.providers.image.id} / ${view.project.request.providers.image.model}`}</p>
         {view.job && <p className="mt-2 text-xs text-muted-foreground">
           {JOB_STATUSES[view.job.status]} · 시도 {view.job.attempts}회{view.job.sceneNo !== null && ` · 장면 ${view.job.sceneNo}`} · 마지막 연결 {when(view.job.lastHeartbeat)}
         </p>}
@@ -681,7 +704,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
               else void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() });
             }}>재시도</button>}
         </div>
-        {archived && <p className="mt-2 text-sm text-muted-foreground">이전 공급자 프로젝트의 문서·장면·이미지·작업 이력은 읽기 전용으로 보존됩니다. 재시도와 재생성은 새 Gemini 프로젝트에서 진행하세요.</p>}
+        {archived && <p className="mt-2 text-sm text-muted-foreground">이전 공급자 프로젝트의 문서·장면·이미지·작업 이력은 읽기 전용으로 보존됩니다. 재시도와 재생성은 새 프로젝트에서 진행하세요.</p>}
         {active && <p className="mt-2 text-sm text-muted-foreground">작업이 실행되거나 워커를 기다리는 동안 편집과 가져오기를 잠급니다. 이 화면을 닫아도 서버 작업은 취소되지 않습니다.</p>}
       </>}
     </div>
@@ -699,7 +722,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
       <nav aria-label="스토리보드 작업" className="flex gap-1 bg-muted/30 p-1">
         {([["scenes", archived ? "장면 기록" : "장면 편집"], ["history", "버전 이력"]] as const).map(([id, label]) =>
           <button key={id} type="button" disabled={!!editing || busy} aria-current={workspaceView === id ? "page" : undefined}
-            className={`min-h-11 rounded-md px-3 py-2 text-sm ${workspaceView === id ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
+            className={`min-h-11 rounded-none px-3 py-2 text-sm ${workspaceView === id ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
             onClick={() => setWorkspaceView(id)}>{label}</button>)}
       </nav>
       {workspaceView === "history" && <VersionHistory key={projectId} projectId={projectId}
@@ -712,7 +735,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
         <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
           <nav aria-label="장면 선택" className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
             {view.project.document.scenes.map((scene) => <button key={scene.sceneNo} type="button"
-              className={`w-36 shrink-0 rounded-lg p-2 text-left transition-colors lg:w-full ${selectedScene === scene.sceneNo ? "bg-muted ring-1 ring-primary/60" : "hover:bg-muted/60"}`}
+              className={`w-36 shrink-0 rounded-none p-2 text-left transition-colors lg:w-full ${selectedScene === scene.sceneNo ? "bg-muted ring-1 ring-primary/60" : "hover:bg-muted/60"}`}
               aria-label={`장면 ${scene.sceneNo} 선택`} aria-current={selectedScene === scene.sceneNo ? "step" : undefined}
               disabled={!!editing} onClick={() => setSelectedScene(scene.sceneNo)}>
               {scene.image && <SceneThumbnail asset={scene.image} projectId={projectId} />}
@@ -734,7 +757,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
             <div className="mt-4 grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
             <div className="min-w-0">
             {scene.image ? <AssetImage key={`${scene.image.id}-${scene.image.original.sha256}`} asset={scene.image} projectId={projectId} title={scene.title} />
-              : <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-border bg-muted p-4 text-sm text-muted-foreground">저장된 이미지 없음</div>}
+              : <div className="flex aspect-video items-center justify-center rounded-none border border-dashed border-border bg-muted p-4 text-sm text-muted-foreground">저장된 이미지 없음</div>}
             {scene.imageError && <p role="alert" className="mt-2 text-sm text-destructive">{message(scene.imageError)}</p>}
             </div>
             <div className="min-w-0">
@@ -890,13 +913,17 @@ function SceneThumbnail({ asset, projectId }: { asset: StoryboardProductionAsset
   return url ? (
     // Authenticated private thumbnails bypass the public image optimizer.
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="" width={variant.width} height={variant.height} className="aspect-video w-full rounded-md object-cover" loading="lazy" />
+    <img src={url} alt="" width={variant.width} height={variant.height} className="aspect-video w-full rounded-none object-cover" loading="lazy" />
   ) : null;
 }
 
 function Provenance({ value }: { value: StoryboardProductionAsset["provenance"] }) {
   const labels = { "local-worker": "로컬 워커", "official-api": "공식 API", "user-import": "사용자 가져오기" };
-  return <span className="break-words [overflow-wrap:anywhere]">{labels[value.verification]} · {value.model || "모델 정보 없음"}{value.modelEvidence === "unverified" ? " · 모델 미검증" : ""}</span>;
+  const usage = value.usage;
+  return <span className="break-words [overflow-wrap:anywhere]">{labels[value.verification]} · {value.providerId} / {value.model || "모델 정보 없음"}
+    {value.responseModel && ` · 응답 모델 ${value.responseModel}`}{value.responseId && ` · 응답 ${value.responseId}`}
+    {usage && ` · 토큰 입력 ${usage.inputTokens ?? '미제공'} / 출력 ${usage.outputTokens ?? '미제공'} / 전체 ${usage.totalTokens ?? '미제공'}`}
+    {value.modelEvidence === "unverified" ? " · 모델 미검증" : value.modelEvidence === 'installed-catalog-and-request' ? ' · 허용 목록 + 요청 기준' : ''}</span>;
 }
 function AssetImage({ asset, projectId, title }: { asset: StoryboardProductionAsset; projectId: string; title: string }) {
   const [failed, setFailed] = useState(false);
@@ -912,8 +939,8 @@ function AssetImage({ asset, projectId, title }: { asset: StoryboardProductionAs
       <img src={source} srcSet={variants.map((variant) => `${variant.url} ${variant.width}w`).join(", ") || undefined}
         sizes="(min-width: 1024px) calc(100vw - 400px), calc(100vw - 64px)"
         width={asset.original.width} height={asset.original.height} alt={title} loading="lazy" decoding="async"
-        className="max-h-[440px] w-full rounded-lg bg-muted object-contain" onError={() => setFailed(true)} />
-    ) : <p role="alert" className="rounded-lg border border-dashed border-border p-4 text-sm">저장된 이미지를 불러오지 못했습니다. 프로젝트를 새로고침하세요.</p>}
+        className="max-h-[440px] w-full rounded-none bg-muted object-contain" onError={() => setFailed(true)} />
+    ) : <p role="alert" className="rounded-none border border-dashed border-border p-4 text-sm">저장된 이미지를 불러오지 못했습니다. 프로젝트를 새로고침하세요.</p>}
     <figcaption className="mt-1 text-xs text-muted-foreground"><Provenance value={asset.provenance} /></figcaption>
   </figure>;
 }

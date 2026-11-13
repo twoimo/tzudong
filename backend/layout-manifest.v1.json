@@ -524,6 +524,22 @@
       "vcsTracked": true
     },
     {
+      "path": "docs/admin",
+      "depth": 2,
+      "ownership": "관리자 콘솔·로컬 OCR 운영 및 검증 문서",
+      "allowedContents": [
+        "관리자 UI 검증 기록",
+        "로컬 OCR 설정·비용 경계 안내"
+      ],
+      "forbiddenContents": [
+        "실행 소스",
+        "시크릿 값과 개인정보",
+        "원본 OCR 내용"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": "docs/agents",
       "depth": 2,
       "ownership": "에이전트 작업 지침 문서",
