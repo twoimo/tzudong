@@ -177,10 +177,9 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
   'insights-controls',
 ] as const;
 
-// The former mobile reel remains approved for compatibility; current home chips wrap.
-const CURRENT_HORIZONTAL_SCROLL_OWNERS = APPROVED_HORIZONTAL_SCROLL_OWNERS.filter(
-  (owner) => owner !== 'mobile-theme-filter-reel',
-);
+// Mobile theme controls use their already-approved horizontal owner to keep
+// five touch-sized controls from covering multiple rows of the map.
+const CURRENT_HORIZONTAL_SCROLL_OWNERS = APPROVED_HORIZONTAL_SCROLL_OWNERS;
 
 const COMPATIBLE_TABLE_HORIZONTAL_SCROLL_OWNERS = [
   'mobile-theme-filter-reel',
@@ -269,6 +268,9 @@ function collectOwnerAttributeValues(root: string): string[] {
       }
       const source = readFileSync(fullPath, 'utf8');
       for (const match of source.matchAll(/data-horizontal-scroll-owner="([^"]+)"/g)) {
+        owners.add(match[1]);
+      }
+      for (const match of source.matchAll(/data-horizontal-scroll-owner=\{[^{}?]+\?\s*["']([^"']+)["']\s*:\s*undefined\s*\}/g)) {
         owners.add(match[1]);
       }
       for (const match of source.matchAll(/horizontalScrollOwner="([^"]+)"/g)) {
@@ -476,11 +478,11 @@ describe('public surface design contract', () => {
     expect(readApp('app/app-globals.css')).toContain('--admin-sidebar-expanded-width: calc(8.75rem * var(--phi))');
   });
 
-  test('current horizontal owners exclude the retired reel and reject unapproved owners', () => {
+  test('current horizontal owners include the mobile theme reel and reject unapproved owners', () => {
     const owners = collectOwnerAttributeValues(appRoot);
     expect(owners).toEqual([...CURRENT_HORIZONTAL_SCROLL_OWNERS].sort());
     expect(owners.filter((owner) => !(APPROVED_HORIZONTAL_SCROLL_OWNERS as readonly string[]).includes(owner))).toEqual([]);
-    expect(owners).not.toContain('mobile-theme-filter-reel');
+    expect(owners).toContain('mobile-theme-filter-reel');
     expect(owners).not.toContain('naver-cluster');
     expect(owners).not.toContain('naver-map-cluster');
     const designSource = readFileSync(resolve(appRoot, '..', '..', 'docs/product/DESIGN.md'), 'utf8');
@@ -506,22 +508,24 @@ describe('public surface design contract', () => {
     expect(tokens).toContain('mobile-theme-filter-reel');
   });
 
-  test('mobile and desktop use the shared wrapping theme filters instead of a horizontal home reel', () => {
-    for (const path of ['components/home/MobileControlOverlay.tsx', 'components/home/home-desktop-control-panel.tsx']) {
-      const source = readApp(path);
-      expect(source).toContain('<HomeMapThemeFilters activeThemeId={selectedTheme} onThemeChange={onThemeChange} />');
-      expect(source).not.toContain('data-horizontal-scroll-owner="mobile-theme-filter-reel"');
-    }
+  test('desktop themes wrap while mobile themes use one approved touch-sized reel', () => {
+    expect(readApp('components/home/MobileControlOverlay.tsx')).toContain('layout="reel"');
+    expect(readApp('components/home/home-desktop-control-panel.tsx')).toContain('<HomeMapThemeFilters activeThemeId={selectedTheme} onThemeChange={onThemeChange} />');
     for (const activeThemeId of [null, 'hot-view'] as const) {
       const html = renderToStaticMarkup(createElement(HomeMapThemeFilters, { activeThemeId, onThemeChange: () => {} }));
       expect(html).toContain('aria-label="쯔양 영상 테마 필터"');
       expect(html).toContain('flex-wrap');
-      expect(html).toContain('min-h-8');
-      expect(html).toContain('whitespace-normal');
-      expect(html.match(/<button\b/g)).toHaveLength(5);
+      expect(html).toContain('min-h-11');
+      expect(html.match(/aria-pressed="(?:true|false)"/g)).toHaveLength(5);
       expect(html.match(/aria-pressed="true"/g) ?? []).toHaveLength(activeThemeId ? 1 : 0);
       expect(html).not.toContain('overflow-x-auto');
       expect(html).not.toContain('data-horizontal-scroll-owner');
+      const mobile = renderToStaticMarkup(createElement(HomeMapThemeFilters, { activeThemeId, onThemeChange: () => {}, layout: 'reel' }));
+      expect(mobile).toContain('overflow-x-auto');
+      expect(mobile).toContain('data-allow-horizontal-scroll="true"');
+      expect(mobile).toContain('data-horizontal-scroll-owner="mobile-theme-filter-reel"');
+      expect(mobile.match(/aria-pressed="(?:true|false)"/g)).toHaveLength(5);
+      expect(mobile.match(/aria-pressed="true"/g) ?? []).toHaveLength(activeThemeId ? 1 : 0);
     }
   });
 

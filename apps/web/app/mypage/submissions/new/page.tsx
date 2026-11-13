@@ -31,6 +31,7 @@ import {
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
 import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
+import { MyPageSubmissionGuide } from "@/components/mypage/MyPageSubmissionGuide";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -586,32 +587,29 @@ export default function NewSubmissionsPage() {
     </Card>
   );
 
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="신규 맛집 제보 내역을 불러오는 중…" />;
-  }
-
-  if (isError) {
-    return (
-      <MyPageErrorState
-        onRetry={() => void refetch()}
-        retrying={isFetching}
-        title="신규 맛집 제보를 불러오지 못했습니다"
-        description="제보 내역을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
-    );
-  }
 
   return (
     <MyPageSectionFrame
       icon={PlusCircle}
       eyebrow="제보 관리"
-      title="신규 맛집 제보"
-      description="새로 제보한 맛집의 처리 상태와 영상 항목을 확인합니다."
-      countLabel={`총 ${submissions.length}건`}
+      title="신규 맛집 제보 내역"
+      description="제보한 맛집의 검토 결과와 영상 정보를 확인하세요."
+      countLabel={isLoading || (isError && submissions.length === 0) ? undefined : `총 ${submissions.length}건`}
       data-section="submissions-new"
     >
-      {submissions.length === 0 ? (
-        <MyPageEmptyState
+      <MyPageSubmissionGuide kind="new" userId={user?.id ?? null} />
+      {isError && (
+      <MyPageErrorState
+        onRetry={() => void refetch()}
+        retrying={isFetching}
+        title="신규 맛집 제보 내역을 불러오지 못했습니다"
+        description="제보 내역을 확인할 수 없습니다. 다시 시도하거나 지도로 돌아가 다른 작업을 이어가세요."
+      />
+      )}
+      {isLoading ? (
+        <MyPageSectionSkeleton label="신규 맛집 제보 내역을 불러오는 중…" />
+      ) : submissions.length === 0 ? (
+        !isError && <MyPageEmptyState
           icon={PlusCircle}
           title="아직 신규 맛집 제보 내역이 없습니다"
           description="새로운 맛집을 제보하면 이곳에서 검토 상태를 확인할 수 있습니다."

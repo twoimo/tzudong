@@ -29,6 +29,7 @@ import {
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
 import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
+import { MyPageSubmissionGuide } from "@/components/mypage/MyPageSubmissionGuide";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -439,32 +440,29 @@ export default function RecommendSubmissionsPage() {
     );
   };
 
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="쯔양 맛집 제보 내역을 불러오는 중…" />;
-  }
-
-  if (isError) {
-    return (
-      <MyPageErrorState
-        onRetry={() => void refetch()}
-        retrying={isFetching}
-        title="쯔양 맛집 제보를 불러오지 못했습니다"
-        description="추천한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
-    );
-  }
 
   return (
     <MyPageSectionFrame
       icon={Heart}
       eyebrow="제보 관리"
-      title="쯔양 맛집 제보"
-      description="쯔양에게 추천한 맛집과 위치 확인 상태를 차분하게 확인합니다."
-      countLabel={`총 ${requests.length}건`}
+      title="쯔양 맛집 제보 내역"
+      description="쯔양에게 추천한 맛집과 위치 확인 상태를 확인하세요."
+      countLabel={isLoading || (isError && requests.length === 0) ? undefined : `총 ${requests.length}건`}
       data-section="submissions-recommend"
     >
-      {requests.length === 0 ? (
-        <MyPageEmptyState
+      <MyPageSubmissionGuide kind="recommend" userId={user?.id ?? null} />
+      {isError && (
+      <MyPageErrorState
+        onRetry={() => void refetch()}
+        retrying={isFetching}
+        title="쯔양 맛집 제보 내역을 불러오지 못했습니다"
+        description="추천한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
+      />
+      )}
+      {isLoading ? (
+        <MyPageSectionSkeleton label="쯔양 맛집 제보 내역을 불러오는 중…" />
+      ) : requests.length === 0 ? (
+        !isError && <MyPageEmptyState
           icon={Heart}
           title="아직 쯔양에게 추천한 맛집이 없습니다"
           description="추천한 맛집은 이곳에서 다시 확인할 수 있습니다."

@@ -29,7 +29,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, X as XIcon, AlertCircle, CheckCircle2, Trash2, Plus, Info } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDraftAutosave, waitForDraftAutosave } from "@/hooks/use-draft-autosave";
@@ -143,7 +142,7 @@ function ExistingFoodPhoto({ url, index, disabled, onRemove }: {
     onRemove: () => void;
 }) {
     return (
-        <div className="relative group">
+        <div className="w-20 space-y-2">
             <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
                 {url ? (
                     <Image src={url} alt={`기존 음식 사진 ${index + 1}`} fill unoptimized sizes="80px" className="object-cover" />
@@ -158,9 +157,10 @@ function ExistingFoodPhoto({ url, index, disabled, onRemove }: {
                 aria-label={`기존 음식 사진 ${index + 1} 제거`}
                 disabled={disabled}
                 onClick={onRemove}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 disabled:cursor-not-allowed"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg border border-border bg-background px-2 text-xs text-muted-foreground transition-colors hover:bg-destructive/5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-                <XIcon className="h-3 w-3" />
+                <XIcon className="h-4 w-4" aria-hidden="true" />
+                제거
             </button>
         </div>
     );
@@ -181,6 +181,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     const [canCancelMissingUpload, setCanCancelMissingUpload] = useState(false);
     const [pendingRecoveryIdentity, setPendingRecoveryIdentity] = useState<{ ownerId: string; reviewId: string } | null>(null);
     const isMobileOrTablet = useImmediateMobileOrTablet();
+    const dialogOpenerRef = useRef<HTMLElement | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [newFoodPhotos, setNewFoodPhotos] = useState<File[]>([]);
@@ -644,7 +645,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                             <Button
                                                 variant="outline"
                                                 disabled={!draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
-                                                className="w-full justify-between"
+                                                className="min-h-11 w-full justify-between"
                                             >
                                                 <span className="truncate">
                                                     {categories.length > 0
@@ -660,7 +661,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                 <h4 className="font-semibold text-sm">카테고리 선택</h4>
                                                 <div className="space-y-2 max-h-48 overflow-y-auto">
                                                     {CATEGORIES.map((cat) => (
-                                                        <div key={cat} className="flex items-center space-x-2">
+                                                        <div key={cat} className="flex min-h-11 items-center gap-2">
                                                             <Checkbox
                                                                 disabled={!draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
                                                                 id={`edit-category-${cat}`}
@@ -676,7 +677,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                             />
                                                             <Label
                                                                 htmlFor={`edit-category-${cat}`}
-                                                                className="text-sm cursor-pointer flex-1"
+                                                                className="flex min-h-11 flex-1 cursor-pointer items-center text-sm"
                                                             >
                                                                 {cat}
                                                             </Label>
@@ -699,18 +700,19 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         </PopoverContent>
                                     </Popover>
                                     {categories.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
+                                        <div className="mt-2 flex flex-wrap gap-2">
                                             {categories.map((category) => (
-                                                <Badge key={category} variant="secondary" className="text-xs">
+                                                <button
+                                                    key={category}
+                                                    type="button"
+                                                    disabled={!draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
+                                                    onClick={() => { if (!mutationRef.current?.pending) setCategories(categories.filter(c => c !== category)); }}
+                                                    aria-label={`${category} 카테고리 선택 해제`}
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                                                >
                                                     {category}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { if (!mutationRef.current?.pending) setCategories(categories.filter(c => c !== category)); }}
-                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                    >
-                                                        <XIcon className="h-3 w-3" />
-                                                    </button>
-                                                </Badge>
+                                                    <XIcon className="h-4 w-4" aria-hidden="true" />
+                                                </button>
                                             ))}
                                         </div>
                                     )}
@@ -767,7 +769,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                             <p className="text-xs text-muted-foreground">새로 추가된 사진</p>
                                             <div className="flex flex-wrap gap-2">
                                                 {newFoodPhotoUrls.length === newFoodPhotos.length && newFoodPhotos.map((photo, idx) => (
-                                                    <div key={`${photo.name}-${idx}`} className="relative group">
+                                                    <div key={`${photo.name}-${idx}`} className="w-20 space-y-2">
                                                         <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-green-300">
                                                             <Image
                                                                 src={newFoodPhotoUrls[idx]}
@@ -778,15 +780,15 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                                 className="object-cover"
                                                             />
                                                         </div>
-                                                        <div className="absolute -top-1 -left-1 bg-green-500 text-white rounded-full p-0.5">
-                                                            <Plus className="h-2 w-2" />
-                                                        </div>
                                                         <button
                                                             type="button"
                                                             onClick={() => removeNewFoodPhoto(idx)}
-                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            disabled={!draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
+                                                            aria-label={`새 음식 사진 ${idx + 1} 제거`}
+                                                            className="inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg border border-border bg-background px-2 text-xs text-muted-foreground transition-colors hover:bg-destructive/5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
                                                         >
-                                                            <XIcon className="h-3 w-3" />
+                                                            <XIcon className="h-4 w-4" aria-hidden="true" />
+                                                            제거
                                                         </button>
                                                     </div>
                                                 ))}
@@ -797,23 +799,30 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     {/* Add more photos drop zone */}
                                     <Card
                                         ref={foodPhotosDropRef}
-                                        className={`p-4 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
+                                        className={`p-4 border-dashed transition-colors ${isFoodPhotosDragging
                                             ? 'border-primary bg-primary/5'
                                             : 'border-border hover:border-primary/50'
                                             }`}
                                         onDragOver={handleDragOver}
                                         onDragEnter={handleFoodPhotosDragEnter}
                                         onDragLeave={handleFoodPhotosDragLeave}
-                                        onDrop={handleFoodPhotosDrop}
-                                        onClick={openFoodPhotosFileDialog}
+                                        onDrop={featureHeld ? undefined : handleFoodPhotosDrop}
                                     >
-                                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                                            <Plus className="h-4 w-4" />
-                                            사진 추가하기
-                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="min-h-11 w-full gap-2"
+                                            disabled={featureHeld || !draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
+                                            onClick={openFoodPhotosFileDialog}
+                                        >
+                                            <Plus className="h-4 w-4" aria-hidden="true" />
+                                            음식 사진 추가
+                                        </Button>
+                                        <p className="mt-2 text-center text-xs text-muted-foreground">사진을 이 영역에 끌어다 놓아도 첨부할 수 있습니다</p>
                                         <input
                                             ref={foodPhotosFileInputRef}
                                             type="file"
+                                            disabled={featureHeld}
                                             accept="image/avif,image/jpeg,image/png,image/webp"
                                             onChange={handleFoodPhotosChange}
                                             multiple
@@ -842,6 +851,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                             size="icon"
                                             disabled={featureHeld || isSubmitting || isDeleting || retryKind !== null}
                                             title="리뷰 삭제"
+                                            aria-label="리뷰 삭제"
+                                            className="h-11 w-11"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -899,9 +910,19 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             if (!open) handleClose();
         }}>
             {isOpen && review && (
-                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-hidden p-0 rounded-xl">
+                <DialogContent
+                    onOpenAutoFocus={() => {
+                        dialogOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                    }}
+                    onCloseAutoFocus={(event) => {
+                        if (dialogOpenerRef.current?.isConnected) {
+                            event.preventDefault();
+                            dialogOpenerRef.current.focus({ preventScroll: true });
+                        }
+                        dialogOpenerRef.current = null;
+                    }} className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-hidden p-0 rounded-xl">
                     <div className="flex flex-col h-full max-h-[calc(100dvh-2rem)]">
-                        <DialogHeader className="px-6 pt-6 pb-4 border-b relative shrink-0">
+                        <DialogHeader className="pl-6 pr-14 pt-6 pb-4 border-b relative shrink-0">
                             {/* 자동 저장 상태 표시 */}
                             <div className="absolute top-1.5 left-6 flex items-center gap-1 text-2xs text-muted-foreground">
                                 {lastSavedAt && (
@@ -989,7 +1010,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                             <Button
                                                 variant="outline"
                                                 disabled={!draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
-                                                className="w-full justify-between"
+                                                className="min-h-11 w-full justify-between"
                                             >
                                                 <span className="truncate">
                                                     {categories.length > 0
@@ -1005,7 +1026,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                 <h4 className="font-semibold text-sm">카테고리 선택</h4>
                                                 <div className="space-y-2 max-h-48 overflow-y-auto">
                                                     {CATEGORIES.map((cat) => (
-                                                        <div key={cat} className="flex items-center space-x-2">
+                                                        <div key={cat} className="flex min-h-11 items-center gap-2">
                                                             <Checkbox
                                                                 disabled={!draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
                                                                 id={`edit-category-${cat}`}
@@ -1021,7 +1042,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                             />
                                                             <Label
                                                                 htmlFor={`edit-category-${cat}`}
-                                                                className="text-sm cursor-pointer flex-1"
+                                                                className="flex min-h-11 flex-1 cursor-pointer items-center text-sm"
                                                             >
                                                                 {cat}
                                                             </Label>
@@ -1044,18 +1065,19 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         </PopoverContent>
                                     </Popover>
                                     {categories.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
+                                        <div className="mt-2 flex flex-wrap gap-2">
                                             {categories.map((category) => (
-                                                <Badge key={category} variant="secondary" className="text-xs">
+                                                <button
+                                                    key={category}
+                                                    type="button"
+                                                    disabled={!draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
+                                                    onClick={() => { if (!mutationRef.current?.pending) setCategories(categories.filter(c => c !== category)); }}
+                                                    aria-label={`${category} 카테고리 선택 해제`}
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                                                >
                                                     {category}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { if (!mutationRef.current?.pending) setCategories(categories.filter(c => c !== category)); }}
-                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                    >
-                                                        <XIcon className="h-3 w-3" />
-                                                    </button>
-                                                </Badge>
+                                                    <XIcon className="h-4 w-4" aria-hidden="true" />
+                                                </button>
                                             ))}
                                         </div>
                                     )}
@@ -1112,7 +1134,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                             <p className="text-xs text-muted-foreground">새로 추가된 사진</p>
                                             <div className="flex flex-wrap gap-2">
                                                 {newFoodPhotoUrls.length === newFoodPhotos.length && newFoodPhotos.map((photo, idx) => (
-                                                    <div key={`${photo.name}-${idx}`} className="relative group">
+                                                    <div key={`${photo.name}-${idx}`} className="w-20 space-y-2">
                                                         <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-green-300">
                                                             <Image
                                                                 src={newFoodPhotoUrls[idx]}
@@ -1123,15 +1145,15 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                                 className="object-cover"
                                                             />
                                                         </div>
-                                                        <div className="absolute -top-1 -left-1 bg-green-500 text-white rounded-full p-0.5">
-                                                            <Plus className="h-2 w-2" />
-                                                        </div>
                                                         <button
                                                             type="button"
                                                             onClick={() => removeNewFoodPhoto(idx)}
-                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            disabled={!draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
+                                                            aria-label={`새 음식 사진 ${idx + 1} 제거`}
+                                                            className="inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg border border-border bg-background px-2 text-xs text-muted-foreground transition-colors hover:bg-destructive/5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
                                                         >
-                                                            <XIcon className="h-3 w-3" />
+                                                            <XIcon className="h-4 w-4" aria-hidden="true" />
+                                                            제거
                                                         </button>
                                                     </div>
                                                 ))}
@@ -1142,23 +1164,30 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     {/* Add more photos drop zone */}
                                     <Card
                                         ref={foodPhotosDropRef}
-                                        className={`p-4 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
+                                        className={`p-4 border-dashed transition-colors ${isFoodPhotosDragging
                                             ? 'border-primary bg-primary/5'
                                             : 'border-border hover:border-primary/50'
                                             }`}
                                         onDragOver={handleDragOver}
                                         onDragEnter={handleFoodPhotosDragEnter}
                                         onDragLeave={handleFoodPhotosDragLeave}
-                                        onDrop={handleFoodPhotosDrop}
-                                        onClick={openFoodPhotosFileDialog}
+                                        onDrop={featureHeld ? undefined : handleFoodPhotosDrop}
                                     >
-                                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                                            <Plus className="h-4 w-4" />
-                                            사진 추가하기
-                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="min-h-11 w-full gap-2"
+                                            disabled={featureHeld || !draftLoaded || isClosing || isSubmitting || isDeleting || retryKind !== null}
+                                            onClick={openFoodPhotosFileDialog}
+                                        >
+                                            <Plus className="h-4 w-4" aria-hidden="true" />
+                                            음식 사진 추가
+                                        </Button>
+                                        <p className="mt-2 text-center text-xs text-muted-foreground">사진을 이 영역에 끌어다 놓아도 첨부할 수 있습니다</p>
                                         <input
                                             ref={foodPhotosFileInputRef}
                                             type="file"
+                                            disabled={featureHeld}
                                             accept="image/avif,image/jpeg,image/png,image/webp"
                                             onChange={handleFoodPhotosChange}
                                             multiple
@@ -1187,6 +1216,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                             size="icon"
                                             disabled={featureHeld || isSubmitting || isDeleting || retryKind !== null}
                                             title="리뷰 삭제"
+                                            aria-label="리뷰 삭제"
+                                            className="h-11 w-11"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>

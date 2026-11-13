@@ -52,19 +52,19 @@ const MOBILE_ROUTE_HEADERS: MyPageMobileRouteHeader[] = [
   },
   {
     href: "/mypage/submissions/new",
-    title: "신규 맛집 제보",
+    title: "신규 맛집 제보 내역",
     description: "새 맛집 제보 상태를 확인하세요.",
     icon: PlusCircle,
   },
   {
     href: "/mypage/submissions/edit",
-    title: "맛집 수정 요청",
+    title: "맛집 수정 요청 내역",
     description: "수정 요청 처리 상태를 확인하세요.",
     icon: Edit3,
   },
   {
     href: "/mypage/submissions/recommend",
-    title: "쯔양 맛집 제보",
+    title: "쯔양 맛집 제보 내역",
     description: "추천한 맛집을 확인하세요.",
     icon: Heart,
   },
@@ -325,7 +325,7 @@ export function MyPageLayoutContent({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="h-11 w-11 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                   onClick={handleLogout}
                   aria-label="로그아웃"
                   data-mypage-mobile-route-header-action="logout"

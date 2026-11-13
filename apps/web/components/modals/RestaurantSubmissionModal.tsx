@@ -3,7 +3,7 @@ import { DraftCleanupRetry } from '@/components/ui/draft-cleanup-retry';
 import { DraftLoadError } from '@/components/ui/draft-load-error';
 import { captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from "@/lib/privacy/browser-draft-lifecycle";
 
-import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     getClientRequestKeyDecision,
@@ -26,6 +26,7 @@ import { saveDraft, getDraft, deleteDraft, type SubmissionDraft } from "@/lib/su
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import {
     RESTAURANT_SUBMISSION_STEPS,
+    getRestaurantSubmissionFieldErrors,
     validateRestaurantSubmission,
     validateRestaurantSubmissionStep,
     type RestaurantSubmissionStep,
@@ -100,6 +101,7 @@ export default function RestaurantSubmissionModal({
         youtube_link: "",
         description: "", // new: 쯔양 리뷰, request: 추천 이유
     });
+    const fieldErrors = validationMessage ? getRestaurantSubmissionFieldErrors(submissionMode, formData) : {};
     const [restoredSavedAt, setLastSavedAt] = useState<Date | null>(null);
     const [isClosing, setIsClosing] = useState(false);
     const [draftLoadFailed, setDraftLoadFailed] = useState(false);
@@ -109,6 +111,7 @@ export default function RestaurantSubmissionModal({
     const [desktopSubmissionPanelPosition, setDesktopSubmissionPanelPosition] = useState<DesktopSubmissionPanelPosition>(DEFAULT_DESKTOP_SUBMISSION_PANEL_POSITION);
     const mobileFormRef = useRef<HTMLFormElement>(null);
     const desktopSubmissionPanelRef = useRef<HTMLElement>(null);
+    const dialogOpenerRef = useRef<HTMLElement | null>(null);
     const desktopSubmissionPanelDragRef = useRef<DesktopSubmissionPanelDragState | null>(null);
     const activeSubmissionRef = useRef<SubmissionAttempt | null>(null);
     const cleanupSubmissionRef = useRef<SubmissionAttempt | null>(null);
@@ -223,7 +226,7 @@ export default function RestaurantSubmissionModal({
         cleanupSubmissionRef.current = attempt; setCompletedSubmission({ attempt, mode });
         if (!await clearDraft() || !ownsSubmissionAttempt(attempt)) return;
         clearRestaurantSubmissionClientKey(mode);
-        toast.success(mode === 'new' ? '맛집 제보가 성공적으로 제출되었습니다!' : '맛집 추천이 성공적으로 제출되었습니다!');
+        toast.success(mode === 'new' ? '맛집 제보를 제출했습니다' : '맛집 추천을 제출했습니다');
         if (mode === 'new') void queryClient.invalidateQueries({ queryKey: ['my-submissions'] });
         else {
             void queryClient.invalidateQueries({ queryKey: ['my-requests'] });
@@ -364,6 +367,14 @@ export default function RestaurantSubmissionModal({
         }
     }, [isOpen, user?.id, submissionMode, loadDraft]);
 
+    const focusFirstInvalidField = () => {
+        window.requestAnimationFrame(() => {
+            const field = mobileFormRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+            field?.focus({ preventScroll: true });
+            field?.scrollIntoView({ block: 'center', inline: 'nearest' });
+        });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (loadedDraftScope !== draftScope || pendingDraft) return;
@@ -376,6 +387,7 @@ export default function RestaurantSubmissionModal({
         const validationError = validateRestaurantSubmission(submissionMode, formData);
         if (validationError) {
             setValidationMessage(validationError);
+            focusFirstInvalidField();
             toast.error(validationError);
             return;
         }
@@ -421,6 +433,7 @@ export default function RestaurantSubmissionModal({
         const validationError = validateRestaurantSubmissionStep(fromStep, submissionMode, formData);
         if (validationError) {
             setValidationMessage(validationError);
+            focusFirstInvalidField();
             toast.error(validationError);
             return;
         }
@@ -446,7 +459,7 @@ export default function RestaurantSubmissionModal({
     };
 
     const draftStatus = lastSavedAt && (
-        <div className="flex items-center gap-1 text-2xs text-muted-foreground">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
             {isSaving ? (
                 <>
                     <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -484,12 +497,31 @@ export default function RestaurantSubmissionModal({
 
     const title = submissionMode === 'new' ? '쯔동여지도 제보하기' : '쯔양에게 맛집 제보하기';
     const description = submissionMode === 'new'
-        ? '쯔양의 맛집 정보와 유튜브 영상 링크를 알려주세요!'
-        : '쯔양에게 방문을 추천하고 싶은 맛집 정보를 알려주세요!';
+        ? '지도에 없는 쯔양의 방문 맛집을 알려주세요'
+        : '쯔양에게 방문을 추천하고 싶은 맛집을 알려주세요';
     const mobileTitleId = 'restaurant-submission-sheet-title';
     const mobileDescriptionId = 'restaurant-submission-sheet-description';
     const validationMessageId = 'restaurant-submission-validation-message';
     const shouldRenderMapPanel = presentation === 'map-panel' && !isMobileOrTablet;
+
+    useEffect(() => {
+        if (!shouldRenderMapPanel || !isOpen) return;
+        const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const frame = window.requestAnimationFrame(() => {
+            desktopSubmissionPanelRef.current?.focus({ preventScroll: true });
+        });
+        return () => {
+            window.cancelAnimationFrame(frame);
+            if (opener?.isConnected) opener.focus({ preventScroll: true });
+        };
+    }, [isOpen, shouldRenderMapPanel]);
+
+    const handleDesktopSubmissionDialogKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+        if (event.key !== 'Escape' || event.defaultPrevented || !event.currentTarget.contains(event.target as Node)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void handleClose();
+    };
 
     const getClampedDesktopSubmissionPanelPosition = useCallback((clientX: number, clientY: number): DesktopSubmissionPanelPosition | null => {
         const dragState = desktopSubmissionPanelDragRef.current;
@@ -568,57 +600,65 @@ export default function RestaurantSubmissionModal({
             <Button
                 type="button"
                 variant={submissionMode === 'new' ? 'default' : 'outline'}
+                aria-pressed={submissionMode === 'new'}
                 onClick={() => handleModeChange('new')}
                 className="h-auto min-h-11 flex-col gap-0.5 whitespace-normal px-2 py-2"
             >
                 <span>쯔양이 다녀간 맛집</span>
-                <span className="text-2xs font-normal opacity-80">영상 링크 필수</span>
+                <span className="text-xs font-normal opacity-80">영상 링크 필수</span>
             </Button>
             <Button
                 type="button"
                 variant={submissionMode === 'request' ? 'default' : 'outline'}
+                aria-pressed={submissionMode === 'request'}
                 onClick={() => handleModeChange('request')}
                 className="h-auto min-h-11 flex-col gap-0.5 whitespace-normal px-2 py-2"
             >
                 <span>쯔양에게 맛집 제보</span>
-                <span className="text-2xs font-normal opacity-80">추천 이유 필수</span>
+                <span className="text-xs font-normal opacity-80">추천 이유 필수</span>
             </Button>
         </div>
     );
 
     const renderCategoryPicker = () => (
-        <div className="space-y-2">
-            <Label>
+        <fieldset
+            className="min-w-0 space-y-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            tabIndex={-1}
+            aria-invalid={Boolean(fieldErrors.categories)}
+            aria-describedby={fieldErrors.categories ? 'submission-categories-error' : undefined}
+        >
+            <legend className="text-sm font-medium">
                 카테고리 <span className="text-red-500">*</span>
-            </Label>
+            </legend>
+            {fieldErrors.categories && <p id="submission-categories-error" className="text-sm text-destructive">{fieldErrors.categories}</p>}
 
             {formData.categories.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 rounded-lg border bg-muted/50 p-3">
+                <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/50 p-3">
                     {formData.categories.map((category) => (
-                        <Badge key={category} variant="secondary" className="text-xs">
+                        <button
+                            key={category}
+                            type="button"
+                            onClick={() => setFormData({
+                                ...formData,
+                                categories: formData.categories.filter(c => c !== category)
+                            })}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={`${category} 카테고리 선택 해제`}
+                        >
                             {category}
-                            <button
-                                type="button"
-                                onClick={() => setFormData({
-                                    ...formData,
-                                    categories: formData.categories.filter(c => c !== category)
-                                })}
-                                className="ml-1.5 rounded-full p-0.5 hover:bg-destructive/20"
-                                aria-label={`${category} 카테고리 삭제`}
-                            >
-                                <X className="h-3 w-3" />
-                            </button>
-                        </Badge>
+                            <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
                     ))}
                 </div>
             )}
 
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
                 {RESTAURANT_CATEGORIES.map((category) => (
                     <Button
                         key={category}
                         type="button"
                         variant={formData.categories.includes(category) ? "default" : "outline"}
+                        aria-pressed={formData.categories.includes(category)}
                         size="sm"
                         onClick={() => {
                             if (formData.categories.includes(category)) {
@@ -633,15 +673,17 @@ export default function RestaurantSubmissionModal({
                                 });
                             }
                         }}
-                        className="h-8 text-xs"
+                        className="min-h-11 px-3 text-sm"
                     >
                         {category}
                     </Button>
                 ))}
             </div>
 
+            <Label htmlFor="submission-custom-category" className="block pt-2 text-sm text-muted-foreground">카테고리 직접 추가 (선택)</Label>
             <div className="flex gap-2">
                 <Input
+                    id="submission-custom-category"
                     value={categoryInput}
                     onChange={(e) => setCategoryInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -657,8 +699,8 @@ export default function RestaurantSubmissionModal({
                             }
                         }
                     }}
-                    placeholder="직접 입력 (예: 광고, 협찬)"
-                    className="h-9 flex-1"
+                    placeholder="목록에 없는 카테고리"
+                    className="min-h-11 flex-1"
                 />
                 <Button
                     type="button"
@@ -675,12 +717,12 @@ export default function RestaurantSubmissionModal({
                         }
                     }}
                     disabled={!categoryInput.trim()}
-                    className="h-9"
+                    className="min-h-11 px-4"
                 >
                     추가
                 </Button>
             </div>
-        </div>
+        </fieldset>
     );
 
     const renderBasicFields = () => (
@@ -691,12 +733,16 @@ export default function RestaurantSubmissionModal({
                 </Label>
                 <Input
                     id="restaurant_name"
+                    aria-required="true"
+                    aria-invalid={Boolean(fieldErrors.restaurant_name)}
+                    aria-describedby={fieldErrors.restaurant_name ? 'submission-name-error' : undefined}
                     value={formData.restaurant_name}
                     onChange={(e) => setFormData({ ...formData, restaurant_name: e.target.value })}
                     placeholder="예: 명동 짜장면"
                     autoComplete="off"
                     enterKeyHint="next"
                 />
+                {fieldErrors.restaurant_name && <p id="submission-name-error" className="text-sm text-destructive">{fieldErrors.restaurant_name}</p>}
             </div>
 
             {renderCategoryPicker()}
@@ -707,16 +753,20 @@ export default function RestaurantSubmissionModal({
                 </Label>
                 <Input
                     id="address"
+                    aria-required="true"
+                    aria-invalid={Boolean(fieldErrors.address)}
+                    aria-describedby={fieldErrors.address ? 'submission-address-error' : undefined}
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     placeholder="서울시 중구 명동길 123"
                     autoComplete="street-address"
                     enterKeyHint="next"
                 />
+                {fieldErrors.address && <p id="submission-address-error" className="text-sm text-destructive">{fieldErrors.address}</p>}
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="phone">전화번호</Label>
+                <Label htmlFor="phone">전화번호 (선택)</Label>
                 <Input
                     id="phone"
                     type="tel"
@@ -734,8 +784,8 @@ export default function RestaurantSubmissionModal({
         <div className="space-y-4">
             <div className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
                 {submissionMode === 'new'
-                    ? '쯔동여지도 등록 근거가 되는 영상 링크를 먼저 받고, 리뷰 메모는 선택으로 남깁니다.'
-                    : '방문을 추천하는 이유가 핵심이에요. 영상은 있으면 함께 첨부할 수 있습니다.'}
+                    ? '쯔양이 이 맛집을 방문한 영상 링크를 알려주세요. 영상 속 리뷰는 선택사항입니다.'
+                    : '먹어본 메뉴와 방문을 추천하는 이유를 알려주세요. 관련 영상은 선택사항입니다.'}
             </div>
 
             <div className="space-y-2">
@@ -745,6 +795,9 @@ export default function RestaurantSubmissionModal({
                 </Label>
                 <Input
                     id="youtube_link"
+                    aria-required={submissionMode === 'new'}
+                    aria-invalid={Boolean(fieldErrors.youtube_link)}
+                    aria-describedby={fieldErrors.youtube_link ? 'submission-video-error' : undefined}
                     type="url"
                     value={formData.youtube_link}
                     onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
@@ -758,6 +811,7 @@ export default function RestaurantSubmissionModal({
                     autoCorrect="off"
                     enterKeyHint="next"
                 />
+                {fieldErrors.youtube_link && <p id="submission-video-error" className="text-sm text-destructive">{fieldErrors.youtube_link}</p>}
             </div>
 
             <div className="space-y-2">
@@ -768,14 +822,18 @@ export default function RestaurantSubmissionModal({
                 </Label>
                 <Textarea
                     id="description"
+                    aria-required={submissionMode === 'request'}
+                    aria-invalid={Boolean(fieldErrors.description)}
+                    aria-describedby={fieldErrors.description ? 'submission-description-error' : undefined}
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder={submissionMode === 'new'
-                        ? "쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요..."
-                        : "이 맛집을 쯔양에게 추천하는 이유를 10자 이상 입력해주세요..."
+                        ? "영상에서 쯔양이 말한 음식과 맛에 대한 내용을 적어주세요"
+                        : "추천 메뉴와 방문하면 좋은 이유를 10자 이상 적어주세요"
                     }
                     className="min-h-[112px]"
                 />
+                {fieldErrors.description && <p id="submission-description-error" className="text-sm text-destructive">{fieldErrors.description}</p>}
             </div>
         </div>
     );
@@ -826,8 +884,8 @@ export default function RestaurantSubmissionModal({
                 </dl>
             </div>
 
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-950 dark:bg-red-950/30 dark:text-red-100">
-                제출 후에는 관리자 검토를 거쳐 지도에 반영돼요. 부정확한 주소나 중복 제보는 반려될 수 있습니다.
+            <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
+                제출한 내용은 관리자가 검토합니다. 맛집 이름과 주소, 영상 링크가 맞는지 확인해주세요.
             </div>
         </div>
     );
@@ -850,7 +908,7 @@ export default function RestaurantSubmissionModal({
     };
 
     const renderDesktopForm = () => (
-        <form onSubmit={handleSubmit} className="space-y-4" data-layout-primitives="form-flow stack">
+        <form ref={mobileFormRef} onSubmit={handleSubmit} className="space-y-4" data-layout-primitives="form-flow stack">
             {draftLoadFailed && <DraftLoadError onRetry={() => void loadDraft()} />}
             {draftRestorePrompt}
             {draftSaveFailure}{completedSubmission && <DraftCleanupRetry onRetry={() => void finishSubmittedDraft(completedSubmission.attempt, completedSubmission.mode)} />}
@@ -869,7 +927,7 @@ export default function RestaurantSubmissionModal({
                     disabled={isClosing} onClick={() => void handleClose()}
                     className="flex-1"
                 >
-                    취소
+                    닫기
                 </Button>
                 <Button
                     type="submit"
@@ -901,7 +959,7 @@ export default function RestaurantSubmissionModal({
             >
                 <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                        <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                        <p className="text-xs font-medium text-muted-foreground">
                             {currentStep} / {RESTAURANT_SUBMISSION_STEPS.length} · {RESTAURANT_SUBMISSION_STEPS[currentStep - 1].title}
                         </p>
                         <h2 id={mobileTitleId} className="truncate text-xl font-semibold text-foreground">
@@ -915,11 +973,11 @@ export default function RestaurantSubmissionModal({
                 <p id={mobileDescriptionId} className="text-sm text-muted-foreground">{description}</p>
                 {draftLoadFailed && <DraftLoadError onRetry={() => void loadDraft()} />}
                 {draftRestorePrompt && <div className="mt-3">{draftRestorePrompt}</div>}
-                <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="제보 단계 진행률">
+                <div className="mt-3 grid grid-cols-3 gap-2" aria-label="제보 단계 진행률">
                     {RESTAURANT_SUBMISSION_STEPS.map((step) => (
                         <div key={step.id} className="space-y-1">
                             <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-brand-tangerine' : 'bg-muted'}`} />
-                            <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                            <span className={`block text-center text-xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                 {step.shortTitle}
                             </span>
                         </div>
@@ -942,7 +1000,7 @@ export default function RestaurantSubmissionModal({
                         </Button>
                     ) : (
                         <Button type="button" variant="outline" disabled={isClosing} onClick={() => void handleClose()} className="min-w-24">
-                            취소
+                            닫기
                         </Button>
                     )}
                     {currentStep < 3 ? (
@@ -983,9 +1041,12 @@ export default function RestaurantSubmissionModal({
         return (
             <section
                 ref={desktopSubmissionPanelRef}
-                className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
+                className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-background shadow-xl"
                 style={{ transform: `translate3d(${desktopSubmissionPanelPosition.x}px, ${desktopSubmissionPanelPosition.y}px, 0)` }}
                 data-desktop-map-submission-panel="true"
+                role="dialog"
+                tabIndex={-1}
+                onKeyDown={handleDesktopSubmissionDialogKeyDown}
                 aria-labelledby={mobileTitleId}
                 aria-describedby={validationMessage ? `${mobileDescriptionId} ${validationMessageId}` : mobileDescriptionId}
             >
@@ -996,7 +1057,17 @@ export default function RestaurantSubmissionModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) void handleClose(); }}>
-            <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            <DialogContent
+                    onOpenAutoFocus={() => {
+                        dialogOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                    }}
+                    onCloseAutoFocus={(event) => {
+                        if (dialogOpenerRef.current?.isConnected) {
+                            event.preventDefault();
+                            dialogOpenerRef.current.focus({ preventScroll: true });
+                        }
+                        dialogOpenerRef.current = null;
+                    }} className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                 <DialogHeader className="relative">
                     <div className="absolute -top-1 left-0">{draftStatus}</div>
                     <div className="flex items-start justify-between gap-2 pt-3">

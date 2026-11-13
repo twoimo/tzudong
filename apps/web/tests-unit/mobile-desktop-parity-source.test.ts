@@ -356,11 +356,11 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).toContain("min-h-11");
     expect(mobileOverlaySource).toContain('aria-label="맛집 검색 열기"');
     expect(themeFiltersSource).toContain("aria-pressed={isSelected}");
-    expect(themeFiltersSource).toContain("min-h-8");
-    expect(themeFiltersSource).toContain("whitespace-normal");
+    expect(themeFiltersSource).toContain("min-h-11");
+    expect(themeFiltersSource).toContain("whitespace-nowrap");
     expect(mobileOverlaySource).toContain("text-xs font-medium");
     expect(mobileOverlaySource).toContain(
-      "rounded-full h-8 px-2 home-map-floating-control-text text-xs font-medium",
+      "rounded-full h-11 px-2 home-map-floating-control-text text-xs font-medium",
     );
     expect(homeAppGlobalsSource).toContain(".home-map-floating-control-text");
     expect(homeAppGlobalsSource).toContain("font-size: 0.75rem");
@@ -377,7 +377,8 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(mobileOverlaySource).toContain("data-mobile-topic-slider");
     expect(themeFiltersSource).toContain("flex-wrap");
-    expect(themeFiltersSource).not.toContain("overflow-x-auto");
+    expect(themeFiltersSource).toContain('data-horizontal-scroll-owner={layout === "reel" ? "mobile-theme-filter-reel" : undefined}');
+    expect(mobileOverlaySource).toContain('onThemeChange={onThemeChange} layout="reel"');
     expect(mobileOverlaySource).not.toContain("mt-2 -mx-3 flex snap-x");
     expect(themeFiltersSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
     expect(mobileOverlaySource).toContain("카테고리 필터 열기");
@@ -445,13 +446,13 @@ describe("mobile and desktop parity source contracts", () => {
       "rounded-full border border-border bg-background/95",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5",
+      "pointer-events-auto flex min-h-14 items-center gap-2 rounded-full border border-border bg-background/95 px-1",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0",
+      "flex-1 h-11 rounded-full flex items-center gap-2 px-3 min-w-0",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation",
+      "h-11 w-11 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
       'aria-label="검색어 지우기"',
@@ -590,7 +591,7 @@ describe("mobile and desktop parity source contracts", () => {
       'setActiveLeftPanelView("map");',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-1.5",
+      "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-2",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"9.5rem\"",
@@ -606,16 +607,16 @@ describe("mobile and desktop parity source contracts", () => {
     expect(themeFiltersSource).toContain("{theme.label}</span>");
     expect(mobileOverlaySource).not.toContain("theme.shortLabel");
     expect(homeDesktopControlPanelSource).not.toContain("theme.shortLabel");
-    expect(themeFilterIconSource).toContain('"hot-view": TrendingUp');
+    expect(themeFilterIconSource).toContain('"hot-view": Eye');
     expect(themeFilterIconSource).toContain('"comment-hot": MessageCircle');
     expect(themeFilterIconSource).toContain('"fresh-video": Clock3');
     expect(themeFilterIconSource).toContain('"repeat-video": Repeat2');
-    expect(themeFilterIconSource).toContain('"fan-signal": Sparkles');
+    expect(themeFilterIconSource).toContain('"fan-signal": Percent');
     expect(homeDesktopControlPanelSource).toContain("<CategoryFilter");
     expect(homeDesktopControlPanelSource).toContain("compactTrigger");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
-    expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
+    expect(homeDesktopControlPanelSource).toContain("맛집 이름 검색");
     expect(homeDesktopControlPanelSource).toContain("hideHistoryAndPopular");
     expect(homeDesktopControlPanelSource).not.toContain(
       "검색·필터·상세를 왼쪽에서 빠르게 확인하세요.",
@@ -869,16 +870,16 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-profile-identity="standard"',
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-profile-side-layout="matrix"',
+      "data-mypage-profile-side-layout=\"grouped-settings\"",
     );
     expect(myPageProfileSource).toContain(
-      "grid min-w-0 gap-3 sm:gap-5 md:contents",
+      "aria-labelledby=\"account-settings-title\"",
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-danger-zone-layout="matrix-bottom-right"',
+      "data-mypage-danger-zone-layout=\"settings-end\"",
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-6 lg:col-span-2"',
+      "data-mypage-danger-zone=\"true\"",
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
@@ -940,7 +941,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(myPageProfileSource).toContain("나의 리뷰 내역");
     expect(myPageProfileSource).toContain("신규 맛집 제보");
     expect(myPageProfileSource).toContain("수정 요청");
-    expect(myPageProfileSource).toContain("쯔양 제보");
+    expect(myPageProfileSource).toContain("href: \"/mypage/submissions/recommend\"");
     expect(myPageProfileSource).toContain(
       "data-mypage-mobile-action-grid={section.id}",
     );

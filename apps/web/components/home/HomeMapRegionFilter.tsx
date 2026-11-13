@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Check, ChevronsUpDown, Globe, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -25,6 +25,7 @@ export function HomeMapRegionFilter(props: HomeMapRegionFilterProps) {
 function RegionFilter({ mapMode, value, options, resultSummary, onValueChange }: HomeMapRegionFilterProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
     const statusId = useId();
     const noun = mapMode === 'domestic' ? '지역' : '국가';
     const selected = options.find((option) => option.value === value);
@@ -45,10 +46,10 @@ function RegionFilter({ mapMode, value, options, resultSummary, onValueChange }:
                     variant="outline"
                     role="combobox"
                     aria-expanded={isOpen}
-                    aria-label={`${noun} 선택`}
+                    aria-label={`${noun} 선택: ${label}`}
                     aria-describedby={statusId}
                     title={`${noun} 필터: ${label}`}
-                    className="h-8 w-full min-w-0 justify-between gap-2 rounded-full border-border bg-background/95 px-2 text-xs font-medium shadow-sm"
+                    className="h-11 w-full min-w-0 justify-between gap-2 rounded-full border-border bg-background/95 px-3 text-xs font-medium shadow-sm"
                 >
                     <MapFilterTriggerLabel
                         icon={mapMode === 'domestic' ? MapPin : Globe}
@@ -75,20 +76,32 @@ function RegionFilter({ mapMode, value, options, resultSummary, onValueChange }:
                         return optionLabel?.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()) ? 1 : 0;
                     }}
                 >
-                    <div className="shrink-0 border-b border-border/70 bg-muted/30 px-3 py-2.5">
+                    <div className="shrink-0 border-b border-border/70 px-3 py-3">
                         <p className="text-sm font-semibold text-foreground">{noun} 필터</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{statusText}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{statusText}</p>
                     </div>
                     <CommandInput
+                        ref={searchInputRef}
                         value={search}
                         onValueChange={setSearch}
                         aria-label={`${noun} 검색`}
                         placeholder={`${noun} 검색…`}
                         className="h-11 text-sm"
                     />
-                    <CommandList className="min-h-0 max-h-[min(21rem,calc(100dvh-9rem))] overscroll-contain p-1.5">
-                        <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
-                            {noun}{mapMode === 'domestic' ? '을' : '를'} 찾을 수 없습니다.
+                    <CommandList className="min-h-0 max-h-[min(21rem,calc(100dvh-9rem))] overscroll-contain p-2">
+                        <CommandEmpty className="px-3 py-6 text-center text-sm text-muted-foreground">
+                            <p>일치하는 {noun}이 없습니다.</p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="mt-3 min-h-11"
+                                onClick={() => {
+                                    setSearch('');
+                                    searchInputRef.current?.focus();
+                                }}
+                            >
+                                전체 {noun} 보기
+                            </Button>
                         </CommandEmpty>
                         <CommandGroup className="p-0">
                             {options.map((option) => (
@@ -100,7 +113,7 @@ function RegionFilter({ mapMode, value, options, resultSummary, onValueChange }:
                                         handleOpenChange(false);
                                         if (option.value !== value) onValueChange(option.value);
                                     }}
-                                    className="min-h-10 rounded-xl px-2.5 py-2 data-[selected='true']:bg-accent"
+                                    className="min-h-11 rounded-xl px-3 py-2 data-[selected='true']:bg-accent"
                                 >
                                     <Check
                                         className={cn('mr-2 h-4 w-4 shrink-0 text-primary', value === option.value ? 'opacity-100' : 'opacity-0')}

@@ -2,8 +2,7 @@ import { LoadingSurface } from "@/components/ui/loading-surface";
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Trophy, PenSquare, X, Plus, MapPin } from 'lucide-react';
+import { MessageSquare, PenSquare, X, Plus, MapPin } from 'lucide-react';
 import { Restaurant } from '@/types/restaurant';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { parseCategory } from './stamp-utils';
@@ -90,11 +89,11 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                     <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1.5 overflow-hidden flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                                <h2 className="font-bold text-xl md:text-2xl truncate">
+                                <h2 className="font-semibold text-xl md:text-2xl truncate">
                                     {restaurant.name}
                                 </h2>
                                 {category && (
-                                    <Badge variant="secondary" className="text-2xs px-1.5 h-5 font-normal bg-secondary/50 text-secondary-foreground/90">
+                                    <Badge variant="secondary" className="text-xs px-2 py-1 font-normal bg-secondary/50 text-secondary-foreground/90">
                                         {category}
                                     </Badge>
                                 )}
@@ -104,7 +103,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                             </p>
                         </div>
                         {onClose && (
-                            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 shrink-0 -mt-1 -mr-2" aria-label="맛집 리뷰 패널 닫기">
+                            <Button variant="ghost" size="icon" onClick={onClose} className="h-11 w-11 shrink-0" aria-label="맛집 리뷰 패널 닫기">
                                 <X className="h-4 w-4" />
                             </Button>
                         )}
@@ -117,13 +116,13 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                 {/* 리뷰 섹션 헤더 */}
                 <div className="flex items-center justify-between gap-2 mb-4">
                     <h3 className="font-semibold flex items-center gap-2">
-                        <Trophy className="h-4 w-4 text-primary" />
+                        <MessageSquare className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         방문자 리뷰 ({reviews.length})
                     </h3>
                     <Button
                         onClick={onWriteReview}
                         size="sm"
-                        className="h-8 gap-1.5"
+                        className="min-h-11 gap-2"
                         variant={reviews.length > 0 ? "outline" : "default"}
                     >
                         <PenSquare className="h-3.5 w-3.5" />
@@ -139,13 +138,13 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                                 key={review.id}
                                 review={{
                                     ...review,
+                                    restaurantId: restaurant.id,
                                     userAvatarUrl: undefined,
                                     visitedAt: review.visitedAt,
                                     submittedAt: review.submittedAt,
                                 }}
                                 onLike={(reviewId, currentIsLiked) => onToggleLike(reviewId, currentIsLiked)}
                                 onClick={() => onReviewClick(review)}
-                                onRestaurantClick={() => { }}
                                 currentUserId={currentUserId}
                                 onEditReview={onEditReview ? (reviewData) => onEditReview({
                                     ...reviewData,
@@ -179,7 +178,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                         <h4 className="font-semibold text-base mb-2">아직 작성된 리뷰가 없습니다</h4>
                         <p className="text-sm text-muted-foreground mb-4">
                             첫 번째 리뷰를 작성하고<br />
-                            다른 팬들과 경험을 공유해보세요!
+                            먹어본 메뉴와 방문할 때 참고할 점을 알려주세요
                         </p>
                         <Button onClick={onWriteReview} className="gap-2">
                             <Plus className="h-4 w-4" />

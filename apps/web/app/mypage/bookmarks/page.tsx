@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bookmark, Trash2, MapPin, ExternalLink } from "lucide-react";
+import { Bookmark, Trash2, MapPin, ExternalLink, ArrowUpRight } from "lucide-react";
 import { useBookmarks, useToggleBookmark } from "@/hooks/use-bookmarks";
 import {
   extractCanonicalYouTubeVideoId,
@@ -26,6 +26,7 @@ import {
 } from "@/components/mypage/MyPageSectionFrame";
 
 import { readMyPageRouteState, writeMyPageRouteState } from "@/lib/mypage-route-state";
+import { buildBookmarkDetailHref } from "@/components/mypage/bookmark-navigation";
 
 const PAGE_SIZE = 15;
 
@@ -106,7 +107,7 @@ export default function BookmarksPage() {
       icon={Bookmark}
       eyebrow="내 활동"
       title="나의 북마크 내역"
-      description="저장한 맛집을 한눈에 확인하고 지도 탐색으로 자연스럽게 이어갑니다."
+      description="저장한 맛집의 위치와 상세 정보를 확인하세요."
       countLabel={`총 ${bookmarks.length}개`}
       data-section="bookmarks"
     >
@@ -116,11 +117,11 @@ export default function BookmarksPage() {
           title="아직 저장한 맛집이 없습니다"
           description="맛집을 탐색하고 마음에 드는 곳을 북마크에 저장해 보세요."
           action={
-            <Link href="/">
-              <Button variant="outline" className="rounded-full">
+            <Button asChild variant="outline" className="min-h-11">
+              <Link href="/">
                 맛집 탐색하기
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           }
         />
       ) : (
@@ -129,6 +130,7 @@ export default function BookmarksPage() {
           data-mypage-responsive-list="bookmarks"
         >
           {visibleBookmarks.map((bookmark) => {
+            const detailHref = buildBookmarkDetailHref(bookmark.restaurant);
             const restaurantWithMergedLinks =
               bookmark.restaurant as typeof bookmark.restaurant & {
                 mergedYoutubeLinks?: string[];
@@ -179,11 +181,17 @@ export default function BookmarksPage() {
                     {/* 정보 */}
                     <div className="flex-1 min-w-0">
                       {/* 헤더: 맛집명 + 카테고리 */}
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="mb-2 flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className={myPageCardTitleClass}>
-                              {bookmark.restaurant.name}
+                              <Link
+                                href={detailHref}
+                                className="inline-flex min-h-11 max-w-full items-center rounded-sm hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                aria-label={`${bookmark.restaurant.name} 상세 정보 보기`}
+                              >
+                                <span className="truncate">{bookmark.restaurant.name}</span>
+                              </Link>
                             </h3>
                             {bookmark.restaurant.category?.[0] && (
                               <Badge variant="secondary" className="text-xs">
@@ -209,19 +217,24 @@ export default function BookmarksPage() {
                       </div>
 
                       {/* 주소 */}
-                      <p className="text-sm text-muted-foreground mb-2 truncate">
-                        <MapPin className="h-3 w-3 inline mr-1" />
+                      <p className="mb-3 flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+                        <MapPin className="mt-1 h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                        <span>
                         {bookmark.restaurant.road_address ||
                           bookmark.restaurant.jibun_address ||
                           "주소 정보 없음"}
+                        </span>
                       </p>
 
-                      {/* 푸터: 리뷰 수 + 저장일 */}
-                      <div className={myPageFooterMetaClass}>
-                        <div>
-                          리뷰 {bookmark.restaurant.review_count || 0}개
-                        </div>
-                        <div>저장일: {formatDate(bookmark.created_at)}</div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <Link
+                          href={detailHref}
+                          className={myPageInlineLinkClass}
+                          aria-label={`${bookmark.restaurant.name} 지도에서 보기`}
+                        >
+                          지도에서 보기
+                          <ArrowUpRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                        </Link>
                         {canonicalYouTubeWatchUrl && (
                           <a
                             href={canonicalYouTubeWatchUrl}
@@ -230,10 +243,14 @@ export default function BookmarksPage() {
                             className={myPageInlineLinkClass}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <ExternalLink className="h-3 w-3" />
+                            <ExternalLink className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
                             영상 보기
                           </a>
                         )}
+                      </div>
+                      <div className={myPageFooterMetaClass}>
+                        <span>리뷰 {bookmark.restaurant.review_count || 0}개</span>
+                        <span>{formatDate(bookmark.created_at)} 저장</span>
                       </div>
                     </div>
                   </div>

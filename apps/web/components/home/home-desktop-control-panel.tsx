@@ -19,6 +19,7 @@ import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import { HomeMapRegionFilter } from "@/components/home/HomeMapRegionFilter";
+import { getHomeMapRegionOptionCount } from "@/components/home/home-map-region-option-count";
 const loadDropdownMenu = () => import("@/components/ui/dropdown-menu");
 const DropdownMenu = dynamic(() => loadDropdownMenu().then((mod) => mod.DropdownMenu), {
   loading: () => (
@@ -27,7 +28,7 @@ const DropdownMenu = dynamic(() => loadDropdownMenu().then((mod) => mod.Dropdown
       size="icon"
       type="button"
       aria-label="지도 메뉴 열기"
-      className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+      className="h-11 w-11 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
       data-desktop-map-menu-trigger="true"
     >
       <Menu className="h-5 w-5" aria-hidden="true" />
@@ -130,6 +131,7 @@ type RestaurantSearchComponentProps = {
   onSearchQueryChange?: (value: string) => void;
   searchTypeValue?: SearchType;
   onSearchTypeChange?: (value: SearchType) => void;
+  onSearchInputFocus?: () => void;
   clearQueryOnSelect?: boolean;
   edgeToEdgeInlineLayout?: boolean;
 };
@@ -1249,10 +1251,8 @@ export default function HomeDesktopControlPanel({
     }
   }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel, router, searchParams]);
 
-  const toggleDesktopSearchType = useCallback(() => {
-    setDesktopSearchType((current) =>
-      current === "name" ? "youtube" : "name",
-    );
+  const selectDesktopSearchType = useCallback((searchType: SearchType) => {
+    setDesktopSearchType(searchType);
     setIsDesktopSearchActive(true);
     desktopSearchInputRef.current?.focus();
   }, [setDesktopSearchType]);
@@ -1565,7 +1565,7 @@ export default function HomeDesktopControlPanel({
           </div>
 
           <div
-            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-1.5"
+            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-2"
             style={desktopMapFloatingControlStyle}
             data-desktop-map-floating-filters="true"
             onMouseDownCapture={handlePanelMouseDownCapture}
@@ -1583,7 +1583,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "domestic"}
                   aria-label="국내 맛집 지도 보기"
                   className={cn(
-                    "h-8 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
+                    "h-11 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
                     mapMode === "domestic"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1601,7 +1601,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "overseas"}
                   aria-label="해외 맛집 지도 보기"
                   className={cn(
-                    "h-8 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
+                    "h-11 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap motion-reduce:transition-none",
                     mapMode === "overseas"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1619,14 +1619,12 @@ export default function HomeDesktopControlPanel({
                 ...(mapMode === "domestic" ? [{
                   value: "all",
                   label: "대한민국",
-                  count: resultSummary.status === "ready" ? resultSummary.count ?? 0 : undefined,
+                  count: getHomeMapRegionOptionCount(resultSummary, { mapMode, selectedRegion, selectedCountry }, "all"),
                 }] : []),
                 ...(mapMode === "domestic" ? REGIONS : OVERSEAS_REGION_LIST).map((region) => ({
                   value: region,
                   label: region,
-                  count: resultSummary.status === "ready"
-                    ? (mapMode === "domestic" ? resultSummary.regionCounts : resultSummary.countryCounts)[region] ?? 0
-                    : undefined,
+                  count: getHomeMapRegionOptionCount(resultSummary, { mapMode, selectedRegion, selectedCountry }, region),
                 })),
               ]}
               onValueChange={(value) => {
@@ -1643,7 +1641,7 @@ export default function HomeDesktopControlPanel({
               compactTrigger
               contentSide="top"
               contentAlign="start"
-              className="h-8 w-full min-w-0 rounded-full border-border bg-background/95 px-2 text-xs font-medium shadow-sm"
+              className="h-11 w-full min-w-0 rounded-full border-border bg-background/95 px-3 text-xs font-medium shadow-sm"
             />
           </div>
         </>
@@ -1721,11 +1719,11 @@ export default function HomeDesktopControlPanel({
           >
             <div
               className={cn(
-                "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5",
+                "pointer-events-auto flex min-h-14 items-center gap-2 rounded-full border border-border bg-background/95 px-1 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20",
               )}
               data-desktop-left-panel-search-bar="true"
             >
-              <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0" onClick={activateDesktopSearch}>
+              <div className="flex-1 h-11 rounded-full flex items-center gap-2 px-3 min-w-0" onClick={activateDesktopSearch}>
                 <Image
                   src="/logo-png-129-8d374bb80346.png"
                   unoptimized
@@ -1746,43 +1744,17 @@ export default function HomeDesktopControlPanel({
                   onFocus={activateDesktopSearch}
                   placeholder={
                     desktopSearchType === "name"
-                      ? "쯔동여지도 검색하기"
-                      : "유튜브 제목으로 검색하기"
+                      ? "맛집 이름 검색"
+                      : "유튜브 제목 검색"
                   }
                   name="desktop-left-panel-restaurant-search"
                   inputMode="search"
                   enterKeyHint="search"
                   autoComplete="off"
                   className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/70"
-                  aria-label="맛집 검색어 입력"
+                  aria-label={desktopSearchType === "name" ? "맛집 이름 검색어 입력" : "유튜브 제목 검색어 입력"}
                 />
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  toggleDesktopSearchType();
-                }}
-                title={
-                  desktopSearchType === "name"
-                    ? "유튜브 제목으로 검색"
-                    : "맛집 이름으로 검색"
-                }
-                aria-label={
-                  desktopSearchType === "name"
-                    ? "유튜브 제목 검색으로 전환"
-                    : "맛집 이름 검색으로 전환"
-                }
-                aria-pressed={desktopSearchType === "youtube"}
-                className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
-              >
-                {desktopSearchType === "name" ? (
-                  <MapPin className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <Video className="h-4 w-4" aria-hidden="true" />
-                )}
-              </Button>
               {hasDesktopSearchQuery ? (
                 <Button
                   variant="ghost"
@@ -1793,7 +1765,7 @@ export default function HomeDesktopControlPanel({
                     desktopSearchInputRef.current?.blur();
                   }}
                   aria-label="검색 닫기"
-                  className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                  className="h-11 w-11 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
                 </Button>
@@ -1806,7 +1778,7 @@ export default function HomeDesktopControlPanel({
                       type="button"
                       onClick={(event) => event.stopPropagation()}
                       aria-label="지도 메뉴 열기"
-                      className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                      className="h-11 w-11 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
                       data-desktop-map-menu-trigger="true"
                     >
                       <Menu className="h-5 w-5" aria-hidden="true" />
@@ -1844,6 +1816,30 @@ export default function HomeDesktopControlPanel({
                 </DropdownMenu>
               )}
             </div>
+            {isDesktopSearchActive && (
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="검색 방식">
+                <Button
+                  type="button"
+                  variant={desktopSearchType === "name" ? "secondary" : "ghost"}
+                  onClick={() => selectDesktopSearchType("name")}
+                  aria-pressed={desktopSearchType === "name"}
+                  className="min-h-11 gap-2 rounded-lg text-sm"
+                >
+                  <MapPin className="h-4 w-4" aria-hidden="true" />
+                  맛집 이름
+                </Button>
+                <Button
+                  type="button"
+                  variant={desktopSearchType === "youtube" ? "secondary" : "ghost"}
+                  onClick={() => selectDesktopSearchType("youtube")}
+                  aria-pressed={desktopSearchType === "youtube"}
+                  className="min-h-11 gap-2 rounded-lg text-sm"
+                >
+                  <Video className="h-4 w-4" aria-hidden="true" />
+                  영상 제목
+                </Button>
+              </div>
+            )}
           </div>
 
           <div
@@ -2038,6 +2034,7 @@ export default function HomeDesktopControlPanel({
                       onSearchQueryChange={setDesktopSearchQuery}
                       searchTypeValue={desktopSearchType}
                       onSearchTypeChange={setDesktopSearchType}
+                      onSearchInputFocus={() => desktopSearchInputRef.current?.focus({ preventScroll: true })}
                       clearQueryOnSelect
                       className="h-full w-full"
                     />
@@ -2081,6 +2078,14 @@ export default function HomeDesktopControlPanel({
                     }
                     isKoreanOnly={mapMode === "domestic"}
                     contextualRestaurantsPayload={mapMode === "domestic" && !isMapFullscreen ? contextualRestaurantsPayload : null}
+                    onClearDiscoveryFilters={selectedTheme || selectedCategories.length > 0 ? () => {
+                      onThemeChange(null);
+                      onCategoryChange([]);
+                    } : undefined}
+                    onShowAllRegions={mapMode === "domestic" && selectedRegion ? () => {
+                      onRegionChange(null);
+                      onSearchExecute(null);
+                    } : undefined}
                   />
                 ) : null}
               </>

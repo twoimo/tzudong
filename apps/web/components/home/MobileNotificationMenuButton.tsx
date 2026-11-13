@@ -90,7 +90,7 @@ export default function MobileNotificationMenuButton({
           variant="ghost"
           size="icon"
           className={cn(
-            "h-9 w-9 rounded-full border border-border bg-background",
+            "h-11 w-11 shrink-0 rounded-full border border-border bg-background",
             "hover:bg-secondary/80 relative focus-visible:ring-2 focus-visible:ring-primary touch-manipulation",
           )}
           aria-label={

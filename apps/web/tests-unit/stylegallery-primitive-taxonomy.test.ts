@@ -30,7 +30,7 @@ const packageABindingCoverageMatrix = {
   publicHomeShell: ['viewport-shell', 'overlay-stack', 'cluster'],
   naverMap: ['overlay-stack', 'frame'],
   mobileControls: ['cluster', 'wrap-row', 'overlay-stack'],
-  homeMobileThemeFilterWrap: ['cluster', 'wrap-row'],
+  homeMobileThemeFilterWrap: ['cluster', 'reel'],
   visibleMarkerListDetail: ['list-detail', 'frame', 'stack'],
   adminShellSidebar: ['fixed-sidenav-shell', 'scroll-body-shell', 'sidebar'],
   adminOverviewMapInfo: ['panel-layout', 'list-detail', 'frame', 'cluster'],
@@ -104,7 +104,8 @@ const g003SourceCoverageMatrix = {
         path: 'components/home/HomeMapThemeFilters.tsx',
         contains: [
           'flex-wrap',
-          'min-h-8',
+          'min-h-11',
+          'data-horizontal-scroll-owner={layout === "reel" ? "mobile-theme-filter-reel" : undefined}',
           'aria-pressed={isSelected}',
         ],
       },
@@ -385,7 +386,7 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     }
   });
 
-  test('G012 public map wraps theme filters and keeps fixed controls shrink-safe and keyboard-safe', () => {
+  test('G012 public map limits horizontal scroll to the mobile theme reel and keeps fixed controls shrink-safe and keyboard-safe', () => {
     const homeMapSource = readSource('components/home/home-map-container.tsx');
     const mobileControlsSource = readSource('components/home/MobileControlOverlay.tsx');
     const submissionSource = readSource('components/home/SubmissionFloatingButton.tsx');
@@ -396,13 +397,14 @@ describe('StyleGallery primitive taxonomy source contract', () => {
       (match) => match[0],
     );
     const horizontalOwners = Array.from(
-      publicMapSource.matchAll(/data-horizontal-scroll-owner="([^"]+)"/g),
+      publicMapSource.matchAll(/data-horizontal-scroll-owner=\{[^{}?]+\?\s*"([^"]+)"\s*:\s*undefined\s*\}/g),
       (match) => match[1],
     );
 
-    expect(horizontalOverflowUtilities).toEqual([]);
-    expect(horizontalOwners).toEqual([]);
+    expect(horizontalOverflowUtilities).toEqual(['overflow-x-auto']);
+    expect(horizontalOwners).toEqual(['mobile-theme-filter-reel']);
     expect(readSource('components/home/HomeMapThemeFilters.tsx')).toContain('flex-wrap');
+    expect(mobileControlsSource).toContain('layout="reel"');
     expect(mobileControlsSource).toContain('id="tzudong-mobile-category-slider"');
 
     expect(homeMapSource).toContain(

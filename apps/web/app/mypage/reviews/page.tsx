@@ -461,7 +461,7 @@ export default function ReviewsPage() {
       icon={MessageSquare}
       eyebrow="내 활동"
       title="나의 리뷰 내역"
-      description="작성한 리뷰와 검수 상태를 차분한 카드 흐름으로 확인합니다."
+      description="내가 남긴 리뷰와 공개·검수 상태를 확인하세요."
       countLabel={`총 ${filteredReviews.length}개`}
       action={
         <Select value={filterStatus} onValueChange={(value) => {

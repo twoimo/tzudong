@@ -1,6 +1,7 @@
 import {
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   useMemo,
   useCallback,
@@ -60,6 +61,7 @@ interface RestaurantSearchProps {
   hideHistoryAndPopular?: boolean;
   clearQueryOnSelect?: boolean;
   edgeToEdgeInlineLayout?: boolean;
+  onSearchInputFocus?: () => void;
 }
 
 const MIN_SEARCH_QUERY_LENGTH = 2;
@@ -107,6 +109,7 @@ const RestaurantSearch = ({
   hideHistoryAndPopular = false,
   clearQueryOnSelect = true,
   edgeToEdgeInlineLayout = false,
+  onSearchInputFocus,
 }: RestaurantSearchProps) => {
   const [internalSearchQuery, setInternalSearchQuery] = useState(
     getSearchQueryFromUrl,
@@ -115,8 +118,14 @@ const RestaurantSearch = ({
     useState<SearchType>("name");
   const searchQuery = searchQueryValue ?? internalSearchQuery;
   const searchType = searchTypeValue ?? internalSearchType;
+  const searchIntentGenerationRef = useRef(0);
+  // Controlled input changes and unmounts invalidate pending selections too.
+  useLayoutEffect(() => () => {
+    searchIntentGenerationRef.current += 1;
+  }, [searchQuery, searchType]);
   const setSearchQuery = useCallback(
     (value: string) => {
+      searchIntentGenerationRef.current += 1;
       onSearchQueryChange?.(value);
       if (searchQueryValue === undefined) {
         setInternalSearchQuery(value);
@@ -126,6 +135,7 @@ const RestaurantSearch = ({
   );
   const setSearchType = useCallback(
     (value: SearchType) => {
+      searchIntentGenerationRef.current += 1;
       onSearchTypeChange?.(value);
       if (searchTypeValue === undefined) {
         setInternalSearchType(value);
@@ -140,6 +150,7 @@ const RestaurantSearch = ({
   );
   const [isFocused, setIsFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } =
     useSearchHistory();
   const queryClient = useQueryClient();
@@ -169,7 +180,13 @@ const RestaurantSearch = ({
   );
 
   // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 N개) - [OPTIMIZATION] 병합/필터링 로직 공유
-  const { data: popularRestaurants = [], isLoading: isPopularRestaurantsLoading } = useQuery({
+  const {
+    data: popularRestaurants = [],
+    isLoading: isPopularRestaurantsLoading,
+    isError: isPopularRestaurantsError,
+    isFetching: isPopularRestaurantsFetching,
+    refetch: refetchPopularRestaurants,
+  } = useQuery({
     queryKey: popularRestaurantsQueryKey,
     queryFn: async () => {
       try {
@@ -179,9 +196,8 @@ const RestaurantSearch = ({
           selectedRegion,
           isKoreanOnly,
         });
-      } catch (error) {
-        console.error("주간 인기 검색어 조회 실패:");
-        return [];
+      } catch {
+        throw new Error("POPULAR_RESTAURANTS_UNAVAILABLE");
       }
     },
     enabled: isFocused || isInlineView,
@@ -208,7 +224,7 @@ const RestaurantSearch = ({
   );
 
   // 맛집 검색 쿼리
-  const { data: restaurants = [], isLoading } = useQuery({
+  const { data: restaurants = [], isLoading, isFetching, isError, refetch } = useQuery({
     queryKey,
     queryFn: async () => {
       // [OPTIMIZATION] 최소 2자 이상부터 검색
@@ -241,8 +257,7 @@ const RestaurantSearch = ({
           const { data, error } = await query;
 
           if (error) {
-            console.warn("맛집 이름 검색 실패:");
-            return [];
+            throw new Error("RESTAURANT_SEARCH_UNAVAILABLE");
           }
 
           results = (data || []) as Restaurant[];
@@ -269,8 +284,7 @@ const RestaurantSearch = ({
           );
 
           if (error) {
-            console.warn("유튜브 제목 검색 실패:");
-            return [];
+            throw new Error("RESTAURANT_SEARCH_UNAVAILABLE");
           }
 
           results = (data || []) as Restaurant[];
@@ -284,9 +298,10 @@ const RestaurantSearch = ({
 
         // 최대 10개로 제한
         return merged.slice(0, 10);
-      } catch (error) {
-        console.error("검색 오류:");
-        return [];
+      } catch {
+        // A failed read must not be presented as a confirmed empty result.
+        // Keep provider details and the user's query out of the error message.
+        throw new Error("RESTAURANT_SEARCH_UNAVAILABLE");
       }
     },
     enabled: trimmedDebouncedSearchQuery.length >= MIN_SEARCH_QUERY_LENGTH,
@@ -341,6 +356,7 @@ const RestaurantSearch = ({
 
   const handleSelect = useCallback(
     (restaurant: Restaurant) => {
+      searchIntentGenerationRef.current += 1;
       // 검색 카운트 증가 (비동기, 에러 무시)
       incrementSearchCount(restaurant.id).then((result) => {
         if (shouldRefreshPopularAfterSearch(result)) {
@@ -385,10 +401,19 @@ const RestaurantSearch = ({
     ],
   );
 
+  const focusSearchInput = useCallback(() => {
+    if (hideSearchControls) {
+      onSearchInputFocus?.();
+    } else {
+      inputRef.current?.focus();
+    }
+  }, [hideSearchControls, onSearchInputFocus]);
+
   const clearSearch = useCallback(() => {
     setSearchQuery("");
-    setIsFocused(false);
-  }, [setSearchQuery]);
+    setIsFocused(true);
+    focusSearchInput();
+  }, [focusSearchInput, setSearchQuery]);
 
   const toggleSearchType = useCallback(() => {
     setSearchType(searchType === "name" ? "youtube" : "name");
@@ -400,26 +425,37 @@ const RestaurantSearch = ({
 
   const handleHistoryOrPopularSelect = useCallback(
     async (name: string, selectedRestaurantId?: string) => {
-      const { data } = await supabase
-        .from("restaurants")
-        .select(RESTAURANT_SEARCH_SELECT)
-        .eq("approved_name", name)
-        .eq("status", "approved");
+      const selectionGeneration = ++searchIntentGenerationRef.current;
+      try {
+        const { data, error } = await supabase
+          .from("restaurants")
+          .select(RESTAURANT_SEARCH_SELECT)
+          .eq("approved_name", name)
+          .eq("status", "approved");
 
-      if (!data || data.length === 0) {
-        return;
+        if (selectionGeneration !== searchIntentGenerationRef.current) return;
+        if (!error && data?.length) {
+          const merged = mergeRestaurants(data as Restaurant[]);
+          const selectedRestaurant =
+            merged.find((restaurant) => restaurant.id === selectedRestaurantId) ||
+            merged.find((restaurant) => restaurant.name === name) ||
+            merged[0];
+          if (selectedRestaurant) {
+            handleSelect(selectedRestaurant);
+            return;
+          }
+        }
+      } catch {
+        // Fall through to the normal search UI, which provides recovery actions.
       }
 
-      const merged = mergeRestaurants(data as Restaurant[]);
-      const selectedRestaurant =
-        merged.find((restaurant) => restaurant.id === selectedRestaurantId) ||
-        merged.find((restaurant) => restaurant.name === name) ||
-        merged[0];
-      if (selectedRestaurant) {
-        handleSelect(selectedRestaurant);
-      }
+      if (selectionGeneration !== searchIntentGenerationRef.current) return;
+      setSearchType("name");
+      setSearchQuery(name);
+      setIsFocused(true);
+      focusSearchInput();
     },
-    [handleSelect],
+    [focusSearchInput, handleSelect, setSearchQuery, setSearchType],
   );
 
   const showResults = isInlineView
@@ -447,7 +483,7 @@ const RestaurantSearch = ({
             variant="outline"
             size="sm"
             onClick={toggleSearchType}
-            className="flex items-center gap-1.5 flex-shrink-0 order-last ml-auto px-2 md:px-3"
+            className="flex min-h-11 items-center gap-2 flex-shrink-0 order-last ml-auto px-3"
             title={
               searchType === "name"
                 ? "유튜브 제목으로 검색"
@@ -463,12 +499,12 @@ const RestaurantSearch = ({
             {searchType === "name" ? (
               <>
                 <MapPin className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden md:inline">맛집명</span>
+                <span>맛집명</span>
               </>
             ) : (
               <>
                 <Video className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden md:inline">유튜브</span>
+                <span>영상 제목</span>
               </>
             )}
           </Button>
@@ -476,6 +512,7 @@ const RestaurantSearch = ({
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
+              ref={inputRef}
               placeholder={
                 searchType === "name"
                   ? "맛집 이름 검색…"
@@ -485,7 +522,7 @@ const RestaurantSearch = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocusInput}
-              className="pl-10 pr-10 w-full min-w-0"
+              className="h-11 pl-10 pr-12 w-full min-w-0"
               name="restaurant-search"
               aria-label="맛집 검색어 입력"
               inputMode="search"
@@ -496,7 +533,7 @@ const RestaurantSearch = ({
               <button
                 type="button"
                 onClick={clearSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="absolute right-0 top-1/2 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="검색어 지우기"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
@@ -509,6 +546,9 @@ const RestaurantSearch = ({
       {/* 검색 결과, 최근 검색, 인기 검색어 드롭다운 */}
       {(showResults || showHistoryAndPopular) && (
         <div
+          role="region"
+          aria-label={showResults ? "맛집 검색 결과" : "최근 검색과 인기 맛집"}
+          aria-busy={showResults && isFetching}
           className={cn(
             isInlineView
               ? "z-10 overflow-y-auto bg-transparent border-0 shadow-none rounded-none"
@@ -529,14 +569,33 @@ const RestaurantSearch = ({
           {showResults ? (
             // 검색 결과 표시
             <>
-              {isLoading ? (
-                <div className="p-3 text-sm text-muted-foreground">
+              {isError && restaurants.length > 0 ? (
+                <div className="space-y-2 border-b border-border p-4">
+                  <p role="status" className="text-sm leading-5 text-muted-foreground">검색 결과를 새로 불러오지 못해 이전 결과를 보여드리고 있습니다.</p>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={() => void refetch()} disabled={isFetching}>다시 검색</Button>
+                </div>
+              ) : null}
+              {restaurants.length > 0 && !isError && !isFetching ? (
+                <p className="sr-only" role="status">검색 결과 {restaurants.length}곳</p>
+              ) : null}
+              {isLoading || (isFetching && restaurants.length === 0) ? (
+                <div role="status" className="p-4 text-sm text-muted-foreground">
                   검색 중…
                 </div>
               ) : trimmedDebouncedSearchQuery.length > 0 &&
                 trimmedDebouncedSearchQuery.length < MIN_SEARCH_QUERY_LENGTH ? (
-                <div className="p-3 text-sm text-muted-foreground">
+                <div role="status" className="p-4 text-sm text-muted-foreground">
                   두 글자 이상 입력해 주세요.
+                </div>
+              ) : isError && restaurants.length === 0 ? (
+                <div className="space-y-3 p-4">
+                  <div role="status" className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">검색 결과를 불러오지 못했습니다.</p>
+                    <p className="text-sm leading-5 text-muted-foreground">연결 상태를 확인한 뒤 다시 시도해 주세요. 입력한 검색어는 유지됩니다.</p>
+                  </div>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={() => void refetch()} disabled={isFetching}>
+                    다시 검색
+                  </Button>
                 </div>
               ) : restaurants.length > 0 ? (
                 restaurants.map((restaurant) => (
@@ -584,8 +643,22 @@ const RestaurantSearch = ({
                   </button>
                 ))
               ) : trimmedDebouncedSearchQuery ? (
-                <div className="p-3 text-sm text-muted-foreground">
-                  검색 결과가 없습니다.
+                <div className="space-y-3 p-4">
+                  <div role="status" className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">검색 결과가 없습니다.</p>
+                    <p className="text-sm leading-5 text-muted-foreground">
+                      {searchType === "name" ? "맛집 이름을 짧게 입력하거나 영상 제목으로 찾아보세요." : "영상 제목의 일부를 입력하거나 맛집 이름으로 찾아보세요."}
+                    </p>
+                    {searchType === "name" && normalizedCategoryFilter.length > 0 ? (
+                      <p className="text-sm leading-5 text-muted-foreground">선택한 카테고리에 해당하는 맛집만 검색하고 있습니다.</p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" className="min-h-11" onClick={() => { toggleSearchType(); focusSearchInput(); }}>
+                      {searchType === "name" ? "영상 제목으로 찾기" : "맛집 이름으로 찾기"}
+                    </Button>
+                    <Button type="button" variant="ghost" className="min-h-11" onClick={clearSearch}>검색어 지우기</Button>
+                  </div>
                 </div>
               ) : null}
             </>
@@ -605,7 +678,7 @@ const RestaurantSearch = ({
                       variant="ghost"
                       size="sm"
                       onClick={clearHistory}
-                      className="h-6 px-2 text-xs"
+                      className="min-h-11 px-3 text-sm"
                     >
                       <Trash2 className="h-3 w-3 mr-1" aria-hidden="true" />
                       전체 삭제
@@ -634,7 +707,7 @@ const RestaurantSearch = ({
                       <button
                         type="button"
                         onClick={() => removeFromHistory(item.id)}
-                        className="mr-3 inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground opacity-0 hover:bg-background hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:opacity-100"
+                        className="mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         aria-label={`${item.name} 최근 검색 삭제`}
                       >
                         <X className="h-3 w-3" aria-hidden="true" />
@@ -645,7 +718,15 @@ const RestaurantSearch = ({
               )}
 
               {/* 인기 검색어 */}
-              {popularRestaurants.length === 0 && history.length === 0 && (
+              {isPopularRestaurantsError ? (
+                <div className="space-y-3 p-4">
+                  <p role="status" className="text-sm leading-5 text-muted-foreground">인기 맛집을 불러오지 못했습니다. 맛집 이름으로 직접 검색할 수 있습니다.</p>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={() => void refetchPopularRestaurants()} disabled={isPopularRestaurantsFetching}>
+                    {isPopularRestaurantsFetching ? "불러오는 중…" : "인기 맛집 다시 불러오기"}
+                  </Button>
+                </div>
+              ) : null}
+              {!isPopularRestaurantsError && popularRestaurants.length === 0 && history.length === 0 && (
                 <div
                   className={cn(
                     "flex flex-col justify-center border-dashed border-border bg-muted/20 text-center text-sm text-muted-foreground",

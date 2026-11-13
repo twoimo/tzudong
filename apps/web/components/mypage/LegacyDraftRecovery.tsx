@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import { FileClock } from 'lucide-react';
+import { AccountSettingsSection } from './AccountSettingsSection';
 import { captureBrowserDraftEpoch, isBrowserDraftEpochCurrent } from '@/lib/privacy/browser-draft-lifecycle';
 
 export function LegacyDraftRecovery({ userId }: { userId: string }) {
@@ -37,16 +39,17 @@ export function LegacyDraftRecovery({ userId }: { userId: string }) {
         } finally { inFlight.current = false; if (mounted.current) setBusy(false); }
     };
     return (
-        <Card data-legacy-draft-recovery="true" className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-5 lg:col-span-2">
-            <CardHeader className="pb-2"><CardTitle className="text-base">이전 버전 초안</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+        <Card data-legacy-draft-recovery="true" className="min-w-0 rounded-xl border border-border bg-card shadow-none">
+            <AccountSettingsSection title="이전 버전 초안" description="이 브라우저에 남아 있는 이전 초안을 가져옵니다." icon={FileClock}>
+            <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">이전 버전에서 작성한 초안이 있다면 가져올 수 있습니다. 현재 초안과 기존 보존 기한은 유지됩니다. 가져온 원본은 새 저장 영역으로 옮겨집니다.</p>
                 <p className="text-sm text-muted-foreground">이전 버전 탭이 열려 있으면 초안이 다시 생길 수 있습니다. 작성 중인 탭에서 임시 저장 완료를 확인한 뒤 새로고침하세요. 저장되지 않은 입력은 가져올 수 없습니다.</p>
-                <Button type="button" variant="outline" disabled={busy} onClick={() => { void recover(); }}>
+                <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => { void recover(); }}>
                     {busy ? '초안 가져오는 중…' : '이전 버전 초안 가져오기'}
                 </Button>
                 <p className="text-sm text-muted-foreground" role="status" aria-live="polite">{message}</p>
-            </CardContent>
+            </div>
+            </AccountSettingsSection>
         </Card>
     );
 }

@@ -10,6 +10,7 @@ import {
 import { MapPin } from 'lucide-react';
 
 import { StampCard } from '@/components/stamp/StampCard';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -46,6 +47,8 @@ type DesktopLeftPanelMapHomeProps = {
   selectedRegion?: string | null;
   isKoreanOnly?: boolean;
   contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
+  onClearDiscoveryFilters?: () => void;
+  onShowAllRegions?: () => void;
 };
 
 const POPULAR_RESTAURANT_LIMIT = 5;
@@ -57,8 +60,8 @@ const latestRestaurantSortOptions: Array<{
   value: LatestRestaurantSort;
   label: string;
 }> = [
-  { value: 'latest', label: '최신순' },
-  { value: 'oldest', label: '오래된순' },
+  { value: 'latest', label: '최신 영상순' },
+  { value: 'oldest', label: '오래된 영상순' },
   { value: 'popular', label: '인기순' },
 ];
 
@@ -68,8 +71,8 @@ function getPopularRankTrendBadge(trend?: PopularRankTrend | null) {
 
   if (trend.trend === 'new') {
     return {
-      label: 'NEW',
-      title: '이전 인기 검색 스냅샷에 없던 맛집',
+      label: '신규',
+      title: '이전 집계 이후 인기 검색 순위에 새로 진입한 맛집',
       className: 'bg-brand-tangerine-tint text-brand-tangerine-ink',
     };
   }
@@ -80,7 +83,7 @@ function getPopularRankTrendBadge(trend?: PopularRankTrend | null) {
 
   return {
     label: `${isUp ? '▲' : '▼'}${Math.abs(trend.rankDelta)}`,
-    title: `이전 인기 검색 스냅샷 대비 ${Math.abs(trend.rankDelta)}위 ${isUp ? '상승' : '하락'}`,
+    title: `이전 집계보다 ${Math.abs(trend.rankDelta)}위 ${isUp ? '상승' : '하락'}`,
     className: isUp
       ? 'bg-brand-garden-tint text-brand-garden-text'
       : 'bg-muted text-muted-foreground',
@@ -89,16 +92,11 @@ function getPopularRankTrendBadge(trend?: PopularRankTrend | null) {
 
 function DesktopRestaurantCardPreview() {
   return (
-    <article className="relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-      <svg viewBox="0 0 320 180" role="img" aria-label="맛집 사진" className="aspect-video w-full">
-        <path d="M0 150 80 50 160 110 250 30 320 130V180H0Z" fill="currentColor" opacity="0.12" />
-      </svg>
-      <div className="space-y-1.5 p-3">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-medium leading-4">영상 속 맛집</h3>
-          <span className="text-xs leading-4">방문</span>
-        </div>
-        <p className="text-xs leading-3">맛있는 여행을 함께해요</p>
+    <article className="overflow-hidden rounded-xl border border-border/70 bg-card" aria-hidden="true">
+      <div className="aspect-video w-full bg-muted" />
+      <div className="space-y-2 p-3">
+        <div className="h-4 w-2/3 rounded bg-muted" />
+        <div className="h-3 w-4/5 rounded bg-muted" />
       </div>
     </article>
   );
@@ -110,6 +108,8 @@ export default function DesktopLeftPanelMapHome({
   selectedRegion,
   isKoreanOnly = true,
   contextualRestaurantsPayload = null,
+  onClearDiscoveryFilters,
+  onShowAllRegions,
 }: DesktopLeftPanelMapHomeProps) {
   const queryClient = useQueryClient();
   const [restaurantThumbnailIndexes, setRestaurantThumbnailIndexes] = useState<
@@ -146,22 +146,19 @@ export default function DesktopLeftPanelMapHome({
     isLoading,
     isSuccess: isPopularListReady,
     isPlaceholderData: isPopularListPlaceholder,
+    isError: isPopularListError,
+    isFetching: isPopularListFetching,
+    refetch: refetchPopularRestaurants,
   } = useQuery({
     enabled: !resultSummary?.active,
     queryKey: desktopLeftPanelHomePopularQueryKey,
-    queryFn: async () => {
-      try {
-        return await fetchPopularRestaurants({
-          limit: POPULAR_RESTAURANT_LIMIT,
-          fetchLimit: POPULAR_RESTAURANT_QUERY_LIMIT,
-          selectedRegion,
-          isKoreanOnly,
-          includeRankTrends: false,
-        });
-      } catch {
-        return [];
-      }
-    },
+    queryFn: () => fetchPopularRestaurants({
+      limit: POPULAR_RESTAURANT_LIMIT,
+      fetchLimit: POPULAR_RESTAURANT_QUERY_LIMIT,
+      selectedRegion,
+      isKoreanOnly,
+      includeRankTrends: false,
+    }),
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
   });
@@ -196,27 +193,21 @@ export default function DesktopLeftPanelMapHome({
     hasNextPage: hasNextLatestRestaurantPage,
     isFetchingNextPage: isFetchingNextLatestRestaurantPage,
     isLoading: isLatestLoading,
+    isError: isLatestError,
+    isFetchNextPageError: isLatestNextPageError,
+    isFetching: isLatestFetching,
+    refetch: refetchLatestRestaurants,
   } = useInfiniteQuery({
     enabled: !resultSummary?.active,
     queryKey: desktopLeftPanelHomeLatestQueryKey,
     initialPageParam: 0,
-    queryFn: async ({ pageParam }) => {
-      try {
-        return await fetchLatestRestaurantPage({
-          offset: Number(pageParam) || 0,
-          fetchLimit: LATEST_RESTAURANT_PAGE_FETCH_LIMIT,
-          sort: latestRestaurantSort,
-          selectedRegion,
-          isKoreanOnly,
-        });
-      } catch {
-        return {
-          restaurants: [],
-          nextOffset: null,
-          hasMore: false,
-        };
-      }
-    },
+    queryFn: ({ pageParam }) => fetchLatestRestaurantPage({
+      offset: Number(pageParam) || 0,
+      fetchLimit: LATEST_RESTAURANT_PAGE_FETCH_LIMIT,
+      sort: latestRestaurantSort,
+      selectedRegion,
+      isKoreanOnly,
+    }),
     getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
@@ -295,6 +286,7 @@ export default function DesktopLeftPanelMapHome({
       isLatestLoading ||
       visibleLatestRestaurants.length > 0 ||
       !hasNextLatestRestaurantPage ||
+      isLatestNextPageError ||
       isFetchingNextLatestRestaurantPage
     ) {
       return;
@@ -306,6 +298,7 @@ export default function DesktopLeftPanelMapHome({
     hasNextLatestRestaurantPage,
     isFetchingNextLatestRestaurantPage,
     isLatestLoading,
+    isLatestNextPageError,
     visibleLatestRestaurants.length,
     resultSummary?.active,
   ]);
@@ -315,6 +308,7 @@ export default function DesktopLeftPanelMapHome({
     if (
       !loadMoreNode ||
       isLatestLoading ||
+      isLatestNextPageError ||
       !hasMoreLatestRestaurants ||
       typeof IntersectionObserver === 'undefined'
     ) {
@@ -343,6 +337,7 @@ export default function DesktopLeftPanelMapHome({
   }, [
     hasMoreLatestRestaurants,
     isLatestLoading,
+    isLatestNextPageError,
     showMoreLatestRestaurants,
     renderedLatestRestaurants.length,
   ]);
@@ -376,6 +371,17 @@ export default function DesktopLeftPanelMapHome({
       <section className="h-full min-h-0 overflow-y-auto bg-background" data-home-filter-results="true" aria-label="현재 지도 필터 결과" aria-busy={resultSummary.status === 'pending'}>
         <MapPanelHeader title="필터 결과" titleIcon={<MapPin />} count={resultSummary.count ?? undefined} countUnit="곳" />
         <p className="px-3 py-2 text-sm text-muted-foreground" role={resultSummary.status === 'error' ? 'alert' : 'status'}>{homeMapResultStatusText(resultSummary)}</p>
+        {resultSummary.status === 'ready' && resultSummary.count === 0 && (onClearDiscoveryFilters || onShowAllRegions) && (
+          <div className="px-3 pb-4">
+            <p className="mb-3 text-sm leading-6 text-muted-foreground">선택한 위치에서 조건을 넓혀 찾아보세요.</p>
+            {onClearDiscoveryFilters && <Button type="button" variant="outline" className="mb-2 min-h-11 w-full" onClick={onClearDiscoveryFilters}>
+              테마·카테고리 해제
+            </Button>}
+            {onShowAllRegions && <Button type="button" variant="outline" className="min-h-11 w-full" onClick={onShowAllRegions}>
+              전체 지역 보기
+            </Button>}
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-3 px-3 pb-3">
           {resultSummary.restaurants.map((restaurant) => (
             <StampCard key={restaurant.id} restaurant={restaurant} isVisited={false} isUserStampsReady={false}
@@ -435,18 +441,11 @@ export default function DesktopLeftPanelMapHome({
         ) : null}
         {!hasContextualRestaurants ? (
           <div
-            className="bg-background px-3 pb-2 pt-3"
+            className="bg-background px-4 pb-4 pt-4"
             data-desktop-left-panel-popular-restaurants="true"
           >
-          <div className="mb-2 flex items-end justify-between gap-2">
-            <BrandSectionHeading
-              title="인기 검색 맛집"
-              emoji="🔥"
-              description="처음 방문해도 바로 눌러볼 만한 맛집 5곳"
-            />
-            <span className="shrink-0 rounded-full bg-brand-ink px-2.5 py-1 text-2xs font-bold text-white">
-              TOP 5
-            </span>
+          <div className="mb-3">
+            <BrandSectionHeading title="많이 찾는 맛집" />
           </div>
 
           <div className="divide-y divide-border/70">
@@ -455,20 +454,33 @@ export default function DesktopLeftPanelMapHome({
                 <LoadingSurface label="인기 검색 맛집 로딩 중" className="divide-y divide-border/70">
                   <div className="divide-y divide-border/70">
                     {Array.from({ length: POPULAR_RESTAURANT_LIMIT }, (_, index) => (
-                      <article key={index} className="flex items-center gap-2 px-1 py-2">
-                        <span className="inline-flex h-6 w-6 items-center justify-center text-xs">{index + 1}</span>
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <h3 className="text-sm font-medium leading-4">영상 속 맛집</h3>
-                          <p className="text-xs leading-3">맛있는 여행을 함께해요</p>
+                      <article key={index} className="flex min-h-14 items-center gap-3 py-2" aria-hidden="true">
+                        <span className="h-6 w-6 rounded bg-muted" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="h-4 w-2/3 rounded bg-muted" />
+                          <div className="h-3 w-4/5 rounded bg-muted" />
                         </div>
                       </article>
                     ))}
                   </div>
                 </LoadingSurface>
               </div>
+            ) : isPopularListError ? (
+              <div className="py-4">
+                <p className="text-sm leading-6 text-muted-foreground" role="alert">인기 맛집을 불러오지 못했습니다.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3 min-h-11"
+                  disabled={isPopularListFetching}
+                  onClick={() => void refetchPopularRestaurants()}
+                >
+                  {isPopularListFetching ? '불러오는 중…' : '다시 불러오기'}
+                </Button>
+              </div>
             ) : popularRestaurants.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
-                인기 검색 데이터가 쌓이면 여기에서 바로 보여드릴게요.
+              <div className="py-4 text-sm leading-6 text-muted-foreground">
+                {selectedRegion ? `${selectedRegion}에 표시할 인기 맛집이 없습니다.` : '아직 인기 검색 순위가 없습니다.'}
               </div>
             ) : (
               popularRestaurants.map((restaurant, index) => {
@@ -481,17 +493,17 @@ export default function DesktopLeftPanelMapHome({
                     key={restaurant.id}
                     type="button"
                     onClick={() => handleRestaurantOpen(restaurant)}
-                    className="group flex w-full items-center gap-2 px-1 py-2 text-left hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                    className="group flex min-h-14 w-full items-center gap-3 rounded-lg px-1 py-3 text-left hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                     aria-label={`${restaurant.name} 인기 맛집 상세 보기`}
                   >
                     <span
-                      className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-garden text-xs font-bold text-white"
+                      className="grid h-6 w-6 shrink-0 place-items-center text-sm font-semibold tabular-nums text-muted-foreground"
                       aria-hidden="true"
                     >
                       {index + 1}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="flex min-w-0 items-center gap-2">
                         <span className="min-w-0 truncate text-sm font-semibold text-foreground">
                           {restaurant.name}
                         </span>
@@ -505,7 +517,7 @@ export default function DesktopLeftPanelMapHome({
                           </span>
                         ) : null}
                       </span>
-                      <span className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                      <span className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
                         <span className="truncate">
                           {restaurant.road_address ||
@@ -525,15 +537,11 @@ export default function DesktopLeftPanelMapHome({
 
         {!hasContextualRestaurants ? (
         <div
-          className="px-3 pt-1"
+          className="border-t border-border/70 px-4 pt-4"
           data-desktop-left-panel-latest-restaurants="true"
         >
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <BrandSectionHeading
-              title="최근 추가된 맛집"
-              emoji="🌱"
-              description="먼저 3곳을 보여주고 스크롤하면 이어서 불러와요"
-            />
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <BrandSectionHeading title="영상 속 맛집" />
             <Select
               value={latestRestaurantSort}
               onValueChange={(value) =>
@@ -541,8 +549,8 @@ export default function DesktopLeftPanelMapHome({
               }
             >
               <SelectTrigger
-                className="!h-7 !w-[4.75rem] shrink-0 gap-1 rounded-full border-border bg-brand-cream !px-2 !text-2xs !leading-none font-bold text-foreground shadow-none hover:bg-secondary focus:ring-1 focus:ring-ring [&>span]:line-clamp-1 [&>span]:text-2xs [&>svg]:!h-3 [&>svg]:!w-3"
-                aria-label="최근 맛집 정렬"
+                className="!h-11 !w-auto min-w-24 shrink-0 gap-2 rounded-lg border-border bg-background !px-3 !text-xs font-medium text-foreground shadow-none hover:bg-secondary focus:ring-2 focus:ring-ring [&>span]:line-clamp-1"
+                aria-label="영상 속 맛집 정렬"
               >
                 <SelectValue placeholder="정렬" />
               </SelectTrigger>
@@ -554,7 +562,7 @@ export default function DesktopLeftPanelMapHome({
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="rounded-xl py-2 pl-7 pr-2 text-xs font-semibold"
+                    className="min-h-11 rounded-lg py-3 pl-8 pr-3 text-sm"
                   >
                     {option.label}
                   </SelectItem>
@@ -564,7 +572,7 @@ export default function DesktopLeftPanelMapHome({
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            {isLatestLoading ? (
+            {isLatestLoading || (visibleLatestRestaurants.length === 0 && isFetchingNextLatestRestaurantPage) ? (
               <div data-desktop-left-panel-latest-skeleton="true">
                 <LoadingSurface className="grid grid-cols-1 gap-3" label="최근 추가된 맛집 로딩 중">
                   <div className="grid grid-cols-1 gap-3">
@@ -574,11 +582,27 @@ export default function DesktopLeftPanelMapHome({
                   </div>
                 </LoadingSurface>
               </div>
+            ) : isLatestError && visibleLatestRestaurants.length === 0 ? (
+              <div className="py-4">
+                <p className="text-sm leading-6 text-muted-foreground" role="alert">최근 맛집을 불러오지 못했습니다.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3 min-h-11"
+                  disabled={isLatestFetching}
+                  onClick={() => void refetchLatestRestaurants()}
+                >
+                  {isLatestFetching ? '불러오는 중…' : '다시 불러오기'}
+                </Button>
+              </div>
             ) : visibleLatestRestaurants.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-5 text-center text-xs text-muted-foreground">
-                {process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1'
-                  ? '로컬 작업장에는 공개 지도용 승인 맛집이 아직 없습니다. pending은 여기 올리지 않고, 확정된 행만 hosted_data_plane으로 프로덕션에 올립니다.'
-                  : '새로 추가된 맛집이 준비되면 최신순으로 보여드릴게요.'}
+              <div className="py-4 text-sm leading-6 text-muted-foreground">
+                <p>{popularRestaurants.length > 0
+                  ? '위 목록 외에 추가로 표시할 맛집이 없습니다.'
+                  : selectedRegion ? `${selectedRegion}에 표시할 맛집이 없습니다.` : '아직 표시할 맛집이 없습니다.'}</p>
+                {onShowAllRegions && <Button type="button" variant="outline" className="mt-3 min-h-11 w-full" onClick={onShowAllRegions}>
+                  전체 지역 보기
+                </Button>}
               </div>
             ) : (
               <>
@@ -602,7 +626,7 @@ export default function DesktopLeftPanelMapHome({
                 {hasMoreLatestRestaurants ? (
                   <div
                     ref={latestRestaurantLoadMoreRef}
-                    className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-3 text-center"
+                    className="py-1 text-center"
                     data-desktop-left-panel-latest-load-more="true"
                   >
                     {isFetchingNextLatestRestaurantPage ? (
@@ -610,14 +634,17 @@ export default function DesktopLeftPanelMapHome({
                         <DesktopRestaurantCardPreview />
                       </LoadingSurface>
                     ) : (
+                      <>
+                      {isLatestNextPageError && <p className="mb-2 text-sm leading-6 text-muted-foreground" role="alert">추가 맛집을 불러오지 못했습니다.</p>}
                       <button
                         type="button"
                         onClick={showMoreLatestRestaurants}
-                        className="text-xs font-semibold text-primary hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        className="min-h-11 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                         aria-label="최근 추가된 맛집 더 보기"
                       >
-                        스크롤하면 더 보여드릴게요
+                        {isLatestNextPageError ? '다시 불러오기' : '맛집 더 보기'}
                       </button>
+                      </>
                     )}
                   </div>
                 ) : null}
