@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 const root = join(import.meta.dir, "../..");
 
-export async function buildAuthModalFocusFixture(keepMounted: boolean) {
+export async function buildAuthModalFocusFixture(keepMounted: boolean, policyRetrySucceeds = false) {
   const mocks: Record<string, string> = {
     "next/image": "import React from 'react';export default function Image({unoptimized,fill,priority,...props}){return <img {...props}/>;}",
     "@/hooks/useDeviceType": "export const useImmediateMobileOrTablet=()=>false;export const useIsMobile=()=>false;",
@@ -14,8 +14,15 @@ export async function buildAuthModalFocusFixture(keepMounted: boolean) {
     import {createRoot} from 'react-dom/client';
     import AuthModal from './components/auth/AuthModal';
     globalThis.__authFocusWrites=0;
-    globalThis.fetch=async(_input,init)=>{
+    globalThis.__authPolicyGets=0;
+    globalThis.fetch=async(input,init)=>{
       if(init?.method && init.method!=='GET')globalThis.__authFocusWrites++;
+      if(input==='/api/privacy/onboarding' && (!init?.method||init.method==='GET')){
+        globalThis.__authPolicyGets++;
+        if(${JSON.stringify(policyRetrySucceeds)} && globalThis.__authPolicyGets>1){
+          return new Response(JSON.stringify({id:'11111111-1111-4111-8111-111111111111',contentSha256:'a'.repeat(64)}),{status:200,headers:{'Content-Type':'application/json'}});
+        }
+      }
       return new Response('{}',{status:503,headers:{'Content-Type':'application/json'}});
     };
     function App(){
@@ -28,7 +35,9 @@ export async function buildAuthModalFocusFixture(keepMounted: boolean) {
   `;
   const result = await Bun.build({
     entrypoints: ["auth-focus-entry"], target: "browser", format: "iife", write: false,
-    define: { "process.env.NODE_ENV": '"test"' },
+    // Imported public config reads other process.env keys at module startup.
+    // Supply an inert build environment instead of depending on Node's process.
+    define: { "process.env": JSON.stringify({ NODE_ENV: "test" }) },
     plugins: [{ name: "auth-modal-focus-fixture", setup(builder) {
       builder.onResolve({ filter: /^auth-focus-entry$/ }, () => ({ path: "entry", namespace: "auth-focus" }));
       builder.onLoad({ filter: /.*/, namespace: "auth-focus" }, () => ({ contents: entry, loader: "tsx", resolveDir: root }));

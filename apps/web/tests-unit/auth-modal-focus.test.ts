@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { buildAuthModalFocusFixture } from "./fixtures/auth-modal-focus-fixture";
 
@@ -44,9 +45,22 @@ function fixture(active: unknown = new ElementBoundary()) {
 }
 
 describe("controlled authentication dialog focus", () => {
-  test("the browser fixture bundles the actual AuthModal and Dialog with inert authentication", async () => {
+  test("the browser fixture initializes actual modules without Node process before reaching the render entry", async () => {
     const script = await buildAuthModalFocusFixture(false);
-    expect(script.length).toBeGreaterThan(0);
+    const renderEntry = new Error("AUTH_FIXTURE_RENDER_ENTRY_REACHED");
+    let observed: unknown;
+    try {
+      runInNewContext(script, {
+        console, setTimeout, clearTimeout, URL, URLSearchParams,
+        TextEncoder, TextDecoder, AbortController, Response, Request, Headers, crypto,
+        document: { getElementById() { throw renderEntry; } },
+      }, { timeout: 3_000 });
+    } catch (error) {
+      observed = error;
+    }
+    // This proves module initialization only. Real DOM mount and keyboard focus
+    // remain assertions of auth-modal-focus-browser.test.ts in pinned Chrome.
+    expect(observed).toBe(renderEntry);
   });
 
   test("captures the real opener before autofocus and restores it once without scrolling", () => {

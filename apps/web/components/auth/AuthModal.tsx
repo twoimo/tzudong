@@ -96,6 +96,7 @@ const GoogleIcon = memo(() => (
 ));
 GoogleIcon.displayName = "GoogleIcon";
 type AgeBand = "" | "age_14_plus" | "under_14";
+type PolicyLoadState = "loading" | "ready" | "error";
 type MarketingConsent = {
   email: boolean;
   sms: boolean;
@@ -117,6 +118,7 @@ const UNDER_14_SIGNUP_UNAVAILABLE_CODE = "UNDER_14_SIGNUP_UNAVAILABLE";
 const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "현재 만 14세 미만은 가입할 수 없습니다.";
 const POLICY_VERSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POLICY_CONTENT_SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const POLICY_LOAD_TIMEOUT_MS = 15_000;
 const MIN_SIGNUP_PASSWORD_LENGTH = 8;
 const MAX_SIGNUP_PASSWORD_LENGTH = 72;
 
@@ -128,7 +130,8 @@ function OnboardingConsentFields({
   onPrivacyPolicyOpen,
   marketingConsent,
   onMarketingConsentChange,
-  policyVersionReady,
+  policyLoadState,
+  onPolicyRetry,
 }: {
   ageBand: AgeBand;
   onAgeBandChange: (value: AgeBand) => void;
@@ -137,7 +140,8 @@ function OnboardingConsentFields({
   onPrivacyPolicyOpen: () => void;
   marketingConsent: MarketingConsent;
   onMarketingConsentChange: (key: keyof MarketingConsent, value: boolean) => void;
-  policyVersionReady: boolean;
+  policyLoadState: PolicyLoadState;
+  onPolicyRetry: () => void;
 }) {
   const marketingControls: Array<{ key: keyof MarketingConsent; label: string }> = [
     { key: "email", label: "이메일 마케팅 수신" },
@@ -201,10 +205,20 @@ function OnboardingConsentFields({
             >
               개인정보 처리방침 읽기
             </button>
-          {!policyVersionReady && (
+          {policyLoadState === "loading" && (
             <p className="text-xs text-muted-foreground" role="status">
               최신 개인정보 처리방침을 확인하는 중입니다.
             </p>
+          )}
+          {policyLoadState === "error" && (
+            <div className="space-y-2">
+              <p className="text-xs leading-5 text-destructive" role="alert">
+                개인정보 처리방침을 불러오지 못했습니다. 다시 확인해 주세요.
+              </p>
+              <Button type="button" variant="outline" className="h-11 text-sm" onClick={onPolicyRetry}>
+                처리방침 다시 확인
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -250,6 +264,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
   const [marketingConsent, setMarketingConsent] = useState<MarketingConsent>(EMPTY_MARKETING_CONSENT);
   const [policyVersion, setPolicyVersion] = useState<string | null>(null);
   const [policyContentSha256, setPolicyContentSha256] = useState<string | null>(null);
+  const [policyLoadState, setPolicyLoadState] = useState<PolicyLoadState>("loading");
+  const [policyLoadAttempt, setPolicyLoadAttempt] = useState(0);
   const [authTab, setAuthTab] = useState<"login" | "signup">(initialAuthTab);
   const [isExistingAccountRecovery, setIsExistingAccountRecovery] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
@@ -264,9 +280,22 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     setAuthTab(initialAuthTab);
 
     setUsername((currentUsername) => currentUsername || generateRandomNickname());
+  }, [initialAuthTab, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
     let cancelled = false;
-    void fetch("/api/privacy/onboarding", { cache: "no-store" })
+    const controller = new AbortController();
+    setPolicyLoadState("loading");
+    setPolicyVersion(null);
+    setPolicyContentSha256(null);
+    const timeout = setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setPolicyLoadState("error");
+      controller.abort();
+    }, POLICY_LOAD_TIMEOUT_MS);
+    void fetch("/api/privacy/onboarding", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         const payload: unknown = await response.json().catch(() => null);
         if (!response.ok || typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
@@ -287,19 +316,28 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         if (!cancelled) {
           setPolicyVersion(currentPolicy?.id ?? null);
           setPolicyContentSha256(currentPolicy?.contentSha256 ?? null);
+          setPolicyLoadState(currentPolicy ? "ready" : "error");
         }
       })
       .catch(() => {
         if (!cancelled) {
           setPolicyVersion(null);
           setPolicyContentSha256(null);
+          setPolicyLoadState("error");
         }
-      });
+      })
+      .finally(() => clearTimeout(timeout));
 
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
+      controller.abort();
     };
-  }, [initialAuthTab, isOpen]);
+  }, [isOpen, policyLoadAttempt]);
+
+  const retryPolicyLoad = useCallback(() => {
+    setPolicyLoadAttempt((attempt) => attempt + 1);
+  }, []);
 
   const resetForm = useCallback(() => {
     setEmail("");
@@ -659,7 +697,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
         marketingConsent={marketingConsent}
         onMarketingConsentChange={handleMarketingConsentChange}
-        policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+        policyLoadState={policyLoadState}
+        onPolicyRetry={retryPolicyLoad}
       />
       <Button
         type="button"
@@ -907,7 +946,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                   onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
                   marketingConsent={marketingConsent}
                   onMarketingConsentChange={handleMarketingConsentChange}
-                  policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+                  policyLoadState={policyLoadState}
+                  onPolicyRetry={retryPolicyLoad}
                 />
 
                 <Button
@@ -1182,7 +1222,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                   onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
                   marketingConsent={marketingConsent}
                   onMarketingConsentChange={handleMarketingConsentChange}
-                  policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+                  policyLoadState={policyLoadState}
+                  onPolicyRetry={retryPolicyLoad}
                 />
 
                 <Button

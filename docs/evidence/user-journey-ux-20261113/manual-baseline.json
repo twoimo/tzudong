@@ -1,0 +1,633 @@
+{
+  "observedOn": "2026-11-13",
+  "surface": "https://www.tzudong.app/",
+  "kind": "manual production UI observations, not candidate deployment verification",
+  "viewport": {
+    "width": 1363,
+    "height": 936
+  },
+  "authentication": "sign-in completed through secure browser authentication; no credentials retained",
+  "scenarioIds": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "S06",
+    "S07",
+    "S08",
+    "S09",
+    "S10",
+    "S11",
+    "S12"
+  ],
+  "observations": {
+    "savedRestaurantTitleNavigates": false,
+    "emptySearchHasRecoveryAction": false,
+    "browserBackRestoresSearch": true,
+    "reviewComposerEscapeCloses": false,
+    "reviewEditorEscapeCloses": true,
+    "reviewEditorRestoresOpenerFocus": false,
+    "newSubmissionHistoryRetry": "loading then same read error",
+    "newSubmissionFirstErrorReceivesFocus": false,
+    "unqueriedRegionsDisplayedAsZero": true,
+    "desktopThemeControlHeightsPx": [
+      32,
+      32,
+      32,
+      32,
+      32
+    ],
+    "reviewMutations": "held by live readiness configuration; final submission not exercised"
+  },
+  "retainedImage": "baseline-home.jpg",
+  "privacy": "No account identifier, email, saved-restaurant membership, personal review text, cookies, tokens, device location or receipt images retained.",
+  "limits": [
+    "No real mobile-device measurement",
+    "No final review or submission write",
+    "No claim of complete WCAG conformance or user-study success rate",
+    "Code and fixture verification do not establish live production fixes",
+    "The successful local full build preceded the final search generation guard and ReviewEditModal header spacing update; search tests and final parity are recorded separately",
+    "Local and remote source commits have the same Git tree; this does not prove deployment or production promotion",
+    "Offline HTML packaging checks do not prove visual layout or runtime network blocking",
+    "Preview sign-in was cancelled by the user and not retried; candidate post-login journeys are not verified",
+    "Desktop manual QA and actual CI browser fixtures have different scopes; final policy-read/test-initialization changes require current PR checks after this record cutoff"
+  ],
+  "baselineDeployment": {
+    "deploymentId": "dpl_DKfxayPRbi1RXBuM8fRoaLJE1QNJ",
+    "commitSha": "27a2d2ae3675bd80c710a81e24b8cfe048baaf2c",
+    "candidatePromoted": false
+  },
+  "candidateCode": {
+    "baseCommitSha": "b605b68c58eac4531847c5ea15860baa68fbe1df",
+    "localSourceCommitSha": "e23462985dc556916cd9ddc2422d5efae2cc6042",
+    "remoteSourceCommitSha": "23a090e69836e4411deb56de30f9fef1ccc5568b",
+    "localTreeSha": "fa10c65fa65810b27b93d224f12d562e666e2563",
+    "remoteTreeSha": "fa10c65fa65810b27b93d224f12d562e666e2563",
+    "sourceTreeEquality": "confirmed",
+    "remoteBranch": "preview/user-journey-ux-20261113",
+    "publication": "connected GitHub API; CLI push credential unavailable",
+    "pullRequest": {
+      "url": "https://github.com/twoimo/tzudong/pull/3828",
+      "state": "draft",
+      "base": "main"
+    },
+    "featurePreview": {
+      "status": "ready",
+      "sourceCommitSha": "23a090e69836e4411deb56de30f9fef1ccc5568b",
+      "deploymentId": "dpl_C8dzLbsvGvrV81kEdZqdxui9if73",
+      "dashboardUrl": "https://vercel.com/twoimos-projects/tzudong/C8dzLbsvGvrV81kEdZqdxui9if73",
+      "url": "https://tzudong-git-preview-user-journey-ux-20261113-twoimos-projects.vercel.app/",
+      "aliasExactUrlVerified": true,
+      "deploymentSuccessVerified": true,
+      "commitLinkVerifiedInDashboard": true,
+      "buildDurationSeconds": 118,
+      "customDomainAssignment": "skipped",
+      "browserVerification": "desktop country selector and auth close focus verified; post-login journeys unverified",
+      "scope": "verified deployment before the final policy-read correction; current alias may advance with later PR head"
+    },
+    "ci": {
+      "status": "completed-with-fixture-failure",
+      "headSha": "23a090e69836e4411deb56de30f9fef1ccc5568b",
+      "runId": 43404767782,
+      "runUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767782",
+      "observedCheckSnapshot": {
+        "total": 37,
+        "success": 24,
+        "failure": 2,
+        "skipped": 11
+      },
+      "finalRequiredChecksVerified": false,
+      "remainingFailure": "two auth-modal-focus-browser cases fail before first opener because fixture module initialization retained unbound process.env access",
+      "aggregateJobUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767782/job/131818096620"
+    },
+    "protectedMerge": "not-performed",
+    "productionPromotion": "not-performed",
+    "pendingFollowupRemoteReconciliation": false,
+    "sourceRevisions": [
+      {
+        "localSourceCommitSha": "526656dc0a05d6189286bf56b10339bcb69caf3d",
+        "remoteSourceCommitSha": "cba9c868e10e7b2107347202822252ef9aa1c236",
+        "localTreeSha": "6855e37c6557b1e704506a39469feb66accd76fa",
+        "remoteTreeSha": "6855e37c6557b1e704506a39469feb66accd76fa",
+        "sourceTreeEquality": "confirmed",
+        "phase": "first-candidate"
+      },
+      {
+        "phase": "CI-and-preview-follow-up",
+        "localSourceCommitSha": "e23462985dc556916cd9ddc2422d5efae2cc6042",
+        "remoteSourceCommitSha": "23a090e69836e4411deb56de30f9fef1ccc5568b",
+        "localTreeSha": "fa10c65fa65810b27b93d224f12d562e666e2563",
+        "remoteTreeSha": "fa10c65fa65810b27b93d224f12d562e666e2563",
+        "sourceTreeEquality": "confirmed"
+      }
+    ],
+    "initialFeaturePreview": {
+      "status": "ready",
+      "sourceCommitSha": "cba9c868e10e7b2107347202822252ef9aa1c236",
+      "dashboardUrl": "https://vercel.com/twoimos-projects/tzudong/DG6XAbtg7vj1UjRVNnbhGwAiYtHz",
+      "url": "https://tzudong-ipgekqc59-twoimos-projects.vercel.app/",
+      "deploymentSuccessVerified": true,
+      "deploymentId": "dpl_DG6XAbtg7vj1UjRVNnbhGwAiYtHz",
+      "commitLinkVerifiedInDashboard": true,
+      "buildDurationSeconds": 206,
+      "buildLog": {
+        "compileSeconds": 51,
+        "typeScriptSeconds": 57,
+        "staticPagesGenerated": 58,
+        "staticPagesExpected": 58,
+        "routeCssBoundary": "pass",
+        "deploymentCompleted": true,
+        "customDomainAssignment": "skipped"
+      },
+      "browserVerification": "desktop-public-UI-observed-with-limitations"
+    },
+    "ciHistory": [
+      {
+        "status": "failures-observed-follow-up-in-progress",
+        "headSha": "cba9c868e10e7b2107347202822252ef9aa1c236",
+        "browserExecution": "actual Chrome execution confirmed in CI",
+        "observedFailures": [
+          {
+            "file": "profile-renewal-browser.test.ts",
+            "viewportWidthPx": 1440,
+            "expectedInputFontPx": 16,
+            "observedInputFontPx": 14,
+            "cause": "shared Input lg:text-sm overrides profile base/md size"
+          },
+          {
+            "file": "legacy-draft-recovery-browser.test.ts",
+            "affectedUiScenarios": 3,
+            "cause": "tests clicked recovery controls before opening the now-collapsed native settings disclosure"
+          }
+        ],
+        "rerunStatus": "pending-follow-up-commit",
+        "observedCheckSnapshot": {
+          "total": 37,
+          "success": 21,
+          "failure": 5,
+          "skipped": 11
+        }
+      }
+    ],
+    "branchUpdate": {
+      "kind": "fast-forward",
+      "expectedPreviousHeadSha": "cba9c868e10e7b2107347202822252ef9aa1c236",
+      "newHeadSha": "23a090e69836e4411deb56de30f9fef1ccc5568b"
+    },
+    "sourceRecordScope": "Published UI source snapshots through 23a090e; final policy-read and test-initialization changes are included with this evidence record and advance the PR head",
+    "postSnapshotChanges": {
+      "scope": [
+        "Auth policy-read loading/ready/error state and safe retry",
+        "browser fixture environment initialization and early pageerror diagnostic",
+        "policy lifecycle and real-component retry regression coverage",
+        "QA documentation and sanitized public evidence"
+      ],
+      "newCommitSha": "resolve from current PR head",
+      "checkAuthorityUrl": "https://github.com/twoimo/tzudong/pull/3828/checks",
+      "resultInterpretation": "current PR checks after this document cutoff; no final-head CI success claimed in this record"
+    }
+  },
+  "codeVerification": {
+    "separateFromManualProductionObservations": true,
+    "groupsAreNotAggregated": true,
+    "testGroups": [
+      {
+        "name": "account-auth",
+        "fileCount": 13,
+        "pass": 135,
+        "fail": 0,
+        "assertions": 1551,
+        "sourceScope": "first candidate before CI and preview follow-up fixes"
+      },
+      {
+        "name": "final-web-quality-review-journey-avatar",
+        "files": [
+          "web-quality-performance-source.test.ts",
+          "restaurant-review-journey.test.ts",
+          "review-card-avatar.test.tsx"
+        ],
+        "pass": 53,
+        "fail": 0,
+        "assertions": 2450,
+        "sourceScope": "first candidate before CI and preview follow-up fixes"
+      },
+      {
+        "name": "final-search-selection-recovery-global-scope",
+        "files": [
+          "restaurant-search-selection.test.ts",
+          "restaurant-search-recovery.test.tsx",
+          "restaurant-search-global-scope-source.test.ts"
+        ],
+        "pass": 20,
+        "fail": 0,
+        "assertions": 106,
+        "includesFinalNarrowSearchGuard": true,
+        "sourceScope": "first candidate before CI and preview follow-up fixes"
+      },
+      {
+        "name": "earlier-mobile-search-selection-logic",
+        "files": [
+          "mobile-home-search-selection.test.ts"
+        ],
+        "pass": 13,
+        "fail": 0,
+        "browserOrDeviceExecution": false,
+        "sourceScope": "first candidate before CI and preview follow-up fixes"
+      },
+      {
+        "name": "profile-font-follow-up",
+        "sourceScope": "follow-up working-tree impact test before source publication; exact published source parity recorded separately",
+        "files": [
+          "mypage-user-journeys-render.test.ts",
+          "mypage-mobile-cleanup-contract.test.ts",
+          "web-quality-performance-source.test.ts"
+        ],
+        "pass": 48,
+        "fail": 0,
+        "assertions": 2745
+      },
+      {
+        "name": "auth-focus-follow-up",
+        "sourceScope": "follow-up working-tree impact test before source publication; exact published source parity recorded separately",
+        "files": [
+          "auth-modal-focus.test.ts",
+          "mypage-user-journeys-render.test.ts",
+          "auth-existing-account-recovery.test.ts",
+          "privacy-onboarding.test.ts",
+          "auth-admin-login-redirect.test.ts"
+        ],
+        "pass": 71,
+        "fail": 0,
+        "assertions": 678
+      },
+      {
+        "name": "final-policy-read-impact",
+        "sourceScope": "last policy-read and fixture initialization patch included with this document; remote result via PR checks",
+        "files": [
+          "auth-policy-loading.test.ts",
+          "auth-modal-focus.test.ts",
+          "mypage-user-journeys-render.test.ts",
+          "auth-existing-account-recovery.test.ts",
+          "privacy-onboarding.test.ts",
+          "auth-admin-login-redirect.test.ts"
+        ],
+        "pass": 77,
+        "fail": 0,
+        "assertions": 698
+      }
+    ],
+    "typeScriptParity": {
+      "command": "npm run typecheck:parity",
+      "status": "pass",
+      "diagnostics": 0,
+      "sourceScope": "final policy-read and fixture-initialization working tree included with this document; exact published head via current PR",
+      "contentDigest": "7c0799d41b42eb9b4a152e8e3c7b282a095f810970cfb8ad5e441a480f821e92",
+      "includesFinalNarrowSearchGuard": true,
+      "includesFinalReviewEditHeaderSpacing": true,
+      "subsequentCiAndPreviewFixesIncluded": true,
+      "includesFinalPolicyReadCorrection": true,
+      "remoteResultAuthority": "https://github.com/twoimo/tzudong/pull/3828/checks"
+    },
+    "localBuild": {
+      "status": "passed-before-final-narrow-updates",
+      "completed": [
+        "webpack compilation",
+        "TypeScript check",
+        "58-page generation",
+        "route CSS boundary"
+      ],
+      "exactFinalSourceCommitBuild": "not-established-by-this-local-build",
+      "subsequentChanges": [
+        "final search generation guard",
+        "ReviewEditModal header pl-6 pr-14 spacing"
+      ],
+      "subsequentVerification": {
+        "finalSearchGuard": "final search selection/recovery/global-scope tests",
+        "bothNarrowChanges": "final native/compat parity, 0 diagnostics",
+        "reviewEditHeaderVisualMeasurement": "not-run"
+      }
+    },
+    "candidateVisualBrowserVerification": "desktop production baseline and two published candidate snapshots observed; 23a CI profile/desktop/legacy browser fixtures passed; final policy correction is locally verified and requires current PR/deployment result",
+    "realMobileDeviceVerification": "not-run",
+    "profileFontSemanticCheck": {
+      "kind": "actual Input SSR class merge and generated Tailwind CSS; not browser measurement",
+      "profileInputCount": 6,
+      "mergedLgTextSmRemaining": 0,
+      "baseFontSize": "1rem",
+      "lgFontSize": "1rem",
+      "lgMedia": "width >= 64rem",
+      "targetedLint": "pass"
+    },
+    "localPinnedBrowser": "not-run; pinned Chrome download failed ZIP validation; no pin bypass",
+    "authFocusFollowup": {
+      "sourceChange": "desktop Dialog captures the actual non-body opener and restores only while connected, then clears the reference",
+      "authenticationConsentRedirectAndMobileBehavior": "unchanged",
+      "unitBoundary": "actual source callbacks with synthetic DOM boundaries; actual AuthModal and Dialog browser fixture bundle",
+      "targetedLint": "pass",
+      "browserTests": {
+        "file": "auth-modal-focus-browser.test.ts",
+        "scenarios": [
+          "kept mounted: keyboard opening then Escape and close button restore each opener",
+          "conditional unmount: keyboard opening then Escape and close button restore each opener"
+        ],
+        "localExecution": "not-run; pinned Chrome unavailable",
+        "remoteExecution": "two scenarios failed before mount on 23a090e; initialization fix accompanies this record; see current PR checks",
+        "finalResultAuthority": "https://github.com/twoimo/tzudong/pull/3828/checks"
+      },
+      "deployedManualVerification": {
+        "sourceCommitSha": "23a090e69836e4411deb56de30f9fef1ccc5568b",
+        "escapeReturnsToActualOpener": "pass",
+        "closeButtonReturnsToActualOpener": "pass",
+        "keyboardEnterReopens": "pass"
+      }
+    },
+    "initialCandidateTypeScriptParity": {
+      "command": "npm run typecheck:parity",
+      "status": "pass",
+      "diagnostics": 0,
+      "includesFinalNarrowSearchGuard": true,
+      "includesFinalReviewEditHeaderSpacing": true,
+      "sourceCommitSha": "cba9c868e10e7b2107347202822252ef9aa1c236",
+      "subsequentCiAndPreviewFixesIncluded": false
+    },
+    "followupStaticChecks": {
+      "changedTsTsxEslint": {
+        "status": "pass",
+        "fileCount": 13
+      },
+      "gitDiffCheck": "pass"
+    },
+    "ciBrowserProofAt23a": {
+      "sourceCommitSha": "23a090e69836e4411deb56de30f9fef1ccc5568b",
+      "runUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767782",
+      "groupsAreNotAggregated": true,
+      "groups": [
+        {
+          "file": "profile-renewal-browser.test.ts",
+          "pass": 1,
+          "skip": 0,
+          "elapsedSeconds": 2.54,
+          "viewportWidthsPx": [
+            390,
+            768,
+            1440
+          ],
+          "kind": "actual pinned Chrome with synthetic profile fixture; not physical mobile device",
+          "jobUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767782/job/131816418605"
+        },
+        {
+          "file": "desktop-panel-renewal-browser.test.ts",
+          "pass": 20,
+          "skip": 0,
+          "stringContractTests": 1,
+          "actualBrowserTests": 19,
+          "jobUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767782/job/131816418712"
+        },
+        {
+          "file": "legacy-draft-recovery-browser.test.ts",
+          "pass": 37,
+          "skip": 0,
+          "jobUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767782/job/131816418466"
+        },
+        {
+          "name": "isolated-search-wrapper",
+          "status": "pass",
+          "elapsedSeconds": 7.16,
+          "jobUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767782/job/131816418605"
+        },
+        {
+          "file": "auth-modal-focus-browser.test.ts",
+          "failedScenarios": 2,
+          "failureStage": "module initialization before first opener; focus assertions not reached",
+          "jobUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767782/job/131816418466"
+        }
+      ]
+    },
+    "otherWorkflowsAt23a": [
+      {
+        "name": "Release",
+        "status": "success",
+        "runUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767645"
+      },
+      {
+        "name": "Promotion Path",
+        "status": "success",
+        "runUrl": "https://github.com/twoimo/tzudong/actions/runs/43404762120"
+      },
+      {
+        "name": "Security",
+        "status": "success",
+        "runUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767567"
+      },
+      {
+        "name": "CodeQL",
+        "status": "success",
+        "runUrl": "https://github.com/twoimo/tzudong/actions/runs/43404767679"
+      }
+    ],
+    "fixtureInitializationFix": {
+      "reproduction": "unmodified fixture bundle raises ReferenceError: process is not defined at lib/site-config initialization in a process-free VM",
+      "change": "replace complete process.env with inert test environment and surface pageerror while awaiting the first opener",
+      "preserved": "actual AuthModal/Radix and both focus scenarios; no skipped or removed assertions",
+      "localVerification": "actual bundle initializes in process-free VM through render entry boundary; not real DOM mount proof",
+      "targetedLintFileCount": 3,
+      "targetedLint": "pass",
+      "finalBrowserResultAuthority": "https://github.com/twoimo/tzudong/pull/3828/checks"
+    },
+    "authPolicyReadFollowup": {
+      "scope": "final AuthModal-only product change after observed 23a090e deployment",
+      "states": [
+        "loading",
+        "ready",
+        "error"
+      ],
+      "requestPath": "/api/privacy/onboarding",
+      "method": "GET",
+      "timeoutMs": 15000,
+      "failureConditions": [
+        "non-success HTTP",
+        "invalid or incomplete policy ID/hash",
+        "transport error",
+        "timeout"
+      ],
+      "retryPreserves": [
+        "signup tab",
+        "nickname and other form inputs",
+        "age choice",
+        "privacy and marketing consent choices"
+      ],
+      "lateResultProtection": [
+        "close/unmount cleanup",
+        "replaced request cleanup",
+        "timed-out request cancellation"
+      ],
+      "eligibilityBoundary": "requires both validated policy ID and content hash; existing age/consent/eligibility checks unchanged",
+      "unitFile": "auth-policy-loading.test.ts",
+      "unitCases": 6,
+      "newBrowserCase": "actual AuthModal 503 then valid retry, GET count 2, input/age retained, all consents unchecked, night consent disabled, auth writes 0",
+      "browserExecution": "not run locally; current PR checks are authoritative",
+      "finalResultAuthority": "https://github.com/twoimo/tzudong/pull/3828/checks"
+    },
+    "finalPolicyPatchStaticChecks": {
+      "targetedEslint": {
+        "status": "pass",
+        "fileCount": 5
+      },
+      "browserScenarioCount": 3,
+      "browserResultAuthority": "https://github.com/twoimo/tzudong/pull/3828/checks"
+    },
+    "prePolicySourceTypeScriptParity": {
+      "command": "npm run typecheck:parity",
+      "status": "pass",
+      "diagnostics": 0,
+      "sourceCommitSha": "23a090e69836e4411deb56de30f9fef1ccc5568b",
+      "localSourceCommitSha": "e23462985dc556916cd9ddc2422d5efae2cc6042",
+      "sourceTreeSha": "fa10c65fa65810b27b93d224f12d562e666e2563",
+      "contentDigest": "75beefdb40e013cec2889f72c1dbf37879c8dce91e18ca98a7fe072b7236f2db",
+      "includesFinalNarrowSearchGuard": true,
+      "includesFinalReviewEditHeaderSpacing": true,
+      "subsequentCiAndPreviewFixesIncluded": true
+    }
+  },
+  "offlineFixture": {
+    "kind": "local synthetic component preview; not deployment evidence",
+    "scenarioCount": 8,
+    "viewportWidthsPx": [
+      390,
+      1152
+    ],
+    "syntheticAccountAndRestaurantDataOnly": true,
+    "realAccountDataIncluded": false,
+    "staticChecks": {
+      "javascriptSyntax": "valid",
+      "sandboxIframeCount": 2,
+      "connectSrc": "none",
+      "externalCssAssetCount": 0,
+      "unresolvedCssImports": 0,
+      "storageWriteNoops": "present"
+    },
+    "backendAuthenticationAndWrites": "disabled in fixture code; not browser-runtime verified",
+    "visualBrowserVerification": "not-run",
+    "sourceIdentity": "delivered artifact carries its own source commit/tree manifest and is refreshed after final publication; not an exact deployed service verification",
+    "deliveryMetadataAuthority": "artifact manifest and static-checks supplied with delivered HTML; do not treat earlier 23a snapshot hash as final artifact hash"
+  },
+  "candidateManualObservations": {
+    "sourceCommitSha": "cba9c868e10e7b2107347202822252ef9aa1c236",
+    "surface": "https://tzudong-ipgekqc59-twoimos-projects.vercel.app/",
+    "viewport": {
+      "width": 1363,
+      "height": 936
+    },
+    "authentication": "unauthenticated preview origin; production sign-in observations remain separate",
+    "accountOrConsentWritesPerformed": false,
+    "uiChecks": {
+      "headingFontWeight": 600,
+      "themeControlHeightsPx": [
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "documentHorizontalOverflow": false,
+      "zeroRegion": "selected Ulsan shows zero; unqueried regions do not show invented zeros",
+      "allRegionsRecoveryCount": 715,
+      "emptyNameSearch": "alternative search type and clear controls present",
+      "switchToVideoSearchReturnsInputFocus": true,
+      "nameSearchDetailBack": "one result opens detail; browser back restores query and result",
+      "themeDefinitionPopoverOpens": true,
+      "clearThemeRestoresCount": 715,
+      "desktopAuthInputHeightPx": 44,
+      "desktopAuthInputFontPx": 14,
+      "authCloseControlPx": {
+        "width": 44,
+        "height": 44
+      },
+      "optionalConsentDisclosureOpens": true,
+      "ordinaryConsentUncheckedCount": 3,
+      "nightConsentDisabledCount": 3,
+      "authEscapeCloses": true,
+      "authEscapeRestoresOpenerFocus": false,
+      "authEscapeObservedFocus": "BODY"
+    },
+    "environmentLimitations": {
+      "videoSearch": "explicit read failure; retry stays failed and preserves input",
+      "themeRead": "explicit read failure; no service success claimed",
+      "privacyPolicy": "checking state persisted; upstream read cause unverified; source-confirmed UI false-loading defect corrected by explicit error/retry/timeout in final patch; consent gate unchanged",
+      "map": "Naver Open API authentication failure then map unavailable recovery UI",
+      "previewDomainAddedToMapProviderAllowlist": false
+    },
+    "notEstablished": [
+      "preview sign-in success",
+      "review or submission server write",
+      "fully working map/provider environment",
+      "mobile-device or cross-browser measurement",
+      "zoom verification"
+    ],
+    "retainedImages": [
+      "candidate-cba9c86-home.jpg",
+      "candidate-cba9c86-search-empty.jpg",
+      "candidate-cba9c86-auth.jpg"
+    ],
+    "imageScope": "initial cba9c86 before follow-up patches; blank auth inputs; not final candidate evidence"
+  },
+  "productionComparison": {
+    "sourceCommitSha": "27a2d2ae3675bd80c710a81e24b8cfe048baaf2c",
+    "authentication": "existing authenticated production tab",
+    "writesPerformed": false,
+    "themeResultCount": 140,
+    "mapTiles": "displayed normally",
+    "restoredDefaultNationalCount": 715,
+    "missingVideoQuery": "old no-results message; old error handling can hide read failures",
+    "limitations": [
+      "Production authenticated and Preview unauthenticated are different conditions",
+      "Candidate RPC failures cannot be attributed only to domain configuration",
+      "Old empty-result text does not prove healthy video search API",
+      "Only the explicit candidate Naver authentication failure establishes a provider error"
+    ],
+    "backendSettingsChanged": false
+  },
+  "finalCandidateManualObservations": {
+    "sourceCommitSha": "23a090e69836e4411deb56de30f9fef1ccc5568b",
+    "surface": "https://tzudong-git-preview-user-journey-ux-20261113-twoimos-projects.vercel.app/",
+    "viewport": {
+      "width": 1363,
+      "height": 936
+    },
+    "authentication": "secure preview sign-in request cancelled by user; fresh form blank; no positive authenticated signal; no retry",
+    "uiChecks": {
+      "countryTriggerPx": {
+        "width": 208,
+        "height": 44
+      },
+      "countryTextClientWidthPx": 93,
+      "countryTextScrollWidthPx": 93,
+      "countryTextTruncated": false,
+      "categoryTextFullyVisible": true,
+      "authEscapeRestoresOpenerFocus": true,
+      "authCloseButtonRestoresOpenerFocus": true,
+      "restoredElement": {
+        "tagName": "BUTTON",
+        "ariaLabel": "로그인 열기"
+      },
+      "keyboardEnterReopensDialog": true,
+      "visibleTabFocusObserved": true
+    },
+    "retainedImages": [
+      "candidate-23a090e-home.jpg",
+      "candidate-23a090e-auth.jpg"
+    ],
+    "accountOrConsentWritesPerformed": false,
+    "postLoginJourneysVerified": false,
+    "notEstablished": [
+      "preview sign-in success",
+      "preview bookmarks/profile post-login behavior",
+      "resolution of previously observed map/RPC/privacy-policy limitations",
+      "review or submission final server write",
+      "mobile-device or cross-browser measurement",
+      "zoom verification"
+    ],
+    "sourceScope": "actual 23a090e deployment observations before final policy-read correction"
+  }
+}
