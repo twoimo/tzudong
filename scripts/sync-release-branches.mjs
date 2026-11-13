@@ -5,10 +5,11 @@
 const guidance = [
   'LEGACY_RELEASE_SYNC_RETIRED',
   'This helper no longer performs Git, GitHub, or deployment operations.',
-  'Use reviewed protected PRs in order: feature -> develop -> data -> main.',
+  'Install main-first once through protected PRs: feature -> develop -> data -> main.',
+  'After verified activation, use reviewed feature/dependency PRs directly into main.',
   'Verify the exact head SHA and required checks before each normal merge.',
   'Do not use administrator bypass or force pushes.',
-  'See docs/agents/release.md and docs/operations/staged-production-transition.md.',
+  'See docs/agents/release.md and docs/operations/main-first-transition.md.',
 ].join('\n') + '\n';
 
 const args = process.argv.slice(2);

@@ -1,12 +1,29 @@
 # CI simplification rollout
 
-This runbook describes the first implementation phase of the approved CI/CD
-simplification. Source changes alone do not prove that branch protection was
+This runbook retains the first implementation phase of the approved CI/CD
+simplification. The current [main-first candidate](main-first-transition.md)
+uses scoped main PRs, one full main post-merge lane, and the final protected serial
+installation before direct-main development. Its operational activation and
+provider alignment require separate readbacks; the dated records below remain
+historical observations. Source changes alone do not prove that branch protection was
 updated, that a deployment occurred, or that a Mac runtime was measured.
 
-## Phase 1: select checks, then require their results
+### Separate hosted readback: 2026-11-13 UTC
 
-`web-admin-ci.yml` starts on every PR and every existing protected branch push.
+The operator session observed the new production deployment serving `main`
+`27a2d2ae3675bd80c710a81e24b8cfe048baaf2c`, healthy public/internal checks, and
+working production map behavior. This is separate from the uninstalled main-first
+source candidate described here. In Vercel, `tzudong` Pre-Production retention was
+saved and read back after reload as **one week**, from 30 days. Production,
+Canceled, and Errored retention remained 30 days. No project or deployment was
+deleted. The other projects were retained: `rinkorea` and `twoimo` had observed
+traffic and distinct unpublished previews; `atlas-h1-verification-20261112` was
+one day old. These observations are not a cleanup of the actual Mac runtime or
+activation of the new source policy.
+
+## Phase 1 record: select checks, then require their results
+
+In the first phase, `web-admin-ci.yml` started on every PR and every existing protected branch push.
 It no longer uses workflow-level path filters, so its stable `CI` result can be
 required without leaving a documentation-only PR waiting for an absent check.
 The `scope` job reads the complete Git diff for the event's exact checkout.
@@ -52,7 +69,7 @@ or the API's incomplete 300-file comparison boundary fails closed. Scheduled
 open-PR discovery retains its existing pagination. Diagnostic output uses fixed
 codes rather than raw provider errors.
 
-## Activation and verification
+## Phase 1 activation procedure
 
 1. Run the scope/result failure tests, workflow wiring contracts, dependency
    candidate race cases, and affected source checks on the candidate.
@@ -71,13 +88,14 @@ codes rather than raw provider errors.
    release structure. Compare changed-input type, wall time, queue time, and
    summed job time; do not present a projected saving as a measurement.
 
-The existing `develop -> data -> main` promotion path remains in this phase.
+The existing `develop -> data -> main` promotion path remained in this phase.
 Push verification is retained until final merge-tree and release-artifact
 identity have a replacement contract. The current production SHA approval gate
-and deployment integration are unchanged. Branch consolidation must first move
-or retire the data-branch publisher and prepare staged production, its single
-promotion owner, and rollback. Do not enable feature-to-main before those
-conditions are verified.
+and deployment integration were unchanged. The next phase separates source
+promotion from legacy data consumers while retaining their ref and write guards;
+it does not require deleting `data`. The
+[main-first transition](main-first-transition.md) defines its coherent installation,
+staged production, single promotion owner, and rollback conditions.
 
 ## Hosted rollout record: 2026-11-13 (KST)
 
@@ -116,19 +134,20 @@ Protected [#3815](https://github.com/twoimo/tzudong/pull/3815) then promoted
 `develop` to `data` after the full promotion checks passed, producing commit
 `8af98ee68890925dddc4f145911774b3e70fa0cf` and tree
 `f6853410d1b49deca57de9310281dfa470ba5bf3`.
-The `data -> main` [#3816](https://github.com/twoimo/tzudong/pull/3816) remains a
-draft at this record, pending the protected promotion conditions and fresh
+The `data -> main` [#3816](https://github.com/twoimo/tzudong/pull/3816) was a
+draft at this historical observation, pending the protected promotion conditions and fresh
 Vercel production and rollback identity.
 
-This documentation update accompanies a candidate reconciliation of the current
+The documentation update at that observation accompanied a candidate reconciliation of the then-current
 `main`, `data`, and `develop` commit ancestry. Runtime, test, and configuration
 files retain their bytes from the tree recorded above. The existing strict
 protection and serial `develop -> data -> main` path remain in force. This record
 does not establish a production deployment, main-only activation, or Mac cleanup.
-The Vercel connection listed the `twoimos-projects` team with zero linked Git
+At that observation, the Vercel connection listed the `twoimos-projects` team with zero linked Git
 projects, and the known project lookup returned 404. That leaves the deployment
 identity unverified; it does not establish project deletion or a service outage.
-Actual Mac/Dots runtime access was also unavailable. Continue independent source
+Actual Mac/Dots runtime access was also unavailable. That record is not a current
+provider status check. Continue independent source
 promotion under the existing policy while those execution inputs are resolved.
 
 ## Rollback
@@ -142,7 +161,7 @@ and deployment evidence; no force push or branch-protection bypass is needed.
 ## Later phases
 
 The [on-demand pipeline modes](../../backend/pipeline-control/LOCAL_MODES.md)
-are implemented on `develop`; activation and measurement on the actual Mac are
+were implemented in the first phase; activation and measurement on the actual Mac are
 separate execution steps. The current web app uses Auth, REST, Storage, Realtime,
 and Edge Functions, and its local development entrypoint requires a verified
 Supabase runtime. A minimal mode must preserve these features and cannot imply
@@ -151,8 +170,9 @@ historical replay modes retain their existing contracts. Actual Mac cleanup need
 active-job/volume ownership, and restart verification before changing services.
 
 The [optional compute/data binding](daily-compute-data-binding.md) is also
-implemented on `develop`; it does not retire the publisher or its remaining
-consumers. Main-only source flow, deployment ownership, and obsolete branch
-cleanup follow the prerequisites in the
-[staged-production transition](staged-production-transition.md). Each phase gets
+implemented in the first phase; it does not retire the publisher or its remaining
+consumers. Main-first source flow follows the
+[main-first transition](main-first-transition.md), and deployment follows the
+[staged-production transition](staged-production-transition.md). Removing a legacy
+data ref remains separate from removing it from source promotion. Each phase gets
 its own relevant verification and remote readback.

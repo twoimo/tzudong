@@ -3,6 +3,8 @@ run-name: ${{ github.event.pull_request.title || format('Security · {0}', githu
 
 on:
   pull_request:
+  push:
+    branches: [main]
   schedule:
     - cron: '0 17 * * 1'
   workflow_dispatch:

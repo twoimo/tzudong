@@ -773,7 +773,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("check_crawler_orchestration_readiness.py --run-tests --json", security_workflow)
         self.assertIn('directory: "/backend/pipeline-control"', dependabot)
         self.assertIn('directory: "/backend/restaurant-crawling/scripts"', dependabot)
-        self.assertEqual(dependabot.count('target-branch: "develop"'), 8)
+        self.assertEqual(dependabot.count('target-branch: "main"'), 8)
         self.assertIn('package-ecosystem: "cargo"', dependabot)
         self.assertIn('directory: "/backend/rust"', dependabot)
         self.assertEqual(dependabot.count('applies-to: "version-updates"'), 3)

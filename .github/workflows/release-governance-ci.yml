@@ -4,7 +4,7 @@ run-name: ${{ github.event.pull_request.title || format('Release · {0}', github
 on:
   pull_request:
   push:
-    branches: [main, develop, data]
+    branches: [main]
 
 concurrency:
   group: release-governance-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

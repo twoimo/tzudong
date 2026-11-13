@@ -243,7 +243,7 @@ describe("dependency candidate split + hold classification (Property 11)", () =>
   test("a bump inside a preserved hold range is rejected; a bump outside is admitted", () => {
     for (const { packages, expectedCode } of holdCases) {
       const candidate = {
-        targetBranch: "develop",
+        targetBranch: "main",
         unit: "/apps/web",
         title: "chore: bump dependencies",
         packages,
