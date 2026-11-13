@@ -476,6 +476,16 @@
   [data-admin-dashboard-kpi-card] { min-height: 88px; grid-template-rows: auto auto; }
   [data-admin-dashboard-kpi-card] > div:first-child { gap: 0; }
   [data-admin-dashboard-kpi-card] > div:first-child > div[aria-hidden="true"] { display: none; }
-  [data-admin-dashboard-kpi-title-actions="single-line-scroll"] { position: absolute; right: 8px; bottom: 8px; width: auto; max-width: 40%; }
+  [data-admin-dashboard-kpi-title-actions="single-line-scroll"] { position: static; width: 100%; max-width: 100%; }
   [data-admin-dashboard-kpi-value-size="bounded"] { font-size: 18px; }
+}
+
+/* Touch controls need the same visible space as their 44px hit targets. */
+@media (max-width: 1023px) {
+  [data-admin-console-shell="true"] [data-admin-dashboard-card-title-row="single-line"] { flex-wrap: wrap; overflow: visible; }
+  [data-admin-console-shell="true"] [data-admin-dashboard-card-title-row="single-line"] > div:first-child { flex: 1 1 100%; }
+  [data-admin-console-shell="true"] [data-admin-dashboard-card-title-actions="single-line-scroll"] { flex: 1 1 100%; width: 100%; max-width: 100%; min-height: 44px; overflow: visible; }
+  [data-admin-console-shell="true"] [data-admin-dashboard-card-title-actions="single-line-scroll"] > div { min-width: 0; max-width: 100%; flex-wrap: wrap; gap: 8px; }
+  [data-admin-console-shell="true"] [data-admin-dashboard-card-view-toggle="true"],
+  [data-admin-console-shell="true"] [data-admin-dashboard-series-toggle="true"] { height: auto; min-height: 44px; }
 }

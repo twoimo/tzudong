@@ -558,14 +558,46 @@ for (const width of widths) for (const colorScheme of colors) {
           const rect = title.getBoundingClientRect(), style = getComputedStyle(title);
           return { height: rect.height, lineHeight: Number.parseFloat(style.lineHeight), singleLine: style.whiteSpace === 'nowrap' && rect.height <= Number.parseFloat(style.lineHeight) + 1, clipped: title.scrollWidth > title.clientWidth + 1 };
         });
+        // Exercise a real nine-digit KPI shape in this synthetic browser only.
+        // Text bounds, rather than element boxes, expose an overlaid change badge.
+        const kpiNumericLayouts = [...root.querySelectorAll('[data-admin-dashboard-kpi-card]')].map(card => {
+          const value = card.querySelector('[data-admin-dashboard-kpi-value-size="bounded"]');
+          const delta = card.querySelector('[data-admin-dashboard-kpi-title-actions="single-line-scroll"]');
+          if (!value || !delta) return { missing: true, overlapArea: 0, outsideCard: false };
+          const original = value.textContent;
+          value.textContent = '999,999,999';
+          const range = document.createRange(); range.selectNodeContents(value);
+          const number = range.getBoundingClientRect(), change = delta.getBoundingClientRect(), bounds = card.getBoundingClientRect();
+          const overlapArea = Math.max(0, Math.min(number.right, change.right) - Math.max(number.left, change.left))
+            * Math.max(0, Math.min(number.bottom, change.bottom) - Math.max(number.top, change.top));
+          const outsideCard = number.left < bounds.left - 1 || number.right > bounds.right + 1;
+          value.textContent = original;
+          return { missing: false, overlapArea, outsideCard };
+        });
+        const clippedTouchControls = window.innerWidth < 1024
+          ? [...root.querySelectorAll('[data-admin-dashboard-card-title-actions="single-line-scroll"] button')].filter(button => {
+            const box = button.getBoundingClientRect();
+            if (!box.width || !box.height || getComputedStyle(button).visibility === 'hidden') return false;
+            let left = box.left, right = box.right, top = box.top, bottom = box.bottom;
+            const card = button.closest('[data-admin-dashboard-widget-card]');
+            for (let ancestor = button.parentElement; ancestor; ancestor = ancestor.parentElement) {
+              const style = getComputedStyle(ancestor), bounds = ancestor.getBoundingClientRect();
+              if (/hidden|clip|auto|scroll/.test(style.overflowX)) { left = Math.max(left, bounds.left); right = Math.min(right, bounds.right); }
+              if (/hidden|clip|auto|scroll/.test(style.overflowY)) { top = Math.max(top, bounds.top); bottom = Math.min(bottom, bounds.bottom); }
+              if (ancestor === card) break;
+            }
+            return right - left < 43 || bottom - top < 43;
+          }).length : 0;
         const mobileHeader = document.querySelector('[data-admin-console-mobile-header="true"]');
         const duplicateMobileSubtitle = Boolean(mobileHeader && mobileHeader.getBoundingClientRect().width > 0 && mobileHeader.textContent?.includes('현재 화면 ·'));
         return { panelWidth: host.width, panelHeight: host.height, graphWidth: graph?.width ?? null,
           graphHeight: graph?.height ?? null, graphHeightShare: graph ? graph.height / host.height : null,
-          pipelineNodes: nodes.length, pipelineOverlaps, kpiTitles, duplicateMobileSubtitle };
+          pipelineNodes: nodes.length, pipelineOverlaps, kpiTitles, kpiNumericLayouts, clippedTouchControls, duplicateMobileSubtitle };
       });
       if (moduleId === 'pipeline' && (geometry.pipelineNodes !== 8 || geometry.pipelineOverlaps)) issues.push('pipeline-node-geometry');
       if (moduleId === 'overview' && (geometry.kpiTitles.length !== 5 || geometry.kpiTitles.some(title => !title.singleLine || title.clipped))) issues.push('kpi-title-geometry');
+      if (moduleId === 'overview' && geometry.kpiNumericLayouts.some(item => item.missing || item.overlapArea > 0.25 || item.outsideCard)) issues.push('kpi-number-change-overlap');
+      if (moduleId === 'overview' && geometry.clippedTouchControls) issues.push('clipped-chart-touch-controls');
       if (geometry.duplicateMobileSubtitle) issues.push('duplicate-mobile-header-subtitle');
       const screenshot = captureScreenshots ? resolve(evidenceRoot, `cms-${moduleId}-${width}-${colorScheme}-${suffix}.png`) : null;
       if (screenshot) await page.screenshot({ path: screenshot });
