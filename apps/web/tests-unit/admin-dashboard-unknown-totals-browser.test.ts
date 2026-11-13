@@ -104,6 +104,13 @@ async function bundle(entry: string) {
         const ops = page.locator('[data-admin-dashboard-widget-card="ops"]');
         await ops.scrollIntoViewIfNeeded();
         await playwrightExpect(ops.locator('[data-admin-dashboard-card-title-delta]')).toHaveText('(검수 리스크 —)');
+        const summaryTable = ops.getByRole('table');
+        await playwrightExpect(summaryTable).toBeVisible();
+        for (const label of ['영상 수', '맛집 데이터', '좌표 완료', '영상 연결']) {
+          const row = summaryTable.getByRole('row').filter({ has: page.getByRole('cell', { name: label, exact: true }) });
+          await playwrightExpect(row.getByRole('cell').last()).toHaveText('—');
+        }
+        await ops.getByRole('button', { name: '운영·검수 요약 그래프 보기', exact: true }).click();
         await playwrightExpect(ops.getByLabel('운영 자산 확인 불가 항목')).toHaveText(
           '확인 불가: 영상 수, 맛집 데이터, 좌표 완료, 영상 연결',
         );
@@ -146,6 +153,12 @@ async function bundle(entry: string) {
       const ops = page.locator('[data-admin-dashboard-widget-card="ops"]');
       await ops.scrollIntoViewIfNeeded();
       await playwrightExpect(ops.locator('[data-admin-dashboard-card-title-delta]')).toHaveText('(검수 리스크 0)');
+      const summaryTable = ops.getByRole('table');
+      for (const label of ['영상 수', '맛집 데이터', '좌표 완료', '영상 연결', '제보 대기', '추천 대기', '리뷰 대기', '좌표 미완료', '비활성 배너']) {
+        const row = summaryTable.getByRole('row').filter({ has: page.getByRole('cell', { name: label, exact: true }) });
+        await playwrightExpect(row.getByRole('cell').last()).toHaveText('0');
+      }
+      await ops.getByRole('button', { name: '운영·검수 요약 그래프 보기', exact: true }).click();
       const assetTable = ops.getByRole('table', { name: '운영 자산 상대 크기 비교 데이터' });
       const riskTable = ops.getByRole('table', { name: '검수 리스크 상대 크기 비교 데이터' });
       for (const row of ['영상 수 0', '맛집 데이터 0', '좌표 완료 0', '영상 연결 0']) {
