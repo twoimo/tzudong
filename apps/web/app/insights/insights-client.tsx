@@ -1,9 +1,9 @@
 'use client';
 
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, useTransition } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
+import { ThemeProvider, Treemap, type ChartEvent } from 'ztd-charts';
 import { AlertTriangle, Info, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AdminEmbeddedModuleShell } from '@/components/admin/AdminEmbeddedModuleShell';
@@ -36,7 +36,6 @@ type TreemapLeafNode = {
     metricText: string;
     percent: number;
     percentText: string;
-    color: string;
     children?: undefined;
 };
 
@@ -47,99 +46,21 @@ type TreemapGroupNode = {
 };
 
 type TreemapNode = TreemapLeafNode | TreemapGroupNode;
-type TreemapRootNode = {
-    name: string;
-    children: TreemapNode[];
-};
 
-type TreemapCellLayout = {
-    node: TreemapLeafNode;
-    x0: number;
-    y0: number;
-    x1: number;
-    y1: number;
-};
-
-type TreemapTooltipState = {
-    x: number;
-    y: number;
-    leaf: TreemapLeafNode;
-};
+function isTreemapGroupNode(entry: TreemapNode): entry is TreemapGroupNode {
+    return Array.isArray(entry.children);
+}
 
 type ChartDimensions = {
     width: number;
     height: number;
 };
 
-type TreemapTileInteraction = (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => void;
-type TreemapTileActivation = (leaf: TreemapLeafNode, index: number) => void;
-
-type TreemapCellRenderInput = {
-    leaf: TreemapLeafNode;
-    foregroundColor: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    metricText: string;
-    metricFontSize: number;
-    percentText: string;
-    percentFontSize: number;
-    canShowBoth: boolean;
-    canShowOneLine: boolean;
-    canShowEllipsis: boolean;
-};
-
-type TreemapTilesProps = {
-    cells: TreemapCellLayout[];
-    containerWidth: number;
-    containerHeight: number;
-    onCellEnter: TreemapTileInteraction;
-    onCellMove: TreemapTileInteraction;
-    onCellLeave: () => void;
-    onCellActivate: TreemapTileActivation;
-};
 type LeafRowsData = {
     leafRows: TreemapLeafNode[];
     leafTotalMetric: number;
     leafMetricValuesSorted: number[];
 };
-
-const TREEMAP_TEXT_CACHE_LIMIT = 3_000;
-const treemapTextFitCache = new Map<string, { text: string; fontSize: number }>();
-
-
-const TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
-const TREEMAP_LIGHT_FOREGROUND = '#ffffff';
-const TREEMAP_DARK_FOREGROUND = '#17202f';
-
-function getHexColorRelativeLuminance(color: string): number {
-    const match = /^#([0-9a-f]{6})$/i.exec(color);
-    if (!match) return 0;
-
-    const channels = [0, 2, 4].map((offset) => {
-        const channel = Number.parseInt(match[1].slice(offset, offset + 2), 16) / 255;
-        return channel <= 0.04045
-            ? channel / 12.92
-            : ((channel + 0.055) / 1.055) ** 2.4;
-    });
-
-    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
-}
-
-function getColorContrastRatio(firstColor: string, secondColor: string): number {
-    const firstLuminance = getHexColorRelativeLuminance(firstColor);
-    const secondLuminance = getHexColorRelativeLuminance(secondColor);
-    const lighter = Math.max(firstLuminance, secondLuminance);
-    const darker = Math.min(firstLuminance, secondLuminance);
-    return (lighter + 0.05) / (darker + 0.05);
-}
-
-function getTreemapTextColor(backgroundColor: string): string {
-    const lightContrast = getColorContrastRatio(backgroundColor, TREEMAP_LIGHT_FOREGROUND);
-    const darkContrast = getColorContrastRatio(backgroundColor, TREEMAP_DARK_FOREGROUND);
-    return darkContrast >= lightContrast ? TREEMAP_DARK_FOREGROUND : TREEMAP_LIGHT_FOREGROUND;
-}
 
 const VIEW_MODE_OPTIONS: { value: ViewMode; label: string }[] = [
     { value: 'all', label: '비율' },
@@ -198,8 +119,6 @@ function getInitialChartSize(isMobile: boolean, isTablet: boolean): ChartDimensi
 
     return { width, height: availableHeight };
 }
-
-let measureCanvasContext: CanvasRenderingContext2D | null = null;
 
 async function fetchTreemapData(
     viewMode: ViewMode,
@@ -314,13 +233,6 @@ function formatSignedPercent(value: number): string {
     return `${value.toFixed(2)}%`;
 }
 
-function getColorByPercent(percent: number): string {
-    if (percent <= 0) return TREEMAP_COLORS[0];
-    if (percent <= 1) return TREEMAP_COLORS[1];
-    if (percent <= 2) return TREEMAP_COLORS[2];
-    return TREEMAP_COLORS[3];
-}
-
 function getClusterIndex(value: number, cuts: number[]): number {
     if (cuts.length === 0) return 0;
 
@@ -425,342 +337,6 @@ function buildStepBasedCuts(values: number[], step: number): number[] {
     return cuts;
 }
 
-function canTextFitInWidth(text: string, fontPx: number, width: number): boolean {
-    if (!text) return true;
-    if (width <= 0 || !Number.isFinite(fontPx) || fontPx <= 0) return false;
-
-    const availableWidth = Math.floor(width);
-
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-        const estimateChars = Math.max(1, Math.floor((availableWidth * 0.94) / Math.max(fontPx * 0.7, 1)));
-        return text.length <= estimateChars;
-    }
-
-    if (!measureCanvasContext) {
-        const canvas = document.createElement('canvas');
-        measureCanvasContext = canvas.getContext('2d');
-    }
-
-    if (!measureCanvasContext) {
-        const estimateChars = Math.max(1, Math.floor((availableWidth * 0.94) / Math.max(fontPx * 0.7, 1)));
-        return text.length <= estimateChars;
-    }
-
-    const safeAvailableWidth = Math.max(2, Math.floor(availableWidth * 0.94));
-    measureCanvasContext.font = `${Math.ceil(fontPx)}px system-ui, -apple-system, Segoe UI, sans-serif`;
-    return measureCanvasContext.measureText(text).width <= safeAvailableWidth;
-}
-
-function fitMetricTextToCellWidth(
-    text: string,
-    width: number,
-    height: number,
-    maxFontPx: number,
-    minFontPx: number,
-): { text: string; fontSize: number } {
-    if (!text) return { text: '', fontSize: minFontPx };
-
-    const safeWidth = Math.max(1, width - 8);
-    const safeHeight = Math.max(1, height - 4);
-    const maxFontByHeight = Math.max(1, Math.floor(safeHeight * 0.92));
-    const minFont = Math.max(1, Math.min(minFontPx, maxFontByHeight));
-    const maxFont = Math.max(minFont, Math.min(maxFontPx, maxFontByHeight));
-
-    if (!canTextFitInWidth('.', Math.max(1, minFont), safeWidth) || safeHeight < 2 || safeWidth < 4) {
-        return { text: '', fontSize: minFont };
-    }
-
-    for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 1) {
-        if (canTextFitInWidth(text, fontSize, safeWidth)) {
-            return { text, fontSize };
-        }
-    }
-
-    if (safeWidth <= 3 || safeHeight <= 2) {
-        return { text: '', fontSize: minFont };
-    }
-
-    const avgCharWidth = Math.max(5, Math.floor(minFont * 0.58));
-    const maxChars = Math.max(1, Math.floor(safeWidth / avgCharWidth));
-
-    if (text.length <= maxChars && canTextFitInWidth(text, minFont, safeWidth)) {
-        return { text, fontSize: minFont };
-    }
-
-    const fallbackEllipsis = canTextFitInWidth('...', minFont, safeWidth) ? '...' : '';
-
-    if (maxChars === 1) {
-        const single = text.slice(0, 1);
-        return canTextFitInWidth(single, minFont, safeWidth)
-            ? { text: single, fontSize: minFont }
-            : { text: fallbackEllipsis, fontSize: minFont };
-    }
-
-    if (maxChars === 2) {
-        const short = `${text[0]}…`;
-        return canTextFitInWidth(short, minFont, safeWidth) ? { text: short, fontSize: minFont } : { text: fallbackEllipsis, fontSize: minFont };
-    }
-
-    const fallback = `${text.slice(0, maxChars - 1)}…`;
-    return canTextFitInWidth(fallback, minFont, safeWidth) ? { text: fallback, fontSize: minFont } : { text: fallbackEllipsis, fontSize: minFont };
-}
-
-function fitMetricTextToCellWidthCached(
-    text: string,
-    width: number,
-    height: number,
-    maxFontPx: number,
-    minFontPx: number,
-): { text: string; fontSize: number } {
-    const key = `${text}|${Math.round(width)}|${Math.round(height)}|${maxFontPx}|${minFontPx}`;
-    const cached = treemapTextFitCache.get(key);
-    if (cached) {
-        return cached;
-    }
-
-    const result = fitMetricTextToCellWidth(text, width, height, maxFontPx, minFontPx);
-
-    if (treemapTextFitCache.size >= TREEMAP_TEXT_CACHE_LIMIT) {
-        treemapTextFitCache.clear();
-    }
-
-    treemapTextFitCache.set(key, result);
-    return result;
-}
-
-function isLeafNode(node: TreemapNode | TreemapRootNode): node is TreemapLeafNode {
-    return !('children' in node);
-}
-
-function buildTreemapLayout(
-    nodes: TreemapNode[],
-    width: number,
-    height: number,
-): TreemapCellLayout[] {
-    if (nodes.length === 0 || width <= 0 || height <= 0) {
-        return [];
-    }
-
-    const source: TreemapRootNode = { name: 'root', children: nodes };
-
-    const hierarchyRoot = hierarchy<TreemapNode | TreemapRootNode>(source, (entry) =>
-        isLeafNode(entry) ? undefined : entry.children,
-    );
-
-    const root = hierarchyRoot.sum((entry) => {
-        if (isLeafNode(entry)) {
-            return Math.max(entry.value, 0.25);
-        }
-        return 0;
-    });
-
-    const layoutGenerator = treemap<TreemapNode | TreemapRootNode>()
-        .size([width, height])
-        .paddingInner(2)
-        .round(true)
-        .tile(treemapResquarify);
-
-    const laidOut = layoutGenerator(root) as HierarchyRectangularNode<TreemapNode | TreemapRootNode>;
-
-    const leafEntries = laidOut
-        .descendants()
-        .filter((entry) => entry.depth > 0 && isLeafNode(entry.data));
-
-    return leafEntries
-        .map((entry): TreemapCellLayout | null => {
-            if (!isLeafNode(entry.data)) {
-                return null;
-            }
-
-            return {
-                node: entry.data,
-                x0: entry.x0,
-                y0: entry.y0,
-                x1: entry.x1,
-                y1: entry.y1,
-            };
-        })
-        .filter((entry): entry is TreemapCellLayout => !!entry)
-        .filter((entry) => entry.x1 > entry.x0 && entry.y1 > entry.y0);
-}
-
-const TreemapTiles = memo(function TreemapTiles({
-    cells,
-    containerWidth,
-    containerHeight,
-    onCellEnter,
-    onCellMove,
-    onCellLeave,
-    onCellActivate,
-}: TreemapTilesProps) {
-    const renderedTiles = useMemo<TreemapCellRenderInput[]>(() => {
-        return cells.map((cell) => {
-            const leaf = cell.node;
-            const width = Math.max(0, cell.x1 - cell.x0);
-            const height = Math.max(0, cell.y1 - cell.y0);
-            const tileArea = Math.max(1, width * height);
-            const tileInnerHeight = Math.max(6, height - 6);
-            const tileBaseSize = Math.sqrt(tileArea);
-            const foregroundColor = getTreemapTextColor(leaf.color);
-            const metricFont = Math.max(10, Math.min(54, Math.floor(tileBaseSize * 0.19)));
-            const percentFont = Math.max(8, Math.min(24, Math.floor(metricFont * 0.6)));
-            const miniFont = Math.max(8, Math.min(20, Math.floor(metricFont * 0.86)));
-            const tinyFont = Math.max(8, Math.floor(Math.min(width, height) * 0.38));
-
-            if (width < 16 || height < 16) {
-                return {
-                    leaf,
-                    foregroundColor,
-                    x: Math.trunc(cell.x0),
-                    y: Math.trunc(cell.y0),
-                    width: Math.trunc(width),
-                    height: Math.trunc(height),
-                    metricText: '...',
-                    metricFontSize: tinyFont,
-                    percentText: leaf.percentText,
-                    percentFontSize: 0,
-                    canShowBoth: false,
-                    canShowOneLine: false,
-                    canShowEllipsis: true,
-                };
-            }
-
-            const metricDisplay = fitMetricTextToCellWidthCached(
-                leaf.metricText,
-                width,
-                Math.max(12, tileInnerHeight),
-                metricFont,
-                miniFont,
-            );
-            const fallbackDisplay = fitMetricTextToCellWidthCached(
-                leaf.metricText,
-                width,
-                Math.max(12, tileInnerHeight),
-                miniFont,
-                Math.max(6, Math.min(12, Math.max(1, Math.floor(Math.min(width, height) * 0.4)))),
-            );
-            const percentDisplay = fitMetricTextToCellWidthCached(
-                leaf.percentText,
-                width,
-                Math.max(6, Math.floor(Math.max(12, tileInnerHeight) * 0.3)),
-                percentFont,
-                7,
-            );
-
-            const bothLineContentHeight = metricDisplay.fontSize + percentDisplay.fontSize + 4;
-            const canShowBoth = width >= 24 && tileArea >= 220 && bothLineContentHeight <= Math.max(10, tileInnerHeight - 2);
-            const canShowOneLine = width >= 14 && tileArea >= 150 && fallbackDisplay.fontSize <= Math.max(10, tileInnerHeight - 2);
-            const canShowEllipsis = width >= 12 && height >= 12;
-
-            return {
-                leaf,
-                foregroundColor,
-                x: Math.trunc(cell.x0),
-                y: Math.trunc(cell.y0),
-                width: Math.trunc(width),
-                height: Math.trunc(height),
-                metricText: canShowBoth ? leaf.metricText : fallbackDisplay.text,
-                metricFontSize: canShowBoth ? metricDisplay.fontSize : fallbackDisplay.fontSize,
-                percentText: percentDisplay.text,
-                percentFontSize: percentDisplay.fontSize,
-                canShowBoth,
-                canShowOneLine: canShowOneLine && !canShowBoth,
-                canShowEllipsis,
-            };
-        });
-    }, [cells]);
-
-    if (renderedTiles.length === 0) {
-        return null;
-    }
-
-    return (
-        <div className="relative" style={{ width: containerWidth, height: containerHeight }}>
-            {renderedTiles.map((tile, index) => (
-                <div
-                    key={`${tile.leaf.id}-${tile.x}-${tile.y}-${tile.leaf.value}`}
-                    className="absolute flex items-center justify-center border border-white/30"
-                    role="presentation"
-                    aria-hidden="true"
-                    data-insights-treemap-tile-index={index}
-                    style={{
-                        left: tile.x,
-                        top: tile.y,
-                        width: tile.width,
-                        height: tile.height,
-                        backgroundColor: tile.leaf.color,
-                        overflow: 'hidden',
-                        boxSizing: 'border-box',
-                    }}
-                    onMouseEnter={(event) => onCellEnter(tile.leaf, event)}
-                    onMouseMove={(event) => onCellMove(tile.leaf, event)}
-                    onMouseLeave={onCellLeave}
-                    onClick={() => onCellActivate(tile.leaf, index)}
-                >
-                    {tile.canShowBoth ? (
-                        <div
-                            className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-center"
-                            style={{
-                                color: tile.foregroundColor,
-                            }}
-                        >
-                            <span
-                                title={tile.leaf.metricText}
-                                className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight font-semibold"
-                                style={{
-                                    fontSize: `${tile.metricFontSize}px`,
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {tile.metricText}
-                            </span>
-                            <span
-                                title={tile.percentText}
-                                className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight"
-                                style={{
-                                    fontSize: `${tile.percentFontSize}px`,
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {tile.percentText}
-                            </span>
-                        </div>
-                    ) : tile.canShowOneLine ? (
-                        <div
-                            className="flex h-full w-full items-center justify-center px-1 text-center"
-                            style={{
-                                color: tile.foregroundColor,
-                            }}
-                        >
-                            <span
-                                className="w-full truncate overflow-hidden whitespace-nowrap font-semibold leading-tight"
-                                style={{
-                                    fontSize: `${tile.metricFontSize}px`,
-                                    lineHeight: 1,
-                                }}
-                            >
-                                {tile.metricText}
-                            </span>
-                        </div>
-                    ) : tile.canShowEllipsis ? (
-                        <div
-                            className="flex h-full w-full items-center justify-center px-1 text-center"
-                            style={{
-                                color: tile.foregroundColor,
-                                fontSize: `${tile.metricFontSize}px`,
-                                lineHeight: 1,
-                                fontWeight: 700,
-                            }}
-                        >
-                            {tile.metricText}
-                        </div>
-                    ) : null}
-                </div>
-            ))}
-        </div>
-    );
-});
-
 function TreemapDetailContent({ leaf, viewMode, period, metricMode }: {
     leaf: TreemapLeafNode;
     viewMode: ViewMode;
@@ -842,12 +418,9 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     const [, startTransition] = useTransition();
     const chartWidth = chartSize.width;
     const chartHeight = chartSize.height;
-    const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
     const [activeTileIndex, setActiveTileIndex] = useState(0);
     const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
     const [tileNavigatorFocused, setTileNavigatorFocused] = useState(false);
-    const tooltipStateRef = useRef<TreemapTooltipState | null>(null);
-    const tooltipRafRef = useRef<number | null>(null);
     const layoutRafRef = useRef<number | null>(null);
     const chartAreaRef = useRef<HTMLDivElement>(null);
     const tileNavigatorRef = useRef<HTMLButtonElement>(null);
@@ -893,7 +466,6 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     }, [periodOptionsForView, period]);
 
     const rawRows = useMemo(() => treemapQuery.data?.videos ?? [], [treemapQuery.data?.videos]);
-    const renderWidth = useMemo(() => Math.max(1, chartWidth), [chartWidth]);
 
     const { leafRows, leafTotalMetric, leafMetricValuesSorted } = useMemo<LeafRowsData>(() => {
         if (rawRows.length === 0) {
@@ -931,7 +503,6 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                 metricText: formatMetricText(metricMode, metricRaw),
                 percent: rowPercent,
                 percentText: isChangeMode ? formatSignedPercent(rowPercent) : '0%',
-                color: getColorByPercent(rowPercent),
             });
 
             totalMetric += metricRaw;
@@ -942,7 +513,6 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
             for (const row of rows) {
                 row.percent = totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0;
                 row.percentText = formatPercent(row.percent);
-                row.color = getColorByPercent(row.percent);
             }
         }
 
@@ -1083,53 +653,6 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         });
     }, [chartConstraints.minWidth, initialChartSize.width, initialChartSize.height]);
 
-    const setTooltipThrottled = useCallback((next: TreemapTooltipState | null) => {
-        if (typeof window === 'undefined') {
-            tooltipStateRef.current = next;
-            setTooltip(next);
-            return;
-        }
-
-        if (next === null) {
-            if (tooltipRafRef.current !== null) {
-                window.cancelAnimationFrame(tooltipRafRef.current);
-                tooltipRafRef.current = null;
-            }
-            tooltipStateRef.current = null;
-            setTooltip(null);
-            return;
-        }
-
-        const prev = tooltipStateRef.current;
-        if (prev && prev.leaf.id === next.leaf.id) {
-            const dx = Math.abs(prev.x - next.x);
-            const dy = Math.abs(prev.y - next.y);
-            if (dx <= 24 && dy <= 16) {
-                return;
-            }
-        }
-
-        tooltipStateRef.current = next;
-
-        if (tooltipRafRef.current !== null) {
-            return;
-        }
-
-        tooltipRafRef.current = window.requestAnimationFrame(() => {
-            tooltipRafRef.current = null;
-            setTooltip(next);
-        });
-    }, []);
-
-    useEffect(() => {
-        return () => {
-            if (tooltipRafRef.current !== null && typeof window !== 'undefined') {
-                window.cancelAnimationFrame(tooltipRafRef.current);
-                tooltipRafRef.current = null;
-            }
-        };
-    }, []);
-
     const clusterStepOptions = useMemo(() => {
         if (leafRows.length === 0) return [];
 
@@ -1232,7 +755,6 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                         metricText: formatMetricText(metricMode, metricRaw),
                         percent,
                         percentText,
-                        color: getColorByPercent(percent),
                     };
                 })
                 .sort((a, b) => b.metricRaw - a.metricRaw);
@@ -1266,34 +788,29 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
 
         return leafRows;
     }, [leafRows, viewMode, metricMode, clusterStep, leafMetricValuesSorted, leafTotalMetric]);
-    const treemapCells = useMemo<TreemapCellLayout[]>(() => {
-        if (treeData.length === 0) return [];
-        return buildTreemapLayout(treeData, renderWidth, chartHeight);
-    }, [treeData, renderWidth, chartHeight]);
-    const selectedTileIndex = useMemo(
-        () => selectedTileId ? treemapCells.findIndex((cell) => cell.node.id === selectedTileId) : -1,
-        [treemapCells, selectedTileId],
-    );
-    const boundedActiveTileIndex = selectedTileIndex >= 0
-        ? selectedTileIndex
-        : Math.min(activeTileIndex, Math.max(0, treemapCells.length - 1));
-    const selectedTile = selectedTileIndex >= 0 ? treemapCells[selectedTileIndex].node : null;
+    const chartRows = useMemo(() => treeData.flatMap((entry) => isTreemapGroupNode(entry) ? entry.children : [entry]), [treeData]);
+    const selectedTileIndex = selectedTileId ? chartRows.findIndex((leaf) => leaf.id === selectedTileId) : -1;
+    const boundedActiveTileIndex = selectedTileIndex >= 0 ? selectedTileIndex : Math.min(activeTileIndex, Math.max(0, chartRows.length - 1));
+    const selectedTile = selectedTileIndex >= 0 ? chartRows[selectedTileIndex] ?? null : null;
     useEffect(() => {
-        if (selectedTileId === null) return;
-        if (selectedTileIndex < 0) {
-            setSelectedTileId(null);
-        } else if (activeTileIndex !== selectedTileIndex) {
-            setActiveTileIndex(selectedTileIndex);
-        }
-    }, [activeTileIndex, selectedTileId, selectedTileIndex]);
-    const handleTileActivate = useCallback<TreemapTileActivation>((leaf, index) => {
-        setTooltipThrottled(null);
-        setActiveTileIndex(index);
+        if (selectedTileId !== null && !selectedTile) setSelectedTileId(null);
+    }, [selectedTile, selectedTileId]);
+
+    const handleChartHover = useCallback((event: ChartEvent<TreemapLeafNode> | null) => {
+        if (!event?.datum) return;
+        const index = chartRows.findIndex((leaf) => leaf.id === event.datum?.id);
+        if (index >= 0) setActiveTileIndex(index);
+    }, [chartRows]);
+    const handleChartActivate = useCallback((event: ChartEvent<TreemapLeafNode>) => {
+        const leaf = event.datum;
+        if (!leaf) return;
+        const index = chartRows.findIndex((candidate) => candidate.id === leaf.id);
+        setActiveTileIndex(Math.max(0, index));
         setSelectedTileId(leaf.id);
         tileNavigatorRef.current?.focus();
-    }, [setTooltipThrottled]);
+    }, [chartRows]);
     const handleTileNavigatorKeyDown = useCallback((event: KeyboardEvent<HTMLButtonElement>) => {
-        const lastIndex = treemapCells.length - 1;
+        const lastIndex = chartRows.length - 1;
         if (lastIndex < 0) return;
         let nextIndex = boundedActiveTileIndex;
         if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = Math.min(lastIndex, nextIndex + 1);
@@ -1305,8 +822,8 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         else return;
         event.preventDefault();
         setActiveTileIndex(nextIndex);
-        if (selectedTileId !== null) setSelectedTileId(treemapCells[nextIndex].node.id);
-    }, [boundedActiveTileIndex, selectedTileId, treemapCells]);
+        if (selectedTileId !== null) setSelectedTileId(chartRows[nextIndex]?.id ?? null);
+    }, [boundedActiveTileIndex, chartRows, selectedTileId]);
     useEffect(() => {
         setActiveTileIndex(0);
         setSelectedTileId(null);
@@ -1324,31 +841,14 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     const moduleSummaryText = `${selectedCount.toLocaleString()}개 영상 · ${metricLabel} · ${periodLabel} · ${modeLabel} · ${clusterContextText}`;
 
     const treemapLegendText = viewMode === 'change'
-        ? `색상 범례: ${periodLabel} 대비 ${metricLabel} 증감률이 높을수록 밝은 초록색입니다.`
-        : `색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.`;
-    const treemapSmallCellGuidance = '작은 칸은 지표나 …만 보일 수 있습니다. 칸에 마우스를 올리거나 터치해 상세를 열고, 키보드는 영상 탐색 버튼에서 화살표 키로 항목을 고릅니다.';
+        ? `칸 크기는 ${metricLabel} 지표이며, 색상은 증감률과 무관합니다. 정확한 증감률은 칸을 선택해 확인하세요.`
+        : `칸 크기는 전체 ${metricLabel} 비중입니다. 강조색은 현재 지표가 가장 큰 영상이며, 정확한 값은 칸을 선택해 확인하세요.`;
+    const treemapSmallCellGuidance = '작은 칸은 이름이 생략될 수 있습니다. 칸에 마우스를 올리거나 키보드로 포커스하면 상세를 확인할 수 있습니다.';
 
     const isWaitingForAuthorizedQuery = !embedded && (
         isAuthLoading || (!!user && !canRender && !treemapReadFailed)
     );
     const isLoading = isWaitingForAuthorizedQuery || (treemapQuery.isLoading && !canRender && !treemapReadFailed);
-
-    const handleCellEnter = useCallback(
-        (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => {
-            setTooltipThrottled({
-                leaf,
-                x: event.clientX + 12,
-                y: event.clientY + 12,
-            });
-        },
-        [setTooltipThrottled],
-    );
-
-    const handleCellMove = handleCellEnter;
-
-    const handleCellLeave = useCallback(() => {
-        setTooltipThrottled(null);
-    }, [setTooltipThrottled]);
 
     const handleSetViewMode = useCallback((nextViewMode: ViewMode) => {
         startTransition(() => {
@@ -1465,216 +965,99 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) insightsCardHadFocusRef.current = false;
                     }}
                     className="overflow-hidden border border-border h-full flex flex-col min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                    <div className="border-b border-border p-2 md:p-3">
-                        <div className={cn(embedded ? "pb-2" : "overflow-x-auto pb-2")}>
-                            <div className={cn("flex w-full flex-wrap items-start md:items-center gap-2 md:gap-3", embedded ? "min-w-0" : "min-w-max")}>
-                                <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
-
-                                <div className="inline-flex min-w-0 max-w-full items-center gap-1 sm:gap-2 shrink-0">
-                                    <span className="text-2xs text-muted-foreground">모드</span>
-                                    <div className="inline-flex min-w-0 max-w-full items-center rounded-lg border border-border overflow-x-auto" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
-                                        {VIEW_MODE_OPTIONS.map((option) => (
-                                            <Button
-                                                key={option.value}
-                                                size="sm"
-                                                variant={viewMode === option.value ? 'default' : 'ghost'}
-                                                onClick={() => handleSetViewMode(option.value)}
-                                                className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
-                                            >
-                                                {option.label}
-                                            </Button>
-                                        ))}
+                    <div className="border-b border-border p-3 md:p-4 space-y-3">
+                        <div className="flex min-w-0 items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-baseline gap-3">
+                                <h2 className="truncate text-base font-semibold tracking-tight">영상 성과 인사이트</h2>
+                                <p className="shrink-0 text-sm text-muted-foreground">전체 {selectedCount.toLocaleString()}개</p>
+                            </div>
+                            <Popover
+                                open={selectedTile !== null}
+                                onOpenChange={(open) => setSelectedTileId(open ? chartRows[boundedActiveTileIndex]?.id ?? null : null)}
+                            >
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        ref={tileNavigatorRef} type="button" size="sm" variant="outline"
+                                        className="h-11 md:h-9 px-3 text-xs" disabled={chartRows.length === 0}
+                                        aria-describedby="insights-treemap-navigation-help"
+                                        onFocus={() => setTileNavigatorFocused(true)} onBlur={() => setTileNavigatorFocused(false)}
+                                        onKeyDown={handleTileNavigatorKeyDown}
+                                    >영상 탐색</Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    ref={tileDetailPanelRef} aria-label={selectedTile ? `영상 상세: ${selectedTile.title}` : '영상 상세'}
+                                    side="bottom" align="end" className="w-80 max-w-[calc(100vw-1rem)] space-y-2 p-3 text-sm"
+                                    onOpenAutoFocus={(event) => { event.preventDefault(); tileDetailPanelRef.current?.focus(); }}
+                                    onCloseAutoFocus={(event) => {
+                                        if (tileNavigatorRef.current?.disabled && treemapHelpRef.current?.isConnected) {
+                                            event.preventDefault(); treemapHelpRef.current.focus();
+                                        }
+                                    }}
+                                >
+                                    {selectedTile ? <>
+                                        <div className="flex items-center justify-between gap-1">
+                                            <Button type="button" size="sm" variant="ghost" className="h-11 px-3" disabled={boundedActiveTileIndex === 0} onClick={() => {
+                                                const nextIndex = boundedActiveTileIndex - 1;
+                                                setActiveTileIndex(nextIndex); setSelectedTileId(chartRows[nextIndex]?.id ?? null);
+                                            }}>이전</Button>
+                                            <span className="text-muted-foreground">{boundedActiveTileIndex + 1} / {chartRows.length}</span>
+                                            <Button type="button" size="sm" variant="ghost" className="h-11 px-3" disabled={boundedActiveTileIndex === chartRows.length - 1} onClick={() => {
+                                                const nextIndex = boundedActiveTileIndex + 1;
+                                                setActiveTileIndex(nextIndex); setSelectedTileId(chartRows[nextIndex]?.id ?? null);
+                                            }}>다음</Button>
+                                            <Button type="button" size="sm" variant="ghost" className="h-11 px-3" onClick={() => setSelectedTileId(null)}>닫기</Button>
+                                        </div>
+                                        <div role="status" aria-live="polite" className="space-y-1">
+                                            <TreemapDetailContent leaf={selectedTile} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} />
+                                        </div>
+                                    </> : null}
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="pb-1">
+                            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 md:gap-3">
+                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                    <legend className="sr-only">표시 방식</legend><span className="text-xs text-muted-foreground">모드</span>
+                                    <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
+                                        {VIEW_MODE_OPTIONS.map((option) => <Button key={option.value} type="button" size="sm" variant={viewMode === option.value ? 'default' : 'ghost'} onClick={() => handleSetViewMode(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
                                     </div>
-                                </div>
-
-                                <div className="inline-flex min-w-0 max-w-full items-center gap-1 sm:gap-2 shrink-0">
-                                    <span className="text-2xs text-muted-foreground">지표</span>
-                                    <div className="inline-flex min-w-0 max-w-full items-center rounded-lg border border-border overflow-x-auto" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
-                                        {METRIC_OPTIONS.map((option) => (
-                                            <Button
-                                                key={option.value}
-                                                size="sm"
-                                                variant={metricMode === option.value ? 'default' : 'ghost'}
-                                                onClick={() => handleSetMetricMode(option.value)}
-                                                className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
-                                            >
-                                                {option.label}
-                                            </Button>
-                                        ))}
+                                </fieldset>
+                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                    <legend className="sr-only">지표</legend><span className="text-xs text-muted-foreground">지표</span>
+                                    <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
+                                        {METRIC_OPTIONS.map((option) => <Button key={option.value} type="button" size="sm" variant={metricMode === option.value ? 'default' : 'ghost'} onClick={() => handleSetMetricMode(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
                                     </div>
-                                </div>
-
-                                <div className="inline-flex min-w-0 max-w-full items-center gap-1 sm:gap-2 shrink-0">
-                                    <span className="text-2xs text-muted-foreground">기준</span>
-                                    <div className="inline-flex min-w-0 max-w-full items-center rounded-lg border border-border overflow-x-auto" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
-                                        {periodOptionsForView.map((option) => (
-                                            <Button
-                                                key={option.value}
-                                                size="sm"
-                                                variant={period === option.value ? 'default' : 'ghost'}
-                                                onClick={() => handleSetPeriod(option.value)}
-                                                className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
-                                            >
-                                                {option.label}
-                                            </Button>
-                                        ))}
+                                </fieldset>
+                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                    <legend className="sr-only">기간</legend><span className="text-xs text-muted-foreground">기간</span>
+                                    <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
+                                        {periodOptionsForView.map((option) => <Button key={option.value} type="button" size="sm" variant={period === option.value ? 'default' : 'ghost'} onClick={() => handleSetPeriod(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
                                     </div>
-                                </div>
-
-                                <div className="inline-flex min-w-0 max-w-full items-center gap-1 sm:gap-2 shrink-0">
-                                    <span className="text-2xs text-muted-foreground">클러스터</span>
-                                    <div className="inline-flex min-w-0 max-w-full items-center rounded-lg border border-border overflow-x-auto" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
-                                        <Button
-                                            size="sm"
-                                            variant={clusterStep === null ? 'default' : 'ghost'}
-                                            onClick={() => handleSetClusterStep(null)}
-                                            className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
-                                        >
-                                            전체
-                                        </Button>
-                                        {clusterStepOptions.map((step) => (
-                                            <Button
-                                                key={step}
-                                                size="sm"
-                                                variant={clusterStep === step ? 'default' : 'ghost'}
-                                                onClick={() => handleSetClusterStep(step)}
-                                                className="rounded-none h-8 px-2.5 text-2xs whitespace-nowrap"
-                                            >
-                                                {formatClusterValueByMode(metricMode, step)}
-                                            </Button>
-                                        ))}
+                                </fieldset>
+                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                    <legend className="sr-only">클러스터 크기</legend><span className="text-xs text-muted-foreground">클러스터</span>
+                                    <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
+                                        <Button type="button" size="sm" variant={clusterStep === null ? 'default' : 'ghost'} onClick={() => handleSetClusterStep(null)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">전체</Button>
+                                        {clusterStepOptions.map((step) => <Button key={step} type="button" size="sm" variant={clusterStep === step ? 'default' : 'ghost'} onClick={() => handleSetClusterStep(step)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{formatClusterValueByMode(metricMode, step)}</Button>)}
                                     </div>
-                                </div>
-
-                                <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0 self-center order-99">
-                                    <Popover
-                                        open={selectedTile !== null}
-                                        onOpenChange={(open) => setSelectedTileId(open ? treemapCells[boundedActiveTileIndex]?.node.id ?? null : null)}
-                                    >
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                ref={tileNavigatorRef}
-                                                type="button"
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-6 px-2 text-2xs"
-                                                disabled={treemapCells.length === 0}
-                                                aria-describedby="insights-treemap-navigation-help"
-                                                onFocus={() => setTileNavigatorFocused(true)}
-                                                onBlur={() => setTileNavigatorFocused(false)}
-                                                onKeyDown={handleTileNavigatorKeyDown}
-                                            >
-                                                영상 탐색
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            ref={tileDetailPanelRef}
-                                            aria-label={selectedTile ? `영상 상세: ${selectedTile.title}` : '영상 상세'}
-                                            side="bottom"
-                                            align="end"
-                                            className="w-72 max-w-[calc(100vw-1rem)] space-y-1 p-3 text-xs"
-                                            onOpenAutoFocus={(event) => {
-                                                event.preventDefault();
-                                                tileDetailPanelRef.current?.focus();
-                                            }}
-                                            onCloseAutoFocus={(event) => {
-                                                if (tileNavigatorRef.current?.disabled && treemapHelpRef.current?.isConnected) {
-                                                    event.preventDefault();
-                                                    treemapHelpRef.current.focus();
-                                                }
-                                            }}
-                                        >
-                                            {selectedTile ? (
-                                                <>
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={boundedActiveTileIndex === 0} onClick={() => {
-                                                            const nextIndex = boundedActiveTileIndex - 1;
-                                                            setActiveTileIndex(nextIndex);
-                                                            setSelectedTileId(treemapCells[nextIndex].node.id);
-                                                        }}>이전</Button>
-                                                        <span className="text-muted-foreground">{boundedActiveTileIndex + 1} / {treemapCells.length}</span>
-                                                        <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={boundedActiveTileIndex === treemapCells.length - 1} onClick={() => {
-                                                            const nextIndex = boundedActiveTileIndex + 1;
-                                                            setActiveTileIndex(nextIndex);
-                                                            setSelectedTileId(treemapCells[nextIndex].node.id);
-                                                        }}>다음</Button>
-                                                        <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setSelectedTileId(null)}>닫기</Button>
-                                                    </div>
-                                                    <div role="status" aria-live="polite" className="space-y-1">
-                                                        <TreemapDetailContent leaf={selectedTile} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} />
-                                                    </div>
-                                                </>
-                                            ) : null}
-                                        </PopoverContent>
-                                    </Popover>
-                                    <span className="text-2xs text-muted-foreground">색상</span>
+                                </fieldset>
+                                <div className="ml-auto flex min-h-11 items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="inline-block h-3 w-3 bg-primary" aria-hidden="true" />
+                                    <span>{viewMode === 'change' ? '증감률 색상 분류 미사용' : '가장 큰 값 강조'}</span>
                                     <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button ref={treemapHelpRef} type="button" size="icon" variant="ghost" className="h-6 w-6 shrink-0" aria-label="트리맵 읽는 법">
-                                                <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent aria-label="트리맵 읽는 법" side="bottom" align="end" className="w-64 max-w-[calc(100vw-1rem)] p-2 text-xs" onOpenAutoFocus={(event) => event.preventDefault()}>
-                                            <p>{treemapLegendText}</p>
-                                            <p className="mt-1">{treemapSmallCellGuidance}</p>
+                                        <PopoverTrigger asChild><Button ref={treemapHelpRef} type="button" size="icon" variant="ghost" className="h-11 w-11" aria-label="트리맵 읽는 법"><Info className="h-4 w-4" aria-hidden="true" /></Button></PopoverTrigger>
+                                        <PopoverContent aria-label="트리맵 읽는 법" side="bottom" align="end" className="w-72 max-w-[calc(100vw-1rem)] p-3 text-sm" onOpenAutoFocus={(event) => event.preventDefault()}>
+                                            <p>{treemapLegendText}</p><p className="mt-2">{treemapSmallCellGuidance}</p>
                                         </PopoverContent>
                                     </Popover>
-                                    <div className="inline-flex overflow-hidden rounded-md border border-border shrink-0">
-                                        <div
-                                            className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
-                                            style={{
-                                                background: TREEMAP_COLORS[0],
-                                                color: getTreemapTextColor(TREEMAP_COLORS[0]),
-                                                minWidth: 42,
-                                            }}
-                                        >
-                                            0%
-                                        </div>
-                                        <div
-                                            className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
-                                            style={{
-                                                background: TREEMAP_COLORS[1],
-                                                color: getTreemapTextColor(TREEMAP_COLORS[1]),
-                                                minWidth: 42,
-                                            }}
-                                        >
-                                            +1%
-                                        </div>
-                                        <div
-                                            className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
-                                            style={{
-                                                background: TREEMAP_COLORS[2],
-                                                color: getTreemapTextColor(TREEMAP_COLORS[2]),
-                                                minWidth: 42,
-                                            }}
-                                        >
-                                            +2%
-                                        </div>
-                                        <div
-                                            className="flex items-center justify-center h-6 px-2 text-2xs font-normal"
-                                            style={{
-                                                background: TREEMAP_COLORS[3],
-                                                color: getTreemapTextColor(TREEMAP_COLORS[3]),
-                                                minWidth: 42,
-                                            }}
-                                        >
-                                            +3%
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div className="sr-only">
                             <p id="insights-treemap-legend">{treemapLegendText}</p>
                             <p id="insights-treemap-small-cell-guidance">{treemapSmallCellGuidance}</p>
-                            <p id="insights-treemap-navigation-help">
-                                화살표 키로 영상을 고르고 Enter로 상세를 엽니다. Page Up과 Page Down은 열 칸, Home과 End는 처음과 끝으로 이동합니다.
-                            </p>
-                            {tileNavigatorFocused && treemapCells.length > 0 ? (
-                                <div role="status" aria-live="polite">
-                                    {boundedActiveTileIndex + 1} / {treemapCells.length}: {treemapCells[boundedActiveTileIndex].node.title}
-                                </div>
-                            ) : null}
+                            <p id="insights-treemap-navigation-help">트리맵 칸은 Tab과 화살표 키로 이동하고 Enter 또는 Space로 상세를 엽니다. 별도 영상 탐색 버튼에서는 화살표, Page Up/Down, Home/End로 이동합니다.</p>
+                            {tileNavigatorFocused && chartRows.length > 0 ? <div role="status" aria-live="polite">{boundedActiveTileIndex + 1} / {chartRows.length}: {chartRows[boundedActiveTileIndex]?.title ?? ''}</div> : null}
                         </div>
                     </div>
 
@@ -1683,47 +1066,33 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                         className="p-0 flex-1 min-h-0 overflow-hidden"
                         style={{ minHeight: 0, minWidth: 0 }}
                     >
-                        <div
-                            className="relative w-full h-full"
-                            style={{ width: renderWidth, height: chartHeight }}
-                            role="img"
-                            aria-label={treemapContextText}
-                            aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance"
-                        >
-                            {treeData.length === 0 ? (
+                        <div className="relative h-full w-full" style={{ minHeight: chartConstraints.minHeight }} aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance">
+                            {chartRows.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">대상 데이터가 없습니다.</div>
                             ) : (
-                                <TreemapTiles
-                                    cells={treemapCells}
-                                    containerWidth={renderWidth}
-                                    containerHeight={chartHeight}
-                                    onCellEnter={handleCellEnter}
-                                    onCellMove={handleCellMove}
-                                    onCellLeave={handleCellLeave}
-                                    onCellActivate={handleTileActivate}
-                                />
+                                <ThemeProvider locale="ko-KR" theme={{
+                                    bg: 'hsl(var(--background))', panel: 'hsl(var(--card))', ink: 'hsl(var(--card-foreground))',
+                                    muted: 'hsl(var(--muted-foreground))', dim: 'hsl(var(--muted-foreground))',
+                                    accent: 'hsl(var(--primary))', accentText: 'hsl(var(--primary))', onAccent: 'hsl(var(--primary-foreground))',
+                                    line: 'hsl(var(--border))', line2: 'hsl(var(--border))', neutral: 'hsl(var(--muted))',
+                                    neutralStrong: 'hsl(var(--secondary))', onNeutralStrong: 'hsl(var(--secondary-foreground))',
+                                    neutralSoft: 'hsl(var(--muted))', lift: 'hsl(var(--accent))', tint: 'hsl(var(--accent))',
+                                    radius: 0, radiusCode: 0, radiusMark: 0,
+                                }}>
+                                    <Treemap
+                                        data={chartRows} label="title" value="value"
+                                        group={viewMode === 'category' ? 'category' : undefined}
+                                        highlight="max" labelMode="value"
+                                        format={(value) => formatMetricText(metricMode, value)} locale="ko-KR"
+                                        height={chartHeight} sort animateOnView
+                                        onHover={handleChartHover} onClick={handleChartActivate}
+                                        tooltip={(event) => event.datum ? <TreemapDetailContent leaf={event.datum} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} /> : null}
+                                        ariaLabel={treemapContextText}
+                                        description={`${treemapLegendText} ${treemapSmallCellGuidance}`}
+                                        className="w-full"
+                                    />
+                                </ThemeProvider>
                             )}
-                            {(tileNavigatorFocused || selectedTile) && treemapCells[boundedActiveTileIndex] ? (
-                                <div
-                                    className="pointer-events-none absolute z-10 ring-2 ring-inset ring-primary"
-                                    aria-hidden="true"
-                                    data-insights-treemap-active-outline="true"
-                                    style={{
-                                        left: treemapCells[boundedActiveTileIndex].x0,
-                                        top: treemapCells[boundedActiveTileIndex].y0,
-                                        width: treemapCells[boundedActiveTileIndex].x1 - treemapCells[boundedActiveTileIndex].x0,
-                                        height: treemapCells[boundedActiveTileIndex].y1 - treemapCells[boundedActiveTileIndex].y0,
-                                    }}
-                                />
-                            ) : null}
-                            {tooltip && !selectedTile ? (
-                                <div
-                                    className="pointer-events-none fixed z-20 rounded-md border border-border bg-card p-2 text-xs text-card-foreground shadow-lg"
-                                    style={{ left: tooltip.x, top: tooltip.y }}
-                                >
-                                    <TreemapDetailContent leaf={tooltip.leaf} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} />
-                                </div>
-                            ) : null}
                         </div>
                     </CardContent>
                 </Card>
