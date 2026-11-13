@@ -4406,17 +4406,17 @@ export function AdminYoutubeThumbnailGenerator() {
   function renderChatSettingsDropdownPanel() {
     return <div className="space-y-3 bg-background p-3" data-thumbnail-chat-settings-panel="true" data-thumbnail-provider="gemini-api">
       <div className="flex items-center justify-between gap-2"><p className="text-sm font-semibold">이미지 생성</p>
-        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-label="생성 설정 닫기" onClick={() => setIsChatSettingsOpen(false)}><X className="h-4 w-4" /></Button></div>
+        <Button type="button" variant="ghost" size="icon" className="h-11 w-11 rounded-none" aria-label="생성 설정 닫기" onClick={() => setIsChatSettingsOpen(false)}><X className="h-4 w-4" /></Button></div>
       <Label htmlFor="thumbnail-gemini-model">모델</Label>
       <Select value={geminiModel} onValueChange={(value) => { if (STORYBOARD_GEMINI_IMAGE_MODELS.some((model) => model.id === value)) setGeminiModel(value as typeof geminiModel); }}>
-        <SelectTrigger id="thumbnail-gemini-model" aria-label="Gemini 이미지 모델"><SelectValue /></SelectTrigger>
+        <SelectTrigger id="thumbnail-gemini-model" className="min-h-11 rounded-none" aria-label="Gemini 이미지 모델"><SelectValue /></SelectTrigger>
         <SelectContent>{STORYBOARD_GEMINI_IMAGE_MODELS.map((model) => <SelectItem key={model.id} value={model.id}>{model.label}</SelectItem>)}</SelectContent>
       </Select>
-      <Button type="button" className="w-full" disabled={!gemini.available || hasPendingGeminiJob || isGenerating} onClick={() => { setIsChatSettingsOpen(false); void runThumbnailGeneration(); }} data-thumbnail-gemini-generate="true">
+      <Button type="button" className="min-h-11 w-full rounded-none" disabled={!gemini.available || hasPendingGeminiJob || isGenerating} onClick={() => { setIsChatSettingsOpen(false); void runThumbnailGeneration(); }} data-thumbnail-gemini-generate="true">
         <Wand2 className="mr-2 h-4 w-4" />썸네일 생성
       </Button>
       {gemini.historyError && <p role="alert" className="text-xs text-destructive">{gemini.historyError}</p>}
-      <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => void gemini.refreshHistory()}>연결 다시 확인</Button>
+      <Button type="button" variant="ghost" size="sm" className="min-h-11 w-full rounded-none" onClick={() => void gemini.refreshHistory()}>연결 다시 확인</Button>
     </div>;
   }
 
@@ -4428,7 +4428,7 @@ export function AdminYoutubeThumbnailGenerator() {
         data-thumbnail-history-status={historyStatus}
       >
         <div className="space-y-1" data-thumbnail-gemini-history="true">
-          <div className="flex items-center justify-between px-1 py-1"><span className="text-sm font-semibold">Gemini 생성 기록</span><Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-label="Gemini 기록 새로고침" onClick={() => void gemini.refreshHistory()}><RotateCw className="h-3.5 w-3.5" /></Button></div>
+          <div className="flex items-center justify-between px-1 py-1"><span className="text-sm font-semibold">Gemini 생성 기록</span><Button type="button" variant="ghost" size="icon" className="h-11 w-11 rounded-none" aria-label="Gemini 기록 새로고침" onClick={() => void gemini.refreshHistory()}><RotateCw className="h-3.5 w-3.5" /></Button></div>
           {gemini.historyError && <p role="alert" className="px-1 text-xs text-destructive">{gemini.historyError}</p>}
           {!gemini.history.length && !gemini.historyError && <p className="px-1 py-2 text-xs text-muted-foreground">생성 기록이 없습니다.</p>}
           {gemini.history.map((job) => <button type="button" key={job.id} className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-xs hover:bg-muted disabled:cursor-default disabled:opacity-70"
@@ -4534,7 +4534,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="secondary"
                       size="sm"
-                      className="h-7 rounded-md px-2 text-2xs"
+                      className="min-h-11 rounded-none px-2 text-xs"
                       onClick={() => {
                         applyThumbnailHistoryRun(run);
                         setIsHistoryPanelOpen(false);
@@ -4547,7 +4547,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 rounded-md px-2 text-2xs"
+                      className="min-h-11 rounded-none px-2 text-xs"
                       onClick={() => void copyThumbnailHistoryRun(run)}
                       data-thumbnail-history-copy-json={run.id ?? run.timestamp ?? "history-run"}
                     >
@@ -4578,18 +4578,18 @@ export function AdminYoutubeThumbnailGenerator() {
       summary={thumbnailModuleSummary}
     >
       <section
-        className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3 admin-surface !p-2"
+        className="flex h-full min-h-0 flex-col overflow-hidden rounded-none bg-background p-2 admin-surface"
         aria-label="유튜브 썸네일 생성기"
         data-admin-youtube-thumbnail-generator="true"
         data-thumbnail-initial-preview-source={initialPreviewSource}
         onKeyDown={handleThumbnailEditorShellKeyDown}
       >
         <div
-          className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] !gap-2"
+          className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(360px,1.2fr)_minmax(320px,0.8fr)] gap-2 overflow-x-hidden overflow-y-auto lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
           data-thumbnail-chat-right-layout="true"
         >
         <Card
-          className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none !bg-card"
+          className="order-2 flex min-h-0 flex-col overflow-hidden rounded-none border-0 bg-card shadow-none"
           aria-label="요구사항 채팅"
           data-thumbnail-generation-input-panel="right-chat"
           data-thumbnail-input-panel="chat-stream"
@@ -4622,7 +4622,7 @@ export function AdminYoutubeThumbnailGenerator() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full"
+                    className="h-11 w-11 rounded-none"
                     aria-label={gemini.historyLoading ? "모델 상태 확인 중" : "모델 상태 다시 확인"}
                     title="모델 상태 다시 확인"
                     aria-busy={gemini.historyLoading}
@@ -4643,7 +4643,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant={isHistoryPanelOpen ? "secondary" : "ghost"}
                       size="icon"
-                      className="h-8 w-8 rounded-full"
+                      className="h-11 w-11 rounded-none"
                       aria-label="생성 히스토리 열기"
                       title="생성 히스토리"
                       data-thumbnail-history-panel-toggle="true"
@@ -4668,7 +4668,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant={isChatSettingsOpen ? "secondary" : "ghost"}
                       size="icon"
-                      className="h-8 w-8 rounded-full"
+                      className="h-11 w-11 rounded-none"
                       aria-label="유튜브 썸네일 채팅 설정 열기"
                       title="채팅 설정"
                       data-thumbnail-chat-settings-toggle="true"
@@ -4692,17 +4692,17 @@ export function AdminYoutubeThumbnailGenerator() {
           </CardHeader>
           {(chatQueue.state.handle || chatQueue.error) && <div className="flex min-w-0 items-center gap-2 border-b px-3 py-2 text-xs" data-thumbnail-chat-queue-status="true" role="status">
             <span className="min-w-0 flex-1 truncate">{chatQueue.error ?? (chatQueue.state.job?.state === 'succeeded' ? '채팅 완료' : chatQueue.state.job?.state === 'cancelled' ? '채팅 중단됨' : chatQueue.state.job?.state === 'unknown' ? '채팅 처리 확인 필요' : '채팅 처리 중')}</span>
-            {chatQueue.state.job?.state === 'succeeded' && <button type="button" className="shrink-0 font-medium underline underline-offset-2" onClick={() => {
+            {chatQueue.state.job?.state === 'succeeded' && <button type="button" className="min-h-11 shrink-0 font-medium underline underline-offset-2" onClick={() => {
               void chatQueue.output().then(({ response }) => appendThumbnailChatMessages([{ id: `assistant-chat-result-${chatMessageIdRef.current++}`, role: 'assistant', mode: 'live', content: response.assistantMessage }]), () => toast({ title: '채팅 결과 확인', description: '결과를 다시 확인해 주세요.' }));
             }}>답변 보기</button>}
-            <button type="button" className="shrink-0 underline underline-offset-2" onClick={() => { void chatQueue.refresh(); }}>새로고침</button>
-            {chatQueue.state.handle && chatQueue.state.phase !== 'settled' && !isChatAgentStreaming && <button type="button" className="shrink-0 underline underline-offset-2" onClick={() => { void chatQueue.cancel(); }}>중단</button>}
+            <button type="button" className="min-h-11 shrink-0 underline underline-offset-2" onClick={() => { void chatQueue.refresh(); }}>새로고침</button>
+            {chatQueue.state.handle && chatQueue.state.phase !== 'settled' && !isChatAgentStreaming && <button type="button" className="min-h-11 shrink-0 underline underline-offset-2" onClick={() => { void chatQueue.cancel(); }}>중단</button>}
           </div>}
           {(gemini.state.handle || gemini.error || gemini.historyError) && <div className="flex min-w-0 items-center gap-2 bg-muted/20 px-3 py-2 text-xs" data-thumbnail-gemini-status="true" role="status">
             <span className="min-w-0 flex-1 truncate">{gemini.error ?? gemini.historyError ?? `${geminiStateLabel(gemini.state.job)}${gemini.state.job?.cancelRequested ? ' · 중단 요청됨' : ''}`}</span>
             {gemini.state.job?.state === 'succeeded' && <a className="shrink-0 font-medium underline underline-offset-2" href={`/api/admin/youtube-thumbnail-generator/jobs/${gemini.state.job.id}?variant=original`} download>원본</a>}
-            {hasPendingGeminiJob && <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={abortThumbnailGeneration}>중단 요청</Button>}
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-label="생성 작업 상태 다시 확인" onClick={() => { void gemini.refresh(); void gemini.refreshHistory(); }}><RotateCw className="h-3.5 w-3.5" /></Button>
+            {hasPendingGeminiJob && <Button type="button" variant="ghost" size="sm" className="min-h-11 rounded-none px-2 text-xs" onClick={abortThumbnailGeneration}>중단 요청</Button>}
+            <Button type="button" variant="ghost" size="icon" className="h-11 w-11 rounded-none" aria-label="생성 작업 상태 다시 확인" onClick={() => { void gemini.refresh(); void gemini.refreshHistory(); }}><RotateCw className="h-3.5 w-3.5" /></Button>
           </div>}
           <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 pt-0">
             <section
@@ -4803,7 +4803,7 @@ export function AdminYoutubeThumbnailGenerator() {
                               type="button"
                               size="sm"
                               variant="outline"
-                              className="h-7 rounded-md bg-background px-2 text-2xs shadow-none"
+                              className="min-h-11 rounded-none bg-background px-2 text-xs shadow-none"
                               onClick={handleThumbnailUsageGuideClick}
                               disabled={isGenerating || isChatAgentStreaming}
                               data-thumbnail-chat-guide-button="true"
@@ -4814,7 +4814,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             <Button
                               type="button"
                               size="sm"
-                              className="h-7 rounded-md px-2 text-2xs shadow-none"
+                              className="min-h-11 rounded-none px-2 text-xs shadow-none"
                               onClick={handleThumbnailGuidedExampleClick}
                               disabled={isGenerating || isChatAgentStreaming}
                               data-thumbnail-chat-guide-example="true"
@@ -4922,7 +4922,7 @@ export function AdminYoutubeThumbnailGenerator() {
 
                 {shouldShowThumbnailCanvasContext ? (
                   <div
-                    className="flex min-h-8 items-center justify-between gap-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1 text-2xs"
+                    className="flex min-h-11 items-center justify-between gap-2 rounded-none border border-primary/20 bg-primary/5 px-2.5 py-1 text-2xs"
                     data-thumbnail-chat-canvas-context="true"
                     data-thumbnail-chat-canvas-context-state={canvasContextState}
                     data-thumbnail-chat-canvas-context-visibility="selected-only"
@@ -4930,7 +4930,7 @@ export function AdminYoutubeThumbnailGenerator() {
                     <div className="flex min-w-0 items-center gap-1.5">
                       <Badge
                         variant={canvasContextState === "editing" ? "secondary" : "outline"}
-                        className="h-6 shrink-0 rounded-md px-2 text-2xs"
+                        className="min-h-11 shrink-0 rounded-none px-2 text-xs"
                       >
                         {canvasContextState === "editing" ? "수정 중" : "선택됨"}
                       </Badge>
@@ -4956,7 +4956,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 shrink-0 rounded-md px-2 text-2xs"
+                      className="min-h-11 shrink-0 rounded-none px-2 text-xs"
                       onClick={useCanvasContextInChat}
                       data-thumbnail-chat-canvas-context-ask="true"
                     >
@@ -4970,7 +4970,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   한글 조합 중 Enter는 전송하지 않고, 조합이 끝난 뒤 Enter로 전송합니다.
                 </p>
                 <div
-                  className="rounded-lg border border-border/60 bg-background p-2 shadow-none"
+                  className="rounded-none border border-border/60 bg-background p-2 shadow-none"
                   data-thumbnail-chat-composer="true"
                   data-thumbnail-chat-composer-shell="storyboard-like"
                 >
@@ -4979,7 +4979,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+                      className="h-11 w-11 shrink-0 rounded-none text-muted-foreground hover:text-foreground"
                       onClick={openThumbnailReferenceFilePicker}
                       disabled={isChatAgentStreaming || isGenerating}
                       aria-label="참고 이미지 첨부"
@@ -4997,14 +4997,14 @@ export function AdminYoutubeThumbnailGenerator() {
                       onKeyDown={handleThumbnailChatKeyDown}
                       aria-describedby="thumbnail-chat-keyboard-hint"
                       disabled={isChatAgentStreaming || isGenerating}
-                      className="max-h-24 min-h-10 resize-none border-0 bg-transparent p-2 text-sm shadow-none focus-visible:ring-0"
+                      className="max-h-24 min-h-11 resize-none border-0 bg-transparent p-2 text-base shadow-none focus-visible:ring-0"
                       placeholder="원하는 썸네일 내용을 입력해 주세요"
                       data-thumbnail-chat-ime-safe="true"
                     />
                     <Button
                       type="button"
                       size={isChatAgentStreaming || isGenerating ? "sm" : "icon"}
-                      className={`h-9 shrink-0 rounded-full ${isChatAgentStreaming || isGenerating ? "px-3" : "w-9"}`}
+                      className={`h-11 shrink-0 rounded-none ${isChatAgentStreaming || isGenerating ? "px-3" : "w-11"}`}
                       onClick={isChatAgentStreaming ? abortThumbnailChatWork : isGenerating ? abortThumbnailGeneration : () => void handleThumbnailChatSubmit()}
                       disabled={isChatAgentStreaming || isGenerating ? false : !chatDraft.trim()}
                       aria-label={isChatAgentStreaming ? "채팅 작업 중단" : isGenerating ? "썸네일 생성 중단" : "요구사항 채팅 반영"}
@@ -5045,7 +5045,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </CardContent>
         </Card>
 
-        <Card className="order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none !bg-card" data-thumbnail-canvas-panel="primary-left">
+        <Card className="order-1 flex min-h-0 flex-col overflow-hidden rounded-none border-0 bg-card shadow-none" data-thumbnail-canvas-panel="primary-left">
           <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
             <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
               <span className="flex min-w-0 items-center gap-2"><span>캔버스 편집</span><span className="truncate text-xs font-normal text-muted-foreground" data-thumbnail-canvas-source="true">{getThumbnailResultSourceLabel(result)}</span></span>
@@ -5056,7 +5056,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   </Badge>
                 ) : null}
                 <Select value={exportPresetId} onValueChange={(value) => setExportPresetId(value as ThumbnailExportPresetId)}>
-                  <SelectTrigger className="h-8 w-[122px]" data-thumbnail-export-preset="true" aria-label="PNG 저장 해상도">
+                  <SelectTrigger className="h-11 w-[122px] rounded-none" data-thumbnail-export-preset="true" aria-label="PNG 저장 해상도">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -5067,13 +5067,13 @@ export function AdminYoutubeThumbnailGenerator() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button type="button" size="sm" variant="outline" onClick={() => setShowSafeAreaGuide((value) => !value)} data-thumbnail-safe-area-toggle="true">
+                <Button type="button" size="sm" variant="outline" className="min-h-11 rounded-none" onClick={() => setShowSafeAreaGuide((value) => !value)} data-thumbnail-safe-area-toggle="true">
                   {showSafeAreaGuide ? "가이드 숨김" : "가이드 표시"}
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={addTextLayer} data-thumbnail-add-text-layer="true">
+                <Button type="button" size="sm" variant="outline" className="min-h-11 rounded-none" onClick={addTextLayer} data-thumbnail-add-text-layer="true">
                   <Plus className="mr-2 h-4 w-4" /> 문구 추가
                 </Button>
-                <Button type="button" size="sm" variant="secondary" onClick={handleExportPng}>
+                <Button type="button" size="sm" variant="secondary" className="min-h-11 rounded-none" onClick={handleExportPng}>
                   <Download className="mr-2 h-4 w-4" /> PNG 저장
                 </Button>
               </div>
@@ -5082,11 +5082,11 @@ export function AdminYoutubeThumbnailGenerator() {
           <CardContent className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 pt-0">
             <div
               ref={canvasViewportRef}
-              className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-lg bg-transparent"
+              className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-none bg-transparent"
               data-thumbnail-canvas-viewport="true"
             >
               <div
-                className="relative overflow-hidden rounded-lg border border-border [container-type:inline-size]"
+                className="relative overflow-hidden rounded-none border border-border [container-type:inline-size]"
                 style={{ width: `${canvasDisplaySize.width}px`, height: `${canvasDisplaySize.height}px` }}
                 data-thumbnail-canvas-aspect-frame="16:9"
               >
@@ -5223,14 +5223,14 @@ export function AdminYoutubeThumbnailGenerator() {
               </div>
             </div>
             <div className="min-h-0 overflow-hidden">
-              <div className="overflow-hidden rounded-lg bg-muted/30 p-1" data-thumbnail-editor-toolbar="true">
+              <div className="overflow-hidden rounded-none bg-muted/30 p-1" data-thumbnail-editor-toolbar="true">
                 <div className="flex w-full gap-1.5 overflow-x-auto pb-1 [&>button]:shrink-0 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] lg:overflow-x-visible lg:pb-0" data-thumbnail-tradingview-tool-palette="true" data-thumbnail-canvas-tool-row="true" role="toolbar" aria-label="캔버스 문구 편집 도구">
                   {THUMBNAIL_EDITOR_TOOLS.map((tool) => (
                     <Button
                       key={tool.id}
                       type="button"
                       variant="ghost"
-                      className="h-8 w-auto min-w-[5.5rem] gap-1 rounded-md bg-background px-1.5 text-2xs leading-none shadow-none hover:bg-muted lg:w-full lg:min-w-0 [&_span]:min-w-0 [&_span]:truncate [&_svg]:h-3.5 [&_svg]:w-3.5"
+                      className="h-11 w-auto min-w-[5.5rem] gap-1 rounded-none bg-background px-2 text-2xs leading-none shadow-none hover:bg-muted lg:w-full lg:min-w-0 [&_span]:min-w-0 [&_span]:truncate [&_svg]:h-3.5 [&_svg]:w-3.5"
                       onClick={() => applyThumbnailEditorTool(tool.id)}
                       title={tool.description}
                       data-thumbnail-editor-tool={tool.id}
