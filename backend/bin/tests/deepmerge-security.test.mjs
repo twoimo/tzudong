@@ -120,3 +120,12 @@ test('both transitive callers resolve the top-level fork without changing stealt
     fonts: { size: 14, family: 'Fixture' }, safe: true,
   });
 });
+
+
+test('installed fork retains tracked entrypoints, declarations and MIT license', () => {
+  const sourceRoot = path.join(backendRoot, 'vendor/tzudong-deepmerge-4.3.1-tzudong.1');
+  const installedRoot = path.join(backendRoot, 'node_modules/deepmerge');
+  for (const name of ['index.js', 'dist/cjs.js', 'dist/umd.js', 'index.d.ts', 'license.txt']) {
+    assert.deepEqual(fs.readFileSync(path.join(installedRoot, name)), fs.readFileSync(path.join(sourceRoot, name)), name);
+  }
+});
