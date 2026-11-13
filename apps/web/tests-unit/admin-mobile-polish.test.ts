@@ -22,7 +22,7 @@ describe("admin mobile visual polish", () => {
     expect(source).toContain("{activeModuleLabel} 작업 화면으로 전환됨");
   });
 
-  test("mobile KPI titles keep the full row with bounded trailing actions", () => {
+  test("mobile KPI values and variable-width changes occupy separate flow rows", () => {
     const adminCss = read("styles/admin-ui.css");
     expect(adminCss).toContain(
       '[data-admin-dashboard-kpi-title-row="single-line"] { display: grid; grid-template-columns: minmax(0, 1fr);',
@@ -31,9 +31,18 @@ describe("admin mobile visual polish", () => {
       '[data-admin-dashboard-kpi-title-row="single-line"] > div:first-child { width: 100%;',
     );
     expect(adminCss).toContain(
-      '[data-admin-dashboard-kpi-title-actions="single-line-scroll"] { position: absolute; right: 8px; bottom: 8px; width: auto; max-width: 40%;',
+      '[data-admin-dashboard-kpi-title-actions="single-line-scroll"] { position: static; width: 100%; max-width: 100%;',
     );
+    expect(adminCss).not.toContain('[data-admin-dashboard-kpi-title-actions="single-line-scroll"] { position: absolute;');
     expect(adminCss).toContain("@media (max-width: 767px)");
+  });
+
+  test("touch chart toolbars wrap within cards and do not clip their hit targets", () => {
+    const adminCss = read("styles/admin-ui.css");
+    expect(adminCss).toContain('[data-admin-dashboard-card-title-row="single-line"] { flex-wrap: wrap; overflow: visible; }');
+    expect(adminCss).toContain('[data-admin-dashboard-card-title-actions="single-line-scroll"] { flex: 1 1 100%; width: 100%; max-width: 100%; min-height: 44px; overflow: visible; }');
+    expect(adminCss).toContain('[data-admin-dashboard-card-title-actions="single-line-scroll"] > div { min-width: 0; max-width: 100%; flex-wrap: wrap; gap: 8px; }');
+    expect(adminCss).toContain('[data-admin-dashboard-series-toggle="true"] { height: auto; min-height: 44px; }');
   });
 
   test("shared badges are square only inside the admin shell; account avatars stay round", () => {
