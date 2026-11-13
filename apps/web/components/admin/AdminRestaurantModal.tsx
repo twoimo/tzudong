@@ -1020,9 +1020,11 @@ function AdminRestaurantEditor({
                                                         value={customCategory}
                                                         onChange={(e) => setCustomCategory(e.target.value)}
                                                         onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && customCategory.trim()) {
+                                                            if (e.key === 'Enter') {
                                                                 e.preventDefault();
+                                                                if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
                                                                 const newCategory = customCategory.trim();
+                                                                if (!newCategory) return;
                                                                 if (!formData.categories.includes(newCategory)) {
                                                                     setFormData({
                                                                         ...formData,

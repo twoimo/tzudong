@@ -8,8 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+import { formatKoreanDateTime } from "@/lib/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -383,9 +382,7 @@ export default function RecommendSubmissionsPage() {
           <div className={myPageFooterMetaClass}>
             <span>
               추천일:{" "}
-              {format(new Date(request.created_at), "yyyy년 M월 d일 HH:mm", {
-                locale: ko,
-              })}
+              {formatKoreanDateTime(new Date(request.created_at))}
             </span>
           </div>
           {deleteTarget?.id === request.id && (

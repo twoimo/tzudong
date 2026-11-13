@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BREAKPOINTS } from "@/hooks/useDeviceType";
+import { DESKTOP_MIN_WIDTH_QUERY } from "@/lib/viewport-breakpoints";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
 function LeaderboardLoadingList() {
@@ -65,17 +65,18 @@ export default function LeaderboardPage() {
     useEffect(() => {
         setIsMounted(true);
 
+        const mediaQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
         const redirectIfDesktop = () => {
-            if (window.innerWidth > BREAKPOINTS.tabletMax) {
+            if (mediaQuery.matches) {
                 router.replace('/?panel=leaderboard');
             }
         };
 
         redirectIfDesktop();
-        window.addEventListener('resize', redirectIfDesktop, { passive: true });
+        mediaQuery.addEventListener('change', redirectIfDesktop);
 
         return () => {
-            window.removeEventListener('resize', redirectIfDesktop);
+            mediaQuery.removeEventListener('change', redirectIfDesktop);
         };
     }, [router]);
 
@@ -122,7 +123,7 @@ export default function LeaderboardPage() {
     }, [isLoading, currentUser, leaderboardData]);
 
     if (!isMounted) return null;
-    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
+    if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden relative">

@@ -420,9 +420,6 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(homeAppGlobalsSource).toContain('[class*="overflow-y-auto"]');
     expect(homeAppGlobalsSource).toContain(")::-webkit-scrollbar");
-    expect(homeAppGlobalsSource).toContain(
-      "-ms-overflow-style: none !important",
-    );
     expect(homeAppGlobalsSource).toContain("scrollbar-width: none !important");
     expect(homeAppGlobalsSource).toContain("display: none !important");
     expect(homeAppGlobalsSource).toContain("width: 0 !important");
@@ -976,7 +973,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-desktop-left-panel-stamp-mobile-parity="true"',
     );
     expect(stampOverlaySource).toContain(
-      "h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']",
+      "h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [scrollbar-width:'none']",
     );
     expect(stampOverlaySource).toContain("<MapPanelHeader");
     expect(stampOverlaySource).toContain('title="도장"');

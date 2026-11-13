@@ -38,7 +38,8 @@ import { describeErrorCodeForLog } from "@/lib/debug-log";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
-import { BREAKPOINTS, useDeviceType } from "@/hooks/useDeviceType";
+import { useDeviceType } from "@/hooks/useDeviceType";
+import { DESKTOP_MIN_WIDTH_QUERY } from "@/lib/viewport-breakpoints";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { REGIONS, extractRegion, extractYouTubeVideoId, parseCategory, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
@@ -198,8 +199,9 @@ export default function StampPage() {
     useEffect(() => {
         setIsMounted(true);
 
+        const mediaQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
         const redirectIfDesktop = () => {
-            if (window.location.pathname === '/stamp' && window.innerWidth > BREAKPOINTS.tabletMax) {
+            if (window.location.pathname === '/stamp' && mediaQuery.matches) {
                 if (reviewContinuationHandled.current) return;
                 const redirectPath = buildDesktopStampHomeRedirectPath(window.location.search);
                 if (redirectPath) router.replace(redirectPath);
@@ -207,10 +209,10 @@ export default function StampPage() {
         };
 
         redirectIfDesktop();
-        window.addEventListener('resize', redirectIfDesktop, { passive: true });
+        mediaQuery.addEventListener('change', redirectIfDesktop);
 
         return () => {
-            window.removeEventListener('resize', redirectIfDesktop);
+            mediaQuery.removeEventListener('change', redirectIfDesktop);
         };
     }, [router]);
 
@@ -911,7 +913,7 @@ export default function StampPage() {
 
     const hasReviewContinuation = searchParams?.get('writeReview') === '1'
         || isReviewModalOpen;
-    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax && !hasReviewContinuation) return null;
+    if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches && !hasReviewContinuation) return null;
 
     return (
         <>
@@ -921,7 +923,7 @@ export default function StampPage() {
                     {/* 스크롤 컨테이너 */}
                     <div
                         ref={mainScrollRef}
-                        className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+                        className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [scrollbar-width:'none']"
                         data-stamp-scroll-container="true"
                         data-layout-primitives="list-detail stack"
                         data-scroll-owner="stamp-list"
@@ -1407,7 +1409,7 @@ export default function StampPage() {
                         setIsReviewModalOpen(false);
                         const wasReviewContinuation = reviewContinuationHandled.current;
                         reviewContinuationHandled.current = null;
-                        if (window.innerWidth > BREAKPOINTS.tabletMax && wasReviewContinuation) {
+                        if (window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches && wasReviewContinuation) {
                             const parameters = new URLSearchParams(window.location.search);
                             parameters.delete('writeReview');
                             const redirectPath = buildDesktopStampHomeRedirectPath(parameters.toString());

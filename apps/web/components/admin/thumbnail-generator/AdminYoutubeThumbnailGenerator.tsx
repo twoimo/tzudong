@@ -3609,7 +3609,7 @@ export function AdminYoutubeThumbnailGenerator() {
   }
 
   function isThumbnailChatImeComposing(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
-    return chatComposerImeRef.current || event.nativeEvent.isComposing || event.key === "Process";
+    return chatComposerImeRef.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || event.key === "Process";
   }
 
   function openThumbnailReferenceFilePicker() {
@@ -5196,7 +5196,10 @@ export function AdminYoutubeThumbnailGenerator() {
                       }
                       event.stopPropagation();
                       if (event.key === "Enter" || event.key === "Escape") {
-                        event.preventDefault();
+                        if (event.key === "Enter") event.preventDefault();
+                        // Leave a composing Escape to the IME instead of closing the editor.
+                        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+                        if (event.key === "Escape") event.preventDefault();
                         commitPendingTextLayerUndoSnapshot();
                         setEditingLayerId(null);
                         canvasRef.current?.focus();

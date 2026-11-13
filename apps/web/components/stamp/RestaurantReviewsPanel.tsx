@@ -112,7 +112,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
             )}
 
             {/* 콘텐츠 영역 */}
-            <div className="flex-1 p-4 pb-24 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <div className="flex-1 p-4 pb-24 overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:'none']">
                 {/* 리뷰 섹션 헤더 */}
                 <div className="flex items-center justify-between gap-2 mb-4">
                     <h3 className="font-semibold flex items-center gap-2">

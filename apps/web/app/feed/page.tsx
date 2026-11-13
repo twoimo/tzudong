@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import FeedContent, { type FeedRestaurantRecord } from '@/components/feed/FeedContent';
-import { BREAKPOINTS } from '@/hooks/useDeviceType';
+import { DESKTOP_MIN_WIDTH_QUERY } from '@/lib/viewport-breakpoints';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { Restaurant } from '@/types/restaurant';
 import { buildEditRestaurantInitialFormData } from '@/lib/edit-restaurant-request-form';
@@ -39,8 +39,9 @@ function FeedPageContent() {
     useEffect(() => {
         setIsMounted(true);
 
+        const mediaQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
         const redirectIfDesktop = () => {
-            if (window.innerWidth > BREAKPOINTS.tabletMax) {
+            if (mediaQuery.matches) {
                 const reviewId = searchParams.get('review');
                 const target = reviewId ? `/?panel=feed&review=${encodeURIComponent(reviewId)}` : '/?panel=feed';
                 router.replace(target);
@@ -48,16 +49,16 @@ function FeedPageContent() {
         };
 
         redirectIfDesktop();
-        window.addEventListener('resize', redirectIfDesktop, { passive: true });
+        mediaQuery.addEventListener('change', redirectIfDesktop);
 
         return () => {
-            window.removeEventListener('resize', redirectIfDesktop);
+            mediaQuery.removeEventListener('change', redirectIfDesktop);
         };
     }, [router, searchParams]);
 
     // Mount 전에는 아무것도 렌더링하지 않음 (Hydration Mismatch 방지)
     if (!isMounted) return null;
-    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
+    if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
 
     const handleOpenRestaurantDetail = (restaurant: FeedRestaurantRecord) => {
         setRestaurantSheetHeightRequestKey(0);

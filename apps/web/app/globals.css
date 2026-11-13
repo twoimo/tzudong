@@ -10,8 +10,7 @@
 
 :root {
   color-scheme: light;
-  --vh: 1vh;
-  --full-height: 100vh;
+  --full-height: 100dvh;
   --font-sans: var(--font-pretendard, "Pretendard"), "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display-fallback: "Noto Serif KR", "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
   --font-noto-serif-kr: var(--font-display, "Noto Serif KR"), "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
@@ -43,14 +42,6 @@
   --brand-tangerine-ink: 18 100% 74%;
   --brand-garden-tint: 146 18% 16%;
   --brand-garden-text: 146 42% 68%;
-}
-
-@supports (height: 100dvh) {
-  :root { --full-height: 100dvh; }
-}
-
-@supports (height: 100svh) and (not (height: 100dvh)) {
-  :root { --full-height: 100svh; }
 }
 
 
@@ -95,7 +86,7 @@ html[data-local-workspace="true"] [data-local-workspace-app="true"] {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  --full-height: calc(100vh - var(--local-workspace-banner-height));
+  --full-height: calc(100dvh - var(--local-workspace-banner-height));
   height: var(--full-height);
   overflow: hidden;
   transform: translateZ(0);

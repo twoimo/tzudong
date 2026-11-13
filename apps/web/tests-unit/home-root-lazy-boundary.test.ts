@@ -121,7 +121,11 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).not.toContain("from '@/hooks/useDeviceType'");
         expect(homeViewportModeSource).toContain("export type HomeViewportMode = 'pending' | 'mobileOrTablet' | 'desktop'");
         expect(homeViewportModeSource).toContain("const [mode, setMode] = useState<HomeViewportMode>('pending')");
-        expect(homeViewportModeSource).toContain('window.innerWidth <= BREAKPOINTS.tabletMax');
+        expect(homeViewportModeSource).toContain('window.matchMedia(DESKTOP_MIN_WIDTH_QUERY)');
+        expect(homeViewportModeSource).toContain("const nextMode = mediaQuery.matches ? 'desktop' : 'mobileOrTablet'");
+        expect(homeViewportModeSource).toContain("mediaQuery.addEventListener('change', updateMode)");
+        expect(homeViewportModeSource).toContain("mediaQuery.removeEventListener('change', updateMode)");
+        expect(homeViewportModeSource).not.toMatch(/resize|orientationchange|requestAnimationFrame/);
         expect(homeViewportModeSource).toContain("previousMode === nextMode ? previousMode : nextMode");
         expect(homeRuntimeShellSource).toContain('HomeAuthSessionUpdatedDetail');
         expect(homeRuntimeShellSource).toContain('hasSupabaseAuthSessionHint');

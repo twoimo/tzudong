@@ -9,8 +9,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+import { formatKoreanDate, formatKoreanDateTime } from "@/lib/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -612,16 +611,12 @@ export default function EditSubmissionsPage() {
         <div className={myPageFooterMetaClass}>
           <span>
             요청일:{" "}
-            {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", {
-              locale: ko,
-            })}
+            {formatKoreanDateTime(new Date(submission.created_at))}
           </span>
           {submission.reviewed_at && (
             <span>
               검토일:{" "}
-              {format(new Date(submission.reviewed_at), "yyyy년 M월 d일", {
-                locale: ko,
-              })}
+              {formatKoreanDate(new Date(submission.reviewed_at))}
             </span>
           )}
         </div>

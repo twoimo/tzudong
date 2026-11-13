@@ -1,17 +1,31 @@
 import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { cva, type VariantProps } from "class-variance-authority";
+import { Slot } from "@radix-ui/react-slot";
 
 import { cn } from "@/lib/utils";
 
-const labelVariants = cva("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70");
+type LabelProps = React.ComponentPropsWithoutRef<"label"> & {
+  asChild?: boolean;
+};
 
-const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & VariantProps<typeof labelVariants>
->(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props} />
-));
-Label.displayName = LabelPrimitive.Root.displayName;
+const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
+  ({ asChild = false, className, onMouseDown, ...props }, ref) => {
+    const Component = asChild ? Slot : "label";
+
+    return (
+      <Component
+        ref={ref}
+        className={cn("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70", className)}
+        {...props}
+        onMouseDown={(event) => {
+          // Preserve label activation without selecting its text on repeated clicks.
+          if ((event.target as HTMLElement).closest("button, input, select, textarea")) return;
+          onMouseDown?.(event);
+          if (!event.defaultPrevented && event.detail > 1) event.preventDefault();
+        }}
+      />
+    );
+  },
+);
+Label.displayName = "Label";
 
 export { Label };

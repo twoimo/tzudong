@@ -689,6 +689,7 @@ export default function RestaurantSubmissionModal({
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                             e.preventDefault();
+                            if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
                             const trimmed = categoryInput.trim();
                             if (trimmed && !formData.categories.includes(trimmed)) {
                                 setFormData({
