@@ -668,9 +668,9 @@
     },
     {
       "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
-      "gitBlobSha1": "1e8020ebb5b2e0dfb75c19893a154b803411d402",
-      "sha256": "60faf0aaed63c27b0b12f9cff631dffcf686f69707216a2f915b4528aabe4847",
-      "bytes": 44758
+      "gitBlobSha1": "3785edd55b2ba6710a2c58ae6dde7d6bd6992d33",
+      "sha256": "c9069086744e8c11d513c0ea3bad0f189ca57d952abb99687dfc003189bf4e53",
+      "bytes": 44755
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
