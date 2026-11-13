@@ -1016,25 +1016,25 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                         </div>
                         <div className="pb-1">
                             <div className="flex w-full min-w-0 flex-wrap items-center gap-2 md:gap-3">
-                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-2">
                                     <legend className="sr-only">표시 방식</legend><span className="text-xs text-muted-foreground">모드</span>
                                     <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
                                         {VIEW_MODE_OPTIONS.map((option) => <Button key={option.value} type="button" size="sm" variant={viewMode === option.value ? 'default' : 'ghost'} onClick={() => handleSetViewMode(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
                                     </div>
                                 </fieldset>
-                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-2">
                                     <legend className="sr-only">지표</legend><span className="text-xs text-muted-foreground">지표</span>
                                     <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
                                         {METRIC_OPTIONS.map((option) => <Button key={option.value} type="button" size="sm" variant={metricMode === option.value ? 'default' : 'ghost'} onClick={() => handleSetMetricMode(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
                                     </div>
                                 </fieldset>
-                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-2">
                                     <legend className="sr-only">기간</legend><span className="text-xs text-muted-foreground">기간</span>
                                     <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
                                         {periodOptionsForView.map((option) => <Button key={option.value} type="button" size="sm" variant={period === option.value ? 'default' : 'ghost'} onClick={() => handleSetPeriod(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
                                     </div>
                                 </fieldset>
-                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                <fieldset className="inline-flex min-w-0 max-w-full items-center gap-2">
                                     <legend className="sr-only">클러스터 크기</legend><span className="text-xs text-muted-foreground">클러스터</span>
                                     <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
                                         <Button type="button" size="sm" variant={clusterStep === null ? 'default' : 'ghost'} onClick={() => handleSetClusterStep(null)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">전체</Button>

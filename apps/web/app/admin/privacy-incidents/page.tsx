@@ -831,7 +831,7 @@ export default function PrivacyIncidentsPage() {
         actions={(
           <button
             type="button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted aria-disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted aria-disabled:opacity-50"
             onClick={() => { if (!loading) void load(); }}
             aria-disabled={loading}
             aria-busy={loading}

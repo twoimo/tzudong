@@ -27,14 +27,14 @@ describe("admin storyboard thinking trace source contract", () => {
     expect(componentSource).not.toContain('data-storyboard-thinking-trace="true"');
   });
 
-  test("keeps the Gemini operator workspace on one compact CMS surface", () => {
+  test("keeps the storyboard operator workspace on one compact CMS surface", () => {
     const componentSource = source(
       "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
     );
 
     expect(componentSource).toContain('data-admin-storyboard-toolbar="true"');
     expect(componentSource).toContain('className="min-w-0 p-3 pb-24 sm:p-4 sm:pb-6"');
-    expect(componentSource).toContain('const panelClass = "min-w-0 rounded-xl bg-card');
+    expect(componentSource).toContain('const panelClass = "min-w-0 rounded-none bg-card');
     expect(componentSource).not.toContain("StoryboardChat");
     expect(componentSource).not.toContain("browser-openai-api-key");
   });

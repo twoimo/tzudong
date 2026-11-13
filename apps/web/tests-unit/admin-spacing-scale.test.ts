@@ -7,6 +7,24 @@ const sheet = postcss.parse(readFileSync(resolve(import.meta.dir, "../styles/adm
 const spacingProperty = /^(?:padding|margin)(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?$|^(?:gap|row-gap|column-gap)$/;
 
 describe("administrator spacing scale", () => {
+  test("active console feature layouts do not reintroduce half-step spacing utilities", () => {
+    const surfaces = [
+      "app/admin/banners/page.tsx", "app/admin/evaluations/page.tsx", "app/admin/privacy-incidents/page.tsx",
+      "app/insights/insights-client.tsx", "components/admin/AdminConsoleOverview.tsx",
+      "components/admin/AdminKnowledgeGraphPanel.tsx", "components/admin/AdminOperationsPanel.tsx",
+      "components/admin/AdminRestaurantRefreshHistoryPanel.tsx", "components/admin/AdminSentryPanel.tsx",
+      "components/admin/AdminUsersPanel.tsx", "components/admin/RestaurantManagementWorkspace.tsx",
+      "components/admin/pipeline/AdminPipelineDashboard.tsx", "components/admin/AdminOverviewDashboard.tsx",
+      "components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+      "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+    ];
+    const offGrid = /(?<![A-Za-z0-9_-])(?:p[xytrbl]?|m[xytrbl]?|gap(?:-[xy])?|space-[xy])-(?:0\.5|1\.5|2\.5|3\.5)(?![A-Za-z0-9_.-])/g;
+    for (const file of surfaces) {
+      const content = readFileSync(resolve(import.meta.dir, "..", file), "utf8");
+      expect([...content.matchAll(offGrid)].map(match => match[0]), file).toEqual([]);
+    }
+  });
+
   test("all explicit shared margins, padding and gaps follow a four-pixel grid", () => {
     const offGrid: string[] = [];
     let checked = 0;

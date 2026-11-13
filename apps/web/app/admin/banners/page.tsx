@@ -988,7 +988,7 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
                     <Button type="button" variant="outline" size="sm" onClick={reopenRefreshConflict}>{refreshConflict.latest ? '현재 입력 버리고 최신 상태 열기' : '현재 입력 버리고 상세 닫기'}</Button>
                 </div>}
                 {isEditorOpen && actionResult && <p role={actionResult.status === 'success' ? 'status' : 'alert'} className={cn("shrink-0 border-b px-3 py-2 text-sm", actionResult.status === 'success' ? 'bg-emerald-50 text-emerald-800' : actionResult.status === 'warning' ? 'bg-amber-50 text-amber-900' : 'bg-destructive/10 text-destructive')}>{actionResult.message}</p>}
-                        <div className="admin-cms-inspector-header sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card p-2.5">
+                        <div className="admin-cms-inspector-header sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card p-3">
                             <div className="min-w-0">
                                 <h2 id="banner-editor-title" className="text-sm font-semibold text-foreground">{!isEditorOpen ? '배너 상세' : editingBanner ? '배너 수정' : '새 배너 작성'}</h2>
                                 <p className="text-xs text-muted-foreground" role="status">{!isEditorOpen ? '목록에서 배너를 선택하세요.' : isDirty ? '저장하지 않은 변경' : editingBanner ? '저장된 배너' : '제목과 표시 위치를 입력하세요.'}</p>
@@ -999,15 +999,15 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
                         {pendingReadback && <div className="flex shrink-0 items-center gap-2 border-b bg-amber-50 px-3 py-2 text-xs text-amber-900"><span className="min-w-0 flex-1">이전 변경의 상태를 먼저 확인해 주세요.</span><Button type="button" size="sm" variant="outline" aria-disabled={bannersFetching || isBusy || undefined} aria-busy={bannersFetching || undefined} disabled={isBusy || undefined} onClick={() => { if (!bannersFetching && !isBusy) void refreshBannerList(); }}>상태 재확인</Button></div>}
                         {!isEditorOpen ? <div className="admin-cms-empty flex min-h-64 flex-1 flex-col items-center justify-center gap-3 p-6 text-center"><ImageIcon className="h-6 w-6 text-muted-foreground" aria-hidden="true" /><p className="text-sm text-muted-foreground">배너를 선택하면 내용과 노출 설정을 편집할 수 있습니다.</p><Button type="button" variant="outline" size="sm" disabled={isBusy || Boolean(pendingReadback)} onClick={openCreatePanel}><Plus className="h-4 w-4" aria-hidden="true" />새 배너</Button></div> : <fieldset disabled={isBusy || Boolean(pendingReadback)} className="admin-cms-inspector-body min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto p-3">
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="space-y-1.5 sm:col-span-2">
+                                <div className="space-y-2 sm:col-span-2">
                                     <Label htmlFor="title">제목 *</Label>
                                     <Input id="title" value={formData.title} onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))} placeholder="배너 제목" />
                                 </div>
-                                <div className="space-y-1.5 sm:col-span-2">
+                                <div className="space-y-2 sm:col-span-2">
                                     <Label htmlFor="description">설명</Label>
                                     <Textarea id="description" value={formData.description || ''} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="배너 설명" rows={3} />
                                 </div>
-                                <div className="space-y-1.5 sm:col-span-2">
+                                <div className="space-y-2 sm:col-span-2">
                                     <Label>배너 이미지/영상</Label>
                                     <Card
                                         role="button"
@@ -1033,11 +1033,11 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
                                         <input ref={fileInputRef} id="banner-media-upload" type="file" accept="image/*,video/*" onChange={handleFileInputChange} className="hidden" />
                                     </Card>
                                 </div>
-                                <div className="space-y-1.5 sm:col-span-2">
+                                <div className="space-y-2 sm:col-span-2">
                                     <Label htmlFor="link_url">클릭 시 이동 URL</Label>
                                     <Input id="link_url" type="url" value={formData.link_url || ''} onChange={(e) => setFormData(prev => ({ ...prev, link_url: e.target.value }))} placeholder="https://example.com" />
                                 </div>
-                                <div className="space-y-1.5">
+                                <div className="space-y-2">
                                     <Label htmlFor="priority">우선순위 <span className="font-normal text-muted-foreground">높을수록 먼저 표시</span></Label>
                                     <Input id="priority" type="number" min={0} max={1000} value={formData.priority} onChange={(e) => setFormData(prev => ({ ...prev, priority: parseInt(e.target.value) || 0 }))} />
                                 </div>
@@ -1083,7 +1083,7 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
                 <AdminPageHeader title={getAdminModuleTitle("banners")} icon={ImageIcon} className="admin-cms-page-header"
                     data-admin-module-header={embedded ? "compact" : undefined} data-admin-module-header-module={embedded ? "banners" : undefined}
                     summary={<>전체 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(sortedBanners.length, '개')} · 활성 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(activeBannerCount, '개')} · 비활성 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(inactiveBannerCount, '개')} · 데스크톱 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(sidebarTargetCount)} · 모바일 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(mobileTargetCount)}</>}
-                    actions={<div className="flex min-w-0 items-center gap-1.5" data-admin-module-actions={embedded ? "top-right" : undefined}>
+                    actions={<div className="flex min-w-0 items-center gap-2" data-admin-module-actions={embedded ? "top-right" : undefined}>
                         <Button type="button" variant="ghost" size="sm" aria-label="배너 목록 새로고침" aria-disabled={bannersFetching || isBusy || undefined} aria-busy={bannersFetching || undefined} disabled={isBusy || undefined} onClick={() => { if (!bannersFetching && !isBusy) void refreshBannerList(); }}><RefreshCw className={cn("h-4 w-4", bannersFetching && "animate-spin")} aria-hidden="true" />새로고침</Button>
                         <Button onClick={openCreatePanel} disabled={isBusy || Boolean(pendingReadback)} className="h-9 w-auto shrink-0 rounded-md bg-primary px-3 text-primary-foreground hover:bg-primary/90">
                             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />새 배너
@@ -1133,7 +1133,7 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
                                         aria-current={isSelected ? "true" : undefined}
                                         aria-pressed={isSelected}
                                         data-selected={isSelected ? "true" : "false"}
-                                        className={cn("admin-cms-record-row w-full border-l-2 px-3 py-2.5 text-left transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary", isSelected ? "admin-cms-row-selected border-l-primary bg-primary/5" : "border-l-transparent")}
+                                        className={cn("admin-cms-record-row w-full border-l-2 px-3 py-3 text-left transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary", isSelected ? "admin-cms-row-selected border-l-primary bg-primary/5" : "border-l-transparent")}
                                         disabled={isBusy || Boolean(pendingReadback)} onClick={() => requestEditor(banner)}
                                     >
                                         <div className="flex min-w-0 gap-2">
@@ -1151,14 +1151,14 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
                                                     <p className="min-w-0 truncate text-sm font-semibold text-foreground">{banner.title}</p>
                                                     <Badge variant="secondary" className={cn("shrink-0 rounded-full border-transparent text-2xs", banner.is_active ? "bg-emerald-50 text-emerald-800" : "bg-muted text-muted-foreground")}>{banner.is_active ? '활성' : '비활성'}</Badge>
                                                 </div>
-                                                <p className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                                                <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                                                     <span className="min-w-0 truncate">{sortOrder === 'updated' ? `수정 ${formatListDateTime(banner.updated_at)}` : banner.description || '설명 없음'}</span>
                                                     <span className="ml-auto shrink-0 tabular-nums">우선순위 {banner.priority}</span>
                                                 </p>
                                                 <div className="mt-1 flex min-w-0 flex-nowrap gap-1 overflow-x-auto scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
                                                     {banner.display_target.includes('sidebar') && <Badge variant="secondary" className="shrink-0 rounded-full text-2xs">데스크톱 배너</Badge>}
                                                     {banner.display_target.includes('mobile_popup') && <Badge variant="secondary" className="shrink-0 rounded-full text-2xs">모바일 팝업</Badge>}
-                                                    {resolvedUrls?.link_url && <span className="inline-flex shrink-0 items-center text-2xs text-primary"><ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />링크</span>}
+                                                    {resolvedUrls?.link_url && <span className="inline-flex shrink-0 items-center text-2xs text-primary"><ExternalLink className="mr-1 h-3 w-3" aria-hidden="true" />링크</span>}
                                                 </div>
                                             </div>
                                         </div>

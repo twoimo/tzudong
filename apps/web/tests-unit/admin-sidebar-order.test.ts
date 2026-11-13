@@ -1,117 +1,79 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  ADMIN_SIDEBAR_SECTIONS,
   DEFAULT_ADMIN_SIDEBAR_ORDER,
   normalizeAdminSidebarOrder,
 } from "../lib/admin/sidebar-order";
 import { ADMIN_CONSOLE_MODULE_IDS } from "../lib/admin/admin-module-routing";
 
 describe("admin sidebar order normalization", () => {
-  test("keeps server and client defaults stable for review and operations sections", () => {
-    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["검수"]).toEqual([
-      "restaurants",
-      "submissions",
-      "reviews",
+  test("groups the 15 visible capabilities by operational purpose", () => {
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.sections).toEqual([
+      "대시보드", "검수·데이터", "콘텐츠", "사이트 운영", "플랫폼 도구",
     ]);
-
-    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["운영"]).toEqual([
-      "users",
-      "banners",
-      "insights",
-      "pipeline",
-      "knowledge-graph",
-      "sentry",
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["대시보드"]).toEqual(["overview"]);
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["검수·데이터"]).toEqual([
+      "restaurants", "submissions", "reviews",
     ]);
-
-    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["실험실"]).toEqual([
-      "youtube-thumbnail-generator",
-      "storyboard",
-      "routes",
-      "llm",
-      "audit",
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["콘텐츠"]).toEqual([
+      "insights", "storyboard", "youtube-thumbnail-generator",
     ]);
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["사이트 운영"]).toEqual(["users", "banners"]);
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["플랫폼 도구"]).toEqual([
+      "pipeline", "knowledge-graph", "sentry", "routes", "llm", "audit",
+    ]);
+    expect(ADMIN_SIDEBAR_SECTIONS).toHaveLength(5);
   });
 
-  test("covers every routed admin module without tying route id order to sidebar IA order", () => {
-    const sidebarModuleIds = new Set(
-      Object.values(DEFAULT_ADMIN_SIDEBAR_ORDER.items).flat(),
-    );
-
+  test("covers every visible route without changing route ids", () => {
+    const sidebarModuleIds = new Set(Object.values(DEFAULT_ADMIN_SIDEBAR_ORDER.items).flat());
+    expect(sidebarModuleIds.size).toBe(15);
     expect([...sidebarModuleIds].sort()).toEqual(
-      ADMIN_CONSOLE_MODULE_IDS.filter(id => id !== 'restaurant-refresh-history').sort(),
+      ADMIN_CONSOLE_MODULE_IDS.filter((id) => id !== "restaurant-refresh-history").sort(),
     );
-    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["실험실"]).toEqual([
-      "youtube-thumbnail-generator",
-      "storyboard",
-      "routes",
-      "llm",
-      "audit",
-    ]);
-    expect(ADMIN_CONSOLE_MODULE_IDS.slice(0, 3)).toEqual([
-      "overview",
-      "routes",
-      "restaurants",
-    ]);
+    expect(ADMIN_CONSOLE_MODULE_IDS.slice(0, 3)).toEqual(["overview", "routes", "restaurants"]);
   });
 
-  test("resets old saved section slots when modules move between operations and lab", () => {
+  test("migrates old section names and retains each capability's saved order", () => {
     const normalized = normalizeAdminSidebarOrder({
       sections: ["홈", "검수", "운영", "실험실"],
       items: {
         홈: ["overview"],
         검수: ["restaurants", "submissions", "reviews"],
-        운영: ["storyboard", "banners", "users", "insights"],
-        실험실: ["audit", "llm"],
+        운영: ["banners", "users", "storyboard", "insights", "pipeline", "knowledge-graph", "sentry"],
+        실험실: ["youtube-thumbnail-generator", "audit", "llm", "routes"],
       },
     });
-
-    expect(normalized.items["검수"]).toEqual([
-      "restaurants",
-      "submissions",
-      "reviews",
+    expect(normalized.sections).toEqual([
+      "대시보드", "검수·데이터", "사이트 운영", "플랫폼 도구", "콘텐츠",
     ]);
-
-    expect(normalized.items["운영"]).toEqual([
-      "users",
-      "banners",
-      "insights",
-      "pipeline",
-      "knowledge-graph",
-      "sentry",
+    expect(normalized.items["사이트 운영"].slice(0, 2)).toEqual(["banners", "users"]);
+    expect(normalized.items["콘텐츠"].slice(0, 3)).toEqual([
+      "storyboard", "insights", "youtube-thumbnail-generator",
     ]);
-
-    expect(normalized.items["실험실"]).toEqual([
-      "youtube-thumbnail-generator",
-      "storyboard",
-      "routes",
-      "llm",
-      "audit",
+    expect(normalized.items["플랫폼 도구"].slice(0, 4)).toEqual([
+      "pipeline", "knowledge-graph", "sentry", "audit",
     ]);
   });
 
-  test("preserves a valid custom order while filling only missing defaults", () => {
+  test("preserves valid custom order and fills missing defaults", () => {
     const normalized = normalizeAdminSidebarOrder({
-      sections: ["운영", "홈"],
-      items: {
-        운영: ["banners", "users"],
-        홈: ["overview"],
-      },
+      sections: ["사이트 운영", "대시보드"],
+      items: { "사이트 운영": ["banners", "users"], 대시보드: ["overview"] },
     });
-
-    expect(normalized.sections).toEqual(["운영", "홈", "검수", "실험실"]);
-    expect(normalized.items["검수"]).toEqual([
-      "restaurants",
-      "submissions",
-      "reviews",
+    expect(normalized.sections).toEqual([
+      "사이트 운영", "대시보드", "검수·데이터", "콘텐츠", "플랫폼 도구",
     ]);
+    expect(normalized.items["사이트 운영"]).toEqual(["banners", "users"]);
+  });
 
-    expect(normalized.items["운영"]).toEqual([
-      "banners",
-      "users",
-      "insights",
-      "pipeline",
-      "knowledge-graph",
-      "sentry",
-    ]);
+  test("does not introduce legacy routes from unknown preferences", () => {
+    const normalized = normalizeAdminSidebarOrder({
+      sections: ["unknown"],
+      items: { unknown: ["privacy-incidents", "restaurant-refresh-history"] },
+    });
+    expect(Object.values(normalized.items).flat()).not.toContain("privacy-incidents");
+    expect(Object.values(normalized.items).flat()).not.toContain("restaurant-refresh-history");
   });
 });

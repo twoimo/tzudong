@@ -4441,17 +4441,17 @@ export function AdminYoutubeThumbnailGenerator() {
 
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-xs font-semibold">
+            <div className="flex items-center gap-2 text-xs font-semibold">
               <History className="h-3.5 w-3.5" />
               <span>생성 히스토리</span>
-              <Badge variant="secondary" className="px-1.5 text-2xs">
+              <Badge variant="secondary" className="px-2 text-2xs">
                 {historyStatus === "loading" && !historyError && historyRuns.length === 0 ? "불러오는 중" : historyStatus === "error" || historyError ? "확인 실패" : `${historyRuns.length}건`}
               </Badge>
-              <Badge variant="outline" className="px-1.5 text-2xs" data-thumbnail-history-source-label="true">
+              <Badge variant="outline" className="px-2 text-2xs" data-thumbnail-history-source-label="true">
                 {getThumbnailInitialPreviewSourceLabel(initialPreviewSource)}
               </Badge>
             </div>
-            <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+            <p className="mt-1 truncate text-2xs text-muted-foreground">
               실제 생성 완료 기록만 표시합니다.
             </p>
           </div>
@@ -4484,19 +4484,19 @@ export function AdminYoutubeThumbnailGenerator() {
         </div>
 
         {historyError ? (
-          <div className="admin-empty-state !min-h-0 !items-start !justify-start bg-destructive/10 px-2.5 py-2 !text-left text-2xs text-destructive" data-thumbnail-history-error="true">
+          <div className="admin-empty-state !min-h-0 !items-start !justify-start bg-destructive/10 px-3 py-2 !text-left text-2xs text-destructive" data-thumbnail-history-error="true">
             히스토리를 불러오지 못했습니다. {historyError ?? "API 상태를 확인하세요."}
           </div>
         ) : null}
 
         {historyStatus === "empty" ? (
-          <div className="admin-empty-state !min-h-0 !items-start !justify-start bg-muted/40 px-2.5 py-2 !text-left text-2xs text-muted-foreground" data-thumbnail-history-empty="true">
+          <div className="admin-empty-state !min-h-0 !items-start !justify-start bg-muted/40 px-3 py-2 !text-left text-2xs text-muted-foreground" data-thumbnail-history-empty="true">
             아직 저장된 실제 생성 기록이 없습니다. 생성 완료 후 다시 새로고침하세요.
           </div>
         ) : null}
 
         {historyRuns.length ? (
-          <div className="max-h-80 space-y-1 overflow-y-auto pr-0.5" data-thumbnail-history-run-list="true">
+          <div className="max-h-80 space-y-1 overflow-y-auto pr-1" data-thumbnail-history-run-list="true">
             {historyRuns.map((run) => (
               <div
                 key={run.id ?? run.timestamp ?? run.imagePath}
@@ -4521,15 +4521,15 @@ export function AdminYoutubeThumbnailGenerator() {
                       <p className="truncate text-muted-foreground">{run.topic || run.completedAt || run.timestamp || "주제 없음"}</p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-                      <Badge variant="outline" className="px-1.5 text-2xs" data-thumbnail-history-source-label="true">
+                      <Badge variant="outline" className="px-2 text-2xs" data-thumbnail-history-source-label="true">
                         {getThumbnailHistoryRunSourceLabel(run)}
                       </Badge>
-                      <Badge variant="outline" className="px-1.5 text-2xs" data-thumbnail-history-provenance-label="true">
+                      <Badge variant="outline" className="px-2 text-2xs" data-thumbnail-history-provenance-label="true">
                         {formatThumbnailModelProvenance(run.modelProvenance)}
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
                       variant="secondary"
@@ -4585,11 +4585,11 @@ export function AdminYoutubeThumbnailGenerator() {
         onKeyDown={handleThumbnailEditorShellKeyDown}
       >
         <div
-          className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(360px,1.2fr)_minmax(320px,0.8fr)] gap-2 overflow-x-hidden overflow-y-auto lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+          className="grid min-h-0 flex-1 grid-cols-1 auto-rows-max content-start gap-2 overflow-x-hidden overflow-y-auto lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 lg:auto-rows-auto lg:content-normal lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
           data-thumbnail-chat-right-layout="true"
         >
         <Card
-          className="order-2 flex min-h-0 flex-col overflow-hidden rounded-none border-0 bg-card shadow-none"
+          className="order-2 flex min-h-[420px] flex-col overflow-hidden rounded-none border-0 bg-card shadow-none lg:min-h-0"
           aria-label="요구사항 채팅"
           data-thumbnail-generation-input-panel="right-chat"
           data-thumbnail-input-panel="chat-stream"
@@ -4765,7 +4765,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             </p>
                           </div>
                           <div
-                            className="grid w-full grid-cols-1 gap-1.5"
+                            className="grid w-full grid-cols-1 gap-2"
                             data-thumbnail-chat-example-grid="true"
                             data-thumbnail-chat-example-grid-layout="3-card-grid"
                           >
@@ -4773,7 +4773,7 @@ export function AdminYoutubeThumbnailGenerator() {
                               <button
                                 key={preset.topic}
                                 type="button"
-                                className="group rounded-md bg-muted/40 px-2.5 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                className="group rounded-md bg-muted/40 px-3 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                 onClick={() =>
                                   handleThumbnailGuidedExamplePresetClick(preset)
                                 }
@@ -4785,7 +4785,7 @@ export function AdminYoutubeThumbnailGenerator() {
                                 <span className="block truncate text-2xs font-semibold text-foreground">
                                   {preset.headline}
                                 </span>
-                                <span className="mt-0.5 block truncate text-2xs font-medium text-primary">
+                                <span className="mt-1 block truncate text-2xs font-medium text-primary">
                                   {preset.subHeadline}
                                 </span>
                                 <span className="mt-1 block line-clamp-2 text-2xs leading-4 text-muted-foreground">
@@ -4795,7 +4795,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             ))}
                           </div>
                           <div
-                            className="flex flex-wrap gap-1.5"
+                            className="flex flex-wrap gap-2"
                             data-thumbnail-chat-message-actions="true"
                             data-thumbnail-chat-message-actions-placement="starter-panel"
                           >
@@ -4870,7 +4870,7 @@ export function AdminYoutubeThumbnailGenerator() {
                                 {message.content}
                               </p>
                               {message.mode === "stream" ? (
-                                <p className="mt-1 flex items-center gap-1.5 whitespace-pre-wrap break-keep opacity-80 [overflow-wrap:anywhere]">
+                                <p className="mt-1 flex items-center gap-2 whitespace-pre-wrap break-keep opacity-80 [overflow-wrap:anywhere]">
                                   <Loader2
                                     className="h-3 w-3 animate-spin"
                                     aria-hidden="true"
@@ -4911,7 +4911,7 @@ export function AdminYoutubeThumbnailGenerator() {
                 ) : null}
               </div>
 
-              <div className="shrink-0 space-y-2 bg-muted/20 p-2.5" data-thumbnail-chat-controls="true">
+              <div className="shrink-0 space-y-2 bg-muted/20 p-3" data-thumbnail-chat-controls="true">
                 <input
                   id="thumbnail-topic"
                   type="hidden"
@@ -4922,12 +4922,12 @@ export function AdminYoutubeThumbnailGenerator() {
 
                 {shouldShowThumbnailCanvasContext ? (
                   <div
-                    className="flex min-h-11 items-center justify-between gap-2 rounded-none border border-primary/20 bg-primary/5 px-2.5 py-1 text-2xs"
+                    className="flex min-h-11 items-center justify-between gap-2 rounded-none border border-primary/20 bg-primary/5 px-3 py-1 text-2xs"
                     data-thumbnail-chat-canvas-context="true"
                     data-thumbnail-chat-canvas-context-state={canvasContextState}
                     data-thumbnail-chat-canvas-context-visibility="selected-only"
                   >
-                    <div className="flex min-w-0 items-center gap-1.5">
+                    <div className="flex min-w-0 items-center gap-2">
                       <Badge
                         variant={canvasContextState === "editing" ? "secondary" : "outline"}
                         className="min-h-11 shrink-0 rounded-none px-2 text-xs"
@@ -5045,7 +5045,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </CardContent>
         </Card>
 
-        <Card className="order-1 flex min-h-0 flex-col overflow-hidden rounded-none border-0 bg-card shadow-none" data-thumbnail-canvas-panel="primary-left">
+        <Card className="order-1 flex h-fit min-h-0 self-start flex-col overflow-hidden rounded-none border-0 bg-card shadow-none lg:h-full lg:self-stretch" data-thumbnail-canvas-panel="primary-left">
           <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
             <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
               <span className="flex min-w-0 items-center gap-2"><span>캔버스 편집</span><span className="truncate text-xs font-normal text-muted-foreground" data-thumbnail-canvas-source="true">{getThumbnailResultSourceLabel(result)}</span></span>
@@ -5079,10 +5079,10 @@ export function AdminYoutubeThumbnailGenerator() {
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 pt-0">
+          <CardContent className="grid min-h-0 flex-1 grid-rows-[auto_auto] content-start gap-2 overflow-visible p-3 pt-0 lg:grid-rows-[minmax(0,1fr)_auto] lg:content-normal lg:gap-3 lg:overflow-hidden">
             <div
               ref={canvasViewportRef}
-              className="relative flex min-h-0 items-center justify-center overflow-hidden rounded-none bg-transparent"
+              className="relative aspect-video w-full min-h-0 self-start overflow-hidden rounded-none bg-transparent lg:aspect-auto lg:h-full lg:self-stretch"
               data-thumbnail-canvas-viewport="true"
             >
               <div
@@ -5224,7 +5224,7 @@ export function AdminYoutubeThumbnailGenerator() {
             </div>
             <div className="min-h-0 overflow-hidden">
               <div className="overflow-hidden rounded-none bg-muted/30 p-1" data-thumbnail-editor-toolbar="true">
-                <div className="flex w-full gap-1.5 overflow-x-auto pb-1 [&>button]:shrink-0 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] lg:overflow-x-visible lg:pb-0" data-thumbnail-tradingview-tool-palette="true" data-thumbnail-canvas-tool-row="true" role="toolbar" aria-label="캔버스 문구 편집 도구">
+                <div className="flex w-full gap-2 overflow-x-auto pb-1 [&>button]:shrink-0 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] lg:overflow-x-visible lg:pb-0" data-thumbnail-tradingview-tool-palette="true" data-thumbnail-canvas-tool-row="true" role="toolbar" aria-label="캔버스 문구 편집 도구">
                   {THUMBNAIL_EDITOR_TOOLS.map((tool) => (
                     <Button
                       key={tool.id}

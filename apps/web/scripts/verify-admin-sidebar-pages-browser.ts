@@ -9,7 +9,8 @@
 import { chromium, type Request } from 'playwright';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import { chromeForTestingExecutable } from '../tests-unit/fixtures/chrome-for-testing.ts';
 import { fileURLToPath } from 'node:url';
 import { isAdminSentryResponse } from '../types/admin-sentry.ts';
 import { isKnowledgeGraphPage } from '../types/knowledge-graph.ts';
@@ -19,7 +20,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const origin = 'http://127.0.0.1:18794';
 const allowedOrigins = new Set([origin, 'http://127.0.0.1:18793']);
 const connection = process.argv[2];
-if (!/^ws:\/\/127\.0\.0\.1:\d+\/devtools\/browser\/[a-z0-9-]+$/i.test(connection ?? '')) throw new Error('OWNED_LOCAL_BROWSER_REQUIRED');
+// Repository browser-test mode owns a fresh, credential-free context, not a user tab.
+const ownedHeadless = connection === '--owned-headless';
+if (!ownedHeadless && !/^ws:\/\/127\.0\.0\.1:\d+\/devtools\/browser\/[a-z0-9-]+$/i.test(connection ?? '')) throw new Error('OWNED_LOCAL_BROWSER_REQUIRED');
 const argument = (name: string) => process.argv.find(value => value.startsWith(`--${name}=`))?.split('=').slice(1).join('=');
 const moduleIds = [
   'overview', 'restaurants', 'submissions', 'reviews', 'users', 'banners',
@@ -53,7 +56,10 @@ if (!/^[a-z0-9-]{1,80}$/.test(suffix)) throw new Error('INVALID_REPORT_SUFFIX');
 const captureScreenshots = argument('screenshots') === 'true';
 const browserSession = argument('browser-session') ?? 'tzudong-sidebar-audit-astra';
 if (!/^[a-z0-9-]{1,80}$/.test(browserSession)) throw new Error('INVALID_BROWSER_SESSION');
-const output = resolve(root, `performance/ui-renewal-20261003/admin-sidebar-pages-browser-${suffix}.json`);
+const outputDirectory = process.env.ADMIN_AUDIT_OUTPUT_DIR;
+if (outputDirectory && !isAbsolute(outputDirectory)) throw new Error('ABSOLUTE_AUDIT_OUTPUT_REQUIRED');
+const evidenceRoot = outputDirectory ?? resolve(root, 'performance/ui-renewal-20261003');
+const output = resolve(evidenceRoot, `admin-sidebar-pages-browser-${suffix}.json`);
 const sha256 = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const sourceRoots = ['app/admin', 'app/api/admin', 'app/insights', 'components/admin', 'components/ui', 'contexts', 'hooks', 'config', 'integrations', 'lib', 'styles', 'types', 'data/knowledge-graph'];
 
@@ -68,14 +74,17 @@ function sources() {
     }
   };
   for (const path of sourceRoots) walk(resolve(root, path));
-  paths.push(resolve(root, 'scripts/preview-design-fixtures.mjs'), fileURLToPath(import.meta.url));
+  paths.push(resolve(root, 'app/app-globals.css'), resolve(root, 'package.json'), resolve(root, 'package-lock.json'), resolve(root, 'scripts/preview-design-fixtures.mjs'), fileURLToPath(import.meta.url));
   const manifest = paths.sort().map(path => ({ path: relative(root, path), sha256: sha256(readFileSync(path)) }));
   return { signature: sha256(JSON.stringify(manifest)), manifest };
 }
 const sourceStart = sources();
 const startedAt = new Date().toISOString();
-const browser = await chromium.connectOverCDP(connection);
-const context = browser.contexts()[0];
+const browser = ownedHeadless
+  ? await chromium.launch({ headless: true, executablePath: chromeForTestingExecutable() })
+  : await chromium.connectOverCDP(connection);
+const context = ownedHeadless ? await browser.newContext() : browser.contexts()[0];
+if (ownedHeadless) await context.newPage();
 const foundPage = context.pages().find(candidate => candidate.url().startsWith(origin))
   ?? context.pages().find(candidate => candidate.url() === 'about:blank');
 const blankUrls = new Set(['about:blank', 'chrome://new-tab-page/', 'chrome://newtab/']);
@@ -118,6 +127,7 @@ const endpoints = new Set([
   '/api/admin/restaurant-refresh-history', '/api/admin/audit-events', '/api/admin/storyboard/production',
   '/api/admin/sentry', '/api/admin/knowledge-graph', '/api/admin/pipeline', '/api/insights/treemap',
   '/api/admin/routes/directions', '/api/admin/routes/candidates', '/api/admin/map-overlays', '/api/admin/trend-proposals',
+  '/api/admin/submissions', '/api/admin/restaurant-requests', '/api/admin/banners',
   '/rest/v1/restaurant_submissions', '/rest/v1/restaurant_submission_items', '/rest/v1/reviews',
   '/rest/v1/user_roles', '/rest/v1/rpc/get_current_privacy_eligibility', '/rest/v1/rpc/read_public_profile_summaries',
 ]);
@@ -276,12 +286,23 @@ async function observation(pattern: string) {
       titleStyle: titleStyle ? { fontSize: titleStyle.fontSize, fontWeight: titleStyle.fontWeight, lineHeight: titleStyle.lineHeight } : null,
       titleCount: headings.filter(element => element.tagName === 'H1').length,
       loading, controls: controls.length, unnamedControls: controls.filter(element => !named(element)).length,
-      escapedControls, rows: root.querySelectorAll('tbody tr').length,
+      escapedControls,
+      smallTouchTargets: innerWidth <= 1023 ? controls.filter(element => {
+        if (element.tagName !== 'BUTTON' && element.getAttribute('data-slot') !== 'button' && element.getAttribute('role') !== 'combobox') return false;
+        if (['checkbox', 'switch'].includes(element.getAttribute('role') ?? '')) return false;
+        const rect = element.getBoundingClientRect();
+        return rect.width < 43 || rect.height < 43;
+      }).map(element => { const rect = element.getBoundingClientRect(); return { tag: element.tagName, role: element.getAttribute('role'), width: rect.width, height: rect.height }; }) : [],
+      smallInputFonts: innerWidth <= 1023 ? controls.filter(element => /^(INPUT|SELECT|TEXTAREA)$/.test(element.tagName)
+        && !['checkbox', 'radio'].includes(element.getAttribute('type') ?? '') && parseFloat(getComputedStyle(element).fontSize) < 16).length : 0,
+      rows: root.querySelectorAll('tbody tr').length,
       images: [...root.querySelectorAll('img')].filter(visible).length,
       brokenImages: [...root.querySelectorAll('img')].filter(element => visible(element) && element.complete && element.naturalWidth === 0).length,
       graphs: [...root.querySelectorAll('svg[role],canvas')].filter(visible).length,
       graphNodes: root.querySelectorAll('svg[aria-label="지식 연결 그래프"] [role="button"]').length,
       graphEdges: root.querySelectorAll('svg[aria-label="지식 연결 그래프"] line').length,
+      thumbnailQueueState: root.querySelector('[data-thumbnail-chat-status]')?.getAttribute('data-thumbnail-chat-status') ?? null,
+      thumbnailPreviewState: root.querySelector('[data-thumbnail-initial-preview-source]')?.getAttribute('data-thumbnail-initial-preview-source') ?? null,
       operationsRows: root.querySelectorAll('[data-operations-row]').length,
       operationsPending: (() => { const value = Number(root.querySelector('[data-operations-summary="pending"]')?.textContent?.match(/^\s*([0-9,]+)/)?.[1]?.replaceAll(',', '') ?? NaN); return Number.isFinite(value) ? value : null; })(),
       boundedHorizontalScrollRegions: [...root.querySelectorAll<HTMLElement>('[data-allow-horizontal-scroll="true"]')].filter(visible)
@@ -289,7 +310,7 @@ async function observation(pattern: string) {
       errorState: Boolean(root.querySelector('[data-admin-audit-unavailable-state="true"], [data-admin-sentry-state="unavailable"]')) || /조회 실패|읽지 못|불러올 수 없|불러오지 못|로드 실패|오류가 발생|Application error|예기치 않은 오류/.test(text),
       authenticationBlocked: /접근 권한이 없습니다|로그인이 필요합니다|관리자만 접근할 수/.test(text),
       notConfigured: Boolean(root.querySelector('[data-admin-sentry-state="not_configured"]')) || /Sentry 연결 (설정이 필요합니다|미설정)/.test(text),
-      providerFallback: /도로 경로 대신 로컬 후보|지도 .*불러올 수 없|지도 API 로딩 실패/.test(text),
+      providerFallback: /도로 경로 대신 로컬 후보|지도 .*불러올 수 없|지도 API 로딩 실패|네이버 지도를 불러오지 못했습니다/.test(text),
       emptyState: /검색 결과가 없|일치하는 지식이 없|아직 없|등록된 .*없|내역이 없|이력이 없|기록이 없|데이터가 없|결과가 없|제보가 없|리뷰가 없|사용자가 없|항목이 없/.test(text),
       documentOverflow: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
       bodyOverflow: Math.max(0, document.body.scrollWidth - document.documentElement.clientWidth),
@@ -406,7 +427,7 @@ function withReadEvidence(records: typeof cases) {
     for (const event of (record.network ?? []) as NetworkEvent[]) {
       if (event.method === 'GET' && event.result === 'http-ok') reads.set(`${group}:${event.endpoint}`, { caseIndex, module: record.module });
     }
-    const expected = record.module === 'submissions' ? '/rest/v1/restaurant_submissions' : record.module === 'reviews' ? '/rest/v1/reviews' : null;
+    const expected = record.module === 'submissions' ? '/api/admin/submissions' : record.module === 'reviews' ? '/rest/v1/reviews' : null;
     if (!expected) return record;
     const evidence = reads.get(`${group}:${expected}`);
     const state = record.observation as Awaited<ReturnType<typeof observation>>;
@@ -422,7 +443,7 @@ const progress = () => {
   const report = {
     kind: 'admin-sidebar-rendered-synthetic-fixture-audit', schemaVersion: 1,
     startedAt, observedThrough: new Date().toISOString(), synthetic: true, syntheticLogin: true, origin,
-    browserSession, agentBrowser: '0.38.1', browser: browser.version(), node: process.version,
+    browserSession, browserDriver: ownedHeadless ? 'pinned-playwright-chrome-for-testing' : 'owned-CDP', browser: browser.version(), node: process.version,
     limitations: ['Synthetic local fixture cannot establish production behavior, source-data correctness, provider availability, or deployment.',
       'Source manifests are frozen evidence; a matching running bundle is not assumed. HMR may change during observation.',
       'Synthetic login cookies are restricted to this isolated browser. No provider, generation, approval, deletion, application persistence, or hosted operation is exercised.',
@@ -440,7 +461,8 @@ const progress = () => {
 
 // Shell bypass alone does not enable user-gated submission/review read queries.
 // This GET creates only the fixture's synthetic browser session, never a real login.
-await page.goto(origin + '/__fixture/session', { waitUntil: 'domcontentloaded' });
+// Cold Next compilation is separate from the bounded steady-state page readiness checks.
+await page.goto(origin + '/__fixture/session', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 for (const width of widths) for (const colorScheme of colors) {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 960 });
   await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
@@ -458,7 +480,7 @@ for (const width of widths) for (const colorScheme of colors) {
       interactionPhase = 'menu-trigger-readiness';
       await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => {
         const label = button.getAttribute('aria-label') ?? '';
-        return ['관리자 메뉴 열기', '대시보드 (KPI)'].includes(label) && button.getBoundingClientRect().width > 0;
+        return ['관리자 메뉴 열기', '운영 대시보드', '대시보드 (KPI)'].includes(label) && button.getBoundingClientRect().width > 0;
       }));
       const openMenu = page.getByRole('button', { name: '관리자 메뉴 열기', exact: true });
       interactionPhase = 'menu-open';
@@ -514,12 +536,15 @@ for (const width of widths) for (const colorScheme of colors) {
       if (settled.readinessTimedOut) issues.push('readiness-timeout');
       if (state && (state.documentOverflow > 1 || state.bodyOverflow > 1)) issues.push('page-horizontal-overflow');
       if (state?.escapedControls) issues.push('horizontally-clipped-controls');
+      if (state?.smallTouchTargets.length) issues.push('small-touch-targets');
+      if (state?.smallInputFonts) issues.push('small-mobile-input-font');
       if (state?.darkApplied !== (colorScheme === 'dark')) issues.push('theme-not-applied');
       if (!state?.reducedMotion) issues.push('reduced-motion-not-applied');
-      if (state?.errorState) issues.push('rendered-error-state');
+      if (state?.errorState && !state?.providerFallback) issues.push('rendered-error-state');
+      if (moduleId === 'youtube-thumbnail-generator' && (state?.thumbnailQueueState !== 'ready' || state?.thumbnailPreviewState?.endsWith('-error'))) issues.push('thumbnail-read-contract');
       if (state?.authenticationBlocked) issues.push('authentication-blocked');
       if (!state?.controls) issues.push('no-enabled-controls');
-      let bodyState = state?.loading ? 'skeleton-or-loading' : state?.notConfigured ? 'not-configured' : state?.errorState ? 'error' : state?.emptyState ? 'rendered-empty' : 'rendered-content';
+      let bodyState = state?.loading ? 'skeleton-or-loading' : state?.notConfigured ? 'not-configured' : state?.providerFallback ? 'provider-fallback' : state?.errorState ? 'error' : state?.emptyState ? 'rendered-empty' : 'rendered-content';
       if (['sentry', 'knowledge-graph'].includes(moduleId) && state?.errorState) {
         bodyState = apiSchemas.some(schema => !schema.valid) ? 'fixture-response-contract-invalid' : 'api-unavailable';
       }
@@ -527,10 +552,22 @@ for (const width of widths) for (const colorScheme of colors) {
       const geometry = await canvas.evaluate(root => {
         const host = root.getBoundingClientRect();
         const graph = root.querySelector('[data-knowledge-canvas]')?.getBoundingClientRect();
+        const nodes = [...root.querySelectorAll('[data-pipeline-stage] rect')].map(node => node.getBoundingClientRect());
+        const pipelineOverlaps = nodes.reduce((count, a, index) => count + nodes.slice(index + 1).filter(b => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1).length, 0);
+        const kpiTitles = [...root.querySelectorAll('[data-admin-dashboard-kpi-title-row="single-line"] p')].map(title => {
+          const rect = title.getBoundingClientRect(), style = getComputedStyle(title);
+          return { height: rect.height, lineHeight: Number.parseFloat(style.lineHeight), singleLine: style.whiteSpace === 'nowrap' && rect.height <= Number.parseFloat(style.lineHeight) + 1, clipped: title.scrollWidth > title.clientWidth + 1 };
+        });
+        const mobileHeader = document.querySelector('[data-admin-console-mobile-header="true"]');
+        const duplicateMobileSubtitle = Boolean(mobileHeader && mobileHeader.getBoundingClientRect().width > 0 && mobileHeader.textContent?.includes('현재 화면 ·'));
         return { panelWidth: host.width, panelHeight: host.height, graphWidth: graph?.width ?? null,
-          graphHeight: graph?.height ?? null, graphHeightShare: graph ? graph.height / host.height : null };
+          graphHeight: graph?.height ?? null, graphHeightShare: graph ? graph.height / host.height : null,
+          pipelineNodes: nodes.length, pipelineOverlaps, kpiTitles, duplicateMobileSubtitle };
       });
-      const screenshot = captureScreenshots ? resolve(root, `performance/ui-renewal-20261003/cms-${moduleId}-${width}-${colorScheme}-${suffix}.png`) : null;
+      if (moduleId === 'pipeline' && (geometry.pipelineNodes !== 8 || geometry.pipelineOverlaps)) issues.push('pipeline-node-geometry');
+      if (moduleId === 'overview' && (geometry.kpiTitles.length !== 5 || geometry.kpiTitles.some(title => !title.singleLine || title.clipped))) issues.push('kpi-title-geometry');
+      if (geometry.duplicateMobileSubtitle) issues.push('duplicate-mobile-header-subtitle');
+      const screenshot = captureScreenshots ? resolve(evidenceRoot, `cms-${moduleId}-${width}-${colorScheme}-${suffix}.png`) : null;
       if (screenshot) await page.screenshot({ path: screenshot });
       await canvas.focus(); await page.keyboard.press('Tab');
       const keyboard = await page.evaluate(() => {
@@ -545,7 +582,7 @@ for (const width of widths) for (const colorScheme of colors) {
       const requiredFailures = network.filter(event => (event.result === 'http-error' || event.result === 'failed')
         && !network.some(denied => denied.result === 'denied-method' && denied.endpoint === event.endpoint && denied.method === event.method));
       if (requiredFailures.length) issues.push('api-failure');
-      const dataReadEndpoint = moduleId === 'submissions' ? '/rest/v1/restaurant_submissions' : moduleId === 'reviews' ? '/rest/v1/reviews' : null;
+      const dataReadEndpoint = moduleId === 'submissions' ? '/api/admin/submissions' : moduleId === 'reviews' ? '/rest/v1/reviews' : null;
       const dataReadObserved = dataReadEndpoint === null ? null : network.some(event => event.endpoint === dataReadEndpoint && event.result === 'http-ok');
       if (dataReadObserved === false) bodyState = 'rendered-query-not-exercised';
       const sourceAfter = sources().signature;
@@ -567,5 +604,6 @@ for (const width of widths) for (const colorScheme of colors) {
 }
 progress();
 console.log(JSON.stringify({ report: relative(root, output), cases: cases.length, deniedNonReadMethodAttempts: totalMutationsBlocked, deniedExternalAttempts: totalExternalBlocked }));
-// Disconnect the CDP client without closing the agent-browser-owned session.
+// Only the dedicated repository test browser is closed; attached user sessions stay open.
+if (ownedHeadless) await browser.close();
 await browser.close();

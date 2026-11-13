@@ -56,6 +56,7 @@
 }
 /* Administrator-only geometry; kept out of the public home CSS. */
 [data-admin-console-shell="true"] { --admin-sidebar-expanded-width: 13rem; --admin-sidebar-expanded-max-width: 13rem; font-size: 13px; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+[data-admin-console-shell="true"] [data-slot="badge"] { border-radius: 0; }
 [data-admin-sidebar-scroll="hidden-scrollbar"] { background: hsl(var(--card)); box-shadow:none; padding: 0.75rem 0.75rem; }
 [data-admin-sidebar-header="true"] { min-height: 3rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 0; }
 [data-admin-sidebar-header-copy="true"] > p { display: none; }
@@ -179,6 +180,10 @@
 }
 @media (max-width: 767px) {
   [data-admin-console-content="true"] { padding: 0.75rem; padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem) !important; }
+  [data-admin-dashboard-kpi-title-row="single-line"] { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; gap: 0.25rem; }
+  [data-admin-dashboard-kpi-title-row="single-line"] > div:first-child { width: 100%; min-width: 0; flex: 1 1 auto; }
+  [data-admin-dashboard-kpi-title-row="single-line"] p { flex: 1 1 0; min-width: 0; }
+  [data-admin-dashboard-kpi-title-actions="single-line-scroll"] { width: 100%; max-width: 100%; justify-content: flex-end; overflow: visible; }
   [data-admin-module-header="compact"] > div { flex-wrap: wrap; }
   [data-admin-module-actions="top-right"] { flex-wrap: wrap; max-width: 100%; }
   .admin-page-header > .admin-page-header-controls,
@@ -373,3 +378,6 @@
   .admin-page-header-identity { flex-wrap: wrap; gap: 4px 8px; }
   .admin-page-header-summary { white-space: normal; }
 }
+
+/* Preserve explicit single-line KPI titles after the shared paragraph wrapping rule. */
+[data-admin-console-shell="true"] [data-admin-dashboard-kpi-title-row="single-line"] p { white-space: nowrap; text-wrap: nowrap; }

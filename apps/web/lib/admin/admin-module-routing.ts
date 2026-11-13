@@ -117,7 +117,7 @@ export function getAdminModuleStateWarning(
   }
 
   if (requestedModule && !isAdminConsoleRouteModuleId(requestedModule)) {
-    return '알 수 없는 관리자 화면 요청을 대시보드 (KPI)로 되돌렸습니다.';
+    return '알 수 없는 관리자 화면 요청을 운영 대시보드로 되돌렸습니다.';
   }
 
   if (legacyModuleId) {

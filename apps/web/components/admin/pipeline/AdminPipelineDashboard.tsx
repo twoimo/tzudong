@@ -19,8 +19,8 @@ import styles from "./PipelineFlowDiagram.module.css";
 const ACTIVE_JOB_STATUSES = new Set(["Queued", "Fetching", "Inserting"]);
 const ACTION_LABELS = { enqueue: "수집 실행", pause: "일시 정지", resume: "다시 시작", cancel: "실행 취소" };
 const LOOPBACK_GRAFANA_DASHBOARD_PREFIX = "http://127.0.0.1:3001/d/tzudong-pipeline-frozen-counters";
-const buttonClass = "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium disabled:opacity-50";
-const inputClass = "min-h-9 w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-sm";
+const buttonClass = "inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-border px-3 text-xs font-medium disabled:opacity-50";
+const inputClass = "min-h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm";
 function allowLoopbackGrafanaIframe() {
   return process.env.NODE_ENV !== "production" && typeof window !== "undefined" && window.location.hostname === "127.0.0.1";
 }
@@ -194,10 +194,10 @@ export function AdminPipelineDashboard() {
         <SheetHeader className="pr-8 text-left"><SheetTitle id="pipeline-stage-title" tabIndex={-1} className="text-base outline-none">{selectedStage.label}</SheetTitle><SheetDescription>{COMPACT_STAGE_LABELS[selectedStage.state]}{selectedStage.state !== "manual" ? ` · ${formatPipelineDuration(selectedStage.durationSeconds)}` : ""}</SheetDescription></SheetHeader>
         <div id="pipeline-stage-body" className="admin-detail-section mt-4 space-y-3">
           <p className="text-xs text-muted-foreground">마지막 배치 기록 · {manifestLabel} · {formatCheckedAt(manifest?.checkedAt)}</p>
-          <div className="grid gap-1.5 text-xs sm:grid-cols-2"><p><span className="mr-2 text-muted-foreground">입력</span>{selectedStage.input}</p><p><span className="mr-2 text-muted-foreground">출력</span>{selectedStage.output}</p></div>
-          <p data-pipeline-explanation className="mt-1.5 text-xs leading-5 text-muted-foreground">{selectedStage.contract}</p>
+          <div className="grid gap-2 text-xs sm:grid-cols-2"><p><span className="mr-2 text-muted-foreground">입력</span>{selectedStage.input}</p><p><span className="mr-2 text-muted-foreground">출력</span>{selectedStage.output}</p></div>
+          <p data-pipeline-explanation className="mt-2 text-xs leading-5 text-muted-foreground">{selectedStage.contract}</p>
           <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">세부 기록·근거</summary>
-            {selectedStage.details.length ? <ul className="mt-2 space-y-1">{selectedStage.details.map(detail => <li key={detail.name} className="flex flex-wrap justify-between gap-x-3 gap-y-1 rounded-md bg-muted/30 px-2 py-1.5"><span className="break-words">{detail.name}</span><span>{detail.event ? ({ completed: "완료", failed: "실패", optional_skipped: "선택 생략", downstream_skipped: "선행 단계로 생략" })[detail.event.status] : "미확인"} · {formatPipelineDuration(detail.event?.durationSeconds ?? null)}</span></li>)}</ul> : null}
+            {selectedStage.details.length ? <ul className="mt-2 space-y-1">{selectedStage.details.map(detail => <li key={detail.name} className="flex flex-wrap justify-between gap-x-3 gap-y-1 rounded-md bg-muted/30 px-2 py-2"><span className="break-words">{detail.name}</span><span>{detail.event ? ({ completed: "완료", failed: "실패", optional_skipped: "선택 생략", downstream_skipped: "선행 단계로 생략" })[detail.event.status] : "미확인"} · {formatPipelineDuration(detail.event?.durationSeconds ?? null)}</span></li>)}</ul> : null}
             <p className="mt-2 break-all">{selectedStage.source}</p><p>backend/ARCHITECTURE.md · backend/DATA_CONTRACTS.md</p><p className="break-all">{PIPELINE_FLOW_DOCUMENT}</p>
           </details>
 

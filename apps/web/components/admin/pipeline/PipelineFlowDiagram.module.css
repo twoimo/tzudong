@@ -18,3 +18,5 @@
 .status { font-size: 12px; fill: hsl(var(--foreground)); }
 
 @media (max-width: 767px) { .workspace { min-height: 0; } .canvas { min-height: 280px; } .recordLabel { top: 8px; left: 8px; max-width: calc(100% - 16px); } }
+/* 7 ranks × 64px nodes + 6 × 24px gaps + 24px edge padding on both ends. */
+.canvas:has([data-flow-direction="vertical"]) { min-height: 640px; flex-shrink: 0; }

@@ -357,6 +357,56 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         await expectNoRuntimeErrorsAfterHydration(page, runtimeErrors);
     });
 
+    test('관리자 대시보드 모바일 헤더와 KPI 제목은 390/834/1423px에서 겹치지 않고 한 줄로 읽힌다', async ({ page }, testInfo) => {
+        test.setTimeout(90_000);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await installE2EAdminShellBypass(page);
+        await page.setExtraHTTPHeaders({
+            [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+            [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
+        });
+        await gotoAndHidePopup(page, '/admin');
+        const dashboard = page.locator('[data-admin-dashboard-management="true"]');
+        await expect(dashboard).toBeVisible({ timeout: 20_000 });
+
+        const mobileHeader = page.locator('[data-admin-console-mobile-header="true"]');
+        await expect(mobileHeader).toBeVisible();
+        await expect(mobileHeader.getByText(/현재 화면\s*·/)).toHaveCount(0);
+        const brand = await mobileHeader.getByText('관리자 콘솔', { exact: true }).boundingBox();
+        const menu = await mobileHeader.getByRole('button', { name: '관리자 메뉴 열기' }).boundingBox();
+        expect(brand).not.toBeNull();
+        expect(menu).not.toBeNull();
+        expect(Math.abs((brand?.y ?? 0) - (menu?.y ?? 0))).toBeLessThanOrEqual(1);
+        await expect(page.locator('#admin-console-canvas [aria-live="polite"]').first())
+            .toContainText('운영 대시보드 작업 화면으로 전환됨');
+
+        for (const width of [390, 834, 1423]) {
+            await page.setViewportSize({ width, height: width === 390 ? 844 : 960 });
+            const observations = await page.locator('[data-admin-dashboard-kpi-card]').evaluateAll((cards) => cards.map((card) => {
+                const row = card.querySelector<HTMLElement>('[data-admin-dashboard-kpi-title-row="single-line"]');
+                const title = row?.querySelector<HTMLElement>('p');
+                const actions = row?.querySelector<HTMLElement>('[data-admin-dashboard-kpi-title-actions="single-line-scroll"]');
+                const titlePart = row?.firstElementChild?.getBoundingClientRect();
+                const actionBox = actions?.getBoundingClientRect();
+                return {
+                    title: title?.textContent?.trim() ?? '',
+                    whiteSpace: title ? getComputedStyle(title).whiteSpace : '',
+                    height: title?.getBoundingClientRect().height ?? 0,
+                    lineHeight: title ? Number.parseFloat(getComputedStyle(title).lineHeight) : 0,
+                    actionsBelowTitle: Boolean(titlePart && actionBox && actionBox.y >= titlePart.bottom - 1),
+                };
+            }));
+            expect(observations.length).toBeGreaterThanOrEqual(5);
+            expect(observations.every((item) => item.title.length > 0 && item.whiteSpace === 'nowrap'
+                && item.height <= item.lineHeight + 1)).toBe(true);
+            if (width === 390) expect(observations[0]?.actionsBelowTitle).toBe(true);
+            await page.screenshot({
+                path: testInfo.outputPath(`admin-overview-mobile-polish-${width}.png`),
+                fullPage: false,
+            });
+        }
+    });
+
     test('KPI 대시보드는 관리자 세션에서 브라우저 런타임 오류 없이 렌더링된다', async ({ page }, testInfo) => {
         const runtimeErrors = captureRuntimeErrors(page);
 

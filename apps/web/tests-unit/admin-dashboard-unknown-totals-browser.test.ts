@@ -103,13 +103,18 @@ async function bundle(entry: string) {
         await page.addScriptTag({ content: script });
         const ops = page.locator('[data-admin-dashboard-widget-card="ops"]');
         await ops.scrollIntoViewIfNeeded();
-        const valueOf = (label: string) => ops.getByText(label, { exact: true }).locator('xpath=following-sibling::span[1]');
         await playwrightExpect(ops.locator('[data-admin-dashboard-card-title-delta]')).toHaveText('(검수 리스크 —)');
-        await playwrightExpect(valueOf('운영 자산')).toHaveText('—');
-        await playwrightExpect(valueOf('검수 리스크')).toHaveText('—');
-        for (const label of ['제보 대기', '추천 대기', '리뷰 대기', '맛집 데이터', '좌표 미완료', '비활성 배너']) {
-          await playwrightExpect(valueOf(label)).toHaveText('—');
-        }
+        await playwrightExpect(ops.getByLabel('운영 자산 확인 불가 항목')).toHaveText(
+          '확인 불가: 영상 수, 맛집 데이터, 좌표 완료, 영상 연결',
+        );
+        await playwrightExpect(ops.getByLabel('검수 리스크 확인 불가 항목')).toHaveText(
+          '확인 불가: 제보 대기, 추천 대기, 리뷰 대기, 좌표 미완료, 비활성 배너',
+        );
+        await playwrightExpect(
+          ops.getByText('확인 가능한 수치가 없습니다.', { exact: true }),
+        ).toHaveCount(2);
+        await playwrightExpect(ops.getByRole('img')).toHaveCount(0);
+        await playwrightExpect(ops.getByRole('table')).toHaveCount(0);
         expect(externalRequests).toBe(0);
         expect(pageErrors).toEqual([]);
       } finally {
@@ -140,11 +145,15 @@ async function bundle(entry: string) {
       await page.addScriptTag({ content: script });
       const ops = page.locator('[data-admin-dashboard-widget-card="ops"]');
       await ops.scrollIntoViewIfNeeded();
-      const valueOf = (label: string) => ops.getByText(label, { exact: true }).locator('xpath=following-sibling::span[1]');
       await playwrightExpect(ops.locator('[data-admin-dashboard-card-title-delta]')).toHaveText('(검수 리스크 0)');
-      await playwrightExpect(valueOf('운영 자산')).toHaveText('0');
-      await playwrightExpect(valueOf('제보 대기')).toHaveText('0');
-      await playwrightExpect(valueOf('맛집 데이터')).toHaveText('0');
+      const assetTable = ops.getByRole('table', { name: '운영 자산 상대 크기 비교 데이터' });
+      const riskTable = ops.getByRole('table', { name: '검수 리스크 상대 크기 비교 데이터' });
+      for (const row of ['영상 수 0', '맛집 데이터 0', '좌표 완료 0', '영상 연결 0']) {
+        await playwrightExpect(assetTable.getByRole('row', { name: row })).toBeVisible();
+      }
+      for (const row of ['제보 대기 0', '추천 대기 0', '리뷰 대기 0', '좌표 미완료 0', '비활성 배너 0']) {
+        await playwrightExpect(riskTable.getByRole('row', { name: row })).toBeVisible();
+      }
       expect(pageErrors).toEqual([]);
     } finally {
       await context.close();

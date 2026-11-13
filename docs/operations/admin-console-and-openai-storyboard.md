@@ -58,3 +58,22 @@ npm run typecheck:parity
 ```
 
 The SQL harness reports its exact migration hash and container image, and removes only its owned disposable container. Browser fixtures use synthetic data and block external requests; their success is never reported as production content or live provider execution.
+
+## Responsive console acceptance
+
+The loopback design fixture is a synthetic read-only environment, not an alternate production login. Its current cookie-generation, account-status, knowledge-graph, privacy-incident and thumbnail-list response shapes match their inspected consumers. Existing production authentication and authorization are unchanged. All generation and other server-bound writes remain blocked during the browser audit.
+
+With the owned fixture gateway on `127.0.0.1:18794` and its isolated upstream already running, from `apps/web`:
+
+```sh
+ADMIN_AUDIT_OUTPUT_DIR=/absolute/private/admin-audit \
+  bun scripts/verify-admin-sidebar-pages-browser.ts --owned-headless \
+  --widths=390,834,1423 --colors=light,dark --screenshots=true \
+  --report-suffix=operator-check
+ADMIN_AUDIT_OUTPUT_DIR=/absolute/private/admin-audit \
+  bun scripts/verify-admin-legacy-routes-browser.ts
+```
+
+The first check covers 15 modules at three widths in both themes, including horizontal clipping, touch/input sizes, keyboard entry, safe read-only interactions, KPI title geometry and pipeline node overlap. The second waits for the canonical destination and rendered data state for five legacy/standalone addresses at three widths. Both retain source-bound evidence outside Git. An unconfigured Sentry connection and a blocked external map provider remain explicit limitations, not successful provider checks. The storyboard schema-held state is also intentionally visible; no creation is implied.
+
+The mobile pipeline reserves space from its seven ranks, node height and gaps rather than squeezing the graph into a short viewport. Mobile thumbnail output keeps its actual 16:9 bounds before the editing/chat controls; desktop retains the side-by-side workspace. Shared badges are square only inside the admin shell, and the real account avatar keeps its shape.
