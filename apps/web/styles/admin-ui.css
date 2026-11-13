@@ -378,3 +378,104 @@
 
 /* Preserve explicit single-line KPI titles after the shared paragraph wrapping rule. */
 [data-admin-console-shell="true"] [data-admin-dashboard-kpi-title-row="single-line"] p { white-space: nowrap; text-wrap: nowrap; }
+
+/* Slotline-inspired workspace density: one heading/toolbar, explicit data boundaries.
+   These administrator-only rules intentionally follow the shared geometry layer. */
+[data-admin-console-shell="true"] { --admin-sidebar-expanded-width: 12rem; --admin-sidebar-expanded-max-width: 12rem; }
+[data-admin-console-content="true"] { padding: var(--admin-space-2); }
+[data-admin-sidebar-scroll="hidden-scrollbar"] { padding: var(--admin-space-2); border-right: 1px solid hsl(var(--border)); }
+[data-admin-sidebar-header="true"] { min-height: 40px; margin-bottom: 8px; padding-bottom: 8px; background: transparent; }
+[data-admin-sidebar-section-list="spacious"] > :not([hidden]) ~ :not([hidden]) { margin-top: var(--admin-space-3); }
+[data-admin-sidebar-section-list="spacious"] > * > p { padding-inline: 8px; font-size: 12px; }
+[data-admin-console-shell="true"] :is(.font-extrabold, .font-black, .font-bold) { font-weight: 600; }
+[data-admin-console-shell="true"] :is(.text-xs, .text-2xs) { letter-spacing: 0; }
+.admin-page-header { min-height: 48px; padding: 4px 12px; }
+.admin-page-header-identity, .admin-page-header-title-group, .admin-page-header-controls { min-height: 36px; }
+.admin-page-header-actions :is(button, select, input, a[data-slot="button"]) { min-height: 32px; }
+.admin-page-header [data-admin-dashboard-action-bar="true"] { padding: 0; border: 0; background: transparent; }
+.admin-page-header .admin-storyboard-project-switch { width: 208px; min-width: 160px; height: 32px; padding-block: 4px; }
+[data-admin-operations-overview="true"] { gap: 8px; padding: 8px 12px; }
+[data-admin-operations-overview="true"] > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 8px; }
+[data-admin-operations-overview="true"] > div > p { margin: 0; }
+[data-admin-operations-overview="true"] > div > p:last-child { grid-column: 1 / -1; font-size: 12px; line-height: 16px; }
+[data-admin-dashboard-kpi-card] { min-height: 80px; padding: 8px; gap: 4px; }
+[data-admin-dashboard-kpi-value-size="bounded"] { font-size: clamp(20px, 10cqw, 28px); font-weight: 600; }
+[data-admin-dashboard-management="true"] > div[data-admin-dashboard-order-mode] { flex: 0 0 auto; }
+[data-admin-dashboard-widget-card="engagementRate"] [data-admin-dashboard-diagnosis-card] { min-height: 96px; }
+[data-admin-console-shell="true"] .admin-records-table :is(th, [data-slot="table-head"]) { height: 32px; padding: 4px 8px; }
+[data-admin-console-shell="true"] .admin-records-table :is(td, [data-slot="table-cell"]) { height: 48px; padding: 4px 8px; }
+[data-admin-console-shell="true"] .admin-cms-table th { height: 32px; padding: 4px 8px; }
+[data-admin-console-shell="true"] .admin-cms-table td { height: 40px; padding: 4px 8px; }
+[data-admin-console-shell="true"] .admin-empty-state { min-height: 112px; padding: 16px; gap: 8px; }
+.admin-storyboard-body { padding: 12px; }
+[data-local-storyboard-workspace="true"] .admin-detail-section { padding: 12px; }
+[data-local-storyboard-workspace="true"] :is(input, select) { min-height: 36px; padding-block: 4px; }
+[data-local-storyboard-workspace="true"] [aria-label="프로젝트 설정과 기록"] { gap: 12px; }
+#local-storyboard-project-library .admin-toolbar { padding: 8px 12px; }
+@media (min-width: 768px) {
+  [data-admin-console-layout="sidebar-content"] > [data-admin-left-panel-expanded="true"] { width: 12rem; min-width: 12rem; max-width: 12rem; }
+}
+@media (min-width: 1024px) {
+  [data-admin-console-shell="true"] [data-slot="table-cell"] { padding-block: 4px; }
+  [data-admin-dashboard-widget-card="impact"]:not([data-admin-dashboard-card-fullscreen="true"]),
+  [data-admin-dashboard-widget-card="trend"]:not([data-admin-dashboard-card-fullscreen="true"]) { min-height: 264px; }
+  [data-admin-dashboard-widget-card="ops"] { min-height: 264px; }
+}
+@media (max-width: 1023px) {
+  .admin-page-header-actions :is(button, select, input, a[data-slot="button"]),
+  [data-local-storyboard-workspace="true"] :is(input, select) { min-height: 44px; }
+  .admin-page-header .admin-storyboard-project-switch { height: 44px; font-size: 16px; }
+  [data-admin-console-shell="true"] .admin-records-table :is(td, [data-slot="table-cell"]) { min-height: 44px; padding-block: 8px; }
+}
+@media (max-width: 767px) {
+  [data-admin-console-content="true"] { padding: 4px 8px; }
+  [data-admin-console-mobile-header="true"] { height: 48px; border-bottom: 1px solid hsl(var(--border)); padding: 0 8px; }
+  /* The menu bar already names the current module. Retain the semantic heading,
+     without repeating the same title in another visible row. */
+  [data-admin-console-shell="true"] .admin-page-header-title-group { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  [data-admin-console-shell="true"] .admin-page-header:not(:has(.admin-page-header-summary)):not(:has(.admin-page-header-controls)) { min-height: 0; padding: 0; border: 0; }
+  [data-admin-console-shell="true"] .admin-page-header:not(:has(.admin-page-header-summary)) > .admin-page-header-identity { min-height: 0; height: 0; }
+  [data-admin-console-shell="true"] .admin-page-header { gap: 4px; padding-block: 4px; }
+  [data-admin-console-shell="true"] .admin-page-header-identity:has(.admin-page-header-summary) { min-height: 24px; }
+  .admin-page-header .admin-storyboard-project-switch { width: 192px; }
+  [data-admin-operations-overview="true"] { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  [data-admin-operations-overview="true"] > div { grid-template-columns: minmax(0, 1fr) auto; border-left: 0; padding-left: 0; }
+  [data-admin-operations-overview="true"] > div > p:last-child { grid-column: 1 / -1; }
+  [data-admin-dashboard-kpi-card] { min-height: 104px; }
+}
+
+/* Temporary OCR suggestions stay separate from the guarded review queue. */
+[data-admin-console-shell="true"] .admin-local-ocr-preview {
+  flex-shrink: 0;
+  border: 1px solid hsl(var(--border));
+  padding: var(--admin-space-2);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+[data-admin-console-shell="true"] .admin-local-ocr-preview dd {
+  overflow-wrap: break-word;
+  word-break: keep-all;
+}
+
+/* Bound table rows to the viewport; numeric values never split across lines. */
+[data-admin-console-shell="true"] [data-admin-dashboard-widget-card]:not([data-admin-dashboard-card-fullscreen="true"]) [data-admin-dashboard-progressive-table="true"] { max-height: 248px; }
+[data-admin-console-shell="true"] [data-admin-dashboard-progressive-table="true"] { border-radius: 0; overscroll-behavior: contain; }
+[data-admin-console-shell="true"] [data-admin-dashboard-progressive-table="true"] table { min-width: 560px; }
+[data-admin-console-shell="true"] [data-admin-dashboard-progressive-table="true"] :is(th, td) { padding: 8px; }
+[data-admin-console-shell="true"] [data-admin-dashboard-cell-align="right"] { white-space: nowrap; overflow-wrap: normal; }
+[data-admin-console-shell="true"] [data-admin-dashboard-diagnosis-card="true"] { border-radius: 0; background: transparent; }
+
+/* Focused final pass: operating counts stay visible; saved-project actions wrap
+   only on phones rather than escaping the clipped administrator canvas. */
+[data-admin-console-shell="true"] [data-admin-dashboard-widget-card="ops"] [data-admin-dashboard-progressive-table="true"] table { min-width: 0; }
+@media (max-width: 767px) {
+  [data-local-storyboard-workspace="true"] .admin-page-header-controls,
+  [data-local-storyboard-workspace="true"] .admin-page-header-actions { width: 100%; min-width: 0; }
+  [data-admin-storyboard-toolbar="true"] { width: 100%; min-width: 0; max-width: 100%; flex-wrap: wrap; }
+  [data-admin-storyboard-toolbar="true"]:has(button[aria-controls="local-storyboard-project-library"]) .admin-storyboard-project-switch { flex: 1 0 100%; width: 100%; }
+  [data-admin-dashboard-kpi-card] { min-height: 88px; grid-template-rows: auto auto; }
+  [data-admin-dashboard-kpi-card] > div:first-child { gap: 0; }
+  [data-admin-dashboard-kpi-card] > div:first-child > div[aria-hidden="true"] { display: none; }
+  [data-admin-dashboard-kpi-title-actions="single-line-scroll"] { position: absolute; right: 8px; bottom: 8px; width: auto; max-width: 40%; }
+  [data-admin-dashboard-kpi-value-size="bounded"] { font-size: 18px; }
+}

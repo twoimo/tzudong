@@ -32,7 +32,7 @@ const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
 const POLL_MS = 2500;
 const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-none border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:py-2";
 const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-none border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
-const panelClass = "min-w-0 rounded-none bg-card admin-detail-section !rounded-none p-3 text-card-foreground sm:p-4";
+const panelClass = "min-w-0 rounded-none bg-card admin-detail-section !rounded-none p-3 text-card-foreground";
 
 const statusSchema = z.enum(["waiting_worker", "generating", "awaiting_import", "partial", "ready", "failed", "cancelled"]);
 // These are frontend HTTP views, deliberately independent of the server-only store.
@@ -380,19 +380,9 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
     className="h-full min-h-0 min-w-0 overflow-y-auto bg-background text-foreground">
     <AdminPageHeader title={getAdminModuleTitle("storyboard")} titleId="local-storyboard-title" icon={Clapperboard}
-      actions={projectId ? <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => {
-        selectProject(null);
-        requestAnimationFrame(() => {
-          if ((document.getElementById("local-project-select") as HTMLSelectElement | null)?.value === "") {
-            document.getElementById("local-storyboard-prompt")?.focus();
-          }
-        });
-      }}>새 프로젝트</button> : undefined}
-    />
-    <div className="admin-cms-toolbar admin-toolbar shrink-0" data-admin-storyboard-toolbar="true">
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+      actions={<div className="flex min-w-0 items-center gap-2" data-admin-storyboard-toolbar="true">
         <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
-        <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-48`} value={projectId ?? ""}
+        <select id="local-project-select" className={inputClass + " !mt-0 admin-storyboard-project-switch"} value={projectId ?? ""}
           onChange={(event) => selectProject(event.target.value || null)}>
           <option value="">저장된 프로젝트 선택</option>
           {catalog.projects.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
@@ -400,16 +390,24 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
         {projectId && <button type="button" className={buttonClass} aria-expanded={showLibrary} aria-controls="local-storyboard-project-library"
           onClick={() => setShowLibrary((value) => !value)}>프로젝트 목록</button>}
         <button type="button" className={buttonClass} aria-expanded={showSetup} onClick={() => setShowSetup((value) => !value)}>연결 설정</button>
-      </div>
-    </div>
-    <div className="min-w-0 p-3 pb-24 sm:p-4 sm:pb-6">
+        {projectId && <button type="button" className={buttonClass + " !border-primary !bg-primary !text-primary-foreground"} onClick={() => {
+          selectProject(null);
+          requestAnimationFrame(() => {
+            if ((document.getElementById("local-project-select") as HTMLSelectElement | null)?.value === "") {
+              document.getElementById("local-storyboard-prompt")?.focus();
+            }
+          });
+        }}>새 프로젝트</button>}
+      </div>}
+    />
+    <div className="admin-storyboard-body min-w-0 p-3">
     {departureNotice && <p role="alert" className="mb-3 text-sm text-destructive">{departureNotice}</p>}
     {featureHeld && <p role="status" className="mb-3 rounded-none border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">{message('feature_database_held')}</p>}
     {catalogError && projectId && !showLibrary && <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 text-sm text-destructive">
       <span>{catalogError}</span>
       <button type="button" className={`${buttonClass} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`} aria-disabled={catalogBusy || undefined} aria-busy={catalogBusy || undefined} onClick={() => { if (!catalogBusy) setCatalogTick((value) => value + 1); }}>목록 다시 불러오기</button>
     </div>}
-    <div className={`grid min-w-0 items-start gap-4 ${!projectId || showLibrary ? "lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)] lg:!grid-cols-[minmax(0,1fr)_minmax(240px,300px)]" : ""}`}>
+    <div className={`grid min-w-0 items-start gap-4 ${!projectId || showLibrary ? "lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]" : ""}`}>
       <div className="order-2 min-w-0" hidden={!!projectId && !showLibrary}>
         <StoryboardProjectLibrary projects={catalog.projects} selectedId={projectId} statusLabels={STATUSES}
           busy={catalogBusy} error={catalogError} countUnknown={!catalogLoaded} onRefresh={() => setCatalogTick((value) => value + 1)} onSelect={(id) => {
@@ -426,7 +424,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
             requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus());
           }} />
       </div>
-    <div className={`order-1 grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:!grid-cols-[minmax(0,1fr)_minmax(280px,320px)]" : ""}`}>
+    <div className={`order-1 grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]" : ""}`}>
       {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${projectId ? "order-2" : "order-1 w-full"}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
           <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>

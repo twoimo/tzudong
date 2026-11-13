@@ -105,7 +105,7 @@ export function DashboardTrendChart({
         data={data}
         x="label"
         y={[...visibleSeries]}
-        height={240}
+        height={208}
         showLabels={false}
         showXAxis
         showYAxis
@@ -139,7 +139,7 @@ export function DashboardBubbleChart({
         y="참여"
         size="규모"
         label="title"
-        height={260}
+        height={224}
         format="compact"
         showLabels
         animate={false}
@@ -172,7 +172,7 @@ export function DashboardEngagementChart({
         data={data}
         x="label"
         y="참여율"
-        height={230}
+        height={208}
         format="decimal"
         unit="%"
         showLabels={false}
@@ -213,7 +213,7 @@ export function DashboardOpsBars({
                 x="label"
                 y="value"
                 orientation="horizontal"
-                height={Math.max(90, data.length * 28)}
+                height={Math.max(88, data.length * 24)}
                 yDomain={[0, 100]}
                 showLabels={false}
                 animate={false}
@@ -267,7 +267,7 @@ export function DashboardRankBars({
               x="label"
               y="value"
               orientation="horizontal"
-              height={Math.max(110, metric.rows.length * 30)}
+              height={Math.max(104, metric.rows.length * 24)}
               format="compact"
               sort={false}
               showLabels

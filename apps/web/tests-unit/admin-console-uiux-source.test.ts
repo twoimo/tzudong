@@ -214,12 +214,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(workspaceSource).toContain(
       'className="h-full min-h-0 min-w-0 overflow-y-auto bg-background text-foreground"',
     );
-    expect(workspaceSource).toContain('className="min-w-0 p-3 pb-24 sm:p-4 sm:pb-6"');
+    expect(workspaceSource).toContain('className="admin-storyboard-body min-w-0 p-3"');
+    const adminStyles = source("styles/admin-ui.css");
+    expectCssDeclaration(adminStyles, '[data-admin-storyboard-toolbar="true"]', "flex-wrap", "wrap");
+    expectCssDeclaration(adminStyles, ".admin-storyboard-body", "padding", "12px");
     expect(workspaceSource).toContain(
-      'lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]',
+      'lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]',
     );
     expect(workspaceSource).toContain(
-      'lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]',
+      'lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]',
     );
     expect(workspaceSource).toContain('aria-labelledby="local-scenes-title"');
     expect(workspaceSource).toContain('break-words');
@@ -2235,11 +2238,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("const progressiveTrendTableRows =");
     expect(consoleSource).toContain("const progressiveTopContentTableRows =");
     expect(consoleSource).toContain(
-      "overflow-y-auto overflow-x-hidden scrollbar-hide rounded-xl border border-border/70",
+      "min-h-0 flex-1 overflow-auto border border-border bg-background",
     );
     expect(consoleSource).toContain(
       'className="w-full table-fixed border-separate border-spacing-0 text-xs"',
     );
+    expect(consoleSource).toContain('aria-label="대시보드 데이터 표 · 가로·세로 스크롤 가능"');
+    expect(consoleSource).toContain("tabIndex={0}");
     expect(consoleSource).toContain("title={row.title}");
     expect(consoleSource).toContain("sticky top-0 z-10 bg-background");
     expect(consoleSource).toContain("dashboardCardViews");
@@ -2386,7 +2391,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "설명: 채널 구독자 수를 보여주는 카드입니다.",
     );
     expect(consoleSource).toContain(
-      "relative z-0 grid min-h-[96px] grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-visible p-3 hover:z-20 focus-within:z-20",
+      "relative z-0 grid min-h-[80px] grid-rows-[auto_minmax(0,1fr)] gap-1 overflow-visible p-2 hover:z-20 focus-within:z-20",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-row="single-line"',
@@ -2470,9 +2475,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "flex min-h-[360px] flex-col overflow-hidden p-2 sm:min-h-[220px]",
     );
-    expect(chartAdapterSource).toContain("height={240}");
-    expect(chartAdapterSource).toContain("height={260}");
-    expect(chartAdapterSource).toContain("height={230}");
+    expect(chartAdapterSource).toContain("height={208}");
+    expect(chartAdapterSource).toContain("height={224}");
+    expect(chartAdapterSource).toContain("height={Math.max(104, metric.rows.length * 24)}");
     expect(consoleSource).not.toContain("AdminDashboardLedgerCard");
     expect(consoleSource).not.toContain("AdminDashboardGaugeCard");
     expect(consoleSource).toContain("AdminDashboardGroupedBarChart");
