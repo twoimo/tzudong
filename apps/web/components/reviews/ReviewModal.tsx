@@ -773,22 +773,32 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     }, [shouldRenderMapPanel]);
 
     useEffect(() => {
-        if (!shouldRenderMapPanel) return;
+        if ((!shouldRenderMapPanel && !inline) || !isOpen) return;
 
-        if (isOpen) {
-            if (document.activeElement instanceof HTMLElement) {
-                desktopReviewMapPanelOpenerRef.current = document.activeElement;
+        desktopReviewMapPanelOpenerRef.current = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        const frame = window.requestAnimationFrame(() => {
+            desktopReviewMapPanelRef.current?.focus({ preventScroll: true });
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frame);
+            if (desktopReviewMapPanelOpenerRef.current?.isConnected) {
+                desktopReviewMapPanelOpenerRef.current.focus({ preventScroll: true });
             }
+            desktopReviewMapPanelOpenerRef.current = null;
+        };
+    }, [inline, isOpen, shouldRenderMapPanel]);
 
-            window.requestAnimationFrame(() => {
-                desktopReviewMapPanelRef.current?.focus({ preventScroll: true });
-            });
-            return;
+    useEffect(() => {
+        if ((!shouldRenderMapPanel && !inline) || !isOpen || loadedDraftKey !== draftLoadKey) return;
+        // Loading the text draft replaces the temporary panel body. Restore
+        // its focus only if the reader has not moved to another control.
+        if (document.activeElement === document.body || document.activeElement === desktopReviewMapPanelOpenerRef.current) {
+            desktopReviewMapPanelRef.current?.focus({ preventScroll: true });
         }
-
-        desktopReviewMapPanelOpenerRef.current?.focus({ preventScroll: true });
-        desktopReviewMapPanelOpenerRef.current = null;
-    }, [isOpen, shouldRenderMapPanel]);
+    }, [draftLoadKey, inline, isOpen, loadedDraftKey, shouldRenderMapPanel]);
 
     useEffect(() => {
         if (isOpen) return;
@@ -828,7 +838,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
     const renderAiFilledBadge = useCallback((field: ReviewOcrFieldKey) => (
         aiFilledFields.has(field) ? (
-            <Badge variant="secondary" className="h-5 rounded-full bg-primary/10 px-2 text-2xs font-medium text-primary">
+            <Badge variant="secondary" className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                 AI 입력 · 확인 필요
             </Badge>
         ) : null
@@ -1615,7 +1625,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             // 결과 리포트
             if (autoFilledParts.length > 0) {
                 toast({
-                    title: "스마트 스캔 완료! ✨",
+                    title: "영수증 자동 입력 완료",
                     description: `${autoFilledParts.join(', ')} 정보가 자동으로 입력되었습니다.`,
                 });
             } else {
@@ -1827,7 +1837,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                     toast({ title: "리뷰는 등록되었습니다", description: "임시 저장 정리를 완료하지 못했습니다. 이 창에서 다시 시도해주세요." });
                     return;
                 }
-                toast({ title: "리뷰 등록 완료! 🎉", description: "소중한 리뷰가 등록되었습니다. 관리자 승인 후 스탬프가 지급됩니다." });
+                toast({ title: "리뷰 등록 완료", description: "관리자 승인 후 리뷰가 공개되고 스탬프가 지급됩니다." });
                 notifySavedReview();
                 await handleClose();
             } else if (result !== 'cancelled') {
@@ -2000,6 +2010,24 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         setCurrentStep(1);
         onClose();
     }, [onClose, replaceVerificationPhoto, clearDraft, notifySavedReview, setReceiptVerificationInputMode, currentStep]);
+
+    const handleDesktopReviewDialogKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
+        if (event.key !== 'Escape' || event.defaultPrevented || !event.currentTarget.contains(event.target as Node)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void handleClose();
+    }, [handleClose]);
+
+    const handleDialogOpenAutoFocus = () => {
+        desktopReviewMapPanelOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    };
+    const handleDialogCloseAutoFocus = (event: Event) => {
+        if (desktopReviewMapPanelOpenerRef.current?.isConnected) {
+            event.preventDefault();
+            desktopReviewMapPanelOpenerRef.current.focus({ preventScroll: true });
+        }
+        desktopReviewMapPanelOpenerRef.current = null;
+    };
 
     const saveRecoveryNotice = saveRecovery ? (
         <div role="status" className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
@@ -2214,7 +2242,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             dedupingInterval: 60000,  // 1분 내 중복 요청 방지
         }
     );
-    const { data: featureReadiness, mutate: mutateFeatureReadiness } = useSWR(
+    const { data: featureReadiness, mutate: mutateFeatureReadiness, isValidating: isCheckingFeatureReadiness } = useSWR(
         isOpen && user ? '/api/runtime-compatibility/features' : null,
         () => fetchFeatureDatabaseReadiness(),
         { revalidateOnFocus: false, dedupingInterval: 60_000, shouldRetryOnError: false },
@@ -2239,9 +2267,13 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     };
 
     const renderFeatureHoldNotice = () => featureHeld ? (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900" role="status" aria-live="polite">
+        <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" role="status" aria-live="polite">
             <p className="font-semibold">리뷰 기능 준비 중</p>
             <p className="mt-1">{FEATURE_DATABASE_HELD_MESSAGE}</p>
+            <p>이용할 수 있을 때 사진을 선택하고 리뷰를 등록할 수 있습니다</p>
+            <Button type="button" variant="outline" className="min-h-11 bg-background" disabled={isCheckingFeatureReadiness} onClick={() => void mutateFeatureReadiness()}>
+                {isCheckingFeatureReadiness ? '확인 중' : '이용 가능 여부 다시 확인'}
+            </Button>
         </div>
     ) : null;
 
@@ -2260,7 +2292,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7 bg-background px-2 text-xs"
+                            className="min-h-11 bg-background px-3 text-sm"
                             disabled={!verificationPhoto || isAnalyzing}
                             onClick={handleCheckReceiptOcr}
                         >
@@ -2270,7 +2302,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7 bg-background px-2 text-xs"
+                            className="min-h-11 bg-background px-3 text-sm"
                             onClick={handleUseReceiptPhotoOnly}
                         >
                             직접 입력
@@ -2282,7 +2314,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7 border-destructive/30 bg-background px-2 text-xs text-destructive hover:bg-destructive/10"
+                            className="min-h-11 border-destructive/30 bg-background px-3 text-sm text-destructive hover:bg-destructive/10"
                             onClick={handleUseReceiptPhotoOnly}
                         >
                             사진만 첨부하고 직접 입력
@@ -2291,7 +2323,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7 border-destructive/30 bg-background px-2 text-xs text-destructive hover:bg-destructive/10"
+                            className="min-h-11 border-destructive/30 bg-background px-3 text-sm text-destructive hover:bg-destructive/10"
                             disabled={!verificationPhoto || isAnalyzing || ocrLimitReached}
                             onClick={handleRetryReceiptOcr}
                         >
@@ -2326,7 +2358,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         return (
             <button
                 type="button"
-                className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs transition-colors ${forceOcrRefresh
+                className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${forceOcrRefresh
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'}`}
                 onClick={() => setForceOcrRefresh(value => !value)}
@@ -2365,7 +2397,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const renderFoodPhotosSection = useCallback(() => (
         <div className="space-y-2">
             <Label className="flex items-center gap-2">
-                음식 사진 (다양한 각도) <span className="text-red-500">*</span>
+                음식 사진 <span className="text-red-500">*</span>
             </Label>
 
             {foodPhotos.length > REVIEW_FOOD_PHOTO_MAX_COUNT && (
@@ -2378,7 +2410,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                     {foodPhotos.map((photo, index) => (
                         <div key={index} className="relative group">
-                            <Card className="p-2 hover:shadow-md">
+                            <Card className="p-2 shadow-none">
                                 <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
                                     <Image
                                         src={foodPhotoUrls[index] || ''}
@@ -2395,12 +2427,15 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 </div>
                             </Card>
                             <Button
-                                variant="destructive"
-                                size="icon"
-                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 shadow-lg"
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                                className="mt-2 min-h-11 w-full gap-2 rounded-lg border border-border bg-background text-muted-foreground shadow-none hover:bg-destructive/5 hover:text-destructive"
+                                aria-label={`음식 사진 ${index + 1} 제거`}
                                 onClick={() => removeFoodPhoto(index)}
                             >
-                                <XIcon className="h-3 w-3" />
+                                <XIcon className="h-4 w-4" aria-hidden="true" />
+                                제거
                             </Button>
                         </div>
                     ))}
@@ -2418,8 +2453,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 onDragOver={handleDragOver}
                 onDragEnter={handleFoodPhotosDragEnter}
                 onDragLeave={handleFoodPhotosDragLeave}
-                onDrop={handleFoodPhotosDrop}
-                onClick={openFoodPhotosFileDialog}
+                onDrop={featureHeld ? undefined : handleFoodPhotosDrop}
+                aria-disabled={featureHeld}
+                onClick={featureHeld ? undefined : openFoodPhotosFileDialog}
                 aria-invalid={foodPhotos.length > REVIEW_FOOD_PHOTO_MAX_COUNT}
             >
                 <div className="flex flex-col items-center gap-4">
@@ -2431,29 +2467,29 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             {isFoodPhotosDragging ? '여기에 사진들을 놓아주세요' : '음식 사진을 업로드해주세요'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                            먹은 음식을 다양한 각도에서 촬영한 사진을 드래그하거나 클릭해서 선택해주세요
+                            방문할 때 찍은 음식 사진을 선택하거나 이 영역에 끌어다 놓으세요
                         </p>
                         <div className="flex gap-2 justify-center">
-                            <Button variant="outline" size="sm" className="gap-2" onClick={(e) => { e.stopPropagation(); openFoodPhotosFileDialog(); }}>
+                            <Button type="button" variant="outline" size="sm" className="min-h-11 gap-2" disabled={featureHeld} onClick={(e) => { e.stopPropagation(); openFoodPhotosFileDialog(); }}>
                                 <Plus className="h-4 w-4" />
                                 사진 추가
                             </Button>
                             {foodPhotos.length > 0 && (
                                 <Badge variant="secondary" className="px-3 py-1">
-                                    📷 {foodPhotos.length} / {REVIEW_FOOD_PHOTO_MAX_COUNT}장
+                                    {foodPhotos.length} / {REVIEW_FOOD_PHOTO_MAX_COUNT}장
                                 </Badge>
                             )}
                         </div>
                     </div>
                 </div>
-                <input ref={foodPhotosFileInputRef} type="file" accept="image/*" multiple onChange={handleFoodPhotosChange} className="hidden" />
+                <input ref={foodPhotosFileInputRef} type="file" disabled={featureHeld} accept="image/*" multiple onChange={handleFoodPhotosChange} className="hidden" />
             </Card>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
-                <span>💡 다양한 각도의 사진을 최대 {REVIEW_FOOD_PHOTO_MAX_COUNT}장까지 업로드할 수 있습니다</span>
+                <span>음식 사진은 최대 {REVIEW_FOOD_PHOTO_MAX_COUNT}장까지 첨부할 수 있습니다</span>
             </div>
         </div>
-    ), [foodPhotoUrls, foodPhotos, handleDragOver, handleFoodPhotosChange, handleFoodPhotosDragEnter, handleFoodPhotosDragLeave, handleFoodPhotosDrop, isFoodPhotosDragging, openFoodPhotosFileDialog, removeFoodPhoto]);
+    ), [featureHeld, foodPhotoUrls, foodPhotos, handleDragOver, handleFoodPhotosChange, handleFoodPhotosDragEnter, handleFoodPhotosDragLeave, handleFoodPhotosDrop, isFoodPhotosDragging, openFoodPhotosFileDialog, removeFoodPhoto]);
 
     const renderReviewContentSection = useCallback((id: string) => (
         <div data-ocr-focus="review" className={`space-y-3 ${getOcrFocusClass("review")}`}>
@@ -2462,12 +2498,12 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 {renderAiFilledBadge("review")}
             </Label>
 
-            <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
-                <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
+            <Card className="border-border bg-muted/40 p-4">
+                <div className="space-y-2 text-sm text-foreground">
                     <p className="font-semibold flex items-center gap-1">
-                        💡 작성 가이드
+                        리뷰에 담으면 좋은 내용
                     </p>
-                    <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
+                    <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
                         <li>어떤 메뉴를 드셨나요?</li>
                         <li>맛은 어떠셨나요?</li>
                         <li>분위기나 서비스는 어땠나요?</li>
@@ -2478,7 +2514,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
             <Textarea
                 id={id}
-                placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
+                placeholder="먹은 메뉴와 맛, 다시 방문할 때 참고할 점을 적어주세요"
                 value={content}
                 aria-invalid={normalizedContentLength > REVIEW_CONTENT_MAX_LENGTH}
                 aria-describedby={`${id}-length`}
@@ -2487,7 +2523,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                     setContent(e.target.value);
                 }}
                 rows={8}
-                className="resize-none"
+                className="min-h-40 resize-y"
             />
             <p id={`${id}-length`} className={`text-xs text-right ${normalizedContentLength > REVIEW_CONTENT_MAX_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}>
                 {normalizedContentLength.toLocaleString()} / 최대 {REVIEW_CONTENT_MAX_LENGTH.toLocaleString()}자 (앞뒤 공백 제외, 최소 20자)
@@ -2500,20 +2536,20 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             {draftLoadFailed ? <DraftLoadError onRetry={() => void loadDraft()} /> : <p role="status">임시 저장 내용을 확인하고 있어요.</p>}
             <Button type="button" variant="outline" onClick={onClose}>리뷰 작성 닫기</Button>
         </div>;
-        if (inline) return pendingContent;
-        if (shouldRenderMapPanel) return <section role="dialog" aria-label="리뷰 작성" className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-auto rounded-3xl border border-border bg-background shadow-2xl">{pendingContent}</section>;
+        if (inline) return <section ref={desktopReviewMapPanelRef} role="dialog" tabIndex={-1} aria-label="리뷰 작성" onKeyDown={handleDesktopReviewDialogKeyDown}>{pendingContent}</section>;
+        if (shouldRenderMapPanel) return <section ref={desktopReviewMapPanelRef} role="dialog" tabIndex={-1} onKeyDown={handleDesktopReviewDialogKeyDown} aria-label="리뷰 작성" className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-auto rounded-3xl border border-border bg-background shadow-2xl">{pendingContent}</section>;
         if (isMobileOrTablet) return <BottomSheet isOpen onClose={onClose} {...MOBILE_FULL_FORM_SHEET} ariaLabel="리뷰 작성">{pendingContent}</BottomSheet>;
-        return <Dialog open onOpenChange={open => { if (!open) onClose(); }}><DialogContent><DialogHeader><DialogTitle>리뷰 작성</DialogTitle><DialogDescription>이 기기의 임시 저장 내용을 확인합니다.</DialogDescription></DialogHeader>{pendingContent}</DialogContent></Dialog>;
+        return <Dialog open onOpenChange={open => { if (!open) onClose(); }}><DialogContent onOpenAutoFocus={handleDialogOpenAutoFocus} onCloseAutoFocus={handleDialogCloseAutoFocus}><DialogHeader><DialogTitle>리뷰 작성</DialogTitle><DialogDescription>이 기기의 임시 저장 내용을 확인합니다.</DialogDescription></DialogHeader>{pendingContent}</DialogContent></Dialog>;
     }
 
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
         return (
-            <div className="flex flex-col h-full overflow-hidden">
+            <section ref={desktopReviewMapPanelRef} role="dialog" tabIndex={-1} aria-label="리뷰 작성" onKeyDown={handleDesktopReviewDialogKeyDown} className="flex h-full flex-col overflow-hidden">
                 {/* 헤더 */}
                 <div className="px-6 pt-6 pb-4 border-b relative shrink-0">
                     {lastSavedAt && (
-                        <div className="absolute top-1.5 left-6 flex items-center gap-1 text-2xs text-muted-foreground">
+                        <div className="absolute top-1.5 left-6 flex items-center gap-1 text-xs text-muted-foreground">
                             {isSaving ? (
                                 <>
                                     <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -2538,7 +2574,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 맛집 방문 후기를 공유해주세요
                             </p>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={handleClose} className="h-9 w-9 rounded-full hover:bg-muted">
+                        <Button variant="ghost" size="icon" onClick={handleClose} className="h-11 w-11 rounded-lg hover:bg-muted" aria-label="리뷰 작성 닫기">
                             <XIcon className="h-5 w-5" />
                         </Button>
                     </div>
@@ -2548,12 +2584,12 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                     <div className="space-y-6">
 
                         {/* 중요 공지 - 컴팩트 버전 */}
-                        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
-                            <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">
+                        <Card className="border-border bg-muted/40 p-4">
+                            <div className="space-y-2 text-sm text-foreground">
                                 <p className="font-semibold flex items-center gap-1">
-                                    📸 영수증 인증 가이드
+                                    영수증 사진 안내
                                 </p>
-                                <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
+                                <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
                                     <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
                                     <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
                                     <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
@@ -2572,9 +2608,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         <Button
                                             type="button"
                                             variant={verificationInputMode === "ai" ? "default" : "outline"}
+                                            aria-pressed={verificationInputMode === "ai"}
                                             size="sm"
-                                            className="h-7 px-2 text-xs"
-                                            disabled={ocrLimitReached}
+                                            className="min-h-11 px-3 text-sm"
+                                            disabled={featureHeld || ocrLimitReached}
                                             onClick={() => setReceiptVerificationInputMode("ai")}
                                         >
                                             AI 자동 입력
@@ -2582,8 +2619,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         <Button
                                             type="button"
                                             variant={verificationInputMode === "manual" ? "default" : "outline"}
+                                            aria-pressed={verificationInputMode === "manual"}
                                             size="sm"
-                                            className="h-7 px-2 text-xs"
+                                            className="min-h-11 px-3 text-sm"
+                                            disabled={featureHeld}
                                             onClick={() => setReceiptVerificationInputMode("manual")}
                                         >
                                             사진만 첨부
@@ -2616,8 +2655,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 onDragOver={handleDragOver}
                                 onDragEnter={handleVerificationDragEnter}
                                 onDragLeave={handleVerificationDragLeave}
-                                onDrop={handleVerificationDrop}
-                                onClick={openVerificationFileDialog}
+                                onDrop={featureHeld ? undefined : handleVerificationDrop}
+                                aria-disabled={featureHeld}
+                                onClick={featureHeld ? undefined : openVerificationFileDialog}
                             >
                                 <div className="flex flex-col items-center gap-4">
                                     {verificationPhoto ? (
@@ -2639,7 +2679,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                             <div className="text-center">
                                                 <Badge variant="default" className="gap-1 mb-2 bg-green-500">
                                                     <CheckCircle2 className="h-3 w-3" />
-                                                    인증 사진 업로드 완료
+                                                    영수증 사진 첨부됨
                                                 </Badge>
                                                 <p className="text-sm font-medium">{verificationPhoto.name}</p>
                                                 <p className="text-xs text-muted-foreground">
@@ -2672,7 +2712,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 </p>
                                                 <p className="text-sm text-muted-foreground mb-3">
                                                     {verificationInputMode === "ai" ? (
-                                                        <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
+                                                        <span className="text-primary font-medium">영수증의 가게명과 방문 정보를 읽어 입력합니다. 입력된 내용은 직접 확인해주세요.</span>
                                                     ) : (
                                                         <span className="font-medium">AI 분석 없이 인증 사진만 첨부됩니다. 필요한 정보는 아래에서 직접 입력해주세요.</span>
                                                     )}
@@ -2680,7 +2720,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="gap-2"
+                                                    className="min-h-11 gap-2"
+                                                    disabled={featureHeld}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         openVerificationFileDialog();
@@ -2693,19 +2734,19 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         </div>
                                     )}
                                 </div>
-                                <input ref={verificationFileInputRef} type="file" accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
+                                <input ref={verificationFileInputRef} type="file" disabled={featureHeld} accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
 
                                 {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                 {isAnalyzing && (
                                     <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
                                         <div className="relative mb-4">
-                                            <div className="relative bg-background rounded-full p-3 border-2 border-primary shadow-lg">
+                                            <div className="rounded-full border border-border bg-background p-3">
                                                 <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                             </div>
                                         </div>
-                                        <h3 className="text-lg font-bold text-primary mb-2">실시간 AI 자동 입력 중</h3>
+                                        <h3 className="mb-2 text-lg font-semibold text-foreground">영수증을 읽고 있습니다</h3>
                                         <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
-                                            {ocrProgress?.message || '가게명, 방문일시, 메뉴 정보, 리뷰 내용을 자동으로 입력합니다 ✨'}
+                                            {ocrProgress?.message || '가게명과 방문 정보를 확인하고 있습니다'}
                                         </p>
                                         {ocrProgress?.fields.length ? (
                                             <div className="mb-3 flex flex-wrap justify-center gap-1.5">
@@ -2721,18 +2762,15 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 {OCR_PROGRESS_STEPS.map((step) => {
                                                     const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
                                                     return (
-                                                        <div key={step.stage} className={`rounded-full px-2 py-1 text-2xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                        <div key={step.stage} className={`rounded-full px-2 py-1 text-xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                                                             {step.label}
                                                         </div>
                                                     );
                                                 })}
                                             </div>
                                         ) : null}
-                                        {ocrProgress?.model ? (
-                                            <p className="mb-3 text-2xs text-muted-foreground">분석 모델: {ocrProgress.model}</p>
-                                        ) : null}
                                         {ocrProgress?.fallbackUsed ? (
-                                            <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-2xs text-foreground">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                            <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-xs text-foreground">분석을 계속하고 있습니다. 잠시만 기다려주세요.</p>
                                         ) : null}
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                             <CheckCircle2 className="w-3 h-3 text-green-600" />
@@ -2751,7 +2789,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                 : ""
                                 }`}>
-                                <Label className="flex items-center gap-2">
+                                <Label htmlFor="review-restaurant-search" className="flex items-center gap-2">
                                     방문한 쯔양 맛집 <span className="text-red-500">*</span>
                                     {renderAiFilledBadge("restaurant")}
                                 </Label>
@@ -2770,7 +2808,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                     setSelectedRestaurant(null);
                                                     setSearchQuery("");
                                                 }}
-                                                className="h-6 px-2 text-xs"
+                                                className="min-h-11 px-3 text-sm"
                                             >
                                                 변경
                                             </Button>
@@ -2781,7 +2819,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                             <Input
-                                                placeholder="맛집 이름을 검색하세요..."
+                                                id="review-restaurant-search"
+                                                aria-required="true"
+                                                placeholder="맛집 이름 검색"
                                                 value={searchQuery}
                                                 onChange={(e) => {
                                                     markManualOcrInteraction("restaurant");
@@ -2883,7 +2923,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 </Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-between">
+                                        <Button variant="outline" className="min-h-11 w-full justify-between">
                                             <span className="truncate">
                                                 {categories.length > 0
                                                     ? `${categories.length}개 선택됨`
@@ -2898,7 +2938,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                             <h4 className="font-semibold text-sm">카테고리 선택</h4>
                                             <div className={`space-y-2 max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                 {CATEGORIES.map((cat) => (
-                                                    <div key={cat} className="flex items-center space-x-2">
+                                                    <div key={cat} className="flex min-h-11 items-center gap-2">
                                                         <Checkbox
                                                             id={`inline-category-${cat}`}
                                                             checked={categories.includes(cat)}
@@ -2911,7 +2951,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                                 }
                                                             }}
                                                         />
-                                                        <Label htmlFor={`inline-category-${cat}`} className="text-sm cursor-pointer flex-1">
+                                                        <Label htmlFor={`inline-category-${cat}`} className="flex min-h-11 flex-1 cursor-pointer items-center text-sm">
                                                             {cat}
                                                         </Label>
                                                     </div>
@@ -2931,21 +2971,21 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                     </PopoverContent>
                                 </Popover>
                                 {categories.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
+                                    <div className="mt-2 flex flex-wrap gap-2">
                                         {categories.map((category) => (
-                                            <Badge key={category} variant="secondary" className="text-xs">
-                                                {category}
-                                                <button
-                                                    type="button"
+                                            <button
+                                                key={category}
+                                                type="button"
                                                     onClick={() => {
                                                         markManualOcrInteraction("category");
                                                         setCategories(categories.filter(c => c !== category));
                                                     }}
-                                                    className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                >
-                                                    <XIcon className="h-3 w-3" />
-                                                </button>
-                                            </Badge>
+                                                aria-label={`${category} 카테고리 선택 해제`}
+                                                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            >
+                                                {category}
+                                                <XIcon className="h-4 w-4" aria-hidden="true" />
+                                            </button>
                                         ))}
                                     </div>
                                 )}
@@ -2983,7 +3023,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                         </Button>
                     </div>
                 </div>
-            </div>
+            </section>
         );
     }
 
@@ -3013,7 +3053,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                             >
                                 <div className="mb-2 flex items-center justify-between gap-3">
                                     <div className="min-w-0">
-                                        <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                                        <p className="text-xs font-medium text-muted-foreground">
                                             {currentStep} / {REVIEW_FORM_STEPS.length} · {REVIEW_FORM_STEPS[currentStep - 1].label}
                                         </p>
                                         <h2 id={mobileTitleId} className="truncate text-xl font-semibold text-foreground">
@@ -3031,7 +3071,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                     {REVIEW_FORM_STEPS.map((step) => (
                                         <div key={step.id} className="space-y-1">
                                             <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-brand-tangerine' : 'bg-muted'}`} />
-                                            <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                                            <span className={`block text-center text-xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                                 {step.label}
                                             </span>
                                         </div>
@@ -3039,7 +3079,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 </div>
                                 <div className="mt-2 min-h-4">
                                     {lastSavedAt ? (
-                                        <div className="flex items-center gap-1 text-2xs leading-none text-muted-foreground" aria-live="polite">
+                                        <div className="flex items-center gap-1 text-xs leading-none text-muted-foreground" aria-live="polite">
                                             {isSaving ? (
                                                 <>
                                                     <div className="h-2.5 w-2.5 animate-spin rounded-full border border-primary border-t-transparent" />
@@ -3062,12 +3102,12 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 <div className="space-y-4">
                                 {currentStep === 1 && (
                                     <>
-                                        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
-                                            <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">
+                                        <Card className="border-border bg-muted/40 p-4">
+                                            <div className="space-y-2 text-sm text-foreground">
                                                 <p className="font-semibold flex items-center gap-1">
-                                                    📸 영수증 인증 가이드
+                                                    영수증 사진 안내
                                                 </p>
-                                                <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
+                                                <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
                                                     <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
                                                     <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
                                                     <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
@@ -3085,9 +3125,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 <Button
                                                     type="button"
                                                     variant={verificationInputMode === "ai" ? "default" : "outline"}
+                                            aria-pressed={verificationInputMode === "ai"}
                                                     size="sm"
-                                                    className="h-7 px-2 text-xs"
-                                                    disabled={ocrLimitReached}
+                                                    className="min-h-11 px-3 text-sm"
+                                                    disabled={featureHeld || ocrLimitReached}
                                                     onClick={() => setReceiptVerificationInputMode("ai")}
                                                 >
                                                     AI 자동 입력
@@ -3095,9 +3136,11 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 <Button
                                                     type="button"
                                                     variant={verificationInputMode === "manual" ? "default" : "outline"}
+                                            aria-pressed={verificationInputMode === "manual"}
                                                     size="sm"
-                                                    className="h-7 px-2 text-xs"
-                                                    onClick={() => setReceiptVerificationInputMode("manual")}
+                                                    className="min-h-11 px-3 text-sm"
+                                                    disabled={featureHeld}
+                                            onClick={() => setReceiptVerificationInputMode("manual")}
                                                 >
                                                     사진만 첨부
                                                 </Button>
@@ -3129,8 +3172,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         onDragOver={handleDragOver}
                                         onDragEnter={handleVerificationDragEnter}
                                         onDragLeave={handleVerificationDragLeave}
-                                        onDrop={handleVerificationDrop}
-                                        onClick={openVerificationFileDialog}
+                                        onDrop={featureHeld ? undefined : handleVerificationDrop}
+                                        aria-disabled={featureHeld}
+                                onClick={featureHeld ? undefined : openVerificationFileDialog}
                                     >
                                         <div className="flex flex-col items-center gap-4">
                                             {verificationPhoto ? (
@@ -3152,7 +3196,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                     <div className="text-center">
                                                         <Badge variant="default" className="gap-1 mb-2 bg-green-500">
                                                             <CheckCircle2 className="h-3 w-3" />
-                                                            인증 사진 업로드 완료
+                                                            영수증 사진 첨부됨
                                                         </Badge>
                                                         <p className="text-sm font-medium">{verificationPhoto.name}</p>
                                                         <p className="text-xs text-muted-foreground">
@@ -3185,7 +3229,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                         </p>
                                                         <p className="text-sm text-muted-foreground mb-3">
                                                             {verificationInputMode === "ai" ? (
-                                                                <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
+                                                                <span className="text-primary font-medium">영수증의 가게명과 방문 정보를 읽어 입력합니다. 입력된 내용은 직접 확인해주세요.</span>
                                                             ) : (
                                                                 <span className="font-medium">AI 분석 없이 인증 사진만 첨부됩니다. 필요한 정보는 아래에서 직접 입력해주세요.</span>
                                                             )}
@@ -3193,7 +3237,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            className="gap-2"
+                                                            className="min-h-11 gap-2"
+                                                            disabled={featureHeld}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 openVerificationFileDialog();
@@ -3206,19 +3251,19 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 </div>
                                             )}
                                         </div>
-                                        <input ref={verificationFileInputRef} type="file" accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
+                                        <input ref={verificationFileInputRef} type="file" disabled={featureHeld} accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
 
                                         {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                         {isAnalyzing && (
                                             <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
                                                 <div className="relative mb-4">
-                                                    <div className="relative bg-background rounded-full p-3 border-2 border-primary shadow-lg">
+                                                    <div className="rounded-full border border-border bg-background p-3">
                                                         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                                     </div>
                                                 </div>
-                                                <h3 className="text-lg font-bold text-primary mb-2">실시간 AI 자동 입력 중</h3>
+                                                <h3 className="mb-2 text-lg font-semibold text-foreground">영수증을 읽고 있습니다</h3>
                                                 <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
-                                                    {ocrProgress?.message || '가게명, 방문일시, 메뉴 정보, 리뷰 내용을 자동으로 입력합니다 ✨'}
+                                                    {ocrProgress?.message || '가게명과 방문 정보를 확인하고 있습니다'}
                                                 </p>
                                                 {ocrProgress?.fields.length ? (
                                                     <div className="mb-3 flex flex-wrap justify-center gap-1.5">
@@ -3234,18 +3279,15 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                         {OCR_PROGRESS_STEPS.map((step) => {
                                                             const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
                                                             return (
-                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-2xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                                                                     {step.label}
                                                                 </div>
                                                             );
                                                         })}
                                                     </div>
                                                 ) : null}
-                                                {ocrProgress?.model ? (
-                                                    <p className="mb-3 text-2xs text-muted-foreground">분석 모델: {ocrProgress.model}</p>
-                                                ) : null}
                                                 {ocrProgress?.fallbackUsed ? (
-                                                    <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-2xs text-foreground">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                                    <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-xs text-foreground">분석을 계속하고 있습니다. 잠시만 기다려주세요.</p>
                                                 ) : null}
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3 text-green-600" />
@@ -3264,7 +3306,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                     ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                     : ""
                                     }`}>
-                                    <Label className="flex items-center gap-2">
+                                    <Label htmlFor="review-restaurant-search" className="flex items-center gap-2">
                                         방문한 쯔양 맛집 <span className="text-red-500">*</span>
                                         {renderAiFilledBadge("restaurant")}
                                     </Label>
@@ -3283,7 +3325,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                         setSelectedRestaurant(null);
                                                         setSearchQuery("");
                                                     }}
-                                                    className="h-6 px-2 text-xs"
+                                                    className="min-h-11 px-3 text-sm"
                                                 >
                                                     변경
                                                 </Button>
@@ -3294,7 +3336,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                             <div className="relative">
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                                 <Input
-                                                    placeholder="맛집 이름을 검색하세요..."
+                                                    id="review-restaurant-search"
+                                                aria-required="true"
+                                                placeholder="맛집 이름 검색"
                                                     value={searchQuery}
                                                     onChange={(e) => {
                                                         markManualOcrInteraction("restaurant");
@@ -3398,7 +3442,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                className="w-full justify-between"
+                                                className="min-h-11 w-full justify-between"
                                             >
                                                 <span className="truncate">
                                                     {categories.length > 0
@@ -3414,7 +3458,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 <h4 className="font-semibold text-sm">카테고리 선택</h4>
                                                 <div className={`space-y-2 max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                     {CATEGORIES.map((cat) => (
-                                                        <div key={cat} className="flex items-center space-x-2">
+                                                        <div key={cat} className="flex min-h-11 items-center gap-2">
                                                             <Checkbox
                                                                 id={`review-category-${cat}`}
                                                                 checked={categories.includes(cat)}
@@ -3429,7 +3473,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                             />
                                                             <Label
                                                                 htmlFor={`review-category-${cat}`}
-                                                                className="text-sm cursor-pointer flex-1"
+                                                                className="flex min-h-11 flex-1 cursor-pointer items-center text-sm"
                                                             >
                                                                 {cat}
                                                             </Label>
@@ -3455,21 +3499,21 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         </PopoverContent>
                                     </Popover>
                                     {categories.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
+                                        <div className="mt-2 flex flex-wrap gap-2">
                                             {categories.map((category) => (
-                                                <Badge key={category} variant="secondary" className="text-xs">
-                                                    {category}
-                                                    <button
-                                                        type="button"
+                                                <button
+                                                    key={category}
+                                                    type="button"
                                                         onClick={() => {
                                                             markManualOcrInteraction("category");
                                                             setCategories(categories.filter(c => c !== category));
                                                         }}
-                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                    >
-                                                        <XIcon className="h-3 w-3" />
-                                                    </button>
-                                                </Badge>
+                                                    aria-label={`${category} 카테고리 선택 해제`}
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                >
+                                                    {category}
+                                                    <XIcon className="h-4 w-4" aria-hidden="true" />
+                                                </button>
                                             ))}
                                         </div>
                                     )}
@@ -3546,7 +3590,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                     <Button
                                         type="button"
                                         onClick={handleNextStep}
-                                        disabled={!isStepValid[currentStep] || isSubmitting}
+                                        disabled={featureHeld || !isStepValid[currentStep] || isSubmitting}
                                         className={`${mobileSheetStyles.primaryAction} flex-1`}
                                     >
                                         다음
@@ -3573,9 +3617,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             return (
                 <section
                     ref={desktopReviewMapPanelRef}
-                    className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
+                    className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-background shadow-xl"
                     style={{ transform: `translate3d(${desktopReviewMapPanelPosition.x}px, ${desktopReviewMapPanelPosition.y}px, 0)` }}
                     data-desktop-map-review-panel="true"
+                    onKeyDown={handleDesktopReviewDialogKeyDown}
                     role="dialog"
                     tabIndex={-1}
                     aria-labelledby={mobileTitleId}
@@ -3606,11 +3651,11 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         <>
             <Dialog open={isOpen} onOpenChange={handleClose}>
                 {isOpen && (
-                    <DialogContent className={`w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border-border/70 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:p-6 ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
+                    <DialogContent onOpenAutoFocus={handleDialogOpenAutoFocus} onCloseAutoFocus={handleDialogCloseAutoFocus} className={`w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border-border/70 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:p-6 ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                         <DialogHeader className="relative space-y-3">
                             {/* 자동 저장 상태 표시 - 좌측 상단 */}
                             {lastSavedAt && (
-                                <div className="absolute top-1.5 left-6 flex items-center gap-1 text-2xs text-muted-foreground">
+                                <div className="absolute top-1.5 left-6 flex items-center gap-1 text-xs text-muted-foreground">
                                     {isSaving ? (
                                         <>
                                             <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -3629,7 +3674,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
                             <div className="flex items-start justify-between gap-2 pt-3">
                                 <div className="flex-1">
-                                    <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                                    <p className="text-xs font-medium text-muted-foreground">
                                         영수증 인증 · 방문 정보 · 리뷰
                                     </p>
                                     <DialogTitle className="text-xl font-semibold text-foreground">
@@ -3644,7 +3689,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 {REVIEW_FORM_STEPS.map((step) => (
                                     <div key={step.id} className="space-y-1">
                                         <div className="h-1.5 rounded-full bg-brand-tangerine" />
-                                        <span className="block text-center text-2xs font-medium text-muted-foreground">
+                                        <span className="block text-center text-xs font-medium text-muted-foreground">
                                             {step.label}
                                         </span>
                                     </div>
@@ -3655,12 +3700,12 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                         <div className="space-y-6 mt-2">
                             <div className="space-y-6">
                                 {/* 중요 공지 - 컴팩트 버전 */}
-                                <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
-                                    <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">
+                                <Card className="border-border bg-muted/40 p-4">
+                                    <div className="space-y-2 text-sm text-foreground">
                                         <p className="font-semibold flex items-center gap-1">
-                                            📸 영수증 인증 가이드
+                                            영수증 사진 안내
                                         </p>
-                                        <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
+                                        <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
                                             <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
                                             <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
                                             <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
@@ -3679,9 +3724,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 <Button
                                                     type="button"
                                                     variant={verificationInputMode === "ai" ? "default" : "outline"}
+                                            aria-pressed={verificationInputMode === "ai"}
                                                     size="sm"
-                                                    className="h-7 px-2 text-xs"
-                                                    disabled={ocrLimitReached}
+                                                    className="min-h-11 px-3 text-sm"
+                                                    disabled={featureHeld || ocrLimitReached}
                                                     onClick={() => setReceiptVerificationInputMode("ai")}
                                                 >
                                                     AI 자동 입력
@@ -3689,9 +3735,11 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 <Button
                                                     type="button"
                                                     variant={verificationInputMode === "manual" ? "default" : "outline"}
+                                            aria-pressed={verificationInputMode === "manual"}
                                                     size="sm"
-                                                    className="h-7 px-2 text-xs"
-                                                    onClick={() => setReceiptVerificationInputMode("manual")}
+                                                    className="min-h-11 px-3 text-sm"
+                                                    disabled={featureHeld}
+                                            onClick={() => setReceiptVerificationInputMode("manual")}
                                                 >
                                                     사진만 첨부
                                                 </Button>
@@ -3723,8 +3771,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         onDragOver={handleDragOver}
                                         onDragEnter={handleVerificationDragEnter}
                                         onDragLeave={handleVerificationDragLeave}
-                                        onDrop={handleVerificationDrop}
-                                        onClick={openVerificationFileDialog}
+                                        onDrop={featureHeld ? undefined : handleVerificationDrop}
+                                        aria-disabled={featureHeld}
+                                onClick={featureHeld ? undefined : openVerificationFileDialog}
                                     >
                                         <div className="flex flex-col items-center gap-4">
                                             {verificationPhoto ? (
@@ -3746,7 +3795,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                     <div className="text-center">
                                                         <Badge variant="default" className="gap-1 mb-2 bg-green-500">
                                                             <CheckCircle2 className="h-3 w-3" />
-                                                            인증 사진 업로드 완료
+                                                            영수증 사진 첨부됨
                                                         </Badge>
                                                         <p className="text-sm font-medium">{verificationPhoto.name}</p>
                                                         <p className="text-xs text-muted-foreground">
@@ -3779,7 +3828,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                         </p>
                                                         <p className="text-sm text-muted-foreground mb-3">
                                                             {verificationInputMode === "ai" ? (
-                                                                <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
+                                                                <span className="text-primary font-medium">영수증의 가게명과 방문 정보를 읽어 입력합니다. 입력된 내용은 직접 확인해주세요.</span>
                                                             ) : (
                                                                 <span className="font-medium">AI 분석 없이 인증 사진만 첨부됩니다. 필요한 정보는 아래에서 직접 입력해주세요.</span>
                                                             )}
@@ -3787,7 +3836,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            className="gap-2"
+                                                            className="min-h-11 gap-2"
+                                                            disabled={featureHeld}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 openVerificationFileDialog();
@@ -3800,19 +3850,19 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 </div>
                                             )}
                                         </div>
-                                        <input ref={verificationFileInputRef} type="file" accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
+                                        <input ref={verificationFileInputRef} type="file" disabled={featureHeld} accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
 
                                         {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
                                         {isAnalyzing && (
                                             <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
                                                 <div className="relative mb-4">
-                                                    <div className="relative bg-background rounded-full p-3 border-2 border-primary shadow-lg">
+                                                    <div className="rounded-full border border-border bg-background p-3">
                                                         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                                     </div>
                                                 </div>
-                                                <h3 className="text-lg font-bold text-primary mb-2">실시간 AI 자동 입력 중</h3>
+                                                <h3 className="mb-2 text-lg font-semibold text-foreground">영수증을 읽고 있습니다</h3>
                                                 <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
-                                                    {ocrProgress?.message || '가게명, 방문일시, 메뉴 정보, 리뷰 내용을 자동으로 입력합니다 ✨'}
+                                                    {ocrProgress?.message || '가게명과 방문 정보를 확인하고 있습니다'}
                                                 </p>
                                                 {ocrProgress?.fields.length ? (
                                                     <div className="mb-3 flex flex-wrap justify-center gap-1.5">
@@ -3828,18 +3878,15 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                         {OCR_PROGRESS_STEPS.map((step) => {
                                                             const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
                                                             return (
-                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-2xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                                                                     {step.label}
                                                                 </div>
                                                             );
                                                         })}
                                                     </div>
                                                 ) : null}
-                                                {ocrProgress?.model ? (
-                                                    <p className="mb-3 text-2xs text-muted-foreground">분석 모델: {ocrProgress.model}</p>
-                                                ) : null}
                                                 {ocrProgress?.fallbackUsed ? (
-                                                    <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-2xs text-foreground">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                                    <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-xs text-foreground">분석을 계속하고 있습니다. 잠시만 기다려주세요.</p>
                                                 ) : null}
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3 text-green-600" />
@@ -3855,7 +3902,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                     ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                     : ""
                                     }`}>
-                                    <Label className="flex items-center gap-2">
+                                    <Label htmlFor="review-restaurant-search" className="flex items-center gap-2">
                                         방문한 쯔양 맛집 <span className="text-red-500">*</span>
                                         {renderAiFilledBadge("restaurant")}
                                     </Label>
@@ -3874,7 +3921,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                         setSelectedRestaurant(null);
                                                         setSearchQuery("");
                                                     }}
-                                                    className="h-6 px-2 text-xs"
+                                                    className="min-h-11 px-3 text-sm"
                                                 >
                                                     변경
                                                 </Button>
@@ -3885,7 +3932,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                             <div className="relative">
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                                 <Input
-                                                    placeholder="맛집 이름을 검색하세요..."
+                                                    id="review-restaurant-search"
+                                                aria-required="true"
+                                                placeholder="맛집 이름 검색"
                                                     value={searchQuery}
                                                     onChange={(e) => {
                                                         markManualOcrInteraction("restaurant");
@@ -3989,7 +4038,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                className="w-full justify-between"
+                                                className="min-h-11 w-full justify-between"
                                             >
                                                 <span className="truncate">
                                                     {categories.length > 0
@@ -4005,7 +4054,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                 <h4 className="font-semibold text-sm">카테고리 선택</h4>
                                                 <div className={`space-y-2 max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                     {CATEGORIES.map((cat) => (
-                                                        <div key={cat} className="flex items-center space-x-2">
+                                                        <div key={cat} className="flex min-h-11 items-center gap-2">
                                                             <Checkbox
                                                                 id={`review-category-${cat}`}
                                                                 checked={categories.includes(cat)}
@@ -4020,7 +4069,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                                             />
                                                             <Label
                                                                 htmlFor={`review-category-${cat}`}
-                                                                className="text-sm cursor-pointer flex-1"
+                                                                className="flex min-h-11 flex-1 cursor-pointer items-center text-sm"
                                                             >
                                                                 {cat}
                                                             </Label>
@@ -4046,21 +4095,21 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                         </PopoverContent>
                                     </Popover>
                                     {categories.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
+                                        <div className="mt-2 flex flex-wrap gap-2">
                                             {categories.map((category) => (
-                                                <Badge key={category} variant="secondary" className="text-xs">
-                                                    {category}
-                                                    <button
-                                                        type="button"
+                                                <button
+                                                    key={category}
+                                                    type="button"
                                                         onClick={() => {
                                                             markManualOcrInteraction("category");
                                                             setCategories(categories.filter(c => c !== category));
                                                         }}
-                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                    >
-                                                        <XIcon className="h-3 w-3" />
-                                                    </button>
-                                                </Badge>
+                                                    aria-label={`${category} 카테고리 선택 해제`}
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                >
+                                                    {category}
+                                                    <XIcon className="h-4 w-4" aria-hidden="true" />
+                                                </button>
                                             ))}
                                         </div>
                                     )}

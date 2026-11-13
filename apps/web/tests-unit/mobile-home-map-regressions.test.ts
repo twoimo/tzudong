@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import vm from 'node:vm';
+import ts from 'typescript';
 
 import type { Restaurant } from '../types/restaurant';
 import { getAdjacentRestaurantByStep } from '../lib/home-map-keyboard-navigation';
@@ -320,7 +322,44 @@ describe('mobile home map regression guards', () => {
         expect(overlaySource).toContain('data-mobile-category-sheet-commit="immediate"');
         expect(overlaySource).toContain('onCategoryChange([])');
         expect(overlaySource).toContain('onCategoryChange(newCategories)');
-        expect(overlaySource).toContain('선택 즉시 지도에 반영됩니다.');
+
+        // Exercise the real JSX callbacks; wording must not decide whether selection commits.
+        const parsed = ts.createSourceFile('MobileControlOverlay.tsx', overlaySource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+        const handlers: ts.ArrowFunction[] = [];
+        const visit = (node: ts.Node) => {
+            if (ts.isJsxAttribute(node) && node.name.getText(parsed) === 'onClick'
+                && node.initializer && ts.isJsxExpression(node.initializer)
+                && node.initializer.expression && ts.isArrowFunction(node.initializer.expression)) {
+                handlers.push(node.initializer.expression);
+            }
+            ts.forEachChild(node, visit);
+        };
+        visit(parsed);
+        const toggle = handlers.find((handler) => handler.getText(parsed).includes('onCategoryChange(newCategories)'));
+        const clear = handlers.find((handler) => ts.isBlock(handler.body)
+            && handler.body.statements.length === 1
+            && handler.getText(parsed).includes('onCategoryChange([])'));
+        const invoke = (handler: ts.ArrowFunction | undefined, selectedCategories: readonly string[], category = '') => {
+            expect(handler).toBeDefined();
+            const changes: string[][] = [];
+            const code = ts.transpileModule(`(${handler!.getText(parsed)})`, {
+                compilerOptions: { target: ts.ScriptTarget.ES2022 },
+            }).outputText;
+            const click = vm.runInNewContext(code, {
+                selectedCategories,
+                category,
+                isSelected: selectedCategories.includes(category),
+                onCategoryChange: (next: string[]) => { changes.push([...next]); },
+            }) as () => void;
+            click();
+            return changes;
+        };
+        const selected = Object.freeze(['한식', '분식']);
+        expect(invoke(toggle, selected, '양식')).toEqual([['한식', '분식', '양식']]);
+        expect(invoke(toggle, selected, '한식')).toEqual([['분식']]);
+        expect(invoke(clear, selected)).toEqual([[]]);
+        expect(selected).toEqual(['한식', '분식']);
+
         const desktopPanelSource = source('components/home/home-desktop-control-panel.tsx');
         expect(desktopPanelSource).toContain('선택하면 즉시 적용됩니다.');
         expect(desktopPanelSource).toContain('onCategoryChange={onCategoryChange}');

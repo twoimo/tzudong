@@ -31,6 +31,7 @@ import {
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
 import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
+import { MyPageSubmissionGuide } from "@/components/mypage/MyPageSubmissionGuide";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -673,32 +674,29 @@ export default function EditSubmissionsPage() {
     </Card>
   );
 
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="맛집 수정 요청 내역을 불러오는 중…" />;
-  }
 
-  if (isError) {
-    return (
+  return (
+    <MyPageSectionFrame
+      icon={Edit3}
+      eyebrow="제보 관리"
+      title="맛집 수정 요청 내역"
+      description="요청한 정보 수정과 검토 결과를 확인하세요."
+      countLabel={isLoading || (isError && submissions.length === 0) ? undefined : `총 ${submissions.length}건`}
+      data-section="submissions-edit"
+    >
+      <MyPageSubmissionGuide kind="edit" userId={user?.id ?? null} />
+      {isError && (
       <MyPageErrorState
         onRetry={() => void refetch()}
         retrying={isFetching}
         title="맛집 수정 요청을 불러오지 못했습니다"
         description="수정 요청 목록을 다시 불러오려면 잠시 후 재시도해주세요."
       />
-    );
-  }
-
-  return (
-    <MyPageSectionFrame
-      icon={Edit3}
-      eyebrow="제보 관리"
-      title="맛집 수정 요청"
-      description="기존 맛집 정보 수정 요청의 검토 흐름을 확인합니다."
-      countLabel={`총 ${submissions.length}건`}
-      data-section="submissions-edit"
-    >
-      {submissions.length === 0 ? (
-        <MyPageEmptyState
+      )}
+      {isLoading ? (
+        <MyPageSectionSkeleton label="맛집 수정 요청 내역을 불러오는 중…" />
+      ) : submissions.length === 0 ? (
+        !isError && <MyPageEmptyState
           icon={Edit3}
           title="아직 맛집 수정 요청 내역이 없습니다"
           description="잘못된 정보를 발견해 수정 요청하면 이곳에 기록됩니다."

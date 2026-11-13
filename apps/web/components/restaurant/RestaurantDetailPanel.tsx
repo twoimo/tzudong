@@ -106,7 +106,7 @@ function RestaurantDetailHeader({
     onClose: () => void;
     showDesktopBackButton: boolean;
 }) {
-    const actionClass = cn(mapPanelIconButtonClass, isMobile && "h-11 w-11");
+    const actionClass = cn(mapPanelIconButtonClass, "h-11 w-11");
     const categoryLabel = categories.join(', ');
     const showBackButton = isMobile || showDesktopBackButton;
 
@@ -127,11 +127,11 @@ function RestaurantDetailHeader({
                             title={categoryLabel}
                         >
                             <span className="sr-only">카테고리: {categoryLabel}</span>
-                            <Badge className="min-w-0 px-1.5 py-0.5 text-2xs" aria-hidden="true">
+                            <Badge className="min-w-0 px-1.5 py-0.5 text-xs" aria-hidden="true">
                                 <span className="truncate">{categories[0]}</span>
                             </Badge>
                             {categories.length > 1 ? (
-                                <span className="shrink-0 text-2xs text-muted-foreground" aria-hidden="true">+{categories.length - 1}</span>
+                                <span className="shrink-0 text-xs text-muted-foreground" aria-hidden="true">+{categories.length - 1}</span>
                             ) : null}
                         </span>
                     ) : null}
@@ -143,7 +143,7 @@ function RestaurantDetailHeader({
                     variant="ghost"
                     size="icon"
                     onClick={onShare}
-                    title={isShareCopied ? "복사됨!" : "공유하기"}
+                    title={isShareCopied ? "복사됨" : "공유하기"}
                     aria-label={isShareCopied ? "공유 링크 복사됨" : "맛집 공유 링크 복사"}
                     className={cn(actionClass, isShareCopied && "bg-green-50 border-green-300 text-green-600")}
                 >
@@ -151,7 +151,7 @@ function RestaurantDetailHeader({
                 </Button>
                 <BookmarkButton
                     restaurantId={restaurantId}
-                    className={cn("h-9 w-9 shrink-0 rounded-lg shadow-none", isMobile && "h-11 w-11")}
+                    className="h-11 w-11 shrink-0 rounded-lg shadow-none"
                     onRequireAuth={onRequireAuth}
                 />
                 {isAdmin && onEditRestaurant ? (
@@ -539,6 +539,10 @@ export function RestaurantDetailPanel({
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
+        isFetchNextPageError,
+        isError: reviewsLoadFailed,
+        isFetching: reviewsFetching,
+        refetch: refetchReviews,
         isLoading: reviewsLoading
     } = useInfiniteQuery({
         queryKey: ['restaurant-reviews', restaurant?.id, user?.id],
@@ -692,9 +696,10 @@ export function RestaurantDetailPanel({
 
                 const nextCursor = reviewsPageData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
                 return { restaurantId: restaurant.id, reviews, nextCursor };
-            } catch (error) {
-                console.error('❌ 리뷰 데이터 조회 중 오류:');
-                return { restaurantId: restaurant?.id ?? null, reviews: [], nextCursor: null };
+            } catch {
+                // A failed read must remain distinguishable from a restaurant with no reviews.
+                // Never surface provider diagnostics or review payloads in the interface.
+                throw new Error('RESTAURANT_REVIEWS_UNAVAILABLE');
             }
         },
         initialPageParam: 0,
@@ -718,14 +723,30 @@ export function RestaurantDetailPanel({
     const persistedVerifiedReviewCount = (restaurant as RestaurantWithVerifiedCount | null)?.verified_review_count;
     const totalReviewCount = Math.max(persistedVerifiedReviewCount ?? 0, safeReviewsData.length);
 
+    const renderReviewLoadFailure = () => (
+        <div role="alert" className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+            <p className="text-sm text-foreground">리뷰를 불러오지 못했습니다</p>
+            <p className="text-sm text-muted-foreground">연결 상태를 확인하고 다시 시도해주세요</p>
+            <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                disabled={reviewsFetching}
+                onClick={() => { void (isFetchNextPageError ? fetchNextPage() : refetchReviews()); }}
+            >
+                {reviewsFetching ? '불러오는 중' : '다시 시도'}
+            </Button>
+        </div>
+    );
+
     // [무한 스크롤 감시] 리뷰 목록 추가 로드
     const loadMoreReviewsRef = useRef<HTMLDivElement>(null);
 
     const handleLoadMoreReviews = useCallback(() => {
-        if (hasNextPage && !isFetchingNextPage) {
+        if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
             fetchNextPage();
         }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
     // [초기화] 초기 로드 시 likedReviews 상태 초기화
     useEffect(() => {
@@ -1196,7 +1217,7 @@ export function RestaurantDetailPanel({
                                                         variant="outline"
                                                         className="text-xs bg-orange-50 text-orange-700 border-orange-300 whitespace-nowrap"
                                                     >
-                                                        📢 {ad}
+                                                        {ad}
                                                     </Badge>
                                                 ))}
                                             </ScrollableTagContainer>
@@ -1228,7 +1249,7 @@ export function RestaurantDetailPanel({
                                         <button
                                             type="button"
                                             key={`${entry.type}-${entry.address}`}
-                                            className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg group text-left"
+                                            className="group flex min-h-11 w-full cursor-pointer gap-3 rounded-lg p-2 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             onClick={() => handleCopyAddress(entry.address, entry.type)}
                                             aria-label={`${entry.label} 복사`}
                                         >
@@ -1240,7 +1261,7 @@ export function RestaurantDetailPanel({
                                             {copiedAddress === entry.type ? (
                                                 <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                                             ) : (
-                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100" />
+                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-60 group-hover:opacity-100 group-focus-visible:opacity-100" />
                                             )}
                                         </button>
                                     ))}
@@ -1282,7 +1303,7 @@ export function RestaurantDetailPanel({
                                                     onClick={() => setIsReviewExpanded(!isReviewExpanded)}
                                                     aria-expanded={isReviewExpanded}
                                                     aria-label={reviewCopy.toggleAriaLabel}
-                                                    className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                                    className="min-h-11 shrink-0 px-3 text-sm text-muted-foreground hover:text-foreground"
                                                 >
                                                     {isReviewExpanded ? (
                                                         <>
@@ -1337,10 +1358,10 @@ export function RestaurantDetailPanel({
                                             <Button
                                                 variant="link"
                                                 size="sm"
-                                                className="h-auto p-0 text-xs"
+                                                className="min-h-11 gap-1 px-2 text-sm"
                                                 onClick={handleViewAllReviews}
                                             >
-                                                전체 보기 →
+                                                전체 보기 <ChevronRight className="h-4 w-4" aria-hidden="true" />
                                             </Button>
                                         )}
                                     </div>
@@ -1349,12 +1370,15 @@ export function RestaurantDetailPanel({
                                         <div className="text-sm text-muted-foreground text-center py-4">
                                             리뷰를 불러오는 중...
                                         </div>
+                                    ) : reviewsLoadFailed && recentReviews.length === 0 ? (
+                                        renderReviewLoadFailure()
                                     ) : recentReviews.length === 0 ? (
                                         <div className="text-sm text-muted-foreground text-center py-4">
-                                            리뷰가 없습니다
+                                            아직 공개된 리뷰가 없습니다
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
+                                            {reviewsLoadFailed && renderReviewLoadFailure()}
                                             {recentReviews.map((review) => (
                                                 <ReviewCard
                                                     key={review.id}
@@ -1365,8 +1389,7 @@ export function RestaurantDetailPanel({
                                                         submittedAt: review.submittedAt,
                                                     }}
                                                     onLike={handleLikeReview}
-                                                    onClick={() => { }}
-                                                    onRestaurantClick={() => onRestaurantClick?.(restaurant)}
+                                                    onRestaurantClick={onRestaurantClick ? () => onRestaurantClick(restaurant) : undefined}
                                                     currentUserId={user?.id}
                                                     onUserClick={onUserClick}
                                                     onEditReview={(reviewData) => setEditingReview({
@@ -1386,9 +1409,11 @@ export function RestaurantDetailPanel({
                                     <div className="text-sm text-muted-foreground text-center py-4">
                                         리뷰를 불러오는 중...
                                     </div>
+                                ) : reviewsLoadFailed && safeReviewsData.length === 0 ? (
+                                    renderReviewLoadFailure()
                                 ) : safeReviewsData.length === 0 ? (
                                     <div className="text-sm text-muted-foreground text-center py-4">
-                                        리뷰가 없습니다
+                                        아직 공개된 리뷰가 없습니다
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
@@ -1402,8 +1427,7 @@ export function RestaurantDetailPanel({
                                                     submittedAt: review.submittedAt,
                                                 }}
                                                 onLike={handleLikeReview}
-                                                onClick={() => { }}
-                                                onRestaurantClick={() => onRestaurantClick?.(restaurant)}
+                                                onRestaurantClick={onRestaurantClick ? () => onRestaurantClick(restaurant) : undefined}
                                                 currentUserId={user?.id}
                                                 onUserClick={onUserClick}
                                                 onEditReview={(reviewData) => setEditingReview({
@@ -1413,13 +1437,15 @@ export function RestaurantDetailPanel({
                                             />
                                         ))}
 
-                                        <div ref={loadMoreReviewsRef} className="h-10 flex items-center justify-center">
-                                            {hasNextPage && (
-                                                <span className="text-sm text-muted-foreground">
-                                                    {isFetchingNextPage ? '리뷰를 더 불러오는 중...' : '스크롤하면 더 불러옵니다'}
-                                                </span>
-                                            )}
-                                        </div>
+                                        {reviewsLoadFailed ? renderReviewLoadFailure() : (
+                                            <div ref={loadMoreReviewsRef} className="flex min-h-11 items-center justify-center">
+                                                {hasNextPage && (
+                                                    <Button type="button" variant="outline" className="min-h-11 w-full" disabled={isFetchingNextPage} onClick={() => void fetchNextPage()}>
+                                                        {isFetchingNextPage ? '리뷰를 더 불러오는 중' : '리뷰 더 보기'}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1452,7 +1478,7 @@ export function RestaurantDetailPanel({
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => setIsDirectionSheetOpen(false)}
-                                        className="h-8 w-8"
+                                        className="h-11 w-11"
                                         aria-label="길찾기 앱 선택 닫기"
                                     >
                                         <X className="h-4 w-4" aria-hidden="true" />
@@ -1474,9 +1500,9 @@ export function RestaurantDetailPanel({
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center gap-2 mb-0.5">
                                                 <span className="text-sm font-semibold">네이버 지도</span>
-                                                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-2xs px-1.5 py-0 border-0">추천</Badge>
+                                                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-xs px-1.5 py-0 border-0">추천</Badge>
                                             </div>
-                                            <p className="text-2xs text-muted-foreground">국내 상세한 길안내 · 실시간 교통정보</p>
+                                            <p className="text-xs text-muted-foreground">국내 상세한 길안내 · 실시간 교통정보</p>
                                         </div>
                                     </div>
                                 </Button>
@@ -1495,7 +1521,7 @@ export function RestaurantDetailPanel({
                                         <MapProviderLogo provider="kakao" />
                                         <div className="flex-1 text-left">
                                             <div className="text-sm font-semibold text-foreground mb-0.5">카카오맵</div>
-                                            <p className="text-2xs text-muted-foreground">대중교통 · 주차 정보</p>
+                                            <p className="text-xs text-muted-foreground">대중교통 · 주차 정보</p>
                                         </div>
                                     </div>
                                 </Button>
@@ -1514,7 +1540,7 @@ export function RestaurantDetailPanel({
                                         <MapProviderLogo provider="google" />
                                         <div className="flex-1 text-left">
                                             <div className="text-sm font-semibold text-foreground mb-0.5">구글 지도</div>
-                                            <p className="text-2xs text-muted-foreground">글로벌 지도 · 위성 뷰</p>
+                                            <p className="text-xs text-muted-foreground">글로벌 지도 · 위성 뷰</p>
                                         </div>
                                     </div>
                                 </Button>
@@ -1535,7 +1561,7 @@ export function RestaurantDetailPanel({
                                         variant="outline"
                                         size="sm"
                                         className={cn(
-                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-2xs font-semibold leading-tight",
+                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-xs font-semibold leading-tight",
                                             isMobile ? "rounded-lg" : "rounded-xl"
                                         )}
                                     >
@@ -1547,11 +1573,11 @@ export function RestaurantDetailPanel({
                                         <Button
                                             onClick={handleGetDirections}
                                             className={cn(
-                                                "h-14 min-w-0 flex-col gap-1 bg-primary px-1.5 text-xs font-bold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90",
+                                                "h-14 min-w-0 flex-col gap-1 bg-primary px-1.5 text-xs font-semibold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90",
                                                 isMobile ? "rounded-lg" : "rounded-xl"
                                             )}
                                         >
-                                            <Navigation className="h-4 w-4 shrink-0 text-brand-tangerine dark:text-brand-ink" aria-hidden="true" />
+                                            <Navigation className="h-4 w-4 shrink-0 text-current" aria-hidden="true" />
                                             <span>길찾기</span>
                                         </Button>
                                     ) : null}
@@ -1561,7 +1587,7 @@ export function RestaurantDetailPanel({
                                         variant="outline"
                                         size="sm"
                                         className={cn(
-                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-2xs font-semibold leading-tight",
+                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-xs font-semibold leading-tight",
                                             isMobile ? "rounded-lg" : "rounded-xl"
                                         )}
                                     >

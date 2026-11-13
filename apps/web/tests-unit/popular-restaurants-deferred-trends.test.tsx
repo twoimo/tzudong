@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { QueryClient, QueryClientProvider, QueryObserver, type QueryObserverOptions } from '@tanstack/react-query';
+import { InfiniteQueryObserver, QueryClient, QueryClientProvider, QueryObserver, type InfiniteQueryObserverOptions, type QueryObserverOptions } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import DesktopLeftPanelMapHome from '../components/home/DesktopLeftPanelMapHome';
 import {
@@ -80,10 +80,10 @@ function clientWithList(list?: PopularRestaurantWithTrend[]) {
   return client;
 }
 
-function renderHome(client: QueryClient, selectedRegion = args.selectedRegion) {
+function renderHome(client: QueryClient, selectedRegion = args.selectedRegion, onShowAllRegions?: () => void) {
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
-      <DesktopLeftPanelMapHome selectedRegion={selectedRegion} isKoreanOnly onRestaurantOpen={() => {}} />
+      <DesktopLeftPanelMapHome selectedRegion={selectedRegion} isKoreanOnly onRestaurantOpen={() => {}} onShowAllRegions={onShowAllRegions} />
     </QueryClientProvider>,
   );
 }
@@ -129,14 +129,14 @@ describe('home deferred popularity trends', () => {
       expect(before).toContain('높은 식당 인기 맛집 상세 보기');
       expect(before).toContain('낮은 식당 인기 맛집 상세 보기');
       expect(before).not.toContain('인기 검색 맛집 로딩 중');
-      expect(before).not.toContain('이전 인기 검색 스냅샷 대비');
+      expect(before).not.toContain('이전 집계보다');
     } finally {
       gate.resolve(json([{ period_start: '2026-01-01' }]));
     }
     const snapshot = await pending;
     const after = renderHome(client);
-    expect(after).toContain('이전 인기 검색 스냅샷 대비 2위 상승');
-    expect(after).toContain('이전 인기 검색 스냅샷 대비 1위 하락');
+    expect(after).toContain('이전 집계보다 2위 상승');
+    expect(after).toContain('이전 집계보다 1위 하락');
     expect(after.indexOf('높은 식당 인기 맛집 상세 보기')).toBeLessThan(after.indexOf('낮은 식당 인기 맛집 상세 보기'));
     expect(attachPopularRankTrends(list, snapshot.snapshots, snapshot.hasSnapshotPeriod).map((row) => row.id)).toEqual(list.map((row) => row.id));
     expect(list.every((row) => row.popularRankTrend?.trend === 'unknown')).toBe(true);
@@ -151,7 +151,7 @@ describe('home deferred popularity trends', () => {
     const html = renderHome(client);
     expect(html).toContain('높은 식당 인기 맛집 상세 보기');
     expect(html).not.toContain('인기 검색 맛집 로딩 중');
-    expect(html).not.toContain('이전 인기 검색 스냅샷 대비');
+    expect(html).not.toContain('이전 집계보다');
     const legacy = await fetchPopularRestaurants(args);
     expect(legacy.map((row) => row.id)).toEqual(list.map((row) => row.id));
     expect(legacy.every((row) => row.popularRankTrend?.trend === 'unknown')).toBe(true);
@@ -191,9 +191,9 @@ describe('home deferred popularity trends', () => {
     const client = clientWithList(list);
     const snapshot = await fetchPopularRankSnapshots(args);
     client.setQueryData(getPopularRankSnapshotsQueryKey({ ...args, selectedRegion: '부산광역시' }), snapshot);
-    expect(renderHome(client)).not.toContain('이전 인기 검색 스냅샷 대비');
+    expect(renderHome(client)).not.toContain('이전 집계보다');
     client.setQueryData(getPopularRankSnapshotsQueryKey(args), snapshot);
-    expect(renderHome(client)).toContain('이전 인기 검색 스냅샷 대비 2위 상승');
+    expect(renderHome(client)).toContain('이전 집계보다 2위 상승');
   });
 
   test('retains scope filters and regional backfill membership in both API modes', async () => {
@@ -216,5 +216,62 @@ describe('home deferred popularity trends', () => {
     restaurantResponse = () => json([]);
     const empty = await fetchLatestRestaurantPage({ ...args, fetchLimit: 2, offset: 6 });
     expect(empty).toEqual({ restaurants: [], nextOffset: null, hasMore: false });
+  });
+
+  test('the actual popular query exposes loading failure and a retry instead of a false empty state', async () => {
+    restaurantResponse = () => json({ code: 'TEST_PROVIDER_ERROR' }, 503);
+    const client = clientWithList();
+    renderHome(client);
+    const query = client.getQueryCache().find({ queryKey: getPopularRestaurantsQueryKey({ ...args, includeRankTrends: false }) })!;
+    const observer = new QueryObserver(client, query.options as QueryObserverOptions);
+    const unsubscribe = observer.subscribe(() => {});
+    try {
+      const result = await observer.refetch();
+      expect(result.isError).toBe(true);
+      // SSR creates a fresh observer; keep the settled state rather than a remount retry.
+      client.setQueryDefaults(query.queryKey, { retryOnMount: false, refetchOnMount: false });
+      const html = renderHome(client);
+      expect(html).toContain('role="alert"');
+      expect(html).toContain('인기 맛집을 불러오지 못했습니다.');
+      expect(html).toContain('다시 불러오기');
+      expect(html).not.toContain('표시할 인기 맛집이 없습니다.');
+      expect(html).not.toContain('TEST_PROVIDER_ERROR');
+    } finally {
+      unsubscribe();
+      observer.destroy();
+    }
+  });
+
+  test('the actual latest query preserves failure instead of treating it as the end of pagination', async () => {
+    restaurantResponse = () => json({ code: 'TEST_PROVIDER_ERROR' }, 503);
+    const client = clientWithList([]);
+    renderHome(client);
+    const query = client.getQueryCache().find({ queryKey: getLatestRestaurantsQueryKey({ ...args, limit: 12, sort: 'latest' }) })!;
+    const observer = new InfiniteQueryObserver(client, query.options as InfiniteQueryObserverOptions);
+    const unsubscribe = observer.subscribe(() => {});
+    try {
+      const result = await observer.refetch();
+      expect(result.isError).toBe(true);
+      client.setQueryDefaults(query.queryKey, { retryOnMount: false, refetchOnMount: false });
+      const html = renderHome(client);
+      expect(html).toContain('최근 맛집을 불러오지 못했습니다.');
+      expect(html).toContain('다시 불러오기');
+      expect(html).not.toContain(`${args.selectedRegion}에 표시할 맛집이 없습니다.`);
+      expect(html).not.toContain('TEST_PROVIDER_ERROR');
+    } finally {
+      unsubscribe();
+      observer.destroy();
+    }
+  });
+
+  test('a ready empty regional list explains its scope and offers an explicit way to widen it', () => {
+    const client = clientWithList([]);
+    let widened = 0;
+    const html = renderHome(client, args.selectedRegion, () => { widened += 1; });
+    expect(html).toContain(`${args.selectedRegion}에 표시할 인기 맛집이 없습니다.`);
+    expect(html).toContain(`${args.selectedRegion}에 표시할 맛집이 없습니다.`);
+    expect(html).toContain('전체 지역 보기');
+    expect(html).not.toContain('role="alert"');
+    expect(widened).toBe(0);
   });
 });

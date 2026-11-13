@@ -201,7 +201,9 @@ for(const kind of kinds)test(`${kind} delayed recovery cannot import into a repl
 test('actual profile recovery control imports all three stores only after the user action',async()=>{
  const f=await setup();try{
   const old=await f.page(true);await old.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());for(const kind of kinds)await save(old,kind,'명시적으로 가져올 합성 초안');const current=await f.page(false,true);await current.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());
-  for(const kind of kinds)expect(await current.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.publicRead(kind),kind)).toBeNull();await current.getByRole('button',{name:'이전 버전 초안 가져오기',exact:true}).click();await browserExpect(current.getByRole('status')).toContainText('3개 초안을 가져왔습니다.');for(const kind of kinds)expect(await current.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.read(kind),kind)).toBe('명시적으로 가져올 합성 초안');
+  for(const kind of kinds)expect(await current.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.publicRead(kind),kind)).toBeNull();
+  await current.locator('summary').filter({hasText:'이전 버전 초안'}).click();
+  await current.getByRole('button',{name:'이전 버전 초안 가져오기',exact:true}).click();await browserExpect(current.getByRole('status')).toContainText('3개 초안을 가져왔습니다.');for(const kind of kinds)expect(await current.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.read(kind),kind)).toBe('명시적으로 가져올 합성 초안');
  }finally{await f.browser.close();}
 },20000);
 
@@ -227,6 +229,7 @@ for(const kind of kinds)for(const invalid of ['expired','media'])test(`${kind} r
 test('actual recovery control reports partial failure and safely retries only missing copies',async()=>{
  const f=await setup();try{
   const old=await f.page(true);await old.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());for(const kind of kinds)await save(old,kind,'부분 실패 후 재시도할 합성 입력');const current=await f.page(false,true);await current.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());await current.evaluate(()=>{const original=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value,key){if(this.name==='review-drafts'&&String(value.userId).startsWith('v3-')){IDBObjectStore.prototype.put=original;throw new DOMException('synthetic','QuotaExceededError')}return original.call(this,value,key)}});
+  await current.locator('summary').filter({hasText:'이전 버전 초안'}).click();
   const button=current.getByRole('button',{name:'이전 버전 초안 가져오기',exact:true});await button.click();await browserExpect(current.getByRole('status')).toContainText('일부 초안은 가져오지 못했습니다.');await button.click();await browserExpect(current.getByRole('status')).toContainText('1개 초안을 가져왔습니다.');for(const kind of kinds)expect(await current.evaluate(kind=>(globalThis as unknown as TabFixture).__tab.read(kind),kind)).toBe('부분 실패 후 재시도할 합성 입력');
  }finally{await f.browser.close();}
 },20000);
@@ -240,7 +243,9 @@ for(const kind of ['review','edit'])test(`${kind} legacy recovery preserves the 
 },20000);
 test('recovery UI suppresses an old result after an account change during a held import',async()=>{
  const f=await setup();try{
-  const old=await f.page(true);await old.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());for(const kind of kinds)await save(old,kind,'계정 전환 전 가져오기 합성 입력');const current=await f.page(false,true);await current.evaluate(()=>{const t=(globalThis as unknown as TabFixture).__tab;t.activate();t.hold='tzudong-review-drafts'});await current.getByRole('button',{name:'이전 버전 초안 가져오기',exact:true}).click();await current.waitForFunction(()=>(globalThis as unknown as TabFixture).__tab.entered);
+  const old=await f.page(true);await old.evaluate(()=>(globalThis as unknown as TabFixture).__tab.activate());for(const kind of kinds)await save(old,kind,'계정 전환 전 가져오기 합성 입력');const current=await f.page(false,true);await current.evaluate(()=>{const t=(globalThis as unknown as TabFixture).__tab;t.activate();t.hold='tzudong-review-drafts'});
+  await current.locator('summary').filter({hasText:'이전 버전 초안'}).click();
+  await current.getByRole('button',{name:'이전 버전 초안 가져오기',exact:true}).click();await current.waitForFunction(()=>(globalThis as unknown as TabFixture).__tab.entered);
   const replacement=await f.page(false);await replacement.evaluate(()=>(globalThis as unknown as TabFixture).__tab.clear());await replacement.evaluate(id=>(globalThis as unknown as TabFixture).__tab.activate(id),other);await save(replacement,'review','다른 계정의 새 합성 리뷰',other);await current.evaluate(()=>(globalThis as unknown as TabFixture).__tab.release());await browserExpect(current.getByRole('button',{name:'이전 버전 초안 가져오기',exact:true})).toBeEnabled();await browserExpect(current.getByRole('status')).toHaveText('');const row=await replacement.evaluate(id=>(globalThis as unknown as TabFixture).__tab.data('review',true,id),other);expect(row?.content).toBe('다른 계정의 새 합성 리뷰');
  }finally{await f.browser.close();}
 },20000);

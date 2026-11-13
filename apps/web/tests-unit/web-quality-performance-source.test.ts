@@ -1044,8 +1044,8 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain(
       "POPULAR_RESTAURANT_QUERY_LIMIT = 60",
     );
-    expect(desktopLeftPanelMapHomeSource).toContain("맛집 5곳");
-    expect(desktopLeftPanelMapHomeSource).toContain("TOP 5");
+    expect(desktopLeftPanelMapHomeSource).toContain("onClearDiscoveryFilters");
+    expect(desktopLeftPanelMapHomeSource).toContain("onShowAllRegions");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchPopularRestaurants");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchLatestRestaurantPage");
     expect(desktopLeftPanelMapHomeSource).toContain("excludeRestaurantsAlreadyShown");
@@ -1056,7 +1056,7 @@ describe("web quality performance source contracts", () => {
     expect(source("components/home/LocalWorkspaceBanner.tsx")).toContain("data-local-workspace-banner");
     expect(source("components/home/LocalWorkspaceBanner.tsx")).not.toContain("z-[200]");
     expect(source("components/layout/OverlayLayout.tsx")).not.toContain("LocalWorkspaceBanner");
-    expect(desktopLeftPanelMapHomeSource).toContain("새로 추가된 맛집이 준비되면 최신순으로 보여드릴게요.");
+    expect(desktopLeftPanelMapHomeSource).toContain("isPopularListError");
     expect(desktopLeftPanelMapHomeSource).toContain(
       "getPopularRestaurantsQueryKey",
     );
@@ -1192,21 +1192,19 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain("<BrandSectionHeading");
     expect(desktopLeftPanelMapHomeSource).not.toContain('eyebrow="새로 지도에 올라온"');
     expect(desktopLeftPanelMapHomeSource).not.toContain('eyebrow="지금 많이 찾는"');
-    expect(desktopLeftPanelMapHomeSource).toContain("최근 추가된 맛집");
-    expect(desktopLeftPanelMapHomeSource).toContain(
-      "먼저 3곳을 보여주고 스크롤하면 이어서 불러와요",
-    );
+    expect(desktopLeftPanelMapHomeSource).toContain("영상 속 맛집");
+    expect(desktopLeftPanelMapHomeSource).toContain("isLatestNextPageError");
     expect(desktopLeftPanelMapHomeSource).toContain("<Select");
     expect(desktopLeftPanelMapHomeSource).toContain("<SelectTrigger");
     expect(desktopLeftPanelMapHomeSource).toContain(
-      'aria-label="최근 맛집 정렬"',
+      'aria-label="영상 속 맛집 정렬"',
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
       '<SelectValue placeholder="정렬" />',
     );
     expect(desktopLeftPanelMapHomeSource).toContain("<SelectItem");
-    expect(desktopLeftPanelMapHomeSource).toContain("최신순");
-    expect(desktopLeftPanelMapHomeSource).toContain("오래된순");
+    expect(desktopLeftPanelMapHomeSource).toContain("최신 영상순");
+    expect(desktopLeftPanelMapHomeSource).toContain("오래된 영상순");
     expect(desktopLeftPanelMapHomeSource).toContain("인기순");
     expect(desktopLeftPanelMapHomeSource).not.toContain(
       "aria-pressed={isSelected}",
@@ -1223,14 +1221,14 @@ describe("web quality performance source contracts", () => {
     );
     expect(desktopLeftPanelMapHomeSource).toContain("trend.trend === 'same'");
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "이전 인기 검색 스냅샷 대비",
+      "이전 집계보다",
     );
     expect(desktopLeftPanelMapHomeSource).toContain("trendBadge.label");
     expect(desktopLeftPanelMapHomeSource).toContain(
       "divide-y divide-border/70",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "group flex w-full items-center gap-2 px-1 py-2 text-left",
+      "group flex min-h-14 w-full items-center gap-3 rounded-lg px-1 py-3 text-left",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
       '<MapPin className="h-3 w-3 shrink-0"',
@@ -1336,11 +1334,12 @@ describe("web quality performance source contracts", () => {
       'import RestaurantSearch from "@/components/search/RestaurantSearch"',
     );
     expect(homeClientSource).toContain("useHomeMapResults");
-    expect(homeDesktopControlPanelSource).toContain("resultSummary.regionCounts");
+    expect(homeDesktopControlPanelSource).toContain("getHomeMapRegionOptionCount");
     expect(homeDesktopControlPanelSource).toContain(
       "components/filters/CategoryFilter",
     );
-    expect(homeDesktopControlPanelSource).toContain("resultSummary.countryCounts");
+    expect(source("components/home/home-map-region-option-count.ts")).toContain("if (selectedRegion && option !== selectedRegion) return undefined;");
+    expect(source("components/home/home-map-region-option-count.ts")).toContain("if (!selectedCountry || option !== selectedCountry) return undefined;");
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-map-panel="true"',
     );
@@ -1379,13 +1378,13 @@ describe("web quality performance source contracts", () => {
       "rounded-full border border-border bg-background/95",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 border border-border px-1.5",
+      "pointer-events-auto flex min-h-14 items-center gap-2 rounded-full border border-border bg-background/95 px-1",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0",
+      "flex-1 h-11 rounded-full flex items-center gap-2 px-3 min-w-0",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation",
+      "h-11 w-11 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
       'aria-label="검색어 지우기"',
@@ -1521,10 +1520,10 @@ describe("web quality performance source contracts", () => {
       'data-desktop-map-floating-filters="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-1.5",
+      "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-2",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"9.5rem\"",
+      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"13rem\"",
     );
     expect(homeDesktopControlPanelSource).toContain(
       '"--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH',
@@ -1539,7 +1538,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain("compactTrigger");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
-    expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
+    expect(homeDesktopControlPanelSource).toContain("맛집 이름 검색");
     expect(homeDesktopControlPanelSource).toContain("hideHistoryAndPopular");
     expect(homeDesktopControlPanelSource).not.toContain(
       "검색·필터·상세를 왼쪽에서 빠르게 확인하세요.",
@@ -1874,7 +1873,8 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).not.toContain(
       "setShouldLoadSearch(true)",
     );
-    expect(mobileControlSource).toContain("const { regionCounts, countryCounts, categoryCounts } = resultSummary;");
+    expect(mobileControlSource).toContain("const { categoryCounts } = resultSummary;");
+    expect(mobileControlSource).toContain("getHomeMapRegionOptionCount");
     expect(mobileControlSource).toContain(
       "initialIntent?: 'search' | 'bookmark' | 'notification' | 'user' | null",
     );
@@ -2140,7 +2140,7 @@ describe("web quality performance source contracts", () => {
       "const MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS =",
     );
     expect(overlayPositionSource).toContain(
-      "'top-[calc(env(safe-area-inset-top)_+_114px)]'",
+      "'top-[var(--mobile-map-controls-bottom,calc(env(safe-area-inset-top)_+_136px))]'",
     );
     expect(overlayPositionSource).toContain(
       "mobile-map-status-badge fixed ${MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS}",
@@ -2169,16 +2169,16 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain(
       "html[data-mobile-search-open] .mobile-map-status-badge {\n    display: none;",
     );
-    expect(homeAppGlobalsSource).toContain(
-      "10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px.",
-    );
+    expect(mobileControlSource).toContain("new ResizeObserver(updateControlsBottom)");
+    expect(mobileControlSource).toContain("controls.getBoundingClientRect().bottom + 8");
+    expect(mobileControlSource).toContain("style.removeProperty('--mobile-map-controls-bottom')");
     expect(mobileControlSource).toContain(
-      "pt-[calc(env(safe-area-inset-top)+10px)]",
+      "pt-[calc(env(safe-area-inset-top)+12px)]",
     );
-    expect(mobileControlSource).toContain("flex h-12");
+    expect(mobileControlSource).toContain("flex min-h-14");
     expect(mobileControlSource).toContain('data-mobile-topic-slider="true"');
-    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("min-h-8");
-    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("p-0.5");
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain("min-h-11");
+    expect(source("components/home/HomeMapThemeFilters.tsx")).toContain('data-horizontal-scroll-owner={layout === "reel" ? "mobile-theme-filter-reel" : undefined}');
     expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
     expect(homeAppGlobalsSource).toContain('grid-template-columns: 1.25rem minmax(0, 1fr)');
     expect(homeAppGlobalsSource).toContain('max-height: min(20rem, calc(100dvh - 24rem))');
@@ -2220,9 +2220,7 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain(
       ".mobile-map-status-badge.mobile-map-announcement-toast {\n  width: max-content;\n  max-width: calc(100vw - 2rem);",
     );
-    expect(homeAppGlobalsSource).toContain(
-      "10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px.",
-    );
+    expect(source("lib/naver-map-overlay-position-helpers.ts")).toContain('--mobile-map-controls-bottom');
   });
 
   test("naver marker click centering avoids slow duplicate recenter loops", () => {
@@ -2579,7 +2577,7 @@ describe("web quality performance source contracts", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
-  test("review like heart keeps the previous feed-style mobile and desktop overlay layout", () => {
+  test("review like controls preserve optimistic state, named avatars, and accessible actions", () => {
     const reviewCardSource = source("components/reviews/ReviewCard.tsx");
     const feedContentSource = source("components/feed/FeedContent.tsx");
     const profilePanelSource = source(
@@ -2596,9 +2594,7 @@ describe("web quality performance source contracts", () => {
     expect(reviewCardSource).toContain(
       "import { Avatar, AvatarFallback, AvatarImage }",
     );
-    expect(reviewCardSource).toContain(
-      '<Avatar className="h-8 w-8 bg-primary/10">',
-    );
+    expect(reviewCardSource).toMatch(/<Avatar className="[^"]*h-8 w-8\b[^"]*">/);
     expect(reviewCardSource).toContain("<AvatarImage");
     expect(reviewCardSource).toContain("<AvatarFallback");
     expect(reviewCardSource).toContain('role="img"');
@@ -2618,7 +2614,7 @@ describe("web quality performance source contracts", () => {
     expect(reviewCardSource).not.toContain("if (!currentUserId)");
     expect(reviewCardSource).toContain("import { cn } from");
     expect(reviewCardSource).toContain(
-      "group -m-1.5 flex items-center gap-1 rounded-full",
+      "group flex min-h-11 min-w-11 items-center justify-center gap-1",
     );
     expect(reviewCardSource).toContain("active:text-red-500");
     expect(reviewCardSource).toContain("data-liked={optimisticLike.isLiked}");
@@ -2639,7 +2635,7 @@ describe("web quality performance source contracts", () => {
       "[&_path]:fill-red-500 [&_path]:stroke-red-500",
     );
     expect(reviewCardSource).toContain(
-      "text-xs font-medium transition-colors group-active:text-red-500",
+      "text-xs font-medium tabular-nums transition-colors group-active:text-red-500",
     );
     expect(reviewCardSource).toContain('"text-muted-foreground');
     expect(reviewCardSource).toContain('"text-red-500"');
@@ -2651,7 +2647,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(reviewCardSource).toContain("aria-pressed={optimisticLike.isLiked}");
     expect(reviewCardSource).toContain(
-      'aria-label={isShareCopied ? "리뷰 링크 복사됨" : "리뷰 공유"}',
+      'aria-label={isSharing ? "리뷰 링크 복사 중" : isShareCopied ? "리뷰 링크 복사됨" : "리뷰 공유"}',
     );
     expect(reviewCardSource).toContain(
       "aria-label={`${review.restaurantName} 맛집 상세 보기`}",
@@ -3277,8 +3273,11 @@ describe("web quality performance source contracts", () => {
     expect(reviewModalSource).toContain(
       "desktopReviewMapPanelRef.current?.focus({ preventScroll: true })",
     );
+    // restaurant-review-journey.test.ts executes the cleanup, including the
+    // conditional-unmount case; this source gate keeps the panel wiring visible.
+    expect(reviewModalSource).toContain("desktopReviewMapPanelOpenerRef.current?.isConnected");
     expect(reviewModalSource).toContain(
-      "desktopReviewMapPanelOpenerRef.current?.focus({ preventScroll: true })",
+      "desktopReviewMapPanelOpenerRef.current.focus({ preventScroll: true })",
     );
     expect(reviewModalSource).toContain(
       'data-desktop-map-review-drag-handle={shouldRenderMapPanel ? "true" : undefined}',
@@ -3502,7 +3501,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageLayoutContentSource).toContain("await signOut();");
     expect(myPageLayoutContentSource).toContain('aria-label="로그아웃"');
     expect(myPageLayoutContentSource).toContain(
-      'className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"',
+      "data-mypage-mobile-route-header-action=\"logout\"",
     );
     expect(myPageLayoutContentSource).not.toContain("<span>로그아웃</span>");
     expect(myPageSidebarSource).toContain(
@@ -3549,7 +3548,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageSidebarSource).toContain('id="mypage-sidebar-avatar-upload"');
     expect(myPageSidebarSource).toContain(
-      'className="relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2',
+      "focus-within:ring-2 focus-within:ring-primary",
     );
     expect(myPageSidebarSource).toContain('aspectRatio: "1 / 1"');
     expect(myPageSidebarSource).toContain('borderRadius: "9999px"');
@@ -3574,16 +3573,25 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-side-column="true"',
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-profile-side-layout="matrix"',
+      "data-mypage-profile-side-layout=\"grouped-settings\"",
     );
     expect(myPageProfileSource).toContain(
-      "grid min-w-0 gap-3 sm:gap-5 md:contents",
+      "aria-labelledby=\"account-settings-title\"",
     );
     expect(myPageProfileSource).toContain(
-      'CardTitle className="flex items-center gap-2 text-base"',
+      "<AccountSettingsSection",
     );
     expect(myPageProfileSource).not.toContain("lg:text-xs");
-    expect(myPageProfileSource).not.toContain("lg:text-base");
+    const profileInputClasses = [...myPageProfileSource.matchAll(
+      /<Input\b[\s\S]*?className="([^"]+)"/g,
+    )].map((match) => match[1].split(/\s+/));
+    expect(profileInputClasses.length).toBeGreaterThan(0);
+    for (const classes of profileInputClasses) {
+      expect(classes).toContain("text-base");
+      // The shared Input has lg:text-sm; keep profile forms readable there too.
+      expect(classes).toContain("lg:text-base");
+      expect(classes.some((value) => /^(?:sm|md|lg|xl|2xl):text-(?:xs|sm)$/.test(value))).toBe(false);
+    }
     expect(myPageProfileSource).toContain(
       'data-mypage-profile-density="content-first"',
     );
@@ -3610,7 +3618,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain("저장");
     expect(myPageSidebarSource).toContain("취소");
     expect(myPageSidebarSource).toContain(
-      '<h3 className="truncate text-lg font-bold">{displayName}</h3>',
+      "data-mypage-sidebar-nickname-field=\"display\"",
     );
     expect(myPageSidebarSource).toContain('id="mypage-sidebar-nickname"');
     expect(myPageSidebarSource).toContain(
@@ -3624,8 +3632,8 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).toContain("lg:grid-cols-2");
     expect(myPageProfileSource).toContain("gap-3");
-    expect(myPageProfileSource).toContain("md:order-1");
-    expect(myPageProfileSource).toContain("md:order-2");
+    expect(myPageProfileSource).toContain("data-mypage-next-actions=\"true\"");
+    expect(myPageProfileSource).toContain("data-mypage-desktop-recent-activity=\"true\"");
     expect(myPageProfileSource).toContain(
       'data-mypage-quick-actions="combined"',
     );
@@ -3656,17 +3664,17 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(myPageProfileSource).not.toContain("진행 전 확인");
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-3"',
+      "data-mypage-password-card=\"full-width\"",
     );
     expect(myPageProfileSource).toContain(
-      'className="hidden min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-2 md:flex md:flex-col lg:col-start-2"',
+      "data-mypage-desktop-recent-activity=\"true\"",
     );
     expect(myPageProfileSource).toContain(
       'data-mypage-desktop-recent-activity-row="true"',
     );
     expect(myPageProfileSource).toContain("최근 활동");
     expect(myPageProfileSource).toContain(
-      "flex min-h-0 min-w-0 items-center gap-3 py-2.5",
+      "flex min-h-11 min-w-0 items-center gap-3 py-2",
     );
     for (const tonalPanelClass of [
       "rounded-2xl bg-muted/40 px-3 py-2.5",
@@ -3682,7 +3690,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain(
       '<h4 className="px-1 text-sm font-semibold">{section.title}</h4>',
     );
-    expect(myPageProfileSource).toContain("등급 대시보드");
+    expect(myPageProfileSource).toContain("aria-label=\"다음 등급 진행률\"");
     expect(myPageProfileSource).not.toContain("바로 할 수 있는 일");
     expect(myPageProfileSource).not.toContain(
       "grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2",
@@ -3703,7 +3711,7 @@ describe("web quality performance source contracts", () => {
         0,
     ).toBe(0);
     expect(myPageProfileSource).toContain(
-      'className="grid min-w-0 gap-3 sm:gap-5',
+      "aria-labelledby=\"account-settings-title\"",
     );
     expect(myPageProfileSource).toContain(
       'data-mypage-profile-hero-layout="sidebar-match"',
@@ -3729,7 +3737,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain(
       "transition-[border-color,box-shadow]",
     );
-    expect(myPageProfileSource).toContain("truncate text-lg font-bold");
+    expect(myPageProfileSource).toContain("truncate text-lg font-semibold");
     expect(myPageProfileSource).toContain(
       "truncate px-2 text-xs text-muted-foreground",
     );
@@ -3752,13 +3760,13 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).not.toContain("MOBILE_SECONDARY_ACTIONS.map");
     expect(myPageSidebarSource).toContain(
-      'className="h-9 w-full rounded-xl text-xs"',
+      "data-mypage-sidebar-session-action=\"logout\"",
     );
     expect(myPageProfileSource).toContain("내 활동");
-    expect(myPageProfileSource).toContain("제보하기");
+    expect(myPageProfileSource).toContain("href: \"/mypage/submissions/new\"");
     expect(myPageProfileSource).not.toContain("지도 환경설정");
     expect(myPageProfileSource).toContain("수정 요청");
-    expect(myPageProfileSource).toContain("쯔양 제보");
+    expect(myPageProfileSource).toContain("href: \"/mypage/submissions/recommend\"");
     expect(myPageProfileSource).toContain(
       "data-mypage-mobile-action-grid={section.id}",
     );
@@ -3820,20 +3828,20 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).toContain('data-mypage-danger-zone="true"');
     expect(myPageProfileSource).toContain(
-      'data-mypage-danger-zone-layout="matrix-bottom-right"',
+      "data-mypage-danger-zone-layout=\"settings-end\"",
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-6 lg:col-span-2"',
+      "data-mypage-danger-zone=\"true\"",
     );
     expect(myPageProfileSource).not.toContain("계정 위험 작업");
     expect(myPageProfileSource).not.toContain(
       "자주 쓰지 않는 작업은 한곳에 모았습니다.",
     );
     expect(myPageProfileSource).toContain(
-      'className="min-h-0 p-3 md:flex md:flex-1 md:flex-col lg:p-3"',
+      "data-layout-primitives=\"form-flow stack\"",
     );
     expect(myPageProfileSource).toContain(
-      'className="group p-1 md:flex md:flex-1 md:flex-col lg:p-0"',
+      "<details",
     );
     expect(myPageProfileSource).not.toContain(
       'className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"',

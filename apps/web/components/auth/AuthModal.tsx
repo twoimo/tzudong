@@ -2,7 +2,7 @@ import { captureBrowserLogout } from "@/lib/auth/browser-logout";
 import { beginBrowserAuthIntent, publishBrowserSignupPkce } from "@/lib/auth/browser-oauth-commit";
 import { requestBrowserPasswordRecovery, startBrowserGoogleOAuth } from "@/lib/auth/isolated-browser-pkce";
 import { beginBrowserDraftCleanup } from "@/lib/privacy/browser-draft-lifecycle";
-import { useState, useEffect, useCallback, memo, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, memo, type CSSProperties } from "react";
 import Image from "next/image";
 import {
   Dialog,
@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/lib/no-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, X } from "lucide-react";
+import { ChevronDown, RefreshCw, X } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
@@ -67,7 +67,7 @@ interface AuthModalProps {
   initialAuthTab?: "login" | "signup";
 }
 
-const AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME = "max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]";
+const AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME = "max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] [&>button.absolute]:right-2 [&>button.absolute]:top-2 [&>button.absolute]:flex [&>button.absolute]:h-11 [&>button.absolute]:w-11 [&>button.absolute]:items-center [&>button.absolute]:justify-center";
 const AUTH_MODAL_DESKTOP_CONTENT_STYLE: CSSProperties = {
   width: "min(calc(100vw - 2rem), 28rem)",
   maxWidth: "calc(100vw - 2rem)",
@@ -96,6 +96,7 @@ const GoogleIcon = memo(() => (
 ));
 GoogleIcon.displayName = "GoogleIcon";
 type AgeBand = "" | "age_14_plus" | "under_14";
+type PolicyLoadState = "loading" | "ready" | "error";
 type MarketingConsent = {
   email: boolean;
   sms: boolean;
@@ -117,6 +118,7 @@ const UNDER_14_SIGNUP_UNAVAILABLE_CODE = "UNDER_14_SIGNUP_UNAVAILABLE";
 const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "현재 만 14세 미만은 가입할 수 없습니다.";
 const POLICY_VERSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POLICY_CONTENT_SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const POLICY_LOAD_TIMEOUT_MS = 15_000;
 const MIN_SIGNUP_PASSWORD_LENGTH = 8;
 const MAX_SIGNUP_PASSWORD_LENGTH = 72;
 
@@ -128,7 +130,8 @@ function OnboardingConsentFields({
   onPrivacyPolicyOpen,
   marketingConsent,
   onMarketingConsentChange,
-  policyVersionReady,
+  policyLoadState,
+  onPolicyRetry,
 }: {
   ageBand: AgeBand;
   onAgeBandChange: (value: AgeBand) => void;
@@ -137,7 +140,8 @@ function OnboardingConsentFields({
   onPrivacyPolicyOpen: () => void;
   marketingConsent: MarketingConsent;
   onMarketingConsentChange: (key: keyof MarketingConsent, value: boolean) => void;
-  policyVersionReady: boolean;
+  policyLoadState: PolicyLoadState;
+  onPolicyRetry: () => void;
 }) {
   const marketingControls: Array<{ key: keyof MarketingConsent; label: string }> = [
     { key: "email", label: "이메일 마케팅 수신" },
@@ -149,69 +153,88 @@ function OnboardingConsentFields({
   ];
 
   return (
-    <div className="space-y-4 rounded-lg border p-3">
+    <div className="space-y-4 rounded-lg border border-border p-4">
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">연령대 확인 (필수)</legend>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs leading-5 text-muted-foreground">
           생년월일이나 주민등록번호를 받지 않습니다. 현재 만 14세 이상만 가입할 수 있습니다.
         </p>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
           <input
             type="radio"
             name="signup-age-band"
             value="age_14_plus"
             checked={ageBand === "age_14_plus"}
             onChange={() => onAgeBandChange("age_14_plus")}
+            className="h-4 w-4 accent-primary"
           />
           만 14세 이상입니다
         </label>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
           <input
             type="radio"
             name="signup-age-band"
             value="under_14"
             checked={ageBand === "under_14"}
             onChange={() => onAgeBandChange("under_14")}
+            className="h-4 w-4 accent-primary"
           />
           만 14세 미만입니다
         </label>
       </fieldset>
 
-      <div className="flex items-start space-x-2">
+      <div className="space-y-1 border-t border-border pt-3">
+        <div className="flex min-h-11 items-center gap-3">
         <Checkbox
           id="privacy-agree"
           checked={privacyAgreed}
           onCheckedChange={(checked) => onPrivacyAgreedChange(checked === true)}
         />
-        <div className="grid gap-1.5 leading-none">
           <label
             htmlFor="privacy-agree"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            className="flex min-h-11 flex-1 cursor-pointer items-center text-sm font-medium leading-6 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
+            개인정보 처리방침에 동의합니다 (필수)
+          </label>
+        </div>
+        <div className="space-y-1 pl-7">
             <button
               type="button"
-              className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
+              className="inline-flex min-h-11 items-center rounded-sm text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               onClick={onPrivacyPolicyOpen}
             >
-              개인정보 처리방침
+              개인정보 처리방침 읽기
             </button>
-            에 동의합니다 (필수)
-          </label>
-          {!policyVersionReady && (
+          {policyLoadState === "loading" && (
             <p className="text-xs text-muted-foreground" role="status">
               최신 개인정보 처리방침을 확인하는 중입니다.
             </p>
           )}
+          {policyLoadState === "error" && (
+            <div className="space-y-2">
+              <p className="text-xs leading-5 text-destructive" role="alert">
+                개인정보 처리방침을 불러오지 못했습니다. 다시 확인해 주세요.
+              </p>
+              <Button type="button" variant="outline" className="h-11 text-sm" onClick={onPolicyRetry}>
+                처리방침 다시 확인
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">마케팅 수신 동의 (선택)</legend>
-        <p className="text-xs text-muted-foreground">
-          일반 수신과 야간 수신은 각각 선택할 수 있으며, 선택하지 않아도 가입할 수 있습니다.
+      <details className="group/marketing border-t border-border pt-3">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-sm text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+          마케팅 수신 동의 (선택)
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground group-open/marketing:rotate-180" strokeWidth={1.5} aria-hidden="true" />
+        </summary>
+        <p className="py-2 text-xs leading-5 text-muted-foreground">
+          선택하지 않아도 가입할 수 있습니다. 야간 수신은 해당 채널의 일반 수신에 동의한 뒤 별도로 선택할 수 있습니다.
         </p>
-        {marketingControls.map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2 text-sm">
+        <fieldset className="space-y-1">
+          <legend className="sr-only">채널별 마케팅 수신 동의</legend>
+          {marketingControls.map(({ key, label }) => (
+          <label key={key} className={cn("flex min-h-11 cursor-pointer items-center gap-3 text-sm", key.startsWith("night_") && !marketingConsent[key.slice(6) as keyof MarketingConsent] && "cursor-not-allowed text-muted-foreground")}>
             <Checkbox
               id={`marketing-${key}`}
               checked={marketingConsent[key]}
@@ -221,13 +244,15 @@ function OnboardingConsentFields({
             {label}
           </label>
         ))}
-      </fieldset>
+        </fieldset>
+      </details>
     </div>
   );
 }
 
 const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, initialAuthTab = "login" }: AuthModalProps) => {
   const isMobileOrTablet = useImmediateMobileOrTablet();
+  const dialogOpenerRef = useRef<HTMLElement | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -239,6 +264,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
   const [marketingConsent, setMarketingConsent] = useState<MarketingConsent>(EMPTY_MARKETING_CONSENT);
   const [policyVersion, setPolicyVersion] = useState<string | null>(null);
   const [policyContentSha256, setPolicyContentSha256] = useState<string | null>(null);
+  const [policyLoadState, setPolicyLoadState] = useState<PolicyLoadState>("loading");
+  const [policyLoadAttempt, setPolicyLoadAttempt] = useState(0);
   const [authTab, setAuthTab] = useState<"login" | "signup">(initialAuthTab);
   const [isExistingAccountRecovery, setIsExistingAccountRecovery] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
@@ -253,9 +280,22 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     setAuthTab(initialAuthTab);
 
     setUsername((currentUsername) => currentUsername || generateRandomNickname());
+  }, [initialAuthTab, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
     let cancelled = false;
-    void fetch("/api/privacy/onboarding", { cache: "no-store" })
+    const controller = new AbortController();
+    setPolicyLoadState("loading");
+    setPolicyVersion(null);
+    setPolicyContentSha256(null);
+    const timeout = setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setPolicyLoadState("error");
+      controller.abort();
+    }, POLICY_LOAD_TIMEOUT_MS);
+    void fetch("/api/privacy/onboarding", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         const payload: unknown = await response.json().catch(() => null);
         if (!response.ok || typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
@@ -276,19 +316,28 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         if (!cancelled) {
           setPolicyVersion(currentPolicy?.id ?? null);
           setPolicyContentSha256(currentPolicy?.contentSha256 ?? null);
+          setPolicyLoadState(currentPolicy ? "ready" : "error");
         }
       })
       .catch(() => {
         if (!cancelled) {
           setPolicyVersion(null);
           setPolicyContentSha256(null);
+          setPolicyLoadState("error");
         }
-      });
+      })
+      .finally(() => clearTimeout(timeout));
 
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
+      controller.abort();
     };
-  }, [initialAuthTab, isOpen]);
+  }, [isOpen, policyLoadAttempt]);
+
+  const retryPolicyLoad = useCallback(() => {
+    setPolicyLoadAttempt((attempt) => attempt + 1);
+  }, []);
 
   const resetForm = useCallback(() => {
     setEmail("");
@@ -449,7 +498,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         return;
       }
 
-      toast.success("로그인 성공!");
+      toast.success("로그인했습니다");
       dispatchHomeAuthSessionUpdated({
         hasSession: true,
         source: 'auth-modal-password-login',
@@ -648,7 +697,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
         marketingConsent={marketingConsent}
         onMarketingConsentChange={handleMarketingConsentChange}
-        policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+        policyLoadState={policyLoadState}
+        onPolicyRetry={retryPolicyLoad}
       />
       <Button
         type="button"
@@ -685,12 +735,12 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           <MobileSheetHeader
             className="break-keep"
             title={isPrivacyOnboarding ? "개인정보 확인" : "쯔동여지도"}
-            description={isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "쯔양의 맛집을 리뷰하고 공유하세요"}
+            description={isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "저장한 맛집과 내가 남긴 리뷰를 이어서 확인하세요."}
             titleId="auth-sheet-title"
             descriptionId="auth-sheet-description"
             icon={<Image src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 object-contain" />}
             action={(
-              <Button type="button" variant="ghost" size="icon" aria-label="로그인 바텀시트 닫기" onClick={onClose}>
+              <Button type="button" variant="ghost" size="icon" className="h-11 w-11" aria-label="로그인 창 닫기" onClick={onClose}>
                 <X className="h-5 w-5" />
               </Button>
             )}
@@ -707,7 +757,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               <TabsTrigger
                 value="login"
                 className={cn(
-                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  "min-h-11 rounded-none bg-transparent px-2 py-3 text-sm font-medium shadow-none",
                   authTab === "login"
                     ? "border-b-2 border-primary text-foreground"
                     : "border-b-2 border-transparent text-muted-foreground"
@@ -718,7 +768,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               <TabsTrigger
                 value="signup"
                 className={cn(
-                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  "min-h-11 rounded-none bg-transparent px-2 py-3 text-sm font-medium shadow-none",
                   authTab === "signup"
                     ? "border-b-2 border-primary text-foreground"
                     : "border-b-2 border-transparent text-muted-foreground"
@@ -728,7 +778,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="login">
+            <TabsContent value="login" className="mt-4">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-sm">이메일</Label>
@@ -743,7 +793,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     autoCapitalize="none"
                     autoCorrect="off"
                     enterKeyHint="next"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                 </div>
                 <div className="space-y-2">
@@ -756,19 +806,19 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
                     enterKeyHint="done"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
+                  className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                   disabled={isLoading}
                 >
                   {isLoading ? "로그인 중..." : "로그인"}
                 </Button>
                 <button
                   type="button"
-                  className="min-h-6 w-full py-1 text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                  className="min-h-11 w-full rounded-sm py-2 text-sm text-muted-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={() => setShowForgotPassword(true)}
                 >
                   비밀번호를 잊으셨나요?
@@ -779,7 +829,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
+                <div className="relative flex justify-center text-xs">
                   <span className="bg-background px-2 text-muted-foreground">
                     또는
                   </span>
@@ -789,7 +839,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-10 sm:h-11"
+                className="w-full h-11"
                 onClick={handleGoogleLogin}
                 disabled={isGoogleLoading}
               >
@@ -801,7 +851,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </p>
             </TabsContent>
 
-            <TabsContent value="signup">
+            <TabsContent value="signup" className="mt-4">
               <form onSubmit={handleSignup} className="space-y-4">
                 {isExistingAccountRecovery && (
                   <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" role="status">
@@ -820,15 +870,16 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                       onChange={(e) => setUsername(e.target.value)}
                       autoComplete="username"
                       enterKeyHint="next"
-                      className="h-10 sm:h-11 flex-1"
+                      className="h-11 min-w-0 flex-1 text-base md:text-base"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
                       onClick={refreshNickname}
-                      className="h-10 sm:h-11 w-10 sm:w-11 shrink-0"
+                      className="h-11 w-11 shrink-0"
                       title="다른 랜덤 닉네임"
+                      aria-label="다른 랜덤 닉네임"
                     >
                       <RefreshCw className="h-4 w-4" />
                     </Button>
@@ -847,7 +898,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     autoCapitalize="none"
                     autoCorrect="off"
                     enterKeyHint="next"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                 </div>
                 <div className="space-y-2">
@@ -864,7 +915,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     aria-describedby={isExistingAccountRecovery ? undefined : "signup-password-help"}
                     autoComplete="new-password"
                     enterKeyHint="next"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                   {!isExistingAccountRecovery && (
                     <p id="signup-password-help" className="text-xs text-muted-foreground">
@@ -883,7 +934,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
                     autoComplete="new-password"
                     enterKeyHint="done"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                 </div>
 
@@ -895,12 +946,13 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                   onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
                   marketingConsent={marketingConsent}
                   onMarketingConsentChange={handleMarketingConsentChange}
-                  policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+                  policyLoadState={policyLoadState}
+                  onPolicyRetry={retryPolicyLoad}
                 />
 
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
+                  className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                   disabled={isLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
                 >
                   {isLoading ? "가입 중..." : "회원가입"}
@@ -911,7 +963,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
+                <div className="relative flex justify-center text-xs">
                   <span className="bg-background px-2 text-muted-foreground">
                     또는
                   </span>
@@ -921,7 +973,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-10 sm:h-11"
+                className="w-full h-11"
                 onClick={handleGoogleSignup}
                 disabled={isGoogleLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
               >
@@ -936,7 +988,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
             <div className={`${mobileSheetStyles.footer} text-center text-xs text-muted-foreground`}>
             <button
               type="button"
-              className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
+              className="inline-flex min-h-11 items-center rounded-sm text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               onClick={() => setIsPrivacyModalOpen(true)}
             >
               개인정보 처리방침
@@ -950,7 +1002,22 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
       {!isMobileOrTablet && (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className={AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME} style={AUTH_MODAL_DESKTOP_CONTENT_STYLE}>
+        <DialogContent
+          onOpenAutoFocus={() => {
+            const active = document.activeElement;
+            dialogOpenerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+          }}
+          onCloseAutoFocus={(event) => {
+            const opener = dialogOpenerRef.current;
+            dialogOpenerRef.current = null;
+            if (opener?.isConnected) {
+              event.preventDefault();
+              opener.focus({ preventScroll: true });
+            }
+          }}
+          className={AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME}
+          style={AUTH_MODAL_DESKTOP_CONTENT_STYLE}
+        >
           <DialogHeader className="space-y-2">
             <div className="flex items-center gap-3" data-auth-brand="tzudong">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40">
@@ -961,7 +1028,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </DialogTitle>
             </div>
             <DialogDescription className="text-sm text-left">
-              {isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "쯔양의 맛집을 리뷰하고 공유하세요"}
+              {isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "저장한 맛집과 내가 남긴 리뷰를 이어서 확인하세요."}
             </DialogDescription>
           </DialogHeader>
 
@@ -972,7 +1039,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               <TabsTrigger
                 value="login"
                 className={cn(
-                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  "min-h-11 rounded-none bg-transparent px-2 py-3 text-sm font-medium shadow-none",
                   authTab === "login"
                     ? "border-b-2 border-primary text-foreground"
                     : "border-b-2 border-transparent text-muted-foreground"
@@ -983,7 +1050,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               <TabsTrigger
                 value="signup"
                 className={cn(
-                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  "min-h-11 rounded-none bg-transparent px-2 py-3 text-sm font-medium shadow-none",
                   authTab === "signup"
                     ? "border-b-2 border-primary text-foreground"
                     : "border-b-2 border-transparent text-muted-foreground"
@@ -993,7 +1060,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="login">
+            <TabsContent value="login" className="mt-4">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-sm">이메일</Label>
@@ -1005,7 +1072,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     enterKeyHint="next"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1018,19 +1085,19 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
                     enterKeyHint="done"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
+                  className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                   disabled={isLoading}
                 >
                   {isLoading ? "로그인 중..." : "로그인"}
                 </Button>
                 <button
                   type="button"
-                  className="min-h-6 w-full py-1 text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                  className="min-h-11 w-full rounded-sm py-2 text-sm text-muted-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={() => setShowForgotPassword(true)}
                 >
                   비밀번호를 잊으셨나요?
@@ -1041,7 +1108,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
+                <div className="relative flex justify-center text-xs">
                   <span className="bg-background px-2 text-muted-foreground">
                     또는
                   </span>
@@ -1051,7 +1118,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-10 sm:h-11"
+                className="w-full h-11"
                 onClick={handleGoogleLogin}
                 disabled={isGoogleLoading}
               >
@@ -1063,7 +1130,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </p>
             </TabsContent>
 
-            <TabsContent value="signup">
+            <TabsContent value="signup" className="mt-4">
               <form onSubmit={handleSignup} className="space-y-4">
                 {isExistingAccountRecovery && (
                   <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" role="status">
@@ -1082,15 +1149,16 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                       onChange={(e) => setUsername(e.target.value)}
                       autoComplete="username"
                       enterKeyHint="next"
-                      className="h-10 sm:h-11 flex-1"
+                      className="h-11 min-w-0 flex-1 text-base md:text-base"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
                       onClick={refreshNickname}
-                      className="h-10 sm:h-11 w-10 sm:w-11 shrink-0"
+                      className="h-11 w-11 shrink-0"
                       title="다른 랜덤 닉네임"
+                      aria-label="다른 랜덤 닉네임"
                     >
                       <RefreshCw className="h-4 w-4" />
                     </Button>
@@ -1106,7 +1174,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     enterKeyHint="next"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1123,7 +1191,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     aria-describedby={isExistingAccountRecovery ? undefined : "signup-password-help"}
                     autoComplete="new-password"
                     enterKeyHint="next"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                   {!isExistingAccountRecovery && (
                     <p id="signup-password-help" className="text-xs text-muted-foreground">
@@ -1142,7 +1210,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
                     autoComplete="new-password"
                     enterKeyHint="done"
-                    className="h-10 sm:h-11"
+                    className="h-11 text-base md:text-base"
                   />
                 </div>
 
@@ -1154,12 +1222,13 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                   onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
                   marketingConsent={marketingConsent}
                   onMarketingConsentChange={handleMarketingConsentChange}
-                  policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+                  policyLoadState={policyLoadState}
+                  onPolicyRetry={retryPolicyLoad}
                 />
 
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
+                  className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                   disabled={isLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
                 >
                   {isLoading ? "가입 중..." : "회원가입"}
@@ -1170,7 +1239,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
+                <div className="relative flex justify-center text-xs">
                   <span className="bg-background px-2 text-muted-foreground">
                     또는
                   </span>
@@ -1180,7 +1249,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-10 sm:h-11"
+                className="w-full h-11"
                 onClick={handleGoogleSignup}
                 disabled={isGoogleLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
               >
@@ -1195,7 +1264,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
             <div className="text-xs text-center text-muted-foreground">
             <button
               type="button"
-              className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
+              className="inline-flex min-h-11 items-center rounded-sm text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               onClick={() => setIsPrivacyModalOpen(true)}
             >
               개인정보 처리방침
@@ -1220,10 +1289,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
             <PrivacyPolicyContent />
           </ScrollArea>
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsPrivacyModalOpen(false)}>
+            <Button variant="outline" className="min-h-11" onClick={() => setIsPrivacyModalOpen(false)}>
               닫기
             </Button>
-            <Button onClick={handlePrivacyAgree}>
+            <Button className="min-h-11" onClick={handlePrivacyAgree}>
               동의하기
             </Button>
           </div>
@@ -1249,14 +1318,14 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                 value={forgotPasswordEmail}
                 onChange={(e) => setForgotPasswordEmail(e.target.value)}
                 autoComplete="email"
-                className="h-10 sm:h-11"
+                className="h-11 text-base md:text-base"
               />
             </div>
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 h-10 sm:h-11"
+                className="flex-1 h-11"
                 onClick={() => {
                   setShowForgotPassword(false);
                   setForgotPasswordEmail("");
@@ -1266,7 +1335,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </Button>
               <Button
                 type="submit"
-                className="flex-1 h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90"
+                className="flex-1 h-11 bg-primary text-primary-foreground hover:bg-primary/90"
                 disabled={isSendingReset}
               >
                 {isSendingReset ? "발송 중..." : "재설정 링크 발송"}

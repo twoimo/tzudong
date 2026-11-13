@@ -106,7 +106,7 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
       : route.abort());
     await page.goto('https://renewal.test/');
     await page.addScriptTag({ content: await renewalPanelBundle() });
-    const search = page.getByRole('textbox', { name: '맛집 검색어 입력' });
+    const search = page.getByRole('textbox', { name: '맛집 이름 검색어 입력' });
     try { await browserExpect(search).toBeVisible(); }
     catch (error) { throw new Error(JSON.stringify({ errors, body: await page.locator('body').innerText() }), { cause: error }); }
     await search.fill('정원');
@@ -201,7 +201,7 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
       }
     }
     expect(await page.evaluate(() => (globalThis as unknown as { __badPanels: string[] }).__badPanels)).toEqual([]);
-    await page.getByRole('textbox', { name: '맛집 검색어 입력' }).fill('검증 과업');
+    await page.getByRole('textbox', { name: '맛집 이름 검색어 입력' }).fill('검증 과업');
     await browserExpect(page.locator('[data-loaded-panel="검색"]')).toBeVisible();
     await browserExpect(page).toHaveURL('https://renewal.test/');
     // Fresh mount with an import delayed at the transport boundary.
@@ -326,10 +326,10 @@ for (const destination of ['bookmark','notification','search'] as const) (exists
   await page.addScriptTag({content:await renewalPanelBundle('mobile')});
   const title={bookmark:'북마크',notification:'알림',search:'검색'}[destination];
   await browserExpect(page.getByRole('alert')).toBeVisible();await browserExpect(page.getByText(/로그인 후 .*확인할 수 있어요/)).toHaveCount(0);
-  if(destination==='search')await page.getByPlaceholder('쯔동여지도 검색하기').fill('보존할 검색어');
+  if(destination==='search')await page.getByPlaceholder('맛집 이름 검색').fill('보존할 검색어');
   await page.evaluate(title=>(globalThis as unknown as {__fixture:{failed:Set<string>}}).__fixture.failed.delete(title),title);
   await page.getByRole('button',{name:'다시 시도',exact:true}).click();await browserExpect(page.locator('[data-loaded-panel="'+title+'"]')).toBeVisible();
-  if(destination==='search')await browserExpect(page.getByPlaceholder('쯔동여지도 검색하기')).toHaveValue('보존할 검색어');
+  if(destination==='search')await browserExpect(page.getByPlaceholder('맛집 이름 검색')).toHaveValue('보존할 검색어');
   expect(errors).toEqual([]);
  }finally{await browser.close();}
 },20000);

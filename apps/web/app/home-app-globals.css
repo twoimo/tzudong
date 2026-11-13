@@ -41,7 +41,8 @@ html[data-home-chrome-ready="true"][data-home-panel-ready="true"] [data-home-sta
   }
 }
 .mobile-map-status-badge {
-  /* 10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px. */
+  /* MobileControlOverlay measures the control stack plus an 8px gap.
+     The position helper uses that height, with a safe-area + 136px fallback. */
   margin-top: 0;
   max-width: calc(100vw - 2rem);
   max-height: min(20rem, calc(100dvh - 24rem));

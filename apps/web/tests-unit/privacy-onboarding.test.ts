@@ -353,7 +353,7 @@ describe('privacy onboarding challenge', () => {
 
     const loginEligibilityIndex = passwordLogin.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
     expect(loginEligibilityIndex).toBeGreaterThan(-1);
-    expect(passwordLogin.indexOf('toast.success("로그인 성공!")')).toBeGreaterThan(loginEligibilityIndex);
+    expect(passwordLogin.indexOf('toast.success(')).toBeGreaterThan(loginEligibilityIndex);
     expect(passwordLogin.indexOf('dispatchHomeAuthSessionUpdated({')).toBeGreaterThan(loginEligibilityIndex);
     expect(passwordLogin.indexOf('redirectAfterRequestedLogin()')).toBeGreaterThan(loginEligibilityIndex);
     expect(passwordLogin).toContain('setAuthTab("signup")');

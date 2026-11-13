@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LegacyDraftRecovery } from '@/components/mypage/LegacyDraftRecovery';
+import { AccountSettingsSection } from '@/components/mypage/AccountSettingsSection';
 import { captureBrowserDraftEpoch } from '@/lib/privacy/browser-draft-lifecycle';
 import { pageHeadingTitleClass } from "@/components/layout/page-heading-styles";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ import {
   ChevronRight,
   Heart,
   MessageSquare,
+  Bell,
   MapPin,
   Edit,
   X,
@@ -54,7 +56,7 @@ import {
   getNextUserTierProgress,
   useUserProfile,
 } from "@/hooks/useUserProfile";
-import { cn } from "@/lib/utils";
+import { getTierDisplayName } from "@/components/mypage/tier-display";
 import {
   ACCOUNT_DELETION_CONFIRMATION_TEXT,
   clearAccountDeletionBrowserStores,
@@ -927,8 +929,8 @@ export default function ProfilePage() {
   const tierLikesNeeded = hasVerifiedReviews
     ? Math.ceil(tierRemainingScore * 10)
     : null;
-  const currentTierName = userProfile?.tier?.name ?? "🌱 뉴비";
-  const nextTierName = tierProgress.nextTier?.name ?? "최고 등급";
+  const currentTierName = getTierDisplayName(userProfile?.tier?.name ?? "뉴비");
+  const nextTierName = getTierDisplayName(tierProgress.nextTier?.name ?? "최고 등급");
   const tierRemainingLabel = tierProgress.nextTier
     ? `${tierRemainingScore}점`
     : "완료";
@@ -938,33 +940,33 @@ export default function ProfilePage() {
       href: "/mypage/bookmarks",
       icon: Bookmark,
       title: "나의 북마크 내역",
-      accent: "bg-primary/10 text-primary",
+      accent: "text-muted-foreground",
     },
     {
       href: "/mypage/reviews",
       icon: MessageSquare,
       title: "나의 리뷰 내역",
-      accent: "bg-sky-500/10 text-sky-600",
+      accent: "text-muted-foreground",
     },
   ];
   const reportActions = [
     {
       href: "/mypage/submissions/new",
       icon: MapPin,
-      title: "신규 맛집 제보",
-      accent: "bg-emerald-500/10 text-emerald-600",
+      title: "신규 맛집 제보 내역",
+      accent: "text-muted-foreground",
     },
     {
       href: "/mypage/submissions/edit",
       icon: Edit,
-      title: "수정 요청",
-      accent: "bg-amber-500/10 text-amber-600",
+      title: "맛집 수정 요청 내역",
+      accent: "text-muted-foreground",
     },
     {
       href: "/mypage/submissions/recommend",
       icon: YouTubeIcon,
-      title: "쯔양 제보",
-      accent: "bg-red-500/10 text-red-600",
+      title: "쯔양 맛집 제보 내역",
+      accent: "text-muted-foreground",
     },
   ];
   const quickActionSections = [
@@ -975,7 +977,7 @@ export default function ProfilePage() {
     },
     {
       id: "report" as const,
-      title: "제보하기",
+      title: "제보 내역",
       actions: reportActions,
     },
   ];
@@ -984,29 +986,29 @@ export default function ProfilePage() {
       icon: Bookmark,
       label: "저장한 맛집",
       value: `${bookmarks.length}개`,
-      accent: "bg-primary/10 text-primary",
+      accent: "text-muted-foreground",
     },
     {
       icon: MessageSquare,
       label: "작성한 리뷰",
       value: `${userProfile?.reviewCount ?? 0}개`,
-      accent: "bg-sky-500/10 text-sky-600",
+      accent: "text-muted-foreground",
     },
     {
       icon: Heart,
       label: "받은 좋아요",
       value: `${userProfile?.totalLikes ?? 0}개`,
-      accent: "bg-red-500/10 text-red-600",
+      accent: "text-muted-foreground",
     },
   ];
 
   return (
     <div
-      className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start"
+      className="grid min-w-0 gap-6 lg:grid-cols-2 lg:items-start"
       data-mypage-profile-page="true"
       data-mypage-profile-density="content-first"
       data-mypage-profile-viewport-fit="content"
-      data-mypage-profile-matrix="content-2x2"
+      data-mypage-profile-matrix="activity-and-settings"
       data-mypage-profile-matrix-size="content-track"
       data-mypage-profile-mobile-flow="stack"
       data-mypage-profile-desktop-flow="activity-then-settings"
@@ -1016,7 +1018,7 @@ export default function ProfilePage() {
         <p className="text-sm leading-6 text-muted-foreground">맛집을 다녀온 기록과 다음 등급까지의 진행 상황을 확인하세요.</p>
       </header>
       <div
-        className="min-w-0 space-y-3 sm:space-y-5 md:contents md:space-y-0"
+        className="min-w-0 space-y-4 md:contents md:space-y-0"
         data-mypage-profile-main-column="true"
       >
         <Card
@@ -1031,7 +1033,7 @@ export default function ProfilePage() {
               <label
                 htmlFor="mypage-mobile-avatar-upload"
                 aria-label="프로필 사진 변경"
-                className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border group-hover:ring-2 group-hover:ring-primary/30 md:pointer-events-none"
+                className="relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 md:pointer-events-none"
                 style={{
                   width: "4rem",
                   height: "4rem",
@@ -1058,7 +1060,7 @@ export default function ProfilePage() {
                   </div>
                 )}
                 <span
-                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 active:opacity-100 md:hidden"
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 active:opacity-100 md:hidden"
                   style={{ borderRadius: "9999px" }}
                 >
                   {mobileAvatarUploading ? (
@@ -1086,9 +1088,9 @@ export default function ProfilePage() {
                   onClick={handleMobileAvatarDelete}
                   disabled={mobileAvatarUploading}
                   aria-label="프로필 사진 삭제"
-                  className="absolute -right-1 -top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-destructive text-white shadow-sm transition-colors hover:bg-destructive/90 disabled:opacity-50 md:hidden"
+                  className="absolute -right-4 -top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 md:hidden"
                 >
-                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card"><X className="h-4 w-4" aria-hidden="true" /></span>
                 </button>
               )}
             </div>
@@ -1113,14 +1115,14 @@ export default function ProfilePage() {
                     }
                     placeholder="닉네임"
                     aria-label="닉네임"
-                    className="h-10 rounded-xl text-center text-base font-semibold"
+                    className="h-11 rounded-lg text-base lg:text-base"
                     autoFocus
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       type="button"
                       size="sm"
-                      className="h-9 rounded-xl text-xs"
+                      className="h-11 rounded-lg text-sm"
                       onClick={handleMobileNicknameChange}
                       disabled={
                         mobileNicknameSaving ||
@@ -1137,7 +1139,7 @@ export default function ProfilePage() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-9 rounded-xl text-xs"
+                      className="h-11 rounded-lg text-sm"
                       onClick={() => {
                         setMobileNicknameInput(displayName);
                         setIsMobileNicknameEditing(false);
@@ -1153,24 +1155,20 @@ export default function ProfilePage() {
                   className="flex max-w-full items-center gap-2 px-2"
                   data-mypage-mobile-nickname-field="display"
                 >
-                  <h3 className="truncate text-lg font-bold">{displayName}</h3>
+                  <h3 className="truncate text-lg font-semibold">{displayName}</h3>
                   {userProfile?.tier && (
                     <Badge
                       variant="outline"
-                      className={cn(
-                        "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-2xs",
-                        userProfile.tier.color,
-                        userProfile.tier.bgColor,
-                      )}
+                      className="h-6 shrink-0 whitespace-nowrap border-border px-2 py-0 text-xs font-medium text-muted-foreground"
                     >
-                      {userProfile.tier.name}
+                      {getTierDisplayName(userProfile.tier.name)}
                     </Badge>
                   )}
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
-                    className="h-7 rounded-full px-2 text-2xs text-muted-foreground"
+                    className="h-11 min-w-11 rounded-lg px-2 text-xs text-muted-foreground"
                     onClick={() => {
                       setMobileNicknameInput(displayName);
                       setIsMobileNicknameEditing(true);
@@ -1193,13 +1191,13 @@ export default function ProfilePage() {
             >
               <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 transition-colors hover:bg-muted/60">
                 <span className="mb-1 text-xs text-muted-foreground">도장</span>
-                <span className="text-sm font-bold">
+                <span className="text-sm font-semibold">
                   {userProfile?.verifiedReviewCount ?? 0}
                 </span>
               </div>
               <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 transition-colors hover:bg-muted/60">
                 <span className="mb-1 text-xs text-muted-foreground">리뷰</span>
-                <span className="text-sm font-bold">
+                <span className="text-sm font-semibold">
                   {userProfile?.reviewCount ?? 0}
                 </span>
               </div>
@@ -1207,7 +1205,7 @@ export default function ProfilePage() {
                 <span className="mb-1 text-xs text-muted-foreground">
                   좋아요
                 </span>
-                <span className="text-sm font-bold">
+                <span className="text-sm font-semibold">
                   {userProfile?.totalLikes ?? 0}
                 </span>
               </div>
@@ -1217,7 +1215,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="overflow-hidden rounded-2xl border border-border bg-card shadow-none md:order-1 lg:col-start-1"
+          className="overflow-hidden rounded-xl border border-border bg-card shadow-none lg:col-start-1"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -1242,12 +1240,12 @@ export default function ProfilePage() {
                       <Link
                         key={action.href}
                         href={action.href}
-                        className="group flex min-h-12 min-w-0 touch-manipulation items-center gap-3 rounded-lg bg-muted/40 px-3 py-2 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="group flex min-h-12 min-w-0 touch-manipulation items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         data-mypage-mobile-action-row="true"
                         data-mypage-action-group={section.id}
                       >
                         <span
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${action.accent}`}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center ${action.accent}`}
                         >
                           <Icon className="h-4 w-4" aria-hidden="true" />
                         </span>
@@ -1266,21 +1264,17 @@ export default function ProfilePage() {
             ))}
           </CardContent>
           <CardContent
-            className="hidden space-y-5 p-5 md:block"
+            className="hidden space-y-4 p-4 md:block"
             data-mypage-desktop-tier-dashboard="true"
           >
             <div className="flex items-start justify-between gap-3">
-              <h4 className="text-sm font-semibold">등급 대시보드</h4>
+              <h2 className="text-base font-semibold">나의 맛집 활동</h2>
               {userProfile?.tier && (
                 <Badge
                   variant="outline"
-                  className={cn(
-                    "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-2xs",
-                    userProfile.tier.color,
-                    userProfile.tier.bgColor,
-                  )}
+                  className="h-6 shrink-0 whitespace-nowrap border-border px-2 py-0 text-xs font-medium text-muted-foreground"
                 >
-                  {userProfile.tier.name}
+                  {getTierDisplayName(userProfile.tier.name)}
                 </Badge>
               )}
             </div>
@@ -1290,14 +1284,14 @@ export default function ProfilePage() {
               data-mypage-desktop-tier-progress="true"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="min-w-0 truncate text-sm font-bold tracking-tight">
+                <p className="min-w-0 truncate text-sm font-semibold">
                   {tierProgress.nextTier
                     ? `${nextTierName}까지 인증 리뷰 ${tierVerifiedReviewsNeeded}개`
                     : "최고 등급 유지 중"}
                 </p>
-                <p className="shrink-0 text-sm font-bold tabular-nums">
+                <p className="shrink-0 text-sm font-semibold tabular-nums">
                   {(userProfile?.qualityScore ?? 0).toFixed(1)}
-                  <span className="ml-0.5 text-2xs font-semibold text-muted-foreground">
+                  <span className="ml-0.5 text-xs font-semibold text-muted-foreground">
                     점
                   </span>
                 </p>
@@ -1316,7 +1310,7 @@ export default function ProfilePage() {
                   aria-hidden="true"
                 />
               </div>
-              <div className="mt-1 flex items-center justify-between gap-3 text-2xs text-muted-foreground">
+              <div className="mt-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                 <span className="min-w-0 truncate">
                   현재 {currentTierName} · 남은 점수 {tierRemainingLabel}
                 </span>
@@ -1330,13 +1324,13 @@ export default function ProfilePage() {
               data-mypage-desktop-tier-action-guide="true"
             >
               <div className="min-w-0">
-                <dt className="text-2xs text-muted-foreground">인증 리뷰</dt>
+                <dt className="text-xs text-muted-foreground">인증 리뷰</dt>
                 <dd className="truncate text-xs font-semibold">
                   {tierProgress.nextTier ? `${tierVerifiedReviewsNeeded}개 더 필요` : "목표 달성"}
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="text-2xs text-muted-foreground">받은 좋아요</dt>
+                <dt className="text-xs text-muted-foreground">받은 좋아요</dt>
                 <dd className="truncate text-xs font-semibold">
                   {tierProgress.nextTier
                     ? hasVerifiedReviews && tierLikesNeeded !== null
@@ -1350,19 +1344,19 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="hidden min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-2 md:flex md:flex-col lg:col-start-2"
+          className="hidden min-w-0 rounded-xl border border-border bg-card shadow-none md:flex md:flex-col lg:col-start-2"
           data-mypage-desktop-recent-activity="true"
         >
-          <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
-            <CardTitle className="text-base">최근 활동</CardTitle>
+          <CardHeader className="shrink-0 p-4 pb-2">
+            <CardTitle className="text-base tracking-normal">최근 활동</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-1 px-5 pb-5">
+          <CardContent className="grid gap-1 px-4 pb-4">
             {recentActivityItems.map((item) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.label}
-                  className="flex min-h-0 min-w-0 items-center gap-3 py-2.5"
+                  className="flex min-h-11 min-w-0 items-center gap-3 py-2"
                   data-mypage-desktop-recent-activity-row="true"
                 >
                   <span
@@ -1373,7 +1367,7 @@ export default function ProfilePage() {
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                     {item.label}
                   </span>
-                  <span className="shrink-0 text-sm font-bold tabular-nums">
+                  <span className="shrink-0 text-sm font-semibold tabular-nums">
                     {item.value}
                   </span>
                 </div>
@@ -1383,29 +1377,32 @@ export default function ProfilePage() {
         </Card>
       </div>
 
-      <div
-        className="grid min-w-0 gap-3 sm:gap-5 md:contents"
-        data-mypage-profile-side-layout="matrix"
+      <section
+        className="min-w-0 space-y-3 lg:col-span-2"
+        aria-labelledby="account-settings-title"
+        data-mypage-profile-side-layout="grouped-settings"
         data-mypage-profile-side-column="true"
       >
+        <header className="space-y-1 pb-1">
+          <h2 id="account-settings-title" className="text-base font-semibold">계정 설정</h2>
+          <p className="text-sm leading-6 text-muted-foreground">필요한 항목을 열어 변경하세요.</p>
+        </header>
         {/* 비밀번호 변경 */}
         <Card
-          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-3"
+          className="min-w-0 rounded-xl border border-border bg-card shadow-none"
           data-mypage-password-card="full-width"
         >
-          <CardHeader className="shrink-0 lg:p-3 lg:pb-1.5">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Lock className="h-5 w-5" aria-hidden="true" />
-              비밀번호 변경
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="min-h-0 md:flex md:flex-1 md:flex-col lg:p-3 lg:pt-0">
+          <AccountSettingsSection
+            title="비밀번호 변경"
+            description="현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다."
+            icon={Lock}
+          >
             <form
-              className="min-h-0 space-y-4 md:flex md:flex-1 md:flex-col lg:space-y-3"
+              className="grid min-w-0 gap-4 lg:grid-cols-3"
               onSubmit={handlePasswordChange}
               data-layout-primitives="form-flow stack"
             >
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="current-password">현재 비밀번호</Label>
                 <div className="relative">
                   <Input
@@ -1416,13 +1413,13 @@ export default function ProfilePage() {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="현재 비밀번호를 입력하세요…"
-                    className="lg:h-9"
+                    className="h-11 pr-12 text-base lg:text-base"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full w-11 px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                     aria-label={
                       showCurrentPassword
@@ -1439,7 +1436,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="new-password">새 비밀번호</Label>
                 <div className="relative">
                   <Input
@@ -1450,13 +1447,13 @@ export default function ProfilePage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="새 비밀번호를 입력하세요…"
-                    className="lg:h-9"
+                    className="h-11 pr-12 text-base lg:text-base"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full w-11 px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                     aria-label={
                       showNewPassword
@@ -1473,7 +1470,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
                 <div className="relative">
                   <Input
@@ -1484,13 +1481,13 @@ export default function ProfilePage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="새 비밀번호를 다시 입력하세요…"
-                    className="lg:h-9"
+                    className="h-11 pr-12 text-base lg:text-base"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full w-11 px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     aria-label={
                       showConfirmPassword
@@ -1512,7 +1509,7 @@ export default function ProfilePage() {
                 disabled={
                   loading || !currentPassword || !newPassword || !confirmPassword
                 }
-                className="w-full md:mt-auto lg:h-9 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                className="min-h-11 w-full lg:col-span-3 lg:w-auto lg:justify-self-end disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
               >
                 {loading ? (
                   <>
@@ -1524,23 +1521,28 @@ export default function ProfilePage() {
                 )}
               </Button>
             </form>
-          </CardContent>
+          </AccountSettingsSection>
         </Card>
 
         <Card
           aria-label="선택 마케팅 수신 설정"
-          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-4"
+          className="min-w-0 rounded-xl border border-border bg-card shadow-none"
           data-privacy-consent-settings="true"
         >
-          <CardContent className="space-y-4 p-4 lg:p-4">
+          <AccountSettingsSection
+            title="마케팅 수신 설정"
+            description="이메일·문자·푸시와 야간 수신을 각각 선택합니다."
+            icon={Bell}
+          >
+          <div className="grid gap-6 lg:grid-cols-2">
             {consentLoading && (
-              <p className="text-sm text-muted-foreground" role="status">
+              <p className="text-sm text-muted-foreground lg:col-span-2" role="status">
                 수신 동의 설정을 확인하는 중입니다.
               </p>
             )}
             {consentError && (
               <div
-                className="flex flex-col gap-2 rounded-xl bg-destructive/5 px-3 py-2.5 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-lg bg-destructive/5 p-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between lg:col-span-2"
                 role="alert"
                 data-privacy-consent-retry="true"
               >
@@ -1549,7 +1551,7 @@ export default function ProfilePage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                  className="min-h-11 border-destructive/40 text-destructive hover:bg-destructive/10"
                   onClick={() => {
                     if (failedConsentAction && consentSettings) {
                       void handleConsentChange(failedConsentAction, failedConsentRequest);
@@ -1565,7 +1567,7 @@ export default function ProfilePage() {
             )}
 
             <section
-              className="space-y-1"
+              className="space-y-3"
               aria-labelledby="ordinary-marketing-consent-title"
               data-privacy-consent-group="ordinary"
             >
@@ -1573,7 +1575,7 @@ export default function ProfilePage() {
                 <h2 id="ordinary-marketing-consent-title" className="text-sm font-semibold">
                   일반 마케팅 수신
                 </h2>
-                <span className="text-2xs font-medium text-muted-foreground">
+                <span className="text-xs font-medium text-muted-foreground">
                   선택
                 </span>
               </div>
@@ -1590,7 +1592,7 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={channel.id}
-                      className="flex min-w-0 items-center gap-3 py-1.5"
+                      className="flex min-w-0 items-center gap-3 py-2"
                       data-privacy-consent-row={`ordinary-${channel.id}`}
                     >
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -1601,9 +1603,10 @@ export default function ProfilePage() {
                       </span>
                       <Button
                         type="button"
-                        variant={enabled ? "outline" : "default"}
+                        variant="outline"
                         size="sm"
-                        className="shrink-0"
+                        className="min-h-11 shrink-0"
+                        aria-label={`일반 ${channel.label} ${enabled ? "수신 철회" : "수신 동의"}`}
                         aria-pressed={enabled}
                         onClick={() => void handleConsentChange(action)}
                         disabled={unknown || consentLoading || consentSaving !== null}
@@ -1621,7 +1624,7 @@ export default function ProfilePage() {
             </section>
 
             <section
-              className="space-y-1 pt-2"
+              className="space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0"
               aria-labelledby="night-marketing-consent-title"
               data-privacy-consent-group="night"
             >
@@ -1629,7 +1632,7 @@ export default function ProfilePage() {
                 <h2 id="night-marketing-consent-title" className="text-sm font-semibold">
                   야간 마케팅 수신
                 </h2>
-                <span className="text-2xs font-semibold text-amber-600">
+                <span className="text-xs font-medium text-muted-foreground">
                   별도 선택
                 </span>
               </div>
@@ -1646,7 +1649,7 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={channel.id}
-                      className="flex min-w-0 items-center gap-3 py-1.5"
+                      className="flex min-w-0 items-center gap-3 py-2"
                       data-privacy-consent-row={`night-${channel.id}`}
                     >
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -1657,9 +1660,10 @@ export default function ProfilePage() {
                       </span>
                       <Button
                         type="button"
-                        variant={enabled ? "outline" : "default"}
+                        variant="outline"
                         size="sm"
-                        className="shrink-0"
+                        className="min-h-11 shrink-0"
+                        aria-label={`야간 ${channel.label} ${enabled ? "수신 철회" : "수신 동의"}`}
                         aria-pressed={enabled}
                         onClick={() => void handleConsentChange(action)}
                         disabled={unknown || consentLoading || consentSaving !== null}
@@ -1675,23 +1679,24 @@ export default function ProfilePage() {
                 })}
               </div>
             </section>
-          </CardContent>
+          </div>
+          </AccountSettingsSection>
         </Card>
 
         <LegacyDraftRecovery key={`${user.id}:${captureBrowserDraftEpoch(user.id).generation}`} userId={user.id} />
 
         <Card
           id="account-deletion"
-          className="min-w-0 rounded-2xl border border-border bg-card shadow-none md:order-6 lg:col-span-2"
+          className="min-w-0 rounded-xl border border-border bg-card shadow-none"
           data-mypage-danger-zone="true"
           data-layout-primitives="form-flow stack"
-          data-mypage-danger-zone-layout="matrix-bottom-right"
+          data-mypage-danger-zone-layout="settings-end"
         >
-          <CardContent className="min-h-0 p-3 md:flex md:flex-1 md:flex-col lg:p-3">
+          <CardContent className="min-h-0 p-4">
             <details
-              className="group p-1 md:flex md:flex-1 md:flex-col lg:p-0"
+              className="group"
             >
-              <summary className="flex min-h-10 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-9">
+              <summary className="flex min-h-11 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-lg text-sm font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
                 <span>계정 삭제 옵션 보기</span>
                 <ChevronRight
                   className="h-4 w-4 shrink-0 text-muted-foreground group-open:rotate-90"
@@ -1719,7 +1724,7 @@ export default function ProfilePage() {
                   <AlertDialogTrigger asChild>
                     <Button
                       variant="destructive"
-                      className="min-h-11 w-full touch-manipulation lg:min-h-9 lg:px-3"
+                      className="min-h-11 w-full touch-manipulation sm:w-auto"
                     >
                       <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
                       계정 완전 삭제
@@ -1755,12 +1760,13 @@ export default function ProfilePage() {
                             onChange={(e) => setDeletionPassword(e.target.value)}
                             autoComplete="current-password"
                             aria-label="계정 삭제 재인증 비밀번호"
+                            className="h-11 pr-12 text-base lg:text-base"
                           />
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-full"
+                            className="absolute right-0 top-0 h-full w-11"
                             onClick={() => setShowDeletionPassword((visible) => !visible)}
                             aria-label={showDeletionPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
                           >
@@ -1775,7 +1781,7 @@ export default function ProfilePage() {
                         value={deleteConfirmationText}
                         onChange={(e) => setDeleteConfirmationText(e.target.value)}
                         placeholder={ACCOUNT_DELETION_CONFIRMATION_TEXT}
-                        className="text-center"
+                        className="h-11 text-center text-base lg:text-base"
                         aria-label="계정 삭제 확인 문구"
                         name="delete-confirmation-text"
                         autoComplete="off"
@@ -1789,6 +1795,7 @@ export default function ProfilePage() {
                     </div>
                     <AlertDialogFooter>
                       <AlertDialogCancel
+                        className="min-h-11"
                         onClick={() => {
                           accountDeletionPollController.current?.abort();
                           accountDeletionGeneration.current += 1;
@@ -1807,7 +1814,7 @@ export default function ProfilePage() {
                       <Button
                         type="button"
                         onClick={handleAccountPermanentDelete}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        className="min-h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         disabled={
                           loading
                           || deleteConfirmationText !== ACCOUNT_DELETION_CONFIRMATION_TEXT
@@ -1832,7 +1839,7 @@ export default function ProfilePage() {
             </details>
           </CardContent>
         </Card>
-      </div>
+      </section>
     </div>
   );
 }

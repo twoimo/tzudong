@@ -47,11 +47,26 @@ createRoot(document.getElementById('root')).render(<QueryClientProvider client={
         const danger=page.locator('#account-deletion details');
         await browserExpect(danger).not.toHaveAttribute('open','');
         await browserExpect(page.getByRole('button',{name:'계정 영구 삭제',exact:true})).toHaveCount(0);
+        const passwordSettings=page.locator('[data-mypage-password-card] details');
+        await browserExpect(passwordSettings).not.toHaveAttribute('open','');
+        await browserExpect(page.locator('#current-password')).not.toBeVisible();
         if(width>=768){
           const activity=await page.locator('[data-mypage-next-actions]').boundingBox();
           const password=await page.locator('[data-mypage-password-card]').boundingBox();
           expect(activity && password && activity.y < password.y).toBe(true);
         }
+        await passwordSettings.locator('summary').focus();
+        await passwordSettings.locator('summary').press('Enter');
+        const currentPassword=page.locator('#current-password');
+        await browserExpect(currentPassword).toBeVisible();
+        expect((await currentPassword.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        expect(await currentPassword.evaluate(element=>parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
+        await currentPassword.fill('fixture-only-unsent-password');
+        await passwordSettings.locator('summary').click();
+        await passwordSettings.locator('summary').press('Enter');
+        await browserExpect(currentPassword).toHaveValue('fixture-only-unsent-password');
+        await currentPassword.fill('');
+        await passwordSettings.locator('summary').click();
         expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
         expect(await page.evaluate(()=>(globalThis as unknown as {__writes:number}).__writes)).toBe(0);
         expect(errors).toEqual([]);

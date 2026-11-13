@@ -41,11 +41,11 @@ describe('home map theme filters', () => {
             'fan-signal',
         ]);
         expect(HOME_MAP_THEME_FILTERS.map((filter) => [filter.id, filter.label])).toEqual([
-            ['hot-view', '조회수 폭발'],
-            ['comment-hot', '댓글 폭주'],
+            ['hot-view', '조회수 상위'],
+            ['comment-hot', '댓글 수 상위'],
             ['fresh-video', '최근 영상'],
-            ['repeat-video', '재등장 맛집'],
-            ['fan-signal', '반응 찐함'],
+            ['repeat-video', '두 번 이상 등장'],
+            ['fan-signal', '댓글 비율 상위'],
         ]);
         expect(HOME_MAP_THEME_FILTERS.find((filter) => filter.id === 'hot-view')?.ariaLabel).toBe(
             '조회수가 높은 쯔양 영상 맛집 필터',
