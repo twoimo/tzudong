@@ -1,5 +1,6 @@
 'use client';
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
@@ -92,7 +93,7 @@ export function AdminSentryPanel() {
     <Button className="mt-4" size="sm" variant="outline" asChild><a href={selected.href} target="_blank" rel="noopener noreferrer">Sentry에서 상세 열기<ExternalLink className="ml-1 h-3.5 w-3.5" aria-hidden="true" /></a></Button>
   </aside> : null;
 
-  return <div className="admin-surface flex h-full min-h-[320px] min-w-0 flex-col overflow-hidden" data-admin-sentry-panel data-admin-sentry-state={readFailed ? "unavailable" : query.isPending ? "loading" : data?.state ?? "unavailable"}>
+  return <div className={`admin-surface flex h-full min-h-[320px] min-w-0 flex-col overflow-hidden ${featurePolish.polishedRoot}`} data-admin-sentry-panel data-admin-sentry-state={readFailed ? "unavailable" : query.isPending ? "loading" : data?.state ?? "unavailable"}>
     <AdminPageHeader title={getAdminModuleTitle("sentry")} icon={Bug} summary={connectionLabel}
       actions={<><Button size="sm" variant="ghost" onClick={reload} aria-disabled={reloading || query.isFetching || undefined} aria-busy={reloading || query.isFetching || undefined} aria-label="오류 목록 새로고침"><RefreshCw className={`h-3.5 w-3.5 ${query.isFetching ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" /></Button>{data?.dashboardUrl ? <Button size="sm" variant="outline" asChild><a href={data.dashboardUrl} target="_blank" rel="noopener noreferrer">Sentry 열기<ExternalLink className="ml-1 h-3 w-3" aria-hidden="true" /></a></Button> : null}</>}
     />

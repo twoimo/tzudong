@@ -1,5 +1,6 @@
 'use client';
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, List, Network, RefreshCw, Search } from 'lucide-react';
@@ -76,7 +77,7 @@ export function AdminKnowledgeGraphPanel() {
   };
   const readFailed = adminQueryLastReadFailed(query);
   const unread = readFailed && !data;
-  return <div className="admin-surface flex min-h-0 min-w-0 flex-1 flex-col" data-admin-knowledge-graph-panel>
+  return <div className={`admin-surface flex min-h-0 min-w-0 flex-1 flex-col ${featurePolish.polishedRoot}`} data-admin-knowledge-graph-panel>
     <AdminPageHeader title={getAdminModuleTitle('knowledge-graph')} icon={Network}
       summary={<span className="text-xs tabular-nums text-muted-foreground">분석 {data ? number.format(data.coverage.analyzedCount) : '미확인'} / {unread ? '대상 미확인' : data?.coverage.eligibleCount == null ? '대상 확인 중' : number.format(data.coverage.eligibleCount)}</span>}
       actions={<><Button size="sm" variant="outline" onClick={() => setListOpen(true)} aria-label="지식 목록과 분석 현황 열기"><List className="mr-1 h-3.5 w-3.5" aria-hidden="true" />목록</Button><Button size="sm" variant="ghost" aria-disabled={searchPending || query.isFetching || undefined} aria-busy={query.isFetching || undefined} aria-label="지식 그래프 새로고침" onClick={() => { if (!searchPending && !query.isFetching) reload(); }}><RefreshCw className={`h-3.5 w-3.5 ${query.isFetching ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" /></Button></>}

@@ -1,5 +1,6 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { EvaluationEvidenceRecovery } from '@/components/admin/EvaluationEvidenceRecovery';
 
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -2211,7 +2212,7 @@ function AdminEvaluationPage({
   return (
     <div
       ref={scrollContainerRef}
-      className="flex h-full min-h-0 flex-col overflow-auto"
+      className={`flex h-full min-h-0 flex-col overflow-auto ${featurePolish.polishedRoot}`}
       id="scroll-container"
       data-admin-embedded-module-shell={embedded ? "true" : undefined}
       data-admin-embedded-module-id={embedded ? embeddedModuleId : undefined}

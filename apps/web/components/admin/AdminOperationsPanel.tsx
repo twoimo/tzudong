@@ -1,5 +1,6 @@
 'use client';
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
@@ -104,7 +105,7 @@ export function AdminOperationsPanel() {
     </div>
   </aside> : null;
 
-  return <section className="admin-surface flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background" aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
+  return <section className={`admin-surface flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background ${featurePolish.polishedRoot}`} aria-labelledby="admin-operations-title" data-admin-operations-panel data-admin-embedded-module-shell="true" data-admin-embedded-module-id="llm">
     <AdminPageHeader title={getAdminModuleTitle("llm")} icon={Bot} titleId="admin-operations-title" summary="읽기 전용" data-admin-module-header="compact" data-admin-module-header-module="llm"
       actions={<Button variant="ghost" size="sm" aria-disabled={busy || undefined} aria-busy={busy || undefined} onClick={() => { if (!busy) refresh(); }} aria-label="운영 상태 새로고침" className="gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />새로고침</Button>}
     />

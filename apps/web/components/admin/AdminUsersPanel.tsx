@@ -1,5 +1,6 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
@@ -803,7 +804,7 @@ export default function AdminUsersPanel({
   return (
     <section
       aria-labelledby="admin-users-title"
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
+      className={`flex h-full min-h-0 flex-col overflow-hidden bg-background ${featurePolish.polishedRoot}`}
       data-admin-embedded-module-shell="true"
       data-admin-embedded-module-id="users"
     >

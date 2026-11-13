@@ -1,5 +1,6 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -129,7 +130,7 @@ export function AdminPipelineDashboard() {
     setControlsOpen(open);
     if (!open) { setPreview(null); setConfirmationText(""); setLiveConfirmationText(""); setShowGrafana(false); }
   };
-  return <section data-admin-pipeline-dashboard="true" className={`${styles.workspace} admin-surface`}>
+  return <section data-admin-pipeline-dashboard="true" className={`${styles.workspace} admin-surface ${featurePolish.polishedRoot}`}>
     <Sheet open={controlsOpen} onOpenChange={changeControlsOpen}>
       <AdminPageHeader title={getAdminModuleTitle("pipeline")} icon={Workflow}
         data-admin-module-header="compact" data-admin-module-header-module="pipeline"

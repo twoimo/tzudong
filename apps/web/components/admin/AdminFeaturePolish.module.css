@@ -1,0 +1,107 @@
+/* Feature-local responsive baseline. Intentionally isolated from shared admin chrome. */
+.polishedRoot {
+  min-width: 0;
+  --admin-feature-hairline: hsl(var(--border));
+}
+
+.polishedRoot :global(.rounded-sm),
+.polishedRoot :global(.rounded-md),
+.polishedRoot :global(.rounded-lg),
+.polishedRoot :global(.rounded-xl),
+.polishedRoot :global(.rounded-2xl) {
+  border-radius: 0 !important;
+}
+
+.polishedRoot :global(.admin-detail-section),
+.polishedRoot :global(.admin-surface),
+.polishedRoot :global(.admin-cms-list-pane),
+.polishedRoot :global([data-admin-feature-panel]) {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.polishedRoot :global(.admin-toolbar),
+.polishedRoot :global([data-admin-module-actions]),
+.polishedRoot :global([data-admin-evaluation-view-actions]) {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.polishedRoot :global(.admin-cms-table-container) {
+  min-width: 0;
+  max-width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.polishedRoot :global(.admin-cms-table) {
+  min-width: 40rem;
+}
+
+.polishedRoot :global(.admin-cms-record-list) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.polishedRoot :global(.admin-cms-record-list.hidden) {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.polishedRoot :global(details > summary) {
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.polishedRoot :global(input),
+.polishedRoot :global(select),
+.polishedRoot :global(textarea) {
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  .polishedRoot :global(input:not([type="checkbox"]):not([type="radio"])),
+  .polishedRoot :global(select),
+  .polishedRoot :global(textarea) {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .polishedRoot :global(button:not([data-icon-only="true"])) {
+    min-height: 44px;
+  }
+
+  .polishedRoot :global(.admin-cms-toolbar) {
+    align-items: stretch;
+  }
+
+  .polishedRoot :global(.admin-cms-toolbar > *) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .polishedRoot :global(.admin-cms-table) {
+    min-width: 40rem;
+  }
+
+  .polishedRoot :global(.admin-cms-footer) {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .polishedRoot :global([data-admin-module-actions] > button),
+  .polishedRoot :global([data-admin-module-actions] > a) {
+    flex: 1 1 auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .polishedRoot :global(.admin-toolbar),
+  .polishedRoot :global([data-admin-module-actions]),
+  .polishedRoot :global([data-admin-evaluation-view-actions]) {
+    flex-wrap: nowrap;
+  }
+}

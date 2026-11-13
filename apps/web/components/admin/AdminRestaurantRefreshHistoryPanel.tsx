@@ -1,5 +1,6 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -807,7 +808,7 @@ export function AdminRestaurantRefreshHistoryPanel({
 
   return <section
     aria-labelledby="admin-restaurant-refresh-history-title"
-    className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
+    className={`flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground ${featurePolish.polishedRoot}`}
     data-admin-restaurant-refresh-history="true"
     data-admin-restaurant-refresh-management-structure="header-list-detail"
     data-admin-embedded-module-shell="true"
