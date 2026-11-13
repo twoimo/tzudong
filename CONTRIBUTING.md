@@ -17,19 +17,22 @@ and focused code changes are welcome in Korean or English.
 
 ## Set up a development branch
 
-Start a feature branch from current `develop`. If you do not have repository write
+Start a feature branch from current `main`. If you do not have repository write
 access, fork the repository and use your fork as the push remote.
 
 ```sh
-git clone --branch develop https://github.com/twoimo/tzudong.git
+git clone --branch main https://github.com/twoimo/tzudong.git
 cd tzudong
 git switch -c docs/your-change
 ```
 
-Existing checkouts should fetch current `develop` before creating the branch.
-Keep unrelated local changes separate. Open feature PRs against **`develop`**.
-Maintainers promote accepted changes through **`develop → data → main`**, as
-enforced by the [promotion policy](.github/PROMOTION_POLICY.md).
+Existing checkouts should fetch current `main` before creating the branch.
+Keep unrelated local changes separate. Open feature and dependency PRs against
+protected **`main`** after the [main-first transition](docs/operations/main-first-transition.md)
+is installed and verified. The transition candidate itself is the final change
+promoted through **`develop → data → main`** under the old trusted policy;
+do not retarget PRs early. The [promotion policy](.github/PROMOTION_POLICY.md)
+defines the exact installation boundary. `data` remains for legacy data consumers.
 
 ## Install and run
 

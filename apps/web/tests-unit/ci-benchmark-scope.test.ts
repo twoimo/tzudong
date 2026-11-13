@@ -18,7 +18,7 @@ describe("compiler CI coverage routing", () => {
     expect(Object.hasOwn(workflow.on, "pull_request")).toBe(true);
     expect(workflow.on.pull_request?.paths).toBeUndefined();
     expect(workflow.on.push.paths).toBeUndefined();
-    expect(workflow.on.push.branches).toEqual(["main", "develop", "data"]);
+    expect(workflow.on.push.branches).toEqual(["main"]);
     expect(workflow.on.schedule.length).toBeGreaterThan(0);
     for (const file of ["apps/web/app/admin/page.tsx", "apps/web/app/api/admin/evaluations/route.ts", "apps/web/tsconfig.json", "apps/web/package-lock.json", "apps/web/scripts/run-typecheck.mjs", "apps/web/tests-unit/typecheck-benchmark-source.test.ts", "apps/web/supabase/migrations/change.sql", "backend/supabase/migrations/change.sql", "backend/test-requirements.txt", "backend/bin/build_tzuyang_case_review_pack.mjs", "backend/bin/tests/node-dependency-compatibility.test.mjs", "backend/restaurant-crawling/scripts/worker.py", ".github/scripts/classify-ci-benchmark.mjs", ".github/dependabot.yml", ".github/nightly-local-publication-allowlist.txt", ".kiro/specs/receipt.json", ".agents/skills/ci/SKILL.md"]) {
       const selected = classifyPaths([file]);

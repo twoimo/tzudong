@@ -2,8 +2,9 @@ name: CodeQL
 
 on:
   push:
-    branches: [main, develop, data]
+    branches: [main]
   pull_request:
+    # Keep the final protected installation PRs covered until the policy reaches main.
     branches: [main, develop, data]
   schedule:
     - cron: '23 19 * * 2'

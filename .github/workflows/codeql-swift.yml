@@ -2,10 +2,11 @@ name: CodeQL Swift
 
 # Swift extraction needs a macOS runner and an autobuild, which measured 13m47s
 # of build work for 1 minute of actual analysis on every pull request. It is
-# kept, but only when Swift sources change and on the weekly schedule, so the
+# kept, but only when merged main Swift sources change and on the weekly schedule, so the
 # coverage exists without sitting on the pull request critical path.
 on:
   push:
+    branches: [main]
     paths:
       - 'Package.swift'
       - 'Package.resolved'

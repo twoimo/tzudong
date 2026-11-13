@@ -15,6 +15,7 @@ stated commit and environment; check the current state before another operation.
 | Understand the local PostgreSQL transition | [PostgreSQL 17 transition plan](local-postgres17-transition.md); use its named revisions and measured results. |
 | Recover restaurant evidence | [Evidence recovery](restaurant-evidence-recovery.md); request and worker execution are separate steps. |
 | Choose checks | [Verification guide](../agents/verification.md). |
+| Install main-first source development | [Main-first transition](main-first-transition.md), [CI scope rollout](cicd-simplification.md), and [staged production](staged-production-transition.md). |
 | Operate Cloudflare CI and review its free-plan budget | [Cloudflare Builds governance](cloudflare-ci.md), including source-bound receipts and the GitHub checks retained during migration. |
 | Prepare a release or rollback | [Release channels](../releases/README.md) and [hosted operations guidance](../agents/release.md). |
 

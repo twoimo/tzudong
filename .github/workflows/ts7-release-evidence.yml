@@ -6,7 +6,7 @@ on:
     inputs:
       release_id: { description: Sanitized release identifier, required: true, type: string }
       main_sha: { description: Exact 40-character current main commit SHA, required: true, type: string }
-      release_tree: { description: Exact Git tree shared by main, develop, and data, required: true, type: string }
+      release_tree: { description: Exact Git tree of the reviewed current main commit, required: true, type: string }
       manifest_url: { description: Content-addressed canonical immutable release manifest URL, required: true, type: string }
       manifest_sha256: { description: Detached SHA-256 of exact canonical manifest bytes, required: true, type: string }
 

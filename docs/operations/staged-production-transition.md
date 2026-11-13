@@ -3,8 +3,9 @@
 This is preparation for the deployment phase of the
 [CI simplification](cicd-simplification.md). It does not establish current provider
 settings, a staged build, a production release, or a rollback receipt. Follow the
-[release policy](../agents/release.md) and keep source promotion serialized through
-`feature -> develop -> data -> main` until its replacement is installed and verified.
+[release policy](../agents/release.md). Install the [main-first replacement](main-first-transition.md)
+once through `feature -> develop -> data -> main`; use direct protected main PRs
+only after the trusted default-branch policy and saved protection are verified.
 
 ## Retired branch synchronization command
 
@@ -75,7 +76,8 @@ unchanged; SQL successor controllers also bind its exact source.
    both aliases, and live application health/identity. A merge, local build, or
    successful promotion request alone is not this readback.
 
-Vercel supports staged production through disabled automatic domain assignment or
+The candidate release-evidence contract requires manual production-domain
+assignment; retain and read back that policy. Vercel supports staged production through disabled automatic domain assignment or
 the scoped CLI staging operation `vercel deploy --prod --skip-domain`; select and
 verify one supported path for the actual project. Promoting a staged production
 build keeps that build, while promoting a preview creates a production rebuild.
@@ -90,20 +92,21 @@ disable automatic assignment. Do not silently restore automatic traffic changes 
 claim the prior policy survived without reading it back. See
 [Vercel Instant Rollback](https://vercel.com/docs/instant-rollback).
 
-## Boundaries before main-only source development
+## Main-first source and retained data compatibility
 
-Branch consolidation is a later coordinated change. Its policy must reach `main`
-through the current protected path before feature PRs target `main` directly.
+The [main-first candidate](main-first-transition.md) updates the following consumers
+together. Its policy must reach `main` through the existing protected path before
+feature PRs target `main` directly. Source preparation is not provider activation.
 
 | Consumer | Required transition |
 | --- | --- |
 | `.github/scripts/verify-promotion-path.mjs`, its tests, and `.github/PROMOTION_POLICY.md` | Install the new trusted policy through the serial path; keep exact source identity and protected checks |
-| The CI scope, benchmark, and Security classifiers under `.github/scripts/` | Replace the current `develop` scope base deliberately; `main` PRs currently select full checks |
-| `.github/dependabot.yml`, `dependency-freshness.yml`, and `verify-dependency-freshness.mjs` | Move the eight update units and their verified target contract together |
-| `apps/web/vercel.json` and `vercel-ignore-build.mjs` | Replace the `develop` preview allowlist and verify one production promotion owner |
-| `.github/cloudflare/build-settings.json` | Reconcile its `develop` build/deploy lane with the actual Cloudflare integration |
-| `ts7-release-evidence.yml` and `verify-final-release-evidence.mjs` | Replace the three-branch tree-equality contract and reconcile any changed domain-assignment policy; retain exact release identity |
-| `AGENTS.md` and `docs/agents/release.md` | Update the operating instructions with the installed replacement policy |
+| The CI scope, benchmark, and Security classifiers under `.github/scripts/` | Main PRs select affected inputs; main post-merge and final legacy installation PRs retain full proof |
+| `.github/dependabot.yml`, `dependency-freshness.yml`, and `verify-dependency-freshness.mjs` | All eight units, PR trigger, and verified target contract use main together; holds remain |
+| `apps/web/vercel.json` and `vercel-ignore-build.mjs` | Explicit `preview/<name>` branches opt in; develop remains for installation; exact main production guard and one promotion owner remain |
+| `.github/cloudflare/build-settings.json` | Desired main branch and both runner arguments move together; actual provider change and readback remain separate pending operations |
+| `ts7-release-evidence.yml` and `verify-final-release-evidence.mjs` | Bind exact current-main commit and tree without legacy equality; require manual domain assignment and retain all other evidence contracts |
+| `AGENTS.md` and `docs/agents/release.md` | Define the pre-activation serial path and verified main-first operating policy |
 
 Verify the actual GitHub default branch and protection settings as part of that
 transition. Before accepting feature PRs directly into `main`, verify that its
@@ -111,7 +114,8 @@ saved protection requires the executed `CI` and `Security` results alongside the
 other applicable checks. The manual Release Evidence workflow is a verification
 consumer, not another deployment owner; do not add deployment mutations to it.
 
-Before retiring `data`, establish whether the opt-in publisher in
+Main-first development retains `data` outside code promotion. Before any later
+retirement of that ref, establish whether the opt-in publisher in
 `daily-crawler.yml`, the caption importer
 `backend/storyboard-agent/scripts/02-video-caption-store-supabase.py`, or
 `backend/restaurant-crawling/scripts/kaggle-context-generation-git.ipynb` is still

@@ -59,15 +59,15 @@ export function classifyEvent({ eventName, event, ref, head, changedPaths }, pol
     if (!SHA.test(pr?.head?.sha ?? '')) return full('SOURCE_INVALID', true);
     if (pr.head.sha !== head) return full('SOURCE_MISMATCH', true);
     if (!SHA.test(pr?.base?.sha ?? '')) return full('DIFF_UNAVAILABLE');
-    if (['data', 'main'].includes(pr.base.ref)) return full('PROTECTED_PROMOTION');
-    if (pr.base.ref !== 'develop') return full('UNKNOWN_BASE');
+    if (['data', 'develop'].includes(pr.base.ref) || ['data', 'develop', 'main'].includes(pr.head.ref)) return full('PROTECTED_PROMOTION');
+    if (pr.base.ref !== 'main') return full('UNKNOWN_BASE');
   } else if (eventName === 'schedule' || eventName === 'workflow_dispatch') return full('PERIODIC_OR_MANUAL');
   else if (eventName === 'push') {
     if (!SHA.test(event?.after ?? '')) return full('SOURCE_INVALID', true);
     if (event.after !== head) return full('SOURCE_MISMATCH', true);
-    if (['refs/heads/data', 'refs/heads/main'].includes(ref)) return full('PROTECTED_PUSH');
-    if (ref !== 'refs/heads/develop') return full('UNKNOWN_REF');
     if (event.deleted || !SHA.test(event.before ?? '')) return full('DIFF_UNAVAILABLE');
+    if (['refs/heads/main', 'refs/heads/develop', 'refs/heads/data'].includes(ref)) return full('PROTECTED_PUSH');
+    return full('UNKNOWN_REF');
   } else return full('UNKNOWN_EVENT');
   return classifyPaths(changedPaths, policy);
 }

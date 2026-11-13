@@ -472,13 +472,23 @@ describe("release workflow governance source contracts", () => {
       ),
     ).toThrow("COMPONENT_URL_INVALID");
   });
-  it("rejects a moved main ref even when every remote tree is unchanged", () => {
+  it("binds release source to main without reading legacy refs and rejects moved SHA or tree", () => {
     const sha = "a".repeat(40);
     const tree = "b".repeat(40);
-    const stable = (_command: string, ref: string) => ref === "origin/main" ? sha : tree;
+    const reads: string[] = [];
+    const stable = (_command: string, ref: string) => {
+      reads.push(ref);
+      if (ref === "origin/main") return sha;
+      if (ref === "origin/main^{tree}") return tree;
+      throw new Error("legacy source ref unavailable");
+    };
     expect(() => verifyRemoteRefs(sha, tree, stable)).not.toThrow();
+    expect(reads).toEqual(["origin/main^{tree}", "origin/main"]);
     const sameTreeMovedMain = (_command: string, ref: string) => ref === "origin/main" ? "c".repeat(40) : tree;
     expect(() => verifyRemoteRefs(sha, tree, sameTreeMovedMain)).toThrow("CHECKOUT_IDENTITY_MISMATCH");
+    const movedTree = (_command: string, ref: string) => ref === "origin/main" ? sha : "d".repeat(40);
+    expect(() => verifyRemoteRefs(sha, tree, movedTree)).toThrow("TARGET_TREE_MISMATCH");
+    expect(() => verifyRemoteRefs(sha, tree, () => { throw new Error("main unavailable"); })).toThrow("main unavailable");
   });
 
   it("fails closed on required workflow security invariants", () => {
@@ -553,7 +563,7 @@ describe("release workflow governance source contracts", () => {
     }
 
     const governance = workflows.get(".github/workflows/release-governance-ci.yml")!;
-    expect(governance.triggers).toBe("  pull_request:\n  push:\n    branches: [main, develop, data]\n\n");
+    expect(governance.triggers).toBe("  pull_request:\n  push:\n    branches: [main]\n\n");
     const governanceJob = governance.jobs.get("governance-contract")!.block;
     expect(governanceJob).toContain("EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}");
     expect(governanceJob).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"');
@@ -821,7 +831,7 @@ describe("release workflow governance source contracts", () => {
     const unsignedEvent = { kind: "promotion", id: "promotion", releaseId, sequence: 1, previousDigest: digest(`tzudong:release-transition:genesis:v1\n${releaseId}`), projectId: "prj_sau35J5uUtShIQ9OKofRtOVVnTSl", orgId: "team_OUj64KeLxJI3PkEbOaFZnorA", fromDeploymentId: knownGood.deploymentId, toDeploymentId: production.deploymentId, gitSha: sha, aliases: ["tzudong.app", "www.tzudong.app"], observedAt: 101 };
     const signedEvent = { ...unsignedEvent, signature: createHmac("sha256", transitionSecret).update("tzudong:release-transition:v2\n").update(canonical(unsignedEvent)).digest("hex") };
     const transitionJournalRoot = digest([signedEvent], "tzudong:release-transition-journal:v1\n");
-    const receipt: any = { releaseId, mainSha: sha, releaseTree: tree, productionDeploymentId: production.deploymentId, githubDeploymentId: inputs.GITHUB_DEPLOYMENT_ID, productionDeploymentUrl: inputs.PRODUCTION_DEPLOYMENT_URL, knownGoodDeploymentId: knownGood.deploymentId, expectedRollbackState: "normal", derivedRollbackState: "normal", transitionJournalRoot, vercel: { project: "tzudong", projectId: "prj_sau35J5uUtShIQ9OKofRtOVVnTSl", orgId: "team_OUj64KeLxJI3PkEbOaFZnorA", teamSlug: "twoimos-projects", rootDirectory: "apps/web", framework: "nextjs", nodeVersion: "24.x", npmVersion: "11.6.2", branch: "main", environment: "production", deploymentId: production.deploymentId, knownGoodDeploymentId: knownGood.deploymentId, gitSha: sha, url: inputs.PRODUCTION_DEPLOYMENT_URL, immutableHost: "tzudong-production.vercel.app", productionAliases: ["tzudong.app", "www.tzudong.app"], health: "healthy", knownGoodEligible: true, observedAt: 100, expiresAt: 900, rollbackState: "normal", automaticProductionDomainAssignment: "normal" }, providerDeployments, events: [signedEvent], previewDeploymentReceiptSha256: inputs.PREVIEW_DEPLOYMENT_RECEIPT_SHA256, productionDeploymentReceiptSha256: inputs.PRODUCTION_DEPLOYMENT_RECEIPT_SHA256, productionAliasDeploymentReceiptSha256: inputs.PRODUCTION_ALIAS_DEPLOYMENT_RECEIPT_SHA256, knownGoodDeploymentReceiptSha256: inputs.KNOWN_GOOD_DEPLOYMENT_RECEIPT_SHA256, ...detached, evidence, visualEvidence: { ledger: { url: inputs.VISUAL_LEDGER_URL, sha256: inputs.VISUAL_LEDGER_SHA256 }, bundle: { url: inputs.VISUAL_VERIFICATION_BUNDLE_URL, sha256: inputs.VISUAL_VERIFICATION_BUNDLE_SHA256 } }, finalBundle: { url: url(digest(finalBytes.toString())), sha256: digest(finalBytes.toString()) } };
+    const receipt: any = { releaseId, mainSha: sha, releaseTree: tree, productionDeploymentId: production.deploymentId, githubDeploymentId: inputs.GITHUB_DEPLOYMENT_ID, productionDeploymentUrl: inputs.PRODUCTION_DEPLOYMENT_URL, knownGoodDeploymentId: knownGood.deploymentId, expectedRollbackState: "normal", derivedRollbackState: "normal", transitionJournalRoot, vercel: { project: "tzudong", projectId: "prj_sau35J5uUtShIQ9OKofRtOVVnTSl", orgId: "team_OUj64KeLxJI3PkEbOaFZnorA", teamSlug: "twoimos-projects", rootDirectory: "apps/web", framework: "nextjs", nodeVersion: "24.x", npmVersion: "11.6.2", branch: "main", environment: "production", deploymentId: production.deploymentId, knownGoodDeploymentId: knownGood.deploymentId, gitSha: sha, url: inputs.PRODUCTION_DEPLOYMENT_URL, immutableHost: "tzudong-production.vercel.app", productionAliases: ["tzudong.app", "www.tzudong.app"], health: "healthy", knownGoodEligible: true, observedAt: 100, expiresAt: 900, rollbackState: "normal", automaticProductionDomainAssignment: "manual" }, providerDeployments, events: [signedEvent], previewDeploymentReceiptSha256: inputs.PREVIEW_DEPLOYMENT_RECEIPT_SHA256, productionDeploymentReceiptSha256: inputs.PRODUCTION_DEPLOYMENT_RECEIPT_SHA256, productionAliasDeploymentReceiptSha256: inputs.PRODUCTION_ALIAS_DEPLOYMENT_RECEIPT_SHA256, knownGoodDeploymentReceiptSha256: inputs.KNOWN_GOOD_DEPLOYMENT_RECEIPT_SHA256, ...detached, evidence, visualEvidence: { ledger: { url: inputs.VISUAL_LEDGER_URL, sha256: inputs.VISUAL_LEDGER_SHA256 }, bundle: { url: inputs.VISUAL_VERIFICATION_BUNDLE_URL, sha256: inputs.VISUAL_VERIFICATION_BUNDLE_SHA256 } }, finalBundle: { url: url(digest(finalBytes.toString())), sha256: digest(finalBytes.toString()) } };
     const receiptBytes = bytes(receipt);
     const manifest = { schemaVersion: 1, releaseId, mainSha: sha, releaseTree: tree, inputs: { ...inputs, RECEIPT_SHA256: digest(receiptBytes.toString()), RECEIPT_URL: url(digest(receiptBytes.toString())) } };
     const manifestBytes = bytes(manifest);
@@ -842,7 +852,16 @@ describe("release workflow governance source contracts", () => {
     ]);
     for (const row of evidence) objects.set(row.url, bytes(evidenceBodies[row.kind], false));
     const env: any = { DISPATCH_REF: "refs/heads/main", WORKFLOW_REF: "twoimo/tzudong/.github/workflows/ts7-release-evidence.yml@refs/heads/main", REPOSITORY: "twoimo/tzudong", RELEASE_ID: releaseId, EXPECTED_SHA: sha, EXPECTED_TREE: tree, DISPATCH_SHA: sha, MANIFEST_URL: url(digest(manifestBytes.toString())), MANIFEST_SHA256: digest(manifestBytes.toString()), VERCEL_API_TOKEN: "test-vercel-token", VERCEL_AUTOMATION_BYPASS_SECRET: "test-bypass-secret", SUPABASE_REVOCATION_RPC_URL: "https://aqlcofblfxdrjhhdmarw.supabase.co/rest/v1/rpc/read_release_auth_revocation_by_operation", SUPABASE_REVOCATION_READ_CAPABILITY: "test-release-evidence-read-capability-0123456789", SUPABASE_REVOCATION_PUBLISHABLE_GATEWAY_KEY: `sb_publishable_${"a".repeat(32)}` };
-    const gitAdapter = (_command: string, ref: string) => ref === "origin/main" || ref === "HEAD" ? sha : ref === "HEAD^{tree}" || ref.includes("origin/") ? tree : "";
+    const gitAdapter = (command: string, ...args: string[]) => {
+      if (command === "fetch") {
+        expect(args).toEqual(["--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main"]);
+        return "";
+      }
+      const [ref] = args;
+      if (ref === "origin/main" || ref === "HEAD") return sha;
+      if (ref === "HEAD^{tree}" || ref === "origin/main^{tree}") return tree;
+      throw new Error("legacy source refs must not be read");
+    };
     const transportCalls: any[] = [];
     const rpcFetch = async (value: string, options?: any) => {
       if (value !== env.SUPABASE_REVOCATION_RPC_URL) {
@@ -883,6 +902,20 @@ describe("release workflow governance source contracts", () => {
       return value === env.SUPABASE_REVOCATION_RPC_URL ? rpcFetch(value, options) : objects.get(value) ?? (() => { throw new Error("missing"); })();
     } });
     expect(new Set(normalBypassDestinations)).toEqual(new Set(["tzudong-production.vercel.app", "tzudong.app", "www.tzudong.app"]));
+    for (const assignment of ["normal", "enabled", "manual ", true, false, null]) {
+      const policyReceipt = { ...receipt, vercel: { ...receipt.vercel, automaticProductionDomainAssignment: assignment } };
+      const policyReceiptBytes = bytes(policyReceipt);
+      const policyInputs = { ...manifest.inputs, RECEIPT_URL: url(digest(policyReceiptBytes.toString())), RECEIPT_SHA256: digest(policyReceiptBytes.toString()) };
+      const policyManifestBytes = bytes({ ...manifest, inputs: policyInputs });
+      const policyManifestUrl = url(digest(policyManifestBytes.toString()));
+      const policyObjects = new Map(objects);
+      policyObjects.set(policyInputs.RECEIPT_URL, policyReceiptBytes);
+      policyObjects.set(policyManifestUrl, policyManifestBytes);
+      await expect(run({
+        env: { ...env, MANIFEST_URL: policyManifestUrl, MANIFEST_SHA256: digest(policyManifestBytes.toString()) },
+        fetch: async (value: string, options?: any) => value === env.SUPABASE_REVOCATION_RPC_URL ? rpcFetch(value, options) : policyObjects.get(value) ?? (() => { throw new Error("missing"); })(),
+      })).rejects.toThrow("TUPLE_MISMATCH");
+    }
     await expect(run({ env: { ...env, SUPABASE_REVOCATION_RPC_URL: "https://evil.supabase.co/rest/v1/rpc/read_release_auth_revocation_by_operation" } })).rejects.toThrow("AUTH_REVOCATION_MISMATCH");
     let visualExpiryClockSamples = 0;
     await expect(run({ clock: () => ++visualExpiryClockSamples === 1 ? 150 : 421 })).rejects.toThrow("FRESHNESS_MISMATCH");
@@ -995,10 +1028,23 @@ describe("release workflow governance source contracts", () => {
     const bypass = "finalizer-bypass-secret";
     const env: any = { INITIAL_OUTCOME: "success", INITIAL_REASON: "VERIFIED", TERMINAL_OUTCOME: "success", TERMINAL_REASON: "VERIFIED", VERIFY_JOB_RESULT: "success", UPLOAD_OUTCOME: "success", RELEASE_ID: "ts7-finalizer", RECEIPT_SHA256: "c".repeat(64), BUNDLE_SHA256: "d".repeat(64), EXPIRES_AT: "200", PRODUCTION_DEPLOYMENT_ID: "dpl_Final", IMMUTABLE_HOST: "tzudong-final.vercel.app", DISPATCH_SHA: sha, RELEASE_TREE: tree, RUN_URL: "https://github.test/run", VERCEL_AUTOMATION_BYPASS_SECRET: bypass };
     const updates: any[] = [];
+    const sourceRefs: string[] = [];
+    let currentMainSha = sha;
+    let currentMainTree = tree;
     const github: any = {
       rest: {
         checks: { create: async () => ({ data: { id: 1 } }), update: async (value: any) => { updates.push(value); } },
-        repos: { getBranch: async () => ({ data: { commit: { sha } } }), getCommit: async () => ({ data: { commit: { tree: { sha: tree } } } }) },
+        repos: {
+          getBranch: async ({ branch }: { branch: string }) => {
+            sourceRefs.push(branch);
+            if (branch !== "main") throw new Error("legacy ref unavailable");
+            return { data: { commit: { sha: currentMainSha } } };
+          },
+          getCommit: async ({ ref }: { ref: string }) => {
+            expect(ref).toBe(currentMainSha);
+            return { data: { commit: { tree: { sha: currentMainTree } } } };
+          },
+        },
       },
     };
     const calls: any[] = [];
@@ -1015,6 +1061,13 @@ describe("release workflow governance source contracts", () => {
     }
     await expect(verifyFinalReceiptCheck({ env: { ...env, VERCEL_AUTOMATION_BYPASS_SECRET: undefined, PROTECTED_LIVE_OUTCOME: "success", PROTECTED_LIVE_REASON: "VERIFIED" }, github, context: { repo: { owner: "twoimo", repo: "tzudong" } }, now: () => 150 })).resolves.toEqual({ passed: true, reason: "VERIFIED" });
     expect(updates.at(-1)).toMatchObject({ conclusion: "success" });
+    expect(sourceRefs).toEqual(["main"]);
+    for (const [nextSha, nextTree] of [["e".repeat(40), tree], [sha, "f".repeat(40)]]) {
+      currentMainSha = nextSha;
+      currentMainTree = nextTree;
+      await expect(verifyFinalReceiptCheck({ env: { ...env, VERCEL_AUTOMATION_BYPASS_SECRET: undefined, PROTECTED_LIVE_OUTCOME: "success", PROTECTED_LIVE_REASON: "VERIFIED" }, github, context: { repo: { owner: "twoimo", repo: "tzudong" } }, now: () => 150 })).resolves.toEqual({ passed: false, reason: "TARGET_TREE_MISMATCH" });
+      expect(updates.at(-1)).toMatchObject({ conclusion: "action_required" });
+    }
     const blockedCalls: any[] = [];
     await expect(verifyProtectedFinalHealth({ env: { ...env, TERMINAL_OUTCOME: "failure", TERMINAL_REASON: "ROLLED_BACK" }, fetch: async (...args: any[]) => { blockedCalls.push(args); throw new Error("must not fetch"); }, now: () => 150 })).resolves.toEqual({ passed: false, reason: "ROLLED_BACK" });
     expect(blockedCalls).toHaveLength(0);

@@ -5,8 +5,8 @@ run-name: Dependency Freshness · ${{ github.ref_name }}
 #
 # This workflow validates dependency update candidates. It NEVER merges,
 # NEVER changes candidate content, and NEVER bypasses branch protection.
-# Candidate PRs themselves are opened by `.github/dependabot.yml` and land only
-# through the serial `develop -> data -> main` path under human review. This
+# Candidate PRs themselves are opened by `.github/dependabot.yml` against
+# protected `main` and land only after the required checks and human review. This
 # workflow enforces the governance rules, runs the four verification commands
 # in `apps/web`, and records a storage-owned run receipt (UTC run time and the
 # per-unit candidate count) with Forbidden_Log_Field values redacted.
@@ -17,7 +17,7 @@ on:
     - cron: '0 6 * * 1' # 06:00 UTC every Monday
   workflow_dispatch:
   pull_request:
-    branches: [develop]
+    branches: [main]
 
 concurrency:
   group: dependency-freshness-${{ github.ref }}
@@ -90,7 +90,7 @@ jobs:
         run: node scripts/collect-dependency-candidates.mjs "$RUNNER_TEMP/dependency-candidates.json"
 
       - name: Assert governance invariants and enumerate dependency units
-        # Original units plus Cloudflare CI (8th), develop-only,
+        # Original units plus Cloudflare CI (8th), main-only,
         # <=5 open per unit, never merged. Fails closed if the contract drifts.
         run: node scripts/verify-dependency-freshness.mjs --candidates "$RUNNER_TEMP/dependency-candidates.json" > "$RUNNER_TEMP/dependency-freshness-units.json"
 

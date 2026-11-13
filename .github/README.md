@@ -7,7 +7,7 @@
 | [workflows/](workflows/) | CI, scheduled jobs, and explicit operator workflows |
 | [scripts/](scripts/) | Workflow support and verification tools |
 | [cloudflare/](cloudflare/README.md) | Bounded Workers Builds governance and verified receipt deployment |
-| [PROMOTION_POLICY.md](PROMOTION_POLICY.md) | Protected feature → develop → data → main promotion |
+| [PROMOTION_POLICY.md](PROMOTION_POLICY.md) | Trusted main-first source policy and its final serial installation |
 | [CODEOWNERS](CODEOWNERS) | Ownership of security-sensitive automation |
 | [dependabot.yml](dependabot.yml) | Dependency update configuration |
 | [ISSUE_TEMPLATE/](ISSUE_TEMPLATE/) | Bug and feature request forms |
@@ -20,5 +20,8 @@ identities belong to those contracts. Check consumers before reorganizing them.
 
 Release-note categories organize the output of **Generate release notes**.
 They do not create tags, publish a release, or change deployment behavior.
-Feature PRs target `develop`; the [promotion policy](PROMOTION_POLICY.md) defines
-how accepted source reaches the protected release branches.
+After the [main-first transition](../docs/operations/main-first-transition.md)
+is installed and verified, feature and dependency PRs target protected `main`.
+The policy-changing candidate itself follows the final `develop → data → main`
+installation under the previously trusted policy. The `data` branch remains for
+its existing data consumers, outside the source-promotion path.

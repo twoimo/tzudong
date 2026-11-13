@@ -192,7 +192,9 @@ const VERCEL_GITHUB_APP_ID = "8329";
 const VERCEL_GITHUB_CREATOR = { login: "vercel[bot]", type: "Bot", id: 35613825 };
 const authCell = { authPreview: ["preview-admin-auth-smoke-metadata", "preview"], authProduction: ["production-admin-auth-smoke-metadata", "production"], authAlias: ["alias-admin-auth-smoke-metadata", "alias"] };
 export function verifyRemoteRefs(expectedSha, expectedTree, gitAdapter = git) {
-  for (const branch of ["main", "develop", "data"]) if (gitAdapter("rev-parse", `origin/${branch}^{tree}`) !== expectedTree) fail("TARGET_TREE_MISMATCH");
+  // Legacy develop/data refs are not release source identities. Keep both
+  // immutable main identities exact, including same-tree moved commits.
+  if (gitAdapter("rev-parse", "origin/main^{tree}") !== expectedTree) fail("TARGET_TREE_MISMATCH");
   if (gitAdapter("rev-parse", "origin/main") !== expectedSha) fail("CHECKOUT_IDENTITY_MISMATCH");
 }
 
@@ -379,8 +381,8 @@ export async function verifyFinalReceiptCheck({
         return { sha: branchResult.data.commit.sha, tree: commit.data.commit.tree.sha };
       };
       const refsMatch = async () => {
-        const refs = await Promise.all(["main", "develop", "data"].map(readRef));
-        return refs.every(({ tree }) => tree === e.RELEASE_TREE) && refs[0].sha === e.DISPATCH_SHA;
+        const main = await readRef("main");
+        return main.tree === e.RELEASE_TREE && main.sha === e.DISPATCH_SHA;
       };
       const freshAndExact = now() <= expiresAt && await refsMatch() && now() <= expiresAt;
       passed = freshAndExact;
@@ -432,7 +434,7 @@ export async function verifyFinalReleaseEvidence({
   for (const [url, hash] of [[e.PREVIEW_DEPLOYMENT_RECEIPT_URL, e.PREVIEW_DEPLOYMENT_RECEIPT_SHA256], [e.PRODUCTION_DEPLOYMENT_RECEIPT_URL, e.PRODUCTION_DEPLOYMENT_RECEIPT_SHA256], [e.PRODUCTION_ALIAS_DEPLOYMENT_RECEIPT_URL, e.PRODUCTION_ALIAS_DEPLOYMENT_RECEIPT_SHA256], [e.KNOWN_GOOD_DEPLOYMENT_RECEIPT_URL, e.KNOWN_GOOD_DEPLOYMENT_RECEIPT_SHA256]]) publicUrl(url, ["release-evidence.tzudong.app"], true, e.EXPECTED_SHA, hash);
   publicUrl(e.RECEIPT_URL, ["release-evidence.tzudong.app"], true, e.EXPECTED_SHA, e.RECEIPT_SHA256);
   if (e.DISPATCH_SHA !== e.EXPECTED_SHA || gitAdapter("rev-parse", "HEAD") !== e.EXPECTED_SHA || gitAdapter("rev-parse", "HEAD^{tree}") !== e.EXPECTED_TREE) fail("CHECKOUT_IDENTITY_MISMATCH");
-  gitAdapter("fetch", "--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main", "+refs/heads/develop:refs/remotes/origin/develop", "+refs/heads/data:refs/remotes/origin/data");
+  gitAdapter("fetch", "--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main");
   verifyRemoteRefs(e.EXPECTED_SHA, e.EXPECTED_TREE, gitAdapter);
   if (!Buffer.from(workflowAtHead(e.EXPECTED_SHA)).equals(Buffer.from(workflowBytes()))) fail("WORKFLOW_AT_HEAD_MISMATCH");
   let receiptBytes; try { receiptBytes = await fetch(e.RECEIPT_URL); } catch { fail("RECEIPT_FETCH_FAILED"); } if (sha256(receiptBytes) !== e.RECEIPT_SHA256) fail("RECEIPT_HASH_MISMATCH");
@@ -456,7 +458,7 @@ export async function verifyFinalReleaseEvidence({
   }
   const now = clock();
   if (deploymentReceipts.preview.expiresAt !== deploymentReceipts.production.expiresAt || deploymentReceipts.knownGood.expiresAt !== deploymentReceipts.production.expiresAt || deploymentReceipts.production.host !== deploymentReceipts.alias.host || deploymentReceipts.production.deploymentId !== deploymentReceipts.alias.deploymentId || deploymentReceipts.production.aliasHost !== deploymentReceipts.alias.aliasHost || deploymentReceipts.production.observedAt !== deploymentReceipts.alias.observedAt || deploymentReceipts.production.expiresAt !== deploymentReceipts.alias.expiresAt || !Object.values(deploymentReceipts).every((record) => validateFreshness({ issuedAt: record.observedAt, observedAt: record.observedAt, capturedAt: record.observedAt, verifiedAt: record.observedAt, expiresAt: record.expiresAt }, now)) || receipt.previewDeploymentReceiptSha256 !== e.PREVIEW_DEPLOYMENT_RECEIPT_SHA256 || receipt.productionDeploymentReceiptSha256 !== e.PRODUCTION_DEPLOYMENT_RECEIPT_SHA256 || receipt.productionAliasDeploymentReceiptSha256 !== e.PRODUCTION_ALIAS_DEPLOYMENT_RECEIPT_SHA256 || receipt.knownGoodDeploymentReceiptSha256 !== e.KNOWN_GOOD_DEPLOYMENT_RECEIPT_SHA256) fail("FRESHNESS_MISMATCH");
-  const tuple = receipt.vercel; if (!exactKeys(tuple, ["project", "projectId", "orgId", "teamSlug", "rootDirectory", "framework", "nodeVersion", "npmVersion", "branch", "environment", "deploymentId", "knownGoodDeploymentId", "gitSha", "url", "immutableHost", "productionAliases", "health", "knownGoodEligible", "observedAt", "expiresAt", "rollbackState", "automaticProductionDomainAssignment"]) || tuple.project !== "tzudong" || tuple.projectId !== "prj_sau35J5uUtShIQ9OKofRtOVVnTSl" || tuple.orgId !== "team_OUj64KeLxJI3PkEbOaFZnorA" || tuple.teamSlug !== "twoimos-projects" || tuple.rootDirectory !== "apps/web" || tuple.framework !== "nextjs" || tuple.nodeVersion !== "24.x" || tuple.npmVersion !== "11.6.2" || tuple.branch !== "main" || tuple.environment !== "production" || tuple.deploymentId !== e.PRODUCTION_DEPLOYMENT_ID || tuple.knownGoodDeploymentId !== e.KNOWN_GOOD_DEPLOYMENT_ID || tuple.gitSha !== e.EXPECTED_SHA || tuple.url !== e.PRODUCTION_DEPLOYMENT_URL || tuple.immutableHost !== deployment.hostname || !Array.isArray(tuple.productionAliases) || tuple.productionAliases.length !== 2 || !["tzudong.app", "www.tzudong.app"].every((host) => tuple.productionAliases.includes(host)) || tuple.health !== "healthy" || tuple.knownGoodEligible !== true || tuple.observedAt !== deploymentReceipts.production.observedAt || tuple.expiresAt !== deploymentReceipts.production.expiresAt || tuple.rollbackState !== e.ROLLBACK_STATE || tuple.automaticProductionDomainAssignment !== "normal") fail("TUPLE_MISMATCH");
+  const tuple = receipt.vercel; if (!exactKeys(tuple, ["project", "projectId", "orgId", "teamSlug", "rootDirectory", "framework", "nodeVersion", "npmVersion", "branch", "environment", "deploymentId", "knownGoodDeploymentId", "gitSha", "url", "immutableHost", "productionAliases", "health", "knownGoodEligible", "observedAt", "expiresAt", "rollbackState", "automaticProductionDomainAssignment"]) || tuple.project !== "tzudong" || tuple.projectId !== "prj_sau35J5uUtShIQ9OKofRtOVVnTSl" || tuple.orgId !== "team_OUj64KeLxJI3PkEbOaFZnorA" || tuple.teamSlug !== "twoimos-projects" || tuple.rootDirectory !== "apps/web" || tuple.framework !== "nextjs" || tuple.nodeVersion !== "24.x" || tuple.npmVersion !== "11.6.2" || tuple.branch !== "main" || tuple.environment !== "production" || tuple.deploymentId !== e.PRODUCTION_DEPLOYMENT_ID || tuple.knownGoodDeploymentId !== e.KNOWN_GOOD_DEPLOYMENT_ID || tuple.gitSha !== e.EXPECTED_SHA || tuple.url !== e.PRODUCTION_DEPLOYMENT_URL || tuple.immutableHost !== deployment.hostname || !Array.isArray(tuple.productionAliases) || tuple.productionAliases.length !== 2 || !["tzudong.app", "www.tzudong.app"].every((host) => tuple.productionAliases.includes(host)) || tuple.health !== "healthy" || tuple.knownGoodEligible !== true || tuple.observedAt !== deploymentReceipts.production.observedAt || tuple.expiresAt !== deploymentReceipts.production.expiresAt || tuple.rollbackState !== e.ROLLBACK_STATE || tuple.automaticProductionDomainAssignment !== "manual") fail("TUPLE_MISMATCH");
   const eventKeys = ["kind", "id", "releaseId", "sequence", "previousDigest", "projectId", "orgId", "fromDeploymentId", "toDeploymentId", "gitSha", "aliases", "observedAt", "signature"];
   const validEventShape = (row, kind, id, fromDeploymentId, toDeploymentId, gitSha) =>
     exactKeys(row, eventKeys) &&
@@ -641,7 +643,7 @@ export async function verifyFinalReleaseEvidence({
   const bundle = receipt.finalBundle; if (!exactKeys(bundle, ["url", "sha256"]) || !sha(bundle.sha256)) fail("FINAL_BUNDLE_MISMATCH"); publicUrl(bundle.url, ["release-evidence.tzudong.app"], true, e.EXPECTED_SHA, bundle.sha256); let bundleBytes; try { bundleBytes = await fetch(bundle.url); } catch { fail("FINAL_BUNDLE_MISMATCH"); } if (sha256(bundleBytes) !== bundle.sha256) fail("FINAL_BUNDLE_MISMATCH"); const finalBundle = parseJson(bundleBytes, "FINAL_BUNDLE_MISMATCH", true);
   const finalKeys = ["kind", "releaseId", "mainSha", "releaseTree", "productionDeploymentId", "knownGoodDeploymentId", "githubDeploymentId", ...Object.keys(detached)];
   if (!exactKeys(finalBundle, finalKeys) || finalBundle.kind !== "ts7-release-evidence-v1" || !releaseId(finalBundle.releaseId) || !gitId(finalBundle.mainSha) || !gitId(finalBundle.releaseTree) || !deploymentId(finalBundle.productionDeploymentId) || !deploymentId(finalBundle.knownGoodDeploymentId) || !/^[1-9][0-9]*$/.test(finalBundle.githubDeploymentId || "") || Object.keys(detached).map((key) => finalBundle[key]).some((value) => !sha(value)) || !Object.entries({ releaseId: e.RELEASE_ID, mainSha: e.EXPECTED_SHA, releaseTree: e.EXPECTED_TREE, productionDeploymentId: e.PRODUCTION_DEPLOYMENT_ID, knownGoodDeploymentId: e.KNOWN_GOOD_DEPLOYMENT_ID, githubDeploymentId: e.GITHUB_DEPLOYMENT_ID, ...detached }).every(([key, value]) => finalBundle[key] === value)) fail("FINAL_BUNDLE_MISMATCH");
-  gitAdapter("fetch", "--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main", "+refs/heads/develop:refs/remotes/origin/develop", "+refs/heads/data:refs/remotes/origin/data");
+  gitAdapter("fetch", "--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main");
   verifyRemoteRefs(e.EXPECTED_SHA, e.EXPECTED_TREE, gitAdapter);
   if (clock() > terminalEvidenceExpiresAt) fail("FRESHNESS_MISMATCH");
   if (e.ROLLBACK_STATE === "rolled_back") fail("ROLLED_BACK");
