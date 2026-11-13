@@ -2,7 +2,7 @@ import { captureBrowserLogout } from "@/lib/auth/browser-logout";
 import { beginBrowserAuthIntent, publishBrowserSignupPkce } from "@/lib/auth/browser-oauth-commit";
 import { requestBrowserPasswordRecovery, startBrowserGoogleOAuth } from "@/lib/auth/isolated-browser-pkce";
 import { beginBrowserDraftCleanup } from "@/lib/privacy/browser-draft-lifecycle";
-import { useState, useEffect, useCallback, memo, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, memo, type CSSProperties } from "react";
 import Image from "next/image";
 import {
   Dialog,
@@ -238,6 +238,7 @@ function OnboardingConsentFields({
 
 const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, initialAuthTab = "login" }: AuthModalProps) => {
   const isMobileOrTablet = useImmediateMobileOrTablet();
+  const dialogOpenerRef = useRef<HTMLElement | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -961,7 +962,22 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
       {!isMobileOrTablet && (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className={AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME} style={AUTH_MODAL_DESKTOP_CONTENT_STYLE}>
+        <DialogContent
+          onOpenAutoFocus={() => {
+            const active = document.activeElement;
+            dialogOpenerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+          }}
+          onCloseAutoFocus={(event) => {
+            const opener = dialogOpenerRef.current;
+            dialogOpenerRef.current = null;
+            if (opener?.isConnected) {
+              event.preventDefault();
+              opener.focus({ preventScroll: true });
+            }
+          }}
+          className={AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME}
+          style={AUTH_MODAL_DESKTOP_CONTENT_STYLE}
+        >
           <DialogHeader className="space-y-2">
             <div className="flex items-center gap-3" data-auth-brand="tzudong">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40">

@@ -297,7 +297,7 @@ interface HomeDesktopControlPanelProps {
 }
 
 const DESKTOP_LEFT_PANEL_WIDTH_PX = 392;
-const DESKTOP_MAP_FLOATING_FILTER_WIDTH = "9.5rem";
+const DESKTOP_MAP_FLOATING_FILTER_WIDTH = "13rem";
 const desktopMapMenuItemClass =
   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
 type DesktopMapMenuItem = {

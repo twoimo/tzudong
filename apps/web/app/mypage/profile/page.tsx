@@ -1115,7 +1115,7 @@ export default function ProfilePage() {
                     }
                     placeholder="닉네임"
                     aria-label="닉네임"
-                    className="h-11 rounded-lg text-base md:text-base"
+                    className="h-11 rounded-lg text-base lg:text-base"
                     autoFocus
                   />
                   <div className="grid grid-cols-2 gap-2">
@@ -1413,7 +1413,7 @@ export default function ProfilePage() {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="현재 비밀번호를 입력하세요…"
-                    className="h-11 pr-12 text-base md:text-base"
+                    className="h-11 pr-12 text-base lg:text-base"
                   />
                   <Button
                     type="button"
@@ -1447,7 +1447,7 @@ export default function ProfilePage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="새 비밀번호를 입력하세요…"
-                    className="h-11 pr-12 text-base md:text-base"
+                    className="h-11 pr-12 text-base lg:text-base"
                   />
                   <Button
                     type="button"
@@ -1481,7 +1481,7 @@ export default function ProfilePage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="새 비밀번호를 다시 입력하세요…"
-                    className="h-11 pr-12 text-base md:text-base"
+                    className="h-11 pr-12 text-base lg:text-base"
                   />
                   <Button
                     type="button"
@@ -1760,7 +1760,7 @@ export default function ProfilePage() {
                             onChange={(e) => setDeletionPassword(e.target.value)}
                             autoComplete="current-password"
                             aria-label="계정 삭제 재인증 비밀번호"
-                            className="h-11 pr-12 text-base md:text-base"
+                            className="h-11 pr-12 text-base lg:text-base"
                           />
                           <Button
                             type="button"
@@ -1781,7 +1781,7 @@ export default function ProfilePage() {
                         value={deleteConfirmationText}
                         onChange={(e) => setDeleteConfirmationText(e.target.value)}
                         placeholder={ACCOUNT_DELETION_CONFIRMATION_TEXT}
-                        className="h-11 text-center text-base md:text-base"
+                        className="h-11 text-center text-base lg:text-base"
                         aria-label="계정 삭제 확인 문구"
                         name="delete-confirmation-text"
                         autoComplete="off"

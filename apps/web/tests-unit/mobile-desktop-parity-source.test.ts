@@ -594,7 +594,7 @@ describe("mobile and desktop parity source contracts", () => {
       "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-2",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"9.5rem\"",
+      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"13rem\"",
     );
     expect(homeDesktopControlPanelSource).toContain(
       '"--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH',

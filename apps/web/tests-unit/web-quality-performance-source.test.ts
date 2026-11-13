@@ -1523,7 +1523,7 @@ describe("web quality performance source contracts", () => {
       "grid auto-rows-auto grid-cols-[var(--desktop-map-floating-filter-width)] items-start gap-2",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"9.5rem\"",
+      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"13rem\"",
     );
     expect(homeDesktopControlPanelSource).toContain(
       '"--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH',
@@ -3582,7 +3582,16 @@ describe("web quality performance source contracts", () => {
       "<AccountSettingsSection",
     );
     expect(myPageProfileSource).not.toContain("lg:text-xs");
-    expect(myPageProfileSource).not.toContain("lg:text-base");
+    const profileInputClasses = [...myPageProfileSource.matchAll(
+      /<Input\b[\s\S]*?className="([^"]+)"/g,
+    )].map((match) => match[1].split(/\s+/));
+    expect(profileInputClasses.length).toBeGreaterThan(0);
+    for (const classes of profileInputClasses) {
+      expect(classes).toContain("text-base");
+      // The shared Input has lg:text-sm; keep profile forms readable there too.
+      expect(classes).toContain("lg:text-base");
+      expect(classes.some((value) => /^(?:sm|md|lg|xl|2xl):text-(?:xs|sm)$/.test(value))).toBe(false);
+    }
     expect(myPageProfileSource).toContain(
       'data-mypage-profile-density="content-first"',
     );
