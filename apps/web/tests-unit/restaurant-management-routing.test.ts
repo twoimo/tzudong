@@ -18,8 +18,9 @@ describe('integrated restaurant management', () => {
   });
   test('old saved sidebar slots remove only the merged entry and preserve the remaining order', () => {
     const result = normalizeAdminSidebarOrder({ sections:['검수','홈','운영','실험실'], items:{검수:['reviews','restaurant-refresh-history','restaurants','submissions']} });
-    expect(result.items.검수).toEqual(['reviews','restaurants','submissions']);
-    expect(result.sections[0]).toBe('검수');
+    expect(result.items['검수·데이터']).toEqual(['reviews','restaurants','submissions']);
+    expect(result.sections[0]).toBe('검수·데이터');
+    expect(result.items.검수).toBeUndefined();
     expect(Object.values(result.items).flat()).not.toContain('restaurant-refresh-history');
   });
 });
