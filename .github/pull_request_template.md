@@ -14,4 +14,4 @@
 
 <!-- Note unresolved limitations or follow-up work; write "None" when there is none. -->
 
-<!-- Feature PRs target develop. Promotion follows develop → data → main. See CONTRIBUTING.md and docs/releases/README.md. -->
+<!-- After verified main-first activation, feature/dependency PRs target main. The policy-changing candidate itself uses one final develop → data → main installation. See CONTRIBUTING.md and docs/operations/main-first-transition.md. -->

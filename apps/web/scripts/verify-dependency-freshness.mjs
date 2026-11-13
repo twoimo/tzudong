@@ -13,7 +13,7 @@
 // Fixed codes owned here:
 //   - dependency_check_failed  : a verification command failed, exceeded the
 //     30-minute budget, or a candidate is missing one of the four attachments.
-//   - target_branch_violation  : a candidate does not target `develop`.
+//   - target_branch_violation  : a candidate does not target `main`.
 //   - dependency_hold_violation : a candidate raises a version inside a
 //     `.github/dependabot.yml` hold range.
 //   - pin_contract_violation   : a candidate changes a Pin_Contract value.
@@ -28,8 +28,8 @@ import { redactCliText, logCliError } from './privacy-safe-cli-log.mjs';
 
 // --- Governance constants (asserted by tests, consumed by the workflow) ---
 
-/** Requirement 4.2: candidates target `develop` only. */
-export const TARGET_BRANCH = 'develop';
+/** Current protected source policy: dependency candidates target `main` only. */
+export const TARGET_BRANCH = 'main';
 
 /** Requirement 4.2: at most five open candidates per unit. */
 export const MAX_OPEN_PER_UNIT = 5;
@@ -329,7 +329,7 @@ export const assertGovernanceInvariants = () => {
     throw Object.assign(new Error('command_count_invalid'), { code: 'command_count_invalid' });
   }
   if (AUTO_MERGE !== false) throw Object.assign(new Error('auto_merge_forbidden'), { code: 'auto_merge_forbidden' });
-  if (TARGET_BRANCH !== 'develop') {
+  if (TARGET_BRANCH !== 'main') {
     throw Object.assign(new Error('target_branch_invalid'), { code: 'target_branch_invalid' });
   }
   return true;

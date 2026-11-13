@@ -11,7 +11,7 @@ on:
       - 'backend/pipeline-control/Dockerfile'
       - 'backend/utils/privacy_log.py'
   push:
-    branches: [develop, data, main]
+    branches: [main]
     paths:
       - '.github/workflows/pipeline-process-boundaries.yml'
       - 'backend/bin/check_pipeline_process_boundaries.py'

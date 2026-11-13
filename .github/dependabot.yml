@@ -2,14 +2,14 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "npm"
     directory: "/apps/web"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
@@ -44,28 +44,28 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/backend"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "pip"
     directory: "/backend/pipeline"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "pip"
     directory: "/backend/restaurant-crawling/scripts"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "pip"
     directory: "/backend/pipeline-control"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
@@ -77,14 +77,14 @@ updates:
 
   - package-ecosystem: "cargo"
     directory: "/backend/rust"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "npm"
     directory: "/.github/cloudflare"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5

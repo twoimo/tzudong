@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const PRODUCTION_BRANCHES = new Set(["main"]);
+// Retain the existing preview lane during the final protected serial transition.
 const PREVIEW_BRANCHES = new Set(["develop"]);
+// A one-level prefix is an explicit preview request; arbitrary feature and
+// dependency branches still do not create Vercel builds.
+const PREVIEW_BRANCH_PATTERN = /^preview\/[^/]+$/;
 const NON_APP_PREVIEW_FILES = new Set([
   "AGENTS.md", "README.md", "README.ko.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "TASKS.md",
   ".github/dependabot.yml", ".github/CODEOWNERS", ".github/PROMOTION_POLICY.md",
@@ -129,7 +133,7 @@ function getVercelBuildDecision(env) {
     };
   }
 
-  if (PREVIEW_BRANCHES.has(ref)) {
+  if (PREVIEW_BRANCHES.has(ref) || PREVIEW_BRANCH_PATTERN.test(ref)) {
     const changedPaths = vercelEnv === "preview" ? readPreviewChangedPaths(env) : null;
     if (changedPaths?.length && changedPaths.every(isNonAppPreviewPath)) {
       return {
@@ -150,7 +154,7 @@ function getVercelBuildDecision(env) {
   return {
     ignore: true,
     ref,
-    reason: "preview deployments are limited to develop; skipping non-production branch",
+    reason: "preview deployments require preview/* or the transition develop lane; skipping non-allowlisted branch",
     vercelEnv,
   };
 }

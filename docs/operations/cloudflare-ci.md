@@ -7,6 +7,21 @@ Cloudflare Workers Builds에서 GitHub `Release`의 실제 거버넌스 검사�
 웹 앱 배포와 전체 CI 이전은 이 단계의 범위가 아니다. GitHub의 기존 필수
 검사는 동일 SHA 비교와 보호 규칙 확인이 끝날 때까지 유지한다.
 
+## Main 중심 전환 후보: 원격 적용 전
+
+현재 [.github/cloudflare/build-settings.json](../../.github/cloudflare/build-settings.json)은
+production branch와 build/deploy의 `--branch`를 함께 `main`으로 지정한다.
+이것은 [main 중심 전환](main-first-transition.md)의 **적용 예정 소스 구성**이며,
+이 변경에서 Workers Builds 설정 변경이나 main 실행 확인은 하지 않았다.
+
+최종 `develop → data → main` 보호 승격이 끝난 뒤 기존 trigger를 읽어 복구 값을
+보관하고, 같은 trigger의 세 값을 함께 바꾼다. root, preview 비활성화, 자격 증명,
+고정 도구 버전과 예산은 유지한다. 저장된 설정과 native main build를 다시 읽고,
+공개 receipt의 commit·tree·build ID 및 산출물 해시를 같은 실행과 대조한다.
+공급자 접근이 없으면 원격 적용을 미완료로 기록한다. 기존 develop 연결의 성공은
+main의 필수 GitHub 검사를 대신하지 않는다. 아래 develop 설정과 실행 수치는
+2026-11-12의 이력이며 이번 main 전환이 완료됐다는 증거가 아니다.
+
 ## 구성 및 검증 기록
 
 아래 표는 **2026-11-12 KST 후속 작업 시작 시점**에 확인한 구성이다. 최신 커밋의 실행 결과는
@@ -62,13 +77,13 @@ commit·tree(`96aaccb5c939e0ea2bbf6250e42e3bc9409c7926`)·build ID가 일치했�
 설치 없이 실행할 수 있다. 이 작은 실제 검사 묶음을 먼저 비교한다. Cloudflare
 실행이 생긴 뒤 같은 SHA에서 checkout, 검사, 배포, 대기 시간을 구분해 측정한다.
 
-## develop 연결 설정
+## 이전 develop 연결 설정 기록
 
 설정 파일과 명령은 [.github/cloudflare/](../../.github/cloudflare/README.md)에 있다.
 Workers Builds는 build와 deploy 명령을 별도 단계로 실행한다.
-아래는 PR 검증과 보호된 develop 병합 후 적용할 연속 실행 설정이다.
-병합 전에는 작업 브랜치 `ci/cloudflare-free-migration-20261112`만 연결하고,
-두 명령의 `--branch`도 그 작업 브랜치와 일치시킨다. 설정 파일 변경만으로
+아래는 당시 PR 검증과 보호된 develop 병합 후 적용한 연속 실행 설정이다.
+초기 검증에는 작업 브랜치 `ci/cloudflare-free-migration-20261112`만 연결했고,
+두 명령의 `--branch`도 그 작업 브랜치와 일치시켰다. 설정 파일 변경만으로
 원격 전환을 완료했다고 보지 않으며 최종 원격 상태는 PR의 실행 기록을 따른다.
 ([공식 설정 문서](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/))
 
@@ -175,14 +190,16 @@ API 권한과 실제 배포용 build token은 구분한다. 토큰 값은 저장
 runner가 실행하는 자식 프로세스 중 Wrangler에만 배포 자격 증명을 전달한다.
 이 환경 변수 제한은 토큰 자체의 계정 권한 축소를 뜻하지 않는다.
 preview는 비활성화하고 지정한 저장소의 단일 신뢰 브랜치만 연결한다.
-최초 검증은 작업 브랜치로 실행하고, 보호된 병합 후에는 develop만 연결한다. fork PR이나 임의 branch의 코드를 배포 토큰이 있는
+최초 검증은 작업 브랜치로 실행했고, 기존 연결은 develop이었다. main 중심 정책
+설치 후에는 위 순서대로 main 하나로 정렬한다. fork PR이나 임의 branch의 코드를 배포 토큰이 있는
 경로에서 실행하지 않는다.
 
 ## GitHub에서 계속 맡는 검사
 
 GitHub `Release`, 전체 8-shard 단위 테스트, 앱 build/lint/typecheck, 플랫폼별
 검사, CodeQL, Security/npm/pip 감사, Dependabot, Nightly, 환경 보호와
-`develop → data → main` 승격 경로를 유지한다. 기존 artifact 업로드와 보존
+보호된 소스 PR을 유지한다. main 중심 정책은 기존 `develop → data → main`
+경로로 한 번 더 설치한 뒤 main PR로 전환한다. 기존 artifact 업로드와 보존
 계약도 유지한다. 별도 CI Worker가 성공했다는 사실로 이 작업들의 성공 상태를
 대신 만들지 않는다.
 
@@ -225,17 +242,17 @@ G003 admitted slice는 0개다. 구분자가 있는 모든 입력의 선형 실�
 기존 큰 fixture와 보안 검사는 그대로 유지하고, separator가 없는 민감값도 계속
 마스킹되는 회귀 검사를 추가했다.
 
-### 기본 브랜치 활성화 의존성
+### 최초 기본 브랜치 활성화 의존성 기록
 
-시작 시점의 기본 브랜치 `main`은 `98f774346c477ac74058cdcbdf8636b0aff8b54c`다.
-추가한 Cloudflare npm 단위는 develop에만 있어 기본 브랜치의 Dependabot는
-아직 일곱 단위다. 변경된 예약 Freshness·Security·Web CI·Nightly 정의도
-`main` 승격 전에는 예약 실행의 새 정의로 활성화되지 않는다.
+당시 시작 시점의 기본 브랜치 `main`은 `98f774346c477ac74058cdcbdf8636b0aff8b54c`였다.
+추가한 Cloudflare npm 단위는 develop에만 있어 당시 기본 브랜치의 Dependabot는
+일곱 단위였다. 변경된 예약 Freshness·Security·Web CI·Nightly 정의도
+그 `main` 승격 전에는 예약 실행의 새 정의로 활성화되지 않았다.
 [Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/about-the-dependabot-yml-file)와
 [schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)은
 기본 브랜치에서 정의를 읽는다.
 
-현재 `Promotion Path`는 `develop → data → main`만 허용한다. 누적 앱·SQL·백엔드
+당시 `Promotion Path`는 `develop → data → main`만 허용했다. 누적 앱·SQL·백엔드
 의존성 변경도 포함되므로 CI 파일만 직행시키거나 기본 브랜치를 바꿔 우회하지 않는다.
 승격 PR에서 실제 소스 SHA와 포함 범위를 검토하고, 기본 브랜치 반영 후 설정과
 예약 실행을 따로 확인한다. develop Worker 성공은 이 활성화의 증거가 아니다.
@@ -253,7 +270,10 @@ Cloudflare의 의존성 캐시는 설치 최적화용이다. 캐시 복구는 �
 4. GitHub branch protection/ruleset을 읽을 수 있는 권한으로 실제 required-check 이름을 확인한다. 필요 변경은 승인된 범위에서 하고 다시 읽어 확인한다.
 5. 이 단계의 증거가 쌓이기 전까지는 병행 검증으로 유지한다. 전환 중 문제가 생기면 새 pilot 연결을 중단하고 기존 GitHub 검사를 계속 사용한다.
 
-### develop 연속 실행으로 전환하는 순서
+### 이전 develop 연속 실행 전환 절차
+
+다음은 초기 설치 절차의 기록이다. 현재 main 중심 전환에는 문서 맨 위의
+별도 순서를 적용하며 develop 연결을 다시 만들지 않는다.
 
 1. PR의 실제 검사와 CodeQL 결과를 확인하고 보호 규칙을 통과하는 정상 PR 병합으로 develop에 반영한다.
 2. Workers Builds의 기존 trigger 하나에서 branch를 `develop`으로, build/deploy 명령의 `--branch`도 `develop`으로 함께 바꾼다. Preview는 계속 끈다.

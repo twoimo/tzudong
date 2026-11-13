@@ -8,7 +8,7 @@ import test from 'node:test';
 import { classifyPaths, classifyEvent, classifyCheckout, compilePattern } from './classify-security-scope.mjs';
 
 const head = 'a'.repeat(40), base = 'b'.repeat(40);
-const pr = (sha = head, target = 'develop') => ({ pull_request: { head: { sha }, base: { sha: base, ref: target } } });
+const pr = (sha = head, target = 'main') => ({ pull_request: { head: { sha }, base: { sha: base, ref: target } } });
 
 test('ordinary web and documentation changes do not start unrelated security jobs', () => {
   for (const paths of [['apps/web/components/Map.tsx'], ['README.md', 'docs/operations/example.md'], ['backend/data/example.json']]) {
@@ -55,15 +55,20 @@ test('unavailable, malformed, unknown and mixed changes cannot produce a skip', 
   }
 });
 
-test('protected promotion, scheduled and manual events retain full security checks', () => {
-  for (const target of ['data', 'main']) assert.equal(classifyEvent({ eventName: 'pull_request', event: pr(head, target), head, changedPaths: ['README.md'] }).security, true);
+test('main PR scope skips only unrelated inputs while legacy installation and merged main keep full security', () => {
+  assert.equal(classifyEvent({ eventName: 'pull_request', event: pr(), head, changedPaths: ['README.md'] }).security, false);
+  for (const target of ['data', 'develop']) assert.equal(classifyEvent({ eventName: 'pull_request', event: pr(head, target), head, changedPaths: ['README.md'] }).security, true);
+  for (const source of ['data', 'develop', 'main']) {
+    const event = pr(); event.pull_request.head.ref = source;
+    assert.equal(classifyEvent({ eventName: 'pull_request', event, head, changedPaths: ['README.md'] }).reason, 'PROTECTED_PROMOTION');
+  }
   for (const eventName of ['schedule', 'workflow_dispatch']) assert.equal(classifyEvent({ eventName, event: {}, head, changedPaths: ['README.md'] }).security, true);
   assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, ref: 'refs/heads/main', head, changedPaths: ['README.md'] }).security, true);
 });
 
 test('wrong source is a fatal result', () => {
   assert.equal(classifyEvent({ eventName: 'pull_request', event: pr(), head: base, changedPaths: ['README.md'] }).fatal, true);
-  assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, ref: 'refs/heads/develop', head: base }).fatal, true);
+  assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, ref: 'refs/heads/main', head: base }).fatal, true);
   assert.equal(classifyEvent({ eventName: 'pull_request', event: pr(), head: '0'.repeat(40) }).fatal, true);
 });
 
@@ -91,7 +96,7 @@ test('exact-source Git diff classifies both sides of a rename away from a protec
   renameSync(join(root, 'backend/pipeline_control/worker.py'), join(root, 'notes.md'));
   git(root, 'add', '-A'); git(root, 'commit', '-qm', 'rename');
   const after = git(root, 'rev-parse', 'HEAD');
-  const event = { pull_request: { head: { sha: after }, base: { sha: before, ref: 'develop' } } };
+  const event = { pull_request: { head: { sha: after }, base: { sha: before, ref: 'main' } } };
   assert.equal(classifyCheckout({ root, eventName: 'pull_request', event, ref: 'refs/pull/1/merge', expectedHead: 'c'.repeat(40) }).security, true);
 }));
 
@@ -99,17 +104,17 @@ test('known doc diff skips and unavailable history expands safely', () => fixtur
   writeFileSync(join(root, 'README.md'), 'changed\n');
   git(root, 'add', '.'); git(root, 'commit', '-qm', 'docs');
   const after = git(root, 'rev-parse', 'HEAD');
-  const event = { pull_request: { head: { sha: after }, base: { sha: before, ref: 'develop' } } };
+  const event = { pull_request: { head: { sha: after }, base: { sha: before, ref: 'main' } } };
   assert.equal(classifyCheckout({ root, eventName: 'pull_request', event }).security, false);
   event.pull_request.base.sha = 'f'.repeat(40);
   assert.equal(classifyCheckout({ root, eventName: 'pull_request', event }).security, true);
-  assert.equal(classifyCheckout({ root, eventName: 'push', event: { before, after }, ref: 'refs/heads/develop', expectedHead: before }).fatal, true);
+  assert.equal(classifyCheckout({ root, eventName: 'push', event: { before, after }, ref: 'refs/heads/main', expectedHead: before }).fatal, true);
 }));
 
 test('CLI publishes bounded booleans/codes and exits nonzero on source mismatch', () => fixture((root, before) => {
   const eventPath = join(root, 'event.json');
   const outputPath = join(root, 'output');
-  writeFileSync(eventPath, JSON.stringify({ pull_request: { head: { sha: 'c'.repeat(40) }, base: { sha: before, ref: 'develop' }, body: 'private diagnostic marker' } }));
+  writeFileSync(eventPath, JSON.stringify({ pull_request: { head: { sha: 'c'.repeat(40) }, base: { sha: before, ref: 'main' }, body: 'private diagnostic marker' } }));
   const result = spawnSync(process.execPath, [fileURLToPath(new URL('./classify-security-scope.mjs', import.meta.url))], {
     cwd: root, encoding: 'utf8', env: { ...process.env, GITHUB_EVENT_PATH: eventPath, GITHUB_EVENT_NAME: 'pull_request', GITHUB_OUTPUT: outputPath },
   });

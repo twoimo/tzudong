@@ -77,12 +77,12 @@ function classifyWebCiPath(path: string) {
   return [
     classifyCiEvent({
       eventName: "pull_request",
-      event: { pull_request: { head: { sha: head }, base: { sha: base, ref: "develop" } } },
+      event: { pull_request: { head: { sha: head }, base: { sha: base, ref: "main" } } },
       ref: "refs/pull/42/merge", head, changedPaths: [path],
     }),
     classifyCiEvent({
       eventName: "push", event: { before: base, after: head },
-      ref: "refs/heads/develop", head, changedPaths: [path],
+      ref: "refs/heads/main", head, changedPaths: [path],
     }),
   ];
 }
@@ -338,7 +338,7 @@ describe("nightly regression package and source contracts", () => {
   test("routes GitHub workflow inputs through web admin pull and push CI", () => {
     expect(Object.hasOwn(webAdminWorkflow.on, "pull_request")).toBe(true);
     expect(webAdminWorkflow.on.pull_request).toBeNull();
-    expect(webAdminWorkflow.on.push).toEqual({ branches: ["main", "develop", "data"] });
+    expect(webAdminWorkflow.on.push).toEqual({ branches: ["main"] });
     const scope = webAdminWorkflow.jobs.scope;
     expect(scope.if).toBeUndefined();
     expect(scope.needs).toBeUndefined();
@@ -366,9 +366,10 @@ describe("nightly regression package and source contracts", () => {
       ".github/scripts/verify-nightly-local-publication.py",
       ".github/scripts/write-nightly-lifecycle-stage.py",
     ]) {
-      for (const selected of classifyWebCiPath(path)) {
-        expect(selected).toMatchObject({ unit: true, admin: true, reason: "SOURCE_CONTRACT_CHANGE", fatal: false });
-      }
+      const [pr, merged] = classifyWebCiPath(path);
+      expect(pr).toMatchObject({ unit: true, admin: true, reason: "SOURCE_CONTRACT_CHANGE", fatal: false });
+      expect(merged).toMatchObject({ authority: true, unit: true, build: true, compatibility: true,
+        install: true, admin: true, reason: "PROTECTED_PUSH", fatal: false });
     }
   });
 
@@ -1841,13 +1842,14 @@ describe("nightly regression package and source contracts", () => {
       ".github/workflows/nightly-local-regression.yml",
       ".github/nightly-local-publication-allowlist.txt",
     ]) {
-      for (const selected of classifyWebCiPath(path)) {
-        expect(selected).toMatchObject({ unit: true, admin: true, fatal: false });
-        if (path.startsWith("apps/web/")) {
-          expect(selected).toMatchObject({ authority: true, build: true, install: true, reason: "WEB_CHANGE" });
-        } else {
-          expect(selected.reason).toBe("SOURCE_CONTRACT_CHANGE");
-        }
+      const [selected, merged] = classifyWebCiPath(path);
+      expect(merged).toMatchObject({ authority: true, unit: true, build: true, compatibility: true,
+        install: true, admin: true, reason: "PROTECTED_PUSH", fatal: false });
+      expect(selected).toMatchObject({ unit: true, admin: true, fatal: false });
+      if (path.startsWith("apps/web/")) {
+        expect(selected).toMatchObject({ authority: true, build: true, install: true, reason: "WEB_CHANGE" });
+      } else {
+        expect(selected.reason).toBe("SOURCE_CONTRACT_CHANGE");
       }
     }
   });

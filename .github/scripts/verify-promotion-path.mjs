@@ -11,24 +11,23 @@ export function verifyPromotionPath(event, repositoryName) {
   }
   const base = pr.base.ref;
   const head = pr.head?.ref;
-  if (typeof head !== 'string' || !head || !/^[0-9a-f]{40}$/.test(pr.head?.sha ?? '')) {
+  if (typeof head !== 'string' || !head || !/^(?!0{40}$)[0-9a-f]{40}$/.test(pr.head?.sha ?? '')
+      || typeof pr.head?.repo?.full_name !== 'string' || !pr.head.repo.full_name) {
     return { passed: false, code: 'PROMOTION_SOURCE_INVALID' };
   }
   if (!protectedBranches.has(base)) {
     return { passed: true, code: 'PROMOTION_NON_RELEASE_BASE' };
   }
-  if (base === 'develop') {
-    return protectedBranches.has(head)
-      ? { passed: false, code: 'PROMOTION_REVERSE_PATH_DENIED' }
-      : { passed: true, code: 'PROMOTION_FEATURE_TO_DEVELOP' };
+  if (base !== 'main') {
+    return { passed: false, code: 'PROMOTION_LEGACY_BASE_RETIRED' };
   }
-  if (pr.head?.repo?.full_name !== repository) {
-    return { passed: false, code: 'PROMOTION_FOREIGN_SOURCE_DENIED' };
+  // This trusted policy reaches main through the previous policy's final
+  // develop -> data -> main promotion. Once installed, legacy data consumers
+  // may keep their ref, but that ref is no longer a source-release conduit.
+  if (protectedBranches.has(head)) {
+    return { passed: false, code: 'PROMOTION_RELEASE_BRANCH_SOURCE_DENIED' };
   }
-  const expected = base === 'data' ? 'develop' : 'data';
-  return head === expected
-    ? { passed: true, code: 'PROMOTION_SERIAL_PATH_VERIFIED' }
-    : { passed: false, code: 'PROMOTION_SERIAL_PATH_REQUIRED' };
+  return { passed: true, code: 'PROMOTION_FEATURE_TO_MAIN' };
 }
 
 function main() {
