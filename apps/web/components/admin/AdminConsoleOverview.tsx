@@ -514,9 +514,9 @@ const DEFAULT_ADMIN_DASHBOARD_CARD_VIEWS: Record<
 > = {
   impact: "chart",
   trend: "chart",
-  ops: "chart",
-  topContent: "chart",
-  engagementRate: "chart",
+  ops: "table",
+  topContent: "table",
+  engagementRate: "table",
 };
 
 const DEFAULT_ADMIN_DASHBOARD_TREND_SERIES_VISIBILITY: AdminDashboardSeriesVisibility<AdminDashboardTrendSeriesKey> =
@@ -3583,7 +3583,10 @@ function AdminDashboardScrollTable<Row>({
 
   return (
     <div
-      className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide rounded-xl border border-border/70 bg-background"
+      className="min-h-0 flex-1 overflow-auto border border-border bg-background"
+      tabIndex={0}
+      role="region"
+      aria-label="대시보드 데이터 표 · 가로·세로 스크롤 가능"
       data-admin-dashboard-table-view="true"
       data-admin-dashboard-progressive-table="true"
     >
@@ -3611,6 +3614,7 @@ function AdminDashboardScrollTable<Row>({
               {columns.map((column) => (
                 <td
                   key={column.key}
+                  data-admin-dashboard-cell-align={column.align ?? "left"}
                   className={cn(
                     "min-w-0 border-b border-border/45 px-3 py-2 align-middle text-foreground last:border-b-0", // taste-skill-ignore: real table row boundary
                     column.align === "right" &&
@@ -3701,7 +3705,7 @@ function AdminDashboardManagementSkeleton() {
     >
       <AdminPageHeader title={getAdminModuleTitle("overview")} icon={Activity} summary="운영 데이터 조회 중"
         actions={<div
-          className="admin-toolbar flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden"
+          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-2 overflow-x-auto scrollbar-hide [scrollbar-width:none] md:w-auto md:justify-end md:overflow-visible [&::-webkit-scrollbar]:hidden"
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
           data-allow-horizontal-scroll="true"
@@ -4161,7 +4165,7 @@ function AdminDashboardKpiCard({
     <div
       className={cn(
         adminDashboardCardClass,
-        "relative z-0 grid min-h-[96px] grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-visible p-3 hover:z-20 focus-within:z-20",
+        "relative z-0 grid min-h-[80px] grid-rows-[auto_minmax(0,1fr)] gap-1 overflow-visible p-2 hover:z-20 focus-within:z-20",
         emphasisClass,
         className,
         isFullscreen && adminDashboardFullscreenCardClassName,
@@ -4553,6 +4557,7 @@ function AdminDashboardDiagnosisBoard({
                     isFullscreen && "px-4 py-3 sm:px-5 sm:py-4",
                   )}
                   aria-label={tooltipLines.join(" ")}
+                  data-admin-dashboard-diagnosis-card="true"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-2xs font-black text-primary">
@@ -6495,7 +6500,7 @@ function AdminDashboardManagementPanel({
     >
       <AdminPageHeader title={getAdminModuleTitle("overview")} icon={Activity} summary={dashboardHeaderSummary}
         actions={<div
-          className="admin-toolbar flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden"
+          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-2 overflow-x-auto scrollbar-hide [scrollbar-width:none] md:w-auto md:justify-end md:overflow-visible [&::-webkit-scrollbar]:hidden"
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
           data-allow-horizontal-scroll="true"
@@ -8032,8 +8037,8 @@ function AdminSidebar({
             />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-extrabold text-foreground">
-              관리자 콘솔
+            <p className="truncate text-sm font-semibold text-foreground" data-admin-mobile-module-title="true">
+              {activeSidebarLabel}
             </p>
           </div>
           <PopoverTrigger asChild>

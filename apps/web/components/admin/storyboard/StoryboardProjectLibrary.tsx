@@ -38,7 +38,7 @@ export function StoryboardProjectLibrary({ projects, selectedId, statusLabels, b
   const hasFilter = normalizedQuery.length > 0 || status !== "all";
   const initialRead = busy && !error && projects.length === 0 && countUnknown;
 
-  return <section id="local-storyboard-project-library" aria-labelledby="local-library-title" className="admin-detail-section min-w-0 bg-card text-card-foreground">
+  return <section id="local-storyboard-project-library" aria-labelledby="local-library-title" className="min-w-0 border border-border bg-card text-card-foreground">
     <div className="flex items-center justify-between gap-2 px-3 pt-3">
       <h3 id="local-library-title" className="admin-section-title text-sm font-semibold">저장된 프로젝트 <span className="ml-1 font-normal tabular-nums text-muted-foreground">{countUnknown ? '미확인' : projects.length}</span></h3>
       <button type="button" className={`${controlClass} inline-flex shrink-0 items-center justify-center !px-2 hover:bg-muted aria-disabled:cursor-not-allowed aria-disabled:opacity-50`}
@@ -46,8 +46,8 @@ export function StoryboardProjectLibrary({ projects, selectedId, statusLabels, b
         {busy ? <Loader2 aria-hidden="true" className="size-4 motion-safe:animate-spin" /> : <RefreshCw aria-hidden="true" className="size-4" />}
       </button>
     </div>
-    <div className="admin-toolbar space-y-2 p-3">
-      <label className="relative block">
+    <div className="grid gap-2 p-3">
+      <label className="relative block min-w-0">
         <span className="sr-only">프로젝트 검색</span>
         <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <input type="search" className={`${controlClass} w-full !pl-9`} placeholder="프로젝트 검색" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -67,7 +67,7 @@ export function StoryboardProjectLibrary({ projects, selectedId, statusLabels, b
     <ul aria-label="저장된 프로젝트 목록" aria-busy={busy} className="max-h-72 space-y-1 overflow-y-auto overscroll-contain bg-muted/20 p-1 lg:max-h-[min(60vh,36rem)]">
       {filtered.map((project) => <li key={project.id}>
         <button type="button" onClick={() => onSelect(project.id)} aria-current={selectedId === project.id ? "true" : undefined}
-          className={`block w-full min-w-0 px-3 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring ${selectedId === project.id ? "bg-primary/10" : "hover:bg-muted/60"}`}>
+          className={`block w-full min-w-0 px-3 py-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring ${selectedId === project.id ? "bg-primary/10" : "hover:bg-muted/60"}`}>
           <span className="block break-words text-sm font-medium [overflow-wrap:anywhere]">{project.title || "제목 없는 프로젝트"}</span>
           <span className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <span className={project.status === "failed" ? "text-destructive" : undefined}>{statusLabels[project.status]}</span>
