@@ -60,4 +60,3 @@ describe("admin console dashboard overhaul source contract", () => {
     expect(source).toContain('"확인 불가"');
   });
 });
-
