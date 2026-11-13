@@ -5,6 +5,7 @@ import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef, mem
 import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { LocalReceiptOcrPreview } from './LocalReceiptOcrPreview';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -2752,6 +2753,7 @@ export function SubmissionListView({
                     <span><strong className="font-semibold text-foreground">{currentTabSummary.label}</strong> · {listRetrying ? '조회 중' : listReadFailed ? '조회 실패' : `${resultCount}건`}</span>
                     <span>{searchValue || statusFilter !== 'all' || queueReasonFilter !== 'all' ? '필터 적용 중' : '전체 조회'}</span>
                 </div>
+                {activeTab === 'reviews' && <LocalReceiptOcrPreview />}
                 {activeTab !== 'reviews' && !listReadFailed && <div className="flex shrink-0 flex-wrap gap-1" data-admin-submission-queue-reason-filter="true" aria-label="제보 큐 검수 사유 필터">
                     {queueReasonFilterOptions.filter(option => option.value === 'all' || option.count > 0 || option.value === queueReasonFilter).map(option => <button key={option.value} type="button" aria-pressed={queueReasonFilter === option.value} data-admin-submission-queue-reason-filter-option={option.value} onClick={() => handleQueueReasonFilterChange(option.value)} className={cn('min-h-7 rounded-md border px-2 text-[11px]', queueReasonFilter === option.value ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted')}>
                         {option.label}<span className="ml-1 tabular-nums">{option.count}</span>

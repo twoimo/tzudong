@@ -444,6 +444,19 @@
   [data-admin-dashboard-kpi-card] { min-height: 104px; }
 }
 
+/* Temporary OCR suggestions stay separate from the guarded review queue. */
+[data-admin-console-shell="true"] .admin-local-ocr-preview {
+  flex-shrink: 0;
+  border: 1px solid hsl(var(--border));
+  padding: var(--admin-space-2);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+[data-admin-console-shell="true"] .admin-local-ocr-preview dd {
+  overflow-wrap: break-word;
+  word-break: keep-all;
+}
+
 /* Bound table rows to the viewport; numeric values never split across lines. */
 [data-admin-console-shell="true"] [data-admin-dashboard-widget-card]:not([data-admin-dashboard-card-fullscreen="true"]) [data-admin-dashboard-progressive-table="true"] { max-height: 248px; }
 [data-admin-console-shell="true"] [data-admin-dashboard-progressive-table="true"] { border-radius: 0; overscroll-behavior: contain; }
