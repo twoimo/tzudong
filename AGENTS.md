@@ -5,6 +5,7 @@ Korean-first restaurant map for places featured in Tzuyang videos.
 ## Structure
 - `apps/web`: Next.js public app and guarded admin console.
 - `backend`: crawlers, evaluation, media and batch pipelines. Keep long jobs out of request handlers.
+- Register new first-/second-level directories in `backend/layout-manifest.v1.json`.
 - Supabase owns persistence; separate browser, session-aware server and privileged server-only clients.
 
 ## Work

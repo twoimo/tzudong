@@ -15,6 +15,12 @@
   [변경 기록 아카이브](docs/archive/changelog/CHANGELOG.ko.md)에 보존합니다.
 - 릴리스 채널 안내, 릴리스 노트 양식과 GitHub 변경 분류를 추가합니다.
 
+## [1.2.8](https://github.com/twoimo/tzudong/releases/tag/v1.2.8) — 2026-11-13
+
+- 관리자 대시보드·스토리보드 여백을 줄이고, 자동 클라우드 대체 호출 없는 선택형 macOS 영수증 OCR 미리보기를 추가합니다.
+- 프로젝트 지침을 간결하게 정리하고 기존 주소·데이터·준비도 차단 조건을 유지합니다.
+- 소스만 공개했으며 운영 전환은 하지 않았습니다. 병합 후 검사에서 문서 소유권 목록 누락을 발견해 PR #3831에서 후속 수정합니다.
+
 ## [1.2.7](https://github.com/twoimo/tzudong/releases/tag/v1.2.7) — 2026-09-27
 
 - 홈의 lazy provider가 준비될 때 기존 자식 트리를 유지합니다.
