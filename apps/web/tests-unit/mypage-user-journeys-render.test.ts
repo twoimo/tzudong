@@ -38,7 +38,7 @@ beforeAll(async () => {
     "next/image": "import React from 'react';export default function Image({unoptimized,fill,priority,...props}){return <img {...props}/>;}",
     "@/contexts/AuthContext": "const user={id:'33333333-3333-4333-8333-333333333333',email:'fixture@example.test',user_metadata:{}};export const useAuth=()=>({user,profileNickname:'검증 계정'});",
     "@tanstack/react-query": "import {getQuery} from 'journey-fixture-state';export const useInfiniteQuery=getQuery;export const useMutation=()=>({mutate(){},isPending:false});export const useQueryClient=()=>({invalidateQueries:async()=>{},clear(){}});",
-    "@/hooks/use-home-return-href": `export const useHomeReturnHref=()=>${JSON.stringify(mapReturnHref)};`,
+    "@/hooks/use-home-return-href": "export const useHomeReturnHref=()=>'/?restaurant=22222222-2222-4222-8222-222222222222&mapMode=domestic';",
     "@/hooks/useDeviceType": "export const useImmediateMobileOrTablet=()=>false;export const useIsMobile=()=>false;",
     "@/components/ui/dialog": "import React from 'react';export const Dialog=({open,children})=>open?<>{children}</>:null;export const DialogContent=({children,...props})=><div {...props}>{children}</div>;export const DialogHeader=DialogContent;export const DialogDescription=({children,...props})=><p {...props}>{children}</p>;export const DialogTitle=({children,...props})=><h2 {...props}>{children}</h2>;",
     "@/components/legal/PrivacyPolicyContent": "import React from 'react';export const PrivacyPolicyContent=()=> <p>검증용 정책</p>;",
