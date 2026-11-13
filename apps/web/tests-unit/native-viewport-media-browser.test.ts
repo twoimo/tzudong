@@ -108,7 +108,7 @@ async function run(width: number, height: number, check: (page: Page) => Promise
     `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root">${serverMarkup}</div><div id="immediate"></div></body></html>`,
   }));
   try {
-    await page.goto('http://viewport.fixture.test/');
+    await page.goto('https://viewport.fixture.test/');
     await page.addScriptTag({ content: bundle });
     await ui(page.locator('#viewport-probe')).not.toHaveAttribute('data-home', 'pending');
     await check(page);
@@ -169,13 +169,13 @@ async function createFractionalViewport(page: Page, width: number, height: numbe
     iframe.id = 'fractional-viewport';
     // Quarter-pixel CSS sizes become whole frame pixels before Chromium's viewport rounding.
     iframe.style.cssText = `display:block;border:0;zoom:${zoom};width:${width}px;height:${height}px`;
-    iframe.src = 'http://viewport.fixture.test/';
+    iframe.src = 'https://viewport.fixture.test/';
     document.body.append(iframe);
   }, { width, height, zoom: FRACTIONAL_VIEWPORT_ZOOM });
   const handle = await page.locator('#fractional-viewport').elementHandle();
   const frame = await handle?.contentFrame();
   if (!frame) throw new Error('NATIVE_VIEWPORT_IFRAME_MISSING');
-  await frame.waitForURL('http://viewport.fixture.test/');
+  await frame.waitForURL('https://viewport.fixture.test/');
   await resizeIframe(page, width, height);
   await frame.addScriptTag({ content: bundle });
   await ui(frame.locator('#viewport-probe')).not.toHaveAttribute('data-home', 'pending');
