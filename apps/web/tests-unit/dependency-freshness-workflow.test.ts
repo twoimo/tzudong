@@ -36,7 +36,7 @@ const rustToolchain = read('backend/rust/rust-toolchain.toml');
 describe('Dependency_Freshness_Workflow governance contract', () => {
   test('candidate B cannot inherit checks from candidate A or the default branch', () => {
     const candidates = ['a', 'b'].map((letter) => ({ headSha: letter.repeat(40),
-      targetBranch: 'develop', unit: '/apps/web', packages: [] }));
+      targetBranch: 'main', unit: '/apps/web', packages: [] }));
     const results = VERIFICATION_COMMANDS.map((command) => ({ command, passed: true,
       finishedAt: '2026-09-05T00:00:00Z', durationMinutes: 1 }));
     const checked = bindVerificationToCommit(candidates, results, 'a'.repeat(40));
@@ -94,16 +94,24 @@ describe('Dependency_Freshness_Workflow governance contract', () => {
     }
   });
 
-  test('targets develop only and never auto-merges', () => {
-    expect(TARGET_BRANCH).toBe('develop');
+  test('targets main only and never auto-merges', () => {
+    expect(TARGET_BRANCH).toBe('main');
     expect(AUTO_MERGE).toBe(false);
+    const parsed = Bun.YAML.parse(workflow) as {
+      on: { pull_request: { branches: string[] }; schedule: unknown[]; workflow_dispatch: unknown };
+      jobs: { freshness: { if: string } };
+    };
+    expect(parsed.on.pull_request.branches).toEqual(['main']);
+    expect(parsed.jobs.freshness.if).toBe(
+      "github.event_name != 'pull_request' || github.event.pull_request.user.login == 'dependabot[bot]'",
+    );
     // Read-only permissions and no merge/push steps.
     expect(workflow).toContain('permissions:\n  contents: read');
     expect(workflow).not.toMatch(/auto[_-]?merge/i);
     expect(workflow).not.toMatch(/gh pr merge/);
     expect(workflow).not.toMatch(/contents: write/);
-    // Every dependabot unit targets develop.
-    const targets = dependabot.match(/target-branch: "develop"/g) ?? [];
+    // Every dependabot unit targets main.
+    const targets = dependabot.match(/target-branch: "main"/g) ?? [];
     expect(targets.length).toBe(UNITS.length);
   });
 
@@ -199,16 +207,18 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
     expect(assertGovernanceInvariants()).toBe(true);
   });
 
-  test('rejects candidates that do not target develop', () => {
-    expect(classifyCandidate({ targetBranch: 'main', packages: [] }).code).toBe(
-      FIXED_CODES.TARGET_BRANCH_VIOLATION,
-    );
-    expect(classifyCandidate({ targetBranch: 'develop', packages: [] }).code).toBeNull();
+  test('rejects legacy, unknown and missing targets while admitting main', () => {
+    for (const targetBranch of ['develop', 'data', 'release/next', '', undefined]) {
+      expect(classifyCandidate({ targetBranch, packages: [] }).code).toBe(
+        FIXED_CODES.TARGET_BRANCH_VIOLATION,
+      );
+    }
+    expect(classifyCandidate({ targetBranch: 'main', packages: [] }).code).toBeNull();
   });
 
   test('rejects Pin_Contract value changes', () => {
     const candidate = {
-      targetBranch: 'develop',
+      targetBranch: 'main',
       packages: [{ name: '@typescript/native', fromVersion: '7.0.2', toVersion: '7.1.0' }],
     };
     expect(classifyCandidate(candidate).code).toBe(FIXED_CODES.PIN_CONTRACT_VIOLATION);
@@ -223,7 +233,7 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
     expect(isHoldRangeBump('typescript-eslint', '8.63.0', 'patch')).toBe(false);
 
     const held = {
-      targetBranch: 'develop',
+      targetBranch: 'main',
       packages: [{ name: 'typescript-eslint', fromVersion: '8.63.0', toVersion: '8.64.0' }],
     };
     expect(classifyCandidate(held).code).toBe(FIXED_CODES.DEPENDENCY_HOLD_VIOLATION);
@@ -239,7 +249,7 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
   test('splits major bumps into standalone per-package candidates', () => {
     const candidate = {
       unit: '/apps/web',
-      targetBranch: 'develop',
+      targetBranch: 'main',
       packages: [
         { name: 'a', fromVersion: '1.0.0', toVersion: '2.0.0' },
         { name: 'b', fromVersion: '1.0.0', toVersion: '3.0.0' },
@@ -283,9 +293,9 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
     const receipt = buildRunReceipt({
       runAtUtc: '2026-01-05T06:00:00Z',
       candidates: [
-        { unit: '/apps/web', targetBranch: 'develop', packages: [], title: 'bump a' },
-        { unit: '/apps/web', targetBranch: 'develop', packages: [], title: 'bump b' },
-        { unit: '/backend/rust', targetBranch: 'develop', packages: [], title: 'bump cargo' },
+        { unit: '/apps/web', targetBranch: 'main', packages: [], title: 'bump a' },
+        { unit: '/apps/web', targetBranch: 'main', packages: [], title: 'bump b' },
+        { unit: '/backend/rust', targetBranch: 'main', packages: [], title: 'bump cargo' },
       ],
     });
     expect(receipt.runAtUtc).toBe('2026-01-05T06:00:00Z');
@@ -296,7 +306,7 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
     const cargo = receipt.units.find((u) => u.directory === '/backend/rust');
     expect(cargo?.candidateCount).toBe(1);
     expect(receipt.autoMerge).toBe(false);
-    expect(receipt.targetBranch).toBe('develop');
+    expect(receipt.targetBranch).toBe('main');
   });
 
   test('redacts Forbidden_Log_Field values from emitted text', () => {

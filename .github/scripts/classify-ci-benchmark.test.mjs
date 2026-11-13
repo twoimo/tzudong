@@ -9,19 +9,24 @@ import { classifyPaths, classifyEvent, classifyCheckout } from './classify-ci-be
 
 const head = 'a'.repeat(40);
 const base = 'b'.repeat(40);
-const pr = { pull_request: { head: { sha: head }, base: { sha: base, ref: 'develop' } } };
+const pr = { pull_request: { head: { sha: head }, base: { sha: base, ref: 'main' } } };
 const feature = ['apps/web/components/admin/Table.tsx', 'apps/web/app/api/admin/items/route.ts', 'backend/utils/cache.py'];
 
-test('ordinary app/backend changes preserve diagnostics without the benchmark', () => {
+test('ordinary main PRs use diagnostics and merged main keeps the benchmark', () => {
   assert.equal(classifyEvent({ eventName: 'pull_request', event: pr, head, changedPaths: feature }).benchmark, false);
-  assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, head, ref: 'refs/heads/develop', changedPaths: feature }).benchmark, false);
+  assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, head, ref: 'refs/heads/main', changedPaths: feature }).benchmark, true);
 });
 
 test('promotion, protected push, scheduled and manual runs always benchmark', () => {
-  for (const ref of ['data', 'main']) {
+  for (const ref of ['data', 'develop']) {
     assert.equal(classifyEvent({ eventName: 'pull_request', event: { pull_request: { ...pr.pull_request, base: { sha: base, ref } } }, head, changedPaths: feature }).reason, 'PROTECTED_PROMOTION');
     assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, ref: `refs/heads/${ref}`, head, changedPaths: feature }).reason, 'PROTECTED_PUSH');
   }
+  for (const source of ['data', 'develop', 'main']) {
+    const event = { pull_request: { ...pr.pull_request, head: { sha: head, ref: source } } };
+    assert.equal(classifyEvent({ eventName: 'pull_request', event, head, changedPaths: feature }).reason, 'PROTECTED_PROMOTION');
+  }
+  assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, ref: 'refs/heads/main', head, changedPaths: feature }).reason, 'PROTECTED_PUSH');
   for (const eventName of ['schedule', 'workflow_dispatch']) assert.equal(classifyEvent({ eventName, head, changedPaths: feature }).benchmark, true);
 });
 
@@ -48,7 +53,7 @@ test('exact repository documentation entry points use parity without broad name 
   for (const file of documents) {
     assert.deepEqual(classifyPaths([file]), { benchmark: false, reason: 'FEATURE_DIAGNOSTICS_ONLY' }, file);
     // A documentation-only promotion still verifies the protected source tree.
-    for (const ref of ['data', 'main']) {
+    for (const ref of ['data', 'develop']) {
       assert.equal(classifyEvent({ eventName: 'pull_request', event: { pull_request: { ...pr.pull_request, base: { sha: base, ref } } }, head, changedPaths: [file] }).reason, 'PROTECTED_PROMOTION', file);
       assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: head }, ref: `refs/heads/${ref}`, head, changedPaths: [file] }).reason, 'PROTECTED_PUSH', file);
     }
@@ -75,9 +80,9 @@ test('uncertain and hostile inputs fail closed', () => {
   for (const eventName of ['pull_request_target', 'unknown']) assert.equal(classifyEvent({ eventName, head, event: pr, changedPaths: feature }).benchmark, true);
   assert.equal(classifyEvent({ eventName: 'pull_request', event: pr, head: base, changedPaths: feature }).benchmark, true);
   assert.equal(classifyEvent({ eventName: 'pull_request', event: pr, head: base, changedPaths: feature }).fatal, true);
-  assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: base }, ref: 'refs/heads/develop', head, changedPaths: feature }).fatal, true);
-  assert.equal(classifyEvent({ eventName: 'push', event: { before: '0'.repeat(40), after: head }, ref: 'refs/heads/develop', head, changedPaths: feature }).benchmark, true);
-  assert.equal(classifyEvent({ eventName: 'pull_request', event: { pull_request: { ...pr.pull_request, base: { sha: '$(whoami)', ref: 'develop' } } }, head, changedPaths: feature }).benchmark, true);
+  assert.equal(classifyEvent({ eventName: 'push', event: { before: base, after: base }, ref: 'refs/heads/main', head, changedPaths: feature }).fatal, true);
+  assert.equal(classifyEvent({ eventName: 'push', event: { before: '0'.repeat(40), after: head }, ref: 'refs/heads/main', head, changedPaths: feature }).benchmark, true);
+  assert.equal(classifyEvent({ eventName: 'pull_request', event: { pull_request: { ...pr.pull_request, base: { sha: '$(whoami)', ref: 'main' } } }, head, changedPaths: feature }).benchmark, true);
 });
 
 test('real Git diff handles branches, deletion/rename, missing history and exact head', () => {
@@ -90,11 +95,11 @@ test('real Git diff handles branches, deletion/rename, missing history and exact
   const put = (file) => { mkdirSync(join(root, file, '..'), { recursive: true }); writeFileSync(join(root, file), 'fixture\n'); };
   const commit = () => { git('add', '.'); git('-c', 'user.name=CI Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'fixture'); return git('rev-parse', 'HEAD'); };
   try {
-    git('init', '-b', 'develop'); put('apps/web/tsconfig.json'); const baseSha = commit();
+    git('init', '-b', 'main'); put('apps/web/tsconfig.json'); const baseSha = commit();
     put(process.platform === 'win32' ? 'apps/web/components/space name.tsx' : 'apps/web/components/line\nbreak.tsx'); const featureSha = commit();
-    const makeEvent = (sha) => ({ pull_request: { head: { sha }, base: { sha: baseSha, ref: 'develop' } } });
+    const makeEvent = (sha) => ({ pull_request: { head: { sha }, base: { sha: baseSha, ref: 'main' } } });
     assert.equal(classifyCheckout({ root, eventName: 'pull_request', event: makeEvent(featureSha) }).benchmark, false);
-    assert.equal(classifyCheckout({ root, eventName: 'push', ref: 'refs/heads/develop', event: { before: baseSha, after: featureSha } }).benchmark, false);
+    assert.equal(classifyCheckout({ root, eventName: 'push', ref: 'refs/heads/main', event: { before: baseSha, after: featureSha } }).benchmark, true);
     assert.equal(classifyCheckout({ root, eventName: 'pull_request', event: makeEvent(baseSha) }).reason, 'SOURCE_MISMATCH');
     assert.equal(classifyCheckout({ root, eventName: 'workflow_dispatch', expectedHead: baseSha }).fatal, true);
     const eventPath = join(root, 'event.json');
@@ -104,7 +109,7 @@ test('real Git diff handles branches, deletion/rename, missing history and exact
     assert.deepEqual(JSON.parse(mismatch.stdout), { benchmark: true, reason: 'SOURCE_MISMATCH', fatal: true });
     renameSync(join(root, 'apps/web/tsconfig.json'), join(root, 'apps/web/components/config.txt')); const renamedSha = commit();
     assert.equal(classifyCheckout({ root, eventName: 'pull_request', event: makeEvent(renamedSha) }).benchmark, true);
-    assert.equal(classifyCheckout({ root, eventName: 'pull_request', event: { pull_request: { head: { sha: renamedSha }, base: { sha: base, ref: 'develop' } } } }).reason, 'DIFF_UNAVAILABLE');
+    assert.equal(classifyCheckout({ root, eventName: 'pull_request', event: { pull_request: { head: { sha: renamedSha }, base: { sha: base, ref: 'main' } } } }).reason, 'DIFF_UNAVAILABLE');
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 

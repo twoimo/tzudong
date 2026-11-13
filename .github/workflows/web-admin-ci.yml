@@ -4,7 +4,7 @@ run-name: ${{ github.event.pull_request.title || format('CI · {0}', github.ref_
 on:
   pull_request:
   push:
-    branches: [main, develop, data]
+    branches: [main]
   schedule:
     - cron: '17 18 * * 0'
   workflow_dispatch:

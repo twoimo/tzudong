@@ -78,14 +78,16 @@ export function classifyEvent({ eventName, event, ref, head, changedPaths }) {
     if (!SHA.test(pr?.head?.sha ?? '')) return invalidSource('SOURCE_INVALID');
     if (pr.head.sha !== head) return invalidSource('SOURCE_MISMATCH');
     if (!SHA.test(pr?.base?.sha ?? '')) return full('DIFF_UNAVAILABLE');
-    if (['data', 'main'].includes(pr.base.ref)) return full('PROTECTED_PROMOTION');
-    if (pr.base.ref !== 'develop') return full('UNKNOWN_BASE');
+    // Keep the one-time installation through the legacy protected path full.
+    // Ordinary feature/dependency PRs use main after trusted policy activation.
+    if (['data', 'develop'].includes(pr.base.ref) || ['data', 'develop', 'main'].includes(pr.head.ref)) return full('PROTECTED_PROMOTION');
+    if (pr.base.ref !== 'main') return full('UNKNOWN_BASE');
   } else if (eventName === 'push') {
     if (!SHA.test(event?.after ?? '')) return invalidSource('SOURCE_INVALID');
     if (event.after !== head) return invalidSource('SOURCE_MISMATCH');
     if (event.deleted || !SHA.test(event.before ?? '')) return full('DIFF_UNAVAILABLE');
-    if (['refs/heads/data', 'refs/heads/main'].includes(ref)) return full('PROTECTED_PUSH');
-    if (ref !== 'refs/heads/develop') return full('UNKNOWN_REF');
+    if (['refs/heads/main', 'refs/heads/develop', 'refs/heads/data'].includes(ref)) return full('PROTECTED_PUSH');
+    return full('UNKNOWN_REF');
   } else return full('UNKNOWN_EVENT');
   return classifyPaths(changedPaths);
 }

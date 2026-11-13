@@ -180,7 +180,7 @@ class SupplyChainContractTests(unittest.TestCase):
         document = yaml.safe_load((ROOT / ".github/dependabot.yml").read_text(encoding="utf-8"))
         updates = document["updates"]
         actual = tuple((item["package-ecosystem"], item["directory"]) for item in updates)
-        self.assertTrue(all(item["target-branch"] == "develop" for item in updates))
+        self.assertTrue(all(item["target-branch"] == "main" for item in updates))
         self.assertTrue(all(item["open-pull-requests-limit"] <= 5 for item in updates))
         cargo_manifests = tuple(ROOT.glob("backend/rust/**/Cargo.toml"))
         expected = BASE_DEPENDENCY_UNITS + (

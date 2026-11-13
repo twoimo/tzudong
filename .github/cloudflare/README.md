@@ -4,12 +4,17 @@
 현재 단계는 GitHub `Release`와의 병행 검증이다. 전체 설정·실측 기준·예산·활성화
 상태는 [운영 문서](../../docs/operations/cloudflare-ci.md)를 따른다.
 
+현재 소스의 `main` 설정은 [main 중심 전환](../../docs/operations/main-first-transition.md)을
+위한 **적용 예정 구성**이다. 이 변경은 Workers Builds 설정을 바꾸거나 원격 실행을
+확인하지 않았다. 실제 연결은 먼저 읽어 확인하고, 보호된 최종 승격 이후 별도로
+적용·검증한다. 이전 `develop` 실행 기록과 현재 공급자 상태를 혼동하지 않는다.
+
 ## 파일과 역할
 
 | 파일 | 역할 |
 | --- | --- |
 | [package.json](package.json) · [package-lock.json](package-lock.json) | npm `11.6.2`와 정확한 Wrangler 의존성의 설치 기준 |
-| [build-settings.json](build-settings.json) | develop branch, root directory, 명령과 빌드 변수의 검토 기준 |
+| [build-settings.json](build-settings.json) | 적용 예정 main branch, root directory, 명령과 빌드 변수의 검토 기준 |
 | [wrangler.jsonc](wrangler.jsonc) | 이 CI Worker의 명시적 배포 대상 |
 | [거버넌스 runner](../scripts/run-cloudflare-governance.mjs) | 원격 실행 정체성 확인, 실제 검사 실행, 해당 SHA 결과 생성 |
 | [배포 runner](../scripts/deploy-cloudflare-governance.mjs) | receipt·도구 버전 재검증, 잠긴 설치, 해당 Worker 배포와 공개 결과 대조 |
@@ -17,22 +22,24 @@
 ## Workers Builds 설정
 
 Root directory는 **`/.github/cloudflare`**, production branch는
-**`develop`**, preview builds는 **비활성화**한다.
+**`main`**, preview builds는 **비활성화**한다.
 여기서 production branch는 이 CI Worker의 배포 기준이며 서비스 앱의 `main`
-승격을 뜻하지 않는다. 아래 설정은 PR의 보호된 develop 병합 후 적용한다.
-병합 전 검증은 지정한 작업 브랜치와 같은 이름의 `--branch` 인자로 실행하며,
-활성 설정과 최종 전환 결과는 [PR #3764](https://github.com/twoimo/tzudong/pull/3764)에서 확인한다.
+승격을 뜻하지 않는다. 아래 설정은 main 중심 정책의 최종 보호된 승격 후,
+동일 trigger의 branch와 두 명령을 함께 바꾸는 별도 작업으로 적용한다.
+기존 값을 복구 입력으로 보관하고 저장된 설정 및 main의 native build·receipt를
+다시 확인한다. [PR #3764](https://github.com/twoimo/tzudong/pull/3764)는 이전 develop
+전환의 기록이며 이번 main 설정이 적용됐다는 증거가 아니다.
 
 Build command:
 
 ```sh
-node ../scripts/run-cloudflare-governance.mjs --branch develop
+node ../scripts/run-cloudflare-governance.mjs --branch main
 ```
 
 Deploy command:
 
 ```sh
-node ../scripts/deploy-cloudflare-governance.mjs --branch develop
+node ../scripts/deploy-cloudflare-governance.mjs --branch main
 ```
 
 빌드 변수는 `NODE_VERSION=24.22.1`, `BUN_VERSION=1.4.0`,

@@ -10,7 +10,7 @@ import {
 import { buildPreflightReceipt, buildRunReceipt } from '../scripts/verify-dependency-freshness.mjs';
 
 const pr = { number: 42, user: { login: 'dependabot[bot]' },
-  base: { ref: 'develop' }, head: { sha: 'a'.repeat(40) } };
+  base: { ref: 'main' }, head: { sha: 'a'.repeat(40) } };
 const file = (name = 'next', version = '16.3.0', fromVersion = '16.2.0') => ({
   filename: 'apps/web/package.json', status: 'modified',
   patch: `-    "${name}": "${fromVersion}",\n+    "${name}": "${version}",`,
@@ -38,7 +38,7 @@ describe('real dependency candidate ingestion', () => {
     expect(calls.some((path) => path.includes('/pulls/99/'))).toBe(false);
   });
 
-  test('derives a lockfile-only update from the merge base even after develop advances', async () => {
+  test('derives a lockfile-only update from the merge base even after main advances', async () => {
     const baseSha = 'b'.repeat(40);
     const mergeBase = 'c'.repeat(40);
     const lock = (version: string) => ({ lockfileVersion: 3, packages: {
@@ -55,7 +55,7 @@ describe('real dependency candidate ingestion', () => {
       calls.push(path);
       if (path.includes('/compare/')) return { base_commit: { sha: baseSha }, merge_base_commit: { sha: mergeBase } };
       if (path.includes('/contents/')) {
-        // Updated develop has unrelated additions/held-package changes. Its
+        // Updated main has unrelated additions/held-package changes. Its
         // lockfile is not the old side of this PR's actual diff.
         if (path.endsWith(baseSha)) throw new Error('unrelated_base_lockfile_requested');
         return blob(lock(path.endsWith(mergeBase) ? '1.2.3' : '1.2.4'));
@@ -108,7 +108,7 @@ describe('real dependency candidate ingestion', () => {
     const receipt = buildRunReceipt({ candidates });
     expect(receipt.units[0].candidateCount).toBe(1);
     expect(receipt.candidates[0].code).toBe('dependency_hold_violation');
-    expect(buildRunReceipt({ candidates: [descriptor({ ...pr, base: { ref: 'main' } }, [file('typescript-eslint', '8.64.0', '8.63.0')])] })
+    expect(buildRunReceipt({ candidates: [descriptor({ ...pr, base: { ref: 'develop' } }, [file('typescript-eslint', '8.64.0', '8.63.0')])] })
       .candidates[0].code).toBe('target_branch_violation');
   });
   test('rejects pin changes, truncated metadata and excess open candidates', () => {
@@ -142,7 +142,7 @@ describe('PR collection remains pinned across merge and metadata races', () => {
   const repository = 'twoimo/tzudong';
   const baseSha = 'b'.repeat(40);
   const mergeBase = 'c'.repeat(40);
-  const pinned = { number: pr.number, repository, baseSha, baseRef: 'develop' };
+  const pinned = { number: pr.number, repository, baseSha, baseRef: 'main' };
   const closed = { ...pr, state: 'closed', merged: true,
     base: { ...pr.base, sha: 'd'.repeat(40), repo: { full_name: repository } },
     head: { ...pr.head, repo: { full_name: repository } } };
@@ -195,7 +195,7 @@ describe('PR collection remains pinned across merge and metadata races', () => {
       { ...closed, head: { ...closed.head, sha: 'e'.repeat(40) } },
       { ...closed, head: { ...closed.head, repo: { full_name: 'someone/tzudong' } } },
       { ...closed, base: { ...closed.base, repo: { full_name: 'someone/tzudong' } } },
-      { ...closed, base: { ...closed.base, ref: 'main' } },
+      { ...closed, base: { ...closed.base, ref: 'develop' } },
       { ...closed, base: undefined },
       null,
     ]) {
@@ -210,7 +210,7 @@ describe('PR collection remains pinned across merge and metadata races', () => {
   test('rejects source or target movement during collection', async () => {
     for (const moved of [
       { ...closed, head: { ...closed.head, sha: 'e'.repeat(40) } },
-      { ...closed, base: { ...closed.base, ref: 'main' } },
+      { ...closed, base: { ...closed.base, ref: 'develop' } },
     ]) {
       let metadataReads = 0;
       await expect(collectCandidates(async (path: string) => {
@@ -250,8 +250,8 @@ describe('PR collection remains pinned across merge and metadata races', () => {
     await expect(collectCandidates(async () => [], null, pinned)).rejects.toThrow('checked_pull_request_invalid');
   });
 
-  test('binds valid target names without imposing a develop-only policy in collection', async () => {
-    for (const baseRef of ['main', 'release/2026.11', '개발/다음']) {
+  test('binds valid target names without imposing a main-only policy in collection', async () => {
+    for (const baseRef of ['develop', 'release/2026.11', '개발/다음']) {
       const metadata = { ...closed, base: { ...closed.base, ref: baseRef } };
       const candidates = await collectCandidates(async (path: string) =>
         path.startsWith('/compare/') ? comparison() : metadata, pr.head.sha, { ...pinned, baseRef });

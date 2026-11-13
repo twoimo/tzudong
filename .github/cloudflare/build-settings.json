@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "workerName": "tzudong-ci-governance",
   "repository": "twoimo/tzudong",
-  "productionBranch": "develop",
+  "productionBranch": "main",
   "previewsEnabled": false,
   "rootDirectory": "/.github/cloudflare",
-  "buildCommand": "node ../scripts/run-cloudflare-governance.mjs --branch develop",
-  "deployCommand": "node ../scripts/deploy-cloudflare-governance.mjs --branch develop",
+  "buildCommand": "node ../scripts/run-cloudflare-governance.mjs --branch main",
+  "deployCommand": "node ../scripts/deploy-cloudflare-governance.mjs --branch main",
   "pathIncludes": [
     "*"
   ],

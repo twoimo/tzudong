@@ -7,8 +7,8 @@ approval policy.
 
 ## Branch and change selection
 
-`apps/web/vercel.json` uses a `**` deny rule with explicit `main` and `develop`
-allow rules. Vercel uses minimatch for branch patterns: `*` alone does not cover
+`apps/web/vercel.json` uses a `**` deny rule with explicit `main`, transitional
+`develop`, and one-level `preview/*` allow rules. Vercel uses minimatch for branch patterns: `*` alone does not cover
 slash-separated names such as `dependabot/github_actions/develop/...`.
 The ignore script remains a second check for deployments that already exist
 or originate from an older source revision.
@@ -20,12 +20,19 @@ Production builds still require all of the following:
 - `TZUDONG_APPROVED_PRODUCTION_SHA` is a complete lowercase Git SHA and exactly
   matches `VERCEL_GIT_COMMIT_SHA`.
 
-For `develop` previews, the ignore script compares the current checked-out
+For `preview/<name>` and transitional `develop` previews, the ignore script compares the current checked-out
 commit with `VERCEL_GIT_PREVIOUS_SHA`, the last successful deployment for that
 project and branch. It skips only a verified diff consisting entirely of the
 explicit non-application paths in the script. It does not compare just `HEAD^`:
 an application change in an earlier failed or canceled deployment still needs
 to be built.
+
+Ordinary feature/dependency branches and nested `preview/a/b` names remain disabled.
+The preview prefix is an explicit review opt-in after the
+[main-first policy](main-first-transition.md) is installed. Formal release evidence
+still requires its provider preview identity to name the exact current `main`
+release; a feature preview does not substitute for it. Production-domain assignment
+remains manual and one operator promotes the verified staged production build.
 
 Missing, invalid, unavailable, unrelated, or mismatched Git history keeps the
 preview build enabled. A redeploy of the same SHA also builds, allowing project
@@ -74,8 +81,11 @@ particular speed improvement. Compare observed build phases separately from
 queue time; Vercel can create and upload the next cache after a deployment is
 already ready. No percentage improvement is claimed from a single build.
 
-Continue to release through the protected `develop -> data -> main` path and
-verify the actual live deployment identity after a production release.
+Install the main-first policy through one final protected `develop -> data -> main`
+path. After trusted policy and protection readback, source PRs target main directly.
+Keep the exact production SHA guard and verify the actual live deployment identity
+after each manual production promotion. Changing source configuration is not a
+provider-setting or deployment readback.
 
 ## References
 

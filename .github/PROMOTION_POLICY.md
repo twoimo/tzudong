@@ -4,24 +4,37 @@
 and checked-out verifier come from the exact default-branch workflow revision
 (`github.workflow_sha`). It never executes a PR head or merge-ref definition.
 Every PR event, including a base edit, runs the verifier without a conditional job
-skip. The verifier permits feature → develop → data → main and rejects shortcuts.
+skip. The main-first verifier accepts feature and dependency heads into protected
+`main`, including ordinary fork contributions. It rejects `develop` and `data`
+as code-promotion bases and rejects any `main`, `develop`, or `data` head into
+`main`. Other development bases remain usable but do not constitute a release.
+Repository and PR source metadata must be present and valid.
 
-The initial main revision predates this workflow. Installation therefore uses a
-bounded repository-metadata transition rather than a PR-defined success check:
+## Install the replacement policy once
 
-1. Retain exact main/develop/data refs, default branch, branch protections, active
-   write freeze, scheduler guards and Vercel's explicit main production branch.
-2. Temporarily select the already protected and reviewed develop branch as the
-   repository default. Do not change refs, protection, credentials or DNS.
-3. Trigger a normal PR event and verify an actual `pull_request_target` run from
-   that protected workflow revision. A skipped or PR-defined check is insufficient.
-4. Merge reviewed changes through develop → data → main using the existing
-   required checks and normal protected PRs. Keep write-producing schedules held.
-5. Restore main as the default immediately after its trusted workflow is installed,
-   then independently verify the default, protections, target-event execution and
-   production-branch identity. Restore the prior default if installation is stopped.
+The existing trusted default-branch policy still enforces the serial path until
+this replacement reaches `main`. Do not expect the policy in a PR head to authorize
+that PR, and do not change the default branch to select it early.
 
-The current owner has authorized the recovery task. Each metadata transition and
-merge still needs its actual external readback; this document is a procedure, not
-a claim that installation, release or freeze exit has occurred. Never create a
-custom passing status to substitute for policy execution.
+1. Capture the actual default branch, main/develop/data SHAs, required contexts,
+   strict and no-bypass settings, current production identity, and rollback target.
+2. Submit the coherent policy and consumer changes to `develop`. Complete the
+   applicable exact-head `Release`, `Promotion Path`, `CI`, `Security`, CodeQL,
+   and dependency checks before each protected merge.
+3. Promote `develop -> data -> main` one final time through normal protected PRs.
+   Reconcile changed head/base SHAs before proceeding. The classifiers retain full
+   coverage for these installation PRs; no custom success status substitutes for
+   execution.
+4. Verify `main` is the default and that its saved protection retains the existing
+   required contexts, including executed `CI` and `Security`, strict up-to-date
+   behavior, and no bypass. Confirm the next normal main-target PR runs the new
+   verifier from the exact trusted default-branch workflow revision.
+5. Start source and dependency PRs from current `main` and target `main`. Keep
+   `data` for its existing data consumers; do not delete branches, publish data,
+   alter write freezes, or reconfigure hosted providers as an implicit side effect.
+
+The [transition runbook](../docs/operations/main-first-transition.md) covers
+dependent workflows, staged production, provider readback, and rollback. This
+source procedure does not claim installation, release, or freeze exit occurred.
+Never weaken protection, force-push, use administrator merge bypass, or create a
+passing replacement check to complete the transition.

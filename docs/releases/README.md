@@ -37,9 +37,11 @@ receipt in a release note does not establish the currently deployed revision.
 
 1. Add a short entry under `Unreleased` in both root changelogs. Keep the two
    languages aligned and leave long operational receipts in their dated documents.
-2. Follow the existing [release policy](../agents/release.md) and protected
-   `feature → develop → data → main` promotion path. Identify the exact source
-   commit, tag and previous release before preparing a publication.
+2. Follow the [release policy](../agents/release.md): install main-first once through
+   protected `feature → develop → data → main`, then use protected feature/dependency
+   PRs into `main` after its trusted policy and saved protection are verified. See the
+   [transition runbook](../operations/main-first-transition.md). Identify the exact
+   source commit, tag and previous release before preparing a publication.
 3. Start from the [release-note template](TEMPLATE.md). GitHub's **Generate release
    notes** uses [`.github/release.yml`](../../.github/release.yml) to group merged
    PRs by label. Select the intended previous stable tag explicitly so a nearby

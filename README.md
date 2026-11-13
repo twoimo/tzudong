@@ -52,7 +52,7 @@ Use **Node.js 24.x** and **npm 11.6.2**, as declared in [apps/web/package.json](
 1. Clone the repository and install the web dependencies:
 
    ```sh
-   git clone --branch develop https://github.com/twoimo/tzudong.git
+   git clone --branch main https://github.com/twoimo/tzudong.git
    cd tzudong/apps/web
    npm ci
    ```
@@ -106,7 +106,7 @@ Exact dependencies are in [package.json](apps/web/package.json) and [package-loc
 
 Use the [latest stable source release](https://github.com/twoimo/tzudong/releases/latest) and the [changelog](CHANGELOG.md) for published changes. The [release guide](docs/releases/README.md) explains stable, nightly, and local-stack channels and provides a release-note template.
 
-Changes follow the protected `develop → data → main` path. Nightly and local-stack prereleases describe local verification. Production deployment has its own commit and readback, recorded according to the [release policy](docs/agents/release.md).
+Feature and dependency PRs target protected `main` after the [main-first transition](docs/operations/main-first-transition.md) is installed and verified. That policy is installed once through the existing `develop → data → main` path; `data` remains for its legacy data consumers. Nightly and local-stack prereleases describe local verification. Production uses an exact approved commit, a staged build, manual promotion, and its own provider readback under the [release policy](docs/agents/release.md).
 
 ## Security and license
 

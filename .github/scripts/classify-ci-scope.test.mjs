@@ -12,7 +12,7 @@ const HEAD = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
 const selected = (result) => SCOPE_FLAGS.filter((flag) => result[flag]);
 const all = (result) => assert.deepEqual(selected(result), [...SCOPE_FLAGS]);
-const event = (head = HEAD, base = BASE, branch = 'develop') => ({ pull_request: { head: { sha: head }, base: { sha: base, ref: branch } } });
+const event = (head = HEAD, base = BASE, branch = 'main') => ({ pull_request: { head: { sha: head }, base: { sha: base, ref: branch } } });
 const script = fileURLToPath(new URL('./classify-ci-scope.mjs', import.meta.url));
 
 function withRepository(run) {
@@ -32,7 +32,7 @@ function withRepository(run) {
   const write = (path, text) => { const target = join(root, path); mkdirSync(dirname(target), { recursive: true }); writeFileSync(target, text); };
   const commit = (message) => { git('add', '.'); git('commit', '-m', message); return git('rev-parse', 'HEAD'); };
   try {
-    git('init', '--initial-branch=develop');
+    git('init', '--initial-branch=main');
     write('README.md', 'Synthetic source.\n');
     write('backend/supabase/migrations/protected.sql', 'select 1;\n');
     write('apps/web/package-lock.json', '{}\n');
@@ -96,9 +96,14 @@ test('unavailable or malformed inventories cannot become documentation skips', (
   for (const paths of [undefined, [], 'README.md', [''], ['/README.md'], ['docs/../README.md'], ['docs\\guide.md'], ['docs//guide.md'], ['docs/./guide.md'], ['README.md\0secret'], [null], new Array(20_001).fill('README.md')]) all(classifyPaths(paths));
 });
 
-test('protected promotion, periodic and unknown events retain full coverage', () => {
-  for (const branch of ['data', 'main']) {
+test('legacy installation, protected pushes, periodic and unknown events retain full coverage', () => {
+  for (const branch of ['data', 'develop']) {
     const pr = classifyEvent({ eventName: 'pull_request', event: event(HEAD, BASE, branch), head: HEAD, changedPaths: ['README.md'] });
+    all(pr); assert.equal(pr.reason, 'PROTECTED_PROMOTION');
+  }
+  for (const branch of ['main', 'data', 'develop']) {
+    const legacy = event(); legacy.pull_request.head.ref = branch;
+    const pr = classifyEvent({ eventName: 'pull_request', event: legacy, head: HEAD, changedPaths: ['README.md'] });
     all(pr); assert.equal(pr.reason, 'PROTECTED_PROMOTION');
     const push = classifyEvent({ eventName: 'push', event: { before: BASE, after: HEAD }, ref: 'refs/heads/' + branch, head: HEAD, changedPaths: ['README.md'] });
     all(push); assert.equal(push.reason, 'PROTECTED_PUSH');
@@ -130,21 +135,22 @@ test('Git diff keeps deleted dependency inputs and NUL-framed names', () => with
   rmSync(join(root, 'apps/web/package-lock.json'));
   write('docs/a document\nsecond line.md', 'Synthetic documentation.\n');
   const head = commit('remove dependency input');
-  all(classifyCheckout({ root, eventName: 'push', event: { before: base, after: head }, ref: 'refs/heads/develop', expectedHead: head }));
+  all(classifyCheckout({ root, eventName: 'pull_request', event: event(head, base), expectedHead: head }));
 }));
 
-test('PR scope uses the merge base while push scope uses its exact before SHA', () => withRepository(({ root, base, write, commit, git }) => {
+test('main PR scope uses its merge base while the merged main tree gets full proof', () => withRepository(({ root, base, write, commit, git }) => {
   git('checkout', '-b', 'feature', base);
   write('docs/change.md', 'Synthetic PR document.\n');
   const head = commit('feature doc');
-  git('checkout', 'develop');
+  git('checkout', 'main');
   write('apps/web/package-lock.json', '{"updated":true}\n');
   const updatedBase = commit('independent base dependency');
   git('checkout', 'feature');
   const pr = classifyCheckout({ root, eventName: 'pull_request', event: event(head, updatedBase), expectedHead: BASE });
   assert.equal(pr.reason, 'DOCUMENTATION_ONLY');
-  const push = classifyCheckout({ root, eventName: 'push', event: { before: base, after: head }, ref: 'refs/heads/develop', expectedHead: head });
-  assert.equal(push.reason, 'DOCUMENTATION_ONLY');
+  const push = classifyCheckout({ root, eventName: 'push', event: { before: base, after: head }, ref: 'refs/heads/main', expectedHead: head });
+  assert.equal(push.reason, 'PROTECTED_PUSH');
+  all(push);
 }));
 
 test('missing Git history selects all lanes and actual checkout mismatch fails', () => withRepository(({ root, base, write, commit }) => {

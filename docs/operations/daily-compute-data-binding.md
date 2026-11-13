@@ -45,9 +45,11 @@ scope, and the residual queue and staging locations defined by the
 [GDrive data contracts](../../backend/DATA_CONTRACTS.md). Separating compute
 source binding does not move durable upload state.
 
-This is a source preparation step. Repository variables, branch protection,
-hosted write gates, and the `develop -> data -> main` promotion order continue
-to govern activation. The `data` branch remains part of that promotion order.
+Repository variables, branch protection, and hosted write gates continue to
+govern activation. The [main-first source transition](main-first-transition.md)
+is installed once through `develop -> data -> main`; afterward, `data` remains
+available to legacy data consumers outside source promotion. That source-policy
+change does not enable this publisher, change GDrive scopes, or remove the ref.
 
 ## Verification
 

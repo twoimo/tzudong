@@ -11,7 +11,7 @@ const source = readFileSync(workflowPath, 'utf8').replace(/\r\n/g, '\n');
 const policy = JSON.parse(readFileSync(join(workflowPath, '../../ci-security-paths.json'), 'utf8')) as { paths: string[] };
 const auditJobs = ['cloudflare-toolchain-audit', 'npm-audit', 'pip-audit', 'orchestration-readiness', 'rust-recovery', 'secret-pattern-scan', 'sbom'];
 const workflow = Bun.YAML.parse(source) as {
-  on: { pull_request: null | { paths?: string[] }; schedule: unknown[] };
+  on: { pull_request: null | { paths?: string[] }; push: { branches: string[] }; schedule: unknown[] };
   jobs: Record<string, {
     name?: string; if?: string; needs?: string | string[]; outputs?: Record<string, string>; "continue-on-error"?: boolean;
     steps: { id?: string; if?: string; run?: string; env?: Record<string, string>; "continue-on-error"?: boolean }[];
@@ -141,6 +141,7 @@ describe('security audit workflow source contract', () => {
   test('always emits the Security gate and retains real database and policy coverage', () => {
     expect(Object.hasOwn(workflow.on, 'pull_request')).toBe(true);
     expect(workflow.on.pull_request?.paths).toBeUndefined();
+    expect(workflow.on.push).toEqual({ branches: ['main'] });
     expect(workflow.on.schedule.length).toBeGreaterThan(0);
     for (const file of [
       'backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql',

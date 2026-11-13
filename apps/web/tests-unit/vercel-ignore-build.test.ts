@@ -89,6 +89,7 @@ describe("Vercel ignored build branch policy", () => {
       "**": false,
       main: true,
       develop: true,
+      "preview/*": true,
     });
     expect(config.regions).toEqual(["icn1"]);
     expect(config.ignoreCommand).toBe("node scripts/vercel-ignore-build.mjs");
@@ -103,9 +104,9 @@ describe("Vercel ignored build branch policy", () => {
     };
     expect(minimatch("feature/admin-shell", "*")).toBe(false);
     expect(minimatch("feature/admin-shell", "**")).toBe(true);
-    for (const branch of ["main", "develop"]) expect(enabled(branch)).toBe(true);
+    for (const branch of ["main", "develop", "preview/admin-shell"]) expect(enabled(branch)).toBe(true);
     for (const branch of ["data", "unknown", "feature/admin-shell", "sync/develop-from-main",
-      "dependabot/npm_and_yarn/apps/web/example-1.0.1", "codex/preview/change"]) {
+      "dependabot/npm_and_yarn/apps/web/example-1.0.1", "codex/preview/change", "preview", "preview/", "preview/nested/change"]) {
       expect(enabled(branch)).toBe(false);
     }
   });
@@ -175,7 +176,7 @@ describe("Vercel ignored build branch policy", () => {
     });
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("skip: preview deployments are limited to develop");
+    expect(result.stdout).toContain("skip: preview deployments require preview/* or the transition develop lane");
     expect(result.stdout).toContain("ref=main");
   });
 
@@ -190,7 +191,7 @@ describe("Vercel ignored build branch policy", () => {
     expect(result.stdout).toContain("ref=data");
   });
 
-  it("continues preview builds only for develop", () => {
+  it("retains the develop preview lane for the final protected transition", () => {
     const result = runIgnoreCommand({
       VERCEL_ENV: "preview",
       VERCEL_GIT_COMMIT_REF: "develop",
@@ -199,6 +200,33 @@ describe("Vercel ignored build branch policy", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("build: allowed preview branch deployment");
     expect(result.stdout).toContain("ref=develop");
+  });
+
+  it("builds explicitly requested one-level preview branches and keeps production closed", () => {
+    for (const ref of ["preview/admin-shell", "refs/heads/preview/map-fix"]) {
+      const preview = runIgnoreCommand({ VERCEL_ENV: "preview", VERCEL_GIT_COMMIT_REF: ref });
+      expect(preview.status).toBe(1);
+      expect(preview.stdout).toContain("build: allowed preview branch deployment");
+      const production = runIgnoreCommand({
+        VERCEL_ENV: "production", VERCEL_GIT_COMMIT_REF: ref,
+        VERCEL_GIT_COMMIT_SHA: APPROVED_SHA, TZUDONG_APPROVED_PRODUCTION_SHA: APPROVED_SHA,
+      });
+      expect(production.status).toBe(0);
+      expect(production.stdout).toContain("production deployments are limited to main");
+    }
+    for (const ref of ["preview", "preview/", "preview/nested/change", "feature/preview", "preview-change"]) {
+      expect(runIgnoreCommand({ VERCEL_ENV: "preview", VERCEL_GIT_COMMIT_REF: ref }).status).toBe(0);
+    }
+  });
+
+  it("applies the same last-successful-build diff guard to requested preview branches", () => {
+    withPreviewRepository(({ git, commitFiles, run }) => {
+      const previous = git("rev-parse", "HEAD");
+      commitFiles({ "docs/notes.md": "documentation only\n" });
+      expect(run(previous, { VERCEL_GIT_COMMIT_REF: "preview/map-fix" }).status).toBe(0);
+      commitFiles({ "apps/web/app/page.tsx": "application change\n" });
+      expect(run(previous, { VERCEL_GIT_COMMIT_REF: "preview/map-fix" }).status).toBe(1);
+    });
   });
 
   it("skips only documented non-app changes since the last successful preview", () => {
@@ -304,7 +332,7 @@ describe("Vercel ignored build branch policy", () => {
       });
 
       expect(result.status).toBe(0);
-      expect(result.stdout).toContain("skip: preview deployments are limited to develop");
+      expect(result.stdout).toContain("skip: preview deployments require preview/* or the transition develop lane");
       expect(result.stdout).toContain(`ref=${ref}`);
     }
   });

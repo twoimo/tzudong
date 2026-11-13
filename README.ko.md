@@ -52,7 +52,7 @@
 1. 저장소를 복제하고 웹 의존성을 설치합니다.
 
    ```sh
-   git clone --branch develop https://github.com/twoimo/tzudong.git
+   git clone --branch main https://github.com/twoimo/tzudong.git
    cd tzudong/apps/web
    npm ci
    ```
@@ -106,7 +106,7 @@
 
 게시된 변경은 [최신 정식 소스 릴리스](https://github.com/twoimo/tzudong/releases/latest)와 [변경 기록](CHANGELOG.ko.md)에서 확인합니다. [릴리스 안내](docs/releases/README.md)에는 정식·Nightly·로컬 스택 채널의 용도와 릴리스 노트 양식이 있습니다.
 
-변경은 보호된 `develop → data → main` 순서로 승격합니다. Nightly·로컬 스택 prerelease는 로컬 검증을 기록합니다. 운영 배포의 커밋과 배포 후 확인은 [릴리스 정책](docs/agents/release.md)에 따라 별도로 기록합니다.
+기능·의존성 PR은 [main 중심 전환](docs/operations/main-first-transition.md)을 설치하고 확인한 뒤 보호된 `main`을 대상으로 합니다. 정책 자체는 기존 `develop → data → main` 경로로 한 번 더 설치하며, `data`는 기존 데이터 소비자를 위해 유지합니다. Nightly·로컬 스택 prerelease는 로컬 검증을 기록합니다. 운영은 정확히 승인된 커밋, 사전 검증한 운영 빌드, 수동 승격과 공급자 확인을 [릴리스 정책](docs/agents/release.md)에 따라 별도로 기록합니다.
 
 ## 보안과 라이선스
 
