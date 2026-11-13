@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { DESKTOP_MIN_WIDTH_QUERY } from '../lib/viewport-breakpoints';
 import {
     buildDesktopStampHomeRedirectPath,
     buildHomeAuthLoginPath,
@@ -70,25 +71,31 @@ describe('requested user login continuation', () => {
         );
     });
 
-    test('closing a resumed composer releases the resize guard at every breakpoint', () => {
+    test('closing a resumed composer releases the viewport guard at integer and fractional breakpoints', () => {
         const source = readFileSync(path.join(webRoot, 'app/stamp/page.tsx'), 'utf8');
         const body = source.split('{/* 리뷰 모달 (Review Modal) */}')[1]
             .split('onClose={() => {')[1].split('}}\n                    restaurant=')[0];
-        const close = new Function('window', 'BREAKPOINTS', 'reviewContinuationHandled',
+        const close = new Function('window', 'DESKTOP_MIN_WIDTH_QUERY', 'reviewContinuationHandled',
             'setIsReviewModalOpen', 'router', 'buildDesktopStampHomeRedirectPath', body);
         const id = '11111111-1111-4111-8111-111111111111';
-        for (const width of [390, 820, 1440]) {
+        for (const width of [390, 767.25, 767.75, 768, 820, 1279, 1279.25, 1279.75, 1280, 1440]) {
             const guard = { current: id as string | null };
             const redirects: string[] = [];
             let open = true;
             const search = `?restaurant=${id}`; // continuation already consumed writeReview
-            close({ innerWidth: width, location: { search } }, { tabletMax: 1023 }, guard,
+            close({
+                matchMedia: (query: string) => {
+                    expect(query).toBe('(min-width: 1280px)');
+                    return { matches: width >= 1280 };
+                },
+                location: { search },
+            }, DESKTOP_MIN_WIDTH_QUERY, guard,
                 (value: boolean) => { open = value; }, { replace: (value: string) => redirects.push(value) },
                 buildDesktopStampHomeRedirectPath);
             expect(open).toBe(false);
             expect(guard.current).toBeNull();
-            expect(redirects).toEqual(width > 1023 ? [`/?restaurant=${id}&panel=stamp`] : []);
-            // The page's resize listener can now route mobile/tablet back to the desktop panel.
+            expect(redirects).toEqual(width >= 1280 ? [`/?restaurant=${id}&panel=stamp`] : []);
+            // The page's media-query listener can now route mobile/tablet back to the desktop panel.
             if (!guard.current) redirects.push(buildDesktopStampHomeRedirectPath(search)!);
             expect(redirects.at(-1)).toBe(`/?restaurant=${id}&panel=stamp`);
         }

@@ -288,7 +288,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     return (
         <div
             ref={scrollContainerRef}
-            className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+            className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [scrollbar-width:'none']"
             data-stamp-scroll-container="true"
             data-desktop-left-panel-stamp-mobile-parity="true"
         >

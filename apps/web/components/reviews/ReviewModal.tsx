@@ -227,7 +227,7 @@ type DesktopReviewMapPanelDragState = {
 const DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN = 16;
 export const DESKTOP_REVIEW_MAP_PANEL_KEYBOARD_STEP = 24;
 const DEFAULT_DESKTOP_REVIEW_MAP_PANEL_POSITION: DesktopReviewMapPanelPosition = { x: 0, y: 0 };
-const REVIEW_MODAL_SCROLLBARLESS_CLASS = "[-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden";
+const REVIEW_MODAL_SCROLLBARLESS_CLASS = "[scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden";
 
 const clampDesktopReviewMapPanelAxis = (value: number, min: number, max: number) => {
     if (max < min) return min;

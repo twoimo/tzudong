@@ -3024,10 +3024,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "grid-template-rows: auto minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain("@media (max-width: 767px)");
-    expect(appGlobalsSource).toContain(
-      '[data-admin-dashboard-management="true"] .recharts-responsive-container',
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-dashboard-management="true"] [data-admin-dashboard-line-chart]',
+      "max-width",
+      "100%",
     );
-    expect(appGlobalsSource).toContain("max-width: 100% !important;");
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-dashboard-management="true"] [data-admin-dashboard-line-chart]',
+      "min-width",
+      "0",
+    );
     expect(appGlobalsSource).toContain(
       "grid-template-columns: 4.5rem minmax(0, 1fr);",
     );

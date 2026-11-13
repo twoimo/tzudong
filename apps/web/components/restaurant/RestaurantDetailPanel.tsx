@@ -1228,7 +1228,7 @@ export function RestaurantDetailPanel({
                 {/* 내용 */}
 	                <div
 	                        data-restaurant-detail-swipe-area="content"
-	                        className="relative flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden lg:[-ms-overflow-style:auto] lg:[scrollbar-width:thin] lg:[&::-webkit-scrollbar]:block lg:[&::-webkit-scrollbar]:w-1.5 lg:[&::-webkit-scrollbar-thumb]:rounded-full lg:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30"
+	                        className="relative flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden lg:[scrollbar-width:thin] lg:[&::-webkit-scrollbar]:block lg:[&::-webkit-scrollbar]:w-1.5 lg:[&::-webkit-scrollbar-thumb]:rounded-full lg:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30"
 	                        style={{ touchAction: 'pan-y' }}
 	                        onTouchStart={handleContentSwipeStart}
 	                        onTouchMove={handleContentSwipeMove}

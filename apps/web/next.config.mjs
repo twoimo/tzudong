@@ -307,8 +307,6 @@ const nextConfig = {
         optimizePackageImports: [
             'lucide-react',
             'date-fns',
-            'recharts',
-            '@radix-ui/react-accordion',
             '@radix-ui/react-alert-dialog',
             '@radix-ui/react-dialog',
             '@radix-ui/react-dropdown-menu',
@@ -317,8 +315,6 @@ const nextConfig = {
             '@radix-ui/react-tabs',
             '@radix-ui/react-tooltip',
             '@radix-ui/react-toast',
-            'framer-motion',
-            'react-hook-form',
             'zod',
             'cmdk',
         ],

@@ -790,7 +790,10 @@ describe("web quality performance source contracts", () => {
       "const [mode, setMode] = useState<HomeViewportMode>('pending')",
     );
     expect(homeViewportModeSource).toContain(
-      "window.innerWidth <= BREAKPOINTS.tabletMax",
+      'window.matchMedia(DESKTOP_MIN_WIDTH_QUERY)',
+    );
+    expect(homeViewportModeSource).toContain(
+      "const nextMode = mediaQuery.matches ? 'desktop' : 'mobileOrTablet'",
     );
     expect(homeViewportModeSource).toContain(
       "previousMode === nextMode ? previousMode : nextMode",
@@ -801,7 +804,7 @@ describe("web quality performance source contracts", () => {
     expect(homeClientSource).not.toContain("home-map-activate-button");
     expect(homeClientSource).toContain("resolveDeviceLocationStateUpdatePlan");
     expect(deviceTypeSource).toContain(
-      "function calculateDeviceTypeSnapshot()",
+      "function calculateDeviceTypeSnapshot(queries: DeviceMediaQueries)",
     );
     expect(deviceTypeSource).toContain(
       "const [deviceType, setDeviceType] = useState<DeviceType>(getDesktopDeviceType)",
@@ -1354,9 +1357,6 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeAppGlobalsSource).toContain('[class*="overflow-y-auto"]');
     expect(homeAppGlobalsSource).toContain('[class*="overflow-x-auto"]');
-    expect(homeAppGlobalsSource).toContain(
-      "-ms-overflow-style: none !important",
-    );
     expect(homeAppGlobalsSource).toContain("scrollbar-width: none !important");
     expect(homeAppGlobalsSource).toContain(")::-webkit-scrollbar");
     expect(homeAppGlobalsSource).toContain("display: none !important");
@@ -2350,7 +2350,6 @@ describe("web quality performance source contracts", () => {
     const stampPageSource = source("app/stamp/page.tsx");
     const stampUtilsSource = source("components/stamp/stamp-utils.ts");
     const stampLoadingSource = source("app/stamp/loading.tsx");
-    const skeletonLoadersSource = source("components/ui/skeleton-loaders.tsx");
     const userProfilePanelSource = source(
       "components/profile/UserProfilePanel.tsx",
     );
@@ -2432,21 +2431,6 @@ describe("web quality performance source contracts", () => {
     expect(stampPageSource).not.toContain("transition-all duration-300");
     expect(stampCardSource).toContain("grayscale opacity-60");
     expect(stampCardSource).not.toContain("absolute inset-0 bg-black/");
-    expect(skeletonLoadersSource).toContain(
-      "function StampPageSkeletonComponent",
-    );
-    expect(skeletonLoadersSource).toContain(
-      'data-testid="stamp-page-skeleton"',
-    );
-    expect(skeletonLoadersSource).toContain(
-      "shrink-0 border-b px-3 py-3 sm:px-5 sm:py-4",
-    );
-    expect(skeletonLoadersSource).toContain(
-      "label=\"도장 페이지를 불러오는 중\"",
-    );
-    expect(skeletonLoadersSource).toContain(
-      "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6",
-    );
     expect(stampLoadingSource).toContain("return null");
     expect(stampLoadingSource).not.toContain("StampPageSkeleton");
     expect(stampPageSource).toContain(
@@ -2732,9 +2716,6 @@ describe("web quality performance source contracts", () => {
     );
     const leaderboardPageSource = source("app/leaderboard/page.tsx");
     const leaderboardLoadingSource = source("app/leaderboard/loading.tsx");
-    const leaderboardSkeletonSource = source(
-      "components/ui/skeleton-loaders.tsx",
-    );
     const leaderboardUtilsSource = source(
       "components/leaderboard/leaderboard-utils.ts",
     );
@@ -2887,17 +2868,6 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardLoadingSource).toContain("return null");
     expect(leaderboardLoadingSource).toContain("한 번만");
     expect(leaderboardPageSource).toContain('className="w-full p-4 px-4"');
-    expect(leaderboardSkeletonSource).toContain("compactLeftPanel?: boolean");
-    expect(leaderboardSkeletonSource).toContain("compactLeftPanel = false");
-    expect(leaderboardSkeletonSource).toContain(
-      'useFilledSkeletonCount(compactLeftPanel ? 52 : 56, count)',
-    );
-    expect(leaderboardSkeletonSource).toContain(
-      'compact={compactLeftPanel}',
-    );
-    expect(leaderboardSkeletonSource).toContain(
-      'showHeader={showHeader}',
-    );
     expect(leaderboardOverlaySource).toContain("compactLeftPanel");
     expect(leaderboardListSource).toContain(
       "const COMPACT_LEFT_PANEL_ROW_STYLE = {",
@@ -4141,7 +4111,10 @@ describe("web quality performance source contracts", () => {
       "function isBrowserMobileOrTabletViewport()",
     );
     expect(deviceTypeSource).toContain(
-      "window.innerWidth <= BREAKPOINTS.tabletMax",
+      "!window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches",
+    );
+    expect(deviceTypeSource).toContain(
+      'desktop: DESKTOP_MIN_WIDTH_QUERY',
     );
     expect(deviceTypeSource).toContain(
       "export function useImmediateMobileOrTablet()",
@@ -4353,7 +4326,7 @@ describe("web quality performance source contracts", () => {
     expect(proxySecuritySource).toContain("'strict-dynamic'");
     expect(middlewareSecuritySource).toContain("request: { headers: forwardedRequestHeaders }");
     expect(layoutSource).not.toContain('import Script from "next/script"');
-    expect(layoutSource).toContain('VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE');
+    expect(layoutSource).toContain('<LoadingProvider nonce={nonce}>');
     expect(layoutSource).toContain('nonce={nonce}');
     for (const staticRoute of [
       "/images/:path*",
@@ -4371,7 +4344,6 @@ describe("web quality performance source contracts", () => {
         expect.arrayContaining(globalSecurityHeaderRoute?.headers ?? []),
       );
     }
-    const viewportFixSource = source("public/scripts/viewport-height-fix.js");
     const authContextSource = source("contexts/AuthContext.tsx");
     const faviconPath = join(import.meta.dir, "..", "public/favicon.ico");
     const faviconPngPath = join(
@@ -4428,7 +4400,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(layoutSource).toContain('href="//nrbe.map.naver.net"');
     expect(layoutSource).toContain('href="//static.naver.net"');
-    expect(layoutSource).toContain('VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE');
+    expect(layoutSource).not.toContain('viewport-height-bootstrap');
     expect(layoutSource).toContain('nonce={nonce}');
     expect(layoutSource).not.toContain('import Script from "next/script"');
     expect(layoutSource).not.toContain('strategy="beforeInteractive"');
@@ -4765,12 +4737,6 @@ describe("web quality performance source contracts", () => {
     );
     expect(mobileBottomNavSource).toContain("isActive && 'font-bold'");
     expect(mobileBottomNavSource).toContain("isActive && 'fill-brand-tangerine/40 scale-110'");
-    expect(viewportFixSource).toContain(
-      "if (window.CSS?.supports?.('height', '100dvh'))",
-    );
-    expect(viewportFixSource).toContain(
-      "window.requestAnimationFrame(updateViewportHeight)",
-    );
     expect(nextConfigSource).toContain("source: '/favicon.ico'");
     expect(nextConfigSource).toContain("source: '/logo.png'");
     expect(nextConfigSource).toContain("source: '/logo.webp'");
