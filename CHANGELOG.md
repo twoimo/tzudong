@@ -15,6 +15,23 @@ full scope, verification records and limitations of each release.
   operational records in the [changelog archive](docs/archive/changelog/CHANGELOG.md).
 - Add release channels, a release-note template and GitHub note categories.
 
+## [1.2.10](https://github.com/twoimo/tzudong/releases/tag/v1.2.10) — 2026-11-14
+
+### Fixed
+
+- Restore native bookmark detail and map links while preserving domestic/overseas
+  navigation and search return paths ([#3828](https://github.com/twoimo/tzudong/pull/3828)).
+- Distinguish failed reads from empty results; retain input and page context with
+  retry and filter recovery, and show zero counts only for queried regions.
+- Restore opener focus after closing authentication and review dialogs, and move
+  focus to the first invalid restaurant-submission field.
+- Add explicit retry and a 15-second timeout for policy reads while preserving
+  signup input and consent choices; ignore cancelled or superseded responses.
+- Clarify discovery labels and account-setting hierarchy; improve spacing with
+  44px primary controls and 16px inputs on small screens.
+- Replace interpolated hook source in the My Page render fixture with a static
+  literal for the CodeQL follow-up, preserving the existing assertions.
+
 ## [1.2.8](https://github.com/twoimo/tzudong/releases/tag/v1.2.8) — 2026-11-13
 
 - Compact the administrator dashboard and storyboard controls; add opt-in, ephemeral macOS receipt OCR with no automatic cloud fallback.
