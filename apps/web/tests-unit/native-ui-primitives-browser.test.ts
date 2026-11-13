@@ -92,8 +92,20 @@ test("native labels preserve real input, checkbox and switch activation, refs, a
     await toggle.focus();
     await page.keyboard.press("Space");
     await ui(toggle).not.toBeChecked();
-    await page.locator('label[for="disabled"]').click();
-    await ui(page.locator("#disabled")).not.toBeFocused();
+    const disabledInput = page.locator("#disabled");
+    const disabledLabel = page.locator('label[for="disabled"]');
+    await ui(disabledInput).toBeDisabled();
+    await disabledLabel.scrollIntoViewIfNeeded();
+    const disabledLabelBox = await disabledLabel.boundingBox();
+    expect(disabledLabelBox).not.toBeNull();
+    // Playwright retargets locator.click() to label.control for its enabled check.
+    // A pointer click on the visible label must still leave that control disabled.
+    await page.mouse.click(
+      disabledLabelBox!.x + disabledLabelBox!.width / 2,
+      disabledLabelBox!.y + disabledLabelBox!.height / 2,
+    );
+    await ui(disabledInput).toBeDisabled();
+    await ui(disabledInput).not.toBeFocused();
 
     await page.locator("#slot-label").click();
     await ui(page.getByRole("textbox", { name: "슬롯 필드", exact: true })).toBeFocused();
