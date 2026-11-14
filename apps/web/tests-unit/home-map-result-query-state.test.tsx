@@ -11,6 +11,7 @@ import { QueryProvider } from '../app/providers';
 import { useHomeMapResults } from '../hooks/use-home-map-results';
 import * as queryHelpers from '../lib/map-query-helpers';
 import * as summaryHelpers from '../lib/home-map-result-summary';
+import * as initialLoadMilestones from '../lib/performance/initial-load-milestones';
 import type { Restaurant } from '../types/restaurant';
 
 type Input = Parameters<typeof useHomeMapResults>[0];
@@ -99,10 +100,11 @@ async function fixture() {
     } }).outputText;
     const exports = {} as { useHomeMapResults: typeof useHomeMapResults };
     vm.runInNewContext(compiled, { exports, require(name: string) {
-        if (name === 'react') return { useMemo: (calculate: () => unknown) => calculate() };
+        if (name === 'react') return { useMemo: (calculate: () => unknown) => calculate(), useEffect() {} };
         if (name === '@/hooks/use-restaurants') return { useRestaurants: () => observer.getCurrentResult() };
         if (name === '@/lib/map-query-helpers') return queryHelpers;
         if (name === '@/lib/home-map-result-summary') return summaryHelpers;
+        if (name === '@/lib/performance/initial-load-milestones') return initialLoadMilestones;
         throw new Error('UNEXPECTED_HOOK_IMPORT');
     } });
     let selected = input();

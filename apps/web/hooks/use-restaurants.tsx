@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
 import { buildOverseasCountryAddressOrFilter, sanitizePostgrestOrTerm } from "@/lib/overseas-region-matching";
 import { perfMonitor } from "@/lib/performance-monitor";
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
 import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn, SupabaseRestRowsError } from "@/lib/supabase-rest-client";
@@ -718,6 +719,8 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         staleTime: 5 * 60 * 1000, // 5분 동안 fresh 상태 유지
         gcTime: 10 * 60 * 1000, // 10분 동안 캐시 유지
         queryFn: async () => {
+            const diagnosticHomeQuery = homeMapMode === 'domestic' && requireComplete;
+            if (diagnosticHomeQuery) markInitialLoadMilestone('dataQueryStarted');
             // [OPTIMIZATION] 필요한 필드만 선택하여 네트워크 전송량 및 파싱 시간 감소
             const selectFields = buildRestaurantSelectFields({
                 compact,
@@ -794,13 +797,16 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     ? await fetchCompleteRestaurantRows<RestaurantWithOptionalName>(query)
                     : await fetchRestaurantsRecoveringMissingEmbed<RestaurantWithOptionalName>(query);
             } catch (error) {
+                if (diagnosticHomeQuery) markInitialLoadMilestone('dataError');
                 console.error('레스토랑 데이터 조회 실패:', describeErrorCodeForLog(error));
                 throw error;
             }
 
             // 승인된 리뷰 수 조회: approved canonical과 동일 이름/동일 주소 deleted duplicate 리뷰도 합산합니다.
             const rawRestaurants = (data || []) as RestaurantWithOptionalName[];
+            if (diagnosticHomeQuery) markInitialLoadMilestone('dataFetchCompleted', rawRestaurants.length);
             const mergedRestaurants = mergeRestaurants(rawRestaurants);
+            if (diagnosticHomeQuery) markInitialLoadMilestone('dataMergeCompleted');
             const candidates = homeMapMode
                 ? selectHomeMapResultCandidates(mergedRestaurants, homeMapMode,
                     homeMapMode === 'overseas' ? normalizedRegion ?? null : null, showUserSubmittedMarkers)
@@ -815,7 +821,9 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 throw new Error('restaurant_theme_metrics_unavailable');
             }
             if (!includeVerifiedReviewCounts) {
-                return applyHomeMapThemeFilter(restaurants, normalizedFeaturedTheme) as Restaurant[];
+                const result = applyHomeMapThemeFilter(restaurants, normalizedFeaturedTheme) as Restaurant[];
+                if (diagnosticHomeQuery) markInitialLoadMilestone('dataReady', result.length);
+                return result;
             }
 
             const verifiedCountMap = await buildRelatedVerifiedReviewCounts(restaurants as RestaurantWithOptionalName[]);

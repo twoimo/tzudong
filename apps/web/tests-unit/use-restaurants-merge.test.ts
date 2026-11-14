@@ -10,6 +10,7 @@ import * as homeMapThemeFilters from '../lib/home-map-theme-filters';
 import * as homeMapResultSummary from '../lib/home-map-result-summary';
 import type { Restaurant } from '../types/restaurant';
 import * as publishedPopularity from '../lib/evidence-engineering/published-popularity';
+import * as initialLoadMilestones from '../lib/performance/initial-load-milestones';
 
 type MergeInput = Array<Record<string, unknown>>;
 
@@ -87,6 +88,7 @@ function regionQueryFixture(regions = OVERSEAS_REGIONS) {
             },
         },
         '@/lib/performance-monitor': { perfMonitor: { startMeasure() {}, endMeasure() {}, report() {} } },
+        '@/lib/performance/initial-load-milestones': initialLoadMilestones,
         '@/lib/supabase-rest-client': {
             ...restClient,
             fetchSupabaseRows: async (table: string, query: Array<[string, string | number]>) => {

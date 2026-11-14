@@ -1,6 +1,7 @@
 'use client';
 
 import { isSupersededLogout } from '@/lib/auth/logout-result';
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
 
 import { memo, useState, useCallback, useMemo, useRef, useEffect, type ComponentType, type KeyboardEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -276,6 +277,7 @@ function MobileControlOverlayComponent({
         if (typeof window !== 'undefined') {
             window.__tzudong_mobile_overlay_ready = true;
             document.documentElement.dataset.homeMobileChromeReady = 'true';
+            markInitialLoadMilestone('mobileControlsMounted');
             window.dispatchEvent(new CustomEvent('tzudong_mobile_overlay_ready'));
         }
         return () => {

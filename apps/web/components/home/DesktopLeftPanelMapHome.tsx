@@ -1,5 +1,6 @@
 'use client';
 import { MapPanelHeader } from '@/components/home/map-panel-chrome';
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -215,6 +216,7 @@ export default function DesktopLeftPanelMapHome({
   useEffect(() => {
     if (resultSummary?.active ? resultSummary.status === 'pending' : isLoading || isLatestLoading) return;
     document.documentElement.dataset.homePanelReady = "true";
+    markInitialLoadMilestone('desktopPanelSettled');
   }, [isLatestLoading, isLoading, resultSummary?.active, resultSummary?.status]);
   useEffect(() => () => {
     delete document.documentElement.dataset.homePanelReady;

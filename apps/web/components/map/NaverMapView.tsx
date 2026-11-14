@@ -1,5 +1,6 @@
 'use client';
 import { syncRetainedMarkerAccessibility } from '@/lib/retained-marker-accessibility';
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
 import { clearNaverDeviceLocationMarker, createNaverCancellableCallback, createNaverOneShotCallback, removeNaverMapListener } from '@/lib/naver-map-event-cleanup';
 
 import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
@@ -2174,6 +2175,7 @@ const NaverMapView = memo(({
 
         const idleHandle = scheduleIdleWork(() => {
             if (cancelled || !mapInstanceRef.current) return;
+            markInitialLoadMilestone('clusterIndexStarted');
 
             // GeoJSON 변환
             const geoJsonPoints = restaurantsToGeoJSON(displayRestaurants);
@@ -2230,6 +2232,7 @@ const NaverMapView = memo(({
                     ? previous
                     : seoulResultFiltered.individualRestaurantIds
             );
+            markInitialLoadMilestone('clusterIndexReady', displayRestaurants.length);
         });
 
         return () => {
@@ -3368,6 +3371,7 @@ const NaverMapView = memo(({
             });
 
             const camera = hasValidUrlState ? undefined : readHomeRouteMemory<{lat: number; lng: number; zoom: number}>(routeQueryClient, mapReturnOwner, "domestic-camera");
+            markInitialLoadMilestone('mapConstructionStarted');
             const map = new maps.Map(mapRef.current, buildNaverMapOptions({
                 center: new maps.LatLng(camera?.lat ?? initialCenter[0], camera?.lng ?? initialCenter[1]),
                 positionTopLeft: maps.Position.TOP_LEFT,
@@ -3385,6 +3389,7 @@ const NaverMapView = memo(({
             prevSelectedRestaurantIdRef.current = null;
             if (camera) hasUserMovedMapRef.current = true;
             setIsMapInitialized(true);
+            markInitialLoadMilestone('mapConstructed');
             const postInitPlan = resolveNaverPostInitPlan({
                 hasValidUrlState,
                 nodeEnv: process.env.NODE_ENV,
@@ -3408,6 +3413,7 @@ const NaverMapView = memo(({
 
         } catch {
             console.error("네이버 지도 초기화 오류:");
+            markInitialLoadMilestone('mapConstructionError');
             markerPool.clear();
             clusterAnimationManager.clear();
             mapInstanceRef.current = null;
