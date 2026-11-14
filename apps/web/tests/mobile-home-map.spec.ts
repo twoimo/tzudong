@@ -186,7 +186,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
         await expect(page.getByLabel('맛집 검색 열기')).toContainText('정원분식');
 
         await page.getByLabel('맛집 검색 열기').click();
-        await expect(page.getByLabel('맛집 검색어 입력')).toHaveValue('정원분식');
+        await expect(page.getByLabel('맛집 이름 검색어 입력')).toHaveValue('정원분식');
         await page.getByLabel('검색 닫기').click();
     });
 
@@ -235,7 +235,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
             fullPage: true,
         });
         await page.getByLabel('맛집 검색 열기').click();
-        await expect(page.getByLabel('맛집 검색어 입력')).toHaveValue('정원분식');
+        await expect(page.getByLabel('맛집 이름 검색어 입력')).toHaveValue('정원분식');
 
         const restoredState = await page.evaluate(() => ({
             pathname: window.location.pathname,
@@ -350,7 +350,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
 
 
         await page.getByRole('button', { name: /한식\s*\(\d+\)/ }).click({ force: true });
-        await expect(page.getByRole('button', { name: /초기화 \(1개 선택됨\)/ })).toBeVisible();
+        await expect(page.getByRole('button', { name: /선택한 카테고리 1개 해제/ })).toBeVisible();
         const filteredRows = await categoryResponse.then((response) => response.json());
         expect(filteredRows).toHaveLength(1);
         expect(filteredRows[0].approved_name).toBe('명동칼국수');
@@ -359,8 +359,8 @@ test.describe('Phase 1: mobile home map regressions', () => {
             fullPage: true,
         });
 
-        await page.getByRole('button', { name: /초기화 \(1개 선택됨\)/ }).click();
-        await expect(page.getByRole('button', { name: /초기화/ })).toHaveCount(0);
+        await page.getByRole('button', { name: /선택한 카테고리 1개 해제/ }).click();
+        await expect(page.getByRole('button', { name: /선택한 카테고리 \d+개 해제/ })).toHaveCount(0);
     });
     test('MHM-02: search-selected detail can swipe to the next restaurant', async ({ page }) => {
         await openMobileSearchAndSelect(page, '정원분식');
