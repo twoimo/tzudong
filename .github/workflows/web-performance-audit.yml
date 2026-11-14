@@ -1,0 +1,147 @@
+name: Initial load performance audit
+run-name: Initial load audit · ${{ github.run_id }} · same runner before and after
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/web-performance-audit.yml'
+      - 'apps/web/performance/initial-load-20261114/collector.mjs'
+      - 'apps/web/performance/initial-load-20261114/protocol.json'
+      - 'apps/web/performance/initial-load-20261114/tools/package.json'
+      - 'apps/web/performance/initial-load-20261114/tools/package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never cancel a retained baseline when the root-owned target is committed.
+concurrency:
+  group: initial-load-audit-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  initial-load:
+    name: Measured initial load (same runner)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (contains(github.event.pull_request.title, '[measure]') &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.head_ref == 'perf/initial-load-20261114')
+    runs-on: ubuntu-latest
+    timeout-minutes: 190
+    env:
+      AUDIT_ROOT: apps/web/performance/initial-load-20261114/runs/ci-${{ github.run_id }}-${{ github.run_attempt }}
+      AUDIT_COLLECTOR: apps/web/performance/initial-load-20261114/collector.mjs
+      BASELINE_SHA: '9316871f4220cd487b0e9575415ed2d760de8997'
+      BASELINE_DEPLOYMENT: 'dpl_A2pdeTvSXQj52ixi3z9WMstWby8y'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/apps/
+            /apps/web/
+            !/apps/web/performance/
+            /apps/web/performance/initial-load-20261114/
+            !/backend/
+            !/docs/
+            !/assets/
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            apps/web/performance/initial-load-20261114/tools/package-lock.json
+      - name: Initialize bounded evidence location
+        run: mkdir -p "$AUDIT_ROOT"
+      - name: Pin authoritative npm
+        run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
+      - name: Install repository browser authority
+        id: app_install
+        working-directory: apps/web
+        run: npm ci --no-audit --fund=false
+      - name: Install task-local Lighthouse from its lock
+        id: tool_install
+        working-directory: apps/web/performance/initial-load-20261114/tools
+        run: npm ci --no-audit --fund=false
+      - name: Install and verify exact Chrome for Testing
+        id: browser
+        run: node .github/scripts/ensure-ci-chromium.mjs
+      - name: Collect five cold baseline trials for each viewport
+        id: before
+        run: >-
+          node "$AUDIT_COLLECTOR"
+          --phase before
+          --source-sha "$BASELINE_SHA"
+          --deployment-id "$BASELINE_DEPLOYMENT"
+          --output "$AUDIT_ROOT/before"
+      - name: Preserve baseline immediately
+        if: always() && steps.before.outcome != 'skipped'
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: initial-load-before-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.AUDIT_ROOT }}/before
+          if-no-files-found: error
+          retention-days: 90
+      - name: Keep this runner for the explicitly declared production target
+        id: target
+        if: success() && steps.before.outcome == 'success'
+        # This read-only wait ends after 75 minutes. It neither deploys nor
+        # approves a release. The current title can lose [measure] while waiting.
+        run: >-
+          node "$AUDIT_COLLECTOR" wait-for-after
+          --target-ref perf/initial-load-20261114
+          --run-id "$GITHUB_RUN_ID"
+          --baseline-run "$AUDIT_ROOT/before/run.json"
+          --output "$AUDIT_ROOT/target"
+      - name: Collect the declared release with the unchanged harness
+        id: after
+        if: success() && steps.target.outcome == 'success'
+        run: >-
+          node "$AUDIT_COLLECTOR" collect-declared-after
+          --target-receipt "$AUDIT_ROOT/target/target-receipt.json"
+          --output "$AUDIT_ROOT/after"
+      - name: Preserve fixed outcome codes even if setup or measurement failed
+        if: always()
+        env:
+          APP_INSTALL_OUTCOME: ${{ steps.app_install.outcome }}
+          TOOL_INSTALL_OUTCOME: ${{ steps.tool_install.outcome }}
+          BROWSER_OUTCOME: ${{ steps.browser.outcome }}
+          BEFORE_OUTCOME: ${{ steps.before.outcome }}
+          TARGET_OUTCOME: ${{ steps.target.outcome }}
+          AFTER_OUTCOME: ${{ steps.after.outcome }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { mkdir, writeFile } from 'node:fs/promises';
+          import { resolve } from 'node:path';
+          const root = resolve(process.env.AUDIT_ROOT);
+          await mkdir(root, { recursive: true });
+          const allowed = new Set(['success', 'failure', 'cancelled', 'skipped', '']);
+          const outcomes = Object.fromEntries(['APP_INSTALL_OUTCOME', 'TOOL_INSTALL_OUTCOME',
+            'BROWSER_OUTCOME', 'BEFORE_OUTCOME', 'TARGET_OUTCOME', 'AFTER_OUTCOME'].map(key => {
+              const value = process.env[key] ?? '';
+              return [key, allowed.has(value) ? value : 'unknown'];
+            }));
+          await writeFile(resolve(root, 'setup.json'), JSON.stringify({
+            schemaVersion: 'initial-load-setup.v1', runId: process.env.GITHUB_RUN_ID,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT, outcomes,
+          }, null, 2) + '\n', { flag: 'wx' });
+          NODE
+      - name: Preserve all sanitized evidence and failures
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: initial-load-complete-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.AUDIT_ROOT }}
+          if-no-files-found: error
+          retention-days: 90
