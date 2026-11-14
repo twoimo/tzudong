@@ -22,7 +22,7 @@ afterAll(async () => { await browser?.close(); });
 async function openInsights(mode: InsightsResponsiveMode, width: number, height: number) {
   browser ??= await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
   // This is a real browser preference; chart rendering and production CSS stay intact.
-  const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
+  const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', hasTouch: width === 454 && height === 312 });
   const page = await context.newPage();
   page.setDefaultTimeout(8_000);
   const errors: string[] = [];
@@ -50,6 +50,7 @@ async function openInsights(mode: InsightsResponsiveMode, width: number, height:
 
 const cardFor = (page: Page) => page.locator('[data-insights-card="true"]');
 const areaFor = (page: Page) => cardFor(page).locator(':scope > [data-slot="card-content"]');
+const previewFor = (page: Page) => page.getByRole('dialog', { name: '영상 미리보기', exact: true });
 
 // Visible DOM boxes can still be clipped by a flex ancestor. Check the full
 // control against every overflow boundary and its actual painted hit target.
@@ -91,76 +92,184 @@ async function expectChartFitsArea(page: Page, width: number) {
       && chart.left >= outer.left - 1 && chart.right <= outer.right + 1
       && chart.top >= outer.top - 1 && chart.bottom <= outer.bottom + 1;
   }, minimum)).toBe(true);
-  if (await area.locator('.ztd-tip').count() === 0) {
-    expect(await area.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-  } else {
-    // A translated tooltip can enlarge scrollWidth with its pre-transform box
-    // even when its final painted box fits. Measure the painted text as well:
-    // the library's nowrap default must not leak a long title outside the plot.
-    await ui.poll(() => area.evaluate(element => {
-      const tooltip = element.querySelector<HTMLElement>('.ztd-tip');
-      if (!tooltip) return false;
-      const plot = element.getBoundingClientRect(), tip = tooltip.getBoundingClientRect();
-      if (tip.width <= 0 || tip.left < plot.left - 1 || tip.right > plot.right + 1
-        || tooltip.scrollWidth > tooltip.clientWidth + 1) return false;
-      const paragraphs = [...tooltip.querySelectorAll('p')];
-      if (paragraphs.length === 0) return false;
-      return paragraphs.every(paragraph => {
-        const text = document.createRange();
-        text.selectNodeContents(paragraph);
-        const lines = [...text.getClientRects()];
-        return lines.length > 0 && lines.every(line => line.left >= Math.max(plot.left, tip.left) - 1
-          && line.right <= Math.min(plot.right, tip.right) + 1);
-      });
-    })).toBe(true);
-  }
+  expect(await area.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
 }
 
-async function reachChartBottom(page: Page, width: number, height: number) {
+async function scrollChartToBottom(page: Page, height: number) {
   const card = cardFor(page);
-  // Dismiss any previous hover through normal pointer movement; never alter the
-  // DOM or tooltip styling to manufacture a no-overflow baseline.
   await page.mouse.move(0, 0);
-  await ui(areaFor(page).locator('.ztd-tip')).toHaveCount(0);
-  await expectChartFitsArea(page, width);
+  await ui(previewFor(page)).toHaveCount(0);
   await card.hover();
   await page.mouse.wheel(0, 30_000);
   await ui.poll(() => card.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThanOrEqual(1);
   if (height <= 390) expect(await card.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
-  // A short card is allowed to show only part of the chart at once. Its last
-  // painted tile must nevertheless be reachable through the real wheel owner.
-  const lastPaintedPoint = () => areaFor(page).evaluate(element => {
+  await page.mouse.move(0, 0);
+  await ui(previewFor(page)).toHaveCount(0);
+}
+
+function visibleTilePoint(page: Page, middle = false) {
+  return areaFor(page).evaluate((element, preferMiddle) => {
     const svg = element.querySelector('svg[role="img"]');
-    if (!svg) return null;
+    const card = element.closest('[data-insights-card]')?.getBoundingClientRect();
+    if (!svg || !card) return null;
     const paths = [...svg.querySelectorAll('.ztd-mark > path:first-child')]
       .filter(path => Number(getComputedStyle(path).opacity) > 0)
       .map(path => path.getBoundingClientRect())
-      .filter(rect => rect.width > 0 && rect.height > 0)
-      .sort((a, b) => b.bottom - a.bottom);
-    const last = paths[0];
-    if (!last) return null;
-    const x = last.x + last.width / 2, y = last.bottom - Math.min(2, last.height / 2);
-    const hit = document.elementFromPoint(x, y);
-    return x >= 0 && x < innerWidth && y >= 0 && y < innerHeight && hit !== null && svg.contains(hit) ? { x, y } : null;
-  });
-  await ui.poll(lastPaintedPoint).not.toBeNull();
-  const point = (await lastPaintedPoint())!;
-  // Exercise a real tile, rather than relying on the card centre coincidentally
-  // landing over the chart. This also covers hover on the 1024px layout.
+      .filter(rect => rect.width > 4 && rect.height > 4);
+    const finalBottom = Math.max(...paths.map(rect => rect.bottom));
+    const points = paths.filter(rect => preferMiddle || rect.bottom >= finalBottom - 1).map(rect => ({
+      x: rect.x + rect.width / 2,
+      y: preferMiddle
+        ? Math.max(rect.top + 2, card.top + 2, Math.min(innerHeight / 2, rect.bottom - 2, card.bottom - 2))
+        : rect.bottom - 2,
+    })).filter(point => {
+      const hit = document.elementFromPoint(point.x, point.y);
+      return point.x >= 0 && point.x < innerWidth && point.y >= 0 && point.y < innerHeight
+        && hit !== null && svg.contains(hit) && hit.closest('.ztd-mark') !== null;
+    });
+    points.sort((a, b) => preferMiddle ? Math.abs(a.y - innerHeight / 2) - Math.abs(b.y - innerHeight / 2) : b.y - a.y);
+    return points[0] ?? null;
+  }, middle);
+}
+
+async function expectPreviewFields(page: Page, changeMode = false) {
+  const preview = previewFor(page);
+  await ui(preview).toBeVisible();
+  await ui.poll(() => preview.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.left >= -1 && rect.right <= innerWidth + 1
+      && rect.top >= -1 && rect.bottom <= innerHeight + 1 && element.scrollWidth <= element.clientWidth + 1
+      && element.scrollHeight <= element.clientHeight + 1;
+  })).toBe(true);
+  expect(await preview.evaluate(element => !document.querySelector('[data-insights-card]')?.contains(element))).toBe(true);
+  const body = preview.locator('[data-insights-preview-body]');
+  await ui(body).toHaveCSS('overflow-y', 'auto');
+  const fields = body.locator('p');
+  await ui(fields).toHaveText([
+    /^반응형 검증용 합성 영상 /, /^카테고리:/, /^조회수:/, /^좋아요:/, /^댓글수:/, /^영상 길이:/,
+    changeMode ? /증감률:/ : /^비율:/, ...(changeMode ? [/^이전 좋아요:/] : []),
+  ]);
+  const box = (await body.boundingBox())!;
+  expect(box.height).toBeGreaterThan(18);
+  await page.mouse.move(box.x + 4, box.y + 4);
+  await page.mouse.wheel(0, -20_000);
+  await ui.poll(() => body.evaluate(element => element.scrollTop)).toBeLessThanOrEqual(1);
+  // Read every retained field through normal wheel input. Every text line must
+  // fit both axes of its actual scroll owner and viewport when brought into view.
+  for (const paragraph of await fields.all()) {
+    const delta = await paragraph.evaluate(element => {
+      const owner = element.closest('[data-insights-preview-body]')!.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
+      return Math.max(0, Math.ceil(rect.bottom - owner.bottom));
+    });
+    if (delta > 0) await page.mouse.wheel(0, delta + 1);
+    await ui.poll(() => paragraph.evaluate(element => {
+      const owner = element.closest('[data-insights-preview-body]')!;
+      const bounds = owner.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const lines = [...range.getClientRects()];
+      return owner.scrollWidth <= owner.clientWidth + 1 && lines.length > 0 && lines.every(line =>
+        line.left >= Math.max(0, bounds.left) - 1 && line.right <= Math.min(innerWidth, bounds.right) + 1
+        && line.top >= Math.max(0, bounds.top) - 1 && line.bottom <= Math.min(innerHeight, bounds.bottom) + 1);
+    })).toBe(true);
+  }
+  await ui(preview).toBeVisible();
+  return body;
+}
+
+async function reachChartBottom(page: Page, width: number, height: number) {
+  await expectChartFitsArea(page, width);
+  await scrollChartToBottom(page, height);
+  // A short card is allowed to show only part of the chart at once. Its last
+  // painted tile must nevertheless be reachable through the real wheel owner.
+  await ui.poll(() => visibleTilePoint(page)).not.toBeNull();
+  const point = (await visibleTilePoint(page))!;
+  const focusedBeforeHover = await page.evaluateHandle(() => document.activeElement);
   await page.mouse.move(point.x, point.y);
-  await ui(areaFor(page).locator('.ztd-tip')).toHaveCount(1);
+  await expectPreviewFields(page);
+  expect(await page.evaluate(element => document.activeElement === element, focusedBeforeHover)).toBe(true);
   await expectChartFitsArea(page, width);
-  // Keep the library's independent vertical placement limitation observable.
-  // This is bounded numeric evidence, not a claim that hover Y clipping passed.
-  const evidence = await diagnostics(page);
-  const verticalClip = Math.max(0, ...(evidence.tooltipText?.map(text => text.overflowY ?? 0) ?? []));
-  if (verticalClip > 1) console.info('INSIGHTS_TOOLTIP_VERTICAL_CLIP=' + JSON.stringify({
-    route: new URL(page.url()).pathname, viewport: evidence.viewport,
-    area: evidence.area, tooltip: evidence.tooltip, maxTextOverflowY: verticalClip,
-  }));
+  await page.keyboard.press('Escape');
+  await ui(previewFor(page)).toHaveCount(0);
+  expect(await page.evaluate(element => document.activeElement === element, focusedBeforeHover)).toBe(true);
+  await focusedBeforeHover.dispose();
+  // Re-enter, then use the preview's real action to open the existing complete
+  // detail dialog. The hover layer must not remain over that dialog.
   await page.mouse.move(0, 0);
-  await ui(areaFor(page).locator('.ztd-tip')).toHaveCount(0);
+  await page.mouse.move(point.x, point.y);
+  await ui(previewFor(page)).toBeVisible();
+  await previewFor(page).getByRole('button', { name: '영상 상세 열기', exact: true }).click();
+  const detail = page.getByRole('dialog', { name: /^영상 상세:/ });
+  await ui(detail).toBeFocused();
+  await ui(previewFor(page)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await ui(detail).toHaveCount(0);
+  await ui(page.getByRole('button', { name: '영상 탐색', exact: true })).toBeFocused();
   await expectChartFitsArea(page, width);
+}
+
+async function exerciseShortPreviewInputs(page: Page) {
+  const chart = areaFor(page).getByRole('group', { name: /^트리맵 기준:/ });
+  await chart.focus();
+  await chart.press('Home');
+  await chart.press('ArrowRight');
+  await ui(previewFor(page)).toHaveCount(0);
+  await chart.press('Enter');
+  const detail = page.getByRole('dialog', { name: /^영상 상세:/ });
+  await ui(detail).toBeFocused();
+  await ui(detail.getByRole('status')).toContainText('반응형 검증용 합성 영상 2:');
+  await page.keyboard.press('Escape');
+  await ui(detail).toHaveCount(0);
+
+  // Change mode retains the eighth "previous metric" paragraph. Hover near the
+  // middle of this short viewport to exercise the preview's own real scroll.
+  const change = page.getByRole('group', { name: '표시 방식', exact: true }).getByRole('button', { name: '증감률', exact: true });
+  await expectReachable(change);
+  await change.click();
+  await ui(areaFor(page).getByRole('img')).toHaveAccessibleName(/좋아요.*증감률/);
+  await scrollChartToBottom(page, 312);
+  const point = (await visibleTilePoint(page, true))!;
+  expect(point).not.toBeNull();
+  await page.mouse.move(point.x, point.y);
+  const body = await expectPreviewFields(page, true);
+  expect(await body.evaluate(element => element.scrollHeight > element.clientHeight && element.scrollTop > 0)).toBe(true);
+
+  // Close while the pointer is over the preview AND a real tile beneath it.
+  // Re-exposure at the same coordinate must stay closed; physical movement
+  // within that same tile must be able to resume its actual cached datum.
+  const overlap = await page.evaluate(() => {
+    const previewBody = document.querySelector('[data-insights-preview-body]')!.getBoundingClientRect();
+    const card = document.querySelector('[data-insights-card]')!.getBoundingClientRect();
+    for (const path of document.querySelectorAll('[data-insights-card] .ztd-mark > path:first-child')) {
+      const tile = path.getBoundingClientRect();
+      const left = Math.max(previewBody.left, card.left, tile.left), right = Math.min(previewBody.right, card.right, tile.right);
+      const top = Math.max(previewBody.top, card.top, tile.top), bottom = Math.min(previewBody.bottom, card.bottom, tile.bottom);
+      if (right - left > 16 && bottom - top > 16) return { x: (left + right) / 2, y: (top + bottom) / 2 };
+    }
+    return null;
+  });
+  expect(overlap).not.toBeNull();
+  await page.mouse.move(overlap!.x, overlap!.y);
+  await page.keyboard.press('Escape');
+  await ui(previewFor(page)).toHaveCount(0);
+  await page.mouse.move(overlap!.x, overlap!.y);
+  await ui(previewFor(page)).toHaveCount(0);
+  await page.mouse.move(overlap!.x + 3, overlap!.y);
+  await expectPreviewFields(page, true);
+  await previewFor(page).getByRole('button', { name: '영상 미리보기 닫기', exact: true }).click();
+  await ui(previewFor(page)).toHaveCount(0);
+  await ui(change).toBeFocused();
+
+  // The same chart still opens full detail with touch, without a hover layer.
+  await page.mouse.move(0, 0);
+  const touchPoint = (await visibleTilePoint(page))!;
+  await page.touchscreen.tap(touchPoint.x, touchPoint.y);
+  await ui(detail).toBeFocused();
+  await ui(detail.getByRole('status').locator('p')).toHaveCount(8);
+  await ui(previewFor(page)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await ui(detail).toHaveCount(0);
 }
 
 async function exerciseControls(page: Page) {
@@ -258,8 +367,8 @@ async function diagnostics(page: Page) {
       const { x, y, width, height } = element.getBoundingClientRect();
       return { x, y, width, height, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop };
     };
-    const tooltip = document.querySelector<HTMLElement>('[data-insights-card] .ztd-tip');
-    const plot = document.querySelector('[data-insights-card] > [data-slot="card-content"]')?.getBoundingClientRect();
+    const tooltip = document.querySelector<HTMLElement>('[data-insights-hover-preview]');
+    const plot = document.querySelector('[data-insights-preview-body]')?.getBoundingClientRect();
     const tipStyle = tooltip ? getComputedStyle(tooltip) : null;
     // Numeric geometry only: no user titles, query payloads or DOM snapshots.
     const tooltipText = tooltip ? [...tooltip.querySelectorAll('p')].slice(0, 8).map(paragraph => {
@@ -276,7 +385,7 @@ async function diagnostics(page: Page) {
     return {
       viewport: [innerWidth, innerHeight], card: measure('[data-insights-card]'),
       area: measure('[data-insights-card] > [data-slot="card-content"]'), svg: measure('[data-insights-card] svg[role="img"]'),
-      tooltip: measure('[data-insights-card] .ztd-tip'), tooltipText,
+      tooltip: measure('[data-insights-hover-preview]'), tooltipBody: measure('[data-insights-preview-body]'), tooltipText,
       tooltipPosition: tipStyle ? { left: tipStyle.left, top: tipStyle.top, transform: tipStyle.transform, maxWidth: tipStyle.maxWidth } : null,
       activeTag: document.activeElement?.tagName,
     };
@@ -290,6 +399,7 @@ for (const mode of ['member', 'admin'] as const) {
       try {
         await exerciseControls(page);
         await reachChartBottom(page, width, height);
+        if (width === 454 && height === 312) await exerciseShortPreviewInputs(page);
         await exercisePopovers(page);
         await expectLayoutBoundary(page, mode, width, height);
         await expectReadOnly(page);
@@ -307,7 +417,12 @@ for (const mode of ['member', 'admin'] as const) {
       await exerciseControls(page);
       await reachChartBottom(page, 390, 844);
       await expectLayoutBoundary(page, mode, 390, 844);
+      await scrollChartToBottom(page, 844);
+      const point = (await visibleTilePoint(page))!;
+      await page.mouse.move(point.x, point.y);
+      await ui(previewFor(page)).toBeVisible();
       await page.setViewportSize({ width: 844, height: 390 });
+      await ui(previewFor(page)).toHaveCount(0);
       await reachChartBottom(page, 844, 390);
       await exerciseControls(page);
       await exercisePopovers(page);

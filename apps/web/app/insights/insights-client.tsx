@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { ThemeProvider, Treemap, type ChartEvent } from 'ztd-charts';
+import { ThemeProvider, type ChartEvent } from 'ztd-charts';
 import { AlertTriangle, Info, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AdminEmbeddedModuleShell } from '@/components/admin/AdminEmbeddedModuleShell';
@@ -15,6 +15,7 @@ import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoR
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { adminQueryLastReadFailed } from '@/lib/admin/query-read-state';
+import { InsightsTreemap } from './insights-treemap';
 
 
 type ViewMode = 'all' | 'category' | 'change';
@@ -1082,18 +1083,15 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                     neutralSoft: 'hsl(var(--muted))', lift: 'hsl(var(--accent))', tint: 'hsl(var(--accent))',
                                     radius: 0, radiusCode: 0, radiusMark: 0,
                                 }}>
-                                    <Treemap
+                                    <InsightsTreemap
                                         data={chartRows} label="title" value="value"
                                         group={viewMode === 'category' ? 'category' : undefined}
                                         highlight="max" labelMode="value"
                                         format={(value) => formatMetricText(metricMode, value)} locale="ko-KR"
                                         height={chartHeight} sort animateOnView
                                         onHover={handleChartHover} onClick={handleChartActivate}
-                                        tooltip={(event) => event.datum ? (
-                                            <div className="max-w-full whitespace-normal [overflow-wrap:anywhere]">
-                                                <TreemapDetailContent leaf={event.datum} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} />
-                                            </div>
-                                        ) : null}
+                                        previewDisabled={selectedTile !== null}
+                                        previewContent={(leaf) => <TreemapDetailContent leaf={leaf} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} />}
                                         ariaLabel={treemapContextText}
                                         description={`${treemapLegendText} ${treemapSmallCellGuidance}`}
                                         className="w-full"
