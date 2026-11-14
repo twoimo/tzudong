@@ -1,6 +1,7 @@
 'use client';
 import { syncRetainedMarkerAccessibility } from '@/lib/retained-marker-accessibility';
 import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
+import { createClusterIndexBuildScheduler } from '@/lib/cluster-index-build-scheduler';
 import { clearNaverDeviceLocationMarker, createNaverCancellableCallback, createNaverOneShotCallback, removeNaverMapListener } from '@/lib/naver-map-event-cleanup';
 
 import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
@@ -767,6 +768,7 @@ const NaverMapView = memo(({
 
     // [Cluster] Supercluster 인덱스 및 클러스터 상태
     const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
+    const [scheduleClusterIndexBuild] = useState(() => createClusterIndexBuildScheduler());
     const [clusterIndexVersion, setClusterIndexVersion] = useState(0);
     const [clusters, setClusters] = useState<Array<ClusterFeature<ClusterProperties> | PointFeature<ClusterProperties>>>([]);
     const [regionalClusters, setRegionalClusters] = useState<RegionalCluster[]>([]); // 17개 행정구역 클러스터
@@ -2173,8 +2175,8 @@ const NaverMapView = memo(({
             ? window.cancelIdleCallback.bind(window)
             : window.clearTimeout.bind(window);
 
-        const idleHandle = scheduleIdleWork(() => {
-            if (cancelled || !mapInstanceRef.current) return;
+        const buildClusterIndex = () => {
+            if (cancelled || !mapInstanceRef.current) return false;
             markInitialLoadMilestone('clusterIndexStarted');
 
             // GeoJSON 변환
@@ -2192,7 +2194,7 @@ const NaverMapView = memo(({
 
             // 데이터 로드
             index.load(geoJsonPoints);
-            if (cancelled) return;
+            if (cancelled) return false;
             clusterIndexRef.current = index;
             setClusterIndexVersion((version) => version + 1);
 
@@ -2233,13 +2235,28 @@ const NaverMapView = memo(({
                     : seoulResultFiltered.individualRestaurantIds
             );
             markInitialLoadMilestone('clusterIndexReady', displayRestaurants.length);
+            return true;
+        };
+        const cancelScheduledBuild = scheduleClusterIndexBuild({
+            build: buildClusterIndex,
+            // The first complete index is needed for visible markers. Yield to
+            // the current task without waiting for an idle period; later query
+            // changes keep the existing idle queue and timeout.
+            scheduleInitial: (callback) => {
+                const handle = window.setTimeout(callback, 0);
+                return () => window.clearTimeout(handle);
+            },
+            scheduleRebuild: (callback) => {
+                const handle = scheduleIdleWork(callback);
+                return () => cancelIdleWork(handle);
+            },
         });
 
         return () => {
             cancelled = true;
-            cancelIdleWork(idleHandle);
+            cancelScheduledBuild();
         };
-    }, [displayRestaurants, expandedClusterRestaurantIds.length, selectedRegion, isMapInitialized, mapOptimization]);
+    }, [displayRestaurants, expandedClusterRestaurantIds.length, selectedRegion, isMapInitialized, mapOptimization, scheduleClusterIndexBuild]);
 
     // [Cluster] 지도 이동/줌 시 클러스터 업데이트
     useEffect(() => {

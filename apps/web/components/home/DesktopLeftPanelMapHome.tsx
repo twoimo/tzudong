@@ -608,7 +608,7 @@ export default function DesktopLeftPanelMapHome({
               </div>
             ) : (
               <>
-                {renderedLatestRestaurants.map((restaurant) => (
+                {renderedLatestRestaurants.map((restaurant, index) => (
                   <StampCard
                     key={restaurant.id}
                     restaurant={restaurant}
@@ -621,6 +621,7 @@ export default function DesktopLeftPanelMapHome({
                     onClick={handleRestaurantOpen}
                     size="default"
                     stampSize="compact"
+                    thumbnailPriority={index === 0}
                     showAddress
                     categoryFallback="맛집"
                   />
