@@ -308,7 +308,14 @@ function installInitialLoadDiagnostic(gitSha: string | null): void {
 
     const freeze = () => {
         if (stopped) return;
-        const frozenAtMs = numeric(performance.now());
+        const freezeStarted = performance.now();
+        // Browser timers can round a fractional delay down. Keep observing until
+        // the actual deadline instead of admitting an early, shorter window.
+        if (freezeStarted < cutoffMs) {
+            window.setTimeout(freeze, Math.max(1, cutoffMs - freezeStarted));
+            return;
+        }
+        const frozenAtMs = numeric(freezeStarted);
         // Drain before disconnecting, then stop every collector before adding UI.
         for (const observer of observers) {
             for (const entry of observer.takeRecords()) handlers[entry.entryType]?.(entry);

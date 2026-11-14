@@ -149,6 +149,20 @@ describe('opt-in production initial-load diagnostic', () => {
         expect(page.panel()!.children[0].nonce).toBe('test-nonce-never-output');
     });
 
+    test('a rounded timer firing early reschedules without freezing or revealing the panel', () => {
+        const page = browser();
+        page.freeze(19999.8);
+        expect(page.panel()).toBeUndefined();
+        expect(page.observerInstances.every((observer) => !observer.disconnected)).toBe(true);
+        expect(page.timers.at(-1)?.delay).toBe(1);
+        page.setTime(19999.9);
+        page.emit('paint', [{ entryType: 'paint', name: 'first-contentful-paint', startTime: 19999.85 }], true);
+        page.freeze(20000.8);
+        expect(page.result().capture.frozenAtMs).toBe(20000.8);
+        expect(page.result().paints.fcpMs).toBe(19999.85);
+        expect(page.observerInstances.every((observer) => observer.disconnected)).toBe(true);
+    });
+
     test('retains classifications and numeric LCP subparts without URL, text, element ID or nonce', () => {
         const page = browser();
         const privateUrl = 'https://project.supabase.co/rest/v1/restaurants?token=PRIVATE_TOKEN&name=PRIVATE_NAME';
