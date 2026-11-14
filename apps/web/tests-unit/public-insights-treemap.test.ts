@@ -79,13 +79,18 @@ describe('public insights treemap route support', () => {
 
   test('uses ztd-charts treemap with weighted areas and accessible interactions', () => {
     const insightsSource = source('app/insights/insights-client.tsx');
+    const chartSource = source('app/insights/insights-treemap.tsx');
 
-    expect(insightsSource).toContain("import { ThemeProvider, Treemap, type ChartEvent } from 'ztd-charts';");
-    expect(insightsSource).toContain('<Treemap');
+    expect(insightsSource).toContain("import { ThemeProvider, type ChartEvent } from 'ztd-charts';");
+    expect(chartSource).toContain("import { Treemap, type ChartEvent, type TreemapProps } from 'ztd-charts';");
+    expect(insightsSource).toContain('<InsightsTreemap');
+    expect(chartSource).toContain('<Treemap {...chartProps} tooltip={false} onHover={handleHover} onClick={activate} />');
     expect(insightsSource).toContain('data={chartRows} label="title" value="value"');
     expect(insightsSource).toContain("group={viewMode === 'category' ? 'category' : undefined}");
     expect(insightsSource).toContain('onHover={handleChartHover} onClick={handleChartActivate}');
-    expect(insightsSource).toContain('tooltip={(event) => event.datum');
+    expect(insightsSource).toContain('previewContent={(leaf) => <TreemapDetailContent leaf={leaf}');
+    expect(chartSource).toContain('onHover?.(event)');
+    expect(chartSource).toContain('onClick?.(event)');
     expect(insightsSource).toContain('description={`${treemapLegendText} ${treemapSmallCellGuidance}`}');
     expect(insightsSource).toContain('aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance"');
     expect(insightsSource).toContain('className="sr-only"');

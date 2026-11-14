@@ -24,7 +24,7 @@ html[data-home-chrome-ready="true"][data-home-panel-ready="true"] [data-home-sta
   display: none;
 }
 
-@media (max-width: 1279px) {
+@media (width < 1280px) {
   /* The mobile controls load lazily. Keep their placeholder until the overlay
      itself mounts; mobile has no desktop panel readiness signal. */
   html[data-home-mobile-chrome-ready="true"] [data-home-static-skeleton] {

@@ -2170,7 +2170,7 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain('@source "../lib/naver-map-overlay-timings.ts";');
     expect(mobileControlSource).toContain("document.documentElement.toggleAttribute('data-mobile-search-open', activeSheet === 'search')");
     expect(homeAppGlobalsSource).toContain('.mobile-map-status-badge');
-    expect(homeAppGlobalsSource).toContain('@media (max-width: 1279px)');
+    expect(homeAppGlobalsSource).toContain('@media (width < 1280px)');
     expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
     expect(homeAppGlobalsSource).toContain('margin-top: 0');
     expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
