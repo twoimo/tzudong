@@ -67,15 +67,20 @@ async function fixture(t, mode = '') {
         desktopMenuReady: false, desktopSearchReady: false, markerCount: 0, initialSkeletonVisible: true };
       observation.traceObservationEndMs = 8000;
       observation.selectedObservationAtMs = 7900;
+      observation.viewportVerificationStartMs = 1000;
+      observation.viewportPaintAnchorAtMs = 900;
       observation.readinessTimeline = [
-        { atMs: 100, actualViewport: viewport, readiness: loading },
+        { atMs: 100, actualViewport: { width: 980, height: 2121, deviceScaleFactor: 2 }, readiness: loading },
+        { atMs: 900, actualViewport: viewport, readiness: loading },
         { atMs: after ? 1500 : 2500, actualViewport: viewport, readiness: observation.readiness },
         { atMs: 7900, actualViewport: viewport, readiness: observation.readiness },
         { atMs: 8100, actualViewport: { width: 780, height: 493, deviceScaleFactor: 1 }, readiness: loading },
       ];
       observation.postCleanupViewport = { width: 780, height: 493, deviceScaleFactor: 1 };
       observation.postCleanupReadiness = loading;
-      if (after && attemptId === 'mobile-01' && mode === 'wrong-timed-viewport') observation.readinessTimeline[0].actualViewport = { ...viewport, width: 391 };
+      if (after && attemptId === 'mobile-01' && mode === 'wrong-timed-viewport') observation.readinessTimeline[2].actualViewport = { ...viewport, width: 391 };
+      if (after && attemptId === 'mobile-01' && mode === 'wrong-paint-anchor') observation.readinessTimeline[1].actualViewport = { ...viewport, width: 391 };
+      if (after && attemptId === 'mobile-01' && mode === 'wrong-paint-boundary') observation.viewportVerificationStartMs = 2500;
       if (after && attemptId === 'mobile-01' && mode === 'late-only-markers') {
         observation.readiness = { ...observation.readiness, markerCount: 0 };
         observation.readinessTimeline = observation.readinessTimeline.map(state => state.atMs <= 8000 ? { ...state, readiness: { ...state.readiness, markerCount: 0 } } : state);
@@ -86,7 +91,7 @@ async function fixture(t, mode = '') {
           throttling: profile.throttling, screenEmulation: { ...viewport, mobile: profile.isMobile, disabled: false } },
         audits: Object.fromEntries([['first-contentful-paint', after ? 1000 : 1800], ['largest-contentful-paint', after ? 2000 : 3000], ['interactive', after ? 2500 : 3500],
           ['total-blocking-time', after ? 100 : 300], ['cumulative-layout-shift', after ? 0.03 : 0.1]].map(([key, value]) => [key, { numericValue: value, scoreDisplayMode: 'numeric' }])) };
-      lhr.audits.metrics = { details: { items: [{ observedTraceEnd: 8000 }] } };
+      lhr.audits.metrics = { details: { items: [{ observedTraceEnd: 8000, observedFirstPaint: mode === 'missing-paint' && after && attemptId === 'mobile-01' ? null : 1000 }] } };
       lhr.audits['final-screenshot'] = { details: { timing: 7900, timestamp: 7900000 } };
       observation.screenshotProvenance = { source: 'lighthouse-final-screenshot', timingMs: 7900, timestampUs: 7900000,
         widthPixels: profile.width, heightPixels: profile.height, mimeType: 'image/jpeg' };
@@ -100,7 +105,7 @@ async function fixture(t, mode = '') {
   const map = await createFixtureMap({ root });
   return { root, repository, artifactMapSha256: map.artifactMapSha256 };
 }
-test('timed evidence survives cleanup reset and permits empty latest fixture list', async t => {
+test('painted viewport survives normal prepaint and cleanup transitions with empty latest fixture list', async t => {
   const options = await fixture(t), result = await scoreFixture(options);
   assert.equal(result.context.eligible, true, JSON.stringify(result.context.failures));
   assert.equal(result.profiles.flatMap(profile => Object.values(profile.metrics)).filter(metric => metric.classification === 'improved').length, 21);
@@ -118,8 +123,8 @@ test('late controls provenance, late build and absent after remain not comparabl
     assert.equal(verified.fieldAdmissionCount, 0);
   }
 });
-test('any wrong timed viewport or markers appearing only after the trace rejects the trial', async t => {
-  for (const mode of ['wrong-timed-viewport', 'late-only-markers']) {
+test('wrong paint anchor, painted viewport, paint boundary or late-only markers rejects the trial', async t => {
+  for (const mode of ['wrong-timed-viewport', 'wrong-paint-anchor', 'wrong-paint-boundary', 'missing-paint', 'late-only-markers']) {
     const options = await fixture(t, mode), result = await scoreFixture(options);
     assert.equal(result.phases.after.trials[0].eligible, false);
     await put(options.root, 'fixture-scored.json', result);

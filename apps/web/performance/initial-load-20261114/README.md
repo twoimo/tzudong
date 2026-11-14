@@ -181,7 +181,7 @@ node validate.mjs --input experiment.json --artifact-map artifact-map.json \
 
 운영 사이트의 측정은 유효한 performance trial을 얻지 못했다. 처음 두 시도는 Node 공개 health readback에서 실패했고, 다음 두 시도는 브라우저 시작 단계 문제를 기록했다. 마지막 `43600568543` 시도는 고정한 Chrome이 정상 실행된 뒤 공개 탐색에서 HTTP 403 challenge를 받았다. 다섯 시도 모두 표본 0이며 운영 TTFB·FCP·LCP·TTI의 before/after는 **N/A**다. 실패 기록을 보존하고 운영 접속 재시도는 종료했다. 이 절의 별도 실험으로 그 빈칸을 채우지 않는다.
 
-`fixture-protocol.json`은 기존 운영 `protocol.json`을 변경하지 않은 독립 프로토콜이다. 다음 실행 전에 고정한 최신 SHA-256은 `e25f17e98b2e691390a13120f853663fd239c49fc6192577a0086bf190637bf3`이다. 첫 fixture 실행 `43601663509`은 실제 시도 1회, invalid 1회, 유효 표본 0개이며 after가 없다. 캡처한 기존 harness로 map·score·독립 validation을 마쳤고 비교 가능한 지표는 0개다. 아래 software test의 숫자는 브라우저 관측치가 아니다. 후보 코드는 유효한 실제 비교를 거쳐 평가하고 운영 반영 여부를 판단한다.
+`fixture-protocol.json`은 기존 운영 `protocol.json`을 변경하지 않은 독립 프로토콜이다. 다음 실행 전에 고정한 최신 SHA-256은 `74eac221fb10a5f0cdc23d8e825ef68f318eb2aabbc4cda8793531c6ef0f5af1`이다. 앞선 두 fixture 실행은 합계 실제 시도 2회, invalid 2회, 유효 표본 0개이며 after가 없다. 각각 캡처한 기존 harness로 map·score·독립 validation을 마쳤고 비교 가능한 지표는 0개다. 아래 software test의 숫자는 브라우저 관측치가 아니다. 후보 코드는 유효한 실제 비교를 거쳐 평가하고 운영 반영 여부를 판단한다.
 
 | 항목 | 프런트엔드 fixture 실험 조건 |
 |---|---|
@@ -215,9 +215,15 @@ HTTP/resource 및 WebSocket interception이 전체 네트워크 격리를 증명
 
 첫 fixture 시도에서는 Lighthouse 종료 뒤 읽은 화면 크기가 요청한 390×844/DPR 2와 달리 780×493/DPR 1이었고 marker 준비 조건도 충족하지 못했다. 그 시도를 재분류하지 않고 기존 artifact map hash `cbfb6df28b350b27bb26055afdea4374195243796af91e418b64dcf862bec50f`와 원자료·계산 결과를 그대로 보존한다. 새 protocol의 method revision은 **실제 시도 1회·유효 표본 0개·비교 지표 0개**를 명시하며 0회 시도라고 기록하지 않는다.
 
-새 관측 방법은 최대 1,000개의 100ms 간격 snapshot에 timestamp·viewport·준비 상태를 남긴다. Lighthouse `observedTraceEnd` 이하인 마지막 snapshot을 실제 측정 상태로 선택하고, **trace 안의 모든 viewport snapshot**이 정확한 요청 크기와 DPR을 만족해야 한다. 선택한 snapshot의 controls·marker·skeleton·desktop panel 조건을 그대로 검사한다. 종료 뒤에만 marker가 나타나면 invalid다. Controls 시각도 trace 안에서 처음 조건을 충족한 snapshot timestamp와 일치해야 한다. `postCleanupViewport`와 `postCleanupReadiness`는 별도 맥락이며 판정에 사용하지 않는다. 이 기준에서는 trace 안의 기능 준비를 입증하지 못한 trial 전체가 제외된다.
+최신 관측 방법은 최대 1,000개의 100ms 간격 snapshot에 timestamp·viewport·준비 상태를 남긴다. Lighthouse `observedTraceEnd` 이하인 마지막 snapshot을 실제 측정 상태로 선택한다. Viewport는 raw metrics audit의 `observedFirstPaint`를 기준으로 **첫 그리기 시각 이하의 마지막 snapshot과 첫 그리기부터 trace 종료까지의 모든 snapshot**이 정확한 요청 크기와 DPR을 만족해야 한다. 그리기 전의 초기 snapshot도 삭제하지 않고 맥락으로 보존한다. First Paint는 유한한 비음수 값이며 trace 종료 이하이어야 하고, 직전 anchor 및 painted window 표본이 있어야 한다. 더 늦은 FCP를 기준으로 대체하거나 observation이 주장하는 시작 시각을 그대로 신뢰하지 않는다.
 
-화면 증거는 Lighthouse가 cleanup 전에 캡처한 `final-screenshot`만 사용한다. 이미지의 시각·pixel 크기·MIME type과 출처를 기록하고 해당 시각이 trace 경계 안에 있는지 검증한다. 이미지가 없거나 잘못되면 다른 numeric/raw artifacts를 먼저 보존하고 명시적 실패로 처리한다. 종료 뒤 화면 설정을 복원해 찍은 이미지를 측정 당시 화면으로 대체하지 않는다. 앱 코드·fixture 데이터·화면 설정·표본 수·예산은 이 method repair로 바꾸지 않았다.
+첫 snapshot은 application script 이전에 설치되는 observer 안에서 **동기적으로** 기록하고, 그 뒤의 snapshot을 100ms timer로 예약한다. 초기 관측까지 timer로 미루면 빠른 desktop paint의 직전 anchor를 놓칠 수 있으므로 관측 시작 순서를 명시했다. 이 보완 전 protocol hash로 새 시도를 실행한 적은 없으며, 누적 실제 시도는 앞의 invalid 2회로 유지된다.
+
+선택한 마지막 snapshot의 controls·marker·skeleton·desktop panel 조건은 그대로 검사한다. 종료 뒤에만 marker가 나타나면 invalid다. Controls 시각도 trace 안에서 처음 조건을 충족한 snapshot timestamp와 일치해야 한다. `postCleanupViewport`와 `postCleanupReadiness`는 별도 맥락이며 판정에 사용하지 않는다. Trace 안의 기능 준비를 입증하지 못한 trial 전체가 제외된다.
+
+두 번째 실행 `43603062046`에서는 690.4ms의 초기 snapshot 하나만 980×2121/DPR 2였고 793.1ms부터는 요청한 390×844/DPR 2였다. Raw First Paint는 1,723ms로 이후였으며 마지막 timed content는 준비돼 있었다. 이 실행도 당시 고정된 모든 trace viewport 검사에서 invalid였으므로 다시 편입하지 않는다. Map hash `dd2dd63e8c87488cfcb5840eb114da054649664ec3e22234edc9b11b04107bda`와 당시 score·validation을 보존하고, 위의 First Paint 및 직전 anchor 규칙은 새 실행에만 적용한다. 이 revision의 누적 상태는 실제 시도 2회·invalid 2회·유효 표본 0개·비교 지표 0개다.
+
+화면 증거는 Lighthouse가 cleanup 전에 캡처한 `final-screenshot`만 사용한다. 이미지의 시각·pixel 크기·MIME type과 출처를 기록하고 해당 시각이 First Paint부터 trace 종료까지의 범위 안에 있는지 검증한다. 이미지가 없거나 잘못되면 다른 numeric/raw artifacts를 먼저 보존하고 명시적 실패로 처리한다. 종료 뒤 화면 설정을 복원해 찍은 이미지를 측정 당시 화면으로 대체하지 않는다. 앱 코드·fixture 데이터·화면 설정·표본 수·예산은 이 method repair로 바꾸지 않았다.
 
 Artifact를 내려받은 뒤 실행할 때 `FIXTURE_EVIDENCE_ROOT`는 실제 artifact root로, `FIXTURE_REPOSITORY`는 두 source Git objects를 가진 checkout으로 지정한다. 아래 명령의 도구 소스는 artifact에 복사된 source와 byte 단위로 일치해야 한다.
 

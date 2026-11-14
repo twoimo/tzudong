@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 export const HERE = dirname(fileURLToPath(import.meta.url));
-export const PROTOCOL_SHA256 = 'e25f17e98b2e691390a13120f853663fd239c49fc6192577a0086bf190637bf3';
+export const PROTOCOL_SHA256 = '74eac221fb10a5f0cdc23d8e825ef68f318eb2aabbc4cda8793531c6ef0f5af1';
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const requireThat = (condition, message) => { if (!condition) throw new Error(`frontend fixture: ${message}`); };
 export const same = isDeepStrictEqual;

@@ -81,22 +81,27 @@ function trialValues(observation, lhr) {
   return values;
 }
 function timedObservationMatches(o, lhr, profile) {
-  const timeline = o.readinessTimeline, end = lhr.audits?.metrics?.details?.items?.[0]?.observedTraceEnd;
-  if (!Array.isArray(timeline) || timeline.length === 0 || timeline.length > 1000 || !finite(end)) return false;
+  const timeline = o.readinessTimeline, metrics = lhr.audits?.metrics?.details?.items?.[0];
+  const end = metrics?.observedTraceEnd, firstPaint = metrics?.observedFirstPaint;
+  if (!Array.isArray(timeline) || timeline.length === 0 || timeline.length > 1000 || !finite(end)
+    || !finite(firstPaint) || firstPaint > end) return false;
   if (!timeline.every((sample, index) => finite(sample.atMs) && (index === 0 || sample.atMs > timeline[index - 1].atMs))) return false;
   const timed = timeline.filter(sample => sample.atMs <= end), last = timed.at(-1);
+  const anchor = timed.filter(sample => sample.atMs <= firstPaint).at(-1);
+  const painted = timed.filter(sample => sample.atMs >= firstPaint);
   const viewport = { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor };
   const firstControl = timed.find(sample => profile.id === 'desktop'
     ? sample.readiness?.homeChromeReady && sample.readiness.desktopMenuReady && sample.readiness.desktopSearchReady
     : sample.readiness?.homeMobileChromeReady);
-  return Boolean(last) && o.traceObservationEndMs === end
-    && timed.every(sample => same(sample.actualViewport, viewport))
+  return Boolean(last) && Boolean(anchor) && painted.length > 0 && o.traceObservationEndMs === end
+    && o.viewportVerificationStartMs === firstPaint && o.viewportPaintAnchorAtMs === anchor.atMs
+    && same(anchor.actualViewport, viewport) && painted.every(sample => same(sample.actualViewport, viewport))
     && o.selectedObservationAtMs === last.atMs && same(o.actualViewport, last.actualViewport) && same(o.readiness, last.readiness)
     && (firstControl ? o.timings?.controlsReadyMs === firstControl.atMs : o.timings?.controlsReadyMs === null || o.timings?.controlsReadyMs > end);
 }
 function screenshotMatches(o, lhr) {
   const image = o.screenshotProvenance, raw = lhr.audits?.['final-screenshot']?.details;
-  return image?.source === 'lighthouse-final-screenshot' && finite(image.timingMs) && image.timingMs <= o.traceObservationEndMs
+  return image?.source === 'lighthouse-final-screenshot' && finite(image.timingMs) && image.timingMs >= o.viewportVerificationStartMs && image.timingMs <= o.traceObservationEndMs
     && image.timingMs === raw?.timing && image.timestampUs === raw?.timestamp && finite(image.timestampUs)
     && Number.isSafeInteger(image.widthPixels) && image.widthPixels > 0 && Number.isSafeInteger(image.heightPixels) && image.heightPixels > 0
     && ['image/jpeg', 'image/png'].includes(image.mimeType);

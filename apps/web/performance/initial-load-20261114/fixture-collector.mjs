@@ -118,7 +118,8 @@ function installObservation() {
     if (state.timings.mockMapReadyMs === null && readiness.mockMapQualified) state.timings.mockMapReadyMs = now;
     if (now < 90000) setTimeout(sample, 100);
   };
-  setTimeout(sample, 0);
+  // Establish the pre-app anchor synchronously; subsequent polls remain 100ms.
+  sample();
 }
 
 function observation() {
@@ -264,6 +265,11 @@ async function trial({ tools, installFixture, protocol, phase, profile, index, r
     if (traceObservationEndMs === null) throw fail('FIXTURE_TRACE_BOUNDARY_UNAVAILABLE');
     const timed = observed.readinessTimeline.filter(sample => sample.atMs <= traceObservationEndMs);
     if (!timed.length) throw fail('FIXTURE_TIMED_OBSERVATIONS_MISSING');
+    const viewportVerificationStartMs = finite(lhr.audits?.metrics?.details?.items?.[0]?.observedFirstPaint);
+    const viewportAnchor = viewportVerificationStartMs === null ? null
+      : timed.filter(sample => sample.atMs <= viewportVerificationStartMs).at(-1);
+    const painted = viewportVerificationStartMs === null ? [] : timed.filter(sample => sample.atMs >= viewportVerificationStartMs);
+    if (!viewportAnchor || !painted.length) throw fail('FIXTURE_VIEWPORT_WINDOW_UNAVAILABLE');
     observed.actualViewport = timed.at(-1).actualViewport;
     observed.readiness = timed.at(-1).readiness;
     observed.selectedObservationAtMs = timed.at(-1).atMs;
@@ -281,7 +287,8 @@ async function trial({ tools, installFixture, protocol, phase, profile, index, r
       browser: { product: 'Google Chrome for Testing', version: PINS.chrome, executable: tools.executable }, browserLaunch: item.browserLaunch,
       requestedViewport: { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor },
       requestedUrl: URL_TO_AUDIT, finalUrl: safeUrl(page.url()), ...observed, errors, networkPolicy, scriptRoleEvidence, traceObservationEndMs,
-      timingBoundary: 'Last 100ms observer sample at or before Lighthouse observedTraceEnd; every in-trace viewport must match. Post-cleanup observations are context only.',
+      viewportVerificationStartMs, viewportPaintAnchorAtMs: viewportAnchor.atMs,
+      timingBoundary: 'Viewport anchor at/before observedFirstPaint and every sample from first paint through observedTraceEnd must match; last in-trace readiness is selected. Full prepaint and post-cleanup context is retained.',
       mockMapTimingScope: 'Exploratory fixture context only; not real map latency or an improvement metric.',
       fixtureSha256: run.fixtureSha256, ttfbScope: 'loopback-frontend-fixture-not-production',
       staticTransferredBytes: network.records.filter(record => record.url?.startsWith(ORIGIN + '/_next/static/'))
@@ -295,7 +302,7 @@ async function trial({ tools, installFixture, protocol, phase, profile, index, r
       const screenshot = result.lhr.audits?.['final-screenshot']?.details;
       const imageMatch = typeof screenshot?.data === 'string' && screenshot.data.length <= 14 * 1024 * 1024
         ? /^data:image\/(jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$/.exec(screenshot.data) : null;
-      if (!imageMatch || !(screenshot.timing >= 0 && screenshot.timing <= traceObservationEndMs)) throw fail('FIXTURE_TRACE_SCREENSHOT_MISSING');
+      if (!imageMatch || !(screenshot.timing >= viewportVerificationStartMs && screenshot.timing <= traceObservationEndMs)) throw fail('FIXTURE_TRACE_SCREENSHOT_MISSING');
       const imageBytes = Buffer.from(imageMatch[2], 'base64');
       const imageInfo = await tools.sharp(imageBytes, { limitInputPixels: 16000000 }).metadata();
       if (!['jpeg', 'png'].includes(imageInfo.format) || !imageInfo.width || !imageInfo.height) throw fail('FIXTURE_TRACE_SCREENSHOT_INVALID');
@@ -318,7 +325,7 @@ async function trial({ tools, installFixture, protocol, phase, profile, index, r
     }
     item.stage = 'validation';
     if (lhr.runtimeError || lhr.lighthouseVersion !== PINS.lighthouse) item.failures.push('FIXTURE_LIGHTHOUSE_INVALID');
-    if (timed.some(sample => sample.actualViewport.width !== profile.width || sample.actualViewport.height !== profile.height
+    if ([viewportAnchor, ...painted].some(sample => sample.actualViewport.width !== profile.width || sample.actualViewport.height !== profile.height
       || sample.actualViewport.deviceScaleFactor !== profile.deviceScaleFactor)) item.failures.push('FIXTURE_VIEWPORT_MISMATCH');
     if (safeUrl(page.url()) !== ORIGIN + '/' || !observed.initialDocumentQaExcluded) item.failures.push('FIXTURE_NAVIGATION_MISMATCH');
     if (errors.mainDocumentStatus !== 200 || errors.firstPartyHttpErrors || errors.pageErrors) item.failures.push('FIXTURE_PAGE_FUNCTIONAL_ERROR');

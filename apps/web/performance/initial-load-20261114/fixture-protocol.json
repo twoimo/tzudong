@@ -206,10 +206,12 @@
       "samplingIntervalMs": 100,
       "raw": "readinessTimeline entries contain atMs, actualViewport and the unchanged readiness fields. Times must be finite, nonnegative and strictly increasing.",
       "selection": "Select the LAST entry with atMs <= Lighthouse audits.metrics.details.items[0].observedTraceEnd. selectedObservationAtMs, actualViewport and readiness must match that entry exactly.",
-      "viewportValidity": "At least one in-trace entry is required. EVERY in-trace actualViewport must equal requested CSS width, height and deviceScaleFactor. A matching final entry cannot excuse an earlier mismatch.",
+      "viewportValidity": "Derive finite nonnegative observedFirstPaint <= observedTraceEnd from Lighthouse audits.metrics.details.items[0]. Require the last timeline snapshot at/before first paint (the paint anchor) to match requested CSS width, height and DPR. Require at least one snapshot from first paint through trace end and EVERY snapshot in that painted window to match. Retain earlier startup snapshots without treating the prepaint layout viewport as the painted page.",
       "contentValidity": "Apply the existing controls, mock map, skeleton and desktop panel criteria to the selected in-trace readiness. Markers appearing only after the trace do not qualify.",
       "controlsTiming": "controlsReadyMs must equal the atMs of the first qualifying controls snapshot in the trace. The same poll timestamp records readiness and timing.",
-      "postCleanup": "Preserve postCleanupViewport and postCleanupReadiness separately as context. They do not determine trial eligibility or performance values."
+      "postCleanup": "Preserve postCleanupViewport and postCleanupReadiness separately as context. They do not determine trial eligibility or performance values.",
+      "boundaryMetadata": "viewportVerificationStartMs must equal raw observedFirstPaint; viewportPaintAnchorAtMs must equal the independently selected preceding anchor timestamp. Missing, invalid or inconsistent boundaries invalidate the trial.",
+      "initialSample": "Record the first snapshot synchronously inside the before-application-script observer installation, then schedule subsequent snapshots at 100ms intervals. A timer-only initial sample may miss the preceding anchor on a fast desktop paint."
     }
   },
   "comparison": {
@@ -236,7 +238,7 @@
       "43600158140",
       "43600568543"
     ],
-    "screenshot": "Require a valid Lighthouse final-screenshot with timing at or before observedTraceEnd, captured before cleanup. Preserve image bytes and source/timing/pixel dimensions/MIME provenance; no post-cleanup screenshot substitution. Save other raw artifacts before marking a missing screenshot invalid.",
+    "screenshot": "Require a valid Lighthouse final-screenshot with timing at or after observedFirstPaint and at or before observedTraceEnd, captured before cleanup. Preserve image bytes and source/timing/pixel dimensions/MIME provenance; no post-cleanup screenshot substitution. Save other raw artifacts before marking a missing screenshot invalid.",
     "retainedFixtureFailures": [
       {
         "runId": "43601663509",
@@ -245,6 +247,14 @@
         "validTrials": 0,
         "comparableMetrics": 0,
         "artifactMapSha256": "cbfb6df28b350b27bb26055afdea4374195243796af91e418b64dcf862bec50f"
+      },
+      {
+        "runId": "43603062046",
+        "attemptId": "before/mobile-01",
+        "attemptedTrials": 1,
+        "validTrials": 0,
+        "comparableMetrics": 0,
+        "artifactMapSha256": "dd2dd63e8c87488cfcb5840eb114da054649664ec3e22234edc9b11b04107bda"
       }
     ]
   },
@@ -285,6 +295,28 @@
       "reason": "The first attempt read viewport/readiness after Lighthouse cleanup and observed 780x493 DPR1 instead of requested 390x844 DPR2. Retain bounded timestamped snapshots during the trace, select the final in-trace snapshot, and require every in-trace viewport to match. The original missing-marker observation is not retroactively assumed to have been ready.",
       "screenshotPolicy": "Use only Lighthouse final-screenshot captured before cleanup. If unavailable or invalid, first retain numeric/raw artifacts, mark the trial invalid and never substitute a post-cleanup screenshot.",
       "toolingCorrection": "Allow digits in CLI option names so --artifact-map-sha256 works. This does not change metric calculations."
+    },
+    {
+      "revisedAt": "2026-11-14T14:13:20.000Z",
+      "previousProtocolSha256": "e25f17e98b2e691390a13120f853663fd239c49fc6192577a0086bf190637bf3",
+      "attemptedTrialsBeforeRevision": 2,
+      "invalidTrialsBeforeRevision": 2,
+      "validTrialsBeforeRevision": 0,
+      "comparableMetricCountBeforeRevision": 0,
+      "retainedRunId": "43603062046",
+      "retainedArtifactMapSha256": "dd2dd63e8c87488cfcb5840eb114da054649664ec3e22234edc9b11b04107bda",
+      "retainedStatus": "before/mobile-01 invalid under its frozen all-trace viewport rule; after null; never readmit either earlier failed attempt",
+      "scope": "Define viewport verification over the painted page with a preceding anchor. No source application, fixture, profile, budget, sample count or metric formula changes.",
+      "reason": "The second attempt retained a startup viewport of 980x2121 DPR2 at 690.4ms and the requested 390x844 DPR2 from 793.1ms onward; raw observedFirstPaint was 1723ms. Final timed content was ready. Verify the last snapshot at/before observedFirstPaint and every snapshot from first paint through trace end; retain all earlier startup snapshots as context.",
+      "boundary": "Derive observedFirstPaint independently from the retained Lighthouse metrics audit. Require finite nonnegative first paint <= trace end, a matching preceding anchor, and at least one matching painted-window snapshot. Do not use FCP as the later boundary or trust a self-reported start timestamp.",
+      "prePushClarification": {
+        "previousUnexecutedProtocolSha256": "ff3b511476f19902cb2c203a143584d6d7ee1ad55d916fa563e9772bbd1dbe5f",
+        "attemptsUnderThatUnexecutedRevision": 0,
+        "cumulativeAttemptedTrials": 2,
+        "cumulativeInvalidTrials": 2,
+        "cumulativeValidTrials": 0,
+        "change": "The initial observer snapshot is synchronous before application scripts; later snapshots retain the declared 100ms timer. This supplies the paint-anchor evidence for fast paints without changing viewport or eligibility thresholds."
+      }
     }
   ]
 }
