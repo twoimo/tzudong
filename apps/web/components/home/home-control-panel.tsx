@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useState, type ComponentType } from 'react';
 import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
+import { markPaintCalibrationMilestone } from '@/lib/performance/paint-calibration-milestones';
 import type { Region, Restaurant } from '@/types/restaurant';
 import type { Announcement } from '@/types/announcement';
 import type { HomeMapResultSummary } from '@/lib/home-map-result-summary';
@@ -58,14 +59,18 @@ type HomeDesktopControlPanelProps = {
 };
 
 const loadHomeDesktopControlPanel = async () => {
+    markPaintCalibrationMilestone('desktopImplementationLoadStarted');
     const mod = await import('@/components/home/home-desktop-control-panel');
+    markPaintCalibrationMilestone('desktopImplementationLoadReady');
     return mod.default as ComponentType<HomeDesktopControlPanelProps>;
 };
 
 type MobileControlOverlayProps = Omit<HomeControlPanelProps, 'viewportMode'>;
 
 const loadMobileControlOverlay = async () => {
+    markPaintCalibrationMilestone('mobileImplementationLoadStarted');
     const mod = await import('@/components/home/MobileControlOverlay');
+    markPaintCalibrationMilestone('mobileImplementationLoadReady');
     return mod.default as ComponentType<MobileControlOverlayProps>;
 };
 

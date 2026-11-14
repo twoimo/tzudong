@@ -16,6 +16,7 @@ import { resolveConfiguredSupabaseOrigin } from '@/lib/profile-avatar-url'
 import { sentryIngestionOrigin } from '@/lib/monitoring/sentry-dsn'
 import { hasSupabaseAuthCookieSessionHint } from '@/lib/supabase-auth-session-hints'
 import { OVERSEAS_MAP_RESOURCE_ORIGIN } from '@/lib/overseas-map-provider'
+import { isPaintCalibrationRequest, PAINT_CALIBRATION_REQUEST_HEADER } from '@/lib/performance/paint-calibration-request'
 
 const DEV_ADMIN_BYPASS_MODULES = new Set([
     'youtube-thumbnail-generator',
@@ -293,6 +294,10 @@ function buildCspRequestHeaders(request: NextRequest) {
     const nonce = btoa(crypto.randomUUID())
     const policy = buildContentSecurityPolicy(nonce)
     const requestHeaders = new Headers(request.headers)
+    requestHeaders.delete(PAINT_CALIBRATION_REQUEST_HEADER)
+    if (isPaintCalibrationRequest(request.nextUrl.pathname, request.nextUrl.searchParams, request.method)) {
+        requestHeaders.set(PAINT_CALIBRATION_REQUEST_HEADER, '1')
+    }
     requestHeaders.set('x-nonce', nonce)
     requestHeaders.set('Content-Security-Policy', policy)
     return { policy, requestHeaders }

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "production-paint-calibration.protocol.v1",
+  "experimentId": "production-paint-calibration-20261115",
+  "purpose": "diagnose-paint-entry-delivery-and-bounded-home-critical-path",
+  "classification": "production-browser-diagnostic-only",
+  "request": {
+    "url": "https://www.tzudong.app/?__perf=paint-calibration",
+    "pathname": "/",
+    "mode": "paint-calibration",
+    "navigationType": "navigate"
+  },
+  "windows": {
+    "primaryCutoffMs": 20000,
+    "finalCutoffMs": 30000,
+    "tailBasis": "passive-observers-only",
+    "entryMembership": "entry.startTime; delivery and checkpoint times are retained separately",
+    "noPrimaryRefillFromTail": true,
+    "visibleResultAfterFinalDisconnectOnly": true
+  },
+  "plannedVisits": {
+    "ordinals": [1, 2, 3],
+    "warmupCount": 0,
+    "freshDocumentEach": true,
+    "replacementCount": 0,
+    "retainEveryAttempt": true,
+    "stopOnAccessBlock": true,
+    "viewportReference": "first planned snapshot available in ordinal order; variation is reported, never used to select visits"
+  },
+  "frameSampling": {
+    "intervalMs": 500,
+    "maximumRequests": 40,
+    "maximumPending": 1,
+    "endAtPrimaryCheckpoint": true,
+    "interpretation": "callback opportunity only; not proof of content paint or compositor presentation"
+  },
+  "identity": {
+    "freezePlanBeforeFirstVisit": true,
+    "providerAndPublicHealthMustAgree": true,
+    "sourceShaAndTreeRequired": true,
+    "collectorSourceHashesRequired": true,
+    "sourceVerificationBasis": "operator-verified exact checkout and actual provider/public-health readbacks; recorder has no network or git access"
+  },
+  "conditions": {
+    "actualViewportEveryVisit": true,
+    "sameSourceEveryVisit": true,
+    "visibilityInputResizeAndContextChangesRetained": true,
+    "focusFalseIsContextNotARejection": true,
+    "browserCacheCpuNetworkControl": "unsupported",
+    "noCredentialsNoFormSubmissionsNoSecurityBypass": true
+  },
+  "analysis": {
+    "observerAndTimelineRemainIndependent": true,
+    "missingValue": null,
+    "timelineIsNeverObserverFcpFallback": true,
+    "signals": [
+      "observer-entry-received-by-primary-checkpoint",
+      "primary-window-entry-delivered-in-tail",
+      "tail-window-entry",
+      "paint-timeline-without-corresponding-observer-entry",
+      "no-entry-observed-in-either-source",
+      "observer-registration-or-handler-failure",
+      "entry-cap-or-unsupported-api-limits-inference",
+      "frame-callback-progress-or-stall-context",
+      "latest-card-lcp-region-evidence"
+    ],
+    "noRootCauseFromCorrelationAlone": true,
+    "noSumOfOverlappingMilestonePaths": true,
+    "noSameOrdinalPairingWithPriorSeries": true,
+    "priorSeriesRemainImmutable": true
+  },
+  "budgets": {
+    "absoluteImprovementMs": null,
+    "relativeImprovementFraction": null,
+    "noiseImprovementMs": null,
+    "improvementBudgetBasis": "not applicable: this protocol admits no improvement or regression claims",
+    "roundingToleranceMs": 1,
+    "frameProbeIntervalMs": 500,
+    "domReadinessBasis": "one primary-checkpoint state snapshot; not a readiness or paint timestamp"
+  },
+  "admission": {
+    "performanceComparisonCount": 0,
+    "fieldAdmissionCount": 0,
+    "g003AdmissionCount": 0,
+    "lighthouseAdmissionCount": 0,
+    "legacyTtiMs": null,
+    "noMobileColdCacheOrHumanPopulationClaims": true
+  },
+  "evidence": {
+    "rawDomJsonBytesRetained": true,
+    "unknownOrPrivatePayloadRejectedBeforePersistence": true,
+    "rawAndReceiptSha256RecordedAtCapture": true,
+    "writeOnceFiles": true,
+    "detachedArtifactMapHashBeforeAnalysis": true,
+    "independentPythonValidation": true,
+    "unavailableAttemptHasReceiptAndNoFabricatedSnapshot": true
+  }
+}
