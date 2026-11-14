@@ -7,6 +7,7 @@ import { chromium, expect as ui, type Browser, type Frame, type Page } from '@pl
 import { BREAKPOINTS, DESKTOP_MIN_WIDTH_QUERY, TABLET_MIN_WIDTH_QUERY } from '../lib/viewport-breakpoints';
 import { NativeViewportProbe } from './fixtures/native-viewport-probe';
 import { chromeForTestingExecutable } from './fixtures/chrome-for-testing';
+import { compileResponsiveCss } from './fixtures/responsive-css';
 
 const root = path.resolve(import.meta.dir, '..');
 const FRACTIONAL_VIEWPORT_ZOOM = 4;
@@ -232,6 +233,39 @@ test('actual hooks and route guards cover fractional iframe widths on both sides
   });
   expect(await frame.evaluate(() => (window as ProbeWindow).viewportProbe.activeListeners())).toBe(0);
 }), 15_000);
+
+test('compiled home readiness CSS agrees with the device hook through fractional desktop boundaries', async () => run(1440, 1600, async page => {
+  const frame = await createFractionalViewport(page, 767.75, 1000);
+  await frame.addStyleTag({ content: await compileResponsiveCss(['globals.css', 'home-app-globals.css']) });
+  await frame.evaluate(() => {
+    // Sentinels isolate the readiness/search rules; the actual viewport hook
+    // remains mounted alongside them in this verified fractional CSS viewport.
+    const skeleton = document.createElement('div');
+    skeleton.id = 'home-readiness-skeleton';
+    skeleton.setAttribute('data-home-static-skeleton', 'true');
+    const badge = document.createElement('div');
+    badge.id = 'home-search-status';
+    badge.className = 'mobile-map-status-badge';
+    document.body.append(skeleton, badge);
+  });
+  for (const width of [767.75, 768, 1279, 1279.25, 1279.75, 1280, 1280.25, 1279.75]) {
+    await resizeIframe(page, width);
+    await expectViewport(frame, width >= 1280 ? 'desktop' : width >= 768 ? 'tablet' : 'mobile', width > 1000);
+    await frame.evaluate(() => {
+      document.documentElement.removeAttribute('data-home-mobile-chrome-ready');
+      document.documentElement.removeAttribute('data-mobile-search-open');
+    });
+    await ui(frame.locator('#home-readiness-skeleton')).toHaveCSS('display', 'block');
+    await ui(frame.locator('#home-search-status')).toHaveCSS('display', 'block');
+    await frame.evaluate(() => {
+      document.documentElement.setAttribute('data-home-mobile-chrome-ready', 'true');
+      document.documentElement.setAttribute('data-mobile-search-open', '');
+    });
+    const expectedDisplay = width < 1280 ? 'none' : 'block';
+    await ui(frame.locator('#home-readiness-skeleton')).toHaveCSS('display', expectedDisplay);
+    await ui(frame.locator('#home-search-status')).toHaveCSS('display', expectedDisplay);
+  }
+}), 20_000);
 
 test('touch capability and immediate mobile modal selection survive initial hydration', async () => run(820, 1180, async page => {
   await expectViewport(page, 'tablet', false, true);

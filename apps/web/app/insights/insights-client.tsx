@@ -425,6 +425,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     const chartAreaRef = useRef<HTMLDivElement>(null);
     const tileNavigatorRef = useRef<HTMLButtonElement>(null);
     const treemapHelpRef = useRef<HTMLButtonElement>(null);
+    const treemapHelpPanelRef = useRef<HTMLDivElement>(null);
     const tileDetailPanelRef = useRef<HTMLDivElement>(null);
     const treemapQuery = useQuery({
         queryKey: ['insight-treemap', viewMode, period, metricMode],
@@ -964,8 +965,8 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                     onBlur={(event) => {
                         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) insightsCardHadFocusRef.current = false;
                     }}
-                    className="overflow-hidden border border-border h-full flex flex-col min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                    <div className="border-b border-border p-3 md:p-4 space-y-3">
+                    className="overflow-x-hidden overflow-y-auto border border-border h-full flex flex-col min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                    <div className="shrink-0 border-b border-border p-3 md:p-4 space-y-3">
                         <div className="flex min-w-0 items-center justify-between gap-3">
                             <div className="flex min-w-0 items-baseline gap-3">
                                 <h2 className="truncate text-base font-semibold tracking-tight">영상 성과 인사이트</h2>
@@ -986,7 +987,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 </PopoverTrigger>
                                 <PopoverContent
                                     ref={tileDetailPanelRef} aria-label={selectedTile ? `영상 상세: ${selectedTile.title}` : '영상 상세'}
-                                    side="bottom" align="end" className="w-80 max-w-[calc(100vw-1rem)] space-y-2 p-3 text-sm"
+                                    side="bottom" align="end" className="w-80 max-w-[calc(100vw-1rem)] max-h-[min(calc(100dvh-1rem),var(--radix-popover-content-available-height))] overflow-y-auto space-y-2 p-3 text-sm"
                                     onOpenAutoFocus={(event) => { event.preventDefault(); tileDetailPanelRef.current?.focus(); }}
                                     onCloseAutoFocus={(event) => {
                                         if (tileNavigatorRef.current?.disabled && treemapHelpRef.current?.isConnected) {
@@ -1046,7 +1047,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                     <span>{viewMode === 'change' ? '증감률 색상 분류 미사용' : '가장 큰 값 강조'}</span>
                                     <Popover>
                                         <PopoverTrigger asChild><Button ref={treemapHelpRef} type="button" size="icon" variant="ghost" className="h-11 w-11" aria-label="트리맵 읽는 법"><Info className="h-4 w-4" aria-hidden="true" /></Button></PopoverTrigger>
-                                        <PopoverContent aria-label="트리맵 읽는 법" side="bottom" align="end" className="w-72 max-w-[calc(100vw-1rem)] p-3 text-sm" onOpenAutoFocus={(event) => event.preventDefault()}>
+                                        <PopoverContent ref={treemapHelpPanelRef} aria-label="트리맵 읽는 법" side="bottom" align="end" className="w-72 max-w-[calc(100vw-1rem)] max-h-[min(calc(100dvh-1rem),var(--radix-popover-content-available-height))] overflow-y-auto p-3 text-sm" onOpenAutoFocus={(event) => { event.preventDefault(); treemapHelpPanelRef.current?.focus(); }}>
                                             <p>{treemapLegendText}</p><p className="mt-2">{treemapSmallCellGuidance}</p>
                                         </PopoverContent>
                                     </Popover>
@@ -1063,8 +1064,10 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
 
                     <CardContent
                         ref={chartAreaRef}
-                        className="p-0 flex-1 min-h-0 overflow-hidden"
-                        style={{ minHeight: 0, minWidth: 0 }}
+                        className="p-0 flex-1 shrink-0 overflow-hidden"
+                        // Preserve a readable chart; the card scrolls when its
+                        // controls and this minimum exceed the available panel.
+                        style={{ minHeight: chartConstraints.minHeight, minWidth: 0 }}
                     >
                         <div className="relative h-full w-full" style={{ minHeight: chartConstraints.minHeight }} aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance">
                             {chartRows.length === 0 ? (

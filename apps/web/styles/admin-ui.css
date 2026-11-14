@@ -381,7 +381,7 @@
 
 /* Slotline-inspired workspace density: one heading/toolbar, explicit data boundaries.
    These administrator-only rules intentionally follow the shared geometry layer. */
-[data-admin-console-shell="true"] { --admin-sidebar-expanded-width: 12rem; --admin-sidebar-expanded-max-width: 12rem; }
+[data-admin-console-shell="true"] { --admin-sidebar-expanded-width: 12rem; --admin-sidebar-expanded-max-width: 12rem; --admin-mobile-header-height: 48px; }
 [data-admin-console-content="true"] { padding: var(--admin-space-2); }
 [data-admin-sidebar-scroll="hidden-scrollbar"] { padding: var(--admin-space-2); border-right: 1px solid hsl(var(--border)); }
 [data-admin-sidebar-header="true"] { min-height: 40px; margin-bottom: 8px; padding-bottom: 8px; background: transparent; }
@@ -429,7 +429,7 @@
 }
 @media (max-width: 767px) {
   [data-admin-console-content="true"] { padding: 4px 8px; }
-  [data-admin-console-mobile-header="true"] { height: 48px; border-bottom: 1px solid hsl(var(--border)); padding: 0 8px; }
+  [data-admin-console-mobile-header="true"] { height: var(--admin-mobile-header-height, 48px); border-bottom: 1px solid hsl(var(--border)); padding: 0 8px; }
   /* The menu bar already names the current module. Retain the semantic heading,
      without repeating the same title in another visible row. */
   [data-admin-console-shell="true"] .admin-page-header-title-group { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

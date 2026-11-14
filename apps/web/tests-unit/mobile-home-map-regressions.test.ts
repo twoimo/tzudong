@@ -30,6 +30,120 @@ const makeRestaurant = (id: string, name: string): Restaurant =>
         lng: 126.978,
     }) as Restaurant;
 
+type MapPadding = { top: number; bottom: number; left: number; right: number } | undefined;
+const mapContainerSource = ts.createSourceFile('home-map-container.tsx',
+    source('components/home/home-map-container.tsx'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+function mapViewportExpression(kind: 'padding' | 'resize') {
+    let expression: ts.Expression | undefined;
+    const visit = (node: ts.Node) => {
+        if (kind === 'padding' && ts.isVariableDeclaration(node)
+            && node.name.getText(mapContainerSource) === 'mapPadding') expression = node.initializer;
+        if (kind === 'resize' && ts.isCallExpression(node) && node.expression.getText(mapContainerSource) === 'useEffect'
+            && node.arguments[0]?.getText(mapContainerSource).includes('setViewportHeight(viewport.height)')) {
+            expression = node.arguments[0];
+        }
+        ts.forEachChild(node, visit);
+    };
+    visit(mapContainerSource);
+    if (!expression) throw new Error(`HOME_MAP_${kind.toUpperCase()}_EXPRESSION_MISSING`);
+    return ts.transpileModule(`(${expression.getText(mapContainerSource)})`, {
+        compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+}
+
+function mapPaddingHarness() {
+    const code = mapViewportExpression('padding');
+    let dependencies: unknown[] | undefined;
+    let cached: MapPadding;
+    let calculations = 0;
+    const state = {
+        isPanelOpen: true, isMapFullscreen: false, isDesktop: false,
+        renderDesktopDetailPanel: true, sheetHeight: 50, viewportHeight: 844,
+    };
+    return {
+        calculations: () => calculations,
+        render(overrides: Partial<typeof state> = {}, layoutHeight = 844): MapPadding {
+            Object.assign(state, overrides);
+            // Execute the production callback AND its dependency array. Retain
+            // the memo across renders so a missing resize dependency fails.
+            return vm.runInNewContext(code, {
+                ...state,
+                window: { innerHeight: layoutHeight },
+                useMemo: (calculate: () => MapPadding, next: unknown[]) => {
+                    if (!dependencies || next.some((value, index) => !Object.is(value, dependencies![index]))) {
+                        cached = calculate();
+                        calculations++;
+                        dependencies = [...next];
+                    }
+                    return cached;
+                },
+            }) as MapPadding;
+        },
+    };
+}
+
+describe('overseas map padding follows the rendered detail sheet viewport', () => {
+    test('the actual resize effect refreshes memoized padding without changing the sheet percentage', () => {
+        const map = mapPaddingHarness();
+        expect(map.render()?.bottom).toBe(422);
+        const listeners = new Map<string, () => void>();
+        const viewport = {
+            height: 844,
+            addEventListener: (type: string, listener: () => void) => listeners.set(type, listener),
+            removeEventListener: (type: string) => listeners.delete(type),
+        };
+        const viewportHeightRef = { current: 844 };
+        let viewportHeight = 844;
+        let sheetHeight = 50;
+        let renderFrame: (() => void) | undefined;
+        const mount = vm.runInNewContext(mapViewportExpression('resize'), {
+            window: { visualViewport: viewport },
+            viewportHeightRef,
+            isDraggingRef: { current: false },
+            setViewportHeight: (value: number) => { viewportHeight = value; },
+            setSheetHeight: (update: (current: number) => number) => { sheetHeight = update(sheetHeight); },
+            getCurrentMaxHeight: () => 100,
+            PEEK_SHEET_HEIGHT: 25,
+            requestAnimationFrame: (callback: () => void) => { renderFrame = callback; return 1; },
+            cancelAnimationFrame: () => {},
+        }) as () => () => void;
+        const cleanup = mount();
+        viewport.height = 390;
+        listeners.get('resize')!();
+        expect(viewportHeight).toBe(844);
+        renderFrame!();
+        expect(viewportHeightRef.current).toBe(390);
+        expect(sheetHeight).toBe(50);
+        expect(map.render({ viewportHeight, sheetHeight }, 390)?.bottom).toBe(195);
+        expect(map.calculations()).toBe(2);
+        cleanup();
+        expect(listeners.size).toBe(0);
+    });
+
+    test('visual viewport height stays authoritative when the layout viewport is taller', () => {
+        const map = mapPaddingHarness();
+        expect(map.render({ viewportHeight: 500 }, 844)?.bottom).toBe(250);
+        expect(map.render({}, 936)?.bottom).toBe(250);
+        expect(map.calculations()).toBe(1);
+    });
+
+    test('desktop offsets, fullscreen, and closed-panel behavior remain unchanged', () => {
+        const map = mapPaddingHarness();
+        expect(map.render({ isDesktop: true })).toEqual({ top: 0, bottom: 0, left: 0, right: 400 });
+        expect(map.render({ renderDesktopDetailPanel: false })).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+        expect(map.render({ isMapFullscreen: true })).toBeUndefined();
+        expect(map.render({ isMapFullscreen: false, isPanelOpen: false })).toBeUndefined();
+    });
+
+    test('sheet padding keeps the existing percentage bounds', () => {
+        const map = mapPaddingHarness();
+        expect(map.render({ sheetHeight: -10 })?.bottom).toBe(0);
+        expect(map.render({ sheetHeight: 150 })?.bottom).toBe(844);
+        expect(map.render({ sheetHeight: 25 })?.bottom).toBe(211);
+    });
+});
+
 describe('mobile home map regression guards', () => {
     test('search-selected restaurant can still swipe to a different visible restaurant', () => {
         const searchedRestaurant = makeRestaurant('search-selected', '정원분식');

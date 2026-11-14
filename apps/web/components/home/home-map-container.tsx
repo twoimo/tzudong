@@ -1357,9 +1357,8 @@ function HomeMapContainerComponent({
         // Mobile: 바텀시트 높이만큼 bottom padding을 동적으로 적용하여
         // 남은 지도 영역의 중앙에 마커가 오도록 보정
         const clampedSheetHeight = Math.max(0, Math.min(100, sheetHeight));
-        const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-        return { top: 0, bottom: vh * (clampedSheetHeight / 100), left: 0, right: 0 };
-    }, [isMapFullscreen, isPanelOpen, isDesktop, renderDesktopDetailPanel, sheetHeight]);
+        return { top: 0, bottom: viewportHeight * (clampedSheetHeight / 100), left: 0, right: 0 };
+    }, [isMapFullscreen, isPanelOpen, isDesktop, renderDesktopDetailPanel, sheetHeight, viewportHeight]);
     const shouldExposeDetailPanelToMap = isMobileOrTablet
         ? isPanelOpen
         : (renderDesktopDetailPanel && isPanelOpen);
