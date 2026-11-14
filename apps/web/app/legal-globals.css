@@ -1,0 +1,9 @@
+@config "../tailwind.config.ts";
+
+@import "tailwindcss" source(none);
+@source "./privacy/page.tsx";
+@source "./data-deletion/page.tsx";
+@source "../components/legal";
+@source "../components/layout/page-heading-styles.ts";
+
+/* Public documents own their utilities without loading the signed-in app shell. */

@@ -93,6 +93,8 @@ const CSS_OWNERS = [
   'app/app-globals.css',
   'app/home-deferred-globals.css',
   'app/home-detail-globals.css',
+  'app/home-interactive-globals.css',
+  'app/legal-globals.css',
 ] as const;
 
 const CSS_IMPORTERS = {
@@ -114,6 +116,16 @@ const CSS_IMPORTERS = {
     needle: "import '@/app/home-detail-globals.css'",
   },
 } as const;
+
+const INTERACTIVE_CSS_IMPORTERS = [
+  'components/auth/AuthModal.tsx',
+  'components/profile/ProfileModal.tsx',
+  'components/profile/NicknameSetupModal.tsx',
+  'components/profile/UserProfilePanel.tsx',
+  'components/overlay-pages/FeedOverlay.tsx',
+  'components/overlay-pages/StampOverlay.tsx',
+  'components/overlay-pages/LeaderboardOverlay.tsx',
+] as const;
 
 const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
   'app/home-app-globals.css': [
@@ -162,6 +174,28 @@ const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
     '@source "../components/home/map-panel-chrome.tsx";',
     '@source not "../**/*.test.*";',
     '@source not "../tests-unit";',
+  ],
+  'app/home-interactive-globals.css': [
+    '@source "../components/auth";',
+    '@source "../components/profile";',
+    '@source "../components/overlay-pages";',
+    '@source "../components/feed";',
+    '@source "../components/stamp";',
+    '@source "../components/leaderboard";',
+    '@source "../components/reviews";',
+    '@source "../components/legal";',
+    '@source "../components/ui";',
+    '@source "../components/home/map-panel-chrome.tsx";',
+    '@source "../components/layout/page-heading-styles.ts";',
+    '@source "../hooks/useUserProfile.ts";',
+    '@source not "../**/*.{test,spec}.{js,jsx,ts,tsx}";',
+    '@source not "../{tests-unit,test,tests,fixtures}/**";',
+  ],
+  'app/legal-globals.css': [
+    '@source "./privacy/page.tsx";',
+    '@source "./data-deletion/page.tsx";',
+    '@source "../components/legal";',
+    '@source "../components/layout/page-heading-styles.ts";',
   ],
 };
 
@@ -369,12 +403,18 @@ describe('public surface design contract', () => {
     expect(readApp('app/s/layout.tsx')).toContain('AppRuntimeLayout');
   });
 
-  test('pins all five CSS owner-to-importer mappings and forbids a sixth Tailwind entry', () => {
+  test('pins CSS owners to their shells, deferred surfaces and public documents', () => {
     const cssFiles = walkCssUnder(appDir);
     expect(cssFiles).toEqual([...CSS_OWNERS].sort());
 
     for (const [owner, { importer, needle }] of Object.entries(CSS_IMPORTERS)) {
       expect(readApp(importer)).toContain(needle);
+    }
+    for (const importer of INTERACTIVE_CSS_IMPORTERS) {
+      expect(readApp(importer)).toMatch(/import ['"]@\/app\/home-interactive-globals\.css['"]/);
+    }
+    for (const importer of ['app/privacy/page.tsx', 'app/data-deletion/page.tsx']) {
+      expect(readApp(importer)).toContain("import '../legal-globals.css'");
     }
 
     const shellSources = [
@@ -384,6 +424,8 @@ describe('public surface design contract', () => {
     ].join('\n');
     expect(shellSources).not.toContain('home-deferred-globals.css');
     expect(shellSources).not.toContain('home-detail-globals.css');
+    expect(shellSources).not.toContain('home-interactive-globals.css');
+    expect(shellSources).not.toContain('legal-globals.css');
 
     expect(readApp('app/globals.css')).not.toContain('@import "tailwindcss"');
     expect(readApp('app/globals.css')).not.toMatch(/^@source /m);
@@ -392,7 +434,7 @@ describe('public surface design contract', () => {
     for (const owner of tailwindOwners) {
       expect(readApp(owner)).toContain('@import "tailwindcss" source(none);');
     }
-    expect(tailwindOwners).toHaveLength(4);
+    expect(tailwindOwners).toHaveLength(6);
 
     const allCss = walkCssUnder(appRoot);
     const extraTailwind = allCss.filter((relativePath) => {

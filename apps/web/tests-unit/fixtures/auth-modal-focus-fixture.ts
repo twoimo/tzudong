@@ -5,7 +5,8 @@ const root = join(import.meta.dir, "../..");
 export async function buildAuthModalFocusFixture(keepMounted: boolean, policyRetrySucceeds = false) {
   const mocks: Record<string, string> = {
     "next/image": "import React from 'react';export default function Image({unoptimized,fill,priority,...props}){return <img {...props}/>;}",
-    "@/hooks/useDeviceType": "export const useImmediateMobileOrTablet=()=>false;export const useIsMobile=()=>false;",
+    // Browser geometry tests load the separately compiled route CSS owners.
+    "@/app/home-interactive-globals.css": "export {};",
     "@/integrations/supabase/client": "export const supabase={auth:{}};export const getSupabaseBrowserClient=()=>supabase;export const commitSupabaseBrowserSession=async()=>{throw new Error('FIXTURE_AUTH_WRITES_FORBIDDEN')};",
     "@/lib/no-toast": "export const toast={success(){},error(){},info(){}};",
   };

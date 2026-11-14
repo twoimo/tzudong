@@ -1,0 +1,20 @@
+@config "../tailwind.config.ts";
+
+@import "tailwindcss" source(none);
+@source "../components/auth";
+@source "../components/profile";
+@source "../components/overlay-pages";
+@source "../components/feed";
+@source "../components/stamp";
+@source "../components/leaderboard";
+@source "../components/reviews";
+@source "../components/legal";
+@source "../components/ui";
+@source "../components/home/map-panel-chrome.tsx";
+@source "../components/layout/page-heading-styles.ts";
+@source "../hooks/useUserProfile.ts";
+@source not "../**/*.{test,spec}.{js,jsx,ts,tsx}";
+@source not "../{tests-unit,test,tests,fixtures}/**";
+
+/* Loaded by the deferred panels and session dialogs themselves. Their first
+   render must not depend on a restaurant detail or another route loading CSS. */

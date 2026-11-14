@@ -12,7 +12,9 @@ const DialogPortal = DialogPrimitive.Portal;
 
 const DialogClose = DialogPrimitive.Close;
 
-type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>;
+type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+  overlayClassName?: string;
+};
 type PointerDownOutsideEvent = Parameters<NonNullable<DialogContentProps['onPointerDownOutside']>>[0];
 type InteractOutsideEvent = Parameters<NonNullable<DialogContentProps['onInteractOutside']>>[0];
 
@@ -21,6 +23,7 @@ const DialogOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
+    data-slot="dialog-overlay"
     ref={ref}
     className={cn(
       "fixed inset-0 z-[100] bg-black/80",
@@ -34,7 +37,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, onPointerDownOutside, onInteractOutside, ...props }, ref) => {
+>(({ className, overlayClassName, children, onPointerDownOutside, onInteractOutside, ...props }, ref) => {
   // 광고 팝업 등 높은 z-index 요소에서 발생한 이벤트인지 확인
   const handlePointerDownOutside = React.useCallback(
     (event: PointerDownOutsideEvent) => {
@@ -69,7 +72,7 @@ const DialogContent = React.forwardRef<
 
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         ref={ref}

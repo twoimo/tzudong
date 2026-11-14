@@ -1246,6 +1246,7 @@ export default function HomeDesktopControlPanel({
       const next = new URLSearchParams(searchParams.toString());
       next.delete("panel");
       next.delete("user");
+      next.delete("review");
       const query = next.toString();
       router.replace(query ? `/?${query}` : "/", { scroll: false });
     }

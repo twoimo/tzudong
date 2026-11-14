@@ -1,5 +1,7 @@
 'use client';
 
+import '@/app/home-interactive-globals.css';
+
 import FeedContent from '@/components/feed/FeedContent';
 import type { Restaurant } from '@/types/restaurant';
 

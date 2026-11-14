@@ -693,7 +693,7 @@ export default function FeedContent({
                 <div className={cn(
                     "flex-1",
                     !hideFloatingButton && !isOverlay
-                        ? "pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+5.5rem)] md:pb-28"
+                        ? "pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+5.5rem)] xl:pb-28"
                         : "pb-8",
                     isOverlay && "overflow-y-auto"
                 )}>
@@ -784,7 +784,7 @@ export default function FeedContent({
                             onClick={handleWriteReview}
                             className={cn(
                                 "h-14 w-14 rounded-full shadow-sm bg-primary text-primary-foreground hover:bg-primary/90",
-                                "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
+                                "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 xl:bottom-8"
                             )}
                             size="icon"
                             aria-label="리뷰 작성"

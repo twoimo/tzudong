@@ -92,12 +92,16 @@ html[data-local-workspace="true"] [data-local-workspace-app="true"] {
   transform: translateZ(0);
 }
 
-/* Legal documents use the document scroll, including inside the local shell. */
+/* Legal documents keep document scrolling even after an app route has loaded
+   its fixed-height body styles, including inside the local shell. */
+html:has([data-legal-page="true"]) body,
 html[data-local-workspace="true"]:has([data-legal-page="true"]) body {
   height: auto;
   overflow-y: auto;
 }
 
+[data-local-workspace-app="true"]:has([data-legal-page="true"]),
+/* Outrank the local fixed-height shell even when home CSS loads after root CSS. */
 html[data-local-workspace="true"] [data-local-workspace-app="true"]:has([data-legal-page="true"]) {
   flex: 0 0 auto;
   min-height: var(--full-height, 100vh);
@@ -138,13 +142,19 @@ body:has([data-legal-page="true"]) {
   overflow-x: hidden;
 }
 
-[data-legal-page="true"],
-[data-legal-page="true"] article,
-[data-legal-page="true"] .font-mono {
-  max-width: 100%;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: break-all;
+@layer base {
+  /* Utilities such as max-w-3xl must win over this defensive width cap. */
+  [data-legal-page="true"],
+  [data-legal-page="true"] article,
+  [data-legal-page="true"] .font-mono {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  [data-legal-page="true"] .font-mono {
+    word-break: break-all;
+  }
 }
 
 [data-centered-error-state="viewport"] {
