@@ -404,7 +404,7 @@ async function deploymentReadback(sourceSha, deploymentId) {
   let response;
   try { response = await fetch(CANONICAL + 'api/health', { redirect: 'error', signal: AbortSignal.timeout(15_000) }); }
   catch { throw fixedError('HEALTH_READBACK_UNAVAILABLE'); }
-  if (!response.ok) throw fixedError('HEALTH_READBACK_HTTP_ERROR');
+  if (!response.ok) throw fixedError('HEALTH_READBACK_HTTP_' + response.status);
   const contentLength = Number(response.headers.get('content-length') ?? 0);
   if (contentLength > 65_536) throw fixedError('HEALTH_READBACK_SIZE_LIMIT');
   const text = await response.text();
@@ -632,7 +632,7 @@ async function readPublicJson(url, { allowMissing = false } = {}) {
       headers: { Accept: 'application/json', 'User-Agent': 'tzudong-public-performance-audit' } });
   } catch { throw fixedError('PUBLIC_READBACK_UNAVAILABLE'); }
   if (allowMissing && response.status === 404) return null;
-  if (!response.ok) throw fixedError('PUBLIC_READBACK_HTTP_ERROR');
+  if (!response.ok) throw fixedError('PUBLIC_READBACK_HTTP_' + response.status);
   if (Number(response.headers.get('content-length') ?? 0) > 131_072) throw fixedError('PUBLIC_READBACK_SIZE_LIMIT');
   const text = await response.text();
   if (text.length > 131_072) throw fixedError('PUBLIC_READBACK_SIZE_LIMIT');
