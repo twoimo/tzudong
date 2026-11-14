@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { loadPinnedPlaywright } from '../../../../../.github/scripts/ensure-ci-chromium.mjs';
-import { FAILURE_CODES, MAX_RECEIPT_BYTES, PINS, PROFILES, RECEIPT_VERSION, SERIALIZATION_FAILURES, THROTTLING,
+import { FAILURE_CODES, FAILURE_TEXT_LIMIT, INITIALIZATION_STAGES, MAX_RECEIPT_BYTES, PINS, PROFILES,
+  RECEIPT_VERSION, SERIALIZATION_FAILURES, THROTTLING,
   allowedFixtureRequest, assertReceiptPrivacy, minimalFailureReceipt, numeric, parseArguments, parseStrictJson,
   profileProblems, projectTrace, receiptProblems, sha256, sha256Bytes, sourceDigestProblems, verifyReceiptBytes } from './evidence.mjs';
 
@@ -45,6 +46,58 @@ export function createWorkGate() {
       }
       return result;
     },
+  };
+}
+
+// Classify explicit indicators only. Do not retain, encode, hash or print an
+// exception's text/stack/paths. Truncated or unrecognized information is unknown;
+// a generic target closure is never evidence of sandbox or permission denial.
+export function initializationFailureKind(error, stage) {
+  try {
+    const name = error?.name; const code = error?.code; const safeCode = error?.safeCode;
+    const rawMessage = error?.message;
+    const message = typeof rawMessage === 'string' ? rawMessage.slice(0, FAILURE_TEXT_LIMIT) : '';
+    if (stage === 'context-launch' && (message.includes('No usable sandbox!')
+      || message.includes('Running as root without --no-sandbox is not supported')
+      || message.includes('Chromium sandboxing failed!'))) return 'explicit-sandbox-denial';
+    if (code === 'EACCES' || code === 'EPERM'
+      || (stage === 'context-launch' && message.split('\n').some(line =>
+        line.includes('Failed to move to new namespace:') && line.includes('Operation not permitted')))) {
+      return 'explicit-permission-denial';
+    }
+    if (name === 'TimeoutError' || ['LOCAL_PROFILE_TIMEOUT', 'BROWSER_CLOSE_TIMEOUT',
+      'CDP_DISCONNECT_TIMEOUT', 'PROFILE_WORK_DRAIN_TIMEOUT'].includes(safeCode)) return 'timeout';
+    if (name === 'TargetClosedError' || message.includes('Target page, context or browser has been closed')) return 'target-closed';
+    const method = stage === 'command-line-read' ? 'Browser.getBrowserCommandLine' : stage === 'version-read' ? 'Browser.getVersion' : null;
+    if (method && message.includes(`Protocol error (${method}): '${method}' wasn't found`)) return 'protocol-method-unavailable';
+  } catch { /* Exceptional property access is unclassified; never expose it. */ }
+  return 'unknown';
+}
+
+// This records progress; createWorkGate still owns cancellation/disposal.
+// Once failure or completion is sealed, late work and cleanup cannot rewrite it.
+export function createInitializationTrace() {
+  const state = { failureStage: null, lastCompletedStage: null, contextReturned: false, failureKind: null };
+  let active = 'context-launch'; let sealed = false;
+  const begin = stage => {
+    if (!INITIALIZATION_STAGES.includes(stage)) throw FAIL('LOCAL_PREFLIGHT_FAILED');
+    if (!sealed) active = stage;
+  };
+  const complete = (stage, result) => {
+    if (!INITIALIZATION_STAGES.includes(stage)) throw FAIL('LOCAL_PREFLIGHT_FAILED');
+    if (sealed) return;
+    state.lastCompletedStage = stage;
+    if (stage === 'context-launch') state.contextReturned = result !== null && typeof result === 'object';
+  };
+  return { state, begin, complete,
+    async step(stage, action) { begin(stage); const result = await action(); complete(stage, result); return result; },
+    sync(stage, action) { begin(stage); const result = action(); complete(stage, result); return result; },
+    fail(error) {
+      if (sealed) return;
+      state.failureStage = active; state.failureKind = initializationFailureKind(error, active);
+      sealed = true; Object.freeze(state);
+    },
+    seal() { sealed = true; Object.freeze(state); },
   };
 }
 
@@ -189,7 +242,9 @@ async function ownedFixture() {
 }
 
 async function localProfile(tools, fixture, profile) {
+  const initialization = createInitializationTrace();
   const row = { id: profile.id, status: 'failed', failureCodes: [], freshOwnedProfile: false, profileCleaned: false,
+    initialization: initialization.state,
     launch: null, controls: null, requests: { blockedHttp: 0, blockedWebSocket: 0, failed: 0,
       documentStatus: null, documentCount: 0, heroCount: 0, cachedResponseCount: 0 },
     observation: null, lighthouse: null, trace: null, screenshot: null };
@@ -201,33 +256,42 @@ async function localProfile(tools, fixture, profile) {
   const disconnect = value => bounded(Promise.resolve().then(() => value.disconnect()), 3000, 'CDP_DISCONNECT_TIMEOUT');
   try {
     work = (async () => {
-      context = await gate.acquire(() => tools.playwright.chromium.launchPersistentContext(profileDir, {
+      context = await initialization.step('context-launch', () => gate.acquire(() => tools.playwright.chromium.launchPersistentContext(profileDir, {
         executablePath: tools.executable, headless: true, chromiumSandbox: true,
         args: ['--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0'],
         viewport: { width: profile.width, height: profile.height }, deviceScaleFactor: profile.dpr,
         isMobile: false, hasTouch: false, serviceWorkers: 'block', timeout: 15000,
         env: Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'XDG_RUNTIME_DIR']
           .filter(key => process.env[key]).map(key => [key, process.env[key]])),
-      }), closeContext);
-      await step(() => context.route('**/*', async route => {
+      }), closeContext));
+      await initialization.step('http-route', () => step(() => context.route('**/*', async route => {
         const request = route.request();
         if (allowedFixtureRequest(request.url(), request.method(), fixture.origin)) await route.continue();
         else { row.requests.blockedHttp++; await route.abort('blockedbyclient'); }
-      }));
-      await step(() => context.routeWebSocket('**/*', socket => { row.requests.blockedWebSocket++; socket.close(); }));
-      await step(() => context.addInitScript(installObservation));
-      const pages = context.pages(); if (pages.length !== 1) throw FAIL('BROWSER_TARGET_AMBIGUOUS');
-      const page = pages[0]; await step(() => page.bringToFront());
-      const cdp = await step(() => context.newCDPSession(page));
-      const args = (await step(() => cdp.send('Browser.getBrowserCommandLine'))).arguments;
-      if (!Array.isArray(args)) throw FAIL('BROWSER_ARGUMENTS_UNAVAILABLE');
-      const version = await step(() => cdp.send('Browser.getVersion'));
-      const disabling = args.some(value => ['--no-sandbox', '--disable-setuid-sandbox'].includes(value));
-      row.launch = { chromiumSandboxRequested: true, disableSandboxFlagObserved: disabling,
-        automationFlagObserved: args.includes('--enable-automation'),
-        versionVerified: [`Chrome/${PINS.chrome}`, `HeadlessChrome/${PINS.chrome}`].includes(version.product),
-        mobileLayoutRequested: false, hasTouch: false };
-      if (disabling || !row.launch.automationFlagObserved || !row.launch.versionVerified) throw FAIL('BROWSER_POLICY_UNVERIFIED');
+      })));
+      await initialization.step('websocket-route', () => step(() => context.routeWebSocket('**/*', socket => { row.requests.blockedWebSocket++; socket.close(); })));
+      await initialization.step('init-script', () => step(() => context.addInitScript(installObservation)));
+      const page = initialization.sync('target-selection', () => {
+        const pages = context.pages(); if (pages.length !== 1) throw FAIL('BROWSER_TARGET_AMBIGUOUS');
+        return pages[0];
+      });
+      await initialization.step('foreground-request', () => step(() => page.bringToFront()));
+      const cdp = await initialization.step('cdp-session', () => step(() => context.newCDPSession(page)));
+      const args = await initialization.step('command-line-read', async () => {
+        const values = (await step(() => cdp.send('Browser.getBrowserCommandLine'))).arguments;
+        if (!Array.isArray(values)) throw FAIL('BROWSER_ARGUMENTS_UNAVAILABLE');
+        return values;
+      });
+      const version = await initialization.step('version-read', () => step(() => cdp.send('Browser.getVersion')));
+      initialization.sync('launch-policy-check', () => {
+        const disabling = args.some(value => ['--no-sandbox', '--disable-setuid-sandbox'].includes(value));
+        row.launch = { chromiumSandboxRequested: true, disableSandboxFlagObserved: disabling,
+          automationFlagObserved: args.includes('--enable-automation'),
+          versionVerified: [`Chrome/${PINS.chrome}`, `HeadlessChrome/${PINS.chrome}`].includes(version.product),
+          mobileLayoutRequested: false, hasTouch: false };
+        if (disabling || !row.launch.automationFlagObserved || !row.launch.versionVerified) throw FAIL('BROWSER_POLICY_UNVERIFIED');
+      });
+      initialization.begin('post-initialization');
       const control = row.controls = { cpuSlowdownRequested: THROTTLING.cpuSlowdownMultiplier,
         latencyMsRequested: THROTTLING.requestLatencyMs,
         downloadBytesPerSecondRequested: Math.floor(THROTTLING.downloadThroughputKbps * 1024 / 8),
@@ -293,10 +357,12 @@ async function localProfile(tools, fixture, profile) {
       const image = Buffer.from(match[1], 'base64'); const metadata = await step(() => tools.sharp(image).metadata());
       row.screenshot = { source: 'lighthouse-final-screenshot', bytes: image.length, sha256Bytes: sha256Bytes(image),
         timingMs: numeric(screenshot.timing), width: numeric(metadata.width), height: numeric(metadata.height) };
+      initialization.complete('post-initialization');
     })();
     await bounded(work, 55000, 'LOCAL_PROFILE_TIMEOUT', gate.expire);
-  } catch (error) { gate.expire(); row.failureCodes.push(errorCode(error)); }
+  } catch (error) { gate.expire(); initialization.fail(error); row.failureCodes.push(errorCode(error)); }
   finally {
+    initialization.seal();
     gate.expire();
     if (puppet) { try { await disconnect(puppet); } catch { row.failureCodes.push('CDP_DISCONNECT_FAILED'); } }
     if (context) {

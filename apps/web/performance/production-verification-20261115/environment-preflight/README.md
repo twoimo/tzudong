@@ -1,6 +1,6 @@
 # Local measurement capability preflight
 
-This is a reusable **synthetic localhost capability kit**. It is not a production performance collector, a replacement for a failed measurement, or proof that a suitable production environment has been secured. The first v1 CI attempt is retained as failed; it produced a zero-byte receipt. The v2 persistence repair described below has only pure software tests until a separate permitted runtime attempt is recorded.
+This is a reusable **synthetic localhost capability kit**. It is not a production performance collector, a replacement for a failed measurement, or proof that a suitable production environment has been secured. The first v1 CI attempt is retained as failed with a zero-byte receipt; v2 retained a nonempty failed receipt. The current v3 adds bounded initialization diagnosis and has only pure software tests until a separate permitted runtime attempt is recorded.
 
 ## Scope and existing blockers
 
@@ -60,17 +60,43 @@ Requested/acknowledged CPU or network controls are not empirical proof of a phys
 
 Browser version, launch, sandbox, endpoint, observer, paint, coverage, cleanup or trace failures retain a failed outcome. Work is deadline-gated; late resource acquisitions are disposed, disconnect/close are bounded, and pending work is joined or recorded as a failed drain before publishing a row. A failed close, failed late disposal, or failed drain never claims profile cleanup and never triggers a weaker launch. Stop and investigate owned-process cleanup in that permitted environment before another run.
 
-Ordinary receipts use `local-environment-preflight.v2`. Every field, including partially populated failed profiles, must satisfy the strict known schema before privacy screening. The unchanged **object** boundary `assertPrivacySafe` then screens every field in small fixed sections and every bounded array record, including its tail. Its existing depth, entry and string limits are not raised. The complete serialized receipt remains capped at **64 KiB**; chunking the object screen does not relax that file limit.
+Ordinary receipts use `local-environment-preflight.v3`. Every field, including partially populated failed profiles, must satisfy the strict known schema before privacy screening. The unchanged **object** boundary `assertPrivacySafe` then screens every field in small fixed sections and every bounded array record, including its tail. Its existing depth, entry and string limits are not raised. The complete serialized receipt remains capped at **64 KiB**; chunking the object screen does not relax that file limit.
 
 `sourceDigests` contains six exact **32-element uint8 arrays** computed directly from the fixed public kit files, existing authority/lock files and owned fixture bytes. The synthetic screenshot's `sha256Bytes` uses the same representation, computed from its image bytes. These fields represent SHA-256 digests; they do not encode arbitrary text, and no general text-encoding facility or privacy exemption is introduced. The detached receipt SHA-256 used by `--verify` remains hexadecimal.
 
-The receipt calls its fixed layout booleans `launch.mobileLayoutRequested` and `lighthouse.settings.mobileLayoutReported`. The generic privacy guard treats keys ending in `mobile` as phone fields, even for booleans; v2 uses names that state these measurements' actual layout meaning. Playwright's real `isMobile:false` option and Lighthouse's real `screenEmulation.mobile:false` option, and their required values, are unchanged. No raw diagnostic or personal-data field is renamed into an allowed field.
+The receipt calls its fixed layout booleans `launch.mobileLayoutRequested` and `lighthouse.settings.mobileLayoutReported`. The generic privacy guard treats keys ending in `mobile` as phone fields, even for booleans; these names introduced in v2 state the measurements' actual layout meaning. Playwright's real `isMobile:false` option and Lighthouse's real `screenEmulation.mobile:false` option, and their required values, are unchanged. No raw diagnostic or personal-data field is renamed into an allowed field.
 
-If schema, size, serialization or privacy screening fails, the writer constructs a separate `local-environment-preflight.failure.v2` envelope. It contains only fixed state/code values, known bounded profile IDs and booleans: `sourceVerified:false`, `projectionsRetained:false`, `productionTested:false`, and explicit `SOURCE_UNVERIFIED` / `RECEIPT_PROJECTION_NOT_RETAINED` codes. It copies no timestamp, tool metadata, digest, raw projection or original error text. Such an envelope is nonempty and cannot verify as a successful capability result. Filesystem write failures still cannot guarantee persistence. The original in-memory observation is not rewritten; process status and the printed receipt summary come from the bytes actually saved.
+If schema, size, serialization or privacy screening fails, the writer constructs a separate `local-environment-preflight.failure.v3` envelope. It contains only fixed state/code values, known bounded profile IDs and booleans: `sourceVerified:false`, `projectionsRetained:false`, `productionTested:false`, and explicit `SOURCE_UNVERIFIED` / `RECEIPT_PROJECTION_NOT_RETAINED` codes. It copies no timestamp, tool metadata, digest, raw projection or original error text. Such an envelope is nonempty and cannot verify as a successful capability result. Filesystem write failures still cannot guarantee persistence. The original in-memory observation is not rewritten; process status and the printed receipt summary come from the bytes actually saved.
 
 Free-form provider errors, page text, response bodies, headers, browser argv, storage and credentials are not retained. Invalid data in a failed profile is subject to the same schema and privacy checks as data in a successful one.
 
 The Playwright persistent-context → owned loopback CDP → Puppeteer → Lighthouse connection and actual sandbox availability remain **runtime-unverified until the explicit command succeeds in a permitted environment**. Passing the included pure tests does not remove that limitation.
+
+## Bounded v3 initialization diagnosis
+
+Each ordinary profile has one strict `initialization` object:
+
+| Field | Meaning |
+|---|---|
+| `failureStage` | Fixed stage active when the main work throws; null when that catch did not run. Cleanup or later validation can still fail independently. |
+| `lastCompletedStage` | Last stage whose action completed successfully, or null. |
+| `contextReturned` | Whether an object was returned through the owned context-acquisition gate before the recorded checkpoint. False does not prove that no OS process was ever created. |
+| `failureKind` | Fixed classification of an explicit failure indicator, or `unknown`; null when no main-work exception was recorded. It is not a root-cause conclusion. |
+
+The stage order is `context-launch`, `http-route`, `websocket-route`, `init-script`, `target-selection`, `foreground-request`, `cdp-session`, `command-line-read`, `version-read`, `launch-policy-check`, then `post-initialization`. These cover the eight initial awaits, synchronous target selection and policy evaluation, and the remaining existing work. The command-line stage includes its response-shape check. A stage is set immediately before its action and completion is recorded only after it succeeds. The catch freezes the failed state; finally seals it before cleanup. Late completion, repeated failure handling and cleanup cannot rewrite the snapshot.
+
+Classification reads only exception name/code and at most the first **4,096 UTF-16 code units** of its message in memory. No message, stack, argv, path, encoded text or message hash is retained. The allowlist is deliberately narrow:
+
+- `timeout`: `TimeoutError` or the runner's known bounded-timeout codes.
+- `target-closed`: `TargetClosedError` or the exact target/page/context/browser-closed phrase. This alone never becomes a denial classification.
+- `explicit-sandbox-denial`: only during context launch and only the explicit `No usable sandbox!`, `Running as root without --no-sandbox is not supported`, or `Chromium sandboxing failed!` indicator.
+- `explicit-permission-denial`: a structured `EACCES`/`EPERM` code, or a context-launch message line containing both the explicit namespace-move failure and `Operation not permitted`. This identifies an access-failure indicator, not the responsible policy or configuration.
+- `protocol-method-unavailable`: only in the corresponding command-line/version CDP stage, with the exact protocol error naming that expected `Browser.*` method as not found.
+- `unknown`: everything else, including generic launch failures, sandbox advice, unreadable properties, or an indicator outside the inspected prefix.
+
+Pure tests use synthetic errors to check this classification and stage retention; they do not establish what the failed CI emitted. Exact pinned Playwright error-source coverage is not claimed. A changed or absent message format remains unknown.
+
+The new schema does not migrate or reinterpret v1/v2 receipts. Their archived bytes and source bindings remain unchanged. After a separately authorized single diagnosis, an explicit denial or unresolved initialization failure is a stop condition: no automatic repeat, different-runner workaround or weaker browser option is supplied.
 
 ## Owned CI capability check
 
@@ -85,6 +111,10 @@ Run `43639072916`, head `ec7948e4d23b73099acde347157dcf8a9fbe53dc`, passed tooli
 A pure reproduction identified a deterministic persistence defect: the actual public browser-contract SHA-256 string matched the unchanged guard's phone-number rule. v1 screened the complete JSON as plain text and then copied that same digest into its fallback, so both screens rejected it. The shared guard's own documentation specifies `assertPrivacySafe` for object/diagnostic boundaries. v2 uses that typed boundary, strictly limited digest arrays and a newly constructed minimal failure envelope. Tests cover the actual fixed public digest, the retained attempt's timestamp as a synthetic input, unchanged privacy rejection, partial failure retention, array bounds/tails, exclusive nonempty file writing and source-byte mismatch despite a recomputed detached receipt hash.
 
 This explains the reproducible receipt-storage failure. It does **not** recover the lost original runtime error code, establish which browser stage ran, or identify why that runtime attempt failed. Pure tests do not establish that the Playwright/Puppeteer/Lighthouse runtime bridge or sandbox will succeed. No browser, dependency install, production request or CI retry is part of the v2 software tests.
+
+### Retained v2 runtime failure
+
+Run `43640481419`, head `bcbe47e256de511fd8a89f78c158815fa6173888`, passed tooling and 24 pure tests, then retained a **1,843-byte** ordinary v2 failed receipt. Its first profile has `LOCAL_PREFLIGHT_FAILED`, `freshOwnedProfile:true`, `profileCleaned:true`, no launch metadata and zero fixture document responses. The source-bound code permits a failure anywhere from context launch through the first browser identity reads and adjacent synchronous operations. Neither `launch:null` nor successful profile-directory cleanup identifies whether a browser context was returned. No sandbox cause is established. v3 adds the missing fixed stage evidence without changing browser options, pins, security requirements or measurement conditions, and does not infer the v1 or v2 failure cause retroactively.
 
 ## Existing authorities and preserved evidence
 

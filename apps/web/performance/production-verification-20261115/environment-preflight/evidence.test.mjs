@@ -6,15 +6,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertPrivacySafe, assertPrivacySafeText } from '../../../lib/privacy/sanitize.ts';
-import { FAILURE_VERSION, PINS, PROFILES, RECEIPT_VERSION, SOURCE_KEYS, THROTTLING, MAX_RECEIPT_BYTES,
+import { FAILURE_TEXT_LIMIT, FAILURE_VERSION, INITIALIZATION_STAGES, PINS, PROFILES, RECEIPT_VERSION,
+  SOURCE_KEYS, THROTTLING, MAX_RECEIPT_BYTES,
   allowedFixtureRequest, assertReceiptPrivacy, digestShape, parseArguments, parseStrictJson, profileProblems,
   projectTrace, receiptProblems, receiptShapeProblems, sha256, sourceDigestProblems, verifyReceiptBytes } from './evidence.mjs';
-import { createWorkGate, readSourceDigests, serializeReceipt, writeReceipt } from './preflight.mjs';
+import { createInitializationTrace, createWorkGate, initializationFailureKind, readSourceDigests,
+  serializeReceipt, writeReceipt } from './preflight.mjs';
 
 // Synthetic software fixtures only. These values are not browser observations.
 function sample(profile) {
   const originTs = 2_000_000;
   const row = { id: profile.id, status: 'passed', failureCodes: [], freshOwnedProfile: true, profileCleaned: true,
+    initialization: { failureStage: null, lastCompletedStage: 'post-initialization', contextReturned: true, failureKind: null },
     launch: { chromiumSandboxRequested: true, disableSandboxFlagObserved: false, automationFlagObserved: true,
       versionVerified: true, mobileLayoutRequested: false, hasTouch: false },
     controls: { cpuSlowdownRequested: 4, latencyMsRequested: 562.5,
@@ -242,7 +245,7 @@ test('real fixed public source digests survive the unchanged object privacy boun
   assert.ok(receiptProblems(failed).includes('PREFLIGHT_NOT_PASSED'));
 });
 
-test('v2 layout booleans have precise typed names; old phone-like keys stay rejected by the unchanged guard', () => {
+test('layout booleans have precise typed names; old phone-like keys stay rejected by the unchanged guard', () => {
   for (const key of ['isMobile', 'mobile']) {
     assert.throws(() => assertPrivacySafe({ [key]: false }), error => error.code === 'PRIVACY_UNSAFE_VALUE');
   }
@@ -256,6 +259,7 @@ test('v2 layout booleans have precise typed names; old phone-like keys stay reje
   assert.ok(receiptShapeProblems(old).includes('mobile:PROFILE_SHAPE_INVALID'));
   const partial = receipt(); partial.status = 'blocked-or-incomplete'; partial.failureCodes = ['LOCAL_PROFILE_FAILED'];
   const row = sample(PROFILES[0]); row.status = 'failed'; row.failureCodes = ['LOCAL_PROFILE_TIMEOUT'];
+  row.initialization = { failureStage: 'context-launch', lastCompletedStage: null, contextReturned: false, failureKind: 'timeout' };
   for (const key of ['launch', 'controls', 'observation', 'lighthouse', 'trace', 'screenshot']) row[key] = null;
   row.profileCleaned = false; partial.profiles = [row];
   const bytes = serializeReceipt(partial); const saved = parseStrictJson(bytes);
@@ -276,8 +280,10 @@ test('digest representations reject wrong length, holes, extra keys, strings and
     const row = sample(PROFILES[0]); row.screenshot.sha256Bytes = digest;
     assert.ok(profileProblems(row).includes('PROFILE_SHAPE_INVALID'));
   }
-  const old = receipt(); old.schemaVersion = 'local-environment-preflight.v1';
-  assert.ok(receiptProblems(old).includes('SCOPE_INVALID'));
+  for (const version of ['local-environment-preflight.v1', 'local-environment-preflight.v2']) {
+    const old = receipt(); old.schemaVersion = version;
+    assert.ok(receiptProblems(old).includes('SCOPE_INVALID'));
+  }
 });
 
 test('bounded record screening covers array tails and retains a fixed failed envelope on rejection', () => {
@@ -324,7 +330,7 @@ test('a minimal failed envelope never admits copied metadata, arbitrary codes or
 });
 
 test('exclusive file writing retains nonempty real-source partial failure and fixed privacy fallback', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'tzudong-preflight-v2-pure-'));
+  const directory = await mkdtemp(join(tmpdir(), 'tzudong-preflight-v3-pure-'));
   try {
     const partial = receipt(); partial.sourceDigests = await readSourceDigests();
     partial.createdAtUtc = '2026-11-14T20:45:05.152Z'; partial.status = 'blocked-or-incomplete';
@@ -346,7 +352,7 @@ test('exclusive file writing retains nonempty real-source partial failure and fi
 });
 
 test('offline CLI source verification compares all 32 bytes even after a new detached receipt hash', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'tzudong-preflight-v2-source-'));
+  const directory = await mkdtemp(join(tmpdir(), 'tzudong-preflight-v3-source-'));
   try {
     const value = receipt(); const actual = await readSourceDigests(); value.sourceDigests = actual;
     assert.deepEqual(sourceDigestProblems(value.sourceDigests, actual), []);
@@ -362,4 +368,98 @@ test('offline CLI source verification compares all 32 bytes even after a new det
       assert.deepEqual(result.failures, changed ? ['SOURCE_DIGEST_MISMATCH'] : []);
     }
   } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('initialization records each failed await or synchronous stage and freezes before cleanup', async () => {
+  for (let failedIndex = 0; failedIndex < INITIALIZATION_STAGES.length; failedIndex++) {
+    const trace = createInitializationTrace();
+    for (let index = 0; index <= failedIndex; index++) {
+      const stage = INITIALIZATION_STAGES[index];
+      const action = () => { if (index === failedIndex) throw new Error('unclassified synthetic error'); return {}; };
+      try {
+        if (['target-selection', 'launch-policy-check'].includes(stage)) trace.sync(stage, action);
+        else if (stage === 'post-initialization') { trace.begin(stage); action(); trace.complete(stage); }
+        else await trace.step(stage, action);
+      } catch (error) { trace.fail(error); break; }
+    }
+    assert.deepEqual(trace.state, { failureStage: INITIALIZATION_STAGES[failedIndex],
+      lastCompletedStage: failedIndex === 0 ? null : INITIALIZATION_STAGES[failedIndex - 1],
+      contextReturned: failedIndex > 0, failureKind: 'unknown' });
+    const frozen = structuredClone(trace.state); assert.equal(Object.isFrozen(trace.state), true);
+    trace.begin('post-initialization'); trace.complete('post-initialization');
+    trace.fail(Object.assign(new Error('cleanup error'), { code: 'EPERM' })); trace.seal();
+    assert.deepEqual(trace.state, frozen);
+  }
+});
+
+test('a launch resolving after the failure checkpoint cannot rewrite context or completed-stage evidence', async () => {
+  const trace = createInitializationTrace(); let resolveLaunch;
+  const pending = trace.step('context-launch', () => new Promise(resolve => { resolveLaunch = resolve; }));
+  trace.fail(Object.assign(new Error('LOCAL_PROFILE_TIMEOUT'), { safeCode: 'LOCAL_PROFILE_TIMEOUT' }));
+  const frozen = structuredClone(trace.state); resolveLaunch({ syntheticContext: true }); await pending;
+  assert.deepEqual(trace.state, frozen);
+  assert.deepEqual(frozen, { failureStage: 'context-launch', lastCompletedStage: null, contextReturned: false, failureKind: 'timeout' });
+  const success = createInitializationTrace();
+  for (const stage of INITIALIZATION_STAGES) await success.step(stage, async () => ({}));
+  success.seal(); success.fail(Object.assign(new Error('cleanup error'), { code: 'EPERM' }));
+  assert.deepEqual(success.state, { failureStage: null, lastCompletedStage: 'post-initialization', contextReturned: true, failureKind: null });
+});
+
+test('failure classification requires a bounded explicit indicator and never equates closure with sandbox denial', () => {
+  const cases = [
+    [{ name: 'TimeoutError', message: 'synthetic timeout' }, 'http-route', 'timeout'],
+    [{ name: 'TargetClosedError', message: 'synthetic closure' }, 'context-launch', 'target-closed'],
+    [{ message: 'browserType.launchPersistentContext: Target page, context or browser has been closed' }, 'context-launch', 'target-closed'],
+    [{ message: 'No usable sandbox!' }, 'context-launch', 'explicit-sandbox-denial'],
+    [{ message: 'Running as root without --no-sandbox is not supported' }, 'context-launch', 'explicit-sandbox-denial'],
+    [{ message: 'Chromium sandboxing failed!' }, 'context-launch', 'explicit-sandbox-denial'],
+    [{ message: 'No usable sandbox!' }, 'http-route', 'unknown'],
+    [{ code: 'EACCES', message: 'synthetic access failure' }, 'context-launch', 'explicit-permission-denial'],
+    [{ code: 'EPERM', message: 'synthetic permission failure' }, 'post-initialization', 'explicit-permission-denial'],
+    [{ message: 'Failed to move to new namespace: synthetic: Operation not permitted' }, 'context-launch', 'explicit-permission-denial'],
+    [{ message: 'Failed to move to new namespace:\nOperation not permitted' }, 'context-launch', 'unknown'],
+    [{ message: "Protocol error (Browser.getVersion): 'Browser.getVersion' wasn't found" }, 'version-read', 'protocol-method-unavailable'],
+    [{ message: "Protocol error (Browser.getBrowserCommandLine): 'Browser.getBrowserCommandLine' wasn't found" }, 'command-line-read', 'protocol-method-unavailable'],
+    [{ message: "Protocol error (Browser.getVersion): 'Browser.getVersion' wasn't found" }, 'context-launch', 'unknown'],
+    [{ message: 'Could not launch browser; inspect sandbox configuration' }, 'context-launch', 'unknown'],
+    [{ message: 'Permission denied' }, 'context-launch', 'unknown'],
+    [{ message: 'x'.repeat(FAILURE_TEXT_LIMIT) + 'No usable sandbox!' }, 'context-launch', 'unknown'],
+    [{ message: 'LOCAL_PREFLIGHT_FAILED' }, 'context-launch', 'unknown'],
+  ];
+  for (const [error, stage, expected] of cases) assert.equal(initializationFailureKind(error, stage), expected);
+  const inaccessible = Object.defineProperty({}, 'message', { get() { throw new Error('synthetic getter'); } });
+  assert.equal(initializationFailureKind(inaccessible, 'context-launch'), 'unknown');
+});
+
+test('initialization fields reject unknown data, impossible ordering and misplaced denial classifications', () => {
+  for (const mutate of [state => { state.failureKind = { rawProviderDiagnostic: 'unrecognized' }; },
+    state => { state.failureStage = 'unrecognized'; }, state => { state.contextReturned = 'true'; },
+    state => { state.lastCompletedStage = { rawProviderDiagnostic: 'unrecognized' }; },
+    state => { state.rawMessage = 'example.user@example.test'; },
+    state => { state.failureKind = 'unknown'; },
+    state => { state.failureStage = 'context-launch'; state.failureKind = 'unknown'; },
+    state => { state.failureStage = 'http-route'; state.lastCompletedStage = 'context-launch'; state.failureKind = 'explicit-sandbox-denial'; },
+    state => { state.failureStage = 'http-route'; state.lastCompletedStage = 'context-launch'; state.failureKind = 'protocol-method-unavailable'; }]) {
+    const value = receipt(); mutate(value.profiles[0].initialization);
+    assert.ok(receiptShapeProblems(value).includes('mobile:PROFILE_SHAPE_INVALID'));
+    assert.throws(() => assertReceiptPrivacy(value), /RECEIPT_SHAPE_INVALID/);
+  }
+  const incomplete = sample(PROFILES[0]); incomplete.initialization.lastCompletedStage = 'launch-policy-check';
+  assert.ok(profileProblems(incomplete).includes('INITIALIZATION_UNVERIFIED'));
+});
+
+test('retained initialization failure contains fixed state only and never copies exception text or reads its stack', async () => {
+  const trace = createInitializationTrace();
+  const privateText = 'example.user@example.test /private/example/path password=synthetic';
+  const error = Object.defineProperty(new Error(privateText), 'stack', { get() { throw new Error('stack must not be read'); } });
+  try { await trace.step('context-launch', () => { throw error; }); } catch (caught) { trace.fail(caught); }
+  const value = receipt(); value.status = 'blocked-or-incomplete'; value.failureCodes = ['LOCAL_PROFILE_FAILED'];
+  const row = value.profiles[0]; row.status = 'failed'; row.failureCodes = ['LOCAL_PREFLIGHT_FAILED']; row.initialization = trace.state;
+  for (const key of ['launch', 'controls', 'observation', 'lighthouse', 'trace', 'screenshot']) row[key] = null;
+  value.profiles = [row];
+  const bytes = serializeReceipt(value); const saved = parseStrictJson(bytes);
+  assert.equal(saved.schemaVersion, RECEIPT_VERSION); assert.deepEqual(saved.profiles[0].initialization, trace.state);
+  assert.equal(saved.profiles[0].initialization.failureKind, 'unknown');
+  assert.equal(bytes.toString().includes(privateText), false); assert.equal(bytes.toString().includes('example.user'), false);
+  assert.deepEqual(receiptShapeProblems(saved), []); assert.equal(verifyReceiptBytes(bytes, sha256(bytes)).verified, false);
 });

@@ -15,8 +15,14 @@ export const ROUNDING_TOLERANCE_MS = 8;
 export const SAMPLE_INTERVAL_MS = 100;
 export const MAX_SAMPLE_GAP_MS = 300;
 export const TRACE_NAMES = Object.freeze(['navigationStart', 'firstPaint', 'firstContentfulPaint', 'largestContentfulPaint::Candidate']);
-export const RECEIPT_VERSION = 'local-environment-preflight.v2';
-export const FAILURE_VERSION = 'local-environment-preflight.failure.v2';
+export const RECEIPT_VERSION = 'local-environment-preflight.v3';
+export const FAILURE_VERSION = 'local-environment-preflight.failure.v3';
+export const INITIALIZATION_STAGES = Object.freeze(['context-launch', 'http-route', 'websocket-route', 'init-script',
+  'target-selection', 'foreground-request', 'cdp-session', 'command-line-read', 'version-read',
+  'launch-policy-check', 'post-initialization']);
+export const INITIALIZATION_FAILURE_KINDS = Object.freeze(['timeout', 'target-closed', 'explicit-sandbox-denial',
+  'explicit-permission-denial', 'protocol-method-unavailable', 'unknown']);
+export const FAILURE_TEXT_LIMIT = 4096;
 export const SOURCE_KEYS = Object.freeze(['preflight', 'evidence', 'browserContract', 'appLock', 'lighthouseLock', 'fixture']);
 export const SERIALIZATION_FAILURES = Object.freeze(['RECEIPT_SHAPE_INVALID', 'RECEIPT_SIZE_LIMIT',
   'PRIVACY_VALIDATION_FAILED', 'RECEIPT_SERIALIZATION_FAILED']);
@@ -29,7 +35,7 @@ export const FAILURE_CODES = Object.freeze([
   'BROWSER_CLOSE_TIMEOUT', 'CDP_DISCONNECT_TIMEOUT', 'BROWSER_TARGET_AMBIGUOUS', 'BROWSER_ARGUMENTS_UNAVAILABLE',
   'OWNED_DEBUG_ENDPOINT_UNAVAILABLE', 'LIGHTHOUSE_RESULT_UNAVAILABLE', 'CDP_DISCONNECT_FAILED', 'BROWSER_CLOSE_FAILED',
   'FIXTURE_CLOSE_TIMEOUT', 'FIXTURE_CLOSE_FAILED', 'RECEIPT_VALIDATION_FAILED', 'SOURCE_DIGEST_MISMATCH',
-  'PROFILE_SHAPE_INVALID', 'PROFILE_NOT_PASSED', 'BROWSER_POLICY_UNVERIFIED', 'PROFILE_OWNERSHIP_UNVERIFIED',
+  'PROFILE_SHAPE_INVALID', 'PROFILE_NOT_PASSED', 'INITIALIZATION_UNVERIFIED', 'BROWSER_POLICY_UNVERIFIED', 'PROFILE_OWNERSHIP_UNVERIFIED',
   'CDP_CONTROL_UNACKNOWLEDGED', 'CDP_CONTROL_REQUEST_MISMATCH', 'FIXTURE_REQUEST_POLICY_FAILED', 'NAVIGATION_UNVERIFIED',
   'OBSERVER_UNVERIFIED', 'LIGHTHOUSE_IDENTITY_INVALID', 'LIGHTHOUSE_SETTINGS_MISMATCH', 'TRACE_TIME_ORIGIN_INVALID',
   'TRACE_METRIC_NORMALIZATION_INVALID', 'LIGHTHOUSE_PAINT_ORDER_INVALID', 'VIEWPORT_ANCHOR_MISSING',
@@ -66,9 +72,19 @@ const numericList = (values, keys, cap) => list(values, cap, value => numericRec
 
 function profileShape(row) {
   if (!exactKeys(row, ['id', 'status', 'failureCodes', 'freshOwnedProfile', 'profileCleaned', 'launch', 'controls',
-    'requests', 'observation', 'lighthouse', 'trace', 'screenshot']) || !PROFILES.some(profile => profile.id === row.id)
+    'initialization', 'requests', 'observation', 'lighthouse', 'trace', 'screenshot']) || !PROFILES.some(profile => profile.id === row.id)
     || !['passed', 'failed'].includes(row.status) || !codeList(row.failureCodes)
     || typeof row.freshOwnedProfile !== 'boolean' || typeof row.profileCleaned !== 'boolean') return false;
+  const initial = row.initialization;
+  if (!exactKeys(initial, ['failureStage', 'lastCompletedStage', 'contextReturned', 'failureKind'])
+    || ![initial.failureStage, initial.lastCompletedStage].every(stage => stage === null || INITIALIZATION_STAGES.includes(stage))
+    || typeof initial.contextReturned !== 'boolean'
+    || (initial.failureKind !== null && !INITIALIZATION_FAILURE_KINDS.includes(initial.failureKind))
+    || (initial.failureStage === null) !== (initial.failureKind === null)
+    || (initial.failureKind === 'explicit-sandbox-denial' && initial.failureStage !== 'context-launch')
+    || (initial.failureKind === 'protocol-method-unavailable' && !['command-line-read', 'version-read'].includes(initial.failureStage))
+    || (initial.failureStage !== null && INITIALIZATION_STAGES.indexOf(initial.lastCompletedStage)
+      > INITIALIZATION_STAGES.indexOf(initial.failureStage))) return false;
   const section = (value, check) => value === null ? row.status === 'failed' : check(value);
   return section(row.launch, value => booleanRecord(value, ['chromiumSandboxRequested', 'disableSandboxFlagObserved',
     'automationFlagObserved', 'versionVerified', 'mobileLayoutRequested', 'hasTouch']))
@@ -179,6 +195,9 @@ export function profileProblems(row) {
   if (!profile || !row || typeof row !== 'object') return ['PROFILE_SHAPE_INVALID'];
   if (row.status !== 'passed') return ['PROFILE_NOT_PASSED'];
   if (!profileShape(row)) return ['PROFILE_SHAPE_INVALID'];
+  add(row.initialization.failureStage === null && row.initialization.failureKind === null
+    && row.initialization.lastCompletedStage === 'post-initialization' && row.initialization.contextReturned === true,
+  'INITIALIZATION_UNVERIFIED');
   const launch = row.launch ?? {}; const controls = row.controls ?? {};
   add(launch.chromiumSandboxRequested === true && launch.disableSandboxFlagObserved === false
     && launch.automationFlagObserved === true && launch.versionVerified === true
@@ -372,8 +391,8 @@ export function assertReceiptPrivacy(receipt) {
   else for (const key of SOURCE_KEYS) assertPrivacySafe({ sourceDigests: { [key]: sourceDigests[key] } });
   assertPrivacySafe({ profiles: [] });
   for (const row of profiles) {
-    const { launch, controls, requests, observation, lighthouse, trace, screenshot, ...identity } = row;
-    assertPrivacySafe(identity); assertPrivacySafe({ launch }); assertPrivacySafe({ controls });
+    const { initialization, launch, controls, requests, observation, lighthouse, trace, screenshot, ...identity } = row;
+    assertPrivacySafe(identity); assertPrivacySafe({ initialization }); assertPrivacySafe({ launch }); assertPrivacySafe({ controls });
     assertPrivacySafe({ requests }); assertPrivacySafe({ lighthouse }); assertPrivacySafe({ screenshot });
     if (observation === null) assertPrivacySafe({ observation });
     else {
