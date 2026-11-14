@@ -21,7 +21,7 @@ test.describe('Phase 1: Smoke Test', () => {
         const homeRegion = page.getByRole('region', { name: '쯔동여지도 홈 지도 화면' });
         await expect(homeRegion).toBeVisible();
 
-        const searchBox = page.getByRole('textbox', { name: '맛집 검색어 입력' });
+        const searchBox = page.getByRole('textbox', { name: '맛집 이름 검색어 입력' });
         await expect(searchBox).toBeVisible();
 
         const loginButton = page.getByRole('button', { name: '로그인 열기' });
