@@ -1,0 +1,322 @@
+{
+  "schemaVersion": "frontend-fixture-protocol.v1",
+  "declaredAt": "2026-11-14T13:44:00.000Z",
+  "title": "Controlled initial-load frontend fixture comparison",
+  "scope": {
+    "measurementType": "frontend-fixture",
+    "claim": "Same-runner sequential unpaired production-build frontend fixture comparison only",
+    "route": "/",
+    "fieldAdmissionCount": 0,
+    "g003AdmissionCount": 0,
+    "productionMetricAdmissionCount": 0,
+    "limitations": [
+      "Loopback TTFB is not production TTFB: no Vercel, CDN, remote backend, DNS or TLS latency is measured.",
+      "The Naver SDK and three restaurants are fixed test fixtures. Browser HTTP/resource requests use loopback or exact fulfilled fixture routes; other HTTP/resource requests and WebSockets are blocked. No real map/API responses are used. Browser resource hints may still initiate unmeasured DNS/TCP/TLS, so complete network isolation is not claimed. Mock map readiness is functional validity only.",
+      "All 15 before trials precede all 15 after trials; this is not an alternating or paired experiment. Runner drift, process startup, scheduling and local server cache remain temporal confounders.",
+      "Five cold-browser samples per viewport and phase are task-local lab observations. They do not satisfy global field or G003 admission and do not demonstrate production or population improvement.",
+      "Viewport emulation and CPU slowdown do not reproduce physical mobile or tablet hardware.",
+      "The application-specific controlsReady time is not TTI, INP or a Core Web Vital.",
+      "Production measurements remain unavailable after five retained zero-trial failures; fixture measurements must never fill the production table."
+    ]
+  },
+  "url": "http://localhost:8080/",
+  "measurementUrl": "http://localhost:8080/?__qa=render-flow",
+  "baselineSourceSha": "9316871f4220cd487b0e9575415ed2d760de8997",
+  "tools": {
+    "nodeMajor": 24,
+    "npm": "11.6.2",
+    "lighthouse": "13.5.0",
+    "playwright": "1.64.1",
+    "chrome": "156.0.8078.4",
+    "browserProduct": "Google Chrome for Testing",
+    "chromePinPath": ".github/chrome-for-testing.v1.json"
+  },
+  "browserLaunch": {
+    "headless": true,
+    "sandboxMode": "disabled-for-disposable-ci",
+    "scope": "disposable-github-runner-browser-process",
+    "measurementExplicitArgs": [
+      "--no-sandbox",
+      "--lang=ko-KR"
+    ],
+    "requiredNoSandboxObserved": true,
+    "requiredRunnerEnvironment": "github-hosted",
+    "activation": "Only when GITHUB_ACTIONS=true and RUNNER_ENVIRONMENT=github-hosted. A different local environment retains its default sandbox and is outside this fixed CI comparison.",
+    "observation": "Record noSandboxObserved from the actual launched process spawnargs membership; retain only the bounded explicit flags, never raw argv."
+  },
+  "sampling": {
+    "phases": [
+      "before",
+      "after"
+    ],
+    "validRunsPerViewportAndPhase": 5,
+    "order": "all-before-then-all-after",
+    "paired": false,
+    "concurrentRuns": 1,
+    "runnerContinuity": "Both phases run in the same GitHub Actions job, runner and attempt. Both frozen production builds complete and are fingerprinted before the first before phase starts.",
+    "cache": "cold-browser-fresh-process-and-profile-per-trial",
+    "serverCache": "Separate production server for each phase; startup health GET before timing; no purge or pretend cold server claim.",
+    "aggregate": "median",
+    "dispersion": "unscaled-median-absolute-deviation",
+    "invalidTrials": "Retain every failed attempt; fail closed on a functional or evidence invalidity.",
+    "extraRuns": "Only a documented concrete invalidity or instability permits additional attempts, preserving original failures."
+  },
+  "lighthouse": {
+    "throttlingMethod": "devtools",
+    "onlyCategories": [
+      "performance"
+    ],
+    "disableStorageReset": false,
+    "maxWaitForLoad": 60000,
+    "legacyTti": "audits.interactive.numericValue; hidden diagnostic with zero score weight"
+  },
+  "profiles": [
+    {
+      "id": "mobile",
+      "label": "390 x 844 mobile viewport, emulated slow 4G, 4x CPU",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 2,
+      "isMobile": true,
+      "hasTouch": true,
+      "formFactor": "mobile",
+      "userAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "throttling": {
+        "rttMs": 150,
+        "throughputKbps": 1638.4,
+        "requestLatencyMs": 562.5,
+        "downloadThroughputKbps": 1474.56,
+        "uploadThroughputKbps": 675,
+        "cpuSlowdownMultiplier": 4
+      }
+    },
+    {
+      "id": "tablet",
+      "label": "820 x 1180 tablet viewport, emulated slow 4G, 4x CPU",
+      "width": 820,
+      "height": 1180,
+      "deviceScaleFactor": 2,
+      "isMobile": true,
+      "hasTouch": true,
+      "formFactor": "mobile",
+      "userAgent": "Mozilla/5.0 (Linux; Android 13; SM-X700) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+      "throttling": {
+        "rttMs": 150,
+        "throughputKbps": 1638.4,
+        "requestLatencyMs": 562.5,
+        "downloadThroughputKbps": 1474.56,
+        "uploadThroughputKbps": 675,
+        "cpuSlowdownMultiplier": 4
+      }
+    },
+    {
+      "id": "desktop",
+      "label": "1440 x 900 desktop viewport, unthrottled network, 1x CPU",
+      "width": 1440,
+      "height": 900,
+      "deviceScaleFactor": 1,
+      "isMobile": false,
+      "hasTouch": false,
+      "formFactor": "desktop",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+      "throttling": {
+        "rttMs": 0,
+        "throughputKbps": 0,
+        "requestLatencyMs": 0,
+        "downloadThroughputKbps": 0,
+        "uploadThroughputKbps": 0,
+        "cpuSlowdownMultiplier": 1
+      }
+    }
+  ],
+  "fixture": {
+    "helperExport": "installMobileHomeMapTestMocks",
+    "restaurantCount": 3,
+    "provider": "mock-naver",
+    "sourcePaths": [
+      "apps/web/tests/mobile-home-map-helpers.ts",
+      "apps/web/tests/nightly/local-profile-read-rpc-boundary.ts"
+    ],
+    "networkPolicy": "Browser HTTP/resource requests: only localhost:8080 GET/HEAD may continue to a server; exact dependency-proof.supabase.co rest/auth routes are fulfilled by the existing fixture. Other routed requests and all WebSockets are aborted. Resource-hint DNS/TCP/TLS attempts are outside this recorded boundary and may still occur.",
+    "installation": "Install the same hashed helper bundle and read-only timing observer before application scripts in every fresh trial. This explicit test fixture scope is separate from production QA.",
+    "sourceBinding": "Bind immutable Git SHA and tree for each clean source, SHA-256 of the production build asset manifest, and each static/server asset name, size and hash. Bind the identical fixture manifest, bundle and copied source bytes in both arms. A manifest fingerprint is provenance, not a retained full build binary.",
+    "applicationMode": "Existing dependency fixture environment; NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME remains unset. No mode change, DOM/CSS mutation, overlay removal or browser network-flag workaround."
+  },
+  "metrics": {
+    "ttfb": {
+      "unit": "ms",
+      "source": "observations.navigation.responseStart - observations.navigation.startTime",
+      "goodTarget": 800,
+      "minimumReduction": 100
+    },
+    "fcp": {
+      "unit": "ms",
+      "source": "lhr.audits.first-contentful-paint.numericValue",
+      "goodTarget": 1800,
+      "minimumReduction": 100
+    },
+    "lcp": {
+      "unit": "ms",
+      "source": "lhr.audits.largest-contentful-paint.numericValue",
+      "goodTarget": 2500,
+      "minimumReduction": 100
+    },
+    "tti": {
+      "unit": "ms",
+      "source": "lhr.audits.interactive.numericValue",
+      "goodTarget": 3500,
+      "minimumReduction": 200,
+      "status": "legacy-diagnostic",
+      "targetBasis": "task-specific engineering target, not current Core Web Vitals"
+    },
+    "tbt": {
+      "unit": "ms",
+      "source": "lhr.audits.total-blocking-time.numericValue",
+      "goodTarget": 200,
+      "minimumReduction": 50
+    },
+    "cls": {
+      "unit": "score",
+      "source": "lhr.audits.cumulative-layout-shift.numericValue",
+      "goodTarget": 0.1,
+      "minimumReduction": 0.01
+    },
+    "controlsReady": {
+      "unit": "ms",
+      "source": "observations.timings.controlsReadyMs",
+      "goodTarget": 3500,
+      "minimumReduction": 100,
+      "status": "application-specific-diagnostic",
+      "targetBasis": "task-specific engineering target, not TTI or Core Web Vitals"
+    }
+  },
+  "applicationTimings": {
+    "timeOrigin": "performance navigation time origin; milliseconds",
+    "controlsReady": {
+      "mobileAndTablet": "First observed homeMobileChromeReady=true.",
+      "desktop": "First observed homeChromeReady=true AND a visible button[data-desktop-map-menu-trigger][aria-haspopup=menu][aria-expanded] AND a visible input[name=desktop-left-panel-restaurant-search]; wrapper readiness alone does not qualify."
+    },
+    "samplingIntervalMs": 100,
+    "throttlingBoundary": "Count controlsReady only if observed by Lighthouse observedTraceEnd; later polls remain contextual and never become throttled samples.",
+    "missing": "Keep null if not observed. Never impute the timeout, map readiness or TTI.",
+    "desktopPanelValidity": "homePanelReady=true, a visible desktop panel, zero panel alerts, exactly three popular fixture items, the latest section present, and no latest skeleton. Latest items may be zero because the existing desktop panel excludes the three popular IDs.",
+    "mapValidity": "Visible mock-naver-overlay and at least one visible fixture restaurant or cluster marker; this is not a real map tile or SDK-network timing.",
+    "timedObservation": {
+      "maximumSamples": 1000,
+      "samplingIntervalMs": 100,
+      "raw": "readinessTimeline entries contain atMs, actualViewport and the unchanged readiness fields. Times must be finite, nonnegative and strictly increasing.",
+      "selection": "Select the LAST entry with atMs <= Lighthouse audits.metrics.details.items[0].observedTraceEnd. selectedObservationAtMs, actualViewport and readiness must match that entry exactly.",
+      "viewportValidity": "Derive finite nonnegative observedFirstPaint <= observedTraceEnd from Lighthouse audits.metrics.details.items[0]. Require the last timeline snapshot at/before first paint (the paint anchor) to match requested CSS width, height and DPR. Require at least one snapshot from first paint through trace end and EVERY snapshot in that painted window to match. Retain earlier startup snapshots without treating the prepaint layout viewport as the painted page.",
+      "contentValidity": "Apply the existing controls, mock map, skeleton and desktop panel criteria to the selected in-trace readiness. Markers appearing only after the trace do not qualify.",
+      "controlsTiming": "controlsReadyMs must equal the atMs of the first qualifying controls snapshot in the trace. The same poll timestamp records readiness and timing.",
+      "postCleanup": "Preserve postCleanupViewport and postCleanupReadiness separately as context. They do not determine trial eligibility or performance values.",
+      "boundaryMetadata": "viewportVerificationStartMs must equal raw observedFirstPaint; viewportPaintAnchorAtMs must equal the independently selected preceding anchor timestamp. Missing, invalid or inconsistent boundaries invalidate the trial.",
+      "initialSample": "Record the first snapshot synchronously inside the before-application-script observer installation, then schedule subsequent snapshots at 100ms intervals. A timer-only initial sample may miss the preceding anchor on a fast desktop paint."
+    }
+  },
+  "comparison": {
+    "minimumRelativeReduction": 0.1,
+    "noiseMultiplier": 2,
+    "noiseDefinition": "2 * max(before MAD, after MAD)",
+    "improvedWhen": "beforeMedian - afterMedian >= minimumReduction AND relativeReduction >= 0.10 AND beforeMedian - afterMedian > noise",
+    "regressedWhen": "afterMedian - beforeMedian >= minimumReduction AND relativeIncrease >= 0.10 AND afterMedian - beforeMedian > noise",
+    "goodTargetSeparateFromImprovement": true,
+    "zeroBaselineRelativePercent": null,
+    "otherwise": "no-confirmed-change",
+    "incomplete": "not-comparable"
+  },
+  "evidence": {
+    "rawReports": "Every attempted trial retains sanitized LHR, numeric trace projection, network summary, DOM-free observations and a screenshot when available. Invalid attempts stay mapped.",
+    "integrity": "SHA-256 artifact map with a separately supplied expected hash; every referenced raw/harness/fixture/build-manifest file is bound.",
+    "validator": "Re-extract raw metrics and validity from mapped observations and LHR independently of the scorer, and independently compute medians, MAD and gates. A shared file reader may verify paths and byte hashes only.",
+    "buildOrdering": "Both build completedAt timestamps must precede before.startedAt. Actual Git trees must equal the declared source trees. App dependency lock and fixture inputs must match across builds.",
+    "unavailablePhases": "A missing phase is explicit null and yields not-comparable, never fabricated zeros.",
+    "productionFailuresRetained": [
+      "43598614632",
+      "43599036723",
+      "43599674200",
+      "43600158140",
+      "43600568543"
+    ],
+    "screenshot": "Require a valid Lighthouse final-screenshot with timing at or after observedFirstPaint and at or before observedTraceEnd, captured before cleanup. Preserve image bytes and source/timing/pixel dimensions/MIME provenance; no post-cleanup screenshot substitution. Save other raw artifacts before marking a missing screenshot invalid.",
+    "retainedFixtureFailures": [
+      {
+        "runId": "43601663509",
+        "attemptId": "before/mobile-01",
+        "attemptedTrials": 1,
+        "validTrials": 0,
+        "comparableMetrics": 0,
+        "artifactMapSha256": "cbfb6df28b350b27bb26055afdea4374195243796af91e418b64dcf862bec50f"
+      },
+      {
+        "runId": "43603062046",
+        "attemptId": "before/mobile-01",
+        "attemptedTrials": 1,
+        "validTrials": 0,
+        "comparableMetrics": 0,
+        "artifactMapSha256": "dd2dd63e8c87488cfcb5840eb114da054649664ec3e22234edc9b11b04107bda"
+      }
+    ]
+  },
+  "references": [
+    "https://github.com/addyosmani/agent-skills/blob/main/agents/web-performance-auditor.md",
+    "https://github.com/GoogleChrome/lighthouse/releases/tag/v13.5.0",
+    "https://github.com/GoogleChrome/lighthouse/blob/v13.5.0/core/config/default-config.js",
+    "https://github.com/GoogleChrome/lighthouse/blob/v13.5.0/core/computed/metrics/interactive.js",
+    "https://github.com/GoogleChrome/lighthouse/blob/v13.5.0/docs/variability.md",
+    "https://github.com/GoogleChrome/lighthouse/blob/v13.5.0/docs/throttling.md",
+    "https://web.dev/articles/ttfb",
+    "https://web.dev/articles/fcp",
+    "https://web.dev/articles/lcp",
+    "https://web.dev/articles/tti",
+    "https://web.dev/articles/tbt",
+    "https://developer.chrome.com/docs/crux/api"
+  ],
+  "premeasurementRevisions": [
+    {
+      "revisedAt": "2026-11-14T13:47:20.000Z",
+      "previousProtocolSha256": "9627dd6142c1166c3e294da95597cf33a0705b8cc0675140d6bebf63a839f483",
+      "measuredTrialsBeforeRevision": 0,
+      "scope": "Clarify the boundary of browser HTTP/resource and WebSocket interception; no timing, profile, fixture data, application mode, sample count or budget changes.",
+      "reason": "Browser resource hints may initiate DNS/TCP/TLS outside Playwright request interception. Retain the existing fixture environment; do not enable the unrelated local-runtime application mode or alter browser network flags."
+    }
+  ],
+  "methodRevisions": [
+    {
+      "revisedAt": "2026-11-14T14:02:00.000Z",
+      "previousProtocolSha256": "d0ee727054e67d54d5ee7846645809a4dd2db958f2caa48850d0ee29adb49a16",
+      "attemptedTrialsBeforeRevision": 1,
+      "validTrialsBeforeRevision": 0,
+      "comparableMetricCountBeforeRevision": 0,
+      "retainedRunId": "43601663509",
+      "retainedArtifactMapSha256": "cbfb6df28b350b27bb26055afdea4374195243796af91e418b64dcf862bec50f",
+      "retainedStatus": "before/mobile-01 invalid; after null; never readmit this attempt",
+      "scope": "Correct observation timing around Lighthouse cleanup only. Keep source application, fixture data, profiles, budgets, five-sample count and sequential design unchanged.",
+      "reason": "The first attempt read viewport/readiness after Lighthouse cleanup and observed 780x493 DPR1 instead of requested 390x844 DPR2. Retain bounded timestamped snapshots during the trace, select the final in-trace snapshot, and require every in-trace viewport to match. The original missing-marker observation is not retroactively assumed to have been ready.",
+      "screenshotPolicy": "Use only Lighthouse final-screenshot captured before cleanup. If unavailable or invalid, first retain numeric/raw artifacts, mark the trial invalid and never substitute a post-cleanup screenshot.",
+      "toolingCorrection": "Allow digits in CLI option names so --artifact-map-sha256 works. This does not change metric calculations."
+    },
+    {
+      "revisedAt": "2026-11-14T14:13:20.000Z",
+      "previousProtocolSha256": "e25f17e98b2e691390a13120f853663fd239c49fc6192577a0086bf190637bf3",
+      "attemptedTrialsBeforeRevision": 2,
+      "invalidTrialsBeforeRevision": 2,
+      "validTrialsBeforeRevision": 0,
+      "comparableMetricCountBeforeRevision": 0,
+      "retainedRunId": "43603062046",
+      "retainedArtifactMapSha256": "dd2dd63e8c87488cfcb5840eb114da054649664ec3e22234edc9b11b04107bda",
+      "retainedStatus": "before/mobile-01 invalid under its frozen all-trace viewport rule; after null; never readmit either earlier failed attempt",
+      "scope": "Define viewport verification over the painted page with a preceding anchor. No source application, fixture, profile, budget, sample count or metric formula changes.",
+      "reason": "The second attempt retained a startup viewport of 980x2121 DPR2 at 690.4ms and the requested 390x844 DPR2 from 793.1ms onward; raw observedFirstPaint was 1723ms. Final timed content was ready. Verify the last snapshot at/before observedFirstPaint and every snapshot from first paint through trace end; retain all earlier startup snapshots as context.",
+      "boundary": "Derive observedFirstPaint independently from the retained Lighthouse metrics audit. Require finite nonnegative first paint <= trace end, a matching preceding anchor, and at least one matching painted-window snapshot. Do not use FCP as the later boundary or trust a self-reported start timestamp.",
+      "prePushClarification": {
+        "previousUnexecutedProtocolSha256": "ff3b511476f19902cb2c203a143584d6d7ee1ad55d916fa563e9772bbd1dbe5f",
+        "attemptsUnderThatUnexecutedRevision": 0,
+        "cumulativeAttemptedTrials": 2,
+        "cumulativeInvalidTrials": 2,
+        "cumulativeValidTrials": 0,
+        "change": "The initial observer snapshot is synchronous before application scripts; later snapshots retain the declared 100ms timer. This supplies the paint-anchor evidence for fast paints without changing viewport or eligibility thresholds."
+      }
+    }
+  ]
+}

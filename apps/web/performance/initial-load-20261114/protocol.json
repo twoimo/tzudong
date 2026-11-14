@@ -1,0 +1,218 @@
+{
+  "schemaVersion": "initial-load-protocol.v1",
+  "declaredAt": "2026-11-14T13:01:00.000Z",
+  "title": "Initial navigation performance before and after optimization",
+  "url": "https://www.tzudong.app/",
+  "measurementUrl": "https://www.tzudong.app/?__qa=render-flow",
+  "baselineSourceSha": "9316871f4220cd487b0e9575415ed2d760de8997",
+  "premeasurementRevisions": [
+    {
+      "revisedAt": "2026-11-14T13:20:37.000Z",
+      "previousProtocolSha256": "858c59b43a6cbae7d9d13a5b1bb9e160a2e0c28347f0d84dabdf99722179b78b",
+      "scope": "Deployment identity readback transport provenance only; timing settings, cache policy, metrics, sample count and budgets are unchanged.",
+      "measuredTrialsBeforeRevision": 0,
+      "retainedPriorAttempts": [
+        {"runId": "43598614632", "trialCount": 0, "failure": "HEALTH_READBACK_HTTP_ERROR"},
+        {"runId": "43599036723", "trialCount": 0, "failure": "HEALTH_READBACK_HTTP_403"}
+      ],
+      "reason": "The Node public health readback failed before any performance trial. A normal anonymous public browser navigation was observed to return the expected identity. Use the same public endpoint through a separate pinned Chrome navigation and fail closed if it is denied."
+    },
+    {
+      "revisedAt": "2026-11-14T13:33:36.000Z",
+      "previousProtocolSha256": "4068740fd3b254f3f62ff7d5d218388d4b767b66f2b1b48800b6902ff10918a8",
+      "scope": "Browser-process launch policy on the disposable GitHub-hosted measurement runner only; timing settings, cache policy, metrics, sample count and budgets are unchanged.",
+      "measuredTrialsBeforeRevision": 0,
+      "retainedPriorAttempts": [
+        {"runId": "43599674200", "trialCount": 0, "failure": "HEALTH_READBACK_UNAVAILABLE"},
+        {"runId": "43600158140", "trialCount": 0, "failure": "HEALTH_BROWSER_SANDBOX_UNAVAILABLE", "stage": "launch"}
+      ],
+      "retainedZeroTrialRunIds": ["43598614632", "43599036723", "43599674200", "43600158140"],
+      "reason": "The diagnostic run confirmed that the browser could not launch with its default sandbox on this runner. Use the same process-local --no-sandbox policy as the repository's successful pinned Playwright browser probe, only for disposable GitHub-hosted audit processes. Public navigation denials still fail closed."
+    }
+  ],
+  "browserLaunch": {
+    "headless": true,
+    "sandboxMode": "disabled-for-disposable-ci",
+    "scope": "disposable-github-runner-browser-process",
+    "healthExplicitArgs": ["--no-sandbox"],
+    "measurementExplicitArgs": ["--no-sandbox", "--lang=ko-KR"],
+    "requiredNoSandboxObserved": true,
+    "requiredRunnerEnvironment": "github-hosted",
+    "activation": "Only when GITHUB_ACTIONS=true and RUNNER_ENVIRONMENT=github-hosted. A different local environment retains its default sandbox and is outside this fixed CI comparison.",
+    "observation": "Record noSandboxObserved from the actual launched process spawnargs membership; retain only the bounded explicit flags, never raw argv.",
+    "credentialScope": "No application secrets, authenticated browser state or credentials are supplied to these fresh browser processes; their environment uses the existing bounded allowlist.",
+    "unchangedControls": "No app, OS, firewall, account authorization, proxy or request-fingerprint workaround is introduced. This isolated browser-process security policy is distinct from website access controls."
+  },
+  "deploymentReadback": {
+    "transport": "browser-public-navigation",
+    "url": "https://www.tzudong.app/api/health",
+    "credentialsUsed": false,
+    "isolatedFromMeasuredBrowser": true,
+    "browserProduct": "Google Chrome for Testing",
+    "browserVersion": "156.0.8078.4",
+    "profile": "A separate fresh anonymous Chrome process and temporary profile; never reuse the measured browser or its resource cache.",
+    "timing": "Outside the Lighthouse trace and timed measurement. A pretrial readback browser closes before the measured browser starts; a post-trace readback starts only after the timed trace has ended.",
+    "requestPolicy": "Ordinary public GET navigation with the browser's default request behavior; no credentials, custom user agent or headers, proxy, reused authenticated session, or app/host/account access-control changes. The process-local sandbox policy is explicitly declared in browserLaunch.",
+    "failurePolicy": "Denied navigation, unexpected final URL, unsuccessful response or source/deployment identity mismatch remains a failed readback; no access-control changes or forced continuation."
+  },
+  "scope": {
+    "measurementType": "controlled-observed-lab",
+    "route": "/",
+    "authentication": "logged-out",
+    "claim": "same-session unpaired lab change at the canonical production hostname",
+    "fieldAdmissionCount": 0,
+    "g003AdmissionCount": 0,
+    "limitations": [
+      "All before samples precede deployment; all after samples follow deployment. This is not an alternating or paired experiment.",
+      "Deployment time, CDN state, backend load, public content, network conditions and third-party responses can confound the observed change.",
+      "Five valid observations per viewport and phase support this task-local diagnostic, not the repository's global field or G003 admission requirements.",
+      "CPU slowdown is relative to the runner. Viewport and request-level throttling do not reproduce a physical mobile or tablet device.",
+      "Both phases use the existing __qa=render-flow query to exclude synthetic traffic from field telemetry. Sanitized report URLs omit the query; this exclusion is not an ordinary-user RUM observation.",
+      "The canonical hostname remains constant so origin-bound map integrations are exercised under the same URL."
+    ]
+  },
+  "tools": {
+    "nodeMajor": 24,
+    "npm": "11.6.2",
+    "lighthouse": "13.5.0",
+    "playwright": "1.64.1",
+    "chrome": "156.0.8078.4",
+    "browserProduct": "Google Chrome for Testing",
+    "chromePinPath": ".github/chrome-for-testing.v1.json"
+  },
+  "sampling": {
+    "phases": ["before", "after"],
+    "validRunsPerViewportAndPhase": 5,
+    "order": "all-before-then-all-after",
+    "paired": false,
+    "concurrentRuns": 1,
+    "runnerContinuity": "Same GitHub Actions job, runner and attempt for both phases; deployment occurs during a bounded wait between phases.",
+    "cache": "cold-browser-fresh-process-and-profile-per-trial",
+    "serverCache": "observed-not-purged",
+    "aggregate": "median",
+    "dispersion": "unscaled-median-absolute-deviation",
+    "invalidTrials": "retain all failed attempts; never replace their status with pass",
+    "extraRuns": "Only to resolve a documented concrete invalidity or instability; preserve the original attempts and the reason."
+  },
+  "lighthouse": {
+    "throttlingMethod": "devtools",
+    "onlyCategories": ["performance"],
+    "disableStorageReset": false,
+    "maxWaitForLoad": 60000,
+    "legacyTti": "audits.interactive.numericValue; hidden diagnostic with zero score weight"
+  },
+  "profiles": [
+    {
+      "id": "mobile",
+      "label": "390 x 844 mobile viewport, emulated slow 4G, 4x CPU",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 2,
+      "isMobile": true,
+      "hasTouch": true,
+      "formFactor": "mobile",
+      "userAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "throttling": {
+        "rttMs": 150,
+        "throughputKbps": 1638.4,
+        "requestLatencyMs": 562.5,
+        "downloadThroughputKbps": 1474.56,
+        "uploadThroughputKbps": 675,
+        "cpuSlowdownMultiplier": 4
+      }
+    },
+    {
+      "id": "tablet",
+      "label": "820 x 1180 tablet viewport, emulated slow 4G, 4x CPU",
+      "width": 820,
+      "height": 1180,
+      "deviceScaleFactor": 2,
+      "isMobile": true,
+      "hasTouch": true,
+      "formFactor": "mobile",
+      "userAgent": "Mozilla/5.0 (Linux; Android 13; SM-X700) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+      "throttling": {
+        "rttMs": 150,
+        "throughputKbps": 1638.4,
+        "requestLatencyMs": 562.5,
+        "downloadThroughputKbps": 1474.56,
+        "uploadThroughputKbps": 675,
+        "cpuSlowdownMultiplier": 4
+      }
+    },
+    {
+      "id": "desktop",
+      "label": "1440 x 900 desktop viewport, unthrottled network, 1x CPU",
+      "width": 1440,
+      "height": 900,
+      "deviceScaleFactor": 1,
+      "isMobile": false,
+      "hasTouch": false,
+      "formFactor": "desktop",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+      "throttling": {
+        "rttMs": 0,
+        "throughputKbps": 0,
+        "requestLatencyMs": 0,
+        "downloadThroughputKbps": 0,
+        "uploadThroughputKbps": 0,
+        "cpuSlowdownMultiplier": 1
+      }
+    }
+  ],
+  "metrics": {
+    "ttfb": {"unit": "ms", "source": "observations.navigation.responseStart - observations.navigation.startTime", "goodTarget": 800, "minimumReduction": 100},
+    "fcp": {"unit": "ms", "source": "lhr.audits.first-contentful-paint.numericValue", "goodTarget": 1800, "minimumReduction": 100},
+    "lcp": {"unit": "ms", "source": "lhr.audits.largest-contentful-paint.numericValue", "goodTarget": 2500, "minimumReduction": 100},
+    "tti": {"unit": "ms", "source": "lhr.audits.interactive.numericValue", "goodTarget": 3500, "minimumReduction": 200, "status": "legacy-diagnostic", "targetBasis": "task-specific engineering target, not current Core Web Vitals"},
+    "tbt": {"unit": "ms", "source": "lhr.audits.total-blocking-time.numericValue", "goodTarget": 200, "minimumReduction": 50},
+    "cls": {"unit": "score", "source": "lhr.audits.cumulative-layout-shift.numericValue", "goodTarget": 0.1, "minimumReduction": 0.01},
+    "controlsReady": {"unit": "ms", "source": "observations.timings.controlsReadyMs", "goodTarget": 3500, "minimumReduction": 100, "status": "application-specific-diagnostic", "targetBasis": "task-specific engineering target, not TTI or Core Web Vitals"},
+    "mapReady": {"unit": "ms", "source": "observations.timings.mapReadyMs", "goodTarget": 3500, "minimumReduction": 100, "status": "application-specific-diagnostic", "targetBasis": "task-specific engineering target, not TTI or Core Web Vitals"}
+  },
+  "applicationTimings": {
+    "timeOrigin": "performance navigation time origin; milliseconds",
+    "controlsReady": {
+      "mobileAndTablet": "First observed homeMobileChromeReady=true.",
+      "desktop": "First observed homeChromeReady=true AND a visible button[data-desktop-map-menu-trigger][aria-haspopup=menu][aria-expanded] AND a visible input[name=desktop-left-panel-restaurant-search]; wrapper readiness alone does not qualify."
+    },
+    "mapReady": "First observation of a visible loaded Naver map tile from pstatic.net/naver.com/naver.net/ntruss.com (at least 100 CSS px in each dimension, complete and naturalWidth > 0) AND a visible cluster or restaurant marker element.",
+    "desktopPanelValidity": "homePanelReady=true AND a visible desktop panel AND zero visible panel alerts AND at least one popular restaurant item AND at least one latest restaurant item.",
+    "capture": "Read-only DOM observation installed before application scripts, sampled every 100 milliseconds. Preserve the qualifying state and first observed timestamp.",
+    "samplingIntervalMs": 100,
+    "throttlingBoundary": "Count an application timing only when it is no later than the Lighthouse observedTraceEnd. Later observations occur after Lighthouse may reset throttling and remain contextual observations only.",
+    "missing": "Retain null when not observed; never use the observation timeout or TTI as an invented value.",
+    "interpretation": "These application-specific timings reveal when usable controls and the populated map appear even if a skeleton is an early LCP candidate. They do not replace TTI."
+  },
+  "comparison": {
+    "minimumRelativeReduction": 0.1,
+    "noiseMultiplier": 2,
+    "noiseDefinition": "2 * max(before MAD, after MAD)",
+    "improvedWhen": "beforeMedian - afterMedian >= minimumReduction AND relativeReduction >= 0.10 AND beforeMedian - afterMedian > noise",
+    "regressedWhen": "afterMedian - beforeMedian >= minimumReduction AND relativeIncrease >= 0.10 AND afterMedian - beforeMedian > noise",
+    "goodTargetSeparateFromImprovement": true,
+    "zeroBaselineRelativePercent": null,
+    "otherwise": "no-confirmed-change",
+    "incomplete": "not-comparable"
+  },
+  "evidence": {
+    "rawReports": "Retained sanitized Lighthouse report, trace, network summary, observations and screenshot for every attempted trial.",
+    "sourceBinding": "Each phase supplies a frozen source SHA, tree SHA and deployment identity, corroborated by the browser observation.",
+    "integrity": "SHA-256 artifact map with a detached expected hash supplied to scorer and validator.",
+    "validator": "Independently rederive metric values, medians, MADs, gates and sample eligibility from mapped raw inputs; do not import scorer logic."
+  },
+  "references": [
+    "https://github.com/addyosmani/agent-skills/blob/main/agents/web-performance-auditor.md",
+    "https://github.com/GoogleChrome/lighthouse/releases/tag/v13.5.0",
+    "https://github.com/GoogleChrome/lighthouse/blob/v13.5.0/core/config/default-config.js",
+    "https://github.com/GoogleChrome/lighthouse/blob/v13.5.0/core/computed/metrics/interactive.js",
+    "https://github.com/GoogleChrome/lighthouse/blob/v13.5.0/docs/variability.md",
+    "https://github.com/GoogleChrome/lighthouse/blob/v13.5.0/docs/throttling.md",
+    "https://web.dev/articles/ttfb",
+    "https://web.dev/articles/fcp",
+    "https://web.dev/articles/lcp",
+    "https://web.dev/articles/tti",
+    "https://web.dev/articles/tbt",
+    "https://developer.chrome.com/docs/crux/api"
+  ]
+}

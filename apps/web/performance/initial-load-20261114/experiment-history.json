@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "initial-load-experiment-history.v1",
+  "declaredAtUtc": "2026-11-14T14:45:24.012681+00:00",
+  "baselineSha": "9316871f4220cd487b0e9575415ed2d760de8997",
+  "productionMeasuredTrials": 0,
+  "experiments": [
+    {
+      "id": "selected-controls-overlap",
+      "candidateSha": "f32a9cffef69a81091a1c3e62be326d975d79c18",
+      "runId": "43603992040",
+      "validTrials": 30,
+      "artifactMapSha256": "a3738f5eb8dd7c52c3d52ea7be2b8c5203e4ccd3e28c66a21c5b3704dbb0924a",
+      "comparisonEligible": true,
+      "metricClassificationCounts": {
+        "improved": 0,
+        "regressed": 0,
+        "no-confirmed-change": 21
+      },
+      "decision": "discard",
+      "reason": "No predeclared timing improvement; local static JS increased. The ten-line application change is removed in the next candidate."
+    },
+    {
+      "id": "remove-unrequested-startup-resources",
+      "status": "declared-before-new-measurements",
+      "changes": [
+        "Do not automatically prefetch every mobile bottom-navigation route on the homepage; preserve hover/focus/touch/click intent handlers and other-route behavior.",
+        "Set preload:false for Noto Serif KR; preserve the same font family, variable, display, subsets and demand-driven CSS font loading."
+      ],
+      "basis": {
+        "firstExperimentObservedNavChunkBytes": 37594,
+        "firstExperimentObservedNotoPreloadBytes": 35452,
+        "combinedObservedBytes": 73046,
+        "note": "Measured raw evidence from the rejected experiment guides this new candidate; it is not a new-candidate result or an isolated per-change causal estimate."
+      },
+      "fixedProtocolSha256": "74eac221fb10a5f0cdc23d8e825ef68f318eb2aabbc4cda8793531c6ef0f5af1",
+      "fixedCollectorSha256": "92f6548f367e4a66ced7c90c79d1a41bc8c99b356bc52aa402af6f319b4f8e2b",
+      "sampling": "Fresh before15 and after15 on the same new runner/job/attempt. Do not reuse or pool earlier samples.",
+      "decisionPolicy": {
+        "timingClassifications": "Keep all original absolute, relative and MAD gates unchanged. No-confirmed-change stays neutral.",
+        "adoption": "Require functional navigation and visual checks and no admitted timing regression. Adopt only if at least one predeclared timing metric improves OR at least 60000 attributable initial resource transfer bytes are removed separately in BOTH mobile and tablet profiles.",
+        "resourceClaim": "If only the resource criterion passes, claim reduced initial bytes/requests, not a confirmed faster TTFB/FCP/LCP/TTI or production improvement.",
+        "tradeoff": "Intent-based prefetch can offer less lead time for a first destination navigation than unconditional prefetch. Measure/test destination behavior separately from zero-interaction timed loads.",
+        "stop": "Retain every attempt. Do not repeat valid neutral samples to seek a favorable outcome.",
+        "resourceDefinition": {
+          "records": "network.sanitized.json records: resourceType in Script, Stylesheet, Font; URL begins exactly http://localhost:8080/_next/static/; HTTP status 200..299; finite nonnegative encodedDataLength; finite endTime completed within observedNavigationStartTs..observedTraceEndTs.",
+          "clock": "network record times are seconds; multiply by 1000000 to compare with Lighthouse metrics.details.items[0] observedNavigationStartTs / observedTraceEndTs in microseconds.",
+          "trial": "Sum encodedDataLength for those records in each independently valid trial. Retain script, stylesheet and font subtotals plus completed request counts.",
+          "comparison": "For each profile independently, before median of five sums minus after median of five sums. Require reduction >=60000B for mobile AND tablet; never pool profiles or phases.",
+          "exclusions": "Exclude null/sanitized URLs, non-localhost resources, mock/external resources, documents/RSC/data, incomplete/out-of-trace requests and entire-build asset totals. Retain excluded counts as context."
+        }
+      }
+    }
+  ],
+  "resourceCriterionClarifiedAtUtc": "2026-11-14T14:46:58.686984+00:00"
+}
