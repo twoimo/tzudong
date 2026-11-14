@@ -1,3 +1,4 @@
+import '@/app/home-interactive-globals.css';
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";

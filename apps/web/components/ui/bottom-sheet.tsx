@@ -106,6 +106,7 @@ const NESTED_MODAL_PORTAL_ALLOW_SELECTOR = [
     '[role="alertdialog"]',
     '[data-radix-dialog-content]',
     '[data-radix-alert-dialog-content]',
+    '[data-slot="dialog-overlay"]',
 ].join(', ');
 
 export const BOTTOM_SHEET_BACKDROP_ATTRIBUTE = 'data-bottom-sheet-backdrop';
@@ -943,7 +944,10 @@ function BottomSheetComponent({
     ]);
 
     const handleDialogKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (!isModal) return;
+        if (!isModal || event.defaultPrevented) return;
+        // React portal events bubble through the sheet's component tree. The
+        // portaled dialog owns its keyboard loop and dismissal while it is open.
+        if (!sheetRef.current?.contains(event.target as Node)) return;
 
         if (event.key === 'Escape') {
             event.preventDefault();
@@ -1071,7 +1075,7 @@ function BottomSheetComponent({
     useEffect(() => {
         if (!isOpen) return;
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape' && !e.defaultPrevented) onClose();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);

@@ -1,3 +1,4 @@
+import "@/app/home-interactive-globals.css";
 import { captureBrowserLogout } from "@/lib/auth/browser-logout";
 import { beginBrowserAuthIntent, publishBrowserSignupPkce } from "@/lib/auth/browser-oauth-commit";
 import { requestBrowserPasswordRecovery, startBrowserGoogleOAuth } from "@/lib/auth/isolated-browser-pkce";
@@ -253,6 +254,7 @@ function OnboardingConsentFields({
 const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, initialAuthTab = "login" }: AuthModalProps) => {
   const isMobileOrTablet = useImmediateMobileOrTablet();
   const dialogOpenerRef = useRef<HTMLElement | null>(null);
+  const auxiliaryDialogOpenerRef = useRef<HTMLElement | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -274,6 +276,20 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
   const [isSendingReset, setIsSendingReset] = useState(false);
   const safeRedirectTo = getSafeAuthNextPath(redirectTo);
   const requestedRedirect = resolveRequestedAuthRedirect(reason, safeRedirectTo);
+
+  const rememberAuxiliaryDialogOpener = useCallback(() => {
+    const active = document.activeElement;
+    auxiliaryDialogOpenerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+  }, []);
+
+  const restoreAuxiliaryDialogOpener = useCallback((event: Event) => {
+    const opener = auxiliaryDialogOpenerRef.current;
+    auxiliaryDialogOpenerRef.current = null;
+    if (opener?.isConnected) {
+      event.preventDefault();
+      opener.focus({ preventScroll: true });
+    }
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1278,17 +1294,22 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
       {/* 개인정보 처리방침 모달 */}
       <Dialog open={isPrivacyModalOpen} onOpenChange={setIsPrivacyModalOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-hidden p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-          <DialogHeader>
+        <DialogContent
+          onOpenAutoFocus={rememberAuxiliaryDialogOpener}
+          onCloseAutoFocus={restoreAuxiliaryDialogOpener}
+          overlayClassName="z-[120]"
+          className="z-[120] flex h-[min(42rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        >
+          <DialogHeader className="shrink-0">
             <DialogTitle>개인정보 처리방침</DialogTitle>
             <DialogDescription>
               쯔동여지도 서비스의 개인정보 처리방침입니다.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="h-[50vh] sm:h-[55vh] pr-4">
+          <ScrollArea className="min-h-0 flex-1 pr-4">
             <PrivacyPolicyContent />
           </ScrollArea>
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex shrink-0 justify-end gap-2 pt-4 border-t">
             <Button variant="outline" className="min-h-11" onClick={() => setIsPrivacyModalOpen(false)}>
               닫기
             </Button>
@@ -1301,7 +1322,12 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
       {/* 비밀번호 찾기 모달 */}
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] [&>button.absolute]:hidden">
+        <DialogContent
+          onOpenAutoFocus={rememberAuxiliaryDialogOpener}
+          onCloseAutoFocus={restoreAuxiliaryDialogOpener}
+          overlayClassName="z-[120]"
+          className="z-[120] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] [&>button.absolute]:hidden"
+        >
           <DialogHeader>
             <DialogTitle>비밀번호 찾기</DialogTitle>
             <DialogDescription>

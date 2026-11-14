@@ -1,5 +1,6 @@
 'use client';
 
+import '@/app/home-interactive-globals.css';
 import { useRouter } from "next/navigation";
 import { useState, memo, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
@@ -380,7 +381,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
 
     if (profileError) {
         return (
-            <div className="flex flex-col h-full bg-background">
+            <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-background" data-user-profile-scroll="true">
                 {profilePanelHeader}
                 <div className="flex items-center justify-center h-64">
                     <div className="text-center text-muted-foreground" aria-live="polite">
@@ -403,7 +404,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
 
     if (!profile) {
         return (
-            <div className="flex flex-col h-full bg-background">
+            <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-background" data-user-profile-scroll="true">
                 {profilePanelHeader}
                 <div className="flex items-center justify-center h-64">
                     <div className="text-center text-muted-foreground">
@@ -416,10 +417,10 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     }
 
     return (
-        <div className="flex flex-col h-full bg-background">
+        <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-background" data-user-profile-scroll="true">
             {profilePanelHeader}
             {/* Profile identity and activity summary */}
-            <div className="flex flex-col gap-3 border-b border-border bg-background px-4 py-3">
+            <div className="flex shrink-0 flex-col gap-3 border-b border-border bg-background px-4 py-3">
                 <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-3">
                         {/* 프로필 아바타 */}
@@ -487,9 +488,10 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="border-b border-border/70 bg-background px-3 py-2">
+            {/* Keep a usable list below the tabs. On short screens the outer
+                panel scrolls the summary away instead of collapsing this body. */}
+            <div className="flex min-h-64 flex-1 flex-col overflow-hidden">
+                <div className="shrink-0 border-b border-border/70 bg-background px-3 py-2">
                     <div
                         role="tablist"
                         aria-label="사용자 프로필 콘텐츠"
@@ -525,7 +527,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-hidden bg-gradient-to-b from-muted/20 to-background">
+                <div className="min-h-0 flex-1 overflow-hidden bg-gradient-to-b from-muted/20 to-background">
                     {/* 도장 탭 */}
                     {activeTab === 'stamps' && (
                     <div

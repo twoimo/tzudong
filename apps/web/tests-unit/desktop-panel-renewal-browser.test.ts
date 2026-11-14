@@ -42,13 +42,39 @@ function Fixture(){const [auth,setAuth]=useState(globalThis.__holdAuth?{user:nul
 createRoot(document.getElementById('root')).render(<QueryClientProvider client={new QueryClient()}><Fixture/></QueryClientProvider>);
 `;
 
-export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-mobile' | 'outer-desktop' = 'desktop') {
+export async function renewalPanelBundle(
+  surface: 'desktop' | 'mobile' | 'outer-mobile' | 'outer-desktop' = 'desktop',
+  { includeHomeEffects = false }: { includeHomeEffects?: boolean } = {},
+) {
+  const fixtureEntry = includeHomeEffects
+    ? entry.replace('const filters =', `
+import HomeClientEffects from './app/home-client-effects';
+const noop = () => {};
+function HomeEffects(){
+  const detail = React.useRef(noop), panel = React.useRef(noop);
+  return <HomeClientEffects activeRightPanel={null} clearRestaurantDetailSelection={noop}
+    closeAllPanels={noop} isAdmin={false} isLoggedIn={true} isAnnouncementSheetOpen={false}
+    mapMode="domestic" openDetailPanelRef={detail} openPanelRef={panel}
+    selectedAnnouncement={null} setMapMode={noop} setSelectedAnnouncement={noop}/>;
+}
+const filters =`).replace('<Fixture/></QueryClientProvider>', '<Fixture/><HomeEffects/></QueryClientProvider>')
+    : entry;
   const built = await Bun.build({
     entrypoints: ['renewal-fixture'], target: 'browser', format: 'iife', write: false,
     define: { 'process.env.NODE_ENV': '"test"' },
     plugins: [{ name: 'renewal-fixture', setup(builder) {
       builder.onResolve({ filter: /^renewal-fixture$/ }, () => ({ path: 'entry', namespace: 'fixture' }));
-      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: entry.replace("'./components/home/home-desktop-control-panel'", JSON.stringify(surface === 'mobile' ? './components/home/MobileControlOverlay' : surface.startsWith('outer') ? './components/home/home-control-panel' : './components/home/home-desktop-control-panel')).replace('<Panel mapMode=', '<Panel viewportMode="'+(surface === 'outer-mobile' ? 'mobileOrTablet' : 'desktop')+'" onModeChange={()=>{}} onPanelClose={()=>{}} initialIntent={globalThis.__initialIntent} mapMode='), loader: 'tsx', resolveDir: root }));
+      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: fixtureEntry.replace("'./components/home/home-desktop-control-panel'", JSON.stringify(surface === 'mobile' ? './components/home/MobileControlOverlay' : surface.startsWith('outer') ? './components/home/home-control-panel' : './components/home/home-desktop-control-panel')).replace('<Panel mapMode=', '<Panel viewportMode="'+(surface === 'outer-mobile' ? 'mobileOrTablet' : 'desktop')+'" onModeChange={()=>{}} onPanelClose={()=>{}} initialIntent={globalThis.__initialIntent} mapMode='), loader: 'tsx', resolveDir: root }));
+      if (includeHomeEffects) {
+        builder.onResolve({ filter: /^\.\/home-supabase-actions$/ }, () => ({ path: 'home-read', namespace: 'home-read' }));
+        builder.onLoad({ filter: /.*/, namespace: 'home-read' }, () => ({ contents: `
+          const unexpected=async()=>{throw new Error('FIXTURE_UNEXPECTED_HOME_READ')};
+          export const fetchHomeAnnouncementById=unexpected;
+          export const resolveHomeRestaurantDeepLink=unexpected;
+          export const resolveHomeRestaurantByCoordinates=unexpected;
+          export const resolveHomeBookmarkRestaurantSelection=unexpected;
+        `, loader: 'js' }));
+      }
       const inert: Record<string, string> = {
         'next/navigation': `import { useSyncExternalStore, useMemo } from 'react'; const subscribe=cb=>{window.addEventListener('popstate',cb);return()=>window.removeEventListener('popstate',cb)}; const router={push(url){history.pushState({},'',url);window.dispatchEvent(new Event('popstate'));},replace(url){history.replaceState({},'',url);window.dispatchEvent(new Event('popstate'));},prefetch(){}}; export const useRouter=()=>router; export const usePathname=()=>location.pathname; export function useSearchParams(){const value=useSyncExternalStore(subscribe,()=>location.search);return useMemo(()=>new URLSearchParams(value),[value]);}`,
         'next/dynamic': `import React from 'react'; export default function dynamic(loader, options={}) {const Component=React.lazy(()=>loader().then(value=>({default:value.default||value})));return props=><React.Suspense fallback={options.loading?<options.loading/>:null}><Component {...props}/></React.Suspense>;}`,
@@ -76,6 +102,7 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
         ...(surface.startsWith('outer') ? {'@/components/home/MobileControlOverlay':'지도 메뉴','@/components/home/home-desktop-control-panel':'지도 메뉴'} : {}),
       };
       for (const [path, title] of Object.entries(views)) inert[path] = `import React,{useState} from 'react';export function UserProfilePanel({onClose}){const [note,setNote]=useState('');return <section data-loaded-panel="${title}"><h2>${title}</h2><input aria-label="${title} 상태" value={note} onChange={e=>setNote(e.target.value)}/><div data-fixture-scroll style={{height:80,overflow:'auto'}}><div style={{height:800}}>합성 목록</div></div><button onClick={onClose}>패널 닫기</button></section>};export default UserProfilePanel;`;
+      if (includeHomeEffects) inert['@/components/overlay-pages/FeedOverlay'] = `import React from 'react';export default function Feed({initialReviewId,onClose}){return <section data-loaded-panel="리뷰" data-shared-review-id={initialReviewId||''}><h2>리뷰</h2><p>선택한 공유 리뷰: {initialReviewId}</p><button onClick={onClose}>패널 닫기</button></section>;}`;
       for (const [path,title] of [['@/components/home/MobileBookmarkMenuButton','북마크'],['@/components/home/MobileNotificationMenuButton','알림']]) inert[path] = `import React from 'react';export default function Menu({open,onOpenChange}){return <><button aria-label="${title}" onClick={()=>onOpenChange(!open)}>${title}</button>{open&&<section data-loaded-panel="${title}"><h2>${title}</h2></section>}</>}`;
       inert['@/components/search/RestaurantSearch'] = `import React from 'react';export default function Search({onRestaurantSearch,onSearchQueryChange}){return <section data-loaded-panel="검색"><button onClick={()=>{onRestaurantSearch({id:'fixture-restaurant',name:'정원분식'});onSearchQueryChange('');}}>정원분식 선택</button></section>;}`;
       builder.onResolve({ filter: /^(?:next\/|@\/)/ }, args => inert[args.path]
@@ -94,6 +121,54 @@ export async function renewalPanelBundle(surface: 'desktop' | 'mobile' | 'outer-
   if (!built.success) throw new Error(built.logs.map(String).join('\n').slice(0, 2000));
   return built.outputs.find(output => output.path.endsWith('.js'))!.text();
 }
+
+(existsSync(chrome) ? test : test.skip)('a cold shared review selects the desktop feed and search exits without reopening it', async () => {
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/*', route => route.request().resourceType() === 'document'
+      ? route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><div id="root"></div></body></html>' })
+      : route.abort());
+    await page.goto('https://renewal.test/?review=fixture-shared-review&mode=overseas');
+    await page.evaluate(() => Object.assign(globalThis, { __heldPanels: ['리뷰'] }));
+    await page.addScriptTag({ content: await renewalPanelBundle('desktop', { includeHomeEffects: true }) });
+    await browserExpect.poll(() => new URL(page.url()).searchParams.get('panel')).toBe('feed');
+    await browserExpect(page.getByRole('region', { name: '리뷰 패널', exact: true }).getByRole('status')).toContainText('리뷰');
+    await page.evaluate(() => (globalThis as unknown as { __fixture: { release(name: string): void } }).__fixture.release('리뷰'));
+    const feed = page.locator('[data-loaded-panel="리뷰"]');
+    await browserExpect(feed).toBeVisible();
+    // The real panel selects the deferred view and supplies the share ID even
+    // when that view finishes loading after the URL was normalized.
+    await browserExpect(feed).toHaveAttribute('data-shared-review-id', 'fixture-shared-review');
+
+    await page.evaluate(() => {
+      const state = globalThis as unknown as { __searchExitRoutes: string[] };
+      state.__searchExitRoutes = [];
+      window.addEventListener('popstate', () => state.__searchExitRoutes.push(location.search));
+    });
+    const search = page.getByRole('textbox', { name: '맛집 이름 검색어 입력', exact: true });
+    await search.click();
+    await search.fill('한추');
+    await browserExpect(page.locator('[data-loaded-panel="검색"]')).toBeVisible();
+    await browserExpect(search).toHaveValue('한추');
+    await page.evaluate(async () => {
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+    });
+    await browserExpect(page).toHaveURL('https://renewal.test/?mode=overseas');
+    await browserExpect(feed).not.toBeVisible();
+    expect(await page.evaluate(() => {
+      const routes = (globalThis as unknown as { __searchExitRoutes: string[] }).__searchExitRoutes;
+      return routes.length > 0 && routes.every(query => {
+        const params = new URLSearchParams(query);
+        return !params.has('panel') && !params.has('review');
+      });
+    })).toBe(true);
+    expect(errors).toEqual([]);
+  } finally { await browser.close(); }
+}, 30_000);
 
 (existsSync(chrome) ? test : test.skip)('detail close and parent history restore preserve the exact desktop search query', async () => {
   const browser = await chromium.launch({ executablePath: chrome, headless: true });

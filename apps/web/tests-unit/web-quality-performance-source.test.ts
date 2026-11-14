@@ -70,6 +70,24 @@ const tailwindEntries = {
     sources: ['"../components/restaurant"', '"../components/reviews"', '"../components/auth"', '"../components/ui"', '"../components/home/map-panel-chrome.tsx"'],
     exclusions: ['not "../**/*.test.*"', 'not "../tests-unit"'],
   },
+  "app/home-interactive-globals.css": {
+    sources: [
+      '"../components/auth"', '"../components/profile"', '"../components/overlay-pages"',
+      '"../components/feed"', '"../components/stamp"', '"../components/leaderboard"',
+      '"../components/reviews"', '"../components/legal"', '"../components/ui"',
+      '"../components/home/map-panel-chrome.tsx"',
+      '"../components/layout/page-heading-styles.ts"',
+      '"../hooks/useUserProfile.ts"',
+    ],
+    exclusions: [
+      'not "../**/*.{test,spec}.{js,jsx,ts,tsx}"',
+      'not "../{tests-unit,test,tests,fixtures}/**"',
+    ],
+  },
+  "app/legal-globals.css": {
+    sources: ['"./privacy/page.tsx"', '"./data-deletion/page.tsx"', '"../components/legal"', '"../components/layout/page-heading-styles.ts"'],
+    exclusions: [],
+  },
 } as const;
 
 const escapedClassSelector = (utility: string) =>
@@ -103,7 +121,9 @@ describe("Tailwind v4 source contracts", () => {
       });
       compiledEntries.set(entry, compiled.css);
       const compiledRoot = postcss.parse(compiled.css);
-      expect(compiledRoot.nodes.some((node) => node.type === "rule")).toBe(true);
+      let compiledRuleCount = 0;
+      compiledRoot.walkRules(() => { compiledRuleCount += 1; });
+      expect(compiledRuleCount).toBeGreaterThan(0);
     }
 
     expect(retainedUtilities.length).toBeGreaterThan(0);

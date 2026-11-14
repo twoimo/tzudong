@@ -10,6 +10,7 @@ import { requestAuthUi } from '@/lib/auth-ui-events';
 import { isPublicRestrictedMode } from '@/lib/site-config';
 import { toast } from '@/lib/no-toast';
 import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from '@/lib/desktop-left-panel-entry';
+import { DESKTOP_MIN_WIDTH_QUERY } from '@/lib/viewport-breakpoints';
 import {
     resolveHomeDetailMapModeParam,
     isHomeDetailHistoryState,
@@ -327,23 +328,37 @@ export default function HomeClientEffects({
         }
 
 
-        const reviewId = searchParams.get('review');
-        if (reviewId) {
-            const isMobileWidth = typeof window !== 'undefined' && window.innerWidth <= 1024;
-
-            if (!isMobileWidth) {
-                window.dispatchEvent(new CustomEvent('openFeedOverlay', { detail: { reviewId } }));
-            } else {
-                router.replace(`/feed?review=${reviewId}`);
-            }
-        }
-
         return () => {
             isCancelled = true;
             clearRegisteredRequestKeys();
             timers.forEach((timer) => window.clearTimeout(timer));
         };
     }, [closeAllPanels, mapMode, openDetailPanelRef, openPanelRef, router, searchParams, setMapMode, setSelectedAnnouncement]);
+
+    useEffect(() => {
+        const reviewId = searchParams.get('review');
+        if (!reviewId) return;
+
+        const desktopQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
+        const openSharedReview = () => {
+            if (!desktopQuery.matches) {
+                router.replace(`/feed?review=${encodeURIComponent(reviewId)}`, { scroll: false });
+                return;
+            }
+
+            // The home panel consumes URL state, including on a cold load.
+            // An event can fire before the deferred feed panel has mounted.
+            if (searchParams.get('panel') !== 'feed') {
+                const params = new URLSearchParams(searchParams.toString());
+                params.set('panel', 'feed');
+                router.replace(`/?${params.toString()}`, { scroll: false });
+            }
+        };
+
+        openSharedReview();
+        desktopQuery.addEventListener('change', openSharedReview);
+        return () => desktopQuery.removeEventListener('change', openSharedReview);
+    }, [router, searchParams]);
 
     useEffect(() => {
         const handleChangeMapMode = (event: Event) => {
