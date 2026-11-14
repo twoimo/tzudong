@@ -400,23 +400,85 @@ async function saveJson(path, value) {
   await writeFile(path, bytes, { flag: 'wx', mode: 0o600 });
 }
 
-async function deploymentReadback(sourceSha, deploymentId) {
-  let response;
-  try { response = await fetch(CANONICAL + 'api/health', { redirect: 'error', signal: AbortSignal.timeout(15_000) }); }
-  catch { throw fixedError('HEALTH_READBACK_UNAVAILABLE'); }
-  if (!response.ok) throw fixedError('HEALTH_READBACK_HTTP_' + response.status);
-  const contentLength = Number(response.headers.get('content-length') ?? 0);
-  if (contentLength > 65_536) throw fixedError('HEALTH_READBACK_SIZE_LIMIT');
-  const text = await response.text();
-  if (text.length > 65_536) throw fixedError('HEALTH_READBACK_SIZE_LIMIT');
-  let value;
-  try { value = JSON.parse(text); } catch { throw fixedError('HEALTH_READBACK_INVALID'); }
-  if (value.ok !== true || value.gitSha !== sourceSha || value.deploymentId !== deploymentId) {
-    throw fixedError('DEPLOYMENT_IDENTITY_MISMATCH');
+export async function publicBrowserHealth(tools) {
+  // A distinct anonymous process/profile reads the ordinary public JSON page.
+  // It is fully closed before returning; the measured browser's connection,
+  // storage and cache are never warmed by deployment verification. No custom
+  // UA, headers, proxy, auth, challenge interaction or security-setting change.
+  const profileRoot = await mkdtemp(resolve(tmpdir(), 'tzudong-health-readback-'));
+  const evidence = { transport: 'browser-public-navigation',
+    isolatedFromMeasuredBrowser: true, credentialsUsed: false,
+    browser: { product: 'Google Chrome for Testing', version: EXPECTED.chrome, executable: tools.executable },
+    observedAt: new Date().toISOString(), httpStatus: null, pageClassification: 'unavailable' };
+  let browser;
+  try {
+    browser = await tools.puppeteer.launch({ executablePath: tools.executable,
+      headless: true, userDataDir: profileRoot, dumpio: false, timeout: 30_000,
+      env: Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'XDG_RUNTIME_DIR']
+        .filter(key => process.env[key]).map(key => [key, process.env[key]])) });
+    if (!(await browser.version()).endsWith('/' + EXPECTED.chrome)) throw fixedError('HEALTH_BROWSER_VERSION_MISMATCH');
+    const page = await browser.newPage();
+    const response = await page.goto(CANONICAL + 'api/health', { waitUntil: 'domcontentloaded', timeout: 15_000 });
+    evidence.httpStatus = finite(response?.status());
+    const document = await page.evaluate(() => {
+      const text = (window.document.querySelector('pre')?.textContent ?? window.document.body?.innerText ?? '').trim();
+      const sample = (window.document.title + '\n' + text.slice(0, 8192)).slice(0, 8448);
+      const challenge = /security checkpoint|verify.{0,30}human|checking your browser|just a moment/i.test(sample);
+      const classification = challenge ? 'challenge_document' : text.length > 65_536 ? 'oversize_document'
+        : !text ? 'empty_document' : text.startsWith('{') ? 'json_document'
+          : window.document.contentType === 'text/html' ? 'html_document' : 'text_document';
+      // Return bounded JSON only. HTML, title, challenge text and arbitrary
+      // provider diagnostics are never transferred into retained evidence.
+      return { classification, json: classification === 'json_document' ? text : null };
+    });
+    evidence.pageClassification = document.classification;
+    evidence.observedAt = new Date().toISOString();
+    if (!response) throw fixedError('HEALTH_READBACK_NO_RESPONSE');
+    if (response.status() >= 400) throw fixedError('HEALTH_READBACK_HTTP_' + response.status());
+    if (page.url() !== CANONICAL + 'api/health') throw fixedError('HEALTH_READBACK_REDIRECTED');
+    if (document.classification === 'oversize_document') throw fixedError('HEALTH_READBACK_SIZE_LIMIT');
+    if (document.classification !== 'json_document') throw fixedError('HEALTH_READBACK_NON_JSON');
+    let value;
+    try { value = JSON.parse(document.json); } catch { throw fixedError('HEALTH_READBACK_INVALID'); }
+    if (value.ok !== true || value.host !== 'www.tzudong.app'
+      || !/^[a-f0-9]{40}$/.test(value.gitSha ?? '') || !/^dpl_[A-Za-z0-9]{10,80}$/.test(value.deploymentId ?? '')) {
+      throw fixedError('HEALTH_READBACK_INVALID');
+    }
+    return { ...evidence, sourceSha: value.gitSha, gitSha: value.gitSha, deploymentId: value.deploymentId,
+      canonicalUrl: CANONICAL, healthOk: true, ok: true, host: value.host };
+  } catch (error) {
+    const failure = error?.auditCode ? error : fixedError('HEALTH_READBACK_UNAVAILABLE');
+    failure.healthReadback = evidence;
+    throw failure;
+  } finally {
+    if (browser) {
+      let timer;
+      try {
+        await Promise.race([browser.close(), new Promise((_, reject) => {
+          timer = setTimeout(() => reject(fixedError('HEALTH_BROWSER_CLOSE_TIMEOUT')), 5000);
+        })]);
+      } catch {
+        browser.process()?.kill('SIGKILL');
+        throw Object.assign(fixedError('HEALTH_BROWSER_CLOSE_FAILED'), { healthReadback: evidence });
+      } finally {
+        clearTimeout(timer);
+        await rm(profileRoot, { recursive: true, force: true });
+      }
+    } else {
+      await rm(profileRoot, { recursive: true, force: true });
+    }
   }
-  return { sourceSha: value.gitSha, gitSha: value.gitSha, deploymentId: value.deploymentId,
-    canonicalUrl: CANONICAL, observedAt: new Date().toISOString(), healthOk: true,
-    ok: true, host: 'www.tzudong.app' };
+}
+
+async function deploymentReadback(tools, sourceSha, deploymentId) {
+  const value = await publicBrowserHealth(tools);
+  if (value.gitSha !== sourceSha || value.deploymentId !== deploymentId) {
+    throw Object.assign(fixedError('DEPLOYMENT_IDENTITY_MISMATCH'), {
+      healthReadback: { transport: value.transport, httpStatus: value.httpStatus,
+        pageClassification: value.pageClassification, observedAt: value.observedAt },
+    });
+  }
+  return value;
 }
 
 async function loadTools(protocol) {
@@ -462,7 +524,7 @@ async function trial({ tools, protocol, profile, index, args, sourceTreeSha, out
   const errors = { pageErrors: 0, consoleErrors: 0, failedRequests: 0,
     firstPartyHttpErrors: 0, mainDocumentStatus: null };
   const work = async () => {
-    const before = await deploymentReadback(args.sourceSha, args.deploymentId);
+    const before = await deploymentReadback(tools, args.sourceSha, args.deploymentId);
     browser = await tools.puppeteer.launch({ executablePath: tools.executable,
       headless: true, userDataDir: profileRoot, dumpio: false, timeout: 30_000,
       args: ['--lang=ko-KR'],
@@ -506,8 +568,11 @@ async function trial({ tools, protocol, profile, index, args, sourceTreeSha, out
       tagName: /^[A-Z0-9-]{1,32}$/.test(observation.lcpElement.tagName ?? '') ? observation.lcpElement.tagName : null,
     } : null;
     let after = null;
-    try { after = await deploymentReadback(args.sourceSha, args.deploymentId); }
-    catch (error) { item.failures.push(failureCode(error)); }
+    try { after = await deploymentReadback(tools, args.sourceSha, args.deploymentId); }
+    catch (error) {
+      item.failures.push(failureCode(error));
+      if (error.healthReadback) item.healthReadbackFailure = error.healthReadback;
+    }
     const traceEndMs = finite(lhr.audits?.metrics?.details?.items?.[0]?.observedTraceEnd);
     const source = { gitSha: args.sourceSha, sourceSha: args.sourceSha, sourceTreeSha,
       deploymentId: args.deploymentId, canonicalUrl: CANONICAL, healthBefore: before, healthAfter: after };
@@ -568,6 +633,7 @@ async function trial({ tools, protocol, profile, index, args, sourceTreeSha, out
     })]);
   } catch (error) {
     item.failures.push(failureCode(error));
+    if (error.healthReadback) item.healthReadbackFailure = error.healthReadback;
     if (page && !item.paths.screenshot) {
       try {
         await page.screenshot({ path: resolve(folder, 'failure.png'), type: 'png', fullPage: false, timeout: 5000 });
@@ -675,6 +741,8 @@ export async function waitForAfter(argv) {
       }
     };
     await unchangedHarness();
+    const protocol = JSON.parse(await readFile(resolve(HERE, 'protocol.json'), 'utf8'));
+    const tools = await loadTools(protocol);
     const deadline = Date.now() + receipt.maximumWaitMs;
     const targetUrl = 'https://raw.githubusercontent.com/twoimo/tzudong/refs/heads/' + TARGET_REF + '/' + TARGET_PATH;
     let target;
@@ -703,7 +771,7 @@ export async function waitForAfter(argv) {
         }
       }
       if (target) {
-        const health = await readPublicJson(CANONICAL + 'api/health');
+        const health = await publicBrowserHealth(tools);
         if (health?.ok === true && health.gitSha === target.afterSourceSha
           && health.deploymentId === target.afterDeploymentId) {
           // Two public reads, no token. An unknown/unprotected/mismatched main
@@ -730,7 +798,7 @@ export async function waitForAfter(argv) {
           }).trim();
           if (tree !== commit.tree.sha) throw fixedError('AFTER_SOURCE_TREE_MISMATCH');
           await unchangedHarness();
-          const projectedHealth = await deploymentReadback(target.afterSourceSha, target.afterDeploymentId);
+          const projectedHealth = await deploymentReadback(tools, target.afterSourceSha, target.afterDeploymentId);
           receipt.sourceSha = target.afterSourceSha;
           receipt.sourceTreeSha = tree;
           receipt.deploymentId = target.afterDeploymentId;
@@ -751,6 +819,7 @@ export async function waitForAfter(argv) {
     if (receipt.status !== 'valid') throw fixedError('AFTER_TARGET_WAIT_EXPIRED');
   } catch (error) {
     receipt.failures.push(failureCode(error));
+    if (error.healthReadback) receipt.healthReadbackFailure = error.healthReadback;
   } finally {
     receipt.endedAt = new Date().toISOString();
     await saveJson(resolve(output, 'target-receipt.json'), receipt);
@@ -814,7 +883,7 @@ export async function main(argv = process.argv.slice(2)) {
     run.browserContractSha256 = sha(await readFile(resolve(REPO, '.github/chrome-for-testing.v1.json')));
     run.puppeteerVersion = tools.puppeteerVersion;
     run.browserExecutable = tools.executable;
-    await saveJson(resolve(args.output, 'deployment-before.json'), await deploymentReadback(args.sourceSha, args.deploymentId));
+    await saveJson(resolve(args.output, 'deployment-before.json'), await deploymentReadback(tools, args.sourceSha, args.deploymentId));
     run.deploymentEvidence = { before: 'deployment-before.json' };
     for (const profile of protocol.profiles) {
       for (let index = 1; index <= 5; index++) {
@@ -822,6 +891,9 @@ export async function main(argv = process.argv.slice(2)) {
         run.trials.push(result);
         // A deployment change invalidates the phase; never compare mixed code.
         if (result.failures.includes('DEPLOYMENT_IDENTITY_MISMATCH')) throw fixedError('DEPLOYMENT_CHANGED_DURING_PHASE');
+        if (result.failures.some(code => code.startsWith('HEALTH_READBACK_') || code.startsWith('HEALTH_BROWSER_'))) {
+          throw fixedError('PUBLIC_HEALTH_BROWSER_BLOCKED');
+        }
         if (result.failures.some(code => ['BROWSER_RUNTIME_VERSION_MISMATCH', 'ACTUAL_VIEWPORT_MISMATCH',
           'LIGHTHOUSE_VERSION_MISMATCH', 'LIGHTHOUSE_RESULT_UNAVAILABLE', 'LIGHTHOUSE_RUNTIME_ERROR',
           'UNEXPECTED_NAVIGATION', 'COLLECTION_FAILED', 'TRIAL_TIMEOUT',
@@ -830,12 +902,13 @@ export async function main(argv = process.argv.slice(2)) {
         }
       }
     }
-    await saveJson(resolve(args.output, 'deployment-after.json'), await deploymentReadback(args.sourceSha, args.deploymentId));
+    await saveJson(resolve(args.output, 'deployment-after.json'), await deploymentReadback(tools, args.sourceSha, args.deploymentId));
     run.deploymentEvidence.after = 'deployment-after.json';
     run.status = run.trials.length === 15 && run.trials.every(item => item.status === 'valid') ? 'valid' : 'invalid';
     if (run.status !== 'valid') run.failures.push('ONE_OR_MORE_TRIALS_INVALID');
   } catch (error) {
     run.failures.push(failureCode(error));
+    if (error.healthReadback) run.healthReadbackFailure = error.healthReadback;
   } finally {
     run.endedAt = new Date().toISOString();
     await saveJson(resolve(args.output, 'run.json'), run);

@@ -93,10 +93,12 @@ async function fixture(t, complete = false) {
       const sourceTreeSha = revision(`${sourceSha}^{tree}`);
       const deploymentId = `dpl_SYNTHETICTEST${phase}`;
       manifest.phases[phase] = { run: `${phase}/run.json`, frozenSource: `${phase}/frozen-source.json` };
-      const identity = { ok: true, healthOk: true, gitSha: sourceSha, deploymentId, host: 'www.tzudong.app' };
+      const identity = { ok: true, healthOk: true, gitSha: sourceSha, deploymentId, host: 'www.tzudong.app', transport: 'browser-public-navigation', isolatedFromMeasuredBrowser: true, credentialsUsed: false, browser: { product: 'Google Chrome for Testing', version: '156.0.8078.4', executable: '/synthetic/identity-browser/chrome' } };
       await put(`${phase}/identity.json`, identity);
+      await put(`${phase}/deployment-before.json`, identity);
+      await put(`${phase}/deployment-after.json`, identity);
       await put(`${phase}/frozen-source.json`, { schemaVersion: 'initial-load-frozen-source.v1', phase, sourceSha, sourceTreeSha, deploymentId, canonicalUrl: protocol.url, verifiedAt: iso(offset), identityEvidence: `${phase}/identity.json` });
-      const run = { schemaVersion: 'initial-load-run.v1', phase, status: 'valid', sourceSha, sourceTreeSha, protocolSha256: PINNED_PROTOCOL_SHA256, collectorSha256: hash(collector), toolLockSha256, puppeteerVersion: '25.9.0', pins: { lighthouse: '13.5.0', playwright: '1.64.1', chrome: '156.0.8078.4' }, environment, startedAt: iso(offset), endedAt: iso(offset + 1600000), trials: [] };
+      const run = { schemaVersion: 'initial-load-run.v1', phase, status: 'valid', sourceSha, sourceTreeSha, protocolSha256: PINNED_PROTOCOL_SHA256, collectorSha256: hash(collector), toolLockSha256, puppeteerVersion: '25.9.0', pins: { lighthouse: '13.5.0', playwright: '1.64.1', chrome: '156.0.8078.4' }, environment, startedAt: iso(offset), endedAt: iso(offset + 1600000), deploymentEvidence: { before: 'deployment-before.json', after: 'deployment-after.json' }, trials: [] };
       let trialIndex = 0;
       for (const profile of protocol.profiles) {
         for (let index = 1; index <= 5; index += 1) {
@@ -188,4 +190,19 @@ test('artifact mutation, detached hash mismatch and source admission forgery fai
   assert.throws(() => validateEvidence(input), /unearned field or G003 admission/);
   await writeFile(join(input.root, 'collector.mjs'), '// MUTATED SYNTHETIC FIXTURE\n');
   await assert.rejects(scoreExperiment(input), /artifact hash mismatch/);
+});
+
+test('an unverified identity transport excludes a phase even when metric numbers look faster', async (t) => {
+  const input = await fixture(t, true);
+  const identity = JSON.parse(await readFile(join(input.root, 'before/identity.json'), 'utf8'));
+  identity.transport = 'node-fetch';
+  await input.put('before/identity.json', identity);
+  const map = await createArtifactMap({ root: input.root, output: 'transport-map.json' });
+  const options = { ...input, artifactMap: 'transport-map.json', artifactMapSha256: map.artifactMapSha256 };
+  const result = await scoreExperiment(options);
+  await input.put('scored.json', result);
+  const verified = validateEvidence(options);
+  assert.ok(result.phases.before.issues.includes('IDENTITY_READBACK_TRANSPORT_INVALID'));
+  assert.equal(verified.comparableMetricCount, 0);
+  assert.equal(verified.improvedMetricCount, 0);
 });

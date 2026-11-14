@@ -5,6 +5,31 @@
   "url": "https://www.tzudong.app/",
   "measurementUrl": "https://www.tzudong.app/?__qa=render-flow",
   "baselineSourceSha": "9316871f4220cd487b0e9575415ed2d760de8997",
+  "premeasurementRevisions": [
+    {
+      "revisedAt": "2026-11-14T13:20:37.000Z",
+      "previousProtocolSha256": "858c59b43a6cbae7d9d13a5b1bb9e160a2e0c28347f0d84dabdf99722179b78b",
+      "scope": "Deployment identity readback transport provenance only; timing settings, cache policy, metrics, sample count and budgets are unchanged.",
+      "measuredTrialsBeforeRevision": 0,
+      "retainedPriorAttempts": [
+        {"runId": "43598614632", "trialCount": 0, "failure": "HEALTH_READBACK_HTTP_ERROR"},
+        {"runId": "43599036723", "trialCount": 0, "failure": "HEALTH_READBACK_HTTP_403"}
+      ],
+      "reason": "The Node public health readback failed before any performance trial. A normal anonymous public browser navigation was observed to return the expected identity. Use the same public endpoint through a separate pinned Chrome navigation and fail closed if it is denied."
+    }
+  ],
+  "deploymentReadback": {
+    "transport": "browser-public-navigation",
+    "url": "https://www.tzudong.app/api/health",
+    "credentialsUsed": false,
+    "isolatedFromMeasuredBrowser": true,
+    "browserProduct": "Google Chrome for Testing",
+    "browserVersion": "156.0.8078.4",
+    "profile": "A separate fresh anonymous Chrome process and temporary profile; never reuse the measured browser or its resource cache.",
+    "timing": "Outside the Lighthouse trace and timed measurement. A pretrial readback browser closes before the measured browser starts; a post-trace readback starts only after the timed trace has ended.",
+    "requestPolicy": "Ordinary public GET navigation with the browser's default request behavior; no credentials, custom user agent or headers, proxy, reused authenticated session, or permission/security setting changes.",
+    "failurePolicy": "Denied navigation, unexpected final URL, unsuccessful response or source/deployment identity mismatch remains a failed readback; no access-control changes or forced continuation."
+  },
   "scope": {
     "measurementType": "controlled-observed-lab",
     "route": "/",

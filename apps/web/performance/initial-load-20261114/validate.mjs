@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 // Deliberately independent of score.mjs: raw inputs, eligibility and statistics
 // are recalculated here. No scorer module or scorer-computed sample is trusted.
-const PROTOCOL_HASH = '858c59b43a6cbae7d9d13a5b1bb9e160a2e0c28347f0d84dabdf99722179b78b';
+const PROTOCOL_HASH = '4068740fd3b254f3f62ff7d5d218388d4b767b66f2b1b48800b6902ff10918a8';
 const DEFAULT_ROOT = dirname(fileURLToPath(import.meta.url));
 const SHA = /^[a-f0-9]{64}$/;
 const COMMIT = /^[a-f0-9]{40}$/;
@@ -100,6 +100,15 @@ function getMetricValues(observation, lighthouse) {
   return result;
 }
 
+function independentTransportCheck(value, protocol) {
+  const declared = protocol.deploymentReadback;
+  const observed = value?.browser;
+  return value?.transport === declared.transport && value?.credentialsUsed === false
+    && value?.isolatedFromMeasuredBrowser === true && observed?.product === declared.browserProduct
+    && observed?.version === declared.browserVersion && typeof observed?.executable === 'string'
+    && isAbsolute(observed.executable);
+}
+
 function browserObservationValid(observed, report, profile, protocol, frozen) {
   const config = report.configSettings ?? {};
   const browser = observed.browser ?? {};
@@ -137,7 +146,7 @@ function browserObservationValid(observed, report, profile, protocol, frozen) {
   ];
   for (const point of ['healthBefore', 'healthAfter']) {
     const identity = observed.source?.[point];
-    requirements.push(identity?.healthOk === true && identity.gitSha === frozen.sourceSha && identity.deploymentId === frozen.deploymentId);
+    requirements.push(identity?.healthOk === true && identity.gitSha === frozen.sourceSha && identity.deploymentId === frozen.deploymentId && independentTransportCheck(identity, protocol));
   }
   const readiness = observed.readiness ?? {};
   requirements.push(readiness.tileReadyCount > 0 && readiness.naverMarkerCount > 0);
@@ -207,6 +216,7 @@ export function validateEvidence({ root = DEFAULT_ROOT, input = 'experiment.json
       frozen.sourceTreeSha === sourceTree, frozen.canonicalUrl === protocol.url,
       identity.ok === true, identity.gitSha === frozen.sourceSha,
       identity.deploymentId === frozen.deploymentId, identity.host === new URL(protocol.url).hostname,
+      independentTransportCheck(identity, protocol),
       typeof frozen.deploymentId === 'string' && /^dpl_[A-Za-z0-9]+$/.test(frozen.deploymentId),
       timestamp(frozen.verifiedAt) !== null,
       run.protocolSha256 === PROTOCOL_HASH, run.collectorSha256 === collectorHash,
@@ -218,6 +228,14 @@ export function validateEvidence({ root = DEFAULT_ROOT, input = 'experiment.json
       timestamp(run.startedAt) >= timestamp(protocol.declaredAt),
       phase !== 'before' || frozen.sourceSha === protocol.baselineSourceSha,
     ];
+    for (const boundary of ['before', 'after']) {
+      const path = run.deploymentEvidence?.[boundary];
+      if (!path) { checks.push(false); continue; }
+      const parent = dirname(location.run);
+      const receipt = get(parent === '.' || path.startsWith(`${parent}/`) ? path : `${parent}/${path}`);
+      checks.push(receipt.ok === true && receipt.healthOk === true && receipt.gitSha === frozen.sourceSha
+        && receipt.deploymentId === frozen.deploymentId && independentTransportCheck(receipt, protocol));
+    }
     for (const pin of ['lighthouse', 'playwright', 'chrome']) checks.push(run.pins?.[pin] === protocol.tools[pin]);
     const phaseValid = checks.every(Boolean);
     const phaseReport = report.phases?.[phase];

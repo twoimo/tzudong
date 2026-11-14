@@ -4,7 +4,7 @@ import { readFile, writeFile, lstat, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const PINNED_PROTOCOL_SHA256 = '858c59b43a6cbae7d9d13a5b1bb9e160a2e0c28347f0d84dabdf99722179b78b';
+export const PINNED_PROTOCOL_SHA256 = '4068740fd3b254f3f62ff7d5d218388d4b767b66f2b1b48800b6902ff10918a8';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const HEX = /^[a-f0-9]{64}$/;
 const GIT = /^[a-f0-9]{40}$/;
@@ -176,13 +176,21 @@ function measuredMetrics(observation, lhr) {
   return values;
 }
 
+function readbackTransportMatches(identity, protocol) {
+  return identity?.transport === protocol.deploymentReadback.transport
+    && identity.isolatedFromMeasuredBrowser === true && identity.credentialsUsed === false
+    && identity.browser?.product === protocol.deploymentReadback.browserProduct
+    && identity.browser?.version === protocol.deploymentReadback.browserVersion
+    && typeof identity.browser?.executable === 'string' && isAbsolute(identity.browser.executable);
+}
+
 function observationProblems(observation, lhr, profile, protocol, frozen) {
   const problems = [];
   const mark = (ok, reason) => { if (!ok) problems.push(reason); };
   mark(observation.source?.gitSha === frozen.sourceSha && observation.source?.deploymentId === frozen.deploymentId, 'OBSERVED_SOURCE_MISMATCH');
   for (const boundary of ['healthBefore', 'healthAfter']) {
     const identity = observation.source?.[boundary];
-    mark(identity?.healthOk === true && identity.gitSha === frozen.sourceSha && identity.deploymentId === frozen.deploymentId, `OBSERVED_${boundary.toUpperCase()}_MISMATCH`);
+    mark(identity?.healthOk === true && identity.gitSha === frozen.sourceSha && identity.deploymentId === frozen.deploymentId && readbackTransportMatches(identity, protocol), `OBSERVED_${boundary.toUpperCase()}_MISMATCH`);
   }
   mark(lhr.lighthouseVersion === protocol.tools.lighthouse, 'LIGHTHOUSE_VERSION_MISMATCH');
   mark(observation.browser?.version === protocol.tools.chrome, 'CHROME_VERSION_MISMATCH');
@@ -254,6 +262,13 @@ export async function scoreExperiment({ root = HERE, input = 'experiment.json', 
     require(frozen.sourceTreeSha === gitTree(repository, frozen.sourceSha), 'FROZEN_TREE_MISMATCH');
     require(frozen.canonicalUrl === protocol.url, 'FROZEN_URL_MISMATCH');
     require(identity.ok === true && identity.gitSha === frozen.sourceSha && identity.deploymentId === frozen.deploymentId && identity.host === new URL(protocol.url).hostname, 'DEPLOYMENT_IDENTITY_MISMATCH');
+    require(readbackTransportMatches(identity, protocol), 'IDENTITY_READBACK_TRANSPORT_INVALID');
+    for (const boundary of ['before', 'after']) {
+      const path = trialPath(reference.run, run.deploymentEvidence?.[boundary]);
+      if (!path) { require(false, `PHASE_${boundary.toUpperCase()}_READBACK_MISSING`); continue; }
+      const receipt = await reader.getJson(path);
+      require(receipt.ok === true && receipt.healthOk === true && receipt.gitSha === frozen.sourceSha && receipt.deploymentId === frozen.deploymentId && readbackTransportMatches(receipt, protocol), `PHASE_${boundary.toUpperCase()}_READBACK_INVALID`);
+    }
     require(typeof frozen.deploymentId === 'string' && /^dpl_[A-Za-z0-9]+$/.test(frozen.deploymentId), 'DEPLOYMENT_ID_MISSING');
     require(time(frozen.verifiedAt) !== null, 'FROZEN_VERIFICATION_TIME_MISSING');
     require(run.protocolSha256 === PINNED_PROTOCOL_SHA256 && run.collectorSha256 === collectorHash, 'MEASUREMENT_CODE_HASH_MISMATCH');

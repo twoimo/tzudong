@@ -11,10 +11,18 @@
 `protocol.json`은 baseline 수집 전에 고정했다. 그 정확한 바이트의 SHA-256은 다음과 같고 scorer와 독립 validator에 같은 값이 고정되어 있다.
 
 ```text
-858c59b43a6cbae7d9d13a5b1bb9e160a2e0c28347f0d84dabdf99722179b78b
+4068740fd3b254f3f62ff7d5d218388d4b767b66f2b1b48800b6902ff10918a8
 ```
 
 초기 baseline 소스는 `9316871f4220cd487b0e9575415ed2d760de8997`이다. 각 phase는 실제 배포 ID, source SHA, Git tree SHA와 공개 health readback을 별도로 보존한다. 소스가 바뀐 중간 샘플을 하나의 phase에 합치지 않는다.
+
+### 유효 측정 이전의 배포 확인 transport 수정
+
+보존된 초기 실행 `43598614632`와 `43599036723`은 각각 `HEALTH_READBACK_HTTP_ERROR`, `HEALTH_READBACK_HTTP_403`으로 종료됐고 두 실행 모두 `trials: []`였다. 따라서 유효 성능 수치는 **0개**이며 결과를 보고 개선 기준을 조정한 것이 아니다. 기존 실패 기록을 유지하고 배포 identity를 확인하는 transport만 수정했다. 지표, timing·cache 조건, 표본 수, 절대·상대·noise budget은 그대로다.
+
+Identity 확인은 `browser-public-navigation`으로 기록한다. 별도의 새 익명 pinned Chrome process/profile에서 공개 `/api/health`로 정상 GET 탐색하고, source·deployment JSON의 허용된 필드만 보존한다. 자격 증명, 재사용 로그인 세션, custom UA/header, proxy, 권한·보안 설정 변경을 사용하지 않는다. 브라우저에서도 거부되거나 identity가 일치하지 않으면 실패로 종료한다.
+
+이 readback은 Lighthouse timed trace 밖에서 수행한다. 사전 확인용 브라우저를 완전히 닫은 뒤 측정 브라우저를 시작하고, 사후 확인은 timed trace가 끝난 뒤 수행한다. 확인용 profile과 측정용 profile을 분리하므로 확인 과정이 **측정 profile의 resource cache를 데우지 않는다**. 이는 CDN·서버·OS 수준의 모든 warming이 없다는 뜻은 아니며 기존의 server-cache 관찰 범위는 유지한다. 각 receipt에는 `transport`, `isolatedFromMeasuredBrowser`, `credentialsUsed`, 실제 browser product/version/executable을 남겨 scorer와 독립 validator가 대조한다.
 
 | 항목 | 고정 조건 |
 | --- | --- |
@@ -134,7 +142,7 @@ Validator의 `evidence-and-calculation-verified`는 **자료와 계산의 일치
 }
 ```
 
-각 frozen source record에는 `schemaVersion: initial-load-frozen-source.v1`, `phase`, immutable `sourceSha`, `sourceTreeSha`, `deploymentId`, `canonicalUrl`, `verifiedAt`, task-root 상대 `identityEvidence`가 필요하다. Identity evidence는 실제 공개 health 응답의 `ok`, `gitSha`, `deploymentId`, `host` 필드를 보존한다. 예시 값을 측정 자료로 만들지 않는다.
+각 frozen source record에는 `schemaVersion: initial-load-frozen-source.v1`, `phase`, immutable `sourceSha`, `sourceTreeSha`, `deploymentId`, `canonicalUrl`, `verifiedAt`, task-root 상대 `identityEvidence`가 필요하다. Identity evidence는 실제 공개 health 응답의 `ok`, `gitSha`, `deploymentId`, `host` 및 위의 실제 browser-navigation provenance를 보존한다. Phase 전후와 각 trial 전후의 receipt도 같은 transport 검증을 통과해야 한다. 예시 값을 측정 자료로 만들지 않는다.
 
 Task directory에서 실행한다. 파일을 덮어쓰지 않으므로 실패 시 원인을 고친 후 별도의 output/map 이름을 지정한다. Map에 기록한 입력·script가 바뀌면 새 map과 독립적으로 기록한 새로운 hash가 필요하다.
 
