@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 // Deliberately independent of score.mjs: raw inputs, eligibility and statistics
 // are recalculated here. No scorer module or scorer-computed sample is trusted.
-const PROTOCOL_HASH = '4068740fd3b254f3f62ff7d5d218388d4b767b66f2b1b48800b6902ff10918a8';
+const PROTOCOL_HASH = '1d105370c00603d3539e7e82355c3e46647dd6ff5af49901595ad01951efb851';
 const DEFAULT_ROOT = dirname(fileURLToPath(import.meta.url));
 const SHA = /^[a-f0-9]{64}$/;
 const COMMIT = /^[a-f0-9]{40}$/;
@@ -100,13 +100,21 @@ function getMetricValues(observation, lighthouse) {
   return result;
 }
 
+function independentLaunchCheck(launch, protocol, role) {
+  const expected = protocol.browserLaunch;
+  const args = role === 'measurement' ? expected.measurementExplicitArgs : expected.healthExplicitArgs;
+  return launch?.headless === expected.headless && launch?.sandboxMode === expected.sandboxMode
+    && launch?.scope === expected.scope && launch?.noSandboxObserved === expected.requiredNoSandboxObserved
+    && same(launch?.explicitArgs, args);
+}
+
 function independentTransportCheck(value, protocol) {
   const declared = protocol.deploymentReadback;
   const observed = value?.browser;
   return value?.transport === declared.transport && value?.credentialsUsed === false
     && value?.isolatedFromMeasuredBrowser === true && observed?.product === declared.browserProduct
     && observed?.version === declared.browserVersion && typeof observed?.executable === 'string'
-    && isAbsolute(observed.executable);
+    && isAbsolute(observed.executable) && independentLaunchCheck(value.browserLaunch, protocol, 'health');
 }
 
 function browserObservationValid(observed, report, profile, protocol, frozen) {
@@ -120,6 +128,7 @@ function browserObservationValid(observed, report, profile, protocol, frozen) {
     browser.version === protocol.tools.chrome,
     typeof browser.product === 'string' && /Chrome/.test(browser.product),
     typeof browser.executable === 'string' && isAbsolute(browser.executable),
+    independentLaunchCheck(observed.browserLaunch, protocol, 'measurement'),
     !report.runtimeError,
     report.requestedUrl === protocol.url,
     report.finalDisplayedUrl === protocol.url,
@@ -223,6 +232,8 @@ export function validateEvidence({ root = DEFAULT_ROOT, input = 'experiment.json
       run.toolLockSha256 === hash(bytes.get(manifest.toolLock)),
       run.puppeteerVersion === toolLock?.packages?.['node_modules/puppeteer-core']?.version,
       typeof run.environment?.nodeVersion === 'string' && /^v?24\./.test(run.environment.nodeVersion),
+      run.environment?.runner?.environment === protocol.browserLaunch.requiredRunnerEnvironment,
+      independentLaunchCheck(run.browserLaunch, protocol, 'measurement'),
       timestamp(run.startedAt) !== null, timestamp(run.endedAt) !== null,
       timestamp(run.startedAt) <= timestamp(run.endedAt),
       timestamp(run.startedAt) >= timestamp(protocol.declaredAt),
@@ -242,6 +253,7 @@ export function validateEvidence({ root = DEFAULT_ROOT, input = 'experiment.json
     check(phaseReport && (phaseReport.issues.length === 0) === phaseValid, 'phase eligibility differs from raw inputs');
     for (const key of ['sourceSha', 'sourceTreeSha', 'deploymentId']) check(phaseReport[key] === frozen[key], 'source binding differs');
     check(phaseReport.startedAt === run.startedAt && phaseReport.endedAt === run.endedAt && same(phaseReport.environment, run.environment ?? null), 'phase metadata differs');
+    check(same(phaseReport.browserLaunch, run.browserLaunch ?? null), 'phase launch provenance differs');
     check(Array.isArray(run.trials) && phaseReport.trials.length === run.trials.length, 'attempts omitted');
     const trials = [];
     const ids = new Set();
@@ -258,7 +270,7 @@ export function validateEvidence({ root = DEFAULT_ROOT, input = 'experiment.json
         paths[kind] = path === null || path === undefined ? null : parent === '.' || path.startsWith(`${parent}/`) ? path : `${parent}/${path}`;
         if (paths[kind] !== null) check(bytes.has(paths[kind]), 'unmapped attempted-trial artifact');
       }
-      let valid = trial.status === 'valid' && Array.isArray(trial.failures) && trial.failures.length === 0 && Object.values(paths).every(Boolean);
+      let valid = trial.status === 'valid' && Array.isArray(trial.failures) && trial.failures.length === 0 && Object.values(paths).every(Boolean) && independentLaunchCheck(trial.browserLaunch, protocol, 'measurement');
       let values = Object.fromEntries(Object.keys(protocol.metrics).map((key) => [key, null]));
       if (paths.observations && paths.lhr) {
         const observed = get(paths.observations);
@@ -274,6 +286,7 @@ export function validateEvidence({ root = DEFAULT_ROOT, input = 'experiment.json
       const eligible = phaseValid && valid;
       const saved = phaseReport.trials[index];
       check(saved.attemptId === trial.attemptId && saved.viewportId === trial.viewportId, 'attempt identity changed');
+      check(same(saved.browserLaunch, trial.browserLaunch ?? null), 'trial launch provenance differs');
       check(saved.eligible === eligible && (saved.reasons.length === 0) === valid, 'trial eligibility differs from raw inputs');
       check(same(saved.values, values) && same(saved.paths, paths), 'trial metrics or retained paths changed');
       trials.push({ attemptId: trial.attemptId, viewportId: trial.viewportId, eligible, values });

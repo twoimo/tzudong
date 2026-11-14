@@ -406,6 +406,24 @@ const HEALTH_STAGE_FAILURES = Object.freeze({
   projection: 'HEALTH_BROWSER_PROJECTION_FAILED', close: 'HEALTH_BROWSER_CLOSE_FAILED',
 });
 
+function browserLaunchPolicy(measured = false) {
+  // Match this repository's Playwright probe only inside a disposable hosted
+  // CI process. Never change the host, app, firewall, auth, UA or proxy policy.
+  const hosted = process.env.GITHUB_ACTIONS === 'true' && process.env.RUNNER_ENVIRONMENT === 'github-hosted';
+  return { headless: true, sandboxMode: hosted ? 'disabled-for-disposable-ci' : 'enabled-default',
+    scope: hosted ? 'disposable-github-runner-browser-process' : 'disposable-local-browser-process',
+    explicitArgs: [...(hosted ? ['--no-sandbox'] : []), ...(measured ? ['--lang=ko-KR'] : [])],
+    noSandboxObserved: null };
+}
+
+function observeBrowserLaunch(policy, browser, errorCode) {
+  const argv = browser.process()?.spawnargs;
+  if (!Array.isArray(argv) || policy.explicitArgs.some(arg => !argv.includes(arg))
+    || argv.includes('--no-sandbox') !== policy.explicitArgs.includes('--no-sandbox')) throw fixedError(errorCode);
+  // Preserve only our explicit allowlisted arguments, never raw process argv.
+  return { ...policy, noSandboxObserved: argv.includes('--no-sandbox') };
+}
+
 export function classifyHealthBrowserError(error, stage) {
   // Inspect bounded diagnostics only in memory; never retain the error, stack,
   // message, executable stderr, or any document/provider diagnostic.
@@ -431,18 +449,22 @@ export async function publicBrowserHealth(tools) {
   // A distinct anonymous process/profile reads the ordinary public JSON page.
   // It is fully closed before returning; the measured browser's connection,
   // storage and cache are never warmed by deployment verification. No custom
-  // UA, headers, proxy, auth, challenge interaction or security-setting change.
+  // UA, headers, proxy, auth, challenge interaction or host/app security change.
   const profileRoot = await mkdtemp(resolve(tmpdir(), 'tzudong-health-readback-'));
+  const launchPolicy = browserLaunchPolicy();
   const evidence = { transport: 'browser-public-navigation',
     isolatedFromMeasuredBrowser: true, credentialsUsed: false,
     browser: { product: 'Google Chrome for Testing', version: EXPECTED.chrome, executable: tools.executable },
+    browserLaunch: launchPolicy,
     observedAt: new Date().toISOString(), stage: 'launch', httpStatus: null, pageClassification: 'unavailable' };
   let browser;
   try {
     browser = await tools.puppeteer.launch({ executablePath: tools.executable,
       headless: true, userDataDir: profileRoot, dumpio: false, timeout: 30_000,
+      args: launchPolicy.explicitArgs,
       env: Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'XDG_RUNTIME_DIR']
         .filter(key => process.env[key]).map(key => [key, process.env[key]])) });
+    evidence.browserLaunch = observeBrowserLaunch(launchPolicy, browser, 'HEALTH_BROWSER_LAUNCH_POLICY_MISMATCH');
     evidence.stage = 'version';
     if (!(await browser.version()).endsWith('/' + EXPECTED.chrome)) throw fixedError('HEALTH_BROWSER_VERSION_MISMATCH');
     evidence.stage = 'newpage';
@@ -551,6 +573,8 @@ async function trial({ tools, protocol, profile, index, args, sourceTreeSha, out
   await mkdir(folder);
   const item = { attemptId, viewportId: profile.id, phase: args.phase,
     status: 'invalid', startedAt: new Date().toISOString(), endedAt: null, failures: [], paths: {} };
+  const launchPolicy = browserLaunchPolicy(true);
+  item.browserLaunch = launchPolicy;
   let browser, page, timeout;
   const profileRoot = await mkdtemp(resolve(tmpdir(), 'tzudong-initial-load-'));
   const errors = { pageErrors: 0, consoleErrors: 0, failedRequests: 0,
@@ -559,9 +583,10 @@ async function trial({ tools, protocol, profile, index, args, sourceTreeSha, out
     const before = await deploymentReadback(tools, args.sourceSha, args.deploymentId);
     browser = await tools.puppeteer.launch({ executablePath: tools.executable,
       headless: true, userDataDir: profileRoot, dumpio: false, timeout: 30_000,
-      args: ['--lang=ko-KR'],
+      args: launchPolicy.explicitArgs,
       env: Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'XDG_RUNTIME_DIR']
         .filter(key => process.env[key]).map(key => [key, process.env[key]])) });
+    item.browserLaunch = observeBrowserLaunch(launchPolicy, browser, 'BROWSER_LAUNCH_POLICY_MISMATCH');
     if (!(await browser.version()).endsWith('/' + EXPECTED.chrome)) throw fixedError('BROWSER_RUNTIME_VERSION_MISMATCH');
     page = await browser.newPage();
     await page.setViewport({ width: profile.width, height: profile.height,
@@ -612,6 +637,7 @@ async function trial({ tools, protocol, profile, index, args, sourceTreeSha, out
       schemaVersion: 'initial-load-observations.v1', phase: args.phase, attemptId,
       viewportId: profile.id, source, browser: { product: 'Google Chrome for Testing',
         version: EXPECTED.chrome, executable: tools.executable },
+      browserLaunch: item.browserLaunch,
       requestedViewport: { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor },
       requestedUrl: URL_TO_AUDIT, finalUrl: safeUrl(page.url()), ...observation,
       traceObservationEndMs: traceEndMs,
@@ -885,6 +911,7 @@ export async function main(argv = process.argv.slice(2)) {
     startedAt: new Date().toISOString(), endedAt: null, status: 'invalid',
     sourceSha: args.sourceSha, sourceTreeSha: null, deploymentId: args.deploymentId,
     canonicalUrl: CANONICAL, url: URL_TO_AUDIT, pins: EXPECTED, trials: [], failures: [],
+    browserLaunch: browserLaunchPolicy(true),
     environment: {
       nodeVersion: process.version, platform: platform(), arch: arch(),
       cpuModels: [...new Set(cpus().map(cpu => safeText(cpu.model)))],
@@ -921,12 +948,13 @@ export async function main(argv = process.argv.slice(2)) {
       for (let index = 1; index <= 5; index++) {
         const result = await trial({ tools, protocol, profile, index, args, sourceTreeSha: run.sourceTreeSha, output: args.output });
         run.trials.push(result);
+        if (result.browserLaunch?.noSandboxObserved !== null) run.browserLaunch = result.browserLaunch;
         // A deployment change invalidates the phase; never compare mixed code.
         if (result.failures.includes('DEPLOYMENT_IDENTITY_MISMATCH')) throw fixedError('DEPLOYMENT_CHANGED_DURING_PHASE');
         if (result.failures.some(code => code.startsWith('HEALTH_READBACK_') || code.startsWith('HEALTH_BROWSER_'))) {
           throw fixedError('PUBLIC_HEALTH_BROWSER_BLOCKED');
         }
-        if (result.failures.some(code => ['BROWSER_RUNTIME_VERSION_MISMATCH', 'ACTUAL_VIEWPORT_MISMATCH',
+        if (result.failures.some(code => ['BROWSER_RUNTIME_VERSION_MISMATCH', 'BROWSER_LAUNCH_POLICY_MISMATCH', 'ACTUAL_VIEWPORT_MISMATCH',
           'LIGHTHOUSE_VERSION_MISMATCH', 'LIGHTHOUSE_RESULT_UNAVAILABLE', 'LIGHTHOUSE_RUNTIME_ERROR',
           'UNEXPECTED_NAVIGATION', 'COLLECTION_FAILED', 'TRIAL_TIMEOUT',
           'SANITIZED_DETAILS_LIMIT', 'TRACE_EVENT_LIMIT', 'NETWORK_RECORD_LIMIT'].includes(code))) {

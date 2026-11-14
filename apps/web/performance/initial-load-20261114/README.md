@@ -11,7 +11,7 @@
 `protocol.json`은 baseline 수집 전에 고정했다. 그 정확한 바이트의 SHA-256은 다음과 같고 scorer와 독립 validator에 같은 값이 고정되어 있다.
 
 ```text
-4068740fd3b254f3f62ff7d5d218388d4b767b66f2b1b48800b6902ff10918a8
+1d105370c00603d3539e7e82355c3e46647dd6ff5af49901595ad01951efb851
 ```
 
 초기 baseline 소스는 `9316871f4220cd487b0e9575415ed2d760de8997`이다. 각 phase는 실제 배포 ID, source SHA, Git tree SHA와 공개 health readback을 별도로 보존한다. 소스가 바뀐 중간 샘플을 하나의 phase에 합치지 않는다.
@@ -20,9 +20,17 @@
 
 보존된 초기 실행 `43598614632`와 `43599036723`은 각각 `HEALTH_READBACK_HTTP_ERROR`, `HEALTH_READBACK_HTTP_403`으로 종료됐고 두 실행 모두 `trials: []`였다. 따라서 유효 성능 수치는 **0개**이며 결과를 보고 개선 기준을 조정한 것이 아니다. 기존 실패 기록을 유지하고 배포 identity를 확인하는 transport만 수정했다. 지표, timing·cache 조건, 표본 수, 절대·상대·noise budget은 그대로다.
 
-Identity 확인은 `browser-public-navigation`으로 기록한다. 별도의 새 익명 pinned Chrome process/profile에서 공개 `/api/health`로 정상 GET 탐색하고, source·deployment JSON의 허용된 필드만 보존한다. 자격 증명, 재사용 로그인 세션, custom UA/header, proxy, 권한·보안 설정 변경을 사용하지 않는다. 브라우저에서도 거부되거나 identity가 일치하지 않으면 실패로 종료한다.
+Identity 확인은 `browser-public-navigation`으로 기록한다. 별도의 새 익명 pinned Chrome process/profile에서 공개 `/api/health`로 정상 GET 탐색하고, source·deployment JSON의 허용된 필드만 보존한다. 자격 증명, 재사용 로그인 세션, custom UA/header, proxy, 웹사이트·호스트·계정의 접근 권한 설정 변경을 사용하지 않는다. 브라우저에서도 거부되거나 identity가 일치하지 않으면 실패로 종료한다. 일회용 측정 프로세스의 sandbox 정책은 아래에 별도로 명시한다.
 
 이 readback은 Lighthouse timed trace 밖에서 수행한다. 사전 확인용 브라우저를 완전히 닫은 뒤 측정 브라우저를 시작하고, 사후 확인은 timed trace가 끝난 뒤 수행한다. 확인용 profile과 측정용 profile을 분리하므로 확인 과정이 **측정 profile의 resource cache를 데우지 않는다**. 이는 CDN·서버·OS 수준의 모든 warming이 없다는 뜻은 아니며 기존의 server-cache 관찰 범위는 유지한다. 각 receipt에는 `transport`, `isolatedFromMeasuredBrowser`, `credentialsUsed`, 실제 browser product/version/executable을 남겨 scorer와 독립 validator가 대조한다.
+
+### 유효 측정 이전의 브라우저 실행 정책 수정
+
+이후 실행 `43599674200`도 HTTP 응답 이전에 실패했고, 진단 실행 `43600158140`에서 `stage: launch`, `HEALTH_BROWSER_SANDBOX_UNAVAILABLE`이 확인됐다. 위 네 실행 모두 성능 trial은 0개였다. 원래 실패 증거는 유지한다.
+
+일회용 GitHub-hosted runner의 browser process에 한해 `--no-sandbox`를 적용한다. 이는 같은 runner에서 성공한 저장소의 pinned Playwright probe와 일치하는 process launch 정책이다. `GITHUB_ACTIONS=true` 및 `RUNNER_ENVIRONMENT=github-hosted`일 때만 활성화하며, health 확인과 측정 Chrome에 동일하게 적용한다. 기존 측정용 `--lang=ko-KR`도 유지한다. **Chrome 프로세스의 sandbox가 비활성화된 조건**을 숨기지 않고 전후에 고정한다.
+
+앱·OS·firewall·계정 권한을 바꾸거나 HTTP 접근 거부를 우회하는 변경은 없다. 정상 공개 탐색이 거부되면 계속 실패로 종료한다. 브라우저에 앱 비밀값이나 인증 상태를 전달하지 않으며 기존 환경변수 allowlist를 유지한다. 실제 process `spawnargs`에 `--no-sandbox`가 있는지 확인한 `noSandboxObserved`와 제한된 explicit flags만 보존한다. 원시 argv는 저장하지 않는다. Run·trial·관측·health receipt의 `browserLaunch`가 protocol과 다르면 비교 대상이 될 수 없다. Timing·profile·cache·표본 수·성능 budget은 바꾸지 않았다.
 
 | 항목 | 고정 조건 |
 | --- | --- |

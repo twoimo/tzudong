@@ -4,7 +4,7 @@ import { readFile, writeFile, lstat, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const PINNED_PROTOCOL_SHA256 = '4068740fd3b254f3f62ff7d5d218388d4b767b66f2b1b48800b6902ff10918a8';
+export const PINNED_PROTOCOL_SHA256 = '1d105370c00603d3539e7e82355c3e46647dd6ff5af49901595ad01951efb851';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const HEX = /^[a-f0-9]{64}$/;
 const GIT = /^[a-f0-9]{40}$/;
@@ -176,12 +176,20 @@ function measuredMetrics(observation, lhr) {
   return values;
 }
 
+function browserLaunchMatches(observed, protocol, measured) {
+  const declared = protocol.browserLaunch;
+  return observed?.headless === declared.headless && observed.sandboxMode === declared.sandboxMode
+    && observed.scope === declared.scope && observed.noSandboxObserved === declared.requiredNoSandboxObserved
+    && equal(observed.explicitArgs, measured ? declared.measurementExplicitArgs : declared.healthExplicitArgs);
+}
+
 function readbackTransportMatches(identity, protocol) {
   return identity?.transport === protocol.deploymentReadback.transport
     && identity.isolatedFromMeasuredBrowser === true && identity.credentialsUsed === false
     && identity.browser?.product === protocol.deploymentReadback.browserProduct
     && identity.browser?.version === protocol.deploymentReadback.browserVersion
-    && typeof identity.browser?.executable === 'string' && isAbsolute(identity.browser.executable);
+    && typeof identity.browser?.executable === 'string' && isAbsolute(identity.browser.executable)
+    && browserLaunchMatches(identity.browserLaunch, protocol, false);
 }
 
 function observationProblems(observation, lhr, profile, protocol, frozen) {
@@ -196,6 +204,7 @@ function observationProblems(observation, lhr, profile, protocol, frozen) {
   mark(observation.browser?.version === protocol.tools.chrome, 'CHROME_VERSION_MISMATCH');
   mark(typeof observation.browser?.executable === 'string' && isAbsolute(observation.browser.executable), 'BROWSER_EXECUTABLE_MISSING');
   mark(typeof observation.browser?.product === 'string' && /Chrome/.test(observation.browser.product), 'BROWSER_PRODUCT_MISSING');
+  mark(browserLaunchMatches(observation.browserLaunch, protocol, true), 'OBSERVED_BROWSER_LAUNCH_POLICY_MISMATCH');
   mark(!lhr.runtimeError, 'LIGHTHOUSE_RUNTIME_ERROR');
   mark(lhr.requestedUrl === protocol.url && lhr.finalDisplayedUrl === protocol.url && lhr.finalUrl === protocol.url, 'URL_OR_REDIRECT_MISMATCH');
   mark(observation.requestedUrl === protocol.measurementUrl && observation.finalUrl === protocol.url && observation.initialDocumentQaExcluded === true, 'MEASUREMENT_URL_OR_QA_EXCLUSION_MISMATCH');
@@ -276,6 +285,8 @@ export async function scoreExperiment({ root = HERE, input = 'experiment.json', 
     require(run.puppeteerVersion === toolLock?.packages?.['node_modules/puppeteer-core']?.version, 'PUPPETEER_LOCK_MISMATCH');
     for (const key of ['lighthouse', 'playwright', 'chrome']) require(run.pins?.[key] === protocol.tools[key], `RUN_${key.toUpperCase()}_PIN_MISMATCH`);
     require(typeof run.environment?.nodeVersion === 'string' && /^v?24\./.test(run.environment.nodeVersion), 'NODE_VERSION_MISSING_OR_MISMATCH');
+    require(run.environment?.runner?.environment === protocol.browserLaunch.requiredRunnerEnvironment, 'BROWSER_LAUNCH_RUNNER_SCOPE_MISMATCH');
+    require(browserLaunchMatches(run.browserLaunch, protocol, true), 'RUN_BROWSER_LAUNCH_POLICY_MISMATCH');
     require(time(run.startedAt) !== null && time(run.endedAt) !== null && time(run.startedAt) <= time(run.endedAt), 'RUN_TIME_INVALID');
     require(time(run.startedAt) >= time(protocol.declaredAt), 'RUN_PRECEDES_PROTOCOL');
     if (phase === 'before') require(frozen.sourceSha === protocol.baselineSourceSha, 'BASELINE_SOURCE_MISMATCH');
@@ -290,6 +301,7 @@ export async function scoreExperiment({ root = HERE, input = 'experiment.json', 
       const reasons = [];
       if (trial.status !== 'valid') reasons.push('COLLECTOR_REPORTED_INVALID');
       if (!Array.isArray(trial.failures) || trial.failures.length) reasons.push('COLLECTOR_FAILURES');
+      if (!browserLaunchMatches(trial.browserLaunch, protocol, true)) reasons.push('TRIAL_BROWSER_LAUNCH_POLICY_MISMATCH');
       const paths = {};
       for (const key of ['observations', 'lhr', 'trace', 'network', 'screenshot']) {
         paths[key] = trialPath(reference.run, trial.paths?.[key]);
@@ -308,9 +320,9 @@ export async function scoreExperiment({ root = HERE, input = 'experiment.json', 
         if (previousEnd !== null && start < previousEnd) reasons.push('CONCURRENT_TRIALS');
         if (end !== null) previousEnd = end;
       }
-      trials.push({ attemptId: trial.attemptId, viewportId: trial.viewportId, eligible: issues.length === 0 && reasons.length === 0, reasons, values, paths });
+      trials.push({ attemptId: trial.attemptId, viewportId: trial.viewportId, eligible: issues.length === 0 && reasons.length === 0, reasons, browserLaunch: trial.browserLaunch ?? null, values, paths });
     }
-    phases[phase] = { sourceSha: frozen.sourceSha, sourceTreeSha: frozen.sourceTreeSha, deploymentId: frozen.deploymentId, startedAt: run.startedAt, endedAt: run.endedAt, environment: run.environment ?? null, issues, trials };
+    phases[phase] = { sourceSha: frozen.sourceSha, sourceTreeSha: frozen.sourceTreeSha, deploymentId: frozen.deploymentId, startedAt: run.startedAt, endedAt: run.endedAt, environment: run.environment ?? null, browserLaunch: run.browserLaunch ?? null, issues, trials };
   }
   if (phases.before && phases.after) {
     if (time(phases.before.endedAt) >= time(phases.after.startedAt)) globalProblems.push('PHASES_OVERLAP_OR_ORDER_INVALID');

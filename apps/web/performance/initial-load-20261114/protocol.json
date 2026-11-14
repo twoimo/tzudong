@@ -16,8 +16,33 @@
         {"runId": "43599036723", "trialCount": 0, "failure": "HEALTH_READBACK_HTTP_403"}
       ],
       "reason": "The Node public health readback failed before any performance trial. A normal anonymous public browser navigation was observed to return the expected identity. Use the same public endpoint through a separate pinned Chrome navigation and fail closed if it is denied."
+    },
+    {
+      "revisedAt": "2026-11-14T13:33:36.000Z",
+      "previousProtocolSha256": "4068740fd3b254f3f62ff7d5d218388d4b767b66f2b1b48800b6902ff10918a8",
+      "scope": "Browser-process launch policy on the disposable GitHub-hosted measurement runner only; timing settings, cache policy, metrics, sample count and budgets are unchanged.",
+      "measuredTrialsBeforeRevision": 0,
+      "retainedPriorAttempts": [
+        {"runId": "43599674200", "trialCount": 0, "failure": "HEALTH_READBACK_UNAVAILABLE"},
+        {"runId": "43600158140", "trialCount": 0, "failure": "HEALTH_BROWSER_SANDBOX_UNAVAILABLE", "stage": "launch"}
+      ],
+      "retainedZeroTrialRunIds": ["43598614632", "43599036723", "43599674200", "43600158140"],
+      "reason": "The diagnostic run confirmed that the browser could not launch with its default sandbox on this runner. Use the same process-local --no-sandbox policy as the repository's successful pinned Playwright browser probe, only for disposable GitHub-hosted audit processes. Public navigation denials still fail closed."
     }
   ],
+  "browserLaunch": {
+    "headless": true,
+    "sandboxMode": "disabled-for-disposable-ci",
+    "scope": "disposable-github-runner-browser-process",
+    "healthExplicitArgs": ["--no-sandbox"],
+    "measurementExplicitArgs": ["--no-sandbox", "--lang=ko-KR"],
+    "requiredNoSandboxObserved": true,
+    "requiredRunnerEnvironment": "github-hosted",
+    "activation": "Only when GITHUB_ACTIONS=true and RUNNER_ENVIRONMENT=github-hosted. A different local environment retains its default sandbox and is outside this fixed CI comparison.",
+    "observation": "Record noSandboxObserved from the actual launched process spawnargs membership; retain only the bounded explicit flags, never raw argv.",
+    "credentialScope": "No application secrets, authenticated browser state or credentials are supplied to these fresh browser processes; their environment uses the existing bounded allowlist.",
+    "unchangedControls": "No app, OS, firewall, account authorization, proxy or request-fingerprint workaround is introduced. This isolated browser-process security policy is distinct from website access controls."
+  },
   "deploymentReadback": {
     "transport": "browser-public-navigation",
     "url": "https://www.tzudong.app/api/health",
@@ -27,7 +52,7 @@
     "browserVersion": "156.0.8078.4",
     "profile": "A separate fresh anonymous Chrome process and temporary profile; never reuse the measured browser or its resource cache.",
     "timing": "Outside the Lighthouse trace and timed measurement. A pretrial readback browser closes before the measured browser starts; a post-trace readback starts only after the timed trace has ended.",
-    "requestPolicy": "Ordinary public GET navigation with the browser's default request behavior; no credentials, custom user agent or headers, proxy, reused authenticated session, or permission/security setting changes.",
+    "requestPolicy": "Ordinary public GET navigation with the browser's default request behavior; no credentials, custom user agent or headers, proxy, reused authenticated session, or app/host/account access-control changes. The process-local sandbox policy is explicitly declared in browserLaunch.",
     "failurePolicy": "Denied navigation, unexpected final URL, unsuccessful response or source/deployment identity mismatch remains a failed readback; no access-control changes or forced continuation."
   },
   "scope": {

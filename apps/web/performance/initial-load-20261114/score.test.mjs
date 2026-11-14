@@ -86,24 +86,28 @@ async function fixture(t, complete = false) {
     const sourceShas = { before: protocol.baselineSourceSha, after: afterCommit };
     const start = Date.parse(protocol.declaredAt) + 60000;
     const iso = (offset) => new Date(start + offset).toISOString();
-    const environment = { nodeVersion: 'v24.22.1', platform: 'linux', arch: 'x64', cpuModels: ['SYNTHETIC TEST CPU'], logicalCpuCount: 4, totalMemoryBytes: 16000000000, runner: { os: 'Linux', arch: 'X64', environment: 'synthetic', runId: 'test', runAttempt: '1' } };
+    const environment = { nodeVersion: 'v24.22.1', platform: 'linux', arch: 'x64', cpuModels: ['SYNTHETIC TEST CPU'], logicalCpuCount: 4, totalMemoryBytes: 16000000000, runner: { os: 'Linux', arch: 'X64', environment: 'github-hosted', runId: 'synthetic-test', runAttempt: '1' } };
+    const healthLaunch = { headless: true, sandboxMode: 'disabled-for-disposable-ci', scope: 'disposable-github-runner-browser-process', explicitArgs: ['--no-sandbox'], noSandboxObserved: true };
+    const measuredLaunch = { ...healthLaunch, explicitArgs: ['--no-sandbox', '--lang=ko-KR'] };
     for (const [phase, factor] of [['before', 1], ['after', 0.7]]) {
       const offset = phase === 'before' ? 0 : 2000000;
       const sourceSha = sourceShas[phase];
       const sourceTreeSha = revision(`${sourceSha}^{tree}`);
       const deploymentId = `dpl_SYNTHETICTEST${phase}`;
       manifest.phases[phase] = { run: `${phase}/run.json`, frozenSource: `${phase}/frozen-source.json` };
-      const identity = { ok: true, healthOk: true, gitSha: sourceSha, deploymentId, host: 'www.tzudong.app', transport: 'browser-public-navigation', isolatedFromMeasuredBrowser: true, credentialsUsed: false, browser: { product: 'Google Chrome for Testing', version: '156.0.8078.4', executable: '/synthetic/identity-browser/chrome' } };
+      const identity = { ok: true, healthOk: true, gitSha: sourceSha, deploymentId, host: 'www.tzudong.app', transport: 'browser-public-navigation', isolatedFromMeasuredBrowser: true, credentialsUsed: false, browser: { product: 'Google Chrome for Testing', version: '156.0.8078.4', executable: '/synthetic/identity-browser/chrome' }, browserLaunch: healthLaunch };
       await put(`${phase}/identity.json`, identity);
       await put(`${phase}/deployment-before.json`, identity);
       await put(`${phase}/deployment-after.json`, identity);
       await put(`${phase}/frozen-source.json`, { schemaVersion: 'initial-load-frozen-source.v1', phase, sourceSha, sourceTreeSha, deploymentId, canonicalUrl: protocol.url, verifiedAt: iso(offset), identityEvidence: `${phase}/identity.json` });
       const run = { schemaVersion: 'initial-load-run.v1', phase, status: 'valid', sourceSha, sourceTreeSha, protocolSha256: PINNED_PROTOCOL_SHA256, collectorSha256: hash(collector), toolLockSha256, puppeteerVersion: '25.9.0', pins: { lighthouse: '13.5.0', playwright: '1.64.1', chrome: '156.0.8078.4' }, environment, startedAt: iso(offset), endedAt: iso(offset + 1600000), deploymentEvidence: { before: 'deployment-before.json', after: 'deployment-after.json' }, trials: [] };
+      run.browserLaunch = measuredLaunch;
       let trialIndex = 0;
       for (const profile of protocol.profiles) {
         for (let index = 1; index <= 5; index += 1) {
           const attemptId = `${profile.id}-${String(index).padStart(2, '0')}`;
           const trial = { attemptId, viewportId: profile.id, status: 'valid', failures: [], startedAt: iso(offset + trialIndex * 100000), endedAt: iso(offset + trialIndex * 100000 + 90000), paths: {} };
+          trial.browserLaunch = measuredLaunch;
           trialIndex += 1;
           const metric = (value) => ({ numericValue: value * factor, numericUnit: 'millisecond', scoreDisplayMode: 'numeric' });
           const lhr = {
@@ -115,6 +119,7 @@ async function fixture(t, complete = false) {
           const observed = {
             source: { gitSha: sourceSha, deploymentId, healthBefore: identity, healthAfter: identity },
             browser: { version: '156.0.8078.4', product: 'Google Chrome for Testing', executable: '/synthetic/chrome' },
+            browserLaunch: measuredLaunch,
             requestedViewport: viewport, actualViewport: viewport,
             requestedUrl: protocol.measurementUrl, finalUrl: protocol.url, initialDocumentQaExcluded: true,
             navigation: { responseStart: 1000 * factor, startTime: 0, type: 'navigate', responseStatus: 200 },
@@ -205,4 +210,18 @@ test('an unverified identity transport excludes a phase even when metric numbers
   assert.ok(result.phases.before.issues.includes('IDENTITY_READBACK_TRANSPORT_INVALID'));
   assert.equal(verified.comparableMetricCount, 0);
   assert.equal(verified.improvedMetricCount, 0);
+});
+
+test('requested browser flags without actual process observation cannot qualify a comparison', async (t) => {
+  const input = await fixture(t, true);
+  const run = JSON.parse(await readFile(join(input.root, 'before/run.json'), 'utf8'));
+  run.browserLaunch.noSandboxObserved = null;
+  await input.put('before/run.json', run);
+  const map = await createArtifactMap({ root: input.root, output: 'launch-map.json' });
+  const options = { ...input, artifactMap: 'launch-map.json', artifactMapSha256: map.artifactMapSha256 };
+  const result = await scoreExperiment(options);
+  await input.put('scored.json', result);
+  const verified = validateEvidence(options);
+  assert.ok(result.phases.before.issues.includes('RUN_BROWSER_LAUNCH_POLICY_MISMATCH'));
+  assert.equal(verified.comparableMetricCount, 0);
 });
