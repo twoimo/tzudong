@@ -65,18 +65,28 @@ export function InsightsTreemap<T>({
     }, [chartProps.data, chartProps.height, previewDisabled, endPointerPreview]);
 
     useEffect(() => {
+        const rememberPointer = (event: globalThis.PointerEvent) => {
+            // The detail portal can move the pointer without entering the chart.
+            // Keep its last real position so closing it cannot reopen a preview
+            // through boundary events at a stationary pointer.
+            if (event.pointerType === 'mouse' || event.pointerType === 'pen') {
+                lastPointerRef.current = { x: event.clientX, y: event.clientY };
+            }
+        };
         const handleScroll = (event: Event) => {
             // Preview scrolling reads its remaining fields. An outside scroll
             // invalidates the captured pointer anchor instead.
             if (event.target instanceof Node && previewRef.current?.contains(event.target)) return;
             endPointerPreview();
         };
+        window.addEventListener('pointermove', rememberPointer, { capture: true, passive: true });
         window.addEventListener('scroll', handleScroll, true);
         window.addEventListener('resize', endPointerPreview);
         const viewport = window.visualViewport;
         viewport?.addEventListener('resize', endPointerPreview);
         return () => {
             clearCloseTimer();
+            window.removeEventListener('pointermove', rememberPointer, true);
             window.removeEventListener('scroll', handleScroll, true);
             window.removeEventListener('resize', endPointerPreview);
             viewport?.removeEventListener('resize', endPointerPreview);

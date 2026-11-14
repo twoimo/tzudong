@@ -576,8 +576,11 @@ describe("web quality performance source contracts", () => {
     );
     expect(pageSource).not.toContain("function HomeDeepLinkPreview()");
     expect(pageSource).not.toContain('id="home-deep-link-preview"');
-    expect(pageSource).not.toContain("searchParams: Promise");
-    expect(pageSource).not.toContain("export default async function HomePage");
+    // Reading Next's async search params is needed for the explicit diagnostic
+    // gate; it must not restore the removed server-side deep-link data request.
+    expect(pageSource).toContain("isInitialLoadDiagnosticRequest(await searchParams)");
+    expect(pageSource).toContain("diagnostic ? (await headers()).get('x-nonce')");
+    expect(pageSource).toContain("{diagnostic && <script nonce={nonce}");
     expect(pageSource).not.toContain("fetchHomeDeepLinkPreviewRestaurant");
     expect(pageSource).not.toContain(
       "fetchSupabaseRows<HomeDeepLinkPreviewRestaurant>",

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { removeNaverMapListener } from '../lib/naver-map-event-cleanup';
 import { scheduleNaverInitialIdleTrigger } from '../lib/naver-map-init-helpers';
+import { markInitialLoadMilestone } from '../lib/performance/initial-load-milestones';
 
 const text = readFileSync(new URL('../components/map/NaverMapView.tsx', import.meta.url), 'utf8');
 const source = ts.createSourceFile('NaverMapView.tsx', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -67,6 +68,7 @@ function initialIdleFixture() {
     const window = { naver: { maps: maps as typeof maps | undefined }, location: { search: '' } };
     const bindings = {
         window, isLoaded: true, isMapViewerLoading: false,
+        markInitialLoadMilestone,
         mapRef: { current: {} }, mapInstanceRef: { current: null as typeof map | null },
         initialIdleWorkRef: { current: null as { map: unknown; cancel: () => void } | null },
         isNaverMapInstanceReusable: () => false,

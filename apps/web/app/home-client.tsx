@@ -59,6 +59,7 @@ import {
 } from "@/lib/home-detail-route-state";
 import { findOverseasRegionKeyForRestaurant } from "@/lib/overseas-region-matching";
 import { useHomeNaverPreload } from "@/hooks/use-home-naver-preload";
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
 
 function HomeMapContainerPendingShell() {
   return (
@@ -209,6 +210,10 @@ export default function HomeClient() {
   const isViewportResolved = viewportMode !== "pending";
   const isDesktop = viewportMode === "desktop";
   const isMobileOrTablet = viewportMode === "mobileOrTablet";
+  useEffect(() => { markInitialLoadMilestone('homeClientCommitted'); }, []);
+  useEffect(() => {
+    if (isViewportResolved) markInitialLoadMilestone('viewportResolved');
+  }, [isViewportResolved]);
   const [mapMode, setMapMode] = useState<"domestic" | "overseas">("domestic");
   useHomeNaverPreload(isViewportResolved, mapMode);
   const [activePanel, setActivePanel] = useState<"map" | "detail" | "control">(

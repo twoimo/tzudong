@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useEffect, useState, type ComponentType } from 'react';
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
 import type { Region, Restaurant } from '@/types/restaurant';
 import type { Announcement } from '@/types/announcement';
 import type { HomeMapResultSummary } from '@/lib/home-map-result-summary';
@@ -164,6 +165,7 @@ function HomeControlPanelComponent({
 }: HomeControlPanelProps) {
     useEffect(() => {
         document.documentElement.dataset.homeChromeReady = "true";
+        markInitialLoadMilestone('controlsWrapperMounted');
         return () => {
             delete document.documentElement.dataset.homeChromeReady;
         };
