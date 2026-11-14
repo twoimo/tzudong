@@ -15,9 +15,9 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {fixture} from 'mypage-responsive-state';
-import Profile from './app/mypage/profile/page';
-import Reviews from './app/mypage/reviews/page';
-import {MyPageLayoutContent} from './app/mypage/mypage-layout-content';
+import Profile from '@/app/mypage/profile/page';
+import Reviews from '@/app/mypage/reviews/page';
+import {MyPageLayoutContent} from '@/app/mypage/mypage-layout-content';
 const Page = location.pathname.endsWith('/reviews') ? Reviews : Profile;
 globalThis.fetch = async (input, init) => {
   const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
@@ -39,7 +39,7 @@ createRoot(document.getElementById('root')).render(
 `;
 
 const state = `
-import {RESTAURANT_CATEGORIES} from './constants/categories';
+import {RESTAURANT_CATEGORIES} from '@/constants/categories';
 export const owner = {id:'33333333-3333-4333-8333-333333333333',email:'fixture@example.test',user_metadata:{}};
 export const fixture = {
   forbidden:[], reads:[],
@@ -115,15 +115,18 @@ export async function buildMyPageResponsiveFixture(): Promise<string> {
     entrypoints: ['mypage-responsive-fixture'], target: 'browser', format: 'iife', write: false,
     define: { 'process.env': JSON.stringify({ NODE_ENV: 'test' }) },
     plugins: [{ name: 'mypage-responsive-fixture', setup(builder) {
-      builder.onResolve({ filter: /^mypage-responsive-fixture$/ }, () => ({ path: 'entry', namespace: 'fixture' }));
-      builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: entry, loader: 'tsx', resolveDir: root }));
+      // Avoid ambient relative resolution for this virtual entry in shared Bun
+      // runs. Resolve real app imports via the explicit root below and keep
+      // this fixture's virtual modules distinct from other browser fixtures.
+      builder.onResolve({ filter: /^mypage-responsive-fixture$/ }, () => ({ path: 'mypage-responsive-entry.tsx', namespace: 'mypage-responsive-entry' }));
+      builder.onLoad({ filter: /.*/, namespace: 'mypage-responsive-entry' }, () => ({ contents: entry, loader: 'tsx', resolveDir: root }));
       // The browser test loads each production CSS owner independently.
-      builder.onResolve({ filter: /\.css$/ }, () => ({ path: 'stylesheet', namespace: 'fixture-css' }));
-      builder.onLoad({ filter: /.*/, namespace: 'fixture-css' }, () => ({ contents: '', loader: 'js' }));
+      builder.onResolve({ filter: /\.css$/ }, () => ({ path: 'stylesheet', namespace: 'mypage-responsive-css' }));
+      builder.onLoad({ filter: /.*/, namespace: 'mypage-responsive-css' }, () => ({ contents: '', loader: 'js' }));
       builder.onResolve({ filter: /^(?:mypage-responsive-state$|next\/|@\/)/ }, args => mocks[args.path]
-        ? { path: args.path, namespace: 'mock' }
+        ? { path: args.path, namespace: 'mypage-responsive-mock' }
         : args.path.startsWith('@/') ? { path: Bun.resolveSync('./' + args.path.slice(2), root) } : undefined);
-      builder.onLoad({ filter: /.*/, namespace: 'mock' }, args => ({ contents: mocks[args.path], loader: 'tsx', resolveDir: root }));
+      builder.onLoad({ filter: /.*/, namespace: 'mypage-responsive-mock' }, args => ({ contents: mocks[args.path], loader: 'tsx', resolveDir: root }));
     } }],
   });
   if (!built.success) throw new Error(built.logs.map(String).join('\n'));

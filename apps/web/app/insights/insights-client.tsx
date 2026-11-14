@@ -1089,7 +1089,11 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                         format={(value) => formatMetricText(metricMode, value)} locale="ko-KR"
                                         height={chartHeight} sort animateOnView
                                         onHover={handleChartHover} onClick={handleChartActivate}
-                                        tooltip={(event) => event.datum ? <TreemapDetailContent leaf={event.datum} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} /> : null}
+                                        tooltip={(event) => event.datum ? (
+                                            <div className="max-w-full whitespace-normal [overflow-wrap:anywhere]">
+                                                <TreemapDetailContent leaf={event.datum} viewMode={viewMode} period={visiblePeriod} metricMode={metricMode} />
+                                            </div>
+                                        ) : null}
                                         ariaLabel={treemapContextText}
                                         description={`${treemapLegendText} ${treemapSmallCellGuidance}`}
                                         className="w-full"

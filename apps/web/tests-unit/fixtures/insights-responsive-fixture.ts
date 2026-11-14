@@ -18,9 +18,10 @@ import InsightsClient from './app/insights/insights-client';
 const embedded=location.pathname==='/admin';
 const fixture={writes:0,reads:0,unexpectedRequests:0,lastMetric:null,navigation:[]};
 globalThis.__insightsResponsiveFixture=fixture;
+// Each title is 94 characters, within YouTube snippet.title's 100-character limit.
 const videos=Array.from({length:8},(_,index)=>({
   id:'responsive-video-'+index,
-  title:'반응형 검증용 합성 영상 '+(index+1)+': 짧은 화면에서도 마지막 설명과 수치를 읽을 수 있도록 긴 제목을 사용하는 차트 검증 자료입니다. 화면 높이와 방향을 바꾸어도 영상 탐색, 기간 선택, 도움말과 하단 탐색을 계속 이용할 수 있어야 합니다.',
+  title:'반응형 검증용 합성 영상 '+(index+1)+': 짧은 화면에서도 마지막 설명과 수치를 읽을 수 있는 맛집 탐방입니다. 화면 방향을 바꿔도 영상 탐색과 기간 선택, 도움말을 이용해 보세요.',
   publishedAt:'2026-11-01T00:00:00Z',category:'한식',
   viewCount:(8-index)*245000,likeCount:(8-index)*1200,
   commentCount:(8-index)*120,duration:(8-index)*180,

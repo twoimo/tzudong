@@ -88,23 +88,28 @@ async function wheelToBottom(page: Page, owner: Locator) {
   await ui.poll(() => owner.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThanOrEqual(1);
 }
 
-async function checkLongList(page: Page) {
+async function checkLongList(page: Page, mode: AdminBannersResponsiveMode, width: number) {
   const list = page.locator('.admin-cms-table-container[aria-label="배너 목록"]');
   const footer = page.locator('.admin-cms-list-pane > .admin-cms-footer');
+  // The mobile console lets its module grow inside the scrollable outer
+  // canvas. Standalone pages and tablet modules bound the inner list instead.
+  const usesOuterCanvas = mode === 'embedded' && width < 768;
+  const owner = usesOuterCanvas ? page.locator('#admin-console-canvas') : list;
   await ui(footer).toContainText(`${bannerCount} / ${bannerCount}개`);
 
   // The pre-fix standalone min-height-only chain expands to the 30-row content:
   // it cannot satisfy both a viewport-bounded list box and real internal overflow.
-  await expectUnclipped(list, false);
+  await ui(owner).toHaveCSS('overflow-y', 'auto');
+  await expectUnclipped(owner, false);
   expect(await list.evaluate(element => element.clientHeight)).toBeGreaterThan(0);
-  expect(await list.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
-  await expectUnclipped(footer);
-  await wheelToBottom(page, list);
-  expect(await list.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+  expect(await owner.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+  if (!usesOuterCanvas) await expectUnclipped(footer);
+  await wheelToBottom(page, owner);
+  expect(await owner.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
   const last = list.getByRole('button', { name: new RegExp(lastBannerTitle) });
   await expectUnclipped(last);
   await expectUnclipped(footer);
-  return { list, last, footer };
+  return { owner, last, footer };
 }
 
 async function inspectSelectedBanner(page: Page, last: Locator, height: number) {
@@ -150,7 +155,7 @@ async function diagnostics(page: Page) {
     };
     return {
       viewport: [innerWidth, innerHeight], main: measure('#main-content'),
-      workspace: measure('.admin-cms-workspace'), list: measure('.admin-cms-table-container'),
+      canvas: measure('#admin-console-canvas'), workspace: measure('.admin-cms-workspace'), list: measure('.admin-cms-table-container'),
       footer: measure('.admin-cms-list-pane > .admin-cms-footer'), editor: measure('.admin-cms-inspector-body'),
     };
   });
@@ -161,8 +166,12 @@ for (const mode of ['standalone', 'embedded'] as const) {
     test(`${mode} banners keeps a long list, footer and selected editor reachable at ${width}x${height}`, async () => {
       const { context, page, errors, blockedNetwork } = await openBanners(mode, width, height);
       try {
-        const { last, footer } = await checkLongList(page);
+        const { owner, last, footer } = await checkLongList(page, mode, width);
         await inspectSelectedBanner(page, last, height);
+        // Restoring search focus may correctly scroll the mobile canvas back up.
+        // Prove the last row and footer remain reachable through wheel input.
+        await wheelToBottom(page, owner);
+        await expectUnclipped(last);
         await expectUnclipped(footer);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.body.scrollWidth <= innerWidth)).toBe(true);
         expect(await page.evaluate(() => {

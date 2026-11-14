@@ -91,11 +91,37 @@ async function expectChartFitsArea(page: Page, width: number) {
       && chart.left >= outer.left - 1 && chart.right <= outer.right + 1
       && chart.top >= outer.top - 1 && chart.bottom <= outer.bottom + 1;
   }, minimum)).toBe(true);
-  expect(await area.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  if (await area.locator('.ztd-tip').count() === 0) {
+    expect(await area.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  } else {
+    // A translated tooltip can enlarge scrollWidth with its pre-transform box
+    // even when its final painted box fits. Measure the painted text as well:
+    // the library's nowrap default must not leak a long title outside the plot.
+    await ui.poll(() => area.evaluate(element => {
+      const tooltip = element.querySelector<HTMLElement>('.ztd-tip');
+      if (!tooltip) return false;
+      const plot = element.getBoundingClientRect(), tip = tooltip.getBoundingClientRect();
+      if (tip.width <= 0 || tip.left < plot.left - 1 || tip.right > plot.right + 1
+        || tooltip.scrollWidth > tooltip.clientWidth + 1) return false;
+      const paragraphs = [...tooltip.querySelectorAll('p')];
+      if (paragraphs.length === 0) return false;
+      return paragraphs.every(paragraph => {
+        const text = document.createRange();
+        text.selectNodeContents(paragraph);
+        const lines = [...text.getClientRects()];
+        return lines.length > 0 && lines.every(line => line.left >= Math.max(plot.left, tip.left) - 1
+          && line.right <= Math.min(plot.right, tip.right) + 1);
+      });
+    })).toBe(true);
+  }
 }
 
 async function reachChartBottom(page: Page, width: number, height: number) {
   const card = cardFor(page);
+  // Dismiss any previous hover through normal pointer movement; never alter the
+  // DOM or tooltip styling to manufacture a no-overflow baseline.
+  await page.mouse.move(0, 0);
+  await ui(areaFor(page).locator('.ztd-tip')).toHaveCount(0);
   await expectChartFitsArea(page, width);
   await card.hover();
   await page.mouse.wheel(0, 30_000);
@@ -103,20 +129,37 @@ async function reachChartBottom(page: Page, width: number, height: number) {
   if (height <= 390) expect(await card.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
   // A short card is allowed to show only part of the chart at once. Its last
   // painted tile must nevertheless be reachable through the real wheel owner.
-  await ui.poll(() => areaFor(page).evaluate(element => {
+  const lastPaintedPoint = () => areaFor(page).evaluate(element => {
     const svg = element.querySelector('svg[role="img"]');
-    if (!svg) return false;
+    if (!svg) return null;
     const paths = [...svg.querySelectorAll('.ztd-mark > path:first-child')]
       .filter(path => Number(getComputedStyle(path).opacity) > 0)
       .map(path => path.getBoundingClientRect())
       .filter(rect => rect.width > 0 && rect.height > 0)
       .sort((a, b) => b.bottom - a.bottom);
     const last = paths[0];
-    if (!last) return false;
+    if (!last) return null;
     const x = last.x + last.width / 2, y = last.bottom - Math.min(2, last.height / 2);
     const hit = document.elementFromPoint(x, y);
-    return x >= 0 && x < innerWidth && y >= 0 && y < innerHeight && hit !== null && svg.contains(hit);
-  })).toBe(true);
+    return x >= 0 && x < innerWidth && y >= 0 && y < innerHeight && hit !== null && svg.contains(hit) ? { x, y } : null;
+  });
+  await ui.poll(lastPaintedPoint).not.toBeNull();
+  const point = (await lastPaintedPoint())!;
+  // Exercise a real tile, rather than relying on the card centre coincidentally
+  // landing over the chart. This also covers hover on the 1024px layout.
+  await page.mouse.move(point.x, point.y);
+  await ui(areaFor(page).locator('.ztd-tip')).toHaveCount(1);
+  await expectChartFitsArea(page, width);
+  // Keep the library's independent vertical placement limitation observable.
+  // This is bounded numeric evidence, not a claim that hover Y clipping passed.
+  const evidence = await diagnostics(page);
+  const verticalClip = Math.max(0, ...(evidence.tooltipText?.map(text => text.overflowY ?? 0) ?? []));
+  if (verticalClip > 1) console.info('INSIGHTS_TOOLTIP_VERTICAL_CLIP=' + JSON.stringify({
+    route: new URL(page.url()).pathname, viewport: evidence.viewport,
+    area: evidence.area, tooltip: evidence.tooltip, maxTextOverflowY: verticalClip,
+  }));
+  await page.mouse.move(0, 0);
+  await ui(areaFor(page).locator('.ztd-tip')).toHaveCount(0);
   await expectChartFitsArea(page, width);
 }
 
@@ -213,9 +256,30 @@ async function diagnostics(page: Page) {
       const element = document.querySelector(selector);
       if (!element) return null;
       const { x, y, width, height } = element.getBoundingClientRect();
-      return { x, y, width, height, clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop };
+      return { x, y, width, height, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop };
     };
-    return { viewport: [innerWidth, innerHeight], card: measure('[data-insights-card]'), area: measure('[data-insights-card] > [data-slot="card-content"]'), svg: measure('[data-insights-card] svg[role="img"]'), activeTag: document.activeElement?.tagName };
+    const tooltip = document.querySelector<HTMLElement>('[data-insights-card] .ztd-tip');
+    const plot = document.querySelector('[data-insights-card] > [data-slot="card-content"]')?.getBoundingClientRect();
+    const tipStyle = tooltip ? getComputedStyle(tooltip) : null;
+    // Numeric geometry only: no user titles, query payloads or DOM snapshots.
+    const tooltipText = tooltip ? [...tooltip.querySelectorAll('p')].slice(0, 8).map(paragraph => {
+      const range = document.createRange();
+      range.selectNodeContents(paragraph);
+      const lines = [...range.getClientRects()];
+      const style = getComputedStyle(paragraph);
+      return {
+        lineCount: lines.length, whiteSpace: style.whiteSpace, textWrap: style.getPropertyValue('text-wrap'),
+        overflowX: plot ? Math.max(0, ...lines.map(line => Math.max(plot.left - line.left, line.right - plot.right))) : null,
+        overflowY: plot ? Math.max(0, ...lines.map(line => Math.max(plot.top - line.top, line.bottom - plot.bottom))) : null,
+      };
+    }) : null;
+    return {
+      viewport: [innerWidth, innerHeight], card: measure('[data-insights-card]'),
+      area: measure('[data-insights-card] > [data-slot="card-content"]'), svg: measure('[data-insights-card] svg[role="img"]'),
+      tooltip: measure('[data-insights-card] .ztd-tip'), tooltipText,
+      tooltipPosition: tipStyle ? { left: tipStyle.left, top: tipStyle.top, transform: tipStyle.transform, maxWidth: tipStyle.maxWidth } : null,
+      activeTag: document.activeElement?.tagName,
+    };
   });
 }
 
