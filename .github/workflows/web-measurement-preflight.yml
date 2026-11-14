@@ -29,7 +29,6 @@ jobs:
     env:
       CAPABILITY_ROOT: apps/web/performance/production-verification-20261115/environment-runs/ci-${{ github.run_id }}-${{ github.run_attempt }}
       CAPABILITY_HEAD: ${{ github.event.pull_request.head.sha }}
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/tzudong-capability-browsers
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -57,6 +56,8 @@ jobs:
             apps/web/performance/initial-load-20261114/tools/package-lock.json
       - name: Provision locked tooling
         id: tooling
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/tzudong-capability-browsers
         run: |
           npm install --global npm@11.6.2
           test "$(npm --version)" = '11.6.2'
@@ -81,6 +82,8 @@ jobs:
       - name: Observe owned localhost capabilities once
         id: capability
         timeout-minutes: 4
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/tzudong-capability-browsers
         run: |
           mkdir -p "$CAPABILITY_ROOT"
           node apps/web/performance/production-verification-20261115/environment-preflight/preflight.mjs --run-local --output "$CAPABILITY_ROOT/receipt.json"
