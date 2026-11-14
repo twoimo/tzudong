@@ -34,14 +34,19 @@ async function openProfile(width: number, height: number) {
   return { context, page, errors };
 }
 
-// Visibility alone misses clipped descendants. Require the complete control to
-// be within the available frame, and hit-test its centre against real paint.
-async function expectReachable(page: Page, target: Locator) {
+// Visibility alone misses clipped descendants. Require the whole measured box
+// to fit in the frame after scrolling, including its last row on short screens.
+async function expectWithinProfileFrame(page: Page, target: Locator) {
   await target.scrollIntoViewIfNeeded();
   const frame = (await page.locator('[data-fixture-profile-frame]').boundingBox())!;
   const box = (await target.boundingBox())!;
   expect(box.y).toBeGreaterThanOrEqual(frame.y - 1);
   expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
+}
+
+// Real controls must also receive pointer input at their painted centre.
+async function expectReachable(page: Page, target: Locator) {
+  await expectWithinProfileFrame(page, target);
   expect(await target.evaluate(element => {
     const rect = element.getBoundingClientRect();
     const painted = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
@@ -110,7 +115,18 @@ test('short profile loading, retry, missing and empty states remain reachable', 
     const skeleton = page.locator('[data-user-profile-panel-skeleton]');
     await ui(skeleton).toBeVisible();
     expect(await skeleton.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
-    await expectReachable(page, skeleton.locator('article').last());
+    const lastSample = skeleton.locator('article').last();
+    await expectWithinProfileFrame(page, lastSample);
+    expect(await skeleton.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    // Skullet's measurement sample is intentionally inert and ignores pointer
+    // input. Its separate painted layer, rather than the sample, must be visible.
+    expect(await lastSample.evaluate(element => {
+      const loading = element.closest('[skullet-loading][inert][aria-hidden="true"]');
+      return loading !== null && getComputedStyle(loading).pointerEvents === 'none';
+    })).toBe(true);
+    const lastSkeletonBar = skeleton.locator('[data-user-profile-tab-skeleton] [skullet-layer] [skullet-bar]').last();
+    await ui(lastSkeletonBar).toBeVisible();
+    await expectWithinProfileFrame(page, lastSkeletonBar);
 
     await mode('error');
     const retry = page.getByRole('button', { name: '다시 시도', exact: true });

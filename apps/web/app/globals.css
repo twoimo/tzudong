@@ -94,12 +94,15 @@ html[data-local-workspace="true"] [data-local-workspace-app="true"] {
 
 /* Legal documents keep document scrolling even after an app route has loaded
    its fixed-height body styles, including inside the local shell. */
-html:has([data-legal-page="true"]) body {
+html:has([data-legal-page="true"]) body,
+html[data-local-workspace="true"]:has([data-legal-page="true"]) body {
   height: auto;
   overflow-y: auto;
 }
 
-[data-local-workspace-app="true"]:has([data-legal-page="true"]) {
+[data-local-workspace-app="true"]:has([data-legal-page="true"]),
+/* Outrank the local fixed-height shell even when home CSS loads after root CSS. */
+html[data-local-workspace="true"] [data-local-workspace-app="true"]:has([data-legal-page="true"]) {
   flex: 0 0 auto;
   min-height: var(--full-height, 100vh);
   height: auto;

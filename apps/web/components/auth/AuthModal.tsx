@@ -731,6 +731,89 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     </div>
   );
 
+  const auxiliaryDialogs = (
+    <>
+      {/* 개인정보 처리방침 모달 */}
+      <Dialog open={isPrivacyModalOpen} onOpenChange={setIsPrivacyModalOpen}>
+        <DialogContent
+          onOpenAutoFocus={rememberAuxiliaryDialogOpener}
+          onCloseAutoFocus={restoreAuxiliaryDialogOpener}
+          overlayClassName="z-[120]"
+          className="z-[120] flex h-[min(42rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        >
+          <DialogHeader className="shrink-0">
+            <DialogTitle>개인정보 처리방침</DialogTitle>
+            <DialogDescription>
+              쯔동여지도 서비스의 개인정보 처리방침입니다.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="min-h-0 flex-1 pr-4">
+            <PrivacyPolicyContent />
+          </ScrollArea>
+          <div className="flex shrink-0 justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" className="min-h-11" onClick={() => setIsPrivacyModalOpen(false)}>
+              닫기
+            </Button>
+            <Button className="min-h-11" onClick={handlePrivacyAgree}>
+              동의하기
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 비밀번호 찾기 모달 */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent
+          onOpenAutoFocus={rememberAuxiliaryDialogOpener}
+          onCloseAutoFocus={restoreAuxiliaryDialogOpener}
+          overlayClassName="z-[120]"
+          className="z-[120] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] [&>button.absolute]:hidden"
+        >
+          <DialogHeader>
+            <DialogTitle>비밀번호 찾기</DialogTitle>
+            <DialogDescription>
+              가입하신 이메일 주소를 입력하시면 <br />비밀번호 재설정 링크를 보내드립니다.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email" className="text-sm">이메일</Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                placeholder="your@email.com"
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                autoComplete="email"
+                className="h-11 text-base md:text-base"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 h-11"
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setForgotPasswordEmail("");
+                }}
+              >
+                취소
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 h-11 bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={isSendingReset}
+              >
+                {isSendingReset ? "발송 중..." : "재설정 링크 발송"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
   // 모달이 닫혀있으면 아무것도 렌더링하지 않음 (성능 최적화)
   if (!isOpen) return null;
 
@@ -1013,6 +1096,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           </div>
           )}
           </div>
+          {auxiliaryDialogs}
         </BottomSheet>
       )}
 
@@ -1288,88 +1372,12 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
             을 확인해주세요
           </div>
           )}
+          {auxiliaryDialogs}
         </DialogContent>
       </Dialog>
       )}
 
-      {/* 개인정보 처리방침 모달 */}
-      <Dialog open={isPrivacyModalOpen} onOpenChange={setIsPrivacyModalOpen}>
-        <DialogContent
-          onOpenAutoFocus={rememberAuxiliaryDialogOpener}
-          onCloseAutoFocus={restoreAuxiliaryDialogOpener}
-          overlayClassName="z-[120]"
-          className="z-[120] flex h-[min(42rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]"
-        >
-          <DialogHeader className="shrink-0">
-            <DialogTitle>개인정보 처리방침</DialogTitle>
-            <DialogDescription>
-              쯔동여지도 서비스의 개인정보 처리방침입니다.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="min-h-0 flex-1 pr-4">
-            <PrivacyPolicyContent />
-          </ScrollArea>
-          <div className="flex shrink-0 justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" className="min-h-11" onClick={() => setIsPrivacyModalOpen(false)}>
-              닫기
-            </Button>
-            <Button className="min-h-11" onClick={handlePrivacyAgree}>
-              동의하기
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* 비밀번호 찾기 모달 */}
-      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
-        <DialogContent
-          onOpenAutoFocus={rememberAuxiliaryDialogOpener}
-          onCloseAutoFocus={restoreAuxiliaryDialogOpener}
-          overlayClassName="z-[120]"
-          className="z-[120] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] [&>button.absolute]:hidden"
-        >
-          <DialogHeader>
-            <DialogTitle>비밀번호 찾기</DialogTitle>
-            <DialogDescription>
-              가입하신 이메일 주소를 입력하시면 <br />비밀번호 재설정 링크를 보내드립니다.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="forgot-email" className="text-sm">이메일</Label>
-              <Input
-                id="forgot-email"
-                type="email"
-                placeholder="your@email.com"
-                value={forgotPasswordEmail}
-                onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                autoComplete="email"
-                className="h-11 text-base md:text-base"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 h-11"
-                onClick={() => {
-                  setShowForgotPassword(false);
-                  setForgotPasswordEmail("");
-                }}
-              >
-                취소
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 h-11 bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={isSendingReset}
-              >
-                {isSendingReset ? "발송 중..." : "재설정 링크 발송"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   );
 });

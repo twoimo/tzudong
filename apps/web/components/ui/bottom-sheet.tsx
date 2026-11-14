@@ -1083,6 +1083,8 @@ function BottomSheetComponent({
 
     useEffect(() => {
         if (!isOpen || !isModal) return;
+        const sheet = sheetRef.current;
+        if (!sheet) return;
 
         previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement
             ? document.activeElement
@@ -1103,24 +1105,6 @@ function BottomSheetComponent({
         };
 
         document.addEventListener('focusin', keepFocusInsideSheet);
-
-        return () => {
-            window.clearTimeout(focusTimer);
-            document.removeEventListener('focusin', keepFocusInsideSheet);
-
-            if (previouslyFocusedElementRef.current?.isConnected) {
-                previouslyFocusedElementRef.current.focus({ preventScroll: true });
-            }
-            previouslyFocusedElementRef.current = null;
-        };
-    }, [focusTrapAllowSelectors, isModal, isOpen]);
-
-
-    useEffect(() => {
-        if (!isOpen || !isModal) return;
-
-        const sheet = sheetRef.current;
-        if (!sheet) return;
         const activeSheet = sheet;
 
         const seen = new Set<HTMLElement>();
@@ -1153,6 +1137,11 @@ function BottomSheetComponent({
         hiddenModalSiblingStatesRef.current = hiddenStates;
 
         return () => {
+            window.clearTimeout(focusTimer);
+            document.removeEventListener('focusin', keepFocusInsideSheet);
+
+            // The opener may be one of these inert siblings. Restore its DOM
+            // eligibility before trying to focus it, in the same lifecycle.
             hiddenModalSiblingStatesRef.current.forEach(({ element, ariaHidden, inert }) => {
                 if (ariaHidden === null) {
                     element.removeAttribute('aria-hidden');
@@ -1162,8 +1151,12 @@ function BottomSheetComponent({
                 element.inert = inert;
             });
             hiddenModalSiblingStatesRef.current = [];
+            if (previouslyFocusedElementRef.current?.isConnected) {
+                previouslyFocusedElementRef.current.focus({ preventScroll: true });
+            }
+            previouslyFocusedElementRef.current = null;
         };
-    }, [isModal, isOpen]);
+    }, [focusTrapAllowSelectors, isModal, isOpen]);
 
     // Pull-to-Refresh 방지
     useEffect(() => {

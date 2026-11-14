@@ -68,7 +68,9 @@ for (const { name, Component, end } of documents) {
           await page.keyboard.press('Control+End');
           await ui.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
           await ui(page.locator(end)).toBeInViewport();
-          expect(await page.evaluate(() => {
+          // Keyboard scrolling may still be animating when the final section
+          // first enters the viewport. Keep the exact bottom bound and wait for it.
+          await ui.poll(() => page.evaluate(() => {
             const doc = document.documentElement;
             return doc.scrollHeight - window.scrollY - window.innerHeight;
           })).toBeLessThanOrEqual(1);

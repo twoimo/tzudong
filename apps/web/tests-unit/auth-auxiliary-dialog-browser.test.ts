@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { chromium, expect as ui } from "@playwright/test";
+import { chromium, expect as ui, type Page } from "@playwright/test";
 import { chromeForTestingExecutable } from "./fixtures/chrome-for-testing";
 import { buildAuthModalFocusFixture } from "./fixtures/auth-modal-focus-fixture";
 import { compileResponsiveCss } from "./fixtures/responsive-css";
@@ -23,8 +23,9 @@ const fixtureStyles = compileResponsiveCss([
 for (const viewport of viewports) {
   test(`authentication auxiliary dialogs own focus and fit ${viewport.width}x${viewport.height}`, async () => {
     const browser = await chromium.launch({ executablePath: chromeForTestingExecutable(), headless: true });
+    let page: Page | undefined;
     try {
-      const page = await browser.newPage({ viewport });
+      page = await browser.newPage({ viewport });
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       await page.route("**/*", (route) => route.request().resourceType() === "document"
@@ -65,7 +66,11 @@ for (const viewport of viewports) {
 
       await recoveryOpener.click();
       await ui(recovery).toBeVisible();
-      await page.mouse.click(8, 8);
+      await ui(recoveryEmail).toBeFocused();
+      const recoveryBackdrop = page.locator('[data-slot="dialog-overlay"]').last();
+      await ui(recoveryBackdrop).toBeVisible();
+      expect(await recoveryBackdrop.evaluate((element) => document.elementFromPoint(8, 8) === element)).toBe(true);
+      await recoveryBackdrop.click({ position: { x: 8, y: 8 } });
       await ui(recovery).toHaveCount(0);
       await ui(authDialog).toBeVisible();
       await ui(recoveryOpener).toBeFocused();
@@ -117,6 +122,27 @@ for (const viewport of viewports) {
       await ui(authOpener).toBeFocused();
       expect(await page.evaluate(() => (globalThis as unknown as { __authFocusWrites: number }).__authFocusWrites)).toBe(0);
       expect(errors).toEqual([]);
+    } catch (error) {
+      if (page && !page.isClosed()) {
+        const state = await page.evaluate(() => {
+          const describe = (element: Element | null) => element ? {
+            tag: element.tagName,
+            id: element.id,
+            slot: element.getAttribute("data-slot"),
+            role: element.getAttribute("role"),
+            inert: element instanceof HTMLElement && element.inert,
+            ariaHidden: element.getAttribute("aria-hidden"),
+            pointerEvents: getComputedStyle(element).pointerEvents,
+          } : null;
+          return {
+            focus: describe(document.activeElement),
+            backdropHit: describe(document.elementFromPoint(8, 8)),
+            dialogs: Array.from(document.querySelectorAll('[role="dialog"]')).slice(0, 3).map(describe),
+          };
+        });
+        console.error("AUTH_AUXILIARY_MODAL_STATE", JSON.stringify({ viewport, state }));
+      }
+      throw error;
     } finally {
       await browser.close();
     }
