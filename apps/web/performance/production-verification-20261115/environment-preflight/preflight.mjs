@@ -6,9 +6,9 @@ import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { loadPinnedPlaywright } from '../../../../../.github/scripts/ensure-ci-chromium.mjs';
-import { assertPrivacySafeText } from '../../../lib/privacy/sanitize.ts';
-import { MAX_RECEIPT_BYTES, PINS, PROFILES, THROTTLING, allowedFixtureRequest, numeric,
-  parseArguments, profileProblems, projectTrace, receiptProblems, sha256, verifyReceiptBytes } from './evidence.mjs';
+import { FAILURE_CODES, MAX_RECEIPT_BYTES, PINS, PROFILES, RECEIPT_VERSION, SERIALIZATION_FAILURES, THROTTLING,
+  allowedFixtureRequest, assertReceiptPrivacy, minimalFailureReceipt, numeric, parseArguments, parseStrictJson,
+  profileProblems, projectTrace, receiptProblems, sha256, sha256Bytes, sourceDigestProblems, verifyReceiptBytes } from './evidence.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../../../../..');
@@ -21,7 +21,7 @@ const HTML = '<!doctype html><html lang="en"><head><meta name="viewport" content
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="220"><rect width="300" height="220" fill="#215f89"/>'
   + '<circle cx="150" cy="110" r="70" fill="#efb44c"/></svg>';
 const FAIL = code => Object.assign(new Error(code), { safeCode: code });
-const errorCode = error => /^[A-Z][A-Z0-9_]{2,79}$/.test(error?.safeCode ?? '') ? error.safeCode : 'LOCAL_PREFLIGHT_FAILED';
+const errorCode = error => FAILURE_CODES.includes(error?.safeCode) ? error.safeCode : 'LOCAL_PREFLIGHT_FAILED';
 const bounded = async (promise, ms, code, onTimeout = () => {}) => {
   let timer;
   try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => { onTimeout(); reject(FAIL(code)); }, ms); })]); }
@@ -49,25 +49,31 @@ export function createWorkGate() {
 }
 
 export function serializeReceipt(receipt) {
-  let bytes;
   try {
-    bytes = Buffer.from(JSON.stringify(receipt) + '\n');
+    assertReceiptPrivacy(receipt);
+    const bytes = Buffer.from(JSON.stringify(receipt) + '\n');
     if (bytes.length > MAX_RECEIPT_BYTES) throw FAIL('RECEIPT_SIZE_LIMIT');
-    assertPrivacySafeText(bytes.toString('utf8'));
+    return bytes;
   } catch (error) {
-    receipt.status = 'blocked-or-incomplete';
-    receipt.failureCodes.push(error?.safeCode === 'RECEIPT_SIZE_LIMIT' ? 'RECEIPT_SIZE_LIMIT' : 'PRIVACY_VALIDATION_FAILED');
-    // Retain attempted identities and failures while marking rejected raw
-    // projections unavailable. This never creates a shortened successful row.
-    receipt.profiles = receipt.profiles.map(row => ({ id: row.id, status: 'failed',
-      failureCodes: [...new Set([...row.failureCodes, 'RECEIPT_PROJECTION_NOT_RETAINED'])],
-      freshOwnedProfile: row.freshOwnedProfile, profileCleaned: row.profileCleaned,
-      launch: null, controls: null, requests: null, observation: null, lighthouse: null, trace: null, screenshot: null }));
-    bytes = Buffer.from(JSON.stringify(receipt) + '\n');
-    assertPrivacySafeText(bytes.toString('utf8'));
+    const code = SERIALIZATION_FAILURES.includes(error?.safeCode) ? error.safeCode
+      : error?.code === 'PRIVACY_UNSAFE_VALUE' ? 'PRIVACY_VALIDATION_FAILED' : 'RECEIPT_SERIALIZATION_FAILED';
+    // A separate fixed envelope cannot repeat rejection of original metadata.
+    // It explicitly loses source verification and all rejected projections.
+    const fallback = minimalFailureReceipt(receipt, code);
+    assertReceiptPrivacy(fallback);
+    const bytes = Buffer.from(JSON.stringify(fallback) + '\n');
     if (bytes.length > MAX_RECEIPT_BYTES) throw FAIL('RECEIPT_SIZE_LIMIT');
+    return bytes;
   }
-  return bytes;
+}
+
+// The caller exclusively reserves the file before runtime work. Tests can use
+// this identical write path with pure synthetic receipts and temporary files.
+export async function writeReceipt(handle, receipt) {
+  const bytes = serializeReceipt(receipt); const saved = parseStrictJson(bytes);
+  await handle.writeFile(bytes); await handle.sync();
+  return { status: saved.status, scope: saved.scope, sha256: sha256(bytes),
+    profilesRetained: saved.profiles.length, failureCodes: saved.failureCodes };
 }
 
 // Serialized by Playwright. Numeric/enumerated state only; no page text/URLs.
@@ -158,13 +164,13 @@ async function loadTools() {
       lighthouse: installed.lighthouse, puppeteerVersion: installed['puppeteer-core'], puppeteerLockMatched: true } };
 }
 
-async function sourceHashes() {
-  const hashes = {};
+export async function readSourceDigests() {
+  const digests = {};
   for (const [key, path] of Object.entries({ preflight: resolve(HERE, 'preflight.mjs'), evidence: resolve(HERE, 'evidence.mjs'),
     browserContract: resolve(REPO, '.github/chrome-for-testing.v1.json'), appLock: resolve(REPO, 'apps/web/package-lock.json'),
-    lighthouseLock: resolve(OLD_TOOLS, 'package-lock.json') })) hashes[key] = sha256(await readFile(path));
-  hashes.fixture = sha256(HTML + '\n' + SVG);
-  return hashes;
+    lighthouseLock: resolve(OLD_TOOLS, 'package-lock.json') })) digests[key] = sha256Bytes(await readFile(path));
+  digests.fixture = sha256Bytes(Buffer.from(HTML + '\n' + SVG));
+  return digests;
 }
 
 async function ownedFixture() {
@@ -220,7 +226,7 @@ async function localProfile(tools, fixture, profile) {
       row.launch = { chromiumSandboxRequested: true, disableSandboxFlagObserved: disabling,
         automationFlagObserved: args.includes('--enable-automation'),
         versionVerified: [`Chrome/${PINS.chrome}`, `HeadlessChrome/${PINS.chrome}`].includes(version.product),
-        isMobile: false, hasTouch: false };
+        mobileLayoutRequested: false, hasTouch: false };
       if (disabling || !row.launch.automationFlagObserved || !row.launch.versionVerified) throw FAIL('BROWSER_POLICY_UNVERIFIED');
       const control = row.controls = { cpuSlowdownRequested: THROTTLING.cpuSlowdownMultiplier,
         latencyMsRequested: THROTTLING.requestLatencyMs,
@@ -272,9 +278,10 @@ async function localProfile(tools, fixture, profile) {
         runtimeError: Boolean(lhr.runtimeError), fixtureUrlMatched: lhr.requestedUrl === fixture.origin + '/fixture'
           && (lhr.finalDisplayedUrl ?? lhr.finalUrl) === fixture.origin + '/fixture',
         settings: { formFactor: actual.formFactor === 'desktop' ? 'desktop' : 'other',
-          mobile: typeof emulation.mobile === 'boolean' ? emulation.mobile : null,
+          mobileLayoutReported: typeof emulation.mobile === 'boolean' ? emulation.mobile : null,
           throttlingMethod: actual.throttlingMethod === 'devtools' ? 'devtools' : 'other',
-          emulatedUserAgent: actual.emulatedUserAgent === false ? false : true, disableStorageReset: actual.disableStorageReset,
+          emulatedUserAgent: actual.emulatedUserAgent === false ? false : true,
+          disableStorageReset: typeof actual.disableStorageReset === 'boolean' ? actual.disableStorageReset : null,
           viewport: { width: numeric(emulation.width), height: numeric(emulation.height), dpr: numeric(emulation.deviceScaleFactor) },
           throttling: Object.fromEntries(Object.keys(THROTTLING).map(key => [key, numeric(actual.throttling?.[key])])) },
         metrics, fcpAuditMs: numeric(lhr.audits?.['first-contentful-paint']?.numericValue),
@@ -284,7 +291,7 @@ async function localProfile(tools, fixture, profile) {
       const match = /^data:image\/(?:jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(screenshot?.data ?? '');
       if (!match || match[1].length > 349528) throw FAIL('TIMED_SCREENSHOT_UNAVAILABLE');
       const image = Buffer.from(match[1], 'base64'); const metadata = await step(() => tools.sharp(image).metadata());
-      row.screenshot = { source: 'lighthouse-final-screenshot', bytes: image.length, sha256: sha256(image),
+      row.screenshot = { source: 'lighthouse-final-screenshot', bytes: image.length, sha256Bytes: sha256Bytes(image),
         timingMs: numeric(screenshot.timing), width: numeric(metadata.width), height: numeric(metadata.height) };
     })();
     await bounded(work, 55000, 'LOCAL_PROFILE_TIMEOUT', gate.expire);
@@ -313,15 +320,15 @@ async function localProfile(tools, fixture, profile) {
 async function runLocal(output) {
   // Reserve before starting a browser. Existing evidence can never be overwritten.
   const handle = await open(resolve(output), 'wx', 0o600);
-  const receipt = { schemaVersion: 'local-environment-preflight.v1', scope: 'synthetic-loopback-capability-only',
+  const receipt = { schemaVersion: RECEIPT_VERSION, scope: 'synthetic-loopback-capability-only',
     layoutSemantics: 'desktop-css-viewport-resize-no-mobile-device-emulation',
     createdAtUtc: new Date().toISOString(), status: 'blocked-or-incomplete',
     production: { access: 'not-tested', source: 'not-tested', deployment: 'not-tested' },
     admissions: { productionPerformance: 0, field: 0, g003: 0 }, improvementBudgets: { absolute: null, relative: null, noise: null },
-    toolchain: null, sourceHashes: {}, profiles: [], failureCodes: [] };
-  let fixture;
+    toolchain: null, sourceDigests: null, profiles: [], failureCodes: [] };
+  let fixture; let savedStatus = 'blocked-or-incomplete';
   try {
-    receipt.sourceHashes = await sourceHashes();
+    receipt.sourceDigests = await readSourceDigests();
     const tools = await loadTools(); receipt.toolchain = tools.toolchain;
     fixture = await ownedFixture();
     for (const profile of PROFILES) {
@@ -341,13 +348,11 @@ async function runLocal(output) {
         .catch(() => { receipt.failureCodes.push('FIXTURE_CLOSE_FAILED'); receipt.status = 'blocked-or-incomplete'; });
     }
     try {
-      const bytes = serializeReceipt(receipt);
-      await handle.writeFile(bytes); await handle.sync();
-      process.stdout.write(JSON.stringify({ status: receipt.status, scope: receipt.scope, sha256: sha256(bytes),
-        profilesRetained: receipt.profiles.length, failureCodes: receipt.failureCodes }) + '\n');
+      const summary = await writeReceipt(handle, receipt); savedStatus = summary.status;
+      process.stdout.write(JSON.stringify(summary) + '\n');
     } finally { await handle.close(); }
   }
-  return receipt.status === 'local-capabilities-observed' ? 0 : 1;
+  return savedStatus === 'local-capabilities-observed' ? 0 : 1;
 }
 
 export async function main(argv = process.argv.slice(2)) {
@@ -365,10 +370,9 @@ export async function main(argv = process.argv.slice(2)) {
     const bytes = await readFile(args.file);
     const result = verifyReceiptBytes(bytes, args.expectedHash);
     if (result.verified) {
-      const recorded = JSON.parse(bytes.toString('utf8')).sourceHashes; const actual = await sourceHashes();
-      if (Object.keys(actual).some(key => actual[key] !== recorded[key])) {
-        result.verified = false; result.failures.push('SOURCE_HASH_MISMATCH');
-      }
+      const recorded = parseStrictJson(bytes).sourceDigests; const actual = await readSourceDigests();
+      const failures = sourceDigestProblems(recorded, actual);
+      if (failures.length) { result.verified = false; result.failures.push(...failures); }
     }
     process.stdout.write(JSON.stringify(result) + '\n'); return result.verified ? 0 : 1;
   }

@@ -1,17 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { mkdtemp, open, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PINS, PROFILES, THROTTLING, MAX_RECEIPT_BYTES, allowedFixtureRequest,
-  parseArguments, parseStrictJson, profileProblems, projectTrace, receiptProblems, sha256, verifyReceiptBytes } from './evidence.mjs';
-import { createWorkGate, serializeReceipt } from './preflight.mjs';
+import { assertPrivacySafe, assertPrivacySafeText } from '../../../lib/privacy/sanitize.ts';
+import { FAILURE_VERSION, PINS, PROFILES, RECEIPT_VERSION, SOURCE_KEYS, THROTTLING, MAX_RECEIPT_BYTES,
+  allowedFixtureRequest, assertReceiptPrivacy, digestShape, parseArguments, parseStrictJson, profileProblems,
+  projectTrace, receiptProblems, receiptShapeProblems, sha256, sourceDigestProblems, verifyReceiptBytes } from './evidence.mjs';
+import { createWorkGate, readSourceDigests, serializeReceipt, writeReceipt } from './preflight.mjs';
 
 // Synthetic software fixtures only. These values are not browser observations.
 function sample(profile) {
   const originTs = 2_000_000;
   const row = { id: profile.id, status: 'passed', failureCodes: [], freshOwnedProfile: true, profileCleaned: true,
     launch: { chromiumSandboxRequested: true, disableSandboxFlagObserved: false, automationFlagObserved: true,
-      versionVerified: true, isMobile: false, hasTouch: false },
+      versionVerified: true, mobileLayoutRequested: false, hasTouch: false },
     controls: { cpuSlowdownRequested: 4, latencyMsRequested: 562.5,
       downloadBytesPerSecondRequested: Math.floor(1474.56 * 1024 / 8), uploadBytesPerSecondRequested: Math.floor(675 * 1024 / 8),
       cpuAcknowledged: true, networkAcknowledged: true, cacheDisabledAcknowledged: true, serviceWorkerBypassAcknowledged: true },
@@ -25,25 +30,25 @@ function sample(profile) {
       lcp: [{ startTimeMs: 240, receivedAtMs: 250 }],
       frames: [{ requestedAtMs: 100, callbackAtMs: 110, frameTimestampMs: 108 }, { requestedAtMs: 200, callbackAtMs: 210, frameTimestampMs: 208 }] },
     lighthouse: { version: PINS.lighthouse, runtimeError: false, fixtureUrlMatched: true, fcpAuditMs: 120, lcpAuditMs: 240,
-      settings: { formFactor: 'desktop', mobile: false, throttlingMethod: 'devtools', emulatedUserAgent: false, disableStorageReset: false,
+      settings: { formFactor: 'desktop', mobileLayoutReported: false, throttlingMethod: 'devtools', emulatedUserAgent: false, disableStorageReset: false,
         viewport: { width: profile.width, height: profile.height, dpr: profile.dpr }, throttling: { ...THROTTLING } },
       metrics: { originTs, navigationTs: originTs, fpMs: 100, fpTs: originTs + 100_000,
         fcpMs: 120, fcpTs: originTs + 120_000, lcpMs: 240, lcpTs: originTs + 240_000,
         endMs: 500, endTs: originTs + 500_000 } },
-    screenshot: { source: 'lighthouse-final-screenshot', bytes: 12000, sha256: 'a'.repeat(64), timingMs: 300, width: 390, height: 844 } };
+    screenshot: { source: 'lighthouse-final-screenshot', bytes: 12000, sha256Bytes: Array(32).fill(170), timingMs: 300, width: 390, height: 844 } };
   row.trace = projectTrace({ traceEvents: [['navigationStart', 0], ['firstPaint', 100], ['firstContentfulPaint', 120],
     ['largestContentfulPaint::Candidate', 240]].map(([name, ms]) => ({ name, ts: originTs + ms * 1000 })) }, row.lighthouse.metrics);
   return row;
 }
 function receipt() {
-  return { schemaVersion: 'local-environment-preflight.v1', scope: 'synthetic-loopback-capability-only',
+  return { schemaVersion: RECEIPT_VERSION, scope: 'synthetic-loopback-capability-only',
     layoutSemantics: 'desktop-css-viewport-resize-no-mobile-device-emulation',
     createdAtUtc: '2026-11-14T00:00:00.000Z', status: 'local-capabilities-observed',
     production: { access: 'not-tested', source: 'not-tested', deployment: 'not-tested' },
     admissions: { productionPerformance: 0, field: 0, g003: 0 }, improvementBudgets: { absolute: null, relative: null, noise: null },
     toolchain: { nodeMajor: 24, nodeVersion: '24.22.1', chrome: PINS.chrome, playwright: PINS.playwright,
       lighthouse: PINS.lighthouse, puppeteerVersion: '25.17.0', puppeteerLockMatched: true },
-    sourceHashes: Object.fromEntries(['preflight', 'evidence', 'browserContract', 'appLock', 'lighthouseLock', 'fixture'].map(key => [key, 'b'.repeat(64)])),
+    sourceDigests: Object.fromEntries(SOURCE_KEYS.map(key => [key, Array(32).fill(187)])),
     profiles: PROFILES.map(sample), failureCodes: [] };
 }
 
@@ -191,24 +196,170 @@ test('duplicate keys, escaped duplicates and prototype keys are rejected before 
     { a: 'quoted,"{text}', b: [{ a: 2 }] });
 });
 
-test('nested free text is rejected and privacy/size failures retain bounded failed attempt identities', () => {
+test('nested payloads on successful or failed rows cannot bypass strict shape screening', () => {
   const nested = receipt(); nested.profiles[0].observation.privateMessage = 'unrecognized';
   assert.ok(receiptProblems(nested).includes('mobile:PROFILE_SHAPE_INVALID'));
   for (const mutate of [row => { row.observation.stopped = { rawProviderDiagnostic: 'unrecognized' }; },
-    row => { row.trace.originalCount = { rawProviderDiagnostic: 'unrecognized' }; }]) {
-    const value = receipt(); mutate(value.profiles[0]);
-    assert.ok(receiptProblems(value).includes('mobile:PROFILE_SHAPE_INVALID'));
+    row => { row.trace.originalCount = { rawProviderDiagnostic: 'unrecognized' }; },
+    row => { row.observation.capReached = { rawProviderDiagnostic: 'unrecognized' }; },
+    row => { row.freshOwnedProfile = { rawProviderDiagnostic: 'unrecognized' }; },
+    row => { row.lighthouse.fcpAuditMs = { rawProviderDiagnostic: 'unrecognized' }; },
+    row => { row.lighthouse.settings.disableStorageReset = { rawProviderDiagnostic: 'unrecognized' }; },
+    row => { row.screenshot.width = { rawProviderDiagnostic: 'unrecognized' }; },
+    row => { row.trace.present = { rawProviderDiagnostic: 'unrecognized' }; }]) {
+    for (const status of ['passed', 'failed']) {
+      const value = receipt(); value.profiles[0].status = status; mutate(value.profiles[0]);
+      assert.ok(receiptShapeProblems(value).includes('mobile:PROFILE_SHAPE_INVALID'));
+      assert.throws(() => assertReceiptPrivacy(value), /RECEIPT_SHAPE_INVALID/);
+    }
   }
-  for (const [text, code] of [['x'.repeat(MAX_RECEIPT_BYTES), 'RECEIPT_SIZE_LIMIT'],
-    ['example.user@example.test', 'PRIVACY_VALIDATION_FAILED']]) {
-    const value = receipt(); value.profiles[0].observation.unexpectedText = text;
-    const bytes = serializeReceipt(value); const saved = JSON.parse(bytes.toString());
-    assert.ok(bytes.length <= MAX_RECEIPT_BYTES); assert.equal(saved.status, 'blocked-or-incomplete');
-    assert.ok(saved.failureCodes.includes(code));
-    assert.deepEqual(saved.profiles.map(row => row.id), PROFILES.map(row => row.id));
-    assert.ok(saved.profiles.every(row => row.status === 'failed' && row.observation === null
-      && row.failureCodes.includes('RECEIPT_PROJECTION_NOT_RETAINED')));
-    assert.equal(bytes.toString().includes(text), false);
+});
+
+test('real fixed public source digests survive the unchanged object privacy boundary', async () => {
+  const sources = await readSourceDigests();
+  const contractBytes = await readFile(new URL('../../../../../.github/chrome-for-testing.v1.json', import.meta.url));
+  const contractHex = sha256(contractBytes);
+  assert.equal(contractHex, '81f9db2648405ba5ac43d0816739b0cde2901fbfc3a25955444d676810cf038c');
+  assert.throws(() => assertPrivacySafeText(contractHex), error => error.code === 'PRIVACY_UNSAFE_VALUE');
+  assert.throws(() => assertPrivacySafe({ sourceHashes: { browserContract: contractHex } }), error => error.code === 'PRIVACY_UNSAFE_VALUE');
+  assert.throws(() => assertPrivacySafe({ message: 'example.user@example.test' }), error => error.code === 'PRIVACY_UNSAFE_VALUE');
+  assert.equal(Buffer.from(sources.browserContract).toString('hex'), contractHex);
+  assert.equal(Buffer.from(sources.fixture).toString('hex'), '4a6a605bf2d535b77554f793af3787aaa1b79bb71e27b5d6461838a7f3115771');
+  assert.ok(Object.values(sources).every(digestShape));
+  const value = receipt(); value.sourceDigests = sources;
+  // The retained CI attempt's metadata timestamp is a software input here, not
+  // a recovered timestamp or runtime failure code from its empty receipt.
+  value.createdAtUtc = '2026-11-14T20:45:05.152Z';
+  assert.doesNotThrow(() => assertReceiptPrivacy(value));
+  const saved = parseStrictJson(serializeReceipt(value));
+  assert.equal(saved.schemaVersion, RECEIPT_VERSION); assert.deepEqual(saved.sourceDigests, sources);
+  assert.deepEqual(receiptProblems(saved), []);
+  value.status = 'blocked-or-incomplete'; value.toolchain = null; value.profiles = [];
+  value.failureCodes = ['LOCAL_PREFLIGHT_FAILED']; // Synthetic known code; no claim about the lost CI cause.
+  const failed = parseStrictJson(serializeReceipt(value));
+  assert.equal(failed.schemaVersion, RECEIPT_VERSION); assert.deepEqual(failed.failureCodes, ['LOCAL_PREFLIGHT_FAILED']);
+  assert.deepEqual(failed.sourceDigests, sources); assert.deepEqual(receiptShapeProblems(failed), []);
+  assert.ok(receiptProblems(failed).includes('PREFLIGHT_NOT_PASSED'));
+});
+
+test('v2 layout booleans have precise typed names; old phone-like keys stay rejected by the unchanged guard', () => {
+  for (const key of ['isMobile', 'mobile']) {
+    assert.throws(() => assertPrivacySafe({ [key]: false }), error => error.code === 'PRIVACY_UNSAFE_VALUE');
+  }
+  assert.doesNotThrow(() => assertPrivacySafe({ mobileLayoutRequested: false, mobileLayoutReported: false }));
+  for (const mutate of [row => { row.launch.mobileLayoutRequested = true; },
+    row => { row.lighthouse.settings.mobileLayoutReported = true; }]) {
+    const row = sample(PROFILES[0]); mutate(row); assert.ok(profileProblems(row).length > 0);
+  }
+  const old = receipt(); old.profiles[0].launch.isMobile = false;
+  delete old.profiles[0].launch.mobileLayoutRequested;
+  assert.ok(receiptShapeProblems(old).includes('mobile:PROFILE_SHAPE_INVALID'));
+  const partial = receipt(); partial.status = 'blocked-or-incomplete'; partial.failureCodes = ['LOCAL_PROFILE_FAILED'];
+  const row = sample(PROFILES[0]); row.status = 'failed'; row.failureCodes = ['LOCAL_PROFILE_TIMEOUT'];
+  for (const key of ['launch', 'controls', 'observation', 'lighthouse', 'trace', 'screenshot']) row[key] = null;
+  row.profileCleaned = false; partial.profiles = [row];
+  const bytes = serializeReceipt(partial); const saved = parseStrictJson(bytes);
+  assert.equal(saved.schemaVersion, RECEIPT_VERSION); assert.deepEqual(saved.profiles[0], row);
+  assert.equal(verifyReceiptBytes(bytes, sha256(bytes)).verified, false);
+});
+
+test('digest representations reject wrong length, holes, extra keys, strings and non-uint8 values', () => {
+  const hole = Array(32); hole[0] = 1;
+  const extra = Array(32).fill(1); extra.freeText = 'unrecognized';
+  const getter = Array(32).fill(1); Object.defineProperty(getter, '0', { enumerable: true, get() { throw new Error('must not execute'); } });
+  for (const digest of [Array(31).fill(1), Array(33).fill(1), hole, extra, getter, 'b'.repeat(64),
+    [...Array(31).fill(1), -1], [...Array(31).fill(1), 256], [...Array(31).fill(1), 1.5],
+    [...Array(31).fill(1), null], [...Array(31).fill(1), 'example.user@example.test']]) {
+    assert.equal(digestShape(digest), false);
+    const value = receipt(); value.sourceDigests.browserContract = digest;
+    assert.ok(receiptShapeProblems(value).includes('SOURCE_DIGESTS_INVALID'));
+    const row = sample(PROFILES[0]); row.screenshot.sha256Bytes = digest;
+    assert.ok(profileProblems(row).includes('PROFILE_SHAPE_INVALID'));
+  }
+  const old = receipt(); old.schemaVersion = 'local-environment-preflight.v1';
+  assert.ok(receiptProblems(old).includes('SCOPE_INVALID'));
+});
+
+test('bounded record screening covers array tails and retains a fixed failed envelope on rejection', () => {
+  const long = receipt();
+  for (const row of long.profiles) row.observation.samples = Array.from({ length: 600 }, (_, index) => ({
+    ...row.observation.samples[0], atMs: index * 100 }));
+  assert.deepEqual(receiptShapeProblems(long), []);
+  assert.doesNotThrow(() => assertReceiptPrivacy(long)); // More than 1000 total entries; no guard limit is raised.
+  const size = parseStrictJson(serializeReceipt(long));
+  assert.equal(size.failureCodes[0], 'RECEIPT_SIZE_LIMIT');
+  long.profiles[2].observation.samples[599].focused = 'example.user@example.test';
+  const tail = parseStrictJson(serializeReceipt(long));
+  assert.equal(tail.failureCodes[0], 'RECEIPT_SHAPE_INVALID');
+  const unknown = receipt(); unknown.profiles[0].observation.unexpectedText = 'example.user@example.test';
+  const privacy = receipt(); privacy.toolchain.chrome = '02.123.4567.0';
+  assert.deepEqual(receiptShapeProblems(privacy), []); // Typed four-part version, still screened by the unchanged guard.
+  for (const [input, code] of [[long, 'RECEIPT_SHAPE_INVALID'], [unknown, 'RECEIPT_SHAPE_INVALID'],
+    [privacy, 'PRIVACY_VALIDATION_FAILED']]) {
+    const bytes = serializeReceipt(input); const saved = parseStrictJson(bytes);
+    assert.ok(bytes.length > 0 && bytes.length < 2048); assert.equal(saved.schemaVersion, FAILURE_VERSION);
+    assert.equal(saved.status, 'blocked-or-incomplete'); assert.equal(saved.sourceVerified, false);
+    assert.equal(saved.projectionsRetained, false); assert.equal(saved.productionTested, false);
+    assert.deepEqual(saved.failureCodes, [code, 'SOURCE_UNVERIFIED', 'RECEIPT_PROJECTION_NOT_RETAINED']);
+    assert.deepEqual(saved.profiles, PROFILES.map(profile => ({ id: profile.id, failed: true, projectionsRetained: false })));
+    assert.equal(bytes.toString().includes('example.user@example.test'), false);
+    assert.equal(Object.hasOwn(saved, 'sourceDigests'), false); assert.equal(Object.hasOwn(saved, 'toolchain'), false);
+    assert.deepEqual(receiptShapeProblems(saved), []); assert.doesNotThrow(() => assertReceiptPrivacy(saved));
     assert.equal(verifyReceiptBytes(bytes, sha256(bytes)).verified, false);
+    assert.equal(input.status, 'local-capabilities-observed'); // Serializer never rewrites the original observation.
   }
+});
+
+test('a minimal failed envelope never admits copied metadata, arbitrary codes or a successful state', () => {
+  const invalid = receipt(); invalid.toolchain.chrome = '02.123.4567.0';
+  const fallback = parseStrictJson(serializeReceipt(invalid));
+  for (const mutate of [value => { value.sourceVerified = true; }, value => { value.projectionsRetained = true; },
+    value => { value.status = 'local-capabilities-observed'; }, value => { value.createdAtUtc = '2026-11-14T00:00:00.000Z'; },
+    value => { value.profiles[0].id = 'unrecognized'; }, value => { value.failureCodes[0] = 'ARBITRARY_ERROR'; },
+    value => { value.profiles[0].failed = 'example.user@example.test'; }]) {
+    const value = structuredClone(fallback); mutate(value);
+    assert.deepEqual(receiptShapeProblems(value), ['FAILURE_ENVELOPE_INVALID']);
+    const bytes = Buffer.from(JSON.stringify(value)); assert.equal(verifyReceiptBytes(bytes, sha256(bytes)).verified, false);
+  }
+});
+
+test('exclusive file writing retains nonempty real-source partial failure and fixed privacy fallback', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'tzudong-preflight-v2-pure-'));
+  try {
+    const partial = receipt(); partial.sourceDigests = await readSourceDigests();
+    partial.createdAtUtc = '2026-11-14T20:45:05.152Z'; partial.status = 'blocked-or-incomplete';
+    partial.toolchain = null; partial.profiles = []; partial.failureCodes = ['LOCAL_PREFLIGHT_FAILED'];
+    const rejected = receipt(); rejected.toolchain.chrome = '02.123.4567.0';
+    for (const [index, value] of [partial, rejected].entries()) {
+      const path = join(directory, `synthetic-${index}.json`); const handle = await open(path, 'wx', 0o600);
+      let summary;
+      try { summary = await writeReceipt(handle, value); } finally { await handle.close(); }
+      const bytes = await readFile(path); const saved = parseStrictJson(bytes);
+      assert.ok(bytes.length > 0 && bytes.length <= MAX_RECEIPT_BYTES);
+      assert.equal(summary.sha256, sha256(bytes)); assert.equal(summary.status, 'blocked-or-incomplete');
+      assert.deepEqual(summary.failureCodes, saved.failureCodes);
+      assert.equal(verifyReceiptBytes(bytes, summary.sha256).verified, false);
+      await assert.rejects(open(path, 'wx', 0o600), { code: 'EEXIST' });
+      assert.deepEqual(await readFile(path), bytes);
+    }
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('offline CLI source verification compares all 32 bytes even after a new detached receipt hash', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'tzudong-preflight-v2-source-'));
+  try {
+    const value = receipt(); const actual = await readSourceDigests(); value.sourceDigests = actual;
+    assert.deepEqual(sourceDigestProblems(value.sourceDigests, actual), []);
+    for (const changed of [false, true]) {
+      const candidate = structuredClone(value);
+      if (changed) candidate.sourceDigests.browserContract[31] ^= 1;
+      const bytes = serializeReceipt(candidate); const path = join(directory, changed ? 'synthetic-changed.json' : 'synthetic-source-matched.json');
+      const handle = await open(path, 'wx', 0o600); try { await handle.writeFile(bytes); } finally { await handle.close(); }
+      const child = spawnSync(process.execPath, [fileURLToPath(new URL('./preflight.mjs', import.meta.url)),
+        '--verify', path, '--sha256', sha256(bytes)], { encoding: 'utf8', timeout: 10000 });
+      assert.equal(child.status, changed ? 1 : 0, child.stderr);
+      const result = JSON.parse(child.stdout); assert.equal(result.verified, !changed);
+      assert.deepEqual(result.failures, changed ? ['SOURCE_DIGEST_MISMATCH'] : []);
+    }
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });

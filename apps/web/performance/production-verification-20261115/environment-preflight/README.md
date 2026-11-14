@@ -1,6 +1,6 @@
 # Local measurement capability preflight
 
-This is a reusable **synthetic localhost capability kit**. It is not a production performance collector, a replacement for a failed measurement, or proof that a suitable production environment has been secured. The runtime has not been executed in the current workspace. Pure tests exercise software fixtures only.
+This is a reusable **synthetic localhost capability kit**. It is not a production performance collector, a replacement for a failed measurement, or proof that a suitable production environment has been secured. The first v1 CI attempt is retained as failed; it produced a zero-byte receipt. The v2 persistence repair described below has only pure software tests until a separate permitted runtime attempt is recorded.
 
 ## Scope and existing blockers
 
@@ -50,7 +50,7 @@ node apps/web/performance/production-verification-20261115/environment-preflight
   --verify /absolute/path/to/a/new-local-preflight.json --sha256 DETACHED_SHA256
 ```
 
-Verification rejects duplicate/escaped duplicate keys, prototype keys, unknown nested payloads, wrong hashes, source-byte drift, incomplete profiles, inconsistent timing, and any production/field/G003 admission. It checks this kit's projections and their integrity; it is not an independent performance scorer or an authenticity signature.
+Verification rejects duplicate/escaped duplicate keys, prototype keys, unknown nested payloads, wrong hashes, source-byte drift, incomplete profiles, inconsistent timing, and any production/field/G003 admission. It compares all 32 bytes of each recorded source digest against a fresh digest of the same fixed local source/authority/fixture bytes. It checks this kit's projections and their integrity; it is not an independent performance scorer or an authenticity signature.
 
 ## Outputs and stop conditions
 
@@ -60,7 +60,15 @@ Requested/acknowledged CPU or network controls are not empirical proof of a phys
 
 Browser version, launch, sandbox, endpoint, observer, paint, coverage, cleanup or trace failures retain a failed outcome. Work is deadline-gated; late resource acquisitions are disposed, disconnect/close are bounded, and pending work is joined or recorded as a failed drain before publishing a row. A failed close, failed late disposal, or failed drain never claims profile cleanup and never triggers a weaker launch. Stop and investigate owned-process cleanup in that permitted environment before another run.
 
-Receipts are compact JSON capped at **64 KiB**, matching the unchanged shared privacy guard. If size or privacy validation rejects a projection, a compact failed receipt retains the attempted profile IDs/outcomes and marks their raw projections `RECEIPT_PROJECTION_NOT_RETAINED`. Such a receipt cannot pass. Free-form provider errors, page text, response bodies, headers, browser argv, storage and credentials are not retained.
+Ordinary receipts use `local-environment-preflight.v2`. Every field, including partially populated failed profiles, must satisfy the strict known schema before privacy screening. The unchanged **object** boundary `assertPrivacySafe` then screens every field in small fixed sections and every bounded array record, including its tail. Its existing depth, entry and string limits are not raised. The complete serialized receipt remains capped at **64 KiB**; chunking the object screen does not relax that file limit.
+
+`sourceDigests` contains six exact **32-element uint8 arrays** computed directly from the fixed public kit files, existing authority/lock files and owned fixture bytes. The synthetic screenshot's `sha256Bytes` uses the same representation, computed from its image bytes. These fields represent SHA-256 digests; they do not encode arbitrary text, and no general text-encoding facility or privacy exemption is introduced. The detached receipt SHA-256 used by `--verify` remains hexadecimal.
+
+The receipt calls its fixed layout booleans `launch.mobileLayoutRequested` and `lighthouse.settings.mobileLayoutReported`. The generic privacy guard treats keys ending in `mobile` as phone fields, even for booleans; v2 uses names that state these measurements' actual layout meaning. Playwright's real `isMobile:false` option and Lighthouse's real `screenEmulation.mobile:false` option, and their required values, are unchanged. No raw diagnostic or personal-data field is renamed into an allowed field.
+
+If schema, size, serialization or privacy screening fails, the writer constructs a separate `local-environment-preflight.failure.v2` envelope. It contains only fixed state/code values, known bounded profile IDs and booleans: `sourceVerified:false`, `projectionsRetained:false`, `productionTested:false`, and explicit `SOURCE_UNVERIFIED` / `RECEIPT_PROJECTION_NOT_RETAINED` codes. It copies no timestamp, tool metadata, digest, raw projection or original error text. Such an envelope is nonempty and cannot verify as a successful capability result. Filesystem write failures still cannot guarantee persistence. The original in-memory observation is not rewritten; process status and the printed receipt summary come from the bytes actually saved.
+
+Free-form provider errors, page text, response bodies, headers, browser argv, storage and credentials are not retained. Invalid data in a failed profile is subject to the same schema and privacy checks as data in a successful one.
 
 The Playwright persistent-context → owned loopback CDP → Puppeteer → Lighthouse connection and actual sandbox availability remain **runtime-unverified until the explicit command succeeds in a permitted environment**. Passing the included pure tests does not remove that limitation.
 
@@ -69,6 +77,14 @@ The Playwright persistent-context → owned loopback CDP → Puppeteer → Light
 `.github/workflows/web-measurement-preflight.yml` runs this synthetic kit on an isolated GitHub-hosted Ubuntu 24.04 runner when this kit or that workflow changes in a same-repository pull request. It checks out the exact PR head, installs the existing locked browser without a separate browser probe or OS-dependency retry, and invokes `--run-local` once. The job is restricted to `github.run_attempt == 1` and does not run on workflow reruns. It has no production target or secrets and does not modify the existing production performance workflow or the managed browser's policy.
 
 The job retains `receipt.json`, a detached `receipt.sha256`, and `attempt.json` even on a capability failure. Setup failures retain fixed step outcomes and an explicit missing-receipt state. Offline verification checks the current source bytes. A missing or failed receipt keeps the job failed; there is no sandbox fallback, hidden retry, or conversion of failure into a pass. The archived attempt, not the presence of this workflow, establishes whether a particular runner actually passed.
+
+### Retained v1 persistence failure and v2 correction
+
+Run `43639072916`, head `ec7948e4d23b73099acde347157dcf8a9fbe53dc`, passed tooling and the original 17 pure tests, then failed the capability step. Its original `receipt.json` is **0 bytes** and offline verification reports `RECEIPT_INVALID_JSON`. Those archived bytes and the failed attempt are unchanged.
+
+A pure reproduction identified a deterministic persistence defect: the actual public browser-contract SHA-256 string matched the unchanged guard's phone-number rule. v1 screened the complete JSON as plain text and then copied that same digest into its fallback, so both screens rejected it. The shared guard's own documentation specifies `assertPrivacySafe` for object/diagnostic boundaries. v2 uses that typed boundary, strictly limited digest arrays and a newly constructed minimal failure envelope. Tests cover the actual fixed public digest, the retained attempt's timestamp as a synthetic input, unchanged privacy rejection, partial failure retention, array bounds/tails, exclusive nonempty file writing and source-byte mismatch despite a recomputed detached receipt hash.
+
+This explains the reproducible receipt-storage failure. It does **not** recover the lost original runtime error code, establish which browser stage ran, or identify why that runtime attempt failed. Pure tests do not establish that the Playwright/Puppeteer/Lighthouse runtime bridge or sandbox will succeed. No browser, dependency install, production request or CI retry is part of the v2 software tests.
 
 ## Existing authorities and preserved evidence
 
