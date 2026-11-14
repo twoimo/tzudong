@@ -400,6 +400,33 @@ async function saveJson(path, value) {
   await writeFile(path, bytes, { flag: 'wx', mode: 0o600 });
 }
 
+const HEALTH_STAGE_FAILURES = Object.freeze({
+  launch: 'HEALTH_BROWSER_LAUNCH_FAILED', version: 'HEALTH_BROWSER_VERSION_FAILED',
+  newpage: 'HEALTH_BROWSER_NEWPAGE_FAILED', navigation: 'HEALTH_BROWSER_NAVIGATION_FAILED',
+  projection: 'HEALTH_BROWSER_PROJECTION_FAILED', close: 'HEALTH_BROWSER_CLOSE_FAILED',
+});
+
+export function classifyHealthBrowserError(error, stage) {
+  // Inspect bounded diagnostics only in memory; never retain the error, stack,
+  // message, executable stderr, or any document/provider diagnostic.
+  const message = typeof error?.message === 'string' ? error.message.slice(0, 16_384).toLowerCase() : '';
+  if (/no usable sandbox|suid sandbox|setuid sandbox|running as root without --no-sandbox|failed to move to new namespace/.test(message)
+    || /sandbox/.test(message) && /not supported|unavailable|operation not permitted|permission denied/.test(message)) {
+    return 'HEALTH_BROWSER_SANDBOX_UNAVAILABLE';
+  }
+  if (/enoent|could not find chrome|executable[^\n]{0,100}(?:not found|does not exist)/.test(message)) {
+    return 'HEALTH_BROWSER_EXECUTABLE_NOT_FOUND';
+  }
+  if (/eacces|eperm|permission denied|access denied/.test(message) && stage === 'launch') {
+    return 'HEALTH_BROWSER_EXECUTABLE_PERMISSION_DENIED';
+  }
+  if (/net::err_(?:blocked_by_client|blocked_by_response|access_denied|network_access_denied)|navigation[^\n]{0,40}denied/.test(message)) {
+    return 'HEALTH_BROWSER_NAVIGATION_DENIED';
+  }
+  if (error?.name === 'TimeoutError' || /timeout|timed out/.test(message)) return 'HEALTH_BROWSER_TIMEOUT';
+  return HEALTH_STAGE_FAILURES[stage] ?? 'HEALTH_READBACK_UNAVAILABLE';
+}
+
 export async function publicBrowserHealth(tools) {
   // A distinct anonymous process/profile reads the ordinary public JSON page.
   // It is fully closed before returning; the measured browser's connection,
@@ -409,17 +436,21 @@ export async function publicBrowserHealth(tools) {
   const evidence = { transport: 'browser-public-navigation',
     isolatedFromMeasuredBrowser: true, credentialsUsed: false,
     browser: { product: 'Google Chrome for Testing', version: EXPECTED.chrome, executable: tools.executable },
-    observedAt: new Date().toISOString(), httpStatus: null, pageClassification: 'unavailable' };
+    observedAt: new Date().toISOString(), stage: 'launch', httpStatus: null, pageClassification: 'unavailable' };
   let browser;
   try {
     browser = await tools.puppeteer.launch({ executablePath: tools.executable,
       headless: true, userDataDir: profileRoot, dumpio: false, timeout: 30_000,
       env: Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'XDG_RUNTIME_DIR']
         .filter(key => process.env[key]).map(key => [key, process.env[key]])) });
+    evidence.stage = 'version';
     if (!(await browser.version()).endsWith('/' + EXPECTED.chrome)) throw fixedError('HEALTH_BROWSER_VERSION_MISMATCH');
+    evidence.stage = 'newpage';
     const page = await browser.newPage();
+    evidence.stage = 'navigation';
     const response = await page.goto(CANONICAL + 'api/health', { waitUntil: 'domcontentloaded', timeout: 15_000 });
     evidence.httpStatus = finite(response?.status());
+    evidence.stage = 'projection';
     const document = await page.evaluate(() => {
       const text = (window.document.querySelector('pre')?.textContent ?? window.document.body?.innerText ?? '').trim();
       const sample = (window.document.title + '\n' + text.slice(0, 8192)).slice(0, 8448);
@@ -447,8 +478,8 @@ export async function publicBrowserHealth(tools) {
     return { ...evidence, sourceSha: value.gitSha, gitSha: value.gitSha, deploymentId: value.deploymentId,
       canonicalUrl: CANONICAL, healthOk: true, ok: true, host: value.host };
   } catch (error) {
-    const failure = error?.auditCode ? error : fixedError('HEALTH_READBACK_UNAVAILABLE');
-    failure.healthReadback = evidence;
+    const failure = fixedError(error?.auditCode ? failureCode(error) : classifyHealthBrowserError(error, evidence.stage));
+    failure.healthReadback = { ...evidence };
     throw failure;
   } finally {
     if (browser) {
@@ -457,9 +488,10 @@ export async function publicBrowserHealth(tools) {
         await Promise.race([browser.close(), new Promise((_, reject) => {
           timer = setTimeout(() => reject(fixedError('HEALTH_BROWSER_CLOSE_TIMEOUT')), 5000);
         })]);
-      } catch {
+      } catch (error) {
         browser.process()?.kill('SIGKILL');
-        throw Object.assign(fixedError('HEALTH_BROWSER_CLOSE_FAILED'), { healthReadback: evidence });
+        throw Object.assign(fixedError(error?.auditCode ? failureCode(error) : classifyHealthBrowserError(error, 'close')),
+          { healthReadback: { ...evidence, stage: 'close' } });
       } finally {
         clearTimeout(timer);
         await rm(profileRoot, { recursive: true, force: true });
