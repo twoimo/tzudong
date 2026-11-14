@@ -1,0 +1,150 @@
+name: Local measurement capability
+run-name: Local measurement capability · ${{ github.run_id }} · synthetic only
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/web-measurement-preflight.yml'
+      - 'apps/web/performance/production-verification-20261115/environment-preflight/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: local-measurement-capability-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  local-capability:
+    name: Synthetic localhost capability
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CAPABILITY_ROOT: apps/web/performance/production-verification-20261115/environment-runs/ci-${{ github.run_id }}-${{ github.run_attempt }}
+      CAPABILITY_HEAD: ${{ github.event.pull_request.head.sha }}
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/tzudong-capability-browsers
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        id: source
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/
+            /apps/web/package.json
+            /apps/web/package-lock.json
+            /apps/web/vendor/
+            /apps/web/scripts/apply-next-sync-patch.mjs
+            /apps/web/lib/privacy/
+            /apps/web/performance/initial-load-20261114/tools/
+            /apps/web/performance/production-verification-20261115/environment-preflight/
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            apps/web/performance/initial-load-20261114/tools/package-lock.json
+      - name: Provision locked tooling
+        id: tooling
+        run: |
+          npm install --global npm@11.6.2
+          test "$(npm --version)" = '11.6.2'
+          npm ci --prefix apps/web --no-audit --fund=false
+          npm ci --prefix apps/web/performance/initial-load-20261114/tools --no-audit --fund=false
+          node --input-type=module <<'NODE'
+          import { loadPinnedPlaywright, runBounded } from './.github/scripts/ensure-ci-chromium.mjs';
+          try {
+            const pinned = loadPinnedPlaywright();
+            const result = await runBounded(process.execPath, [pinned.cliPath, 'install', 'chromium'],
+              { cwd: pinned.webRoot, timeoutMs: 300000 });
+            if (result.status !== 0 || result.error) throw new Error('failed');
+            process.stdout.write('CAPABILITY_BROWSER_INSTALLED\n');
+          } catch {
+            process.stdout.write('CAPABILITY_TOOLING_UNAVAILABLE\n');
+            process.exitCode = 1;
+          }
+          NODE
+      - name: Verify capability software fixtures
+        id: software
+        run: node --test apps/web/performance/production-verification-20261115/environment-preflight/evidence.test.mjs
+      - name: Observe owned localhost capabilities once
+        id: capability
+        timeout-minutes: 4
+        run: |
+          mkdir -p "$CAPABILITY_ROOT"
+          node apps/web/performance/production-verification-20261115/environment-preflight/preflight.mjs --run-local --output "$CAPABILITY_ROOT/receipt.json"
+      - name: Preserve and verify the retained outcome
+        if: always()
+        env:
+          SOURCE_OUTCOME: ${{ steps.source.outcome }}
+          TOOLING_OUTCOME: ${{ steps.tooling.outcome }}
+          SOFTWARE_OUTCOME: ${{ steps.software.outcome }}
+          CAPABILITY_OUTCOME: ${{ steps.capability.outcome }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { spawnSync } from 'node:child_process';
+          import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
+          import { resolve } from 'node:path';
+          const root = resolve(process.env.CAPABILITY_ROOT);
+          await mkdir(root, { recursive: true });
+          const allowed = new Set(['success', 'failure', 'cancelled', 'skipped', '']);
+          const outcomes = Object.fromEntries(['SOURCE_OUTCOME', 'TOOLING_OUTCOME', 'SOFTWARE_OUTCOME', 'CAPABILITY_OUTCOME'].map(key => {
+            const value = process.env[key] ?? '';
+            return [key, allowed.has(value) ? value : 'unknown'];
+          }));
+          const receiptPath = resolve(root, 'receipt.json');
+          let receipt = { retained: false, bytes: null, sha256: null };
+          let verification = { verified: false, failures: ['RECEIPT_UNAVAILABLE'] };
+          try {
+            const info = await lstat(receiptPath);
+            if (!info.isFile() || info.size > 65536) throw new Error('invalid');
+            const bytes = await readFile(receiptPath);
+            const hash = createHash('sha256').update(bytes).digest('hex');
+            receipt = { retained: true, bytes: bytes.length, sha256: hash };
+            await writeFile(resolve(root, 'receipt.sha256'), hash + '\n', { flag: 'wx' });
+            const result = spawnSync(process.execPath, [
+              'apps/web/performance/production-verification-20261115/environment-preflight/preflight.mjs',
+              '--verify', receiptPath, '--sha256', hash,
+            ], { encoding: 'utf8', timeout: 15000, maxBuffer: 65536, stdio: ['ignore', 'pipe', 'pipe'] });
+            const parsed = JSON.parse(result.stdout);
+            if (!Array.isArray(parsed.failures) || parsed.failures.length > 128
+                || parsed.failures.some(value => typeof value !== 'string' || !/^[A-Za-z0-9_:-]{1,120}$/.test(value))) throw new Error('invalid');
+            verification = { verified: result.status === 0 && parsed.verified === true && parsed.failures.length === 0,
+              failures: parsed.failures };
+          } catch { verification = { verified: false, failures: ['RECEIPT_OR_VERIFICATION_UNAVAILABLE'] }; }
+          const checkout = spawnSync('git', ['rev-parse', 'HEAD'],
+            { encoding: 'utf8', timeout: 5000, maxBuffer: 4096, stdio: ['ignore', 'pipe', 'pipe'] });
+          const checkoutText = checkout.stdout?.trim() ?? '';
+          const checkoutSha = checkout.status === 0 && /^[a-f0-9]{40}$/.test(checkoutText) ? checkoutText : null;
+          const sourceVerified = checkoutSha === process.env.CAPABILITY_HEAD && outcomes.SOURCE_OUTCOME === 'success';
+          const metadata = {
+            schemaVersion: 'local-capability-ci-attempt.v1', scope: 'synthetic-loopback-capability-only',
+            runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            requestedHeadSha: process.env.CAPABILITY_HEAD, checkoutSha, sourceVerified, runnerOs: 'ubuntu-24.04',
+            observedAtUtc: new Date().toISOString(), outcomes, receipt, verification,
+            productionNavigationRequested: false, productionEnvironmentSecured: false,
+          };
+          await writeFile(resolve(root, 'attempt.json'), JSON.stringify(metadata, null, 2) + '\n', { flag: 'wx' });
+          process.stdout.write(JSON.stringify(metadata) + '\n');
+          if (!sourceVerified || !verification.verified || Object.values(outcomes).some(value => value !== 'success')) process.exitCode = 1;
+          NODE
+      - name: Retain capability evidence including failures
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: local-capability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.CAPABILITY_ROOT }}
+          if-no-files-found: error
+          retention-days: 90

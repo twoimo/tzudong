@@ -64,6 +64,12 @@ Receipts are compact JSON capped at **64 KiB**, matching the unchanged shared pr
 
 The Playwright persistent-context → owned loopback CDP → Puppeteer → Lighthouse connection and actual sandbox availability remain **runtime-unverified until the explicit command succeeds in a permitted environment**. Passing the included pure tests does not remove that limitation.
 
+## Owned CI capability check
+
+`.github/workflows/web-measurement-preflight.yml` runs this synthetic kit on an isolated GitHub-hosted Ubuntu 24.04 runner when this kit or that workflow changes in a same-repository pull request. It checks out the exact PR head, installs the existing locked browser without a separate browser probe or OS-dependency retry, and invokes `--run-local` once. The job is restricted to `github.run_attempt == 1` and does not run on workflow reruns. It has no production target or secrets and does not modify the existing production performance workflow or the managed browser's policy.
+
+The job retains `receipt.json`, a detached `receipt.sha256`, and `attempt.json` even on a capability failure. Setup failures retain fixed step outcomes and an explicit missing-receipt state. Offline verification checks the current source bytes. A missing or failed receipt keeps the job failed; there is no sandbox fallback, hidden retry, or conversion of failure into a pass. The archived attempt, not the presence of this workflow, establishes whether a particular runner actually passed.
+
 ## Existing authorities and preserved evidence
 
 - `.github/chrome-for-testing.v1.json` and `.github/scripts/ensure-ci-chromium.mjs` (`loadPinnedPlaywright` only; the installer is never called).
