@@ -25,7 +25,12 @@ const fail = code => Object.assign(new Error(code), { auditCode: code });
 const code = error => /^[A-Z][A-Z0-9_]{2,95}$/.test(error?.auditCode ?? '') ? error.auditCode : 'FIXTURE_COLLECTION_FAILED';
 const finite = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const git = (root, args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000 }).trim();
-const save = async (path, value) => writeFile(path, JSON.stringify(value, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+const save = async (path, value) => {
+  const bytes = JSON.stringify(value, null, 2) + '\n';
+  if (Buffer.byteLength(bytes) > 48 * 1024 * 1024) throw fail('FIXTURE_ARTIFACT_SIZE_LIMIT');
+  await writeFile(path, bytes, { flag: 'wx', mode: 0o600 });
+  return Buffer.byteLength(bytes);
+};
 const childEnv = () => Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'TMP', 'TEMP', 'XDG_RUNTIME_DIR']
   .filter(key => process.env[key]).map(key => [key, process.env[key]]));
 
@@ -69,8 +74,8 @@ function installObservation() {
       && box.top < innerHeight && box.left < innerWidth && style.display !== 'none'
       && style.visibility !== 'hidden' && Number(style.opacity) !== 0;
   };
-  const state = { timings: { controlsReadyMs: null, desktopPanelReadyMs: null },
-    samplingIntervalMs: 100, samples: 0, lcp: null, longTasks: [], stopped: false };
+  const state = { timings: { controlsReadyMs: null, desktopPanelReadyMs: null, mockMapReadyMs: null },
+    samplingIntervalMs: 100, samples: [], lcp: null, longTasks: [], stopped: false };
   const inspect = () => {
     const data = document.documentElement?.dataset ?? {};
     const panel = document.querySelector('[data-desktop-left-panel-map-home="true"]');
@@ -105,9 +110,12 @@ function installObservation() {
   }).observe({ type: 'longtask', buffered: true });
   const sample = () => {
     if (state.stopped) return;
-    const readiness = inspect(); const now = performance.now(); state.samples++;
+    const readiness = inspect(); const now = performance.now();
+    if (state.samples.length < 1000) state.samples.push({ atMs: now,
+      actualViewport: { width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio }, readiness });
     if (state.timings.controlsReadyMs === null && readiness.controlsQualified) state.timings.controlsReadyMs = now;
     if (state.timings.desktopPanelReadyMs === null && readiness.desktopPanelQualified) state.timings.desktopPanelReadyMs = now;
+    if (state.timings.mockMapReadyMs === null && readiness.mockMapQualified) state.timings.mockMapReadyMs = now;
     if (now < 90000) setTimeout(sample, 100);
   };
   setTimeout(sample, 0);
@@ -122,11 +130,12 @@ function observation() {
     navigation[name] = typeof nav?.[name] === 'number' ? nav[name] : null;
   }
   const state = window.__fixtureAudit; if (state) state.stopped = true;
-  return { actualViewport: { width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio },
+  return { postCleanupViewport: { width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio },
     initialDocumentQaExcluded: new URLSearchParams(location.search).has('__qa'), navigation,
-    readiness: window.__fixtureAuditInspect?.() ?? null, timings: state?.timings ?? {}, samplingIntervalMs: state?.samplingIntervalMs ?? null,
-    readinessSamples: state?.samples ?? 0, lcpElement: state?.lcp ?? null, longTasks: state?.longTasks ?? [],
-    horizontalOverflowPx: Math.max(0, document.documentElement.scrollWidth - innerWidth), observedAtMs: performance.now() };
+    postCleanupReadiness: window.__fixtureAuditInspect?.() ?? null, timings: state?.timings ?? {}, samplingIntervalMs: state?.samplingIntervalMs ?? null,
+    readinessTimeline: state?.samples ?? [], readinessSamples: state?.samples.length ?? 0,
+    lcpElement: state?.lcp ?? null, longTasks: state?.longTasks ?? [],
+    postCleanupHorizontalOverflowPx: Math.max(0, document.documentElement.scrollWidth - innerWidth), postCleanupObservedAtMs: performance.now() };
 }
 
 async function loadTools() {
@@ -143,7 +152,7 @@ async function loadTools() {
     !== 'Google Chrome for Testing ' + PINS.chrome) throw fail('FIXTURE_BROWSER_IDENTITY_MISMATCH');
   const version = JSON.parse(await readFile(requireTools.resolve('lighthouse/package.json'), 'utf8')).version;
   if (version !== PINS.lighthouse || lock.packages['node_modules/lighthouse'].version !== version) throw fail('FIXTURE_LIGHTHOUSE_PIN_MISMATCH');
-  return { executable, playwright,
+  return { executable, playwright, sharp: pinned.requireWeb('sharp'),
     lighthouse: (await import(pathToFileURL(requireTools.resolve('lighthouse')).href)).default,
     puppeteer: (await import(pathToFileURL(requireTools.resolve('puppeteer-core')).href)).default };
 }
@@ -187,7 +196,8 @@ async function startServer(root) {
 async function trial({ tools, installFixture, protocol, phase, profile, index, run, output }) {
   const attemptId = profile.id + '-' + String(index).padStart(2, '0');
   const folder = resolve(output, phase, attemptId); await mkdir(folder);
-  const item = { attemptId, phase, viewportId: profile.id, status: 'invalid', failures: [], paths: {}, startedAt: new Date().toISOString(), endedAt: null };
+  const item = { attemptId, phase, viewportId: profile.id, status: 'invalid', stage: 'launch', failures: [], paths: {},
+    artifactSizes: {}, capturedArtifactShape: null, startedAt: new Date().toISOString(), endedAt: null };
   const profileRoot = await mkdtemp(resolve(tmpdir(), 'tzudong-fixture-audit-'));
   let browser, page, connection, timer;
   const errors = { pageErrors: 0, consoleErrors: 0, failedRequests: 0, firstPartyHttpErrors: 0, mainDocumentStatus: null };
@@ -207,6 +217,7 @@ async function trial({ tools, installFixture, protocol, phase, profile, index, r
     await page.setViewport({ width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor,
       isMobile: profile.isMobile, hasTouch: profile.hasTouch });
     await page.emulateTimezone('UTC');
+    item.stage = 'fixture-install';
     connection = await tools.playwright.chromium.connectOverCDP(browser.wsEndpoint());
     const fixturePages = connection.contexts().flatMap(context => context.pages());
     if (fixturePages.length !== 1) throw fail('FIXTURE_CDP_PAGE_MISMATCH');
@@ -237,12 +248,28 @@ async function trial({ tools, installFixture, protocol, phase, profile, index, r
       screenEmulation: { mobile: profile.isMobile, width: profile.width, height: profile.height,
         deviceScaleFactor: profile.deviceScaleFactor, disabled: false }, emulatedUserAgent: profile.userAgent, locale: 'en-US' };
     delete settings.legacyTti;
+    item.stage = 'lighthouse';
     const result = await tools.lighthouse(URL_TO_AUDIT, { logLevel: 'silent' }, { extends: 'lighthouse:default', settings }, page);
     if (!result?.lhr) throw fail('FIXTURE_LIGHTHOUSE_RESULT_MISSING');
+    item.capturedArtifactShape = { lighthouseAuditCount: Object.keys(result.lhr.audits ?? {}).length,
+      traceEventCount: result.artifacts?.Trace?.traceEvents?.length ?? null, networkEventCount: result.artifacts?.DevtoolsLog?.length ?? null,
+      scriptRecordCount: Array.isArray(result.artifacts?.Scripts) ? result.artifacts.Scripts.length : null,
+      finalScreenshotDataChars: typeof result.lhr.audits?.['final-screenshot']?.details?.data === 'string'
+        ? result.lhr.audits['final-screenshot'].details.data.length : null };
+    item.stage = 'timed-observation';
     const lhr = sanitizeLhr(result.lhr); const network = sanitizeNetwork(result.artifacts?.DevtoolsLog);
     const observed = await page.evaluate(observation);
     if (observed.lcpElement) observed.lcpElement.url = safeUrl(observed.lcpElement.url);
     const traceObservationEndMs = finite(lhr.audits?.metrics?.details?.items?.[0]?.observedTraceEnd);
+    if (traceObservationEndMs === null) throw fail('FIXTURE_TRACE_BOUNDARY_UNAVAILABLE');
+    const timed = observed.readinessTimeline.filter(sample => sample.atMs <= traceObservationEndMs);
+    if (!timed.length) throw fail('FIXTURE_TIMED_OBSERVATIONS_MISSING');
+    observed.actualViewport = timed.at(-1).actualViewport;
+    observed.readiness = timed.at(-1).readiness;
+    observed.selectedObservationAtMs = timed.at(-1).atMs;
+    for (const name of Object.keys(observed.timings)) if (observed.timings[name] > traceObservationEndMs) observed.timings[name] = null;
+    if (observed.lcpElement?.startTime > traceObservationEndMs) observed.lcpElement = null;
+    observed.longTasks = observed.longTasks.filter(task => task.startTime + task.duration <= traceObservationEndMs);
     const scripts = Array.isArray(result.artifacts?.Scripts) ? result.artifacts.Scripts : [];
     const scriptRoleEvidence = { status: Array.isArray(result.artifacts?.Scripts) ? 'available' : 'unavailable',
       exactSourceLiteralFlagsOnly: true, records: scripts.filter(script =>
@@ -254,17 +281,45 @@ async function trial({ tools, installFixture, protocol, phase, profile, index, r
       browser: { product: 'Google Chrome for Testing', version: PINS.chrome, executable: tools.executable }, browserLaunch: item.browserLaunch,
       requestedViewport: { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor },
       requestedUrl: URL_TO_AUDIT, finalUrl: safeUrl(page.url()), ...observed, errors, networkPolicy, scriptRoleEvidence, traceObservationEndMs,
+      timingBoundary: 'Last 100ms observer sample at or before Lighthouse observedTraceEnd; every in-trace viewport must match. Post-cleanup observations are context only.',
+      mockMapTimingScope: 'Exploratory fixture context only; not real map latency or an improvement metric.',
       fixtureSha256: run.fixtureSha256, ttfbScope: 'loopback-frontend-fixture-not-production',
       staticTransferredBytes: network.records.filter(record => record.url?.startsWith(ORIGIN + '/_next/static/'))
         .reduce((sum, record) => sum + (record.encodedDataLength ?? 0), 0) };
+    item.stage = 'artifacts';
     for (const [kind, name, value] of [['lhr', 'lighthouse.sanitized.json', lhr], ['trace', 'trace.sanitized.json', sanitizeTrace(result.artifacts?.Trace)],
       ['network', 'network.sanitized.json', network], ['observations', 'observations.json', observations]]) {
-      await save(resolve(folder, name), value); item.paths[kind] = attemptId + '/' + name;
+      item.artifactSizes[kind] = await save(resolve(folder, name), value); item.paths[kind] = attemptId + '/' + name;
     }
-    await page.screenshot({ path: resolve(folder, 'screenshot.png'), type: 'png' }); item.paths.screenshot = attemptId + '/screenshot.png';
+    try {
+      const screenshot = result.lhr.audits?.['final-screenshot']?.details;
+      const imageMatch = typeof screenshot?.data === 'string' && screenshot.data.length <= 14 * 1024 * 1024
+        ? /^data:image\/(jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$/.exec(screenshot.data) : null;
+      if (!imageMatch || !(screenshot.timing >= 0 && screenshot.timing <= traceObservationEndMs)) throw fail('FIXTURE_TRACE_SCREENSHOT_MISSING');
+      const imageBytes = Buffer.from(imageMatch[2], 'base64');
+      const imageInfo = await tools.sharp(imageBytes, { limitInputPixels: 16000000 }).metadata();
+      if (!['jpeg', 'png'].includes(imageInfo.format) || !imageInfo.width || !imageInfo.height) throw fail('FIXTURE_TRACE_SCREENSHOT_INVALID');
+      const imageName = 'lighthouse-final.' + (imageMatch[1] === 'jpeg' ? 'jpg' : 'png');
+      observations.screenshotProvenance = { source: 'lighthouse-final-screenshot', timingMs: screenshot.timing,
+        timestampUs: screenshot.timestamp, widthPixels: imageInfo.width, heightPixels: imageInfo.height, mimeType: 'image/' + imageMatch[1] };
+      await writeFile(resolve(folder, imageName), imageBytes, { flag: 'wx', mode: 0o600 });
+      item.paths.screenshot = attemptId + '/' + imageName; item.artifactSizes.screenshot = imageBytes.length;
+    } catch (error) {
+      // Missing visual evidence never discards the numeric/raw diagnostics and
+      // never falls back to a screenshot from the post-cleanup viewport.
+      item.failures.push(code(error)); item.failedStage = 'artifacts';
+    }
+    if (observations.screenshotProvenance) {
+      // This trial's already-retained observation changes only by adding the
+      // image provenance after extraction. Numeric/raw evidence exists first.
+      const bytes = JSON.stringify(observations, null, 2) + '\n';
+      await writeFile(resolve(folder, 'observations.json'), bytes, { mode: 0o600 });
+      item.artifactSizes.observations = Buffer.byteLength(bytes);
+    }
+    item.stage = 'validation';
     if (lhr.runtimeError || lhr.lighthouseVersion !== PINS.lighthouse) item.failures.push('FIXTURE_LIGHTHOUSE_INVALID');
-    if (observed.actualViewport.width !== profile.width || observed.actualViewport.height !== profile.height
-      || observed.actualViewport.deviceScaleFactor !== profile.deviceScaleFactor) item.failures.push('FIXTURE_VIEWPORT_MISMATCH');
+    if (timed.some(sample => sample.actualViewport.width !== profile.width || sample.actualViewport.height !== profile.height
+      || sample.actualViewport.deviceScaleFactor !== profile.deviceScaleFactor)) item.failures.push('FIXTURE_VIEWPORT_MISMATCH');
     if (safeUrl(page.url()) !== ORIGIN + '/' || !observed.initialDocumentQaExcluded) item.failures.push('FIXTURE_NAVIGATION_MISMATCH');
     if (errors.mainDocumentStatus !== 200 || errors.firstPartyHttpErrors || errors.pageErrors) item.failures.push('FIXTURE_PAGE_FUNCTIONAL_ERROR');
     if (!observed.readiness?.controlsQualified || !observed.readiness?.mockMapQualified || observed.readiness?.initialSkeletonVisible
@@ -275,19 +330,25 @@ async function trial({ tools, installFixture, protocol, phase, profile, index, r
       if (!audit || audit.errorCode || audit.scoreDisplayMode === 'error' || finite(audit.numericValue) === null) item.failures.push('FIXTURE_REQUIRED_METRIC_UNAVAILABLE');
     }
     item.status = item.failures.length ? 'invalid' : 'valid';
+    if (item.status === 'valid') item.stage = 'complete';
   };
   try { await Promise.race([work(), new Promise((_, reject) => { timer = setTimeout(() => reject(fail('FIXTURE_TRIAL_TIMEOUT')), 150000); })]); }
   catch (error) { item.failures.push(code(error)); }
   finally {
     clearTimeout(timer);
-    if (page && !item.paths.screenshot) try { await page.screenshot({ path: resolve(folder, 'failure.png'), timeout: 5000 }); item.paths.screenshot = attemptId + '/failure.png'; } catch {}
     if (browser) {
       let closeTimer;
       try { await Promise.race([browser.close(), new Promise((_, reject) => { closeTimer = setTimeout(() => reject(fail('FIXTURE_BROWSER_CLOSE_TIMEOUT')), 5000); })]); }
-      catch { browser.process()?.kill('SIGKILL'); }
+      catch { browser.process()?.kill('SIGKILL'); item.failures.push('FIXTURE_BROWSER_CLOSE_FAILED'); item.status = 'invalid'; }
       finally { clearTimeout(closeTimer); }
     }
     await rm(profileRoot, { recursive: true, force: true }); item.endedAt = new Date().toISOString();
+    if (item.status !== 'valid') {
+      item.paths.failureContext = attemptId + '/failure-context.json';
+      await save(resolve(folder, 'failure-context.json'), { schemaVersion: 'frontend-fixture-failure-context.v1', stage: item.failedStage ?? item.stage,
+        failures: item.failures, artifactSizes: item.artifactSizes, capturedArtifactShape: item.capturedArtifactShape,
+        requestedViewport: { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor } });
+    }
     await save(resolve(folder, 'trial.json'), item);
   }
   process.stdout.write(JSON.stringify({ phase, attemptId, status: item.status, failures: item.failures }) + '\n');

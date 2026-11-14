@@ -80,6 +80,22 @@ function independentlyExtract(o, report) {
   values.controlsReady = finite(end) && finite(ready) && ready <= end ? ready : null;
   return values;
 }
+function independentlyCheckTimeline(o, report, profile) {
+  const end = report.audits?.metrics?.details?.items?.[0]?.observedTraceEnd, states = o.readinessTimeline;
+  if (!finite(end) || !Array.isArray(states) || states.length < 1 || states.length > 1000) return false;
+  let previous = -1, last = null, firstReady = null;
+  for (const state of states) {
+    if (!finite(state.atMs) || state.atMs <= previous) return false;
+    previous = state.atMs;
+    if (state.atMs > end) continue;
+    if (!same(state.actualViewport, { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor })) return false;
+    last = state;
+    const ready = profile.id === 'desktop' ? state.readiness?.homeChromeReady && state.readiness?.desktopMenuReady && state.readiness?.desktopSearchReady : state.readiness?.homeMobileChromeReady;
+    if (ready && firstReady === null) firstReady = state.atMs;
+  }
+  if (last === null || o.traceObservationEndMs !== end || o.selectedObservationAtMs !== last.atMs || !same(last.actualViewport, o.actualViewport) || !same(last.readiness, o.readiness)) return false;
+  return firstReady === null ? o.timings?.controlsReadyMs === null || o.timings?.controlsReadyMs > end : firstReady === o.timings?.controlsReadyMs;
+}
 function independentTrial(item, run, p) {
   const trial = item.trial, o = item.observation, report = item.lhr;
   const profile = p.profiles.find(value => value.id === trial.viewportId);
@@ -93,6 +109,14 @@ function independentTrial(item, run, p) {
     o.fixtureSha256 === run.fixtureSha256, o.ttfbScope === 'loopback-frontend-fixture-not-production',
     o.browser?.product === p.tools.browserProduct, o.browser?.version === p.tools.chrome, isAbsolute(o.browser?.executable ?? ''),
     checkLaunch(o.browserLaunch, p), checkLaunch(trial.browserLaunch, p),
+    independentlyCheckTimeline(o, report, profile),
+    o.screenshotProvenance?.source === 'lighthouse-final-screenshot',
+    finite(o.screenshotProvenance?.timingMs) && o.screenshotProvenance.timingMs <= o.traceObservationEndMs,
+    o.screenshotProvenance?.timingMs === report.audits?.['final-screenshot']?.details?.timing,
+    finite(o.screenshotProvenance?.timestampUs) && o.screenshotProvenance.timestampUs === report.audits?.['final-screenshot']?.details?.timestamp,
+    Number.isSafeInteger(o.screenshotProvenance?.widthPixels) && o.screenshotProvenance.widthPixels > 0,
+    Number.isSafeInteger(o.screenshotProvenance?.heightPixels) && o.screenshotProvenance.heightPixels > 0,
+    ['image/jpeg', 'image/png'].includes(o.screenshotProvenance?.mimeType),
     same(o.actualViewport, { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor }),
     same(o.requestedViewport, { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor }),
     o.requestedUrl === p.measurementUrl, o.finalUrl === p.url, o.initialDocumentQaExcluded === true, o.navigation?.type === 'navigate', o.navigation?.responseStatus === 200,

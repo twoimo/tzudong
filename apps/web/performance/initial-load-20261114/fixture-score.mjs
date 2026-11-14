@@ -80,6 +80,27 @@ function trialValues(observation, lhr) {
   values.controlsReady = finite(control) && finite(end) && control <= end ? control : null;
   return values;
 }
+function timedObservationMatches(o, lhr, profile) {
+  const timeline = o.readinessTimeline, end = lhr.audits?.metrics?.details?.items?.[0]?.observedTraceEnd;
+  if (!Array.isArray(timeline) || timeline.length === 0 || timeline.length > 1000 || !finite(end)) return false;
+  if (!timeline.every((sample, index) => finite(sample.atMs) && (index === 0 || sample.atMs > timeline[index - 1].atMs))) return false;
+  const timed = timeline.filter(sample => sample.atMs <= end), last = timed.at(-1);
+  const viewport = { width: profile.width, height: profile.height, deviceScaleFactor: profile.deviceScaleFactor };
+  const firstControl = timed.find(sample => profile.id === 'desktop'
+    ? sample.readiness?.homeChromeReady && sample.readiness.desktopMenuReady && sample.readiness.desktopSearchReady
+    : sample.readiness?.homeMobileChromeReady);
+  return Boolean(last) && o.traceObservationEndMs === end
+    && timed.every(sample => same(sample.actualViewport, viewport))
+    && o.selectedObservationAtMs === last.atMs && same(o.actualViewport, last.actualViewport) && same(o.readiness, last.readiness)
+    && (firstControl ? o.timings?.controlsReadyMs === firstControl.atMs : o.timings?.controlsReadyMs === null || o.timings?.controlsReadyMs > end);
+}
+function screenshotMatches(o, lhr) {
+  const image = o.screenshotProvenance, raw = lhr.audits?.['final-screenshot']?.details;
+  return image?.source === 'lighthouse-final-screenshot' && finite(image.timingMs) && image.timingMs <= o.traceObservationEndMs
+    && image.timingMs === raw?.timing && image.timestampUs === raw?.timestamp && finite(image.timestampUs)
+    && Number.isSafeInteger(image.widthPixels) && image.widthPixels > 0 && Number.isSafeInteger(image.heightPixels) && image.heightPixels > 0
+    && ['image/jpeg', 'image/png'].includes(image.mimeType);
+}
 function trialEligible(item, run, profile, p) {
   const { trial: t, observation: o, lhr: l } = item;
   if (!o || !l || !profile) return false;
@@ -94,6 +115,8 @@ function trialEligible(item, run, profile, p) {
     && o.fixtureSha256 === run.fixtureSha256 && o.ttfbScope === 'loopback-frontend-fixture-not-production'
     && o.browser?.product === p.tools.browserProduct && o.browser.version === p.tools.chrome && isAbsolute(o.browser.executable ?? '')
     && launchMatches(o.browserLaunch, p) && launchMatches(t.browserLaunch, p)
+    && timedObservationMatches(o, l, profile)
+    && screenshotMatches(o, l)
     && same(o.actualViewport, viewport) && same(o.requestedViewport, viewport) && o.requestedUrl === p.measurementUrl && o.finalUrl === p.url
     && o.initialDocumentQaExcluded === true && o.navigation?.type === 'navigate' && o.navigation.responseStatus === 200
     && l.lighthouseVersion === p.tools.lighthouse && !l.runtimeError && l.requestedUrl === p.url && l.finalDisplayedUrl === p.url && l.finalUrl === p.url

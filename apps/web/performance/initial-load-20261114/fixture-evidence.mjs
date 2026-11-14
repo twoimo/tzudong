@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 export const HERE = dirname(fileURLToPath(import.meta.url));
-export const PROTOCOL_SHA256 = 'd0ee727054e67d54d5ee7846645809a4dd2db958f2caa48850d0ee29adb49a16';
+export const PROTOCOL_SHA256 = 'e25f17e98b2e691390a13120f853663fd239c49fc6192577a0086bf190637bf3';
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const requireThat = (condition, message) => { if (!condition) throw new Error(`frontend fixture: ${message}`); };
 export const same = isDeepStrictEqual;
@@ -106,7 +106,7 @@ export async function loadFixtureEvidence({ root = HERE, input = 'experiment.jso
 export function argumentsFor(argv) {
   const options = {};
   for (let index = 0; index < argv.length; index += 2) {
-    requireThat(/^--[a-z-]+$/.test(argv[index]) && typeof argv[index + 1] === 'string', 'CLI arguments');
+    requireThat(/^--[a-z][a-z0-9-]*$/.test(argv[index]) && typeof argv[index + 1] === 'string', 'CLI arguments');
     const key = argv[index].slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
     requireThat(!Object.hasOwn(options, key), 'duplicate CLI argument'); options[key] = argv[index + 1];
   }

@@ -200,7 +200,17 @@
     "throttlingBoundary": "Count controlsReady only if observed by Lighthouse observedTraceEnd; later polls remain contextual and never become throttled samples.",
     "missing": "Keep null if not observed. Never impute the timeout, map readiness or TTI.",
     "desktopPanelValidity": "homePanelReady=true, a visible desktop panel, zero panel alerts, exactly three popular fixture items, the latest section present, and no latest skeleton. Latest items may be zero because the existing desktop panel excludes the three popular IDs.",
-    "mapValidity": "Visible mock-naver-overlay and at least one visible fixture restaurant or cluster marker; this is not a real map tile or SDK-network timing."
+    "mapValidity": "Visible mock-naver-overlay and at least one visible fixture restaurant or cluster marker; this is not a real map tile or SDK-network timing.",
+    "timedObservation": {
+      "maximumSamples": 1000,
+      "samplingIntervalMs": 100,
+      "raw": "readinessTimeline entries contain atMs, actualViewport and the unchanged readiness fields. Times must be finite, nonnegative and strictly increasing.",
+      "selection": "Select the LAST entry with atMs <= Lighthouse audits.metrics.details.items[0].observedTraceEnd. selectedObservationAtMs, actualViewport and readiness must match that entry exactly.",
+      "viewportValidity": "At least one in-trace entry is required. EVERY in-trace actualViewport must equal requested CSS width, height and deviceScaleFactor. A matching final entry cannot excuse an earlier mismatch.",
+      "contentValidity": "Apply the existing controls, mock map, skeleton and desktop panel criteria to the selected in-trace readiness. Markers appearing only after the trace do not qualify.",
+      "controlsTiming": "controlsReadyMs must equal the atMs of the first qualifying controls snapshot in the trace. The same poll timestamp records readiness and timing.",
+      "postCleanup": "Preserve postCleanupViewport and postCleanupReadiness separately as context. They do not determine trial eligibility or performance values."
+    }
   },
   "comparison": {
     "minimumRelativeReduction": 0.1,
@@ -225,6 +235,17 @@
       "43599674200",
       "43600158140",
       "43600568543"
+    ],
+    "screenshot": "Require a valid Lighthouse final-screenshot with timing at or before observedTraceEnd, captured before cleanup. Preserve image bytes and source/timing/pixel dimensions/MIME provenance; no post-cleanup screenshot substitution. Save other raw artifacts before marking a missing screenshot invalid.",
+    "retainedFixtureFailures": [
+      {
+        "runId": "43601663509",
+        "attemptId": "before/mobile-01",
+        "attemptedTrials": 1,
+        "validTrials": 0,
+        "comparableMetrics": 0,
+        "artifactMapSha256": "cbfb6df28b350b27bb26055afdea4374195243796af91e418b64dcf862bec50f"
+      }
     ]
   },
   "references": [
@@ -248,6 +269,22 @@
       "measuredTrialsBeforeRevision": 0,
       "scope": "Clarify the boundary of browser HTTP/resource and WebSocket interception; no timing, profile, fixture data, application mode, sample count or budget changes.",
       "reason": "Browser resource hints may initiate DNS/TCP/TLS outside Playwright request interception. Retain the existing fixture environment; do not enable the unrelated local-runtime application mode or alter browser network flags."
+    }
+  ],
+  "methodRevisions": [
+    {
+      "revisedAt": "2026-11-14T14:02:00.000Z",
+      "previousProtocolSha256": "d0ee727054e67d54d5ee7846645809a4dd2db958f2caa48850d0ee29adb49a16",
+      "attemptedTrialsBeforeRevision": 1,
+      "validTrialsBeforeRevision": 0,
+      "comparableMetricCountBeforeRevision": 0,
+      "retainedRunId": "43601663509",
+      "retainedArtifactMapSha256": "cbfb6df28b350b27bb26055afdea4374195243796af91e418b64dcf862bec50f",
+      "retainedStatus": "before/mobile-01 invalid; after null; never readmit this attempt",
+      "scope": "Correct observation timing around Lighthouse cleanup only. Keep source application, fixture data, profiles, budgets, five-sample count and sequential design unchanged.",
+      "reason": "The first attempt read viewport/readiness after Lighthouse cleanup and observed 780x493 DPR1 instead of requested 390x844 DPR2. Retain bounded timestamped snapshots during the trace, select the final in-trace snapshot, and require every in-trace viewport to match. The original missing-marker observation is not retroactively assumed to have been ready.",
+      "screenshotPolicy": "Use only Lighthouse final-screenshot captured before cleanup. If unavailable or invalid, first retain numeric/raw artifacts, mark the trial invalid and never substitute a post-cleanup screenshot.",
+      "toolingCorrection": "Allow digits in CLI option names so --artifact-map-sha256 works. This does not change metric calculations."
     }
   ]
 }

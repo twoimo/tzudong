@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { HERE, PROTOCOL_SHA256, codeFiles, digest, createFixtureMap } from './fixture-evidence.mjs';
+import { HERE, PROTOCOL_SHA256, codeFiles, digest, createFixtureMap, argumentsFor } from './fixture-evidence.mjs';
 import { scoreFixture } from './fixture-score.mjs';
 import { validateFixture } from './fixture-validate.mjs';
 
@@ -63,12 +63,33 @@ async function fixture(t, mode = '') {
         readiness: { homeChromeReady: true, homeMobileChromeReady: true, desktopMenuReady: true, desktopSearchReady: true, homePanelReady: true, desktopPanelPresent: true,
           desktopPanelAlertCount: 0, desktopPopularItemCount: 3, desktopLatestItemCount: 0, desktopLatestSectionPresent: true, desktopLatestSkeletonPresent: false,
           mockOverlayVisible: true, markerCount: 3, initialSkeletonVisible: false } };
+      const loading = { ...observation.readiness, homeChromeReady: false, homeMobileChromeReady: false,
+        desktopMenuReady: false, desktopSearchReady: false, markerCount: 0, initialSkeletonVisible: true };
+      observation.traceObservationEndMs = 8000;
+      observation.selectedObservationAtMs = 7900;
+      observation.readinessTimeline = [
+        { atMs: 100, actualViewport: viewport, readiness: loading },
+        { atMs: after ? 1500 : 2500, actualViewport: viewport, readiness: observation.readiness },
+        { atMs: 7900, actualViewport: viewport, readiness: observation.readiness },
+        { atMs: 8100, actualViewport: { width: 780, height: 493, deviceScaleFactor: 1 }, readiness: loading },
+      ];
+      observation.postCleanupViewport = { width: 780, height: 493, deviceScaleFactor: 1 };
+      observation.postCleanupReadiness = loading;
+      if (after && attemptId === 'mobile-01' && mode === 'wrong-timed-viewport') observation.readinessTimeline[0].actualViewport = { ...viewport, width: 391 };
+      if (after && attemptId === 'mobile-01' && mode === 'late-only-markers') {
+        observation.readiness = { ...observation.readiness, markerCount: 0 };
+        observation.readinessTimeline = observation.readinessTimeline.map(state => state.atMs <= 8000 ? { ...state, readiness: { ...state.readiness, markerCount: 0 } } : state);
+        observation.postCleanupReadiness = { ...observation.readiness, markerCount: 3 };
+      }
       const lhr = { lighthouseVersion: p.tools.lighthouse, requestedUrl: p.url, finalUrl: p.url, finalDisplayedUrl: p.url, runtimeError: null,
         configSettings: { throttlingMethod: 'devtools', formFactor: profile.formFactor, disableStorageReset: false, emulatedUserAgent: profile.userAgent,
           throttling: profile.throttling, screenEmulation: { ...viewport, mobile: profile.isMobile, disabled: false } },
         audits: Object.fromEntries([['first-contentful-paint', after ? 1000 : 1800], ['largest-contentful-paint', after ? 2000 : 3000], ['interactive', after ? 2500 : 3500],
           ['total-blocking-time', after ? 100 : 300], ['cumulative-layout-shift', after ? 0.03 : 0.1]].map(([key, value]) => [key, { numericValue: value, scoreDisplayMode: 'numeric' }])) };
       lhr.audits.metrics = { details: { items: [{ observedTraceEnd: 8000 }] } };
+      lhr.audits['final-screenshot'] = { details: { timing: 7900, timestamp: 7900000 } };
+      observation.screenshotProvenance = { source: 'lighthouse-final-screenshot', timingMs: 7900, timestampUs: 7900000,
+        widthPixels: profile.width, heightPixels: profile.height, mimeType: 'image/jpeg' };
       for (const [kind, value] of Object.entries({ observations: observation, lhr, trace: {}, network: {} })) { trial.paths[kind] = attemptId + '/' + kind + '.json'; await put(root, phase + '/' + trial.paths[kind], value); }
       trial.paths.screenshot = attemptId + '/screenshot.png'; await writeFile(resolve(root, phase, trial.paths.screenshot), 'SYNTHETIC SOFTWARE TEST NOT AN IMAGE');
       await put(root, phase + '/' + attemptId + '/trial.json', trial); run.trials.push(trial);
@@ -79,7 +100,7 @@ async function fixture(t, mode = '') {
   const map = await createFixtureMap({ root });
   return { root, repository, artifactMapSha256: map.artifactMapSha256 };
 }
-test('independent fixture score verifies all 21 metrics and permits empty latest fixture list', async t => {
+test('timed evidence survives cleanup reset and permits empty latest fixture list', async t => {
   const options = await fixture(t), result = await scoreFixture(options);
   assert.equal(result.context.eligible, true, JSON.stringify(result.context.failures));
   assert.equal(result.profiles.flatMap(profile => Object.values(profile.metrics)).filter(metric => metric.classification === 'improved').length, 21);
@@ -87,15 +108,27 @@ test('independent fixture score verifies all 21 metrics and permits empty latest
   result.productionMetricAdmissionCount = 1; await put(options.root, 'fixture-scored.json', result);
   await assert.rejects(validateFixture(options), /independently derived/);
 });
-test('late controls timing is omitted, late build and absent after remain not comparable', async t => {
+test('late controls provenance, late build and absent after remain not comparable', async t => {
   for (const mode of ['late-control', 'late-build', 'before-only']) {
     const options = await fixture(t, mode), result = await scoreFixture(options);
     await put(options.root, 'fixture-scored.json', result);
     const verified = await validateFixture(options);
-    assert.equal(verified.comparableMetrics, mode === 'late-control' ? 20 : 0);
+    assert.equal(verified.comparableMetrics, mode === 'late-control' ? 14 : 0);
     assert.equal(result.profiles[0].metrics.controlsReady.classification, 'not-comparable');
     assert.equal(verified.fieldAdmissionCount, 0);
   }
+});
+test('any wrong timed viewport or markers appearing only after the trace rejects the trial', async t => {
+  for (const mode of ['wrong-timed-viewport', 'late-only-markers']) {
+    const options = await fixture(t, mode), result = await scoreFixture(options);
+    assert.equal(result.phases.after.trials[0].eligible, false);
+    await put(options.root, 'fixture-scored.json', result);
+    assert.equal((await validateFixture(options)).comparableMetrics, 14);
+  }
+});
+test('CLI accepts the detached SHA-256 option without relaxing argument syntax', () => {
+  assert.deepEqual(argumentsFor(['--artifact-map-sha256', 'abc', '--root', '/tmp/example']), { artifactMapSha256: 'abc', root: '/tmp/example' });
+  assert.throws(() => argumentsFor(['--bad=value', 'x']), /CLI arguments/);
 });
 test('raw artifact tampering fails even when the summary has not changed', async t => {
   const options = await fixture(t), result = await scoreFixture(options); await put(options.root, 'fixture-scored.json', result);
