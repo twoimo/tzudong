@@ -31,6 +31,7 @@ const notoSerifKr = Noto_Serif_KR({
     subsets: ["latin"],
     variable: "--font-display",
     display: "swap",
+    preload: false,
 });
 export const metadata: Metadata = {
     metadataBase: new URL(siteUrl),

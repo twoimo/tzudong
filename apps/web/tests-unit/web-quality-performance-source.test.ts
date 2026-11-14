@@ -4728,11 +4728,10 @@ describe("web quality performance source contracts", () => {
     expect(mobileBottomNavSource).not.toContain(
       "HOME_NAV_PREFETCH_DELAY_MS = 8000",
     );
-    expect(mobileBottomNavSource).toContain(
-      "HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS = 2500",
-    );
-    expect(mobileBottomNavSource).toContain(
-      "runHomeNavPrefetchWhenIdle(prefetchNavigationTargets)",
+    expect(mobileBottomNavSource).not.toContain("HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS");
+    expect(mobileBottomNavSource).not.toContain("runHomeNavPrefetchWhenIdle");
+    expect(mobileBottomNavSource).toMatch(
+      /useEffect\(\(\) => \{\s*if \(pathname === '\/'\) return;[\s\S]*?NAV_ITEMS\.forEach/,
     );
     expect(mobileBottomNavSource).toContain("MOBILE_BOTTOM_NAV_BUTTON_STYLE");
     expect(mobileBottomNavSource).toContain("minHeight: 60");
