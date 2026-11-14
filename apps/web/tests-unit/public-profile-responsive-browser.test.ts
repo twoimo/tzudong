@@ -124,9 +124,18 @@ test('short profile loading, retry, missing and empty states remain reachable', 
       const loading = element.closest('[skullet-loading][inert][aria-hidden="true"]');
       return loading !== null && getComputedStyle(loading).pointerEvents === 'none';
     })).toBe(true);
-    const lastSkeletonBar = skeleton.locator('[data-user-profile-tab-skeleton] [skullet-layer] [skullet-bar]').last();
-    await ui(lastSkeletonBar).toBeVisible();
-    await expectWithinProfileFrame(page, lastSkeletonBar);
+    // MeasuredSkeleton draws div[skullet-rect] in the layer's open shadow root;
+    // [skullet-bar] belongs to the separate standalone SkeletonBox component.
+    // Playwright's CSS locator also searches open shadow roots.
+    const lastSkeletonRect = skeleton.locator('[data-user-profile-tab-skeleton] [skullet-layer] [skullet-rect]').last();
+    await ui(lastSkeletonRect).toBeVisible();
+    await expectWithinProfileFrame(page, lastSkeletonRect);
+    const paintedBox = (await lastSkeletonRect.boundingBox())!;
+    const frameBox = (await page.locator('[data-fixture-profile-frame]').boundingBox())!;
+    expect(paintedBox.width).toBeGreaterThan(0);
+    expect(paintedBox.height).toBeGreaterThan(0);
+    expect(paintedBox.x).toBeGreaterThanOrEqual(frameBox.x - 1);
+    expect(paintedBox.x + paintedBox.width).toBeLessThanOrEqual(frameBox.x + frameBox.width + 1);
 
     await mode('error');
     const retry = page.getByRole('button', { name: '다시 시도', exact: true });
