@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { runInNewContext } from 'node:vm';
+import { readFileSync } from 'node:fs';
+import ts from 'typescript';
 import { buildInitialLoadDiagnosticScript, isInitialLoadDiagnosticRequest } from '../lib/performance/initial-load-diagnostic';
 import { shouldCollectFieldVitals } from '../lib/performance/field-vitals';
 
@@ -114,6 +116,57 @@ const resource = (overrides: Record<string, unknown> = {}) => ({ entryType: 'res
     transferSize: 1200, encodedBodySize: 900, decodedBodySize: 1000, ...overrides });
 
 describe('opt-in production initial-load diagnostic', () => {
+    test('actual home page keeps the runtime unconditional and only exact opt-in reads the nonce or builds a script', async () => {
+        type Node = { type: unknown; props: { children?: unknown; type?: string; nonce?: string; dangerouslySetInnerHTML?: { __html: string } } };
+        const shellType = Symbol('home-runtime-shell');
+        const clientType = Symbol('home-client');
+        const element = (type: unknown, props: Node['props']): Node => ({ type, props });
+        let nonceReads = 0;
+        let scriptBuilds = 0;
+        const dependencies: Record<string, unknown> = {
+            'react/jsx-runtime': { Fragment: Symbol('fragment'), jsx: element, jsxs: element },
+            'next/headers': { headers: async () => { nonceReads += 1; return new Map([['x-nonce', 'fixture-page-nonce']]); } },
+            '@/lib/seo': { homeJsonLd: {} },
+            '@/lib/performance/initial-load-diagnostic': { isInitialLoadDiagnosticRequest,
+                buildInitialLoadDiagnosticScript: (release: string) => { scriptBuilds += 1; return buildInitialLoadDiagnosticScript(release); } },
+            './home-runtime-shell': { HomeRuntimeShell: shellType },
+            './home-client': { __esModule: true, default: clientType },
+        };
+        const compiled = ts.transpileModule(readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8'), {
+            compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+        }).outputText;
+        const exports = {} as { default: (props: { searchParams: Promise<Record<string, string | string[] | undefined>> }) => Promise<Node> };
+        runInNewContext(compiled, { exports, process: { env: { VERCEL_GIT_COMMIT_SHA: 'a'.repeat(40) } },
+            fetch: () => { throw new Error('UNEXPECTED_HOME_SERVER_FETCH'); },
+            require: (name: string) => {
+                if (Object.hasOwn(dependencies, name)) return dependencies[name];
+                throw new Error('UNEXPECTED_HOME_SERVER_DEPENDENCY');
+            },
+        });
+        const nodes = (value: unknown): Node[] => {
+            if (Array.isArray(value)) return value.flatMap(nodes);
+            if (!value || typeof value !== 'object' || !('type' in value) || !('props' in value)) return [];
+            const node = value as Node;
+            return [node, ...nodes(node.props.children)];
+        };
+        for (const params of [{}, { __perf: 'initial-load', extra: '1' }, { __perf: ['initial-load', 'initial-load'] }, { __perf: 'initial-load' }]) {
+            nonceReads = 0;
+            scriptBuilds = 0;
+            const tree = nodes(await exports.default({ searchParams: Promise.resolve(params) }));
+            const expectedScripts = isInitialLoadDiagnosticRequest(params) ? 1 : 0;
+            const diagnosticScripts = tree.filter((node) => node.type === 'script' && node.props.type !== 'application/ld+json');
+            expect(tree.filter((node) => node.type === shellType)).toHaveLength(1);
+            expect(tree.filter((node) => node.type === clientType)).toHaveLength(1);
+            expect(nonceReads).toBe(expectedScripts);
+            expect(scriptBuilds).toBe(expectedScripts);
+            expect(diagnosticScripts).toHaveLength(expectedScripts);
+            if (expectedScripts) {
+                expect(diagnosticScripts[0].props.nonce).toBe('fixture-page-nonce');
+                expect(diagnosticScripts[0].props.dangerouslySetInnerHTML?.__html).toContain('__tzudongInitialLoadDiagnostic');
+            }
+        }
+    });
+
     test('requires exactly the explicit home query and preserves field-RUM exclusion', () => {
         expect(isInitialLoadDiagnosticRequest({ __perf: 'initial-load' })).toBe(true);
         for (const params of [{}, { __perf: '1' }, { __perf: ['initial-load', 'initial-load'] }, { __perf: 'initial-load', q: 'private' }]) {

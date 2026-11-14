@@ -87,7 +87,7 @@
   },
   "attribution": {
     "role": "Descriptive per-observation cause separation; do not add overlapping request or application phase durations.",
-    "ttfbRequestDuration": "Connection completion to responseStart includes network transit and server work; it is not server-only processing time.",
+    "ttfbRequestDuration": "Request start to responseStart includes network transit and server work; it is not server-only processing time.",
     "fcp": "Report TTFB and firstByteToFCP separately.",
     "lcp": "Report TTFB, resource-load delay, resource-load duration and element-render delay with their numeric basis and availability. Do not treat a hidden cross-origin timing as known zero.",
     "server": "Provider traces or explicit Server-Timing are separate provenance; never infer them from a browser response duration.",
