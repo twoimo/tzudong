@@ -240,6 +240,16 @@ export default function HomeClient() {
   useEffect(() => {
     if (isDesktop) setIsMapFullscreen(false);
   }, [isDesktop]);
+  useEffect(() => {
+    if (viewportMode === "pending" || isMapFullscreen) return;
+
+    // Start the selected controls while their shared wrapper is loading.
+    // The rendered loader keeps ownership of import failures and retry UI.
+    const pendingControls = viewportMode === "desktop"
+      ? import("@/components/home/home-desktop-control-panel")
+      : import("@/components/home/MobileControlOverlay");
+    void pendingControls.catch(() => undefined);
+  }, [viewportMode, isMapFullscreen]);
   const [contextualRestaurantsPayload, setContextualRestaurantsPayload] =
     useState<HomeMapContextualRestaurantsPayload | null>(null);
   const [mapInteractionEpoch, setMapInteractionEpoch] = useState(0);

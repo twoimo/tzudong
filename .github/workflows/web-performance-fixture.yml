@@ -1,0 +1,144 @@
+name: Frontend fixture performance comparison
+run-name: Frontend fixture comparison · ${{ github.run_id }} · not production timings
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/web-performance-fixture.yml'
+      - 'apps/web/performance/initial-load-20261114/fixture-*'
+      - 'apps/web/app/home-client.tsx'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-fixture-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  fixture:
+    name: Frozen frontend fixture comparison
+    if: >-
+      contains(github.event.pull_request.title, '[fixture-measure]') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'perf/initial-load-20261114'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      AUDIT_ROOT: apps/web/performance/initial-load-20261114/fixture-runs/ci-${{ github.run_id }}-${{ github.run_attempt }}
+      BASELINE_SHA: '9316871f4220cd487b0e9575415ed2d760de8997'
+      CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+      NEXT_PUBLIC_SUPABASE_URL: 'https://dependency-proof.supabase.co'
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'dependency-modernization-browser-proof-anon-key'
+      PLAYWRIGHT_BASE_URL: 'http://localhost:8080'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/apps/
+            /apps/web/
+            !/apps/web/performance/
+            /apps/web/performance/initial-load-20261114/
+            !/backend/
+            /backend/utils/provider-budget.mjs
+            /backend/utils/provider_budget.py
+            !/docs/
+            !/assets/
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            apps/web/performance/initial-load-20261114/tools/package-lock.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.0'
+      - name: Initialize evidence and pin npm
+        run: |
+          mkdir -p "$AUDIT_ROOT"
+          npm install --global npm@11.6.2
+          test "$(npm --version)" = '11.6.2'
+      - name: Install pinned browser and fixture tooling
+        id: tooling
+        run: |
+          npm ci --prefix apps/web --no-audit --fund=false
+          npm ci --prefix apps/web/performance/initial-load-20261114/tools --no-audit --fund=false
+          node .github/scripts/ensure-ci-chromium.mjs
+          bun build apps/web/tests/mobile-home-map-helpers.ts --target=node --format=esm --external @playwright/test --outfile "$AUDIT_ROOT/fixture-helper.mjs"
+      - name: Build both frozen sources before measurements
+        id: builds
+        run: |
+          for phase in before after; do
+            if [ "$phase" = before ]; then source_sha="$BASELINE_SHA"; else source_sha="$CANDIDATE_SHA"; fi
+            fixture_tree="$RUNNER_TEMP/tzudong-fixture-$phase"
+            git worktree add --detach --no-checkout "$fixture_tree" "$source_sha"
+            git -C "$fixture_tree" sparse-checkout set --no-cone --stdin <<'PATTERNS'
+          /*
+          !/apps/
+          /apps/web/
+          !/apps/web/performance/
+          !/backend/
+          /backend/utils/provider-budget.mjs
+          /backend/utils/provider_budget.py
+          !/docs/
+          !/assets/
+          PATTERNS
+            git -C "$fixture_tree" checkout --detach "$source_sha"
+            (
+              cd "$fixture_tree/apps/web"
+              npm ci --no-audit --fund=false
+              npm run build
+              node scripts/sync-standalone-static.mjs
+            )
+          done
+      - name: Measure thirty cold fixture navigations on the same runner
+        id: comparison
+        run: >-
+          node apps/web/performance/initial-load-20261114/fixture-collector.mjs
+          --before-root "$RUNNER_TEMP/tzudong-fixture-before"
+          --after-root "$RUNNER_TEMP/tzudong-fixture-after"
+          --candidate-sha "$CANDIDATE_SHA"
+          --output "$AUDIT_ROOT"
+      - name: Preserve fixed setup outcomes
+        if: always()
+        env:
+          TOOLING_OUTCOME: ${{ steps.tooling.outcome }}
+          BUILDS_OUTCOME: ${{ steps.builds.outcome }}
+          COMPARISON_OUTCOME: ${{ steps.comparison.outcome }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { mkdir, writeFile } from 'node:fs/promises';
+          import { resolve } from 'node:path';
+          const root = resolve(process.env.AUDIT_ROOT);
+          await mkdir(root, { recursive: true });
+          const allowed = new Set(['success', 'failure', 'cancelled', 'skipped', '']);
+          const outcomes = Object.fromEntries(['TOOLING_OUTCOME', 'BUILDS_OUTCOME', 'COMPARISON_OUTCOME'].map(key => {
+            const value = process.env[key] ?? '';
+            return [key, allowed.has(value) ? value : 'unknown'];
+          }));
+          await writeFile(resolve(root, 'setup.json'), JSON.stringify({
+            schemaVersion: 'frontend-fixture-setup.v1', scope: 'frontend-fixture',
+            runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            baselineSha: process.env.BASELINE_SHA, candidateSha: process.env.CANDIDATE_SHA, outcomes,
+          }, null, 2) + '\n', { flag: 'wx' });
+          NODE
+      - name: Preserve fixture evidence and failures
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: frontend-fixture-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.AUDIT_ROOT }}
+          if-no-files-found: error
+          retention-days: 90

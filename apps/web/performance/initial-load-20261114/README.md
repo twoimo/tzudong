@@ -176,3 +176,59 @@ node validate.mjs --input experiment.json --artifact-map artifact-map.json \
 같은 runner를 사용해도 배포 전후 시간, CDN 상태, backend load, 공개 콘텐츠, 외부 provider 응답은 변할 수 있다. 전후 차이를 task-local lab 관측으로 제시하고 코드만의 확정적 인과 효과로 확대하지 않는다. 전체 사이트·다른 route·실제 모바일 hardware의 결과로 일반화하지 않는다.
 
 [CrUX API](https://developer.chrome.com/docs/crux/api)는 28일 이동 집계이며 약 2일 지연된다. 같은 날 재조회한 field p75를 즉각적인 after로 사용하지 않는다. URL 또는 origin 범위, form factor, collection period를 구분한다. [PSI](https://developers.google.com/speed/docs/insights/v5/about)는 URL 표본이 부족하면 origin으로 fallback할 수 있다. Field data가 없으면 없는 상태로 보고하고 lab 수치를 채워 넣지 않는다.
+
+## 별도 실험: 고정 데이터로 실행하는 프런트엔드 비교
+
+운영 사이트의 측정은 유효한 performance trial을 얻지 못했다. 처음 두 시도는 Node 공개 health readback에서 실패했고, 다음 두 시도는 브라우저 시작 단계 문제를 기록했다. 마지막 `43600568543` 시도는 고정한 Chrome이 정상 실행된 뒤 공개 탐색에서 HTTP 403 challenge를 받았다. 다섯 시도 모두 표본 0이며 운영 TTFB·FCP·LCP·TTI의 before/after는 **N/A**다. 실패 기록을 보존하고 운영 접속 재시도는 종료했다. 이 절의 별도 실험으로 그 빈칸을 채우지 않는다.
+
+`fixture-protocol.json`은 기존 운영 `protocol.json`을 변경하지 않은 독립 프로토콜이다. 미리 고정한 SHA-256은 `d0ee727054e67d54d5ee7846645809a4dd2db958f2caa48850d0ee29adb49a16`이다. 이 절을 작성한 시점에는 실제 fixture 측정과 검증이 아직 완료되지 않았으며, 아래 software test의 숫자는 브라우저 관측치가 아니다. 후보 코드는 실제 비교를 거쳐 평가하고 운영 반영 여부를 판단한다.
+
+| 항목 | 프런트엔드 fixture 실험 조건 |
+|---|---|
+| 대상 | `/` 초기 접속, 로그아웃, `http://localhost:8080/?__qa=render-flow` |
+| 코드 | immutable baseline `9316871f4220cd487b0e9575415ed2d760de8997`과 별도 고정 candidate SHA |
+| 빌드 | 두 소스의 production build를 모두 완료하고 SHA·tree·dependency lock·asset manifest를 기록한 다음 측정 시작 |
+| 환경 | 같은 GitHub-hosted runner/job/attempt; Node 24, npm 11.6.2, Chrome for Testing 156.0.8078.4, Lighthouse 13.5.0 |
+| 화면 | 390×844, 820×1180, 1440×900 CSS px; 실제 `innerWidth`·`innerHeight`·DPR 및 Lighthouse 설정 검증 |
+| 반복 | 화면별 before 5회와 after 5회, 총 30회; 모든 before 후 모든 after; 동시 실행 없음 |
+| 캐시 | trial마다 새 browser process/profile; phase마다 새 local server, 시작 확인 GET은 측정 밖에서 실행 |
+| 데이터 | 기존 `installMobileHomeMapTestMocks`의 동일한 3개 식당과 mock Naver SDK |
+| 네트워크 | 브라우저 HTTP/resource 요청은 로컬 GET/HEAD와 정확히 지정한 fixture 응답만 허용; 다른 routed 요청과 WebSocket 차단 |
+| 판정 | 앞 절과 같은 median·MAD, 절대 감소량·10%·strict noise gate; 목표 달성과 개선 판정 분리 |
+| 인정 범위 | task-local `frontend-fixture`만; production·field·G003 admission 모두 0 |
+
+모바일·태블릿은 기존의 4× CPU 및 DevTools 4G 설정을 유지하고 데스크톱은 1× CPU와 무제한 로컬 네트워크를 사용한다. DevTools가 실제로 적용한 지연을 포함하더라도 로컬 응답은 운영 서버나 CDN의 응답을 재현하지 않는다. Server cache를 purge하거나 cold server라고 주장하지 않는다. 두 phase는 순차 실행이므로 동일 runner에서도 시간 경과와 scheduling에 따른 차이가 남는다.
+
+HTTP/resource 및 WebSocket interception이 전체 네트워크 격리를 증명하지는 않는다. 기존 layout의 resource hint가 DNS/TCP/TLS 연결을 시도할 수 있으며, 그 시도는 이번 counter에 잡히지 않아 외부 연결이 전혀 없었다고 단정하지 않는다. 두 build 모두 기존 dependency fixture 환경을 유지한다. `NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME=1`은 app wrapper의 flex·overflow·transform 및 지도 mode까지 바꾸므로 사용하지 않는다. 별도의 DOM/CSS 수정이나 browser network flag 변경도 하지 않는다. 이 한계를 명시하기 위한 0표본 시점의 protocol revision에만 해당하며 지표·기준·표본 수는 그대로다.
+
+수집 지표는 **loopback TTFB**, FCP, LCP, legacy TTI, TBT, CLS, `controlsReady`다. TTI는 Lighthouse 13.5.0의 `interactive` numeric audit를 그대로 사용하고 TBT나 INP로 대체하지 않는다. `controlsReady`는 모바일·태블릿의 실제 mobile chrome readiness, 데스크톱의 chrome readiness와 보이는 메뉴 trigger 및 검색 input을 함께 확인한다. 100ms 간격으로 처음 관측한 시각이며 Lighthouse trace가 끝난 뒤 얻은 값은 지표 표본에서 제외한다.
+
+지도는 mock overlay와 실제 렌더링된 marker가 보이는지 기능 확인만 한다. **실제 지도 로딩 시간 또는 mapReady 개선 수치를 산출하지 않는다.** 데스크톱 fixture는 인기 목록에 식당 3개가 모두 들어가고 최신 목록은 인기 ID를 제외하므로 최신 항목 0개가 정상이다. 패널 준비, 인기 항목 3개, 최신 section 존재, alert와 skeleton 부재를 확인해 빈 정상 상태와 loading/error를 구분한다.
+
+### 원자료 연결 및 독립 재계산
+
+`fixture-collector.mjs`가 두 source tree, build asset manifest, fixture bundle과 원본 helper 파일, 실제 browser/tool/viewport 설정, 모든 시도의 정제한 LHR·trace·network·observation·screenshot을 연결한다. Build manifest는 실제 빌드 산출물의 이름·크기·SHA-256을 기록하지만 모든 build binary 자체를 보관하는 것은 아니다. Fixture source는 두 Git tree의 파일과도 대조한다. 저장된 자료는 운영 배포 identity나 Vercel receipt를 포함하지 않는다.
+
+`fixture-score.mjs`와 `fixture-validate.mjs`는 공통 `fixture-evidence.mjs`를 파일 경로·byte hash 읽기에만 사용한다. 각각 원자료의 적격 조건과 metric numeric fields를 별도로 읽는다. 통계는 기존 scorer의 순수 비교 함수와 기존 validator의 독립 비교 함수를 각각 사용한다. Validator는 scorer 결과를 신뢰해 재사용하지 않는다. 실제 viewport, source/build/fixture binding, 두 build의 완료 순서, 같은 runner, trial 순서, 기능 준비 상태를 재확인한다. 전체 파일 map의 detached SHA-256과 실행 중인 scorer/validator bytes도 대조한다.
+
+적격한 after가 없으면 `after:null`을 유지하고 모든 비교는 `not-comparable`이다. Trace 종료 뒤의 controls 관측은 `null`이므로 그 지표만 비교 표본이 부족해진다. 검증 결과 `evidence-and-calculation-verified`는 자료와 계산이 일치한다는 뜻이며, 성능 통과나 운영 개선 입증이라는 뜻이 아니다.
+
+Artifact를 내려받은 뒤 실행할 때 `FIXTURE_EVIDENCE_ROOT`는 실제 artifact root로, `FIXTURE_REPOSITORY`는 두 source Git objects를 가진 checkout으로 지정한다. 아래 명령의 도구 소스는 artifact에 복사된 source와 byte 단위로 일치해야 한다.
+
+```sh
+node --test apps/web/performance/initial-load-20261114/fixture-score.test.mjs
+
+node apps/web/performance/initial-load-20261114/fixture-score.mjs map \
+  --root "$FIXTURE_EVIDENCE_ROOT" --output fixture-artifact-map.json
+
+node apps/web/performance/initial-load-20261114/fixture-score.mjs \
+  --root "$FIXTURE_EVIDENCE_ROOT" --repository "$FIXTURE_REPOSITORY" \
+  --artifact-map-sha256 EXPECTED_DETACHED_SHA256 --output fixture-scored.json
+
+node apps/web/performance/initial-load-20261114/fixture-validate.mjs \
+  --root "$FIXTURE_EVIDENCE_ROOT" --repository "$FIXTURE_REPOSITORY" \
+  --artifact-map-sha256 EXPECTED_DETACHED_SHA256 \
+  --scored fixture-scored.json --output fixture-validated.json
+```
+
+실제로 출력된 map hash를 별도로 기록해 `EXPECTED_DETACHED_SHA256`에 사용한다. 동일 파일을 덮어쓰지 않으며 수정된 증거는 새 map 이름과 새 detached hash를 필요로 한다. `fixture-score.test.mjs`는 synthetic software fixture로 21개 지표의 독립 재계산, 정상적인 빈 최신 목록, 늦은 controls 시각 제외, build 순서 위반, after 부재, raw artifact 변경과 production admission 위조 거부를 검증한다. 이 테스트의 성공은 실제 browser sample 수를 늘리지 않는다.
