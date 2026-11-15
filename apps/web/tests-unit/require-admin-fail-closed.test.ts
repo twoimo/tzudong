@@ -93,12 +93,14 @@ async function withRequireAdmin<T>(
           };
           builder.eq = () => builder;
           builder.maybeSingle = () => builder;
-          builder.returns = async () => ({
-            data: row === null ? null : Object.fromEntries(
-              selectedColumns.filter(column => column in row).map(column => [column, row[column]]),
-            ),
-            error,
-          });
+          builder.returns = () => builder;
+          builder.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+            Promise.resolve({
+              data: row === null ? null : Object.fromEntries(
+                selectedColumns.filter(column => column in row).map(column => [column, row[column]]),
+              ),
+              error,
+            }).then(resolve, reject);
           return builder;
         },
       };
