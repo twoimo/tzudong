@@ -6,27 +6,34 @@ const reviewDraftSource = readFileSync(
   join(import.meta.dir, "..", "lib", "reviewDraftDB.ts"),
   "utf8",
 );
+const draftStoreSource = readFileSync(
+  join(import.meta.dir, "..", "lib", "drafts", "bounded-draft-store.ts"),
+  "utf8",
+);
 
-function section(start: string, end: string): string {
-  const startIndex = reviewDraftSource.indexOf(start);
-  const endIndex = reviewDraftSource.indexOf(end, startIndex);
-  return reviewDraftSource.slice(startIndex, endIndex);
+function section(source: string, start: string, end: string): string {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end, startIndex);
+  expect(startIndex).toBeGreaterThan(-1);
+  expect(endIndex).toBeGreaterThan(startIndex);
+  return source.slice(startIndex, endIndex);
 }
 
 describe("review draft privacy persistence", () => {
   test("uses a v3 compound scope key with bounded expiry metadata", () => {
-    expect(reviewDraftSource).toContain("const DB_VERSION = 3");
-    expect(reviewDraftSource).toContain("keyPath: ['userId', 'restaurantId']");
-    expect(reviewDraftSource).toContain("store.createIndex('by-expires-at', 'expiresAt')");
-    expect(reviewDraftSource).toContain("store.createIndex('by-user-saved-at', ['userId', 'savedAt'])");
-    expect(reviewDraftSource).toContain("const MAX_DRAFTS_PER_USER = 20");
+    expect(reviewDraftSource).toContain("dbVersion: 3,");
+    expect(reviewDraftSource).toContain("slotField: 'restaurantId',");
+    expect(draftStoreSource).toContain("keyPath: ['userId', config.slotField]");
+    expect(draftStoreSource).toContain("store.createIndex('by-expires-at', 'expiresAt')");
+    expect(draftStoreSource).toContain("store.createIndex('by-user-saved-at', ['userId', 'savedAt'])");
+    expect(reviewDraftSource).toContain("maxDraftsPerUser: 20,");
     expect(reviewDraftSource).toContain("const MAX_RECORD_BYTES = 16 * 1024");
-    expect(reviewDraftSource).toContain("oldVersion < DB_VERSION");
+    expect(draftStoreSource).toContain("oldVersion < config.dbVersion");
   });
 
   test("constructs persisted and returned rows field-by-field without media", () => {
-    const writeSection = section("function createPersistedDraft", "function toPublicDraft");
-    const readSection = section("function toPublicDraft", "function userDraftRange");
+    const writeSection = section(reviewDraftSource, "function createPersistedDraft", "function toPublicDraft");
+    const readSection = section(reviewDraftSource, "function toPublicDraft", "const FAILURE_LOG_LABELS");
 
     expect(writeSection).toContain("const persistedDraft: PersistedReviewDraft = {");
     expect(writeSection).toContain("expiresAt: now + REVIEW_DRAFT_TTL_MS");
@@ -46,23 +53,29 @@ describe("review draft privacy persistence", () => {
 
   test("uses bounded cursors for cleanup, user lists, and deletion readback", () => {
     const cleanupSection = section(
+      draftStoreSource,
       "async function sweepExpiredOrInvalidDrafts",
       "async function enforceUserDraftLimit",
     );
     const listSection = section(
-      "export async function getAllDraftsByUser",
-      "export async function cleanupOldDrafts",
+      draftStoreSource,
+      "async function getAllDraftsByUser",
+      "async function cleanupOldDrafts",
     );
     const deleteSection = section(
-      "export async function deleteAllDraftsByUser",
-      "export async function getAllDraftsByUser",
+      draftStoreSource,
+      "async function deleteAllDraftsByUser",
+      "async function getAllDraftsByUser",
     );
 
-    expect(reviewDraftSource).not.toContain("getAll(");
-    expect(reviewDraftSource).not.toContain("getAllKeys(");
-    expect(cleanupSection).toContain("expiredRows < MAX_SWEEP_ROWS");
-    expect(cleanupSection).toContain("scannedRows < MAX_SWEEP_ROWS");
-    expect(listSection).toContain("scannedRows < MAX_DRAFTS_PER_USER");
+    for (const source of [reviewDraftSource, draftStoreSource]) {
+      expect(source).not.toContain("getAll(");
+      expect(source).not.toContain("getAllKeys(");
+    }
+    expect(reviewDraftSource).toContain("sweepBatchSize: 100,");
+    expect(cleanupSection).toContain("expiredRows < sweepBatchSize");
+    expect(cleanupSection).toContain("scannedRows < sweepBatchSize");
+    expect(listSection).toContain("scannedRows < maxDraftsPerUser");
     expect(deleteSection).toContain("for (const ownerKey of [draftStorageOwnerKey(userId), ...legacyDraftStorageOwnerKeys(userId)])");
     expect(deleteSection).toContain("deleted < 100");
     expect(deleteSection).toContain("let cursor = await index.openCursor(ownerKey)");

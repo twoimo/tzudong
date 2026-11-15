@@ -2,6 +2,9 @@ import * as draftOwnerKeys from '../lib/privacy/draft-storage-owner';
 import * as draftLifecycle from '../lib/privacy/browser-draft-lifecycle';
 import * as draftQueue from '../lib/draft-write-queue';
 import * as records from '../lib/validation/records';
+import * as draftFields from '../lib/drafts/draft-fields';
+import * as privacySanitize from '../lib/privacy/sanitize';
+import * as editSubmitContract from '../lib/restaurant-edit-submit-contract';
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -38,15 +41,27 @@ function nodeText(text: string, name: string): string {
     if (!found) throw new Error('FIXTURE_NODE_MISSING');
     return found.getText(tree);
 }
-function evaluate(text: string, bindings: Record<string, unknown>) {
+function evaluate(text: string, bindings: Record<string, unknown>, modules: Record<string, unknown> = {}) {
     const moduleFixture = { exports: {} };
     const js = ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
     return vm.runInNewContext(js, { module: moduleFixture, exports: moduleFixture.exports, File, crypto, Date, Promise,
-        require: (name: string) => { if (name === 'react/jsx-runtime') return jsxRuntime; if(name === '@/lib/privacy/browser-draft-lifecycle') return draftLifecycle; if(name === '@/lib/privacy/draft-storage-owner') return draftOwnerKeys; if(name === '@/lib/validation/records') return records; throw new Error('OFFLINE_IMPORT'); },
+        require: (name: string) => { if (Object.hasOwn(modules, name)) return modules[name]; if (name === 'react/jsx-runtime') return jsxRuntime; if(name === '@/lib/privacy/browser-draft-lifecycle') return draftLifecycle; if(name === '@/lib/privacy/draft-storage-owner') return draftOwnerKeys; if(name === '@/lib/validation/records') return records; throw new Error('OFFLINE_IMPORT'); },
         // Extracted handlers start after successful draft admission; the full
         // component's failed-read/retry boundary runs in mypage-draft-browser.
         draftLoadKey: 'loaded-handler-fixture', loadedDraftKey: 'loaded-handler-fixture', setLoadedDraftKey() {}, setDraftLoadFailed() {},
         ...draftLifecycle, ...draftOwnerKeys, ...draftQueue, console: { error() {}, warn() {} }, fetch: () => { throw new Error('OFFLINE_ONLY'); }, ...bindings });
+}
+const draftStoreSource = readFileSync(join(import.meta.dir, '../lib/drafts/bounded-draft-store.ts'), 'utf8');
+// Maintenance sweeps and the per-owner limit see empty indexes on these transports.
+const emptyDraftCursors = { openCursor: async () => null, index: () => ({ count: async () => 0, openCursor: async () => null }) };
+function draftStoreOver(storeFile: string, db: object, bindings: Record<string, unknown> = {}, modules: Record<string, unknown> = {}) {
+    const keyRange = { bound: () => ({}), upperBound: () => ({}), lowerBound: () => ({}) };
+    const shared = evaluate(`${draftStoreSource}\nmodule.exports;`, { IDBKeyRange: keyRange, ...bindings },
+        { idb: { openDB: async () => db }, '@/lib/drafts/draft-fields': draftFields });
+    return evaluate(`${readFileSync(join(import.meta.dir, `../lib/${storeFile}.ts`), 'utf8')}\nmodule.exports;`, bindings, {
+        '@/lib/drafts/bounded-draft-store': shared, '@/lib/drafts/draft-fields': draftFields,
+        '@/lib/privacy/sanitize': privacySanitize, '@/lib/restaurant-edit-submit-contract': editSubmitContract, ...modules,
+    }) as Record<string, (...args: never[]) => Promise<unknown>>;
 }
 function fixture() {
     const counts = { uploads: 0, inserts: 0, removes: 0, reads: 0, cleared: 0, success: 0, closes: 0 };
@@ -1151,11 +1166,8 @@ describe('actual draft handlers and IndexedDB deletion boundary', () => {
     test('awaits in-flight autosave then prepared cleanup and suppresses late autosave', async () => {
         const writeEntered = gate(); const writeDone = gate(); const deleteEntered = gate(); const deleteDone = gate();
         let exists = false; let writes = 0; let deletes = 0; let completed = false;
-        const draftModule = readFileSync(join(import.meta.dir, '../lib/reviewDraftDB.ts'), 'utf8');
-        const deleteDraft = evaluate(`${nodeText(draftModule, 'deleteDraft')}\ndeleteDraft;`, {
-            isValidIdentifier: () => true, STORE_NAME: 'review-drafts',
-            initDB: async () => ({ close() {}, transaction: () => ({ store: { get: async () => exists, delete: async () => { deletes++; deleteEntered.resolve(); await deleteDone.promise; exists = false; } }, done: Promise.resolve() }) }),
-        }) as (owner: string, restaurant: string) => Promise<void>;
+        const deleteDraft = draftStoreOver('reviewDraftDB', { close() {}, transaction: () => ({ store: { ...emptyDraftCursors, get: async () => exists, delete: async () => { deletes++; deleteEntered.resolve(); await deleteDone.promise; exists = false; } }, done: Promise.resolve() }) })
+            .deleteDraft as (owner: string, restaurant: string) => Promise<void>;
         const bindings = {
             user: { id: 'fixture-owner' }, selectedRestaurant: { id: 'fixture-restaurant' }, restaurant: null,
             visitedDate: '2026-10-04', visitedTime: '12:00', categories: ['한식'], content: 'Synthetic draft text',
@@ -1208,20 +1220,17 @@ function revisionFixture() {
         get: async () => { if (failCapture) throw Error('SYNTHETIC_IO'); return read(); },
         transaction: () => ({
             store: {
+                ...emptyDraftCursors,
                 put: async (row: Record<string, unknown>) => { stored = structuredClone(row); },
                 get: async () => read(),
                 delete: async () => { if (failDelete) throw Error('SYNTHETIC_IO'); events.deletes++; stored = undefined; },
             }, done: Promise.resolve(),
         }), close() {},
     };
-    const draftSource = readFileSync(join(import.meta.dir, '../lib/reviewDraftDB.ts'), 'utf8');
-    const api = evaluate(draftSource.replace(/^import .* from 'idb';\n/m, '') + `
-        initDB = async () => fixtureDB;
-        sweepExpiredOrInvalidDrafts = async () => {};
-        enforceUserDraftLimit = async () => {};
-        ({ saveDraft, getDraft, prepareDraftDeletion });`, {
-        fixtureDB: db, TextEncoder, Date: class extends Date { static now() { return now; } },
-    }) as Pick<typeof import('../lib/reviewDraftDB'), 'saveDraft' | 'getDraft' | 'prepareDraftDeletion'>;
+    const { saveDraft, getDraft, prepareDraftDeletion } = draftStoreOver('reviewDraftDB', db, {
+        Date: class extends Date { static now() { return now; } },
+    }) as unknown as typeof import('../lib/reviewDraftDB');
+    const api = { saveDraft, getDraft, prepareDraftDeletion };
     f.setPrepareDeletion(async (...args) => { events.captures++; return Reflect.apply(api.prepareDraftDeletion, null, args); });
     const bindings = {
         ...f.bindings, currentStep: 3, useCallback: (fn: unknown) => fn,
@@ -1341,19 +1350,19 @@ for (const storeName of ['review', 'submission', 'editRequest']) {
             const owner = `tx-${storeName}-${operation}`;
             draftLifecycle.activateBrowserDraftOwner(owner);
             const entered = gate(); const release = gate(); let mutations = 0;
-            const store = { get: async () => { entered.resolve(); await release.promise; return undefined; },
+            const store = { ...emptyDraftCursors, get: async () => { entered.resolve(); await release.promise; return undefined; },
                 put: async () => { mutations++; }, delete: async () => { mutations++; } };
-            const draftSourceSnippet = readFileSync(join(import.meta.dir, `../lib/${storeName}DraftDB.ts`), 'utf8');
-            const handler = evaluate(`${nodeText(draftSourceSnippet, operation)}\n${operation};`, {
-                isValidIdentifier: () => true, isBoundedIdentifier: () => true,
-                STORE_NAME: 'synthetic-draft-store', createPersistedDraft: (value: unknown) => value,
-                readDraft: (value: unknown) => value, getDraftKey: (a: string, b: string) => [a,b],
-                initDB: async () => ({ transaction: () => ({store, done: Promise.resolve()}) }),
-                sweepExpiredOrInvalidDrafts: async () => {}, enforceUserDraftLimit: async () => {},
-                PrivacyUnsafeValueError: class extends Error {}, PRIVACY_UNSAFE_VALUE_REASON: 'SYNTHETIC_UNSAFE',
-            }) as (...args: unknown[]) => Promise<unknown>;
+            // The sanitizer compares prototypes with this realm's Object.prototype, so a draft
+            // built inside the vm context always fails it. This case checks only the session boundary.
+            const handler = draftStoreOver(`${storeName}DraftDB`, { close() {}, transaction: () => ({ store, done: Promise.resolve() }) }, {},
+                { '@/lib/privacy/sanitize': { ...privacySanitize, assertPrivacySafe: () => {} } })[operation] as (...args: unknown[]) => Promise<unknown>;
+            const input = storeName === 'review'
+                ? { userId: owner, restaurantId: 'synthetic-restaurant', visitedDate: '', visitedTime: '', categories: [], content: '' }
+                : storeName === 'submission'
+                    ? { userId: owner, submissionMode: 'new', restaurant_name: '', address: '', phone: '', categories: [], youtube_link: '', description: '' }
+                    : { userId: owner, restaurantId: 'synthetic-restaurant', name: '', address: '', phone: '', category: [], youtube_reviews: [] };
             const pending = (operation === 'saveDraft'
-                ? handler({userId:owner,restaurantId:'synthetic-restaurant',submissionMode:'new'})
+                ? handler(input)
                 : handler(owner,storeName === 'submission' ? 'new' : 'synthetic-restaurant')).then(() => true, () => false);
             await entered.promise;
             draftLifecycle.beginBrowserDraftCleanup(owner);
