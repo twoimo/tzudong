@@ -6,7 +6,22 @@ Korean-first restaurant map for places featured in Tzuyang videos.
 - `apps/web`: Next.js public app and guarded admin console.
 - `backend`: crawlers, evaluation, media and batch pipelines. Keep long jobs out of request handlers.
 - Register new first-/second-level directories in `backend/layout-manifest.v1.json`.
-- Supabase owns persistence; separate browser, session-aware server and privileged server-only clients.
+- Supabase owns persistence; separate browser (`apps/web/integrations/supabase/client.ts`), session-aware server (`apps/web/lib/supabase/server.ts`) and privileged server-only (`apps/web/lib/supabase/service-role.ts`) clients. Migrations live in `backend/supabase/migrations`.
+
+## Commands
+Web, from `apps/web` (Node 24.x; npm 11.6.2 and `package-lock.json` are release authority, Bun is fine day to day):
+
+```sh
+bun run dev                          # local dev server, port 3000
+bun run lint                         # ESLint, zero warnings
+bun run test:unit                    # all Bun tests in tests-unit/
+bun test tests-unit/<name>.test.ts   # one unit test file
+npm run typecheck:parity             # pinned native and compat compilers; never a global tsc
+npm run build
+npx playwright test tests/<name>.spec.ts
+```
+
+Backend, from the repository root: `python3 -m unittest backend.pipeline.test_validators_unittest` (and the other modules in [verification](docs/agents/verification.md)). `python3 backend/bin/check_env_contract.py --profile daily` fails closed without operator secrets; never fake them.
 
 ## Work
 - Finish the authorized outcome and relevant checks. Reuse approval; ask only for a material missing decision or authority. Continue independent work when one part is blocked.
