@@ -109,23 +109,25 @@ function resolveCanonicalBookmarkedRestaurant(
 }
 
 async function fetchRelatedBookmarkRestaurantIds(restaurantId: string): Promise<string[]> {
-    const { data: restaurantRow } = await supabase
+    const { data: restaurantRow, error: restaurantError } = await supabase
         .from('restaurants')
         .select('id, name:approved_name, approved_name, road_address, jibun_address')
         .eq('id', restaurantId)
         .maybeSingle();
 
+    if (restaurantError) throw new Error('BOOKMARK_RESTAURANTS_UNAVAILABLE');
     const restaurant = restaurantRow as Restaurant | null;
     if (!restaurant) return [restaurantId];
 
     const lookupName = getRestaurantReviewLookupName(restaurant);
     if (!lookupName) return [restaurantId];
 
-    const { data: relatedRestaurantRows } = await supabase
+    const { data: relatedRestaurantRows, error: relatedRestaurantsError } = await supabase
         .from('restaurants')
         .select('id, name:approved_name, approved_name, road_address, jibun_address')
         .eq('approved_name', lookupName);
 
+    if (relatedRestaurantsError) throw new Error('BOOKMARK_RESTAURANTS_UNAVAILABLE');
     return selectRelatedRestaurantReviewIds(
         restaurant,
         (relatedRestaurantRows ?? []) as Restaurant[]
@@ -248,11 +250,12 @@ export function useBookmarkIds() {
             const bookmarkedRestaurantIds = ((data ?? []) as BookmarkIdRow[]).map((item) => item.restaurant_id);
             if (bookmarkedRestaurantIds.length === 0) return bookmarkedRestaurantIds;
 
-            const { data: restaurantsData } = await supabase
+            const { data: restaurantsData, error: restaurantsError } = await supabase
                 .from('restaurants')
                 .select(BOOKMARK_RESTAURANT_SELECT)
                 .in('id', bookmarkedRestaurantIds);
 
+            if (restaurantsError) throw new Error('BOOKMARK_RESTAURANTS_UNAVAILABLE');
             const bookmarkedRestaurants = ((restaurantsData ?? []) as unknown as RestaurantRow[]).map(toRestaurant);
             const approvedRestaurants = await fetchApprovedCandidatesByRestaurantNames(bookmarkedRestaurants);
             // 북마크 행마다 승인 맛집 목록을 다시 훑지 않도록 색인을 한 번만 만듭니다.
