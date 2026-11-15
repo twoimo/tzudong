@@ -79,7 +79,6 @@ const filters =`).replace('<Fixture/></QueryClientProvider>', '<Fixture/><HomeEf
         'next/navigation': `import { useSyncExternalStore, useMemo } from 'react'; const subscribe=cb=>{window.addEventListener('popstate',cb);return()=>window.removeEventListener('popstate',cb)}; const router={push(url){history.pushState({},'',url);window.dispatchEvent(new Event('popstate'));},replace(url){history.replaceState({},'',url);window.dispatchEvent(new Event('popstate'));},prefetch(){}}; export const useRouter=()=>router; export const usePathname=()=>location.pathname; export function useSearchParams(){const value=useSyncExternalStore(subscribe,()=>location.search);return useMemo(()=>new URLSearchParams(value),[value]);}`,
         'next/dynamic': `import React from 'react'; export default function dynamic(loader, options={}) {const Component=React.lazy(()=>loader().then(value=>({default:value.default||value})));return props=><React.Suspense fallback={options.loading?<options.loading/>:null}><Component {...props}/></React.Suspense>;}`,
         'next/image': `import React from 'react'; export default function Image({unoptimized,priority,fill,...props}) {return <img {...props}/>;}`,
-        '@/components/home/use-overseas-country-counts': 'export const useOverseasCountryCounts=()=>({});',
         '@/lib/overseas-map-loader': 'export const preloadOverseasMap=()=>{};',
         '@/lib/site-config': 'export const isPublicRestrictedMode=false;export const siteConfig={operator:{copyrightLabel:"합성 운영자"},contact:{}};',
         '@/contexts/AuthContextBase': 'export const useAuth=()=>({signOut:async()=>{}});',
@@ -88,7 +87,6 @@ const filters =`).replace('<Fixture/></QueryClientProvider>', '<Fixture/><HomeEf
         '@/lib/auth-ui-events': 'export const requestAuthUi=(value)=>globalThis.__fixture.auth.push(value);',
         '@/components/home/DesktopLeftPanelMapHome': `import React from 'react'; export default function Home(){return <div data-testid="map-home">인기 검색 맛집</div>}`,
         '@/components/home/HydratedDetailRestaurant': `export default function Hydrated({children,restaurant}){return children(restaurant);}`,
-        '@/components/region/RegionSelector': 'export default function Region(){return null;}',
         '@/components/filters/CategoryFilter': 'export default function Category(){return null;}',
         '@/components/map/map-view-deferred-panels': `import React from 'react';export function RestaurantDetailPanel({onClose}){return <button onClick={onClose}>상세 닫기</button>;}`,
       };

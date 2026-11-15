@@ -56,7 +56,7 @@ const tailwindEntries = {
       '"./home-client-effects.tsx"', '"./app-providers.tsx"', '"./providers.tsx"',
       '"../hooks"', '"../contexts"', '"../components/home"', '"../components/layout"',
       '"../components/map"', '"../components/search"', '"../components/filters"',
-      '"../components/region"', '"../components/skeletons"', '"../components/ui"',
+      '"../components/skeletons"', '"../components/ui"',
       '"../lib/naver-map-overlay-position-helpers.ts"',
       '"../lib/naver-map-overlay-timings.ts"',
     ],
@@ -459,14 +459,10 @@ describe("web quality performance source contracts", () => {
   });
 
   test("home filter count queries run before dropdown open so triggers do not show stale zero counts", () => {
-    const regionSelectorSource = source("components/region/RegionSelector.tsx");
     const categoryFilterSource = source(
       "components/filters/CategoryFilter.tsx",
     );
 
-    expect(regionSelectorSource).toContain("queryKey: ['restaurants-count']");
-    expect(regionSelectorSource).toContain("enabled: true,");
-    expect(regionSelectorSource).not.toContain("enabled: isOpen,");
     expect(categoryFilterSource).toContain("queryKey: categoryQueryKey");
     expect(categoryFilterSource).toContain(
       "? ['restaurants-categories', selectedRegion, selectedCountry]",
@@ -475,12 +471,6 @@ describe("web quality performance source contracts", () => {
     expect(categoryFilterSource).toContain("enabled: !resultSummary,");
     expect(categoryFilterSource).toContain("if (resultSummary) return resultSummary.categoryCounts;");
     expect(categoryFilterSource).not.toContain("enabled: isOpen,");
-    expect(regionSelectorSource).toContain("contentSide?:");
-    expect(regionSelectorSource).toContain("z-[180]");
-    expect(regionSelectorSource).toContain(
-      '<span className="whitespace-nowrap">대한민국</span>',
-    );
-    expect(regionSelectorSource).not.toContain("<span>전국</span>");
     expect(categoryFilterSource).toContain("contentSide?:");
     expect(categoryFilterSource).toContain("카테고리 검색…");
     expect(categoryFilterSource).toContain("z-[180]");
@@ -524,7 +514,6 @@ describe("web quality performance source contracts", () => {
     );
     const homeClientEffectsSource = source("app/home-client-effects.tsx");
     const homeViewportModeSource = source("hooks/useHomeViewportMode.ts");
-    const regionSelectorSource = source("components/region/RegionSelector.tsx");
     const categoryFilterSource = source(
       "components/filters/CategoryFilter.tsx",
     );
@@ -1955,11 +1944,6 @@ describe("web quality performance source contracts", () => {
     expect(mobileNotificationSource).toContain(
       "formatDistanceToNow(notification.createdAt",
     );
-    expect(regionSelectorSource).toContain("enabled: true,");
-    expect(regionSelectorSource).toContain("fetchSupabaseRows");
-    expect(regionSelectorSource).not.toContain(
-      "@/integrations/supabase/client",
-    );
     expect(categoryFilterSource).toContain("enabled: !resultSummary,");
     expect(categoryFilterSource).toContain("if (resultSummary) return resultSummary.categoryCounts;");
     expect(categoryFilterSource).toContain("fetchSupabaseRows");
@@ -3337,9 +3321,6 @@ describe("web quality performance source contracts", () => {
     const myPageTopActionsSource = source(
       "components/mypage/MyPageTopActions.tsx",
     );
-    const returnToMapButtonSource = source(
-      "components/layout/ReturnToMapButton.tsx",
-    );
     const myPageSectionSkeletonSource = source(
       "components/mypage/MyPageSectionSkeleton.tsx",
     );
@@ -3529,17 +3510,6 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain(
       "focus-visible:ring-2 focus-visible:ring-primary",
     );
-    expect(returnToMapButtonSource).toContain(
-      'data-return-to-map-button="true"',
-    );
-    expect(returnToMapButtonSource).toContain("function canUseBrowserBack()");
-    expect(returnToMapButtonSource).toContain("window.history.length <= 1");
-    expect(returnToMapButtonSource).toContain(
-      "new URL(document.referrer).origin === window.location.origin",
-    );
-    expect(returnToMapButtonSource).toContain("router.back()");
-    expect(returnToMapButtonSource).toContain("router.push(fallbackHref)");
-    expect(returnToMapButtonSource).toContain('fallbackHref = "/"');
     expect(myPageSidebarSource).toContain('await import("@/lib/image-utils")');
     expect(myPageSidebarSource).not.toContain(
       "import { compressImage } from '@/lib/image-utils'",
@@ -3973,10 +3943,6 @@ describe("web quality performance source contracts", () => {
       countSourceMatches(source("app/stamp/loading.tsx"), /<StampPageSkeleton\s*\/>/g),
     ).toBe(0);
     expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
-    expect(source("app/home-client-loader.tsx")).not.toContain("<GlobalLoader");
-    expect(source("app/home-client-loader.tsx")).toContain(
-      'className="sr-only"',
-    );
     expect(source("app/feed/page.tsx")).toContain("<GlobalLoader");
 
     const appLoaderTags = sourceFilesUnder("app").flatMap((relativePath) => {
