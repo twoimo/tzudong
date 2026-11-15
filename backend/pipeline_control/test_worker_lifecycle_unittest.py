@@ -16,6 +16,7 @@ from backend.pipeline_control.adapter import default_live_runner
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.graph import STEP_SPECS
 from backend.pipeline_control.live_run import run_once
+from backend.pipeline_control.persist import PersistError
 from backend.pipeline_control.state_machine import ControlPlaneError, RunRecord
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.worker import process_one
@@ -325,6 +326,27 @@ class BusyTargetTests(unittest.TestCase):
             self.assertEqual((current.status, current.error_code), ("Fetching", None))
         self.assertEqual(result, "Failed")
         self.assertEqual(manifest["finalStatus"], "ERROR")
+
+    def test_store_error_other_than_a_busy_target_propagates_and_no_run_changes(self) -> None:
+        for error in (
+            ControlPlaneError("idempotency_payload_conflict", 409),
+            PersistError("persist_divergence"),
+        ):
+            with self.subTest(error=type(error).__name__):
+                store = MemoryStore(clock=_Clock())
+                holders = [
+                    _claimed(store, "tzuyang", "error-tzuyang-1"),
+                    _claimed(store, "meatcreator", "error-meat-0001"),
+                ]
+
+                with _local_pipeline(), patch.object(store, "create_run", side_effect=error):
+                    with self.assertRaises(type(error)) as raised:
+                        run_once(store, target="tzuyang", index=1, live=False)
+
+                self.assertIs(raised.exception, error)
+                for holder in holders:
+                    current = store.get(holder.id)
+                    self.assertEqual((current.status, current.error_code), ("Fetching", None))
 
     def test_paused_target_is_not_taken_over(self) -> None:
         clock = _Clock()
