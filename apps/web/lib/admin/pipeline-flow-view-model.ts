@@ -1,4 +1,4 @@
-import { isRecord } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import { PIPELINE_GAUGE_KEYS, type PipelineGaugeKey } from './pipeline-control';
 import { parseGithubWorkflowState } from './operations-view-model';
 

@@ -30,6 +30,7 @@ const approvedSources = new Set([
   'lib/privacy/processing-inventory.ts', 'lib/security/bounded-json-request.ts',
   'lib/security/same-origin-mutation.ts', 'lib/auth/auth-redirect.ts', 'lib/auth/callback-origin.ts',
   'lib/auth/callback-session.ts', 'lib/auth/session-cookies.ts', 'lib/auth/signup-pkce-handoff.ts', 'lib/profile-mutation.ts',
+  'lib/validation/records.ts',
   'app/api/privacy/onboarding/route.ts', 'app/auth/callback/route.ts',
 ]);
 

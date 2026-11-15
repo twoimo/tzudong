@@ -1,6 +1,7 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { isRecord,normalizeEvaluationRecord,withAdminEvaluationDisplayName } from './normalize-evaluation-record';
+import { normalizeEvaluationRecord, withAdminEvaluationDisplayName } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import { summarizeEvaluationRecord } from './evaluation-summary';
 import { formatSameVideoDuplicateWarning, type SameVideoDuplicateWarningCandidate } from '@/lib/admin-same-video-duplicate-warning';
 import { findRestaurantIdentityWarnings, deletedRestaurantIdentityWarning } from '@/lib/admin-restaurant-identity-warning';

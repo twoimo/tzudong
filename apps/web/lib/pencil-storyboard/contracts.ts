@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { isRecord } from '@/lib/validation/records';
 
 export type PencilStoryboardSurfaceType = 'route' | 'component' | 'flow';
 export type PencilStoryboardViewportKey = 'mobile' | 'tablet' | 'desktop';
@@ -94,10 +95,6 @@ const SURFACE_TYPES = new Set<PencilStoryboardSurfaceType>(['route', 'component'
 const MANIFEST_STATUSES = new Set<PencilStoryboardStatus>(['planned', 'captured', 'generated', 'stale', 'review-needed']);
 const QUEUE_STATUSES = new Set<PencilReviewQueueStatus>(['proposed', 'needs-triage', 'approved', 'rejected', 'implemented']);
 const RISK_LEVELS = new Set<PencilReviewRiskLevel>(['low', 'medium', 'high']);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === 'string' && value.trim().length > 0;

@@ -1,3 +1,5 @@
+import { isRecord } from '@/lib/validation/records';
+
 export const ADMIN_DASHBOARD_WIDGET_IDS = [
   "subscribers",
   "views",
@@ -41,10 +43,6 @@ export function normalizeAdminDashboardWidgetId(
   if (typeof value !== "string") return null;
 
   return widgetAliasMap.get(value) ?? null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 export function normalizeAdminDashboardWidgetOrder(

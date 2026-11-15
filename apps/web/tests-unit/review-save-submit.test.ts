@@ -1,6 +1,7 @@
 import * as draftOwnerKeys from '../lib/privacy/draft-storage-owner';
 import * as draftLifecycle from '../lib/privacy/browser-draft-lifecycle';
 import * as draftQueue from '../lib/draft-write-queue';
+import * as records from '../lib/validation/records';
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -38,7 +39,7 @@ function evaluate(text: string, bindings: Record<string, unknown>) {
     const moduleFixture = { exports: {} };
     const js = ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
     return vm.runInNewContext(js, { module: moduleFixture, exports: moduleFixture.exports, File, crypto, Date, Promise,
-        require: (name: string) => { if (name === 'react/jsx-runtime') return jsxRuntime; if(name === '@/lib/privacy/browser-draft-lifecycle') return draftLifecycle; if(name === '@/lib/privacy/draft-storage-owner') return draftOwnerKeys; throw new Error('OFFLINE_IMPORT'); },
+        require: (name: string) => { if (name === 'react/jsx-runtime') return jsxRuntime; if(name === '@/lib/privacy/browser-draft-lifecycle') return draftLifecycle; if(name === '@/lib/privacy/draft-storage-owner') return draftOwnerKeys; if(name === '@/lib/validation/records') return records; throw new Error('OFFLINE_IMPORT'); },
         // Extracted handlers start after successful draft admission; the full
         // component's failed-read/retry boundary runs in mypage-draft-browser.
         draftLoadKey: 'loaded-handler-fixture', loadedDraftKey: 'loaded-handler-fixture', setLoadedDraftKey() {}, setDraftLoadFailed() {},
