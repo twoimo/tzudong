@@ -9,6 +9,7 @@ import {
     getDevAdminBypassCookieFromHeader,
     validateDevAdminBypassCookie,
 } from '@/lib/auth/dev-admin-bypass-cookie'
+import { isLoopbackHost, normalizeHostName } from '@/lib/auth/loopback-host'
 import { classifyPublicEligibilitySessionRoute, isCredentiallessFieldVitalsPost } from '@/lib/auth/public-eligibility-session'
 import { isHomePrivacyOnboardingRequest } from '@/lib/auth/auth-redirect'
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation'
@@ -32,32 +33,8 @@ const INTERNAL_CAPABILITY_PROXY_PATHS = new Set([
 ])
 
 
-
-
-function normalizeHostName(value: string) {
-    const firstValue = value.split(',')[0]?.trim().toLowerCase() ?? ''
-
-    if (firstValue.startsWith('[')) {
-        const closingBracketIndex = firstValue.indexOf(']')
-        return closingBracketIndex > 1 ? firstValue.slice(1, closingBracketIndex) : firstValue
-    }
-
-    if (firstValue === '::1') return firstValue
-    if (firstValue.includes(':') && firstValue.split(':').length > 2) return firstValue
-
-    return firstValue.split(':')[0] ?? ''
-}
-
-function isLocalPlaywrightHost(hostname: string) {
-    const normalizedHostName = normalizeHostName(hostname)
-
-    return normalizedHostName === 'localhost' || normalizedHostName === '127.0.0.1' || normalizedHostName === '::1'
-}
-
 function isLocalPlaywrightRequestUrlHost(hostname: string) {
-    const normalizedHostName = normalizeHostName(hostname)
-
-    return normalizedHostName === '0.0.0.0' || isLocalPlaywrightHost(normalizedHostName)
+    return normalizeHostName(hostname) === '0.0.0.0' || isLoopbackHost(hostname)
 }
 
 function isLocalPlaywrightHostHeader(
@@ -68,7 +45,7 @@ function isLocalPlaywrightHostHeader(
         return !options.required
     }
 
-    return isLocalPlaywrightHost(normalizeHostName(value))
+    return isLoopbackHost(value)
 }
 
 function isPlaywrightAdminBypassRequest(request: NextRequest) {
@@ -150,7 +127,7 @@ async function isDevAdminThumbnailBypassRequest(request: NextRequest) {
         return false
     }
     if (!DEV_ADMIN_BYPASS_MODULES.has(searchParams.get('module') ?? '')) return false
-    if (!isLocalPlaywrightHost(normalizeHostName(hostname))) return false
+    if (!isLoopbackHost(hostname)) return false
     if (!isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true })) return false
 
     const cookieValue = getDevAdminBypassCookieFromHeader(request.headers.get('cookie'))

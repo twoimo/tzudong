@@ -4,7 +4,6 @@ import {
     DEV_ADMIN_BYPASS_COOKIE_NAME,
     createDevAdminBypassCookieValue,
     getDevAdminBypassCookieFromHeader,
-    isDevAdminBypassLocalHost,
     resolveDevAdminBootstrapNext,
     validateDevAdminBypassCookie,
 } from '@/lib/auth/dev-admin-bypass-cookie'
@@ -62,20 +61,13 @@ describe('dev admin bypass cookie', () => {
             nonce: 'unit-test-nonce',
         })
 
-        for (const { host, devCookie } of LOOPBACK_HOST_CASES) {
+        for (const { host, isLoopback } of LOOPBACK_HOST_CASES) {
             const result = await validateDevAdminBypassCookie({ cookieValue, host, env: enabledEnv, now })
-            expect(result.ok, JSON.stringify(host)).toBe(devCookie)
+            expect(result.ok, JSON.stringify(host)).toBe(isLoopback)
         }
     })
 
-    test('limits local-host parsing and bootstrap next targets', () => {
-        expect(isDevAdminBypassLocalHost('localhost:8080')).toBe(true)
-        expect(isDevAdminBypassLocalHost('LOCALHOST:8080')).toBe(true)
-        expect(isDevAdminBypassLocalHost('[::1]:8080')).toBe(true)
-        expect(isDevAdminBypassLocalHost('localhost.evil.test')).toBe(false)
-        expect(isDevAdminBypassLocalHost('localhost@evil.test')).toBe(false)
-        expect(isDevAdminBypassLocalHost('example.com, localhost')).toBe(false)
-
+    test('limits bootstrap next targets', () => {
         expect(resolveDevAdminBootstrapNext(null)).toBe('/admin?module=youtube-thumbnail-generator')
         expect(resolveDevAdminBootstrapNext('/admin?module=youtube-thumbnail-generator')).toBe('/admin?module=youtube-thumbnail-generator')
         expect(resolveDevAdminBootstrapNext('/admin?module=overview')).toBe('/admin?module=overview')

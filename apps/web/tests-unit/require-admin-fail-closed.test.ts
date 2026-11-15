@@ -328,7 +328,7 @@ describe("requireAdmin fail-closed contract", () => {
     await withRequireAdmin({ e2e: true }, async (requireAdmin) => {
       state.authError = { message: "missing session" };
 
-      for (const { host, requireAdmin: bypassed } of LOOPBACK_HOST_CASES) {
+      for (const { host, isLoopback } of LOOPBACK_HOST_CASES) {
         setHeaders({
           ...(host === null ? {} : { host }),
           "x-e2e-admin-bypass": "1",
@@ -336,7 +336,7 @@ describe("requireAdmin fail-closed contract", () => {
         });
 
         const result = await requireAdmin();
-        expect(result.ok ? result.userId : null, JSON.stringify(host)).toBe(bypassed ? E2E_BYPASS_USER_ID : null);
+        expect(result.ok ? result.userId : null, JSON.stringify(host)).toBe(isLoopback ? E2E_BYPASS_USER_ID : null);
       }
     });
   });

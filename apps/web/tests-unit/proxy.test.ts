@@ -390,13 +390,13 @@ test('Playwright 관리자 우회는 루프백 Host 헤더에서만 세션 갱�
         }))
 
         const { proxy } = await loadProxyModule()
-        for (const { host, proxy: bypassed } of LOOPBACK_HOST_CASES) {
+        for (const { host, isLoopback } of LOOPBACK_HOST_CASES) {
             const headers = new Headers(adminBypassHeaders())
             if (host === null) headers.delete('host')
             else headers.set('host', host)
 
             const response = await proxy(new NextRequest('http://localhost:3000/admin', { headers }))
-            expect(response.headers.get('x-auth-checked'), JSON.stringify(host)).toBe(bypassed ? null : '1')
+            expect(response.headers.get('x-auth-checked'), JSON.stringify(host)).toBe(isLoopback ? null : '1')
         }
     } finally {
         resetAdminBypassEnv()
