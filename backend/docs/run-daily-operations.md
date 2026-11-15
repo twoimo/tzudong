@@ -123,16 +123,20 @@ PY
   단위 값을 지정합니다.
 - 워커는 live 단계마다 단계 제한 시간에 5분을 더한 길이의 lease를 받습니다.
   워커가 단계 도중 죽으면 lease가 끝난 뒤의 첫 `create_run`, `claim`,
-  `control` 호출이 실행을 `lease_expired`로 정리하고 대상 lock을 풉니다. 그
-  전에 lock을 풀려면 `POST /v1/runs/{id}/cancel`을 호출합니다.
+  `control` 호출이 실행을 `lease_expired`로 정리하고 대상 lock을 풉니다.
+- 워커가 SIGKILL처럼 정리 없이 죽으면 단계 프로세스는 자기 프로세스 그룹에서
+  계속 실행되고, lease가 끝나도 멈추지 않습니다. 남은 단계는
+  `ps -eo pid,pgid,command | grep -E 'backend/restaurant-(crawling|evaluation)/scripts/'`로
+  찾고 `kill -TERM -<pgid>`로 종료합니다. 그다음 lease가 끝나기 전에 lock을
+  풀려면 `POST /v1/runs/{id}/cancel`을 호출합니다.
 - 다른 실행이 대상 lock을 잡고 있으면 워커는
   `operation=live_run_refused code=lock_held`를 출력하고 `ERROR` manifest만
   남깁니다. lock을 잡은 실행은 바꾸지 않습니다.
-- queue에 작업이 없을 때 워커가 만드는 기본 실행은 UTC 날짜, 프로필, 모드
-  (dry-run 또는 live)마다 하나입니다. 같은 날 다시 호출하면 단계를 실행하지
-  않고 `Failed`를 보고합니다. 같은 날 다시 실행하려면 새 `Idempotency-Key`로
-  `POST /v1/runs`를 호출합니다. 워커가 그 실행을 30초 안에 claim하지 않으면
-  실행은 `lease_expired`로 끝납니다.
+- queue에 작업이 없으면 워커는 대상, UTC 날짜, 프로필, 모드(dry-run 또는
+  live)마다 기본 실행을 `TZUDONG_PIPELINE_COUNT`개 만듭니다. 기본값은 1입니다.
+  같은 날 다시 호출하면 단계를 실행하지 않고 `Failed`를 보고합니다. 같은 날
+  다시 실행하려면 새 `Idempotency-Key`로 `POST /v1/runs`를 호출합니다. 워커가
+  그 실행을 30초 안에 claim하지 않으면 실행은 `lease_expired`로 끝납니다.
 
 ## 변경 원칙
 
