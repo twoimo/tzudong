@@ -56,7 +56,11 @@ from backend.pipeline_control.schedule import (
     inspect_committed_cadence_sources,
     validate_cadence,
 )
-from backend.pipeline_control.state_machine import TERMINAL_STATUSES, RunRecord
+from backend.pipeline_control.state_machine import (
+    TERMINAL_STATUSES,
+    ControlPlaneError,
+    RunRecord,
+)
 from backend.pipeline_control.store import (
     LEASE_TTL_SECONDS,
     STEP_LEASE_MARGIN_SECONDS,
@@ -524,7 +528,7 @@ def process_one(
             record_failure = None
         except Exception as exc:
             print(f"operation=run_record_failed error={safe_error_name(exc)}")
-            recorded, record_failure = "Failed", exc
+            recorded, record_failure = _local_status(store, attempt.run), exc
         if status == "Succeeded":
             _write_manifest(store, attempt, recorded, manifest_path)
         try:
@@ -635,6 +639,17 @@ def _failure(exc: BaseException) -> tuple[str, BaseException | None]:
     if isinstance(exc, Exception):
         return "worker_unexpected", exc
     return "worker_interrupted", exc
+
+
+def _local_status(store: MemoryStore, run: RunRecord) -> str:
+    """The local store's status for a run whose record raised. The store
+    commits a finished run before its mirror write, so a mirror failure
+    leaves a terminal status here."""
+    try:
+        status = store.get(run.id).status
+    except (OSError, ValueError, ControlPlaneError):
+        return "Failed"
+    return status if status in TERMINAL_STATUSES else "Failed"
 
 
 def _record(store: MemoryStore, run: RunRecord, status: str, error_code: str, *, live: bool) -> str:
