@@ -1,4 +1,5 @@
-import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import type { ThumbnailGenerationMode, ThumbnailProviderId } from './types';
@@ -562,7 +563,13 @@ export async function promoteThumbnailReleaseCandidate(
     sha256: candidate.sha256,
   };
   await mkdir(promotionRoot, { recursive: true });
-  await writeFile(join(promotionRoot, 'current.json'), `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  const temporaryPath = join(promotionRoot, `.current.json.${process.pid}.${randomBytes(8).toString('hex')}.tmp`);
+  try {
+    await writeFile(temporaryPath, `${JSON.stringify(state, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
+    await rename(temporaryPath, join(promotionRoot, 'current.json'));
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
 
   return {
     ...payload,
