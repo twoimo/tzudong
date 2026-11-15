@@ -36,6 +36,16 @@ Backend, from the repository root: `python3 -m unittest backend.pipeline.test_va
 - Preserve fail-closed behavior and immutable applied migrations. Use `apps/web/lib/privacy/sanitize.ts`; never log/persist credentials, tokens, personal data, precise location, raw OCR, request bodies or provider diagnostics.
 - Never invent approvals, retention periods or receipts. Report missing evidence and the next action accurately.
 
+## Rules and what enforces them
+Each rule replaces a repeated mistake. Add a row when a correction recurs, and enforce it in code where possible.
+
+| Rule | Enforced by |
+| --- | --- |
+| No tracked Python module or package takes a stdlib name (`queue.py` broke `unittest discover`). | `test_no_tracked_python_module_shadows_the_standard_library` in `backend/utils/tests/test_layout_naming_source_recovery.py` |
+| After you edit a file that the platform-modernization reconciliation pins, run its generator and commit the manifest. Do not edit hashes by hand. | `backend/bin/build_platform_modernization_reconciliation.py --check` names each drifted entry and the command; `test_platform_modernization_reconciliation` runs it in CI |
+| A test fails when its behavior breaks. Do not branch on real repository state to accept either outcome. | Review. A known gap uses `test.failing` with a reason, a start date, an expiry and the pending decision; Bun fails the marker once the behavior returns |
+| Do not re-pin a successor manifest or change its `launchPolicy.state` to turn a test green. The operator decides. | Review. `apps/web/tests-unit/admin-record-sql-successor.test.ts` holds the open case until 2026-12-16 |
+
 ## Read when relevant
 - Tests, toolchain, performance: [verification](docs/agents/verification.md).
 - Auth, privacy, location, consent, retention, notifications: [privacy](docs/agents/privacy.md).
