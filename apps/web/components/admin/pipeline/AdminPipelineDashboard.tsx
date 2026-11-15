@@ -11,7 +11,7 @@ import { RefreshCw, ChevronRight, SlidersHorizontal, Workflow } from "lucide-rea
 import { PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION } from "@/lib/admin/pipeline-control";
 import { parsePipelineActionPreview, pipelineApplyBody, type PipelineActionInput, type PipelineActionPreview } from "@/lib/admin/pipeline-action-preview";
 import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, pipelineDisplayIsReliable, PIPELINE_FLOW_DOCUMENT, PIPELINE_JOB_LABELS, type PipelineStageId } from "@/lib/admin/pipeline-flow-view-model";
-import { isRecord } from "@/lib/admin/normalize-evaluation-record";
+import { isRecord } from "@/lib/validation/records";
 import { adminQueryLastReadFailed } from "@/lib/admin/query-read-state";
 import { PipelineFlowDiagram, formatPipelineDuration, COMPACT_STAGE_LABELS } from "./PipelineFlowDiagram";
 import styles from "./PipelineFlowDiagram.module.css";

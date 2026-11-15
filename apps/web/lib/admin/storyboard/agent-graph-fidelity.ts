@@ -5,6 +5,7 @@ import type {
   StoryboardDataMode,
   StoryboardGraphDiagnostics,
 } from './types';
+import { isRecord } from '@/lib/validation/records';
 
 export const STORYBOARD_AGENT_GRAPH_AHP_TARGET = 98;
 
@@ -37,10 +38,6 @@ export type StoryboardAgentGraphFidelityInput = {
   storyboardHistoryCount?: number;
   finalOutputReady?: boolean;
 };
-
-function isRecord(value: unknown): value is RecordValue {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 
 function asRecord(value: unknown): RecordValue {
   return isRecord(value) ? value : {};

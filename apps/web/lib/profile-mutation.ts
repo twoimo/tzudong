@@ -4,6 +4,7 @@ import {
   getProfileAvatarVersionedStorageKey,
 } from "@/lib/profile-avatar-url";
 import { readPublicProfileSummaries } from "@/lib/public-profile-read";
+import { hasExactKeys, isPlainRecord } from "@/lib/validation/records";
 
 export const PROFILE_NICKNAME_UPDATE_RPC = "update_current_profile_nickname" as const;
 export const PROFILE_AVATAR_COMPARE_AND_SET_RPC =
@@ -123,32 +124,6 @@ const MAX_PROFILE_AVATAR_BYTES = 2 * 1024 * 1024;
 
 function fail(code: ProfileMutationErrorCode): never {
   throw new ProfileMutationError(code);
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-  } catch {
-    return false;
-  }
-}
-
-function hasExactKeys(value: Record<string, unknown>, expectedKeys: readonly string[]) {
-  try {
-    const descriptors = Object.getOwnPropertyDescriptors(value);
-    const actualKeys = Object.keys(descriptors).sort();
-    const sortedExpectedKeys = [...expectedKeys].sort();
-    return actualKeys.length === sortedExpectedKeys.length
-      && actualKeys.every((key, index) => key === sortedExpectedKeys[index])
-      && sortedExpectedKeys.every((key) => "value" in descriptors[key]!);
-  } catch {
-    return false;
-  }
 }
 
 function hasOwnDataProperties(value: Record<string, unknown>, keys: readonly string[]) {

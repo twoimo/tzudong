@@ -1,3 +1,5 @@
+import { isNonNullObject } from '@/lib/validation/records';
+
 export const ADMIN_PENDING_COUNT_DOMAIN_IDS = [
   "restaurant_submissions",
   "restaurant_recommendation_requests",
@@ -79,26 +81,22 @@ function normalizeAsOf(value: string | Date | undefined): string {
   return new Date().toISOString();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 function getDomainCount(payload: Record<string, unknown>, id: AdminPendingCountDomainId): number | null {
   const domains = payload.domains;
-  if (!isRecord(domains)) return null;
+  if (!isNonNullObject(domains)) return null;
 
   const domain = domains[id];
-  if (!isRecord(domain)) return null;
+  if (!isNonNullObject(domain)) return null;
 
   return normalizeCountValue(domain.count);
 }
 
 function getDomainReady(payload: Record<string, unknown>, id: AdminPendingCountDomainId): boolean | null {
   const domains = payload.domains;
-  if (!isRecord(domains)) return null;
+  if (!isNonNullObject(domains)) return null;
 
   const domain = domains[id];
-  if (!isRecord(domain) || typeof domain.ready !== "boolean") return null;
+  if (!isNonNullObject(domain) || typeof domain.ready !== "boolean") return null;
 
   return domain.ready;
 }
@@ -172,7 +170,7 @@ export function buildAdminPendingCountsResponse({
 }
 
 export function normalizeAdminPendingCountsResponse(payload: unknown): AdminPendingCountsResponse {
-  const record = isRecord(payload) ? payload : {};
+  const record = isNonNullObject(payload) ? payload : {};
   const recommendationRequests =
     getDomainCount(record, "restaurant_recommendation_requests") ??
     normalizeCountValue(record.recommendationRequests);

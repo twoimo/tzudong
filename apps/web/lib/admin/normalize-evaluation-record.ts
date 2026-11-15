@@ -2,6 +2,9 @@ import { normalizeSponsorshipInfo } from '@/lib/sponsorship-state';
 import type { DbConflictInfo, EvaluationRecord, EvaluationRecordStatus, RestaurantInfo } from '@/types/evaluation';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { getRecordApprovalEligibility } from './evaluation-approval-eligibility';
+import { isRecord } from '@/lib/validation/records';
+
+export { isRecord };
 
 export function isEvaluationRecordStatus(value: unknown): value is EvaluationRecordStatus {
   switch (value) {
@@ -19,10 +22,6 @@ export function isEvaluationRecordStatus(value: unknown): value is EvaluationRec
     default:
       return false;
   }
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function isNullableString(value: unknown): value is string | null {

@@ -1,6 +1,7 @@
 import { draftStorageOwnerKey, draftPublicOwnerId, legacyDraftStorageOwnerKeys } from '@/lib/privacy/draft-storage-owner';
 import { assertBrowserDraftWrite, beginBrowserDraftCleanup, captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from '@/lib/privacy/browser-draft-lifecycle';
 import { openDB, DBSchema, IDBPDatabase, IDBPObjectStore } from 'idb';
+import { isRecord } from '@/lib/validation/records';
 
 const DB_NAME = 'tzudong-review-drafts';
 const DB_VERSION = 3;
@@ -121,10 +122,6 @@ async function initDB(): Promise<IDBPDatabase<ReviewDraftDB>> {
 
     await sweepExpiredOrInvalidDrafts(db);
     return db;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function hasExactKeys(value: Record<string, unknown>): boolean {

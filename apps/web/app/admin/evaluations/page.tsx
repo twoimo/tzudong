@@ -10,7 +10,7 @@ import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 import { createPortal } from 'react-dom';
 import { useRestaurantManagementHeader } from '@/components/admin/RestaurantManagementWorkspace';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense, type FocusEvent } from 'react';
-import { isEvaluationRecordStatus, isRecord, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
+import { isEvaluationRecordStatus, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { fetchAdminEvaluationPage, isEvaluationCursorStale, type EvaluationWarnings } from '@/lib/admin/evaluation-page-client';
 import { filterEvaluationRecords } from '@/lib/admin/evaluation-query';
 import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
@@ -97,6 +97,7 @@ import {
   ADMIN_MODAL_FOOTER,
   ADMIN_MODAL_SCROLL_BODY,
 } from '@/components/admin/admin-modal-styles';
+import { isRecord, parseValidatedRows } from '@/lib/validation/records';
 
 const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
@@ -318,22 +319,6 @@ type RestaurantRequestListRow =
     | 'review_audit_id'
     | 'updated_at'
   >>;
-
-function parseValidatedRows<Row>(
-  values: readonly unknown[],
-  isRow: (value: unknown) => value is Row,
-): Row[] {
-  const rows: Row[] = [];
-
-  for (const value of values) {
-    if (isRow(value)) {
-      rows.push(value);
-    }
-  }
-
-  return rows;
-}
-
 
 function isSubmissionRow(value: unknown): value is SubmissionRow {
   if (!isRecord(value)) return false;
