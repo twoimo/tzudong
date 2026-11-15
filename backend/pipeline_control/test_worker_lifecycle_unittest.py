@@ -1,13 +1,12 @@
-"""Worker run lifecycle: every claimed run ends in a recorded state, once per window."""
-
 from __future__ import annotations
 
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 from typing import Iterator
 from unittest.mock import patch
@@ -38,8 +37,6 @@ class _Clock:
 
 @contextmanager
 def _local_pipeline(**extra: str) -> Iterator[Path]:
-    """Hermetic local_db worker environment with a private output directory."""
-
     with tempfile.TemporaryDirectory() as raw:
         root = Path(raw)
         environment = {
@@ -53,7 +50,7 @@ def _local_pipeline(**extra: str) -> Iterator[Path]:
         }
         with patch.dict(os.environ, environment, clear=True), patch.object(
             live_run, "CANDIDATE_DIR", root / "live-runs"
-        ):
+        ), redirect_stdout(io.StringIO()):
             yield root
 
 

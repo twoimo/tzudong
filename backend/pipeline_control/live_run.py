@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from backend.pipeline_control.dsn_guard import admit_dsn
@@ -15,6 +16,7 @@ from backend.pipeline_control.manifest import (
     record_parity_attempt,
     write_compatible_summary,
 )
+from backend.pipeline_control.state_machine import ControlPlaneError
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.profiles import resolve_compute_profile
 from backend.pipeline_control.targets import assert_admitted
@@ -72,33 +74,34 @@ def run_once(
             )
             return "Failed"
         return result
+    profile = resolve_compute_profile()
+    mode = "live" if use_live else "dry"
+    utc_date = datetime.fromtimestamp(store.now(), timezone.utc).strftime("%Y-%m-%d")
     try:
         run, _created = store.create_run(
             target=target,
-            profile=resolve_compute_profile(),
-            idempotency_key=f"liverun{index:02d}-{target}",
+            profile=profile,
+            idempotency_key=f"liverun{index:02d}-{target}-{profile}-{mode}-{utc_date}",
             payload={"index": index, "live": live},
             actor="live_run",
             request_id=f"live-{index}",
             dry_run=not use_live,
         )
-    except Exception:
-        for held in list(store.locks.values()):
-            store.finish_failed(held, "stale_live_retry")
-        run, _created = store.create_run(
-            target=target,
-            profile=resolve_compute_profile(),
-            idempotency_key=f"liverun{index:02d}-{target}-retry",
-            payload={"index": index, "live": live, "retry": True},
-            actor="live_run",
-            request_id=f"live-{index}",
-            dry_run=not use_live,
+    except ControlPlaneError as exc:
+        print(f"operation=live_run_refused code={exc.code}")
+        write_run_manifest(
+            "Failed",
+            manifest,
+            store=store,
+            job_id_scope="worker_execution",
         )
+        return "Failed"
     result = process_one(
         store,
         live=use_live,
         runner=runner,
         manifest_path=manifest,
+        run_id=run.id,
         job_id_scope="worker_execution",
     )
     if result is None:
