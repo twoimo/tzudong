@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
@@ -209,6 +210,74 @@ def stopped_at(event):
 lines, _ = stopped_at(0)
 print(json.dumps([stopped_at(event)[1] for event in range(1, len(lines) + 1)]))
 """
+WORKER_STOPPED_WHILE_A_SERVICE_STALLS = """
+import os, signal, sys, time
+from pathlib import Path
+from unittest.mock import patch
+
+from backend.pipeline_control import live_evidence
+from backend.pipeline_control import store as store_module
+from backend.pipeline_control.file_store import FileStore
+from backend.pipeline_control.worker import process_one
+
+root, stalled = Path(sys.argv[1]), sys.argv[2]
+store = FileStore(root / "store.json")
+run, _ = store.create_run(
+    target="tzuyang",
+    profile="heavy_local",
+    idempotency_key="stalled-00001",
+    payload={},
+    actor="qa",
+    request_id="req-stalled",
+    dry_run=False,
+)
+(root / "run_id").write_text(run.id)
+stopped = []
+finish_succeeded = FileStore.finish_succeeded
+
+
+def stop():
+    stopped.append(True)
+    (root / "stopped").write_text("1")
+    os.kill(os.getpid(), signal.SIGTERM)
+
+
+def step_stopped(argv):
+    stop()
+    return 0
+
+
+def mirror_stalls_on_the_failed_record(run, *, lock_held, lock_key, audit):
+    if audit is not None and audit["transition"] == "failed":
+        time.sleep(60)
+
+
+def finish_succeeded_after_a_stop(self, run_id):
+    stop()
+    return finish_succeeded(self, run_id)
+
+
+def evidence_stalls_once_stopped(*args, **kwargs):
+    if stopped:
+        time.sleep(60)
+    return ("c" * 64, 1)
+
+
+if stalled == "mirror":
+    patches = [patch.object(store_module, "persist_mutation", mirror_stalls_on_the_failed_record)]
+    runner = step_stopped
+else:
+    patches = [
+        patch.object(FileStore, "finish_succeeded", finish_succeeded_after_a_stop),
+        patch.object(live_evidence, "snapshot_restaurants_relation", evidence_stalls_once_stopped),
+    ]
+    runner = lambda argv: 0
+for active in patches:
+    active.start()
+process_one(store, live=True, runner=runner, manifest_path=root / "summary.json", run_id=run.id)
+"""
+# backend/bin/run_daily_monitor_daemon.sh stops a run with TERM, sleep 5, KILL.
+DAEMON_STOP_GRACE_SECONDS = 5.0
 
 
 class _Clock:
@@ -531,6 +600,40 @@ class StopSignalTests(unittest.TestCase):
             manifest = _read(summary) if summary.exists() else None
         return worker.returncode, run, store["locks"], manifest
 
+    def _stopped_like_the_daemon(self, stalled: str) -> tuple[dict, dict, dict | None]:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            summary = root / "summary.json"
+
+            def recorded() -> bool:
+                run = _read(root / "store.json")["runs"][(root / "run_id").read_text()]
+                return summary.exists() and run["status"] in {"Succeeded", "Failed"}
+
+            worker = subprocess.Popen(
+                [sys.executable, "-c", WORKER_STOPPED_WHILE_A_SERVICE_STALLS, str(root), stalled],
+                cwd=REPO_ROOT,
+                env={**WORKER_ENVIRONMENT, "VIDEO_CACHE_DIR": str(root / "video-cache")},
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            try:
+                deadline = time.monotonic() + 60
+                while not (root / "stopped").exists() and worker.poll() is None:
+                    self.assertLess(time.monotonic(), deadline, "worker never reached its stop")
+                    time.sleep(0.01)
+                grace_ends = time.monotonic() + DAEMON_STOP_GRACE_SECONDS
+                while worker.poll() is None and time.monotonic() < grace_ends and not recorded():
+                    time.sleep(0.05)
+            finally:
+                if worker.poll() is None:
+                    os.killpg(worker.pid, signal.SIGKILL)
+                worker.wait()
+            store = _read(root / "store.json")
+            run = store["runs"][(root / "run_id").read_text()]
+            manifest = _read(summary) if summary.exists() else None
+        return run, store["locks"], manifest
+
     def _assert_recorded_failed(self, run: dict, locks: dict, manifest: dict | None) -> None:
         self.assertEqual((run["status"], run["error_code"]), ("Failed", "worker_interrupted"))
         self.assertEqual(locks, {})
@@ -594,6 +697,21 @@ class StopSignalTests(unittest.TestCase):
         self.assertEqual(
             {outcome["status"] for outcome in outcomes}, {"Queued", "Failed", "Succeeded"}
         )
+
+    def test_stop_while_the_mirror_stalls_leaves_a_manifest_within_the_daemon_grace(self) -> None:
+        run, locks, manifest = self._stopped_like_the_daemon("mirror")
+
+        self._assert_recorded_failed(run, locks, manifest)
+
+    def test_stop_while_live_evidence_stalls_leaves_a_manifest_within_the_daemon_grace(
+        self,
+    ) -> None:
+        run, locks, manifest = self._stopped_like_the_daemon("evidence")
+
+        self.assertEqual((run["status"], locks), ("Succeeded", {}))
+        self.assertIsNotNone(manifest)
+        self.assertEqual((manifest["finalStatus"], manifest["jobId"]), ("OK", run["id"]))
+        self.assertEqual(manifest["readbackSha256"], "c" * 64)
 
 
 class RunWindowTests(unittest.TestCase):
