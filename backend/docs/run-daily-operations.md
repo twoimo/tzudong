@@ -102,6 +102,38 @@ PY
   - residual/staging artifacts
 - 로컬 log tail: manifest가 없거나 파싱 실패할 때만 bounded fallback으로 사용합니다.
 
+## 워커 실행 수명주기
+
+워커는 대상(target)과 프로필마다 실행을 하나만 진행합니다. 실행 상태는
+`backend/log/cron/pipeline-store.json`과 `GET /v1/runs`에 남습니다. 실행이
+`Failed`로 끝나면 `error_code`로 원인을 구분합니다. 아래 표는 수명주기와
+관련된 코드만 다룹니다.
+
+| `error_code` | 원인 |
+| --- | --- |
+| `adapter_failed` | 단계가 0이 아닌 코드로 끝났습니다. 워커 로그에 `operation=step_timeout`이 있으면 단계 제한 시간을 넘긴 것입니다. |
+| `lease_expired` | 워커가 lease를 갱신하지 못했습니다. 워커 프로세스가 죽었거나 호스트가 절전 상태였습니다. |
+| `worker_unexpected` | 단계 실행 중 처리하지 않은 예외가 났습니다. 워커 로그의 traceback을 확인합니다. |
+| `worker_interrupted` | 단계 실행 중 워커가 SIGTERM, SIGHUP 또는 Ctrl-C를 받았습니다. |
+| `step_timeout_invalid` | `TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS` 값이 0보다 큰 유한한 수가 아닙니다. |
+
+- 단계 제한 시간은 단계마다 2시간입니다. 시간이 지나면 워커가 그 단계의
+  프로세스 그룹을 종료하고 실행을 `Failed`로 끝냅니다. backfill처럼 한
+  단계가 더 오래 걸리는 실행은 `TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS`에 초
+  단위 값을 지정합니다.
+- 워커는 live 단계마다 단계 제한 시간에 5분을 더한 길이의 lease를 받습니다.
+  워커가 단계 도중 죽으면 lease가 끝난 뒤의 첫 `create_run`, `claim`,
+  `control` 호출이 실행을 `lease_expired`로 정리하고 대상 lock을 풉니다. 그
+  전에 lock을 풀려면 `POST /v1/runs/{id}/cancel`을 호출합니다.
+- 다른 실행이 대상 lock을 잡고 있으면 워커는
+  `operation=live_run_refused code=lock_held`를 출력하고 `ERROR` manifest만
+  남깁니다. lock을 잡은 실행은 바꾸지 않습니다.
+- queue에 작업이 없을 때 워커가 만드는 기본 실행은 UTC 날짜, 프로필, 모드
+  (dry-run 또는 live)마다 하나입니다. 같은 날 다시 호출하면 단계를 실행하지
+  않고 `Failed`를 보고합니다. 같은 날 다시 실행하려면 새 `Idempotency-Key`로
+  `POST /v1/runs`를 호출합니다. 워커가 그 실행을 30초 안에 claim하지 않으면
+  실행은 `lease_expired`로 끝납니다.
+
 ## 변경 원칙
 
 - crontab/GHA는 `python3 -m backend.pipeline_control.worker`를 호출합니다.
