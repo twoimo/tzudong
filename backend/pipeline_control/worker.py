@@ -614,6 +614,22 @@ def process_one(
             job_id_scope=job_id_scope,
         )
         return "Failed"
+    except BaseException as exc:
+        store.finish_failed(
+            run.id,
+            "worker_unexpected" if isinstance(exc, Exception) else "worker_interrupted",
+        )
+        write_run_manifest(
+            "Failed",
+            manifest_path,
+            events=collected,
+            run=run,
+            execution_mode=execution_mode,
+            data_sink=data_sink,
+            store=store,
+            job_id_scope=job_id_scope,
+        )
+        raise
     if result == "Succeeded" and not success_recorded:
         if execution_mode == "live":
             store.finish_succeeded(run.id)

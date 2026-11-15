@@ -3,7 +3,7 @@
   "kind": "platform_modernization_reconciliation",
   "baseCommit": "3f4ca55742aa33869b776291e0d035a16024eef1",
   "sourceCommit": "880bf06d375dbc6ebe8dcf108419c3f455048a97",
-  "candidateContentSha256": "ee7d4c423b797cc196420eaff5911bd3a2f0a6bdcf2e4b51343bb582aa626296",
+  "candidateContentSha256": "ef76a2a381fadfe769a9d13aa50f3a0eb6ca07891449cf86133756fba1140add",
   "candidateWorkingTreeStateIncluded": true,
   "sourceDeltaEntryCount": 207,
   "dispositionCounts": {
@@ -2343,7 +2343,7 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": "e336a34cf43dc0ea080cbe485f860e708a0d3b70",
       "sourceGitBlobSha1": "4527f88d7543c7793c04d2017985c3abff4c2654",
-      "candidateGitBlobSha1": "0dc3bc68e6ea00d217408ca6a069618682dbe4e9",
+      "candidateGitBlobSha1": "7e13c8a2a9f33a14388f285ee8bb890fcf1cba65",
       "contentState": "candidate_transformed",
       "disposition": "candidate_transformed_present",
       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."
