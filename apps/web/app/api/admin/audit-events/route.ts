@@ -120,9 +120,9 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const limit = normalizeLimit(request.nextUrl.searchParams.get("limit"));
-  const supabase = createSupabaseServiceRoleClient();
 
   try {
+    const supabase = createSupabaseServiceRoleClient();
     const { data, error } = await supabase
       .rpc("read_admin_user_audit_events", { p_limit: limit });
 

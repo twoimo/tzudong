@@ -37,12 +37,12 @@ function browserMutation(headers: HeadersInit) {
 const storyboardJsonMutationRoutes = [
   {
     routePath: 'app/api/admin/storyboard/rag/documents/route.ts',
-    authCall: 'await authenticateStoryboardRagAction',
+    authCall: 'await requireAdmin',
     mutationMarker: 'embedStoryboardRagTexts(',
   },
   {
     routePath: 'app/api/admin/storyboard/rag/search/route.ts',
-    authCall: 'await authenticateStoryboardRagAction',
+    authCall: 'await requireAdmin',
     mutationMarker: 'embedStoryboardRagTexts(',
   },
 ] as const;

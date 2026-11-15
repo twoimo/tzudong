@@ -94,7 +94,7 @@ test('thumbnail actual Storage client cannot overwrite an existing immutable rel
   const policy = '(version 1)(allow default)(deny network*)';
   try {
     for (const sandboxed of process.platform === 'darwin' ? [false, true] : [false]) {
-    const args = ['--no-env-file', 'run', join(import.meta.dir, 'fixtures/thumbnail-storage-immutability.ts')];
+    const args = ['--no-env-file', '--conditions=react-server', 'run', join(import.meta.dir, 'fixtures/thumbnail-storage-immutability.ts')];
     const result = spawnSync(sandboxed ? '/usr/bin/sandbox-exec' : process.execPath,
       sandboxed ? ['-p', policy, process.execPath, ...args] : args, {
       cwd: join(import.meta.dir, '..'), encoding: 'utf8', timeout: 15_000,

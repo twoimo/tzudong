@@ -14,8 +14,8 @@ export async function GET(request: Request, context: EvaluationDetailContext) {
   const expected = new URL(request.url).searchParams.get('revision');
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id)) return NextResponse.json({ error: 'EVALUATION_ID_INVALID' }, { status: 400, headers });
   if (expected !== null && !/^\d{1,20}$/.test(expected)) return NextResponse.json({ error: 'EVALUATION_CURSOR_INVALID' }, { status: 400, headers });
-  const supabase = createSupabaseServiceRoleClient();
   try {
+    const supabase = createSupabaseServiceRoleClient();
     const rpc = supabase.rpc.bind(supabase) as unknown as (name: 'admin_evaluation_revision') => PromiseLike<{ data: unknown; error: unknown }>;
     const readRevision = async () => {
       const { data, error } = await rpc('admin_evaluation_revision');

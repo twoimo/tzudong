@@ -25,12 +25,6 @@ export type AccountDeletionPreview = Readonly<{
   sourceManifestHash: string;
   counts: AccountDeletionCounts;
 }>;
-export type AccountDeletionStorageWorkItem = Readonly<{
-  bucketId: string;
-  objectName: string;
-  objectLocatorHash: string;
-  objectVersionHash: string;
-}>;
 export type AccountDeletionStorageReceiptRef = Readonly<{
   objectLocatorHash: string;
   objectVersionHash: string;
@@ -85,59 +79,6 @@ export type AccountDeletionBrowserCleanupResult = Readonly<{
 
 
 type RecordValue = Record<string, unknown>;
-export type AccountDeletionProviderAttestationInput = Readonly<{
-  actorUserId: string;
-  targetUserId: string;
-  requestId: string;
-  previewHash: string;
-  idempotencyKey: string;
-  sourceManifestHash: string;
-  leaseToken: string;
-}>;
-export type AccountDeletionVerifiedStorageReceipt =
-  AccountDeletionProviderAttestationInput & Readonly<{
-    objectLocatorHash: string;
-    objectVersionHash: string;
-    providerReceiptRef: string;
-    providerReceiptHash: string;
-  }>;
-export type AccountDeletionVerifiedAuthReceipt =
-  AccountDeletionProviderAttestationInput & Readonly<{
-    authReceiptRef: string;
-  }>;
-export type AccountDeletionProviderAttestation = Readonly<{
-  getVerifiedStorageReceipts: (
-    input: AccountDeletionProviderAttestationInput & Readonly<{
-      workItems: readonly AccountDeletionStorageWorkItem[];
-    }>,
-  ) => Promise<readonly AccountDeletionVerifiedStorageReceipt[] | null>;
-  getVerifiedAuthReceipt: (
-    input: AccountDeletionProviderAttestationInput & Readonly<{
-      storageReceiptRefs: readonly AccountDeletionStorageReceiptRef[];
-    }>,
-  ) => Promise<AccountDeletionVerifiedAuthReceipt | null>;
-}>;
-export type AccountDeletionProviderAttestationFactory = () => AccountDeletionProviderAttestation | null;
-
-/**
- * Source-pinned production dependency. It remains unavailable until an
- * independent verifier publishes owner-only proof records it can read.
- */
-export const createAccountDeletionProviderAttestation = (): AccountDeletionProviderAttestation | null =>
-  null;
-
-let accountDeletionProviderAttestationFactory: AccountDeletionProviderAttestationFactory =
-  createAccountDeletionProviderAttestation;
-
-export const getAccountDeletionProviderAttestation = () =>
-  accountDeletionProviderAttestationFactory();
-
-export const setAccountDeletionProviderAttestationFactoryForTests = (
-  factory: AccountDeletionProviderAttestationFactory,
-) => {
-  accountDeletionProviderAttestationFactory = factory;
-};
-
 const isRecord = (value: unknown): value is RecordValue =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 

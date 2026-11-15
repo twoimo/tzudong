@@ -10,8 +10,6 @@ const storyboardRagRoutePaths = new Set([
   'app/api/admin/storyboard/rag/search/route.ts',
 ]);
 
-const acceptedAuthHelperPath = 'lib/admin/storyboard/rag-actions-auth.ts';
-
 /**
  * Storyboard production routes delegate their HTTP methods to a server-only API
  * object instead of inlining the admin gate. The gate lives in that module, so
@@ -246,40 +244,27 @@ function exportedHandlerBodies(source: string) {
   return bodies;
 }
 
-function assertFailClosedAuthGate(body: string, callName: 'requireAdmin' | 'authenticateStoryboardRagAction', label: string) {
+function assertFailClosedAuthGate(body: string, label: string) {
   const strippedBody = stripCommentsAndStringLiterals(body);
-  const authCallIndex = firstCallIndex(body, callName);
-  expect(authCallIndex, `${label} must call ${callName}`).toBeGreaterThanOrEqual(0);
+  const authCallIndex = firstCallIndex(body, 'requireAdmin');
+  expect(authCallIndex, `${label} must call requireAdmin`).toBeGreaterThanOrEqual(0);
 
   const preAuthSource = strippedBody.slice(0, authCallIndex);
-  expect(preAuthSource, `${label} must not await work before admin auth`).not.toMatch(/await\s+(?!requireAdmin|authenticateStoryboardRagAction)/);
+  expect(preAuthSource, `${label} must not await work before admin auth`).not.toMatch(/await\s+(?!requireAdmin)/);
   expect(preAuthSource, `${label} must not start privileged/provider work before admin auth`).not.toMatch(
     /createSupabaseServiceRoleClient\s*\(|fetch\s*\(|\.from\s*\(|\.rpc\s*\(|request\.json\s*\(|readStoryboardRouteJson\s*\(|embedStoryboardRagTexts\s*\(|rerankStoryboardRagCandidates\s*\(|buildCollectionLogPayload\s*\(/,
   );
 
   const postAuthSource = strippedBody.slice(Math.max(0, authCallIndex - 96));
-  const gatePattern = callName === 'requireAdmin'
-    ? /const\s+([A-Za-z_$][\w$]*)\s*=\s*await\s+requireAdmin\s*\([^)]*\)\s*;\s*if\s*\(\s*!\1\.ok\s*\)\s*(?:return\s+\1\.response\s*;|\{[\s\S]{0,240}?return\s+\1\.response\s*;[\s\S]{0,120}?\})/
-    : /const\s+([A-Za-z_$][\w$]*)\s*=\s*await\s+authenticateStoryboardRagAction\s*\([^)]*\)\s*;\s*if\s*\(\s*!\1\.ok\s*\)\s*(?:return\s+\1\.response\s*;|\{[\s\S]{0,240}?return\s+\1\.response\s*;[\s\S]{0,120}?\})/;
-  expect(postAuthSource, `${label} must return the auth failure response before continuing`).toMatch(gatePattern);
+  expect(postAuthSource, `${label} must return the auth failure response before continuing`).toMatch(
+    /const\s+([A-Za-z_$][\w$]*)\s*=\s*await\s+requireAdmin\s*\([^)]*\)\s*;\s*if\s*\(\s*!\1\.ok\s*\)\s*(?:return\s+\1\.response\s*;|\{[\s\S]{0,240}?return\s+\1\.response\s*;[\s\S]{0,120}?\})/,
+  );
 }
 
 describe('admin route auth source contract', () => {
   test('keeps every admin route admin-gated directly or through an accepted route helper', () => {
-    const helperSource = appSource(acceptedAuthHelperPath);
-    const helperRequireAdminIndex = firstCallIndex(helperSource, 'requireAdmin');
-    const helperServiceRoleIndex = firstCallIndex(helperSource, 'createSupabaseServiceRoleClient');
-
-    expect(helperRequireAdminIndex).toBeGreaterThanOrEqual(0);
-    expect(helperSource).not.toContain('Bearer');
-    expect(helperSource).not.toContain('supabase.auth.getUser');
-    if (helperServiceRoleIndex >= 0) {
-      expect(helperRequireAdminIndex).toBeLessThan(helperServiceRoleIndex);
-    }
-
     for (const file of listAdminRouteFiles()) {
       const source = routeSource(file);
-      const isStoryboardRagRoute = storyboardRagRoutePaths.has(file);
 
       if (assertThumbnailDelegation(file, source)) continue;
 
@@ -382,7 +367,7 @@ describe('admin route auth source contract', () => {
       if (/export const (?:GET|POST) = retiredStoryboardApi;/.test(source)) {
         expect(source).toContain("@/lib/admin/storyboard/retired-api");
         const retired = appSource('lib/admin/storyboard/retired-api.ts');
-        assertFailClosedAuthGate(retired, 'requireAdmin', `${file} retired handler`);
+        assertFailClosedAuthGate(retired, `${file} retired handler`);
         expect(retired).toContain('status: 410');
         expect(retired).not.toContain('createSupabaseServiceRoleClient');
         if (exportedHandlerBodies(source).length === 0) continue;
@@ -393,32 +378,19 @@ describe('admin route auth source contract', () => {
       expect(handlerBodies.length, `${file} must export at least one HTTP handler`).toBeGreaterThan(0);
 
       for (const { method, body } of handlerBodies) {
-        if (isStoryboardRagRoute) {
-          assertFailClosedAuthGate(body, 'authenticateStoryboardRagAction', `${file} ${method}`);
-          expect(source, `${file} must import the accepted RAG auth helper`).toContain("@/lib/admin/storyboard/rag-actions-auth");
-        } else {
-          assertFailClosedAuthGate(body, 'requireAdmin', `${file} ${method}`);
-        }
+        assertFailClosedAuthGate(body, `${file} ${method}`);
       }
     }
   });
 
   test('orders admin auth before service-role work', () => {
-    const helperSource = appSource(acceptedAuthHelperPath);
-    const helperRequireAdminIndex = firstCallIndex(helperSource, 'requireAdmin');
-    const helperServiceRoleIndex = firstCallIndex(helperSource, 'createSupabaseServiceRoleClient');
-
-    if (helperServiceRoleIndex >= 0) {
-      expect(helperRequireAdminIndex).toBeLessThan(helperServiceRoleIndex);
-    }
-
     for (const file of listAdminRouteFiles()) {
       const source = routeSource(file);
       if (assertThumbnailDelegation(file, source)) continue;
       if (/export const (?:GET|POST) = retiredStoryboardApi;/.test(source)) {
         expect(source).toContain("@/lib/admin/storyboard/retired-api");
         const retired = appSource('lib/admin/storyboard/retired-api.ts');
-        assertFailClosedAuthGate(retired, 'requireAdmin', `${file} retired handler`);
+        assertFailClosedAuthGate(retired, `${file} retired handler`);
         expect(retired).toContain('status: 410');
         expect(retired).not.toContain('createSupabaseServiceRoleClient');
         continue;
@@ -430,16 +402,6 @@ describe('admin route auth source contract', () => {
         const strippedBody = stripCommentsAndStringLiterals(body);
         if (!strippedBody.includes('createSupabaseServiceRoleClient(')) continue;
 
-        if (storyboardRagRoutePaths.has(file)) {
-          const ragAuthIndex = firstCallIndex(body, 'authenticateStoryboardRagAction');
-          const serviceRoleIndex = strippedBody.indexOf('createSupabaseServiceRoleClient(', ragAuthIndex);
-          expect(ragAuthIndex, `${file} ${method} must authenticate through the RAG helper before service-role work`).toBeGreaterThanOrEqual(0);
-          expect(serviceRoleIndex, `${file} ${method} must create service-role clients only after RAG auth`).toBeGreaterThanOrEqual(0);
-          expect(ragAuthIndex, `${file} ${method} must authenticate before service-role work`).toBeLessThan(serviceRoleIndex);
-          expect(helperRequireAdminIndex, `${acceptedAuthHelperPath} must call requireAdmin`).toBeGreaterThanOrEqual(0);
-          continue;
-        }
-
         const requireAdminIndex = firstCallIndex(body, 'requireAdmin');
         const serviceRoleIndex = strippedBody.indexOf('createSupabaseServiceRoleClient(', requireAdminIndex);
         expect(requireAdminIndex, `${file} ${method} must call requireAdmin before service-role work`).toBeGreaterThanOrEqual(0);
@@ -450,7 +412,7 @@ describe('admin route auth source contract', () => {
   });
 
   test('keeps new guarded storyboard RAG auth contracts sanitized', () => {
-    for (const file of [...storyboardRagRoutePaths, acceptedAuthHelperPath]) {
+    for (const file of storyboardRagRoutePaths) {
       const source = appSource(file);
       expect(source, `${file} must not leak raw Error.message`).not.toContain('error.message');
       expect(source, `${file} must not leak raw exception messages`).not.toContain('message: error');

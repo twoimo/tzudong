@@ -14,9 +14,9 @@ const MAX_THUMBNAIL_RELEASE_CANDIDATE_PROMOTION_REQUEST_BYTES = 4 * 1024;
 function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: noStoreHeaders });
 }
-async function promoteThumbnailReleaseCandidateFromRoute(candidateId: string) {
+async function promoteThumbnailReleaseCandidateFromRoute(candidateId: string, promotedBy: string) {
   const { promoteThumbnailReleaseCandidate } = await import('@/lib/admin/youtube-thumbnail-generator/release-candidates');
-  return promoteThumbnailReleaseCandidate({ candidateId, promotedBy: 'local-dev-admin' }, process.env);
+  return promoteThumbnailReleaseCandidate({ candidateId, promotedBy }, process.env);
 }
 
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const candidateId = typeof body?.candidateId === 'string' ? body.candidateId : '';
     if (!candidateId.trim()) return jsonError('thumbnail_release_candidate_id_required', 400, '승격할 후보 ID가 필요합니다.');
 
-    const payload = await promoteThumbnailReleaseCandidateFromRoute(candidateId);
+    const payload = await promoteThumbnailReleaseCandidateFromRoute(candidateId, auth.userId);
     return NextResponse.json(payload, { headers: noStoreHeaders });
   } catch (error) {
     console.error('[admin/youtube-thumbnail-generator/release-candidates/promote] unexpected failure', {
