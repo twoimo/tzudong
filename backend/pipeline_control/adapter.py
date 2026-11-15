@@ -82,30 +82,51 @@ def step_timeout_seconds() -> float:
     return seconds
 
 
-@contextmanager
-def _deferred_stop_signals() -> Iterator[list[int]]:
-    """A step runs in its own session, so a signal sent to the worker's process
-    group does not reach the step."""
+class StopSignals:
+    """SIGINT, SIGTERM, and SIGHUP stop the worker where it is, except inside
+    ``held()``, where the stop waits until the block ends.
 
-    noted: list[int] = []
+    A step runs in its own session, so a signal sent to the worker's process
+    group does not reach the step. The runner holds a stop while it waits for
+    a step, and stops the step before it raises.
+    """
 
-    def note(signum: int, _frame: object) -> None:
-        noted.append(signum)
+    def __init__(self) -> None:
+        self.held_signal: int | None = None
+        self._holds = 0
+        self._previous: dict[int, Any] = {}
 
-    previous = {
-        signum: signal.signal(signum, note)
-        for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-        if signal.getsignal(signum) is not signal.SIG_IGN
-    }
-    try:
-        yield noted
-    finally:
-        for signum, handler in previous.items():
+    def __enter__(self) -> StopSignals:
+        self._previous = {
+            signum: signal.signal(signum, self._stop)
+            for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+            if signal.getsignal(signum) is not signal.SIG_IGN
+        }
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        for signum, handler in self._previous.items():
             signal.signal(signum, handler)
-    if noted:
-        if noted[0] == signal.SIGINT:
-            raise KeyboardInterrupt
-        raise SystemExit(128 + noted[0])
+
+    def _stop(self, signum: int, _frame: object) -> None:
+        if not self._holds:
+            raise _stop_exception(signum)
+        self.held_signal = self.held_signal or signum
+
+    @contextmanager
+    def held(self) -> Iterator[None]:
+        self._holds += 1
+        try:
+            yield
+        finally:
+            self._holds -= 1
+        if self.held_signal is not None and not self._holds:
+            signum, self.held_signal = self.held_signal, None
+            raise _stop_exception(signum)
+
+
+def _stop_exception(signum: int) -> BaseException:
+    return KeyboardInterrupt() if signum == signal.SIGINT else SystemExit(128 + signum)
 
 
 def _step_group_alive(process: subprocess.Popen) -> bool:
@@ -141,11 +162,11 @@ def default_live_runner(
 ) -> int:
     budget = step_timeout_seconds() if timeout is None else timeout
     deadline = wall_clock() + budget
-    with _deferred_stop_signals() as stop_signals:
+    with StopSignals() as stops, stops.held():
         process = subprocess.Popen(argv, start_new_session=True)
         code = None
         try:
-            while code is None and not stop_signals and (remaining := deadline - wall_clock()) > 0:
+            while code is None and stops.held_signal is None and (remaining := deadline - wall_clock()) > 0:
                 try:
                     code = process.wait(timeout=min(remaining, _STEP_POLL_SECONDS))
                 except subprocess.TimeoutExpired:
@@ -156,7 +177,7 @@ def default_live_runner(
         if code is not None:
             return code
         _terminate_step(process)
-        if not stop_signals:
+        if stops.held_signal is None:
             print(f"operation=step_timeout seconds={budget:g}")
         return STEP_TIMEOUT_EXIT_CODE
 
