@@ -1,4 +1,6 @@
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import type { HomeKpiQueryMode, HomeYouTubeKpiObservation } from '@/lib/performance/home-kpi-server-timing';
+export type { HomeKpiQueryMode, HomeYouTubeKpiObservation } from '@/lib/performance/home-kpi-server-timing';
 import {
   buildInsightTreemapResponseQualityMeta,
   buildInsightTreemapComparisonCoverageFromVideos,
@@ -61,6 +63,136 @@ export type LatestYouTubeKpiMetric = {
   bucketStartedAt: string;
   fetchedAt: string | null;
 };
+
+export type HomeYouTubeKpiOptions = {
+  mode?: HomeKpiQueryMode;
+  observe?: (event: HomeYouTubeKpiObservation) => void;
+};
+
+type HomeKpiRpcEnvelope = {
+  schemaVersion: 1;
+  status: 'ok' | 'bucket_error' | 'rows_error';
+  rows: VideoSnapshotRow[];
+  timings?: unknown;
+  timingValid?: unknown;
+};
+
+const HOME_KPI_ROW_KEYS = [
+  'video_id', 'title', 'published_at', 'category_id', 'duration_seconds',
+  'view_count', 'like_count', 'comment_count', 'bucket_started_at', 'fetched_at',
+] as const;
+const HOME_KPI_ENVELOPE_KEYS = new Set(['schemaVersion', 'status', 'rows', 'timings', 'timingValid']);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseHomeKpiRpcEnvelope(value: unknown, videoIds: string[]): HomeKpiRpcEnvelope {
+  const invalid = () => new Error('home-youtube-kpi:invalid_response');
+  if (!isRecord(value) || value.schemaVersion !== 1
+    || !['ok', 'bucket_error', 'rows_error'].includes(value.status as string)
+    || !Array.isArray(value.rows) || value.rows.length > videoIds.length
+    || Object.keys(value).some(key => !HOME_KPI_ENVELOPE_KEYS.has(key))) throw invalid();
+  if (value.status !== 'ok' && value.rows.length !== 0) throw invalid();
+
+  const requested = new Set(videoIds);
+  const seen = new Set<string>();
+  let bucket: string | undefined;
+  for (const row of value.rows) {
+    if (!isRecord(row) || Object.keys(row).length !== HOME_KPI_ROW_KEYS.length
+      || !HOME_KPI_ROW_KEYS.every(key => Object.hasOwn(row, key))
+      || typeof row.video_id !== 'string' || !requested.has(row.video_id) || seen.has(row.video_id)
+      || typeof row.bucket_started_at !== 'string' || row.bucket_started_at.length === 0
+      || (bucket !== undefined && bucket !== row.bucket_started_at)) throw invalid();
+    for (const key of ['title', 'published_at', 'category_id', 'fetched_at'] as const) {
+      if (row[key] !== null && typeof row[key] !== 'string') throw invalid();
+    }
+    for (const key of ['duration_seconds', 'view_count', 'like_count', 'comment_count'] as const) {
+      if (row[key] !== null && typeof row[key] !== 'number' && typeof row[key] !== 'string') throw invalid();
+    }
+    seen.add(row.video_id);
+    bucket = row.bucket_started_at;
+  }
+  return value as HomeKpiRpcEnvelope;
+}
+
+function observeHomeKpi(options: HomeYouTubeKpiOptions, event: HomeYouTubeKpiObservation): void {
+  try { options.observe?.(event); } catch { /* Telemetry cannot affect data or cache behavior. */ }
+}
+
+function readHomeKpiClock(): number | null {
+  try {
+    const now = performance.now();
+    return Number.isFinite(now) && now >= 0 && now <= Number.MAX_SAFE_INTEGER ? now : null;
+  } catch { return null; }
+}
+
+async function observeHomeKpiRequest<T>(
+  name: 'bucketRequest' | 'rowsRequest' | 'rpcRequest',
+  options: HomeYouTubeKpiOptions,
+  request: () => Promise<T>,
+): Promise<T> {
+  const startedAt = readHomeKpiClock();
+  try {
+    return await request();
+  } finally {
+    const endedAt = readHomeKpiClock();
+    if (startedAt !== null && endedAt !== null && endedAt >= startedAt) {
+      observeHomeKpi(options, { name, durationMs: endedAt - startedAt });
+    }
+  }
+}
+
+function observeHomeKpiDatabase(envelope: HomeKpiRpcEnvelope, options: HomeYouTubeKpiOptions): void {
+  // A malformed clock observation is not a data failure. Discard all DB spans
+  // together so a partial set cannot be mistaken for a complete measurement.
+  try {
+    const timings = envelope.timings;
+    const validDuration = (value: unknown): value is number => typeof value === 'number'
+      && Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER;
+    if (envelope.timingValid !== true || !isRecord(timings) || Object.keys(timings).length !== 3) {
+      observeHomeKpi(options, { name: 'dbTimingInvalid' });
+      return;
+    }
+    const { bucketMs, rowsMs, totalMs } = timings;
+    if (!validDuration(bucketMs) || !validDuration(totalMs)
+      || (rowsMs !== null && !validDuration(rowsMs))
+      || (envelope.status === 'bucket_error' && rowsMs !== null)
+      || ((envelope.status === 'rows_error' || envelope.rows.length > 0) && rowsMs === null)
+      || totalMs + 0.000001 < bucketMs + (rowsMs ?? 0)) {
+      observeHomeKpi(options, { name: 'dbTimingInvalid' });
+      return;
+    }
+    observeHomeKpi(options, { name: 'dbBucket', durationMs: bucketMs });
+    if (rowsMs !== null) observeHomeKpi(options, { name: 'dbRows', durationMs: rowsMs });
+    observeHomeKpi(options, { name: 'dbTotal', durationMs: totalMs });
+  } catch {
+    observeHomeKpi(options, { name: 'dbTimingInvalid' });
+  }
+}
+
+async function fetchHomeKpiSnapshotMap(
+  videoIds: string[], options: HomeYouTubeKpiOptions,
+): Promise<Map<string, VideoSnapshotRow>> {
+  if ((options.mode ?? 'rpc') === 'legacy') {
+    const latestBucket = await observeHomeKpiRequest('bucketRequest', options, fetchLatestBucket);
+    if (!latestBucket) return new Map();
+    return observeHomeKpiRequest('rowsRequest', options, () => fetchSnapshotMapForVideoIds(latestBucket, videoIds));
+  }
+  const { data, error } = await observeHomeKpiRequest('rpcRequest', options, async () => {
+    const supabase = createSupabaseServiceRoleClient();
+    return await supabase.rpc('get_home_youtube_kpi_metrics', { p_video_ids: videoIds });
+  });
+  if (error) throw new Error('home-youtube-kpi:rpc_failed');
+  const envelope = parseHomeKpiRpcEnvelope(data, videoIds);
+  observeHomeKpiDatabase(envelope, options);
+  if (envelope.status === 'bucket_error') {
+    console.warn('[youtube-kpi-snapshots] latest bucket unavailable:');
+    return new Map();
+  }
+  if (envelope.status === 'rows_error') throw new Error('youtube-kpi-snapshot-video-map:query_failed');
+  return new Map(envelope.rows.map(row => [row.video_id, row]));
+}
 
 
 function toNonNegativeNumber(
@@ -250,14 +382,17 @@ function mapSnapshotRowToVideo(
 }
 export async function getLatestYouTubeKpiMetricsForVideoIds(
   videoIds: string[],
+  options: HomeYouTubeKpiOptions = {},
 ): Promise<LatestYouTubeKpiMetric[]> {
+  if (options.mode !== undefined && options.mode !== 'legacy' && options.mode !== 'rpc') {
+    throw new Error('home-youtube-kpi:invalid_mode');
+  }
   const uniqueVideoIds = [...new Set(videoIds.map((videoId) => videoId.trim()).filter(Boolean))];
   if (uniqueVideoIds.length === 0) return [];
 
-  const latestBucket = await fetchLatestBucket();
-  if (!latestBucket) return [];
-
-  const snapshotMap = await fetchSnapshotMapForVideoIds(latestBucket, uniqueVideoIds);
+  // One RPC retains a single chosen bucket even for non-route callers with more
+  // than 120 IDs. The public route independently enforces its existing cap.
+  const snapshotMap = await fetchHomeKpiSnapshotMap(uniqueVideoIds, options);
 
   return uniqueVideoIds
     .map((videoId) => snapshotMap.get(videoId))

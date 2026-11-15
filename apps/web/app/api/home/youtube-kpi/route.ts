@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getLatestYouTubeKpiMetricsForVideoIds } from '@/lib/admin/youtube-kpi-snapshots';
+import { createHomeKpiServerTiming, resolveHomeKpiQueryMode } from '@/lib/performance/home-kpi-server-timing';
 import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
 
 export const runtime = 'nodejs';
@@ -25,30 +26,42 @@ function normalizeVideoIds(value: unknown): string[] {
 }
 
 export async function POST(request: NextRequest) {
+  const timing = createHomeKpiServerTiming();
+  // Deployment-owned only: no request/header/body selector and no implicit
+  // fallback after an RPC error. The missing value selects the RPC release.
+  const mode = resolveHomeKpiQueryMode(process.env.TZUDONG_HOME_KPI_QUERY_MODE);
+  const respond = (metrics: Awaited<ReturnType<typeof getLatestYouTubeKpiMetricsForVideoIds>>, cacheControl: string) =>
+    NextResponse.json({ metrics }, {
+      status: 200,
+      headers: { 'Cache-Control': cacheControl, 'Server-Timing': timing.header(mode) },
+    });
+
+  if (mode === null) return respond([], 'no-store');
+
   try {
-    const requestBody = await readBoundedJsonRequest(request, MAX_YOUTUBE_KPI_REQUEST_BYTES);
+    const finishBody = timing.beginBody();
+    let requestBody;
+    try {
+      requestBody = await readBoundedJsonRequest(request, MAX_YOUTUBE_KPI_REQUEST_BYTES);
+    } finally {
+      finishBody();
+    }
     if (!requestBody.ok) {
-      return NextResponse.json(
-        { metrics: [] },
-        { status: 200, headers: { 'Cache-Control': 'no-store' } },
-      );
+      return respond([], 'no-store');
     }
 
     const body = requestBody.value;
     const videoIds = normalizeVideoIds((body as { videoIds?: unknown } | null)?.videoIds);
 
     if (videoIds.length === 0) {
-      return NextResponse.json({ metrics: [] }, { headers: { 'Cache-Control': 'public, max-age=60' } });
+      return respond([], 'public, max-age=60');
     }
 
-    const metrics = await getLatestYouTubeKpiMetricsForVideoIds(videoIds);
+    const metrics = await getLatestYouTubeKpiMetricsForVideoIds(videoIds, { mode, observe: timing.observe });
 
-    return NextResponse.json(
-      { metrics },
-      { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } },
-    );
+    return respond(metrics, 'public, max-age=60, stale-while-revalidate=300');
   } catch {
     console.error('[home/youtube-kpi] failed:');
-    return NextResponse.json({ metrics: [] }, { status: 200, headers: { 'Cache-Control': 'no-store' } });
+    return respond([], 'no-store');
   }
 }
