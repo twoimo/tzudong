@@ -596,7 +596,7 @@ class ThumbnailQueuePg17(unittest.TestCase):
                      'FIXTURE_OWNER_ID':self.owner,'FIXTURE_TOKEN_0':self.workers[0]}
                 policy=('(version 1)(allow default)(deny network*)(allow network-outbound (remote ip "localhost:*"))'
                         '(allow network-bind (local ip "localhost:*"))(allow network-inbound (local ip "localhost:*"))')
-                result=subprocess.run(['/usr/bin/sandbox-exec','-p',policy,str(executable),'--no-env-file','run',str(PRIVATE_TS),mode],
+                result=subprocess.run(['/usr/bin/sandbox-exec','-p',policy,str(executable),'--no-env-file','--conditions=react-server','run',str(PRIVATE_TS),mode],
                                       cwd=ROOT/'apps/web',env=env,text=True,capture_output=True,timeout=25)
                 (self.root/('private-'+mode+'.log')).write_text(result.stdout+'\n'+result.stderr)
                 self.assertEqual(0,result.returncode,result.stderr)
