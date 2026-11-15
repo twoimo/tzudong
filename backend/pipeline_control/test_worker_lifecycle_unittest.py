@@ -14,11 +14,13 @@ from unittest.mock import patch
 
 from backend.pipeline_control import live_run
 from backend.pipeline_control.adapter import default_live_runner
-from backend.pipeline_control.state_machine import RunRecord
+from backend.pipeline_control.graph import STEP_SPECS
+from backend.pipeline_control.state_machine import ControlPlaneError, RunRecord
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.worker import process_one
 
 STEP_TIMEOUT_ENV = "TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS"
+DAY = 86_400.0
 
 
 class _Clock:
@@ -76,6 +78,105 @@ def _target_status(store: MemoryStore, target: str) -> str:
 
 def _read(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+class LiveStepLeaseTests(unittest.TestCase):
+    def test_step_longer_than_the_claim_ttl_keeps_its_run_and_lock(self) -> None:
+        clock = _Clock()
+        store = MemoryStore(clock=clock)
+        run = _enqueue(store)
+
+        def minute_long_step(argv: list[str]) -> int:
+            clock.advance(60)
+            with self.assertRaises(ControlPlaneError) as held:
+                _enqueue(store, key="lifecycle-rival")
+            self.assertEqual(held.exception.code, "lock_held")
+            return 0
+
+        with _local_pipeline() as root:
+            result = process_one(
+                store, live=True, runner=minute_long_step, manifest_path=root / "summary.json"
+            )
+
+        self.assertEqual(result, "Succeeded")
+        self.assertEqual(store.get(run.id).status, "Succeeded")
+
+    def test_worker_that_outlived_its_lease_stops_and_reports_failed(self) -> None:
+        clock = _Clock()
+        store = MemoryStore(clock=clock)
+        run = _enqueue(store)
+        steps: list[list[str]] = []
+
+        def step_on_a_suspended_host(argv: list[str]) -> int:
+            steps.append(argv)
+            clock.advance(DAY)
+            _enqueue(store, key="lifecycle-next")
+            return 0
+
+        with _local_pipeline() as root:
+            result = process_one(
+                store,
+                live=True,
+                runner=step_on_a_suspended_host,
+                manifest_path=root / "summary.json",
+            )
+            manifest = _read(root / "summary.json")
+
+        self.assertEqual(result, "Failed")
+        self.assertEqual(len(steps), 1)
+        reclaimed = store.get(run.id)
+        self.assertEqual((reclaimed.status, reclaimed.error_code), ("Failed", "lease_expired"))
+        self.assertEqual(_target_status(store, "tzuyang"), "Queued")
+        self.assertEqual((manifest["finalStatus"], manifest["jobId"]), ("ERROR", run.id))
+
+    def test_run_reclaimed_during_its_last_step_is_not_reported_succeeded(self) -> None:
+        clock = _Clock()
+        store = MemoryStore(clock=clock)
+        run = _enqueue(store)
+
+        def last_step_on_a_suspended_host(argv: list[str]) -> int:
+            if STEP_SPECS[-1].script in argv:
+                clock.advance(DAY)
+                _enqueue(store, key="lifecycle-next")
+            return 0
+
+        with _local_pipeline() as root:
+            result = process_one(
+                store,
+                live=True,
+                runner=last_step_on_a_suspended_host,
+                manifest_path=root / "summary.json",
+            )
+            manifest = _read(root / "summary.json")
+
+        self.assertEqual(result, "Failed")
+        self.assertEqual(store.get(run.id).error_code, "lease_expired")
+        self.assertEqual(_target_status(store, "tzuyang"), "Queued")
+        self.assertEqual(manifest["finalStatus"], "ERROR")
+
+    def test_operator_cancel_during_a_step_ends_the_run_cancelled(self) -> None:
+        store = MemoryStore(clock=_Clock())
+        run = _enqueue(store)
+        steps: list[list[str]] = []
+
+        def step_cancelled_by_the_operator(argv: list[str]) -> int:
+            steps.append(argv)
+            store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+            return 0
+
+        with _local_pipeline() as root:
+            result = process_one(
+                store,
+                live=True,
+                runner=step_cancelled_by_the_operator,
+                manifest_path=root / "summary.json",
+            )
+            manifest = _read(root / "summary.json")
+
+        self.assertEqual(result, "Cancelled")
+        self.assertEqual(len(steps), 1)
+        self.assertEqual(store.get(run.id).status, "Cancelled")
+        self.assertEqual(manifest["finalStatus"], "ERROR")
 
 
 class HungStepTests(unittest.TestCase):
