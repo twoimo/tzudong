@@ -30,11 +30,15 @@ export function resolveNaverMapTimedOverlayDropPlan(
     return {
         dropMapToast: overlayKind === 'loading',
         dropAnnouncement: overlayKind === 'loading' || overlayKind === 'map-toast',
-        dropRestaurantCount: overlayKind === 'loading' || overlayKind === 'map-toast' || overlayKind === 'announcement',
+        dropRestaurantCount: overlayKind === 'loading'
+            || overlayKind === 'map-toast'
+            || overlayKind === 'announcement'
+            || overlayKind === 'theme',
         dropOnlineUsers: overlayKind === 'loading'
             || overlayKind === 'map-toast'
             || overlayKind === 'announcement'
-            || overlayKind === 'restaurant-count',
+            || overlayKind === 'restaurant-count'
+            || overlayKind === 'theme',
     };
 }
 
@@ -62,10 +66,10 @@ export function resolveNaverMapOverlayKind({
     if (isLoadingRestaurants || !isLoaded) return 'loading';
     if (isMapToastVisible) return 'map-toast';
     if (showAnnouncementToast && hasAnnouncementTitle) return 'announcement';
+    if (restaurantsLength > 0 && hasActiveTheme) return 'theme';
     if (restaurantsLength > 0 && showRestaurantCount) return 'restaurant-count';
     if (showOnlineUsers) return 'online-users';
     if (restaurantsLength === 0) return 'empty';
-    if (hasActiveTheme) return 'theme';
     return null;
 }
 

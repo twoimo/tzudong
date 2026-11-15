@@ -136,6 +136,15 @@ retain exact status semantics, healthy-read request counts, disabled mutations,
 keyboard recovery and responsive reachability. Hosted rerun results must be
 recorded separately below.
 
+An additional map review found that the periodic online-user notice could
+unmount an open filter explanation for four seconds every thirty seconds.
+For a ready, non-empty result, the active theme now precedes passive count and
+presence notices; loading, error/toast, explicit announcements and empty-result
+behavior retain priority. The existing timed-drop policy prevents a stale count
+or presence notice from reappearing after the explanation. This focused fix
+passed seven resolver tests and targeted lint without changing presence timers,
+permission or location behavior.
+
 | Layer | Result at implementation checkpoint | Limits |
 | --- | --- | --- |
 | Public and authenticated production inspection | Map, dashboard, insights, storyboard and thumbnail loaded and inspected | Existing production source, before deployment |

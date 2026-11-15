@@ -1965,6 +1965,7 @@ const NaverMapView = memo(({
 
     const activeMapOverlayKind = resolveNaverMapOverlayKind({
         hasAnnouncementTitle: Boolean(announcementToastTitle),
+        hasActiveTheme: Boolean(filters.featuredTheme),
         isLoaded,
         isLoadingRestaurants,
         isMapToastVisible: mapToast?.isVisible === true,
