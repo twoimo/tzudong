@@ -88,6 +88,8 @@ def run_once(
             dry_run=not use_live,
         )
     except ControlPlaneError as exc:
+        if exc.code != "lock_held":
+            raise
         print(f"operation=live_run_refused code={exc.code}")
         write_run_manifest(
             "Failed",
