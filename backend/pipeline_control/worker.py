@@ -16,6 +16,7 @@ from backend.pipeline_control.adapter import (
     SKIP_HEAVY_REASON,
     execute_steps,
     noop_event_sink,
+    step_timeout_seconds,
 )
 from backend.pipeline_control.media_cache import owned_media_cache
 from backend.pipeline_control.graph import AdapterGraphError, STEP_SPECS
@@ -52,8 +53,12 @@ from backend.pipeline_control.schedule import (
     inspect_committed_cadence_sources,
     validate_cadence,
 )
-from backend.pipeline_control.state_machine import RunRecord
-from backend.pipeline_control.store import MemoryStore
+from backend.pipeline_control.state_machine import TERMINAL_STATUSES, RunRecord
+from backend.pipeline_control.store import (
+    LEASE_TTL_SECONDS,
+    STEP_LEASE_MARGIN_SECONDS,
+    MemoryStore,
+)
 from backend.utils.supabase_rest import (
     PIPELINE_COMPUTE_PROFILE_ENV,
     PIPELINE_DATA_SINK_ENV,
@@ -485,24 +490,12 @@ def process_one(
         )
         return "Failed"
 
-    def should_stop() -> str | None:
-        checkpoint = getattr(store, "checkpoint", None)
-        if checkpoint is not None:
-            current = checkpoint(run.id, adapter_index=run.adapter_index)
-        else:
-            current = store.get(run.id)
-            store.beat(run.id)
-        if current.status == "Cancelled":
-            return "Cancelled"
-        if current.status == "Paused":
-            return "Paused"
-        return None
-
     use_live = live_enabled() if live is None else live
     execution_mode = "live" if use_live and not run.dry_run else "dry_run"
     try:
         preflight_data_sink(compute_profile=run.profile)
-    except ProfileError as exc:
+        step_timeout = step_timeout_seconds()
+    except (ProfileError, AdapterGraphError) as exc:
         store.finish_failed(run.id, exc.code)
         write_run_manifest(
             "Failed",
@@ -535,6 +528,20 @@ def process_one(
             hosted_gate_rejection_code=rejection_code,
         )
         return "Failed"
+    lease_ttl = (
+        step_timeout + STEP_LEASE_MARGIN_SECONDS if execution_mode == "live" else LEASE_TTL_SECONDS
+    )
+
+    def should_stop() -> str | None:
+        checkpoint = getattr(store, "checkpoint", None)
+        if checkpoint is not None:
+            current = checkpoint(run.id, adapter_index=run.adapter_index)
+        else:
+            current = store.beat(run.id, lease_ttl)
+        if current.status == "Paused" or current.status in TERMINAL_STATUSES:
+            return current.status
+        return None
+
     collected: list[dict] = []
 
     def emit(event: dict) -> None:
@@ -560,9 +567,10 @@ def process_one(
                 )
                 if result == 'Succeeded':
                     if execution_mode == "live":
-                        store.finish_succeeded(run.id)
+                        result = store.finish_succeeded(run.id).status
                     else:
-                        store.finish_dry_run(run.id)
+                        result = store.finish_dry_run(run.id).status
+                if result == 'Succeeded':
                     success_recorded = True
                     try:
                         media_completed()

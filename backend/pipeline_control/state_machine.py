@@ -1,4 +1,16 @@
-"""Run status, lock lease, and adapter step checkpoints."""
+"""Run status, lock lease, and adapter step checkpoints.
+
+Run lifecycle::
+
+    Queued --claim--> Fetching --all steps pass--> Succeeded
+    Queued | Fetching | Inserting --pause--> Paused --resume--> Queued
+    Queued | Fetching | Inserting | Paused --cancel--> Cancelled
+    Queued | Fetching | Inserting | Paused --step or worker failure--> Failed
+    Queued | Fetching | Inserting --lease lapsed--> Failed (lease_expired)
+
+``Succeeded``, ``Failed``, and ``Cancelled`` are terminal. A terminal run does
+not change again and does not hold its target lock.
+"""
 
 from __future__ import annotations
 
@@ -20,6 +32,7 @@ RUN_STATUSES = (
     "Succeeded",
 )
 ACTIVE_LOCK_STATUSES = frozenset({"Queued", "Fetching", "Inserting", "Paused"})
+TERMINAL_STATUSES = frozenset(RUN_STATUSES) - ACTIVE_LOCK_STATUSES
 TARGET_IDLE = "Idle"
 ILLEGAL_TRANSITION = "illegal_transition"
 PAUSE_FROM = frozenset({"Queued", "Fetching", "Inserting"})
