@@ -5,6 +5,48 @@ It is separate from the Next app, production, authentication, Supabase, real map
 providers, paid generation, and the frozen browser performance measurements.
 Passing it does not establish those integrations or LCP/INP/CLS performance.
 
+## Observed stop — 2026-11-15
+
+The first hosted browser-launch attempt **failed and remains failed**. Run
+`43709547248`, job `132797907943`, artifact `14160126275` retained a
+`QA_BROWSER_LAUNCH_FAILED_STOP_NO_RETRY` receipt with the script's
+`explicit_sandbox_denial` classification. No UI phase or Bombadil exploration
+started. No screenshots, geometry results, property results or rendered-UI pass
+were produced. The underlying raw browser diagnostic was not retained, so this
+classification does not identify a particular kernel or host-policy cause.
+
+| Observed field | Retained value |
+| --- | --- |
+| Feature head | `e7febf400dce2f7a594b3513366c0292cb4430e9` |
+| Actual clean merge checkout in both receipts | `50ce8726e2424fe2f6460eb5dbc55c5cb3ed0579` |
+| QA start / finish UTC | `2026-11-15T11:35:12.220Z` / `2026-11-15T11:35:13.387Z` |
+| Runner launch API invocation counter | `1` |
+| Sandbox requested | `true` |
+| Runtime browser version / disabling-flag readback | `null` / `null` — not reached |
+| UI phases | `[]` — zero started |
+| Fixture requests / capability reads | `0` / `0` |
+
+The prelaunch [build receipt](../../apps/web/performance/user-journey-ux-qa-20261115/bombadil-43709547248/build-receipt.json)
+binds the compiled fixture and 23 source hashes. Its `browserLaunched:false`
+describes the build stage, before the attempted launch. The
+[QA receipt](../../apps/web/performance/user-journey-ux-qa-20261115/bombadil-43709547248/qa-receipt.json)
+records the later failure. Both copies preserve the artifact bytes; their
+[provenance](../../apps/web/performance/user-journey-ux-qa-20261115/bombadil-43709547248/provenance.json)
+retains the archive/member hashes and run identities. Zero error/blocked-request
+counters do not represent passing checks: the corresponding page observers and
+UI phases were never reached. The invocation counter is not an independent
+measurement of Chromium process creation.
+
+The failed run is preserved without a retry, sandbox weakening, runner switch or
+launch-flag change. Automatic PR execution has now been removed to prevent later
+source commits from repeating the denied launch. Manual dispatch remains behind
+the explicit, default-false `environment_approved` input. When false, the first
+step fails with `QA_STOPPED_ENVIRONMENT_APPROVAL_REQUIRED` before checkout,
+dependency installation or browser launch. A true input must follow actual
+environment approval; it does not itself establish that approval or change the
+existing sandbox requirement. No new dispatch is part of this change. Do not use
+GitHub's rerun action on the historical job: it retains the earlier workflow.
+
 ## Pinned tooling
 
 | Input | Pin |
@@ -63,13 +105,14 @@ reach this executor's loopback server; that attempt is not rendered UI evidence.
 
 ## Hosted execution and admission
 
-The new `Bombadil component UX QA` workflow uses a fresh GitHub-hosted job,
+The manual `Bombadil component UX QA` workflow uses a fresh GitHub-hosted job,
 `contents: read`, no supplied secrets, and checkout credential persistence off.
 It leaves existing CI gates and the frozen measurement workflow unchanged.
-Chrome is installed before the run, then launched once with `chromiumSandbox:
-true`. There are no sandbox-disabling flags, privilege/policy changes or browser
-launch retries. Launch denial stops the job and is retained as a fixed failure
-code. This workflow requires parent review before its first push/execution.
+Only after the explicit environment-approval step succeeds does it install
+Chrome and invoke launch with `chromiumSandbox: true`. The runner has no retry
+loop or sandbox-disabling flags. Launch denial stops the job and is retained as
+a fixed failure code. Runtime sandbox/Chrome identity readback requires a
+successful launch and was not reached in the retained failed run.
 
 The harness owns a fresh temporary browser profile and its loopback debugger.
 Bombadil connects only to that profile, never to a user's existing browser.
@@ -79,7 +122,8 @@ only exact fixture asset and inert capability GET/HEAD URLs. All WebSockets,
 arbitrary routes, query strings, redirects, writes, service workers and popups
 are blocked. CSP denies frames, workers, objects and form submission.
 
-Two fixed viewports run sequentially: 1024×768 and 390×844. Each runs seven
+After successful launch admission, two fixed viewports are intended to run
+sequentially: 1024×768 and 390×844. Each runs seven
 deterministic component cases, screenshots/geometry for five views, and one
 30-second Bombadil exploration. The first property violation stops that phase;
 there are no retries or replacement samples. Deterministic cases cover theme
@@ -88,7 +132,8 @@ performance filtering/export, thumbnail reference role preservation,
 storyboard pagination/unavailable send, and loading skeletons. Seven configured
 Bombadil properties cover uncaught errors, rejected promises, local navigation,
 page width, selected theme state, reference alignment and accessible names.
-JavaScript coverage instrumentation is disabled; this is UI property evidence.
+JavaScript coverage instrumentation is disabled. These are the configured checks;
+the retained run stopped before producing UI property evidence.
 
 Acceptance requires the exact binary/browser authority, one sandbox-requested
 launch without disabling flags, both case sets, nonempty Bombadil action and

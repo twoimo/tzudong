@@ -73,12 +73,12 @@ export function StoryboardConversation({ context, sceneCount, onUsePrompt, onWri
     } finally { if (!current.signal.aborted) { controller.current = null; setPending(''); } }
   }
 
-  return <section aria-labelledby="storyboard-conversation-title" className="flex h-full min-h-[360px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
+  return <section aria-labelledby="storyboard-conversation-title" data-layout-primitives="scroll-body-shell stack" className="flex h-full min-h-[360px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
     <header className="border-b border-border px-4 py-3">
       <h3 id="storyboard-conversation-title" className="flex items-center gap-2 text-base font-semibold"><MessageCircle size={18} aria-hidden="true" />AI와 이야기 만들기</h3>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">아이디어를 함께 정리해요. 제안은 확인한 뒤 요청에 옮겨요.</p>
     </header>
-    <div ref={transcript} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain scroll-pb-4 p-4" aria-label="기획 대화" role="log" aria-live="polite" aria-relevant="additions">
+    <div ref={transcript} data-scroll-owner="storyboard-conversation" className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain scroll-pb-4 p-4" aria-label="기획 대화" role="log" aria-live="polite" aria-relevant="additions">
       {turns.length === 0 && <div className="space-y-3">
         <p className="text-sm leading-6">어떤 이야기를 그리고 싶으세요? 장소, 음식, 분위기부터 적어도 좋아요.</p>
         <div className="grid gap-2">{examples.map(example => <button key={example} type="button" className={`${buttonClass} text-left font-normal`} disabled={!!pending || disabled}

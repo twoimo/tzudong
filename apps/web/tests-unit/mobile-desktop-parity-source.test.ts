@@ -362,10 +362,13 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).toContain(
       "rounded-full h-11 px-2 home-map-floating-control-text text-xs font-medium",
     );
-    expect(homeAppGlobalsSource).toContain(".home-map-floating-control-text");
-    expect(homeAppGlobalsSource).toContain("font-size: 0.75rem");
-    expect(homeAppGlobalsSource).toContain("line-height: 1rem");
-    expect(themeFiltersSource).toContain("home-map-floating-control-text");
+    const floatingControlTextRule = homeAppGlobalsSource.match(
+      /\.home-map-floating-control-text\s*\{([^}]*)\}/,
+    )?.[1] ?? "";
+    expect(floatingControlTextRule).toMatch(/font-size:\s*0\.875rem\s*;/);
+    expect(floatingControlTextRule).toMatch(/line-height:\s*1\.25rem\s*;/);
+    expect(themeFiltersSource).toContain("home-map-floating-control-text text-sm font-medium");
+    expect(themeFiltersSource).toContain("focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2");
     expect(mobileOverlaySource).not.toContain(
       "pointer-events-auto inline-flex h-11 min-h-11 snap-start shrink-0 items-center gap-1 rounded-full",
     );

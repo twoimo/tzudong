@@ -18,6 +18,7 @@ const acceptedAuthHelperPath = 'lib/admin/storyboard/rag-actions-auth.ts';
  * the accepted delegation is asserted here together with the fail-closed check.
  */
 const delegatedProductionApiModule = 'lib/admin/storyboard/production-api.ts';
+const delegatedAssistantRoute = 'app/api/admin/storyboard/production/assistant/route.ts';
 const delegatedProductionApiRoutes: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['app/api/admin/storyboard/production/route.ts', ['GET', 'POST']],
   ['app/api/admin/storyboard/production/[id]/route.ts', ['GET', 'POST']],
@@ -281,6 +282,28 @@ describe('admin route auth source contract', () => {
       const isStoryboardRagRoute = storyboardRagRoutePaths.has(file);
 
       if (assertThumbnailDelegation(file, source)) continue;
+
+      if (file === delegatedAssistantRoute) {
+        // The planner uses a separate, bounded API. Accept only the exact
+        // default-bound factory and verify both methods enter the auth guard.
+        expect(source).toContain("from '@/lib/admin/storyboard/assistant-api'");
+        expect(source).toContain('const api = createStoryboardAssistantApi();');
+        expect(exportedHandlerBodies(source)).toHaveLength(0);
+        expect([...source.matchAll(/export const (GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s*=/g)].map(match => match[1])).toEqual(['GET', 'POST']);
+        expect(source).toContain('export const GET = api.GET;');
+        expect(source).toContain('export const POST = api.POST;');
+        expect(source).not.toMatch(/createSupabaseServiceRoleClient|fetch\s*\(|request\.(?:json|formData)\s*\(/);
+        const api = appSource('lib/admin/storyboard/assistant-api.ts');
+        expect(api).toContain("import { requireAdmin } from '@/lib/auth/require-admin'");
+        expect(api).toContain('const authenticate = options.requireAdmin ?? requireAdmin;');
+        expect(api).toMatch(/async function authenticated\(\)\s*\{\s*const auth = await authenticate\(\);\s*if \(!auth\.ok\) throw new AssistantError\('unauthorized'/);
+        expect(api).toContain("if (!z.string().uuid().safeParse(auth.userId).success) throw new AssistantError('unauthorized', 403);");
+        expect(api).toMatch(/try \{ await authenticated\(\); return await run\(\); \}/);
+        expect(api).toContain('GET: () => guarded(async () => {');
+        expect(api).toContain('POST: (request: Request) => guarded(async () => {');
+        expect(api).not.toMatch(/createSupabaseServiceRoleClient|supabase\.auth\.getUser/);
+        continue;
+      }
 
       if (file === delegatedOperatingReadbackRoute) {
         const moduleSource = appSource(delegatedOperatingReadbackModule);

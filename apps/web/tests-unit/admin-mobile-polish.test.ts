@@ -45,16 +45,24 @@ describe("admin mobile visual polish", () => {
     expect(adminCss).toContain('[data-admin-dashboard-series-toggle="true"] { height: auto; min-height: 44px; }');
   });
 
-  test("shared badges are square only inside the admin shell; account avatars stay round", () => {
+  test("admin badge geometry stays scoped and the account avatar keeps its compact neutral treatment", () => {
     const badgeSource = read("components/ui/badge.tsx");
     const adminCss = read("styles/admin-ui.css");
     const consoleSource = read("components/admin/AdminConsoleOverview.tsx");
 
     expect(badgeSource).toContain('data-slot="badge"');
-    expect(adminCss).toContain(
-      '[data-admin-console-shell="true"] [data-slot="badge"] { border-radius: 0; }',
-    );
-    expect(consoleSource).toContain('rounded-full bg-primary/10 text-primary');
+    expect(badgeSource).toContain('inline-flex items-center rounded-full');
+    const badgeRules = [...adminCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter((rule) => rule[1].includes('[data-slot="badge"]'));
+    expect(badgeRules.map((rule) => rule[1].trim())).toEqual([
+      '[data-admin-console-shell="true"] [data-slot="badge"]',
+    ]);
+    expect(badgeRules[0]?.[2]).toMatch(/border-radius:\s*8px\s*;/);
+    const avatarClass = consoleSource.match(/const sidebarAccountAvatarClassName\s*=\s*"([^"]+)"/)?.[1].split(/\s+/) ?? [];
+    for (const token of ['h-8', 'w-8', 'shrink-0', 'rounded-lg', 'border-border', 'bg-muted', 'text-muted-foreground']) {
+      expect(avatarClass).toContain(token);
+    }
     expect(consoleSource).toContain('data-admin-sidebar-account-avatar="true"');
+    expect(consoleSource).toContain('aria-hidden="true"\n          data-admin-sidebar-account-avatar="true"');
   });
 });

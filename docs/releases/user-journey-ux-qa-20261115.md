@@ -105,6 +105,37 @@ as a distributed spend limit. No live provider call is part of this QA record.
 
 ## Validation record
 
+### Hosted readiness and preview observations
+
+Read-only catalog inspection of the already documented production Supabase
+project confirmed that `public.get_feature_runtime_capability(uuid)` and its
+private implementation are absent. The capability marker, receipt-result and
+review-generation tables and the named storage verification guards are also
+absent. This is stronger evidence than inferring a missing migration from a UI
+banner. The [fixed boolean receipt](../../apps/web/performance/user-journey-ux-qa-20261115/storyboard-readiness-catalog.json)
+and [bounded catalog query](../../apps/web/performance/user-journey-ux-qa-20261115/storyboard-readiness-catalog.sql)
+contain no user records or credentials. Both reads used read-only transactions
+and a three-second statement timeout. The larger predicate diagnostic was not
+run after its prerequisites failed; no role, grant, schema, gate or worker was
+changed. Existing hosted release prerequisites still apply.
+
+Preview `dpl_GHqvRKN9axxyoEqhd2pBrqtoWjwo` reached Ready at source
+`e7febf400dce2f7a594b3513366c0292cb4430e9`. Its public shell and compact
+restaurant list rendered, but Naver displayed map authentication failure on the
+unique preview origin. Selecting the top-view theme entered pending and then
+read-error state there. The same filter on the unchanged production source
+resolved to 140 restaurants. Preview administrator navigation correctly
+redirected to sign-in; production-origin cookies were not copied. These
+observations are not successful preview map/admin acceptance.
+
+The first complete CI pass found stale header/disclosure/style expectations and
+a real storyboard keyboard-focus regression after a failed project selection.
+The latter now restores the project selector without stealing a successful
+title focus; duplicate catalog error announcements are removed. Updated tests
+retain exact status semantics, healthy-read request counts, disabled mutations,
+keyboard recovery and responsive reachability. Hosted rerun results must be
+recorded separately below.
+
 | Layer | Result at implementation checkpoint | Limits |
 | --- | --- | --- |
 | Public and authenticated production inspection | Map, dashboard, insights, storyboard and thumbnail loaded and inspected | Existing production source, before deployment |
@@ -118,7 +149,7 @@ as a distributed spend limit. No live provider call is part of this QA record.
 | Corrected full web build | Passed: compile, type check, 58 static pages and route CSS boundary verification | Local candidate; not a production deployment |
 | Local browser performance preflight | Previously denied; frozen evidence retained | Not retried or relabelled as successful |
 | Cloud browser → executor fixture | Connection refused because the runtimes have separate loopback networks | No tunnel, browser-profile attachment or hidden fallback |
-| New hosted component workflow | Execution and screenshots must be reviewed before rendered-UI success is claimed | Synthetic components, not full Next/auth/DB/map integration |
+| New hosted component workflow | **Failed and stopped:** run `43709547248`, job `132797907943`, `QA_BROWSER_LAUNCH_FAILED_STOP_NO_RETRY`; classified `explicit_sandbox_denial` | Runner launch API invocation counter 1; UI phases 0; no screenshots, geometry or Bombadil property result |
 | First hosted workflow registration | Failed before any job/browser: `runner.temp` is unavailable in job-level `env` | Moved cache-path setup into an executed step; original failed run retained |
 | Release and deployment | Exact-head protected checks and final deployment readback are required | Local results are not substitutes |
 
@@ -127,6 +158,26 @@ connected the previously missed overseas map path, and identified conversation
 remount and create-in-flight proposal conflicts. Corrections preserve a single
 conversation instance within a saved project and block proposal application while
 a creation request is in flight.
+
+The failed hosted run used actual clean merge checkout
+`50ce8726e2424fe2f6460eb5dbc55c5cb3ed0579`, not feature head
+`e7febf400dce2f7a594b3513366c0292cb4430e9`. The retained
+[build receipt](../../apps/web/performance/user-journey-ux-qa-20261115/bombadil-43709547248/build-receipt.json),
+[QA receipt](../../apps/web/performance/user-journey-ux-qa-20261115/bombadil-43709547248/qa-receipt.json)
+and [artifact provenance](../../apps/web/performance/user-journey-ux-qa-20261115/bombadil-43709547248/provenance.json)
+bind artifact `14160126275` and its exact bytes. The QA window was
+`2026-11-15T11:35:12.220Z`–`11:35:13.387Z`. Sandbox was requested; runtime browser
+version and actual disabling-flag readback stayed `null` because launch did not
+complete. Empty phases and zero page/request counters cannot be counted as
+successful UI checks. This failure is separate from the earlier frozen browser
+performance denial and the cloud browser's inaccessible executor loopback.
+
+Automatic PR triggering of this new workflow has been removed, so later source
+commits do not repeat the denied browser launch. Manual dispatch requires the
+default-false `environment_approved` input; false fails before installation or
+launch. No new dispatch, historical-job rerun, sandbox change, runner switch or
+launch-flag change was made. The failed historical result remains visible and
+rendered-UI acceptance remains incomplete.
 
 The hosted fixture has its own [bounded execution and receipt contract](../operations/bombadil-qa.md).
 Record the actual workflow run, source SHA, screenshot review, release checks,

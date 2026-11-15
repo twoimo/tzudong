@@ -1,38 +1,41 @@
 name: Bombadil component UX QA
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/bombadil-ux-qa.yml'
-      - '.github/chrome-for-testing.v1.json'
-      - 'scripts/run-bombadil-qa.mjs'
-      - 'apps/web/tests/bombadil/**'
-      - 'apps/web/tests/fixtures/local-storyboard-ui/next-image-shim.ts'
-      - 'apps/web/components/**'
-      - 'apps/web/lib/admin/**'
-      - 'apps/web/lib/home-map-*.ts'
-      - 'apps/web/app/*.css'
-      - 'apps/web/styles/**'
-      - 'apps/web/package.json'
-      - 'apps/web/package-lock.json'
   workflow_dispatch:
+    inputs:
+      environment_approved:
+        description: 'Explicit environment approval after the retained sandbox denial; never permits sandbox bypass'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: bombadil-component-qa-${{ github.event.pull_request.number || github.ref }}
+  group: bombadil-component-qa-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   component-qa:
     name: Isolated components / sandboxed Chrome
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     env:
       CI: 'true'
     steps:
+      - name: Require explicit environment approval before installation or launch
+        id: environment-approval
+        env:
+          ENVIRONMENT_APPROVED: ${{ inputs.environment_approved }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$ENVIRONMENT_APPROVED" != 'true' ]; then
+            printf '%s\n' 'QA_STOPPED_ENVIRONMENT_APPROVAL_REQUIRED'
+            exit 1
+          fi
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
@@ -81,7 +84,7 @@ jobs:
             --bun "$(command -v bun)" \
             --bombadil "$RUNNER_TEMP/bombadil-tool/bombadil"
       - name: Retain minimized receipts and synthetic screenshots
-        if: always()
+        if: ${{ always() && steps.environment-approval.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: bombadil-component-qa-${{ github.run_id }}-${{ github.run_attempt }}

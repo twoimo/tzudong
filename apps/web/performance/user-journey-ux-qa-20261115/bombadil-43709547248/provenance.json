@@ -1,0 +1,42 @@
+{
+  "schema": "tzudong-bombadil-stopped-evidence-v1",
+  "recordedAtUtc": "2026-11-15T11:43:49.735143+00:00",
+  "gitHub": {
+    "runId": 43709547248,
+    "jobId": 132797907943,
+    "artifactId": 14160126275,
+    "metadataAuthority": "parent-observed GitHub identities"
+  },
+  "featureHead": "e7febf400dce2f7a594b3513366c0292cb4430e9",
+  "actualCheckoutSha": "50ce8726e2424fe2f6460eb5dbc55c5cb3ed0579",
+  "archive": {
+    "bytes": 2536,
+    "sha256": "b3a856ad6265e6b011b848ed47cd8b8f727b73d80de02d504dc43ea3076f05bf",
+    "verifiedMembers": 2,
+    "archiveCopied": false
+  },
+  "receipts": {
+    "build-receipt.json": {
+      "bytes": 3365,
+      "sha256": "0d6570093dfabb099f7d25aa3b52bcad80d57ce64205126436b6bd7decd36b80"
+    },
+    "qa-receipt.json": {
+      "bytes": 1053,
+      "sha256": "f619dd3cdae615ac264f5d5c8552a85be8f3e17abe7a4bfd94b2259d53653fa2"
+    }
+  },
+  "originalReceiptBytesPreserved": true,
+  "currentSourceHashesMatched": 23,
+  "observedStatus": "failed-stop-before-ui",
+  "browserLaunchApiInvocationCounter": 1,
+  "uiPhasesStarted": 0,
+  "screenshotsProduced": 0,
+  "runtimeBrowserVersionObserved": false,
+  "sandboxFlagsRuntimeReadbackReached": false,
+  "interpretationLimits": [
+    "The build receipt is a prelaunch snapshot, not a complete-run browser claim.",
+    "Zero page and blocked-request counters were initialized before page observers existed.",
+    "The launch counter records runner API invocation, not independently observed OS process creation.",
+    "The fixed sandbox-denial category does not retain a raw diagnostic or identify the specific host policy."
+  ]
+}

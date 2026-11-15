@@ -393,6 +393,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   }
 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
+    data-layout-primitives="scroll-body-shell stack" data-scroll-owner="storyboard-workspace"
     className="h-full min-h-0 min-w-0 overflow-y-auto bg-background text-foreground">
     <AdminPageHeader title={getAdminModuleTitle("storyboard")} titleId="local-storyboard-title" icon={Clapperboard}
       actions={<div className="flex min-w-0 flex-wrap items-center gap-2" data-admin-storyboard-toolbar="true">
@@ -419,11 +420,20 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
         <p className="text-sm leading-6">새 생성과 변경은 준비 중이에요. 저장된 프로젝트와 이력은 계속 볼 수 있어요.</p>
         <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick(value => value + 1)}>제작 가능 여부 다시 확인</button>
       </div>}
-      {catalogError && <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+      {catalogError && !showLibrary && <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
         <span>{catalogError}</span><button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick(value => value + 1)}>목록 다시 불러오기</button>
       </div>}
       {showLibrary && <StoryboardProjectLibrary projects={catalog.projects} selectedId={projectId} statusLabels={STATUSES}
-        busy={catalogBusy} error={catalogError} countUnknown={!catalogLoaded} onRefresh={() => setCatalogTick(value => value + 1)} onSelect={selectProject}
+        busy={catalogBusy} error={catalogError} countUnknown={!catalogLoaded} onRefresh={() => setCatalogTick(value => value + 1)} onSelect={id => {
+          if (!selectProject(id)) return;
+          requestAnimationFrame(() => {
+            const active = document.activeElement;
+            const hidden = active instanceof HTMLElement && Boolean(active.closest("[hidden]"));
+            // Closing the library removes the chosen button. If the project read
+            // fails, retain a useful keyboard target instead of leaving focus on body.
+            if (active === document.body || hidden) document.getElementById("local-project-select")?.focus();
+          });
+        }}
         onStart={() => { selectProject(null); setNewPanel("request"); setMobileView("conversation"); requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus()); }} />}
         {showSetup && <section className={panelClass} aria-labelledby="local-workers-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -445,7 +455,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
         <nav aria-label="작업 공간 보기" className="flex gap-2 lg:hidden">
           {([["board", "네 컷 미리보기"], ["conversation", "대화와 제작 요청"]] as const).map(([id, label]) => <button key={id} type="button" className={`${buttonClass} flex-1 ${mobileView === id ? 'border-primary text-primary' : ''}`} aria-pressed={mobileView === id} onClick={() => setMobileView(id)}>{label}</button>)}
         </nav>
-        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+        <div data-layout-primitives="split-sidebar panel-layout" className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
           <div className={mobileView === "board" ? "min-w-0" : "hidden min-w-0 lg:block"}>
             <StoryboardComicBoard scenes={[]} selectedScene={1} onSelect={() => undefined} state="empty" />
           </div>
@@ -457,8 +467,8 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
               <StoryboardConversation context={{ prompt: prompt.slice(0, 4000), scene: null }} sceneCount={Number.isInteger(sceneCount) ? sceneCount : 6}
                 onUsePrompt={reviewProposal} disabled={creating} onWriteRequest={() => { setNewPanel("request"); requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus()); }} />
             </div>
-            <div hidden={newPanel !== "request"} className="max-h-[min(74vh,720px)] overflow-y-auto overscroll-contain p-1">
-        <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
+            <div hidden={newPanel !== "request"} data-scroll-owner="storyboard-create-request" className="max-h-[min(74vh,720px)] overflow-y-auto overscroll-contain p-1">
+        <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title" data-layout-primitives="form-flow">
           <h3 id="local-request-title" className="font-semibold">어떤 이야기를 만들까요?</h3>
           {!catalogLoaded && catalogError && <p role="status" className="mt-2 text-sm text-muted-foreground">{readinessUnknownMessage}</p>}
           <fieldset disabled={creating || actionsHeld} className="mt-3 min-w-0 space-y-3">
@@ -691,7 +701,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
           {view && <button type="button" className={buttonClass} disabled={busy || !view.project.document} onClick={() => { void download(); }}>내보내기</button>}
         </div>
       </div>
-      <div aria-live="polite" role="status" className="mt-3 text-sm">
+      <div aria-live="polite" aria-atomic="true" role="status" aria-label="프로젝트 저장 상태" className="mt-3 text-sm">
         {loading && !view && !readError ? "저장된 결과 확인 중…" : view ? STATUSES[view.project.status] : "아직 저장 결과를 확인하지 못했습니다."}
         {busy && " · 요청 처리 중…"}{notice && <p className="mt-1">{notice}</p>}
       </div>
@@ -749,7 +759,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
       {workspaceView === "scenes" && <nav aria-label="장면 작업 공간 보기" className="flex gap-2 lg:hidden">
         {([["board", "네 컷과 편집"], ["chat", "AI와 대화"]] as const).map(([id, label]) => <button key={id} type="button" className={`${buttonClass} flex-1`} aria-pressed={mobilePane === id} disabled={!!editing} onClick={() => setMobilePane(id)}>{label}</button>)}
       </nav>}
-      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+      <div data-layout-primitives="split-sidebar panel-layout" className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
         <div className={workspaceView === "history" ? "min-w-0 space-y-4 lg:col-span-2" : mobilePane === "board" ? "min-w-0" : "hidden min-w-0 lg:block"}>
       {workspaceView === "history" && <VersionHistory key={projectId} projectId={projectId}
         revision={view.project.revision} disabled={locked || !!editing || !view.project.document || archived} onRestore={mutate} />}

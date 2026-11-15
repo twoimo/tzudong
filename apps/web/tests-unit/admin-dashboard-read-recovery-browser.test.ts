@@ -23,6 +23,11 @@ async function bundle() {
       fixture.requests.push(url.split('?')[0]);
       if (url === '/api/admin/pending-counts') return json(buildAdminPendingCountsResponse({ restaurantSubmissions: 2, restaurantRecommendationRequests: 1, reviews: 3, recommendationRequestsLifecycleReady: true, asOf }));
       if (url === '/api/admin/banners') return json({ banners: [] });
+      if (url === '/api/admin/youtube-kpi-collection-logs') return json({ asOf,
+        workflow: { available: true, repository: 'twoimo/tzudong', workflowId: 'youtube-kpi-snapshot.yml', error: null, runs: [], latestJobs: [] },
+        snapshot: { available: false, error: null } });
+      if (url === '/api/admin/sentry?status=unresolved') return json({ state: 'connected',
+        collection: { browser: true, server: true }, dashboardUrl: null, issues: [], nextCursor: null, fetchedAt: asOf });
       if (url.startsWith('/api/admin/youtube-kpis?')) return json({ asOf, period: '1M', totalVideos: 0, videos: [] });
       if (url === '/api/dashboard/summary') {
         if (fixture.holdSummary) await new Promise(resolve => { fixture.releaseSummary = resolve; });
@@ -94,6 +99,10 @@ const requestCount = async (page: Page, path: string) => (await fixture(page)).r
     expect(await requestCount(page, '/api/dashboard/summary')).toBe(1);
     const pendingBefore = await requestCount(page, '/api/admin/pending-counts');
     const bannersBefore = await requestCount(page, '/api/admin/banners');
+    const collectionBefore = await requestCount(page, '/api/admin/youtube-kpi-collection-logs');
+    const sentryBefore = await requestCount(page, '/api/admin/sentry');
+    expect(collectionBefore).toBe(1);
+    expect(sentryBefore).toBe(1);
 
     await page.evaluate(() => { (globalThis as unknown as { __dashboardFixture: Fixture }).__dashboardFixture.holdSummary = true; });
     await retry.focus();
@@ -112,12 +121,21 @@ const requestCount = async (page: Page, path: string) => (await fixture(page)).r
     await page.evaluate(() => { (globalThis as unknown as { __dashboardFixture: Fixture }).__dashboardFixture.summaryOk = true; });
     await page.keyboard.press('Enter');
     const summary = page.locator('[data-admin-module-summary]');
-    await playwrightExpect(summary).toHaveText('대기 6건 · 맛집 12곳 · 영상 34개');
+    // Each compact status owns a label/value pair; spacing and other healthy
+    // status items must not become part of the operations retry contract.
+    for (const [id, label, value] of [
+      ['pending', '대기', '6건'], ['restaurants', '맛집', '12곳'], ['videos', '영상', '34개'],
+      ['collection', 'KPI 수집', '내역 없음'], ['sentry', 'Sentry', '미해결 0개'],
+    ]) {
+      await playwrightExpect(summary.locator(`[data-admin-dashboard-status="${id}"] > span`)).toHaveText([label, value]);
+    }
     await playwrightExpect(page.locator('[data-admin-dashboard-read-error]')).toHaveCount(0);
     await playwrightExpect(summary.locator('span[tabindex="-1"]')).toBeFocused();
     expect(await requestCount(page, '/api/dashboard/summary')).toBe(3);
     expect(await requestCount(page, '/api/admin/pending-counts')).toBe(pendingBefore);
     expect(await requestCount(page, '/api/admin/banners')).toBe(bannersBefore);
+    expect(await requestCount(page, '/api/admin/youtube-kpi-collection-logs')).toBe(collectionBefore);
+    expect(await requestCount(page, '/api/admin/sentry')).toBe(sentryBefore);
     expect(externalRequests).toBe(0);
     expect(pageErrors).toEqual([]);
     } finally {

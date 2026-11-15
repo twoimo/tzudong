@@ -11,8 +11,8 @@ const entry = `
   import React from 'react';
   import { createRoot } from 'react-dom/client';
   import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-  import { AdminConsoleOverview } from './components/admin/AdminConsoleOverview';
-  import { buildAdminPendingCountsResponse } from './lib/admin/pending-counts';
+  import { AdminConsoleOverview } from '@/components/admin/AdminConsoleOverview';
+  import { buildAdminPendingCountsResponse } from '@/lib/admin/pending-counts';
   const fixture = { holdBanners: true, waiters: [], release() { this.holdBanners = false; const pending = this.waiters.splice(0); for (const resolve of pending) resolve(); } };
   globalThis.__dashboardHeadline = fixture;
   const json = value => new Response(JSON.stringify(value), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -21,6 +21,11 @@ const entry = `
     const url = String(input).split('?')[0];
     if (url === '/api/admin/pending-counts') return json(buildAdminPendingCountsResponse({ restaurantSubmissions: 2, restaurantRecommendationRequests: 1, reviews: 3, recommendationRequestsLifecycleReady: true, asOf }));
     if (url === '/api/dashboard/summary') return json({ asOf, totals: { restaurants: 12, videos: 34, withCoordinates: 10 }, topCategories: [], videos: [] });
+    if (url === '/api/admin/youtube-kpi-collection-logs') return json({ asOf,
+      workflow: { available: true, repository: 'twoimo/tzudong', workflowId: 'youtube-kpi-snapshot.yml', error: null, runs: [], latestJobs: [] },
+      snapshot: { available: false, error: null } });
+    if (url === '/api/admin/sentry') return json({ state: 'connected',
+      collection: { browser: true, server: true }, dashboardUrl: null, issues: [], nextCursor: null, fetchedAt: asOf });
     if (url.startsWith('/api/admin/youtube-kpis')) return json({ asOf, period: '1M', totalVideos: 0, videos: [] });
     if (url.startsWith('/api/admin/youtube-channel')) return json({ subscriberCount: 100, videoCount: 34, viewCount: 1000 });
     if (url === '/api/admin/banners') {
@@ -92,11 +97,19 @@ const releaseBanners = (page: Page) => page.evaluate(() => {
         const submissions = page.locator('[data-admin-console-menu-item-mode="desktop-sidebar"][aria-label="제보 관리 대기 3건"]');
         await playwrightExpect(submissions).toHaveCount(1);
         if (width === 1280) await playwrightExpect(submissions).toBeVisible();
-        await playwrightExpect(summary).toHaveText('대기 6건 · 맛집 12곳 · 영상 34개');
+        const expectHeadline = async () => {
+          for (const [id, label, value] of [
+            ['pending', '대기', '6건'], ['restaurants', '맛집', '12곳'], ['videos', '영상', '34개'],
+            ['collection', 'KPI 수집', '내역 없음'], ['sentry', 'Sentry', '미해결 0개'],
+          ]) {
+            await playwrightExpect(summary.locator(`[data-admin-dashboard-status="${id}"] > span`)).toHaveText([label, value]);
+          }
+        };
+        await expectHeadline();
         await playwrightExpect(summary).not.toContainText('KPI 데이터 조회 중');
         await playwrightExpect(page.locator('[data-admin-dashboard-mobile-loading-prompt="live"]')).toHaveCount(0);
         await releaseBanners(page);
-        await playwrightExpect(summary).toHaveText('대기 6건 · 맛집 12곳 · 영상 34개');
+        await expectHeadline();
         await playwrightExpect(summary).not.toContainText('KPI 데이터 조회 중');
         expect(externalRequests).toBe(0);
         expect(pageErrors).toEqual([]);
