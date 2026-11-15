@@ -182,15 +182,18 @@ describe('receipt review storage verification', () => {
 
   test('ReviewModal OCRs and uploads one finalized receipt file and save RPC receives server-only storage proof', () => {
     const modal = readFileSync(join(import.meta.dir, '../components/reviews/ReviewModal.tsx'), 'utf8');
+    const receiptStep = readFileSync(join(import.meta.dir, '../components/reviews/receipt-step/use-receipt-step.ts'), 'utf8');
     const route = readFileSync(join(import.meta.dir, '../app/api/ocr/reviews/save/route.ts'), 'utf8');
     const migration = readFileSync(join(import.meta.dir, '../../../backend/supabase/migrations/20261013190000_durable_receipt_ocr_results.sql'), 'utf8');
     const bucketMigration = readFileSync(join(import.meta.dir, '../../../backend/supabase/migrations/20261008200719_review_verification_private.sql'), 'utf8');
-    expect(modal).toContain('preparedFile = await prepareVerificationUploadFile({');
-    expect(modal).toContain('signal: selection.signal');
-    expect(modal).toContain('replaceVerificationPhoto(preparedFile, selectionGeneration)');
-    expect(modal).toContain('void analyzeReceipt(preparedFile, selectionGeneration);');
+    expect(receiptStep).toContain('preparedFile = await prepareVerificationUploadFile({');
+    expect(receiptStep).toContain('signal: selection.signal');
+    expect(receiptStep).toContain('replaceVerificationPhoto(preparedFile, selectionGeneration)');
+    expect(receiptStep).toContain('void analyzeReceipt(preparedFile, selectionGeneration);');
     expect(modal).toContain('const receipt = draft.verificationPhoto;');
-    expect(modal).not.toContain('prepareVerificationUploadFile({ file: draft.verificationPhoto');
+    for (const source of [modal, receiptStep]) {
+      expect(source).not.toContain('prepareVerificationUploadFile({ file: draft.verificationPhoto');
+    }
     expect(modal).toContain('cacheControl: \'3600\', upsert: false');
     expect(route).toContain('verifyReviewStorageForReceipt({');
     expect(route).toContain('p_verification_photo_sha256: verifiedStorage.verificationPhotoSha256');
