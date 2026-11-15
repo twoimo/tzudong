@@ -2,6 +2,7 @@ import {
   getE2EAdminRouteBypassExpectedToken,
   isE2EAdminRouteBypassEnvEnabled,
 } from '@/lib/e2e-admin-route-bypass'
+import { isLoopbackHost } from '@/lib/auth/loopback-host'
 
 export const DEV_ADMIN_BYPASS_COOKIE_NAME = 'tzudong-dev-admin-bypass'
 export const DEV_ADMIN_BYPASS_SCOPE = 'thumbnail-dev'
@@ -27,26 +28,6 @@ type DevAdminBypassValidationInput = {
 export type DevAdminBypassValidationResult =
   | { ok: true; payload: DevAdminBypassCookiePayload }
   | { ok: false; reason: string }
-
-function normalizeHostName(value: string) {
-  const firstValue = value.split(',')[0]?.trim().toLowerCase() ?? ''
-
-  if (firstValue.startsWith('[')) {
-    const closingBracketIndex = firstValue.indexOf(']')
-    return closingBracketIndex > 1 ? firstValue.slice(1, closingBracketIndex) : firstValue
-  }
-
-  if (firstValue === '::1') return firstValue
-  if (firstValue.includes(':') && firstValue.split(':').length > 2) return firstValue
-
-  return firstValue.split(':')[0] ?? ''
-}
-
-export function isDevAdminBypassLocalHost(value: string | null | undefined) {
-  if (!value) return false
-  const normalizedHostName = normalizeHostName(value)
-  return normalizedHostName === 'localhost' || normalizedHostName === '127.0.0.1' || normalizedHostName === '::1'
-}
 
 function getCrypto() {
   const cryptoImpl = globalThis.crypto
@@ -161,7 +142,7 @@ export async function validateDevAdminBypassCookie({
   now = Date.now(),
 }: DevAdminBypassValidationInput): Promise<DevAdminBypassValidationResult> {
   if (!isE2EAdminRouteBypassEnvEnabled(env)) return { ok: false, reason: 'env_disabled' }
-  if (!isDevAdminBypassLocalHost(host)) return { ok: false, reason: 'non_local_host' }
+  if (!isLoopbackHost(host)) return { ok: false, reason: 'non_local_host' }
   if (!cookieValue) return { ok: false, reason: 'missing_cookie' }
 
   const [payloadPart, signaturePart, extraPart] = cookieValue.split('.')

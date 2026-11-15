@@ -2753,7 +2753,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "pathname === '/api/admin' || pathname.startsWith('/api/admin/')",
     );
     expect(middlewareSource).toContain("isAdminNavigationRequest");
-    expect(middlewareSource).toContain("eq('role', 'admin')");
+    expect(middlewareSource).toContain("checkAdminAccess(supabase, authUserId)");
+    expect(source("lib/auth/admin-access.ts")).toContain("eq('role', 'admin')");
     expect(middlewareSource).toContain(
       "const redirectAdminLoginWithSessionCookies",
     );
