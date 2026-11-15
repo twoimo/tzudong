@@ -21,7 +21,7 @@ from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.profiles import resolve_compute_profile
 from backend.pipeline_control.targets import assert_admitted
 from backend.pipeline_control.worker import process_one, write_run_manifest
-from backend.pipeline_control.queue import drain
+from backend.pipeline_control.file_queue import drain
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CANDIDATE_DIR = REPO_ROOT / "backend" / "log" / "cron" / "live-runs"

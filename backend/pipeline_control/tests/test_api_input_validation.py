@@ -14,7 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from backend.pipeline_control import api, queue
+from backend.pipeline_control import api, file_queue
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.state_machine import ControlPlaneError
 
@@ -27,7 +27,7 @@ class ApiInputValidationTests(unittest.TestCase):
         self.queue_path = Path(temporary.name) / "queue.jsonl"
         self.store = FileStore(path=self.store_path)
         self.enterContext(mock.patch.object(api, "STORE", self.store))
-        self.enterContext(mock.patch.object(queue, "DEFAULT_QUEUE", self.queue_path))
+        self.enterContext(mock.patch.object(file_queue, "DEFAULT_QUEUE", self.queue_path))
         self.enterContext(mock.patch.dict("os.environ", {
             "TZUDONG_DATA_ENV": "local_db",
             "PIPELINE_CONTROL_DSN": "postgresql://tzudong@127.0.0.1:54322/postgres",
@@ -80,7 +80,7 @@ class ApiInputValidationTests(unittest.TestCase):
                 self.assertEqual((replay_status, replay["id"]), (202, body["id"]))
                 persisted = FileStore(path=self.store_path).get(body["id"])
                 self.assertIs(persisted.dry_run, fields.get("dryRun", True))
-                rows = queue.drain(self.queue_path)
+                rows = file_queue.drain(self.queue_path)
                 self.assertEqual(len(rows), 1)
                 self.assertEqual(rows[0]["id"], body["id"])
                 self.assertIs(rows[0]["dry_run"], persisted.dry_run)

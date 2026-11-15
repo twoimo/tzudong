@@ -346,16 +346,21 @@ test('dedicated manifest pins the exact five-source chain, full vectors, toolcha
   });
 });
 
-test('production manifest loader either binds the exact current toolchain or fails closed on source drift', () => {
-  const toolchainMatches = record.manifest.toolchain.every((entry: any) => {
+// Expected failure from 2026-11-16, expiring 2026-12-16. The manifest is "ready", but f4739a778
+// and 4d4ecf608 changed supabase-migration-bundle.mjs after its sha256 pin. Re-pinning or holding
+// the manifest is the operator's decision. Bun fails this marker as soon as the pin matches again.
+const readyToolchainDecisionPending = Date.now() < Date.parse('2026-12-16T00:00:00Z');
+(readyToolchainDecisionPending ? test.failing : test)('ready production manifest binds the exact current toolchain', () => {
+  expect(record.manifest.launchPolicy.state).toBe('ready');
+  for (const entry of record.manifest.toolchain) {
     const bytes = readFileSync(new URL(`../../../${entry.path}`, import.meta.url));
-    return sha256(bytes) === entry.sha256;
-  });
-  if (toolchainMatches) {
-    expect(() => loadSuccessorManifest()).not.toThrow();
-  } else {
-    expect(() => loadSuccessorManifest()).toThrow('SUCCESSOR_SOURCE_DRIFT');
+    expect({ path: entry.path, sha256: sha256(bytes) }).toEqual(entry);
   }
+  expect(() => loadSuccessorManifest()).not.toThrow();
+});
+
+test('production manifest loader fails closed when a statement vector drifts', () => {
+  expect(() => loadSuccessorManifest({ readVectorImpl: () => ['drift'] })).toThrow('SUCCESSOR_SOURCE_DRIFT');
 });
 
 test('production ready manifest still rejects corrupt fence custody before checkout, transport or journal creation', () => {

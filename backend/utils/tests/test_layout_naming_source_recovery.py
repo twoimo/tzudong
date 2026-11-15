@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import yaml
 
@@ -93,6 +95,30 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
         self.assertEqual(result["entryCount"], 5)
         self.assertTrue(all(item["oldReferenceCount"] == 0 for item in result["checks"]["verification"]))
         self.assertTrue(all(item["newDefinitionCount"] == 1 for item in result["checks"]["verification"]))
+
+    @unittest.skipUnless(hasattr(sys, "stdlib_module_names"), "needs Python 3.10+")
+    def test_no_tracked_python_module_shadows_the_standard_library(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z", "--", "*.py"],
+            cwd=ROOT,
+            capture_output=True,
+            check=True,
+        ).stdout.decode("utf-8").split("\0")
+        shadows = []
+        for raw in filter(None, tracked):
+            path = PurePosixPath(raw)
+            name = path.parent.name if path.name == "__init__.py" else path.stem
+            if name in sys.stdlib_module_names:
+                shadows.append(f"{raw} shadows stdlib '{name}'")
+        self.assertEqual(
+            shadows,
+            [],
+            "A script run from that directory, or `unittest discover -s <dir>` "
+            "without `-t .`, puts the directory first on sys.path, so "
+            "`import <name>` in the stdlib or in hypothesis loads the local file. "
+            "Rename the module, as backend/pipeline_control/queue.py became "
+            "file_queue.py.",
+        )
 
     def test_checkers_are_read_only_and_have_bounded_codes(self) -> None:
         layout_source = LAYOUT_CHECKER.read_text(encoding="utf-8")
