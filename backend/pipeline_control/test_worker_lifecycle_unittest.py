@@ -127,6 +127,88 @@ with patch.object(media_cache.shutil, "rmtree", killed_by_the_daemon), patch.obj
         run_id=run.id,
     )
 """
+WORKER_STOPPED_AT_EACH_LINE = """
+import io, json, os, signal, sys, tempfile
+from contextlib import redirect_stdout
+from functools import partial
+from pathlib import Path
+from unittest.mock import patch
+
+from backend.pipeline_control import media_cache, worker
+from backend.pipeline_control.file_store import FileStore
+
+
+class Escaped(BaseException):
+    pass
+
+
+def escaped(signum, frame):
+    raise Escaped()
+
+
+def step_that_fills_the_cache(argv):
+    (Path(os.environ["VIDEO_CACHE_DIR"]) / "frame.bin").write_bytes(b"x")
+    return 0
+
+
+def stopped_at(event):
+    with tempfile.TemporaryDirectory() as raw:
+        root = Path(raw)
+        store = FileStore(root / "store.json")
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="every-line-01",
+            payload={},
+            actor="qa",
+            request_id="req-every-line",
+            dry_run=False,
+        )
+        lines = []
+
+        def trace(frame, kind, arg):
+            if frame.f_code is not worker.process_one.__code__:
+                return None
+
+            def line(frame, kind, arg):
+                if kind == "line":
+                    lines.append(frame.f_lineno)
+                    if len(lines) == event:
+                        os.kill(os.getpid(), signal.SIGTERM)
+                return line
+
+            return line
+
+        signal.signal(signal.SIGTERM, escaped)
+        sys.settrace(trace)
+        try:
+            with patch.object(
+                worker, "owned_media_cache", partial(media_cache.owned_media_cache, root=root / "run-cache")
+            ), redirect_stdout(io.StringIO()):
+                worker.process_one(
+                    store,
+                    live=True,
+                    runner=step_that_fills_the_cache,
+                    manifest_path=root / "summary.json",
+                    run_id=run.id,
+                )
+        except BaseException:
+            pass
+        finally:
+            sys.settrace(None)
+        state = json.loads((root / "store.json").read_text())
+        return lines, {
+            "line": lines[event - 1] if 0 < event <= len(lines) else None,
+            "status": state["runs"][run.id]["status"],
+            "locks": state["locks"],
+            "manifest": (root / "summary.json").exists(),
+            "cache": (root / "run-cache" / run.id).exists(),
+        }
+
+
+lines, _ = stopped_at(0)
+print(json.dumps([stopped_at(event)[1] for event in range(1, len(lines) + 1)]))
+"""
 
 
 class _Clock:
@@ -486,6 +568,32 @@ class StopSignalTests(unittest.TestCase):
 
         self._assert_recorded_failed(run, locks, manifest)
         self.assertEqual(code, -signal.SIGKILL)
+
+    def test_stop_at_any_line_of_a_run_leaves_it_recorded_and_cleaned_up(self) -> None:
+        worker = subprocess.run(
+            [sys.executable, "-c", WORKER_STOPPED_AT_EACH_LINE],
+            cwd=REPO_ROOT,
+            env=WORKER_ENVIRONMENT,
+            capture_output=True,
+            timeout=120,
+            check=True,
+        )
+        outcomes = json.loads(worker.stdout.decode().splitlines()[-1])
+
+        def settled(outcome: dict) -> bool:
+            if outcome["status"] == "Queued":
+                return not outcome["manifest"]
+            return (
+                outcome["status"] in {"Succeeded", "Failed"}
+                and outcome["locks"] == {}
+                and outcome["manifest"]
+                and not outcome["cache"]
+            )
+
+        self.assertEqual([outcome for outcome in outcomes if not settled(outcome)], [])
+        self.assertEqual(
+            {outcome["status"] for outcome in outcomes}, {"Queued", "Failed", "Succeeded"}
+        )
 
 
 class RunWindowTests(unittest.TestCase):
