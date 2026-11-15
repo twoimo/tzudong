@@ -11,7 +11,7 @@ import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Sequence
 
 from backend.pipeline_control.adapter import (
     CANONICAL_STEP_NAMES,
@@ -291,6 +291,7 @@ def write_run_manifest(
     missed_window_count: int = 0,
     reflection: dict | None = None,
     cadence_config_path: Path | None = None,
+    snapshots: Sequence[tuple[str, int]] = (),
 ) -> Path:
     if execution_mode not in {"dry_run", "live"}:
         raise ValueError("execution_mode_invalid")
@@ -407,7 +408,6 @@ def write_run_manifest(
     input_provenance = payload["hashProvenance"]["inputSha256"]
     output_provenance = payload["hashProvenance"]["outputSha256"]
     if ok and execution_mode == "live" and data_sink == "local_db":
-        snapshots = independent_local_db_snapshots()
         if (
             len(snapshots) == 3
             and snapshots[0] == snapshots[1] == snapshots[2]
@@ -483,6 +483,7 @@ class _Attempt:
     data_sink: str | None = None
     hosted_gate_rejection_code: str | None = None
     events: list[dict] = field(default_factory=list)
+    snapshots: list[tuple[str, int]] = field(default_factory=list)
     purge_media_cache: Callable[[str], None] = lambda _status: None
 
 
@@ -512,27 +513,22 @@ def process_one(
         except BaseException as exc:
             status = "Failed"
             error_code, unexpected = _failure(exc)
+        if status != "Succeeded":
+            # This manifest does not depend on the record, so it lands
+            # before the record's durable mirror write, which can stall.
+            _write_manifest(store, attempt, status, manifest_path)
         try:
-            status = _record(
+            recorded = _record(
                 store, attempt.run, status, error_code, live=attempt.execution_mode == "live"
             )
             record_failure = None
         except Exception as exc:
             print(f"operation=run_record_failed error={safe_error_name(exc)}")
-            status, record_failure = "Failed", exc
-        write_run_manifest(
-            status,
-            manifest_path,
-            events=attempt.events,
-            run=attempt.run,
-            execution_mode=attempt.execution_mode,
-            data_sink=attempt.data_sink,
-            store=store,
-            job_id_scope=attempt.job_id_scope,
-            hosted_gate_rejection_code=attempt.hosted_gate_rejection_code,
-        )
+            recorded, record_failure = "Failed", exc
+        if status == "Succeeded":
+            _write_manifest(store, attempt, recorded, manifest_path)
         try:
-            attempt.purge_media_cache(status)
+            attempt.purge_media_cache(recorded)
         except (OSError, ValueError, AdapterGraphError):
             # Settled provider/DB work stays settled. Purge is recoverable
             # local cleanup, never a reason to replay it.
@@ -541,7 +537,24 @@ def process_one(
         raise unexpected
     if record_failure is not None:
         raise record_failure
-    return status
+    return recorded
+
+
+def _write_manifest(
+    store: MemoryStore, attempt: _Attempt, status: str, path: Path | None
+) -> None:
+    write_run_manifest(
+        status,
+        path,
+        events=attempt.events,
+        run=attempt.run,
+        execution_mode=attempt.execution_mode,
+        data_sink=attempt.data_sink,
+        store=store,
+        job_id_scope=attempt.job_id_scope,
+        hosted_gate_rejection_code=attempt.hosted_gate_rejection_code,
+        snapshots=attempt.snapshots,
+    )
 
 
 def _execute(
@@ -606,6 +619,10 @@ def _execute(
                 data_sink=attempt.data_sink,
                 compute_profile=run.profile,
             )
+    if status == "Succeeded" and use_live and attempt.data_sink == "local_db":
+        # Network reads run here, where a stop interrupts them, and never
+        # inside the record, where a stop waits for them.
+        attempt.snapshots = independent_local_db_snapshots()
     return status, "adapter_failed"
 
 
