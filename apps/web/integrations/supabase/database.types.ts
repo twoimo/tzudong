@@ -2237,6 +2237,9 @@ isOneToOne: false
 "get_feature_runtime_capability":
 { Args: { "p_user_id": string }; Returns: Json
                            },
+"get_home_youtube_kpi_metrics":
+{ Args: { "p_video_ids": (string)[] }; Returns: Json
+                           },
 "get_index_usage":
 { Args: Record<PropertyKey, never>; Returns: {
               "index_name": string,"index_scans": number,"index_size": string,"schema_name": string,"table_name": string,"tuples_fetched": number,"tuples_read": number

@@ -277,11 +277,11 @@ describe("release workflow governance source contracts", () => {
       workflow: ".github/workflows/release-governance-ci.yml",
       requiredCheck: "Release",
       scope: "governance-contracts-only",
-      cloudflareAutomaticBuilds: "paused",
+      cloudflareAutomaticBuilds: "unchanged-quota-limited",
     });
     expect(settings.productionBranch).toBe("main");
-    expect(settings.branchIncludes).toEqual([]);
-    expect(settings.branchExcludes).toEqual(["*"]);
+    expect(settings.branchIncludes).toEqual(["main"]);
+    expect(settings.branchExcludes).toEqual([]);
     expect(settings.previewsEnabled).toBe(false);
   });
 

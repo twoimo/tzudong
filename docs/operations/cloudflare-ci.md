@@ -1,12 +1,12 @@
 # Cloudflare Builds 거버넌스 CI
 
-최신 구성 관측: **2026-11-15 06:13:46 UTC**. 아래 2026-11-12 KST 기록은
+최신 구성 관측: **2026-11-15 06:38:17 UTC**. 아래 2026-11-12 KST 기록은
 Cloudflare 병행 실행을 도입했을 때의 이력이다.
 
 계정의 Cloudflare Workers Builds 월간 한도가 소진되어, 기존 필수 GitHub
-`Release`가 같은 다섯 거버넌스 검사를 실행하는 대체 경로를 맡는다. 정확한
-후보의 `Release` 성공 후 이 Worker의 자동 push trigger만 정지한다. 기존
-GitHub 필수 검사와 Cloudflare 실패 기록을 유지한다. 웹 앱 배포, 전체 CI 이전,
+`Release`가 같은 다섯 거버넌스 검사를 실행하는 대체 경로를 맡는다.
+Cloudflare 연결과 자동 build 설정은 그대로 유지하고 한도 제한에 따른 optional
+실패도 보존한다. GitHub 필수 검사와 보호 규칙을 변경하지 않는다. 웹 앱 배포, 전체 CI 이전,
 요금제 상향, 공개 Worker의 재배포는 이 변경의 범위가 아니다.
 
 ## 월간 한도와 GitHub 대체 실행
@@ -22,6 +22,7 @@ GitHub 필수 검사와 Cloudflare 실패 기록을 유지한다. 웹 앱 배포
 | 다음 갱신 | `2026-11-30T23:59:59.999Z` = 2026-12-01 08:59:59.999 KST |
 | 마지막 main의 Cloudflare 결과 | [check 132708736275](https://github.com/twoimo/tzudong/runs/132708736275), build `c3128eee-baf8-488a-93e9-bc321189e5eb`, `stopped` / `skipped`; 초기화·실행 시작 시각 없음, 실행 로그 없음 |
 | 변경 전 GitHub Release | [run 43680125865](https://github.com/twoimo/tzudong/actions/runs/43680125865), 같은 기준 SHA에서 success; 새 분류기 단계까지의 후보 결과는 별도 확인 필요 |
+| 대체 검사 후보 검증 | `8e47b8b970620a97423c2e1df1dda47456907588`, [Release run 43686032434](https://github.com/twoimo/tzudong/actions/runs/43686032434), job `132726582309`: 다섯 검사·SHA/tree binding·artifact 보존 모두 success |
 
 한도 응답과 실행 전 skipped 상태를 각각 보존한다. 이 응답에 개별 build의
 상세 사유 코드가 없으므로 과거 모든 skip 원인을 한도로 단정하지 않는다.
@@ -49,45 +50,53 @@ SHA·tree 확인, 읽기 전용 권한, Node/Bun 고정, 20분 제한과 scored 
 유지한다. 이 scoped 검사의 성공은 합성 governance fixture 검증이며 전체 성능
 실측 통과나 새 Cloudflare 배포 성공을 뜻하지 않는다.
 
-### 자동 push trigger 정지와 readback
+### 거부된 정지 요청과 보존한 연결
 
-[build-settings.json](../../.github/cloudflare/build-settings.json)은 **적용할 구성**을
-기록한다. 파일 수정은 원격 적용의 증거가 아니다. 공개
-[Workers Builds API](https://developers.cloudflare.com/api/resources/workers_builds/)의
-`PATCH /accounts/{account_id}/builds/triggers/{trigger_uuid}`는 branch include/exclude
-배열 변경을 지원한다. 대상은 위 Worker의 기존 trigger
-`0045f8da-1cef-4835-9d9f-6ea3125c56f6` 하나다.
+위 후보의 `Release` 성공을 확인한 뒤 기존 trigger
+`0045f8da-1cef-4835-9d9f-6ea3125c56f6`에서만 두 branch filter를 바꾸려 했다.
+06:38:16.648 UTC의 요청은 `branch_includes: []`, `branch_excludes: ["*"]`였고
+공급자가 **HTTP 400**으로 거부했다. 06:38:17.310 UTC readback에서 아래 상태와
+다른 trigger/configuration 필드가 모두 변경되지 않았음을 확인했다. 추가
+provider 변경이나 자동 재시도는 하지 않았다.
 
-1. 정확한 변경 후보 SHA의 GitHub `Release`에서 위 다섯 검사와 artifact 보존이 성공했는지 확인한다.
-2. trigger를 다시 읽어 Worker·저장소·명령·root·preview 상태와 기존 `["main"]` / `[]` 배열을 확인한다. 예상과 다르면 먼저 차이를 검토한다.
-3. 다음 두 필드만 변경한다. 저장소 연결, Worker 배포, 토큰, 다른 Worker의 설정은 변경하지 않는다.
+| 보존한 항목 | readback |
+| --- | --- |
+| Production branch/includes | `main` / `["main"]` |
+| Branch excludes | `[]` |
+| 자동 build / preview | `auto_build_enabled: true` / `previews_enabled: false` |
+| Trigger 마지막 변경 | `2026-11-13T07:06:52.003Z` |
+| 계정 한도 | 06:38:16 UTC에 reached=true, 갱신 `2026-11-30T23:59:59.999Z` |
 
-   ```json
-   { "branch_includes": [], "branch_excludes": ["*"] }
-   ```
+공식 [Builds API 오류 문서](https://developers.cloudflare.com/workers/ci-cd/builds/troubleshoot/#builds-api-errors)는
+production trigger가 **단일 literal include와 빈 excludes** 조합만 허용한다고
+명시한다. 빈 include나 wildcard exclude는 지원되지 않는다. 문서가 이 오류를
+`Invalid request body (12002)`로 분류하지만, 이번 요청에서 보존한 실제 오류
+관측값은 HTTP 400이며 상세 공급자 오류 코드를 관측했다고 주장하지 않는다.
+이는 월간 build quota 응답이나 API 권한 거부와 별개의 요청 검증 실패다.
 
-4. trigger와 Worker build configuration을 다시 읽어 변경된 배열과 보존한 설정을 대조한다. 관측 시각, 후보 SHA, GitHub run URL과 설정 readback을 비식별 증거로 남긴다.
-5. 다음 실제 main push에서 해당 SHA의 GitHub 필수 검사와 Cloudflare 신규 실행 여부를 확인한다. 확인 전에는 자동 실행 정지가 실증됐다고 표시하지 않는다. 확인을 위한 빈 push·수동 build·재시도는 만들지 않는다.
+[build-settings.json](../../.github/cloudflare/build-settings.json)은 실제 보존한
+`["main"]` / `[]`와 `cloudflareAutomaticBuilds: "unchanged-quota-limited"`를 기록한다.
+GitHub `Release`가 필요한 다섯 검사를 계속 실행하는 것이 지원되는 fallback이다.
+Cloudflare는 optional 검사로 남고 기존 실패를 성공·skip으로 다시 쓰지 않는다.
+이 문서 정정 이후의 새 후보와 최종 main은 각각 그 SHA의 필수 검사 결과로
+확인한다. 이전 후보의 성공을 새 SHA의 성공으로 대체하지 않는다.
 
-복구 입력은 같은 trigger의 다음 두 필드다. 복구 필요성을 검토한 뒤 저장된 값과
-후속 실행을 다시 확인하며 월간 quota 갱신만으로 자동 복구하지 않는다.
-
-```json
-{ "branch_includes": ["main"], "branch_excludes": [] }
-```
-
-`path_excludes: ["*"]`만으로 자동 실행을 정지하지 않는다. 공식
-[watch paths 문서](https://developers.cloudflare.com/workers/ci-cd/builds/build-watch-paths/)는
-파일 변경 0개 또는 3,000개 이상/20 commit 이상인 push에서 path matching을
-건너뛸 수 있다고 설명한다. `wrangler versions upload`도 배포만 바꿀 뿐
+공개 PATCH schema에 없는 `auto_build_enabled`를 보내거나 다른 branch filter를
+시도하지 않는다. `path_excludes: ["*"]`도
+[빈 push·대형 push 예외](https://developers.cloudflare.com/workers/ci-cd/builds/build-watch-paths/)가
+있어 build 중단을 보장하지 않는다. `wrangler versions upload`는 배포만 바꾸고
 [자동 build 실행은 유지한다](https://developers.cloudflare.com/workers/ci-cd/builds/#disconnecting-builds).
-공개 PATCH 스키마에 없는 `auto_build_enabled` 필드를 보내지 않는다.
 
-자동 실행을 정지해도 마지막 성공 Worker 배포는 남는다. 공개 `/receipt`의
-HTTP 200은 그 과거 commit·build ID의 결과이며 현재 GitHub fallback 성공으로
-바꾸어 게시하지 않는다. 현재 SHA의 검증은 해당 SHA의 GitHub run과 artifact를
-따른다. 원격 변경이 거부되면 거부 원인과 미완료 상태를 기록하고 GitHub 검사는
-계속 실행한다.
+공식 dashboard의 **Workers & Pages → 해당 Worker → Settings → Builds → Disconnect**는
+별도 선택지다. [공개 API](https://developers.cloudflare.com/api/resources/workers_builds/)의
+build configuration 삭제는 Worker 자체를 지우지는 않지만 build 설정과 trigger를
+삭제하고 미완료 build를 취소한다. 이번 fallback에서는 이 작업을 하지 않으며,
+GitHub 연동 권한·다른 프로젝트·토큰도 변경하지 않는다.
+
+현재 자동 build 설정은 켜져 있으므로 quota 갱신 후 새 main push는 기존 연결로
+다시 실행될 수 있다. 과거 실패를 재시도하거나 별도 확인용 push를 만들지 않는다.
+공개 Worker의 마지막 성공 `/receipt`는 해당 과거 commit·build ID의 결과다.
+현재 SHA의 GitHub 성공을 Cloudflare receipt로 게시하지 않는다.
 
 ## Main 연결과 이전 기록
 
@@ -265,8 +274,8 @@ runner가 실행하는 자식 프로세스 중 Wrangler에만 배포 자격 증�
 이 환경 변수 제한은 토큰 자체의 계정 권한 축소를 뜻하지 않는다.
 preview는 비활성화하고 지정한 저장소의 단일 신뢰 브랜치만 연결한다.
 최초 검증은 작업 브랜치로 실행했고, 기존 연결은 develop이었다. main 중심 정책
-설치 후 main 하나로 정렬된 상태를 2026-11-15에 읽어 확인했다. 현재 자동 실행
-정지 절차는 문서 상단을 따른다. fork PR이나 임의 branch의 코드를 배포 토큰이 있는
+설치 후 main 하나로 정렬된 상태를 2026-11-15에 읽어 확인했다. 현재 한도 소진과
+GitHub 대체 실행 상태는 문서 상단을 따른다. fork PR이나 임의 branch의 코드를 배포 토큰이 있는
 경로에서 실행하지 않는다.
 
 ## GitHub에서 계속 맡는 검사
@@ -340,7 +349,7 @@ Cloudflare의 의존성 캐시는 설치 최적화용이다. 캐시 복구는 �
 ## 초기 병행 실행의 전환 기준 기록
 
 다음은 최초 Cloudflare 병행 실행을 검토한 기준이다. 현재 한도 소진에 따른
-GitHub 대체 실행과 trigger 정지에는 문서 상단의 절차를 적용한다.
+GitHub 대체 실행과 보존한 연결 상태는 문서 상단을 따른다.
 
 1. 공급자 API에서 Worker, 저장소, root directory, 두 명령, branch, preview 비활성화를 읽어 확인한다.
 2. 실제 build ID와 커밋 SHA를 receipt 및 GitHub의 같은 SHA 결과에 연결한다. 실패·취소·시간 초과도 비교 대상으로 남긴다.
@@ -350,8 +359,8 @@ GitHub 대체 실행과 trigger 정지에는 문서 상단의 절차를 적용�
 
 ### 이전 develop 연속 실행 전환 절차
 
-다음은 초기 설치 절차의 기록이다. 현재 main 연결과 자동 실행 정지는 문서 맨 위의
-절차를 적용하며 develop 연결을 다시 만들지 않는다.
+다음은 초기 설치 절차의 기록이다. 현재 main 연결과 한도 소진 시 대체 실행은
+문서 맨 위의 상태를 따르며 develop 연결을 다시 만들지 않는다.
 
 1. PR의 실제 검사와 CodeQL 결과를 확인하고 보호 규칙을 통과하는 정상 PR 병합으로 develop에 반영한다.
 2. Workers Builds의 기존 trigger 하나에서 branch를 `develop`으로, build/deploy 명령의 `--branch`도 `develop`으로 함께 바꾼다. Preview는 계속 끈다.

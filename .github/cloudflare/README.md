@@ -10,24 +10,32 @@
 2026-11-30 23:59:59.999 UTC다. 이 한도는 조회 권한 거부나 브라우저 측정 환경의
 정책 차단과 별개다. 이전 Cloudflare 실패를 성공으로 바꾸지 않는다.
 
-## GitHub 대체 실행과 Cloudflare 자동 빌드 정지
+## GitHub 대체 실행과 Cloudflare 연결 유지
 
-[build-settings.json](build-settings.json)은 **적용할 구성**이다. 보호된
+[build-settings.json](build-settings.json)은 GitHub 대체 실행과 **보존하는 Cloudflare
+구성**을 기록한다. 보호된
 [Release workflow](../workflows/release-governance-ci.yml)는 실제 commit·tree를
 확인한 다음 scorer·독립 validator, workflow 계약, 문서 무결성, benchmark 분류기,
 Cloudflare runner·배포 실패 경로를 실행한다. 웹 의존성 설치나 새 배포 자격 증명은
 필요하지 않다. GitHub `CI`, `Release`, `Security`, `Promotion Path` 필수 검사는
 유지하며 `Release` 성공을 전체 웹·브라우저 실측 성공으로 해석하지 않는다.
 
-정확한 변경 후보의 `Release` 성공을 확인한 뒤 기존 Worker의 단일 trigger에만
-`branch_includes: []`, `branch_excludes: ["*"]`를 적용한다. 기존 값
-`["main"]` / `[]`는 복구 입력이다. 설정 파일 변경만으로 원격 정지를 완료했다고
-보지 않는다. API readback과 다음 실제 `main` push를 별도로 확인하고 관측 시각,
-SHA, GitHub run URL, provider 결과를 남긴다. 복구도 같은 두 필드로 제한하며
-계정 한도 갱신만으로 자동 복구하지 않는다.
+후보 `8e47b8b970620a97423c2e1df1dda47456907588`의
+[Release run 43686032434](https://github.com/twoimo/tzudong/actions/runs/43686032434)에서
+다섯 검사와 artifact 보존이 모두 성공했다. 이후 2026-11-15 06:38:16 UTC에
+빈 include/all-exclude 배열로 정지하려던 요청은 HTTP 400으로 거부되었다.
+06:38:17 UTC readback에서 `branch_includes: ["main"]`, `branch_excludes: []`,
+`auto_build_enabled: true`와 다른 설정이 그대로임을 확인했다.
 
-이 절차는 Worker의 공개 서비스·배포 내용·저장소 연결·명령·토큰을 변경하지
-않는다. 마지막 성공 Worker receipt는 과거 Cloudflare 실행의 증거로 남는다.
+공식 [branch-pattern 제한](https://developers.cloudflare.com/workers/ci-cd/builds/troubleshoot/#builds-api-errors)은
+production trigger에 단일 literal branch와 빈 excludes만 허용한다. 이 필터로
+정지를 구현하거나 공개 PATCH schema에 없는 필드를 보내지 않는다. 현재 경로는
+GitHub `Release`를 필수 거버넌스 검사로 사용하고, Cloudflare의 한도 제한과 optional
+실패를 그대로 남긴다. 자동 빌드 중단이 완료됐다는 주장은 하지 않는다.
+
+Worker의 공개 서비스·배포 내용·저장소 연결·명령·토큰은 그대로다.
+계정 quota가 갱신된 후 새 main push는 기존 연결로 다시 실행될 수 있다.
+마지막 성공 Worker receipt는 과거 Cloudflare 실행의 증거로 남는다.
 현재 SHA의 fallback 결과는 GitHub의 해당 SHA `Release` run과 기존 scored
 artifact 두 파일에서 확인한다. GitHub 결과를 Cloudflare receipt로 게시하지 않는다.
 
@@ -36,7 +44,7 @@ artifact 두 파일에서 확인한다. GitHub 결과를 Cloudflare receipt로 �
 | 파일 | 역할 |
 | --- | --- |
 | [package.json](package.json) · [package-lock.json](package-lock.json) | npm `11.6.2`와 정확한 Wrangler 의존성의 설치 기준 |
-| [build-settings.json](build-settings.json) | GitHub 대체 실행과 Cloudflare trigger 정지의 적용 목표, 보존할 main 명령·빌드 변수 |
+| [build-settings.json](build-settings.json) | GitHub 대체 실행과 보존하는 main trigger·명령·빌드 변수 |
 | [wrangler.jsonc](wrangler.jsonc) | 이 CI Worker의 명시적 배포 대상 |
 | [거버넌스 runner](../scripts/run-cloudflare-governance.mjs) | 원격 실행 정체성 확인, 실제 검사 실행, 해당 SHA 결과 생성 |
 | [배포 runner](../scripts/deploy-cloudflare-governance.mjs) | receipt·도구 버전 재검증, 잠긴 설치, 해당 Worker 배포와 공개 결과 대조 |
@@ -46,8 +54,8 @@ artifact 두 파일에서 확인한다. GitHub 결과를 Cloudflare receipt로 �
 Root directory는 **`/.github/cloudflare`**, production branch는
 **`main`**, preview builds는 **비활성화**한다.
 여기서 production branch는 이 CI Worker의 배포 기준이며 서비스 앱의 `main`
-승격을 뜻하지 않는다. 자동 실행을 정지하는 동안에도 아래 명령과 root는
-보존한다. [PR #3764](https://github.com/twoimo/tzudong/pull/3764)는 이전 develop
+승격을 뜻하지 않는다. 한도 제한 동안에도 아래 명령과 root는 보존한다.
+[PR #3764](https://github.com/twoimo/tzudong/pull/3764)는 이전 develop
 전환의 기록이며 현재 SHA의 실행 증거가 아니다.
 
 Build command:
