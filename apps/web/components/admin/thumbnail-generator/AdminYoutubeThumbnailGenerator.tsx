@@ -5102,10 +5102,10 @@ export function AdminYoutubeThumbnailGenerator() {
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid min-h-0 flex-1 grid-rows-[auto_auto] content-start gap-2 overflow-visible p-3 pt-0 lg:grid-rows-[minmax(0,1fr)_auto] lg:content-normal lg:gap-3 lg:overflow-hidden">
+          <CardContent className="grid min-h-0 flex-1 grid-rows-[auto_auto] content-start gap-2 overflow-visible p-3 pt-0 lg:flex lg:flex-col lg:gap-3 lg:overflow-hidden">
             <div
               ref={canvasViewportRef}
-              className="relative aspect-video w-full min-h-0 self-start overflow-hidden rounded-none bg-transparent lg:aspect-auto lg:h-full lg:self-stretch"
+              className="relative aspect-video w-full min-h-0 self-start overflow-hidden rounded-none bg-transparent lg:flex-[0_1_auto]"
               data-thumbnail-canvas-viewport="true"
             >
               <div
@@ -5248,7 +5248,7 @@ export function AdminYoutubeThumbnailGenerator() {
               ) : null}
               </div>
             </div>
-            <div className="min-h-0 overflow-hidden">
+            <div className="min-h-0 overflow-hidden lg:shrink-0">
               <div className="overflow-hidden rounded-none bg-muted/30 p-1" data-thumbnail-editor-toolbar="true">
                 <div className="flex w-full gap-2 overflow-x-auto pb-1 [&>button]:shrink-0 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] lg:overflow-x-visible lg:pb-0" data-thumbnail-tradingview-tool-palette="true" data-thumbnail-canvas-tool-row="true" role="toolbar" aria-label="캔버스 문구 편집 도구">
                   {THUMBNAIL_EDITOR_TOOLS.map((tool) => (

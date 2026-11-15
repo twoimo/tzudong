@@ -66,7 +66,7 @@ export const STORYBOARD_ASSISTANT_ERRORS: Record<string, string> = {
   invalid_request: '대화 내용과 선택한 모델을 확인해 주세요.',
   request_too_large: '대화가 길어졌습니다. 새 대화에서 핵심 내용을 짧게 적어 주세요.',
   private_content: '개인정보나 인증 정보는 대화에 넣을 수 없습니다. 내용을 확인해 주세요.',
-  assistant_unavailable: 'AI 대화 연결이 아직 준비되지 않았습니다. 제작 요청을 직접 작성할 수 있어요.',
+  assistant_unavailable: 'AI 대화 연결이 아직 준비되지 않았습니다.',
   assistant_busy: '이전 답변을 기다린 뒤 다시 보내 주세요.',
   rate_limited: '잠시 쉬었다가 다시 대화해 주세요.',
   assistant_timeout: '답변을 확인하지 못했습니다. 자동으로 다시 요청하지 않습니다.',

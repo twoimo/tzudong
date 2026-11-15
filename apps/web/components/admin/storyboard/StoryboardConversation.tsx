@@ -12,9 +12,9 @@ const buttonClass = 'min-h-11 rounded-lg border border-border px-3 py-2 text-sm 
 const examples = ['맛집 방문기를 자연스럽게 이어 가고 싶어요', '첫 컷에서 눈길을 끌 방법을 제안해 주세요'];
 type Turn = StoryboardAssistantMessage & { proposal?: string; provenance?: StoryboardAssistantResult['provenance'] };
 
-export function StoryboardConversation({ context, sceneCount, onUsePrompt, onWriteRequest, disabled = false }: {
+export function StoryboardConversation({ context, sceneCount, onUsePrompt, onWriteRequest, canWriteRequest = false, disabled = false }: {
   context: StoryboardAssistantRequest['context']; sceneCount: number;
-  onUsePrompt: (prompt: string) => boolean | void; onWriteRequest?: () => void; disabled?: boolean;
+  onUsePrompt: (prompt: string) => boolean | void; onWriteRequest?: () => void; canWriteRequest?: boolean; disabled?: boolean;
 }) {
   const [provider, setProvider] = useState<StoryboardProvider | null>(null);
   const [checking, setChecking] = useState(true);
@@ -24,6 +24,7 @@ export function StoryboardConversation({ context, sceneCount, onUsePrompt, onWri
   const [error, setError] = useState<string | null>(null);
   const [applied, setApplied] = useState<string | null>(null);
   const [capabilityTick, setCapabilityTick] = useState(0);
+  const requestActionsDisabled = !canWriteRequest || disabled || !!pending;
   const controller = useRef<AbortController | null>(null);
   const transcript = useRef<HTMLDivElement | null>(null);
   const input = useRef<HTMLTextAreaElement | null>(null);
@@ -89,7 +90,7 @@ export function StoryboardConversation({ context, sceneCount, onUsePrompt, onWri
         <p className="whitespace-pre-wrap break-words text-sm leading-6 [overflow-wrap:anywhere]">{turn.content}</p>
         {turn.proposal && <details className="mt-3 rounded-lg border border-border p-3"><summary className="cursor-pointer text-sm font-medium">제작 요청 제안 보기</summary>
           <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{turn.proposal}</p>
-          <button type="button" className={`${buttonClass} mt-3 w-full`} disabled={disabled || !!pending} onClick={() => { if (onUsePrompt(turn.proposal!) !== false) setApplied('제작 요청에 옮겼어요. 내용을 확인한 뒤 프로젝트를 만들어 주세요.'); }}>요청에 옮겨 검토하기</button>
+          <button type="button" className={`${buttonClass} mt-3 w-full`} disabled={requestActionsDisabled} onClick={() => { if (requestActionsDisabled) return; if (onUsePrompt(turn.proposal!) !== false) setApplied('제작 요청에 옮겼어요. 내용을 확인한 뒤 프로젝트를 만들어 주세요.'); }}>요청에 옮겨 검토하기</button>
         </details>}
         {turn.provenance && <details className="mt-2 text-xs text-muted-foreground"><summary className="cursor-pointer">답변 정보</summary><p className="mt-1 break-all">{turn.provenance.model} · 응답 모델 {turn.provenance.responseModel}</p></details>}
       </article>)}
@@ -98,10 +99,12 @@ export function StoryboardConversation({ context, sceneCount, onUsePrompt, onWri
     <div className="border-t border-border p-3">
       {checking ? <p role="status" className="mb-3 text-sm text-muted-foreground">AI 대화 설정을 확인하고 있어요.</p> : !provider && <div className="mb-3 space-y-2 text-sm">
         <p role="status" className="leading-6 text-muted-foreground">{STORYBOARD_ASSISTANT_ERRORS.assistant_unavailable}</p>
+        {canWriteRequest && onWriteRequest && <p className="leading-6 text-muted-foreground">제작 요청을 직접 작성할 수 있어요.</p>}
         <button type="button" className={buttonClass} onClick={() => setCapabilityTick(value => value + 1)}>연결 상태 다시 확인</button>
       </div>}
       {error && <p role="alert" className="mb-3 text-sm leading-6 text-destructive">{error}</p>}
-      {applied && <p role="status" className="mb-3 text-sm text-muted-foreground">{applied}</p>}
+      {!canWriteRequest && <p className="mb-3 text-sm leading-6 text-muted-foreground">제작 준비가 확인되면 요청을 작성할 수 있어요.</p>}
+      {applied && canWriteRequest && <p role="status" className="mb-3 text-sm text-muted-foreground">{applied}</p>}
       <form onSubmit={send} className="space-y-2">
         <label htmlFor="storyboard-conversation-input" className="sr-only">AI에게 보낼 메시지</label>
         <textarea ref={input} id="storyboard-conversation-input" rows={3} maxLength={2000} value={draft}
@@ -109,7 +112,7 @@ export function StoryboardConversation({ context, sceneCount, onUsePrompt, onWri
           placeholder="예: 시장에서 발견한 국수집을 따뜻한 분위기로 소개하고 싶어요."
           className="block min-h-24 w-full resize-none rounded-lg border border-border bg-background p-3 text-base leading-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50 sm:text-sm" />
         <div className="flex items-center justify-between gap-2">
-          {onWriteRequest ? <button type="button" className={`${buttonClass} border-transparent text-muted-foreground`} disabled={!!pending || disabled} onClick={onWriteRequest}>요청 직접 쓰기</button> : <span className="text-xs text-muted-foreground">대화는 이 화면에서만 유지돼요.</span>}
+          {onWriteRequest ? <button type="button" className={`${buttonClass} border-transparent text-muted-foreground`} disabled={requestActionsDisabled} onClick={() => { if (!requestActionsDisabled) onWriteRequest(); }}>요청 직접 쓰기</button> : <span className="text-xs text-muted-foreground">대화는 이 화면에서만 유지돼요.</span>}
           <button type="submit" className={`${buttonClass} flex items-center gap-1 border-primary bg-primary text-primary-foreground hover:bg-primary/90`}
             disabled={!provider || checking || !!pending || disabled || !draft.trim()}><ArrowUp size={16} aria-hidden="true" />{pending ? '답변 대기' : '보내기'}</button>
         </div>

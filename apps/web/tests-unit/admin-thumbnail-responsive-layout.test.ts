@@ -21,9 +21,30 @@ describe("thumbnail generator responsive canvas layout", () => {
     expect(component).toContain(
       'aspect-video w-full min-h-0 self-start overflow-hidden',
     );
-    expect(component).toContain("lg:aspect-auto lg:h-full lg:self-stretch");
     expect(component).toContain('data-thumbnail-canvas-aspect-frame="16:9"');
     expect(component).toContain("min-h-[420px]");
+  });
+
+  test("desktop controls follow the rendered canvas while a short viewport can shrink the canvas", () => {
+    const viewportStart = component.indexOf('ref={canvasViewportRef}');
+    expect(viewportStart).toBeGreaterThan(0);
+    const contentStart = component.lastIndexOf('<CardContent', viewportStart);
+    expect(contentStart).toBeGreaterThan(0);
+    const contentClasses = component.slice(contentStart, viewportStart)
+      .match(/className="([^"]+)"/)?.[1].split(/\s+/) ?? [];
+    for (const token of ['min-h-0', 'flex-1', 'lg:flex', 'lg:flex-col', 'lg:gap-3', 'lg:overflow-hidden']) {
+      expect(contentClasses).toContain(token);
+    }
+    expect(contentClasses).not.toContain('lg:grid-rows-[minmax(0,1fr)_auto]');
+    const viewportClasses = component.slice(viewportStart)
+      .match(/className="([^"]+)"/)?.[1].split(/\s+/) ?? [];
+    for (const token of ['aspect-video', 'w-full', 'min-h-0', 'lg:flex-[0_1_auto]']) {
+      expect(viewportClasses).toContain(token);
+    }
+    expect(viewportClasses).not.toContain('lg:aspect-auto');
+    expect(viewportClasses).not.toContain('lg:h-full');
+    const toolbarClasses = component.match(/<div className="([^"]+)">\s*<div className="[^"]+" data-thumbnail-editor-toolbar="true"/)?.[1].split(/\s+/) ?? [];
+    expect(toolbarClasses).toContain('lg:shrink-0');
   });
 
   test("continues sizing the canvas and pointer coordinates from its rendered box", () => {
