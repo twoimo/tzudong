@@ -1,4 +1,4 @@
-"""Worker run lifecycle: every claimed run ends in a recorded state."""
+"""Worker run lifecycle: every claimed run ends in a recorded state, once per window."""
 
 from __future__ import annotations
 
@@ -14,7 +14,9 @@ from unittest.mock import patch
 
 from backend.pipeline_control import live_run
 from backend.pipeline_control.adapter import default_live_runner
+from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.graph import STEP_SPECS
+from backend.pipeline_control.live_run import run_once
 from backend.pipeline_control.state_machine import ControlPlaneError, RunRecord
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.worker import process_one
@@ -70,6 +72,12 @@ def _enqueue(
         dry_run=False,
     )
     return run
+
+
+def _claimed(store: MemoryStore, target: str, key: str) -> RunRecord:
+    claimed = store.claim(_enqueue(store, target, key).id)
+    assert claimed is not None
+    return claimed
 
 
 def _target_status(store: MemoryStore, target: str) -> str:
@@ -233,6 +241,109 @@ class UnexpectedErrorTests(unittest.TestCase):
                     self.assertEqual(
                         (manifest["finalStatus"], manifest["jobId"]), ("ERROR", run.id)
                     )
+
+
+class RunWindowTests(unittest.TestCase):
+    def test_next_day_gets_a_new_run_on_a_persistent_store(self) -> None:
+        clock = _Clock(1_700_000_000.0)
+        with _local_pipeline() as root:
+            summary = root / "live-runs" / "run-1-current-summary.json"
+            first = run_once(
+                FileStore(root / "store.json", clock=clock), target="tzuyang", index=1, live=False
+            )
+            first_job = _read(summary)["jobId"]
+            clock.advance(DAY)
+            second = run_once(
+                FileStore(root / "store.json", clock=clock), target="tzuyang", index=1, live=False
+            )
+            second_job = _read(summary)["jobId"]
+
+        self.assertEqual((first, second), ("Succeeded", "Succeeded"))
+        self.assertNotEqual(first_job, second_job)
+
+    def test_same_window_retry_does_not_run_again(self) -> None:
+        clock = _Clock(1_700_000_000.0)
+        store = MemoryStore(clock=clock)
+        steps: list[list[str]] = []
+
+        def step(argv: list[str]) -> int:
+            steps.append(argv)
+            return 0
+
+        with _local_pipeline():
+            first = run_once(store, target="tzuyang", index=1, live=True, runner=step)
+            executed = len(steps)
+            clock.advance(60)
+            second = run_once(store, target="tzuyang", index=1, live=True, runner=step)
+
+        self.assertEqual((first, second), ("Succeeded", "Failed"))
+        self.assertGreater(executed, 0)
+        self.assertEqual(len(steps), executed)
+
+    def test_dry_run_and_live_run_share_a_window(self) -> None:
+        store = MemoryStore(clock=_Clock(1_700_000_000.0))
+        steps: list[list[str]] = []
+
+        with _local_pipeline():
+            dry = run_once(store, target="tzuyang", index=1, live=False)
+            live_result = run_once(
+                store,
+                target="tzuyang",
+                index=1,
+                live=True,
+                runner=lambda argv: steps.append(argv) or 0,
+            )
+
+        self.assertEqual((dry, live_result), ("Succeeded", "Succeeded"))
+        self.assertTrue(steps)
+
+
+class BusyTargetTests(unittest.TestCase):
+    def test_busy_target_is_refused_and_no_holder_is_touched(self) -> None:
+        store = MemoryStore(clock=_Clock())
+        holders = [
+            _claimed(store, "tzuyang", "busy-tzuyang-1"),
+            _claimed(store, "meatcreator", "busy-meat-0001"),
+        ]
+
+        with _local_pipeline() as root:
+            result = run_once(store, target="tzuyang", index=1, live=False)
+            manifest = _read(root / "live-runs" / "run-1-current-summary.json")
+
+        for holder in holders:
+            current = store.get(holder.id)
+            self.assertEqual((current.status, current.error_code), ("Fetching", None))
+        self.assertEqual(result, "Failed")
+        self.assertEqual(manifest["finalStatus"], "ERROR")
+
+    def test_paused_target_is_not_taken_over(self) -> None:
+        clock = _Clock()
+        store = MemoryStore(clock=clock)
+        paused = _enqueue(store, key="paused-tzuyang")
+        store.control(paused.id, "pause", actor="operator", request_id="req-pause")
+        clock.advance(DAY)
+
+        with _local_pipeline():
+            result = run_once(store, target="tzuyang", index=1, live=False)
+
+        self.assertEqual(store.get(paused.id).status, "Paused")
+        self.assertEqual(result, "Failed")
+
+    def test_expired_holder_is_reclaimed_and_other_targets_are_untouched(self) -> None:
+        clock = _Clock()
+        store = MemoryStore(clock=clock)
+        dead = _claimed(store, "tzuyang", "dead-tzuyang-1")
+        clock.advance(20)
+        alive = _claimed(store, "meatcreator", "live-meat-0001")
+        clock.advance(15)
+
+        with _local_pipeline():
+            result = run_once(store, target="tzuyang", index=1, live=False)
+
+        self.assertEqual(result, "Succeeded")
+        reclaimed = store.get(dead.id)
+        self.assertEqual((reclaimed.status, reclaimed.error_code), ("Failed", "lease_expired"))
+        self.assertEqual(store.get(alive.id).status, "Fetching")
 
 
 if __name__ == "__main__":
