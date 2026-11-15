@@ -35,7 +35,9 @@ SOURCE_FILES = [Path(__file__), Path(fixture.__file__), fixture.MIGRATION, fixtu
 
 
 class FixtureFailure(RuntimeError):
-    pass
+    def __init__(self, code: str, diagnostic: dict | None = None) -> None:
+        super().__init__(code)
+        self.diagnostic = diagnostic or {}
 
 
 def checked(condition: bool, code: str) -> None:
@@ -53,6 +55,18 @@ def safe_failure(stderr: str) -> str:
         return match.group(0)[:100]
     match = re.search(r"ERROR:\s+([0-9A-Z]{5}):", stderr)
     return "HOME_KPI_SQL_" + match.group(1) if match else "HOME_KPI_COMMAND_FAILED"
+
+
+def sql_diagnostic(stderr: str) -> dict:
+    """Keep only SQLSTATE and a bounded stdin line; never the error message."""
+    diagnostic = {}
+    state = re.search(r"\b(?:ERROR|FATAL):\s+([0-9A-Z]{5}):", stderr)
+    if state:
+        diagnostic["sqlState"] = state.group(1)
+    line = re.search(r"^psql:<stdin>:([0-9]{1,10}):\s+(?:ERROR|FATAL):", stderr, re.M)
+    if line and 0 < int(line.group(1)) <= 2147483647:
+        diagnostic["stdinLine"] = int(line.group(1))
+    return diagnostic
 
 
 def image_readback(image: dict, daemon_version: str) -> dict:
@@ -100,7 +114,7 @@ class OwnedDatabase:
             raise FixtureFailure("HOME_KPI_COMMAND_TIMEOUT" if isinstance(error, subprocess.TimeoutExpired)
                                  else "HOME_KPI_COMMAND_UNAVAILABLE") from None
         if result.returncode and not allow_failure:
-            raise FixtureFailure(safe_failure(result.stderr))
+            raise FixtureFailure(safe_failure(result.stderr), sql_diagnostic(result.stderr) if sql is not None else None)
         return result
 
     def owned(self) -> dict:
@@ -153,7 +167,11 @@ exec postgres -D /tmp/home-kpi-data -c listen_addresses='' -c unix_socket_direct
         raise FixtureFailure("HOME_KPI_READINESS_TIMEOUT")
 
     def sql(self, text: str, database: str = "postgres", user: str = "fixture_bootstrap",
-            *, allow_failure: bool = False, single_transaction: bool = False) -> subprocess.CompletedProcess[str]:
+            *, allow_failure: bool = False, single_transaction: bool = False,
+            substage: str = "readback") -> subprocess.CompletedProcess[str]:
+        checked(substage in {"bootstrap", "setup", "migration", "readback", "validator", "catalog_validator",
+                             "behavior", "reapply", "validator_drift", "rollback_setup", "rollback_migration"},
+                "HOME_KPI_SQL_SUBSTAGE")
         self.owned()
         command = [
             "docker", "exec", "--interactive", "--env", "PGPASSWORD=" + PASSWORD, self.name,
@@ -162,17 +180,21 @@ exec postgres -D /tmp/home-kpi-data -c listen_addresses='' -c unix_socket_direct
         ]
         if single_transaction:
             command.append("--single-transaction")
-        return self.command(command, sql="\\set VERBOSITY verbose\n" + text, allow_failure=allow_failure)
+        try:
+            return self.command(command, sql="\\set VERBOSITY verbose\n" + text, allow_failure=allow_failure)
+        except FixtureFailure as error:
+            error.diagnostic = {"substage": substage, **error.diagnostic}
+            raise
 
-    def json(self, text: str, database: str = "postgres") -> dict:
-        output = self.sql(text, database).stdout.strip().splitlines()
+    def json(self, text: str, database: str = "postgres", *, substage: str = "readback") -> dict:
+        output = self.sql(text, database, substage=substage).stdout.strip().splitlines()
         checked(bool(output), "HOME_KPI_SQL_RESULT_MISSING")
         return json.loads(output[-1])
 
     def setup(self, name: str, definitions: dict[str, str]) -> None:
         checked(re.fullmatch(r"kpi_[a-z_]+", name) is not None, "HOME_KPI_DATABASE_NAME")
-        self.sql("CREATE DATABASE " + name + " OWNER postgres TEMPLATE template0;")
-        self.sql(fixture.setup_database_sql(definitions), name)
+        self.sql("CREATE DATABASE " + name + " OWNER postgres TEMPLATE template0;", substage="bootstrap")
+        self.sql(fixture.setup_database_sql(definitions), name, substage="setup")
 
     def cleanup(self) -> bool:
         if self.container_id is None:
@@ -203,11 +225,14 @@ def verify_success(database: OwnedDatabase, variant: str, definitions: dict[str,
     name = "kpi_" + variant
     database.setup(name, definitions)
     before = database.json(fixture.STATE_SQL, name)
-    database.sql(fixture.MIGRATION.read_text(), name, "postgres", single_transaction=True)
+    checked(before["migrationSchemaAccess"] == [True, False], "HOME_KPI_SCHEMA_ADMISSION")
+    database.sql(fixture.MIGRATION.read_text(), name, "postgres", single_transaction=True, substage="migration")
     after = database.json(fixture.STATE_SQL, name)
     checked(before["memberships"] == after["memberships"] and after["effectiveOwnerAccess"] == [False, False],
             "HOME_KPI_MEMBERSHIP_RESTORATION")
     checked(before["table"] == after["table"] and before["columns"] == after["columns"], "HOME_KPI_TABLE_CHANGED")
+    checked(before["schema"] == after["schema"] and after["migrationSchemaAccess"] == [True, False],
+            "HOME_KPI_SCHEMA_CHANGED")
     for validator, metadata in before["validators"].items():
         next_metadata = after["validators"][validator]
         checked({k: v for k, v in metadata.items() if k != "prosrc"}
@@ -223,14 +248,15 @@ def verify_success(database: OwnedDatabase, variant: str, definitions: dict[str,
     checked(after["rpc"]["prosrc"] == fixture.previous.tagged(fixture.MIGRATION.read_text(), "home_kpi_function"),
             "HOME_KPI_RPC_SOURCE_CHANGED")
     check_validators = "SET ROLE privacy_workflow_owner; SELECT privacy_retention.assert_g014_public_rpc_allowlist(); SELECT privacy_retention.assert_g014_definer_contract(); RESET ROLE;"
-    database.sql(check_validators, name)
+    database.sql(check_validators, name, substage="validator")
     catalog = definitions["assert_g014_catalog_contract"].replace(fixture.body(definitions["assert_g014_catalog_contract"]),
                                                                 after["validators"]["assert_g014_catalog_contract"]["prosrc"])
-    database.sql(fixture.catalog_loop_sql(catalog), name)
-    behavior = database.json(fixture.BEHAVIOR.read_text(), name)
+    database.sql(fixture.catalog_loop_sql(catalog), name, substage="catalog_validator")
+    behavior = database.json(fixture.BEHAVIOR.read_text(), name, substage="behavior")
     checked(behavior["count"] == 10 and len(behavior["cases"]) == 10, "HOME_KPI_BEHAVIOR_INCOMPLETE")
     checked(database.json(fixture.STATE_SQL, name) == after, "HOME_KPI_BEHAVIOR_ROLLBACK")
-    repeated = database.sql(fixture.MIGRATION.read_text(), name, "postgres", allow_failure=True, single_transaction=True)
+    repeated = database.sql(fixture.MIGRATION.read_text(), name, "postgres", allow_failure=True,
+                            single_transaction=True, substage="reapply")
     checked(repeated.returncode != 0 and safe_failure(repeated.stderr) == "HOME_KPI_IDENTITY_EXISTS"
             and database.json(fixture.STATE_SQL, name) == after, "HOME_KPI_REAPPLY_CHANGED_STATE")
 
@@ -244,12 +270,14 @@ def verify_success(database: OwnedDatabase, variant: str, definitions: dict[str,
         ("grant_option", "GRANT EXECUTE ON FUNCTION public.get_home_youtube_kpi_metrics(text[]) TO service_role WITH GRANT OPTION;"),
         ("missing_service", "REVOKE EXECUTE ON FUNCTION public.get_home_youtube_kpi_metrics(text[]) FROM service_role;"),
     ]:
-        result = database.sql("BEGIN; " + change + check_validators + fixture.catalog_loop_sql(catalog) + " ROLLBACK;", name, allow_failure=True)
+        result = database.sql("BEGIN; " + change + check_validators + fixture.catalog_loop_sql(catalog) + " ROLLBACK;",
+                              name, allow_failure=True, substage="validator_drift")
         checked(result.returncode != 0 and database.json(fixture.STATE_SQL, name) == after,
                 "HOME_KPI_VALIDATOR_DRIFT_UNDETECTED")
         rejected.append(code)
     return {"behaviorCases": behavior["cases"], "validatorDriftCases": rejected,
             "membershipsRestored": True, "validatorMetadataPreserved": True, "tableBoundaryPreserved": True,
+            "schemaBoundaryPreserved": True,
             "strictReapplyRejectedWithoutChanges": True, "beforeSha256": state_digest(before), "afterSha256": state_digest(after)}
 
 
@@ -260,20 +288,23 @@ def verify_registration_rollback(database: OwnedDatabase, definitions: dict[str,
         database.setup(name, definitions)
         if case == "catalog_drift":
             definition = definitions["assert_g014_catalog_contract"]
-            database.sql(definition.replace(fixture.body(definition), fixture.body(definition) + "\n"), name)
+            database.sql(definition.replace(fixture.body(definition), fixture.body(definition) + "\n"), name,
+                         substage="rollback_setup")
         elif case == "lease_failure":
             # Owner custody is acquired first, then temporary function creation
             # really fails on language USAGE. The postgres caller still has that
             # right, so the failure occurs after SET ROLE, not in an earlier DO.
             # Closing the failed transaction must undo the live role lease.
-            database.sql("REVOKE USAGE ON LANGUAGE plpgsql FROM PUBLIC,privacy_workflow_owner; GRANT USAGE ON LANGUAGE plpgsql TO postgres;", name)
+            database.sql("REVOKE USAGE ON LANGUAGE plpgsql FROM PUBLIC,privacy_workflow_owner; GRANT USAGE ON LANGUAGE plpgsql TO postgres;",
+                         name, substage="rollback_setup")
         before = database.json(fixture.STATE_SQL, name)
         source = fixture.MIGRATION.read_text()
         if case == "outer_finalize_failure":
             # Exact migration bytes plus a failing executor-finalization
             # statement: no internal COMMIT may strand DDL outside the wrapper.
             source += "\nSELECT 1/0;\n"
-        result = database.sql(source, name, "postgres", allow_failure=True, single_transaction=True)
+        result = database.sql(source, name, "postgres", allow_failure=True, single_transaction=True,
+                              substage="rollback_migration")
         checked(result.returncode != 0, "HOME_KPI_REGISTRATION_FAILURE_NOT_REJECTED")
         if case == "catalog_drift":
             checked(safe_failure(result.stderr) == "HOME_KPI_SOURCE_DRIFT", "HOME_KPI_WRONG_DRIFT_FAILURE")
@@ -312,7 +343,7 @@ def main() -> int:
         canonical = fixture.canonical_definitions()
         stage = "database_start"
         database.start()
-        version = database.json("SELECT jsonb_build_object('serverVersionNum',current_setting('server_version_num'),'serverVersion',current_setting('server_version'),'isolation',current_setting('transaction_isolation'));")
+        version = database.json("SELECT jsonb_build_object('serverVersionNum',current_setting('server_version_num'),'serverVersion',current_setting('server_version'),'isolation',current_setting('transaction_isolation'));", substage="bootstrap")
         checked(version["serverVersionNum"] == EXPECTED_SERVER and version["isolation"] == "read committed",
                 "HOME_KPI_DATABASE_VERSION")
         receipt["database"] = version
@@ -325,7 +356,7 @@ CREATE ROLE anon NOLOGIN NOSUPERUSER NOBYPASSRLS;
 CREATE ROLE authenticated NOLOGIN NOSUPERUSER NOBYPASSRLS;
 GRANT privacy_workflow_owner TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE;
 GRANT privacy_workflow_owner TO privacy_auth_bridge WITH ADMIN FALSE, INHERIT TRUE, SET TRUE;
-""")
+""", substage="bootstrap")
         receipt["variants"] = {}
         for variant, definitions in [("hosted", hosted), ("canonical", canonical)]:
             stage = variant + "_contract"
@@ -337,6 +368,8 @@ GRANT privacy_workflow_owner TO privacy_auth_bridge WITH ADMIN FALSE, INHERIT TR
     except (FixtureFailure, ValueError, KeyError, OSError) as error:
         receipt["status"] = "failed"
         receipt["failure"] = {"stage": stage, "code": str(error) if isinstance(error, FixtureFailure) else "HOME_KPI_FIXTURE_INPUT"}
+        if isinstance(error, FixtureFailure):
+            receipt["failure"].update(error.diagnostic)
     finally:
         if database.image_readback is not None:
             receipt["imageReadback"] = database.image_readback

@@ -72,6 +72,22 @@ class HomeKpiFixtureGuards(unittest.TestCase):
             with self.assertRaisesRegex(runner.FixtureFailure, "^HOME_KPI_COMMAND_FAILED$"):
                 runner.OwnedDatabase.command(["docker", "inspect", "fixture"])
 
+    def test_sql_failure_retains_only_fixed_substage_state_and_stdin_line(self):
+        database = runner.OwnedDatabase()
+        stderr = ("psql:<stdin>:34: ERROR:  42501: synthetic private provider detail\n"
+                  "CONTEXT: SQL statement containing SYNTHETIC_PRIVATE_DETAIL\n")
+        with patch.object(database, "owned"), patch.object(runner.subprocess, "run",
+                return_value=CompletedProcess([], 1, "SYNTHETIC_PRIVATE_DETAIL", stderr)):
+            with self.assertRaises(runner.FixtureFailure) as failure:
+                database.sql("synthetic source", substage="migration", single_transaction=True)
+        self.assertEqual(str(failure.exception), "HOME_KPI_SQL_42501")
+        self.assertEqual(failure.exception.diagnostic,
+                         {"substage": "migration", "sqlState": "42501", "stdinLine": 34})
+        self.assertNotIn("PRIVATE_DETAIL", json.dumps(failure.exception.diagnostic))
+        self.assertEqual(runner.sql_diagnostic("psql:<stdin>:99999999999: ERROR: 42501: private"),
+                         {"sqlState": "42501"})
+        self.assertEqual(runner.sql_diagnostic("private non-SQL failure"), {})
+
     def test_remote_docker_rejected_before_pull_or_container_creation(self):
         database = runner.OwnedDatabase()
         with patch.object(runner.shutil, "which", return_value="/usr/bin/docker"), \

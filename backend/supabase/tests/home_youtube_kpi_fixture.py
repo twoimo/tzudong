@@ -118,6 +118,10 @@ def setup_database_sql(definitions: dict[str, str]) -> str:
     statements = ["""
 CREATE SCHEMA privacy_retention AUTHORIZATION privacy_workflow_owner;
 REVOKE ALL ON SCHEMA privacy_retention FROM PUBLIC, anon, authenticated, service_role;
+-- Hosted postgres already has effective USAGE through an existing role.
+-- Reproduce that minimum name-resolution right without CREATE, owner SET or
+-- EXECUTE on any private validator in this isolated synthetic database.
+GRANT USAGE ON SCHEMA privacy_retention TO postgres;
 GRANT USAGE ON SCHEMA public TO privacy_workflow_owner, privacy_auth_bridge, service_role, anon, authenticated;
 CREATE TABLE privacy_retention.g014_public_rpc_allowlist (
   function_schema name NOT NULL, function_name name NOT NULL,
@@ -185,6 +189,10 @@ SELECT jsonb_build_object(
     FROM privacy_retention.g014_public_rpc_allowlist r),
   'table',(SELECT jsonb_build_object('acl',relacl,'rls',relrowsecurity,'force',relforcerowsecurity,'owner',relowner)
     FROM pg_class WHERE oid='public.youtube_video_kpi_snapshots'::regclass),
+  'schema',(SELECT jsonb_build_object('acl',nspacl,'owner',nspowner)
+    FROM pg_namespace WHERE nspname='privacy_retention'),
+  'migrationSchemaAccess',jsonb_build_array(has_schema_privilege('postgres','privacy_retention','USAGE'),
+    has_schema_privilege('postgres','privacy_retention','CREATE')),
   'columns',(SELECT jsonb_agg(jsonb_build_array(attname,attacl) ORDER BY attnum) FROM pg_attribute
     WHERE attrelid='public.youtube_video_kpi_snapshots'::regclass AND attnum>0 AND NOT attisdropped),
   'rpc',(SELECT to_jsonb(p) FROM pg_proc p WHERE p.oid=to_regprocedure('public.get_home_youtube_kpi_metrics(text[])')),

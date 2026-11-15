@@ -4,11 +4,11 @@ This procedure is prepared for a separately authorized deployment comparison. Au
 
 ## Freeze the comparison before either phase
 
-Use one exact application commit for both deployments. Record the committed source SHA, deployment ID, origin and runtime TZUDONG_HOME_KPI_QUERY_MODE from the provider's readback, first **legacy**, then **rpc**. The same source must contain the instrumentation and both query paths; an older uninstrumented release is not this baseline. Keep the DB migration/function identity and relevant deployment configuration in a minimized supporting receipt. Do not record secrets or raw provider/environment dumps.
+Use one exact application commit for both deployments. Record the committed source SHA, deployment ID and origin from the provider's readback, plus the operator-configured **expected** TZUDONG_HOME_KPI_QUERY_MODE, first **legacy**, then **rpc**. A successful configuration save establishes the intended setting; actual runtime mode is checked only through the fixed Server-Timing marker on each of the five planned responses. Do not make extra KPI probes. The same source must contain the instrumentation and both query paths; an older uninstrumented release is not this baseline. Keep the DB migration/function identity and relevant deployment configuration in a minimized supporting receipt. Do not record secrets or raw provider/environment dumps.
 
 Keep the existing cohort file **outside the repository**: /workspace/scratch/57877157ba3f/kpi-input-cohort.json, shaped as {"videoIds":[100 unique strings]}. It was selected at 2026-11-15 06:31:18 UTC from the newest published videos in the global latest snapshot bucket, then sorted by video ID. Reuse the same bytes/order in both phases; do not replace missing rows or select a more favorable cohort. The tool retains only its count and SHA-256. The separate read-only DB EXPLAIN observations are query-plan evidence, not API/network timings.
 
-Before each phase, prepare receipts/legacy-provenance.json or receipts/rpc-provenance.json with **exactly** these fields. Replace every example value with observed identity; the readback must be no more than 30 minutes old when starting:
+Before each phase, prepare receipts/legacy-provenance.json or receipts/rpc-provenance.json with **exactly** these fields. Replace every example value with observed identity or, for mode, the configured expected value; the identity readback must be no more than 30 minutes old when starting:
 
 ~~~json
 {
@@ -22,7 +22,7 @@ Before each phase, prepare receipts/legacy-provenance.json or receipts/rpc-prove
 }
 ~~~
 
-The providerReadbackSha256 identifies the retained, minimized provider readback that ties source, deployment, alias and runtime mode together. These values are mandatory operator-supplied evidence; the diagnostic tool does not independently authenticate a provider deployment. Do not point a production alias at a source until its ordinary release and database gates pass.
+The providerReadbackSha256 identifies the retained, minimized control-plane receipt containing the source, deployment and alias observations and the configured expected mode. Record the configuration-save observation and any unavailable readback, such as an environment value that could not be revealed. The mode field is an operator-configured expectation, not proof of effective runtime mode. These values are mandatory operator-supplied evidence; the diagnostic tool does not independently authenticate a provider deployment. Do not point a production alias at a source until its ordinary release and database gates pass.
 
 ## Execute the fixed phases
 
@@ -35,7 +35,7 @@ node apps/web/performance/kpi-rpc-20261115/diagnose.mjs --run \
   --out apps/web/performance/kpi-rpc-20261115/receipts/legacy-pre.ndjson
 ~~~
 
-After the same-source RPC deployment and fresh mode/source/deployment/alias readback:
+After the same-source RPC deployment, fresh source/deployment/alias readback and recorded expected RPC configuration:
 
 ~~~sh
 node apps/web/performance/kpi-rpc-20261115/diagnose.mjs --run \
@@ -46,7 +46,7 @@ node apps/web/performance/kpi-rpc-20261115/diagnose.mjs --run \
 
 Each invocation has five sequential slots, one POST per slot, with a 15-second deadline and 256 KiB response cap. There is no warmup, parallel load, redirect follow, retry or failure replacement. Native connection reuse and server/database cache state are not reset or classified as cold. A failed response remains in its original slot; all five planned slots are attempted unless receipt persistence fails. Invalid inputs, stale provenance or an existing output stop before requests. A persistence failure stops remaining slots; retain the partial receipt and do not rerun to fill it. Keep each printed receipt SHA outside the artifact map, then include the provenance files, minimized readback and NDJSON receipts in the final hashed artifact inventory.
 
-Immediately after each phase, retain a second minimized provider readback confirming the same source, deployment, alias and runtime mode. A changed or unavailable identity makes the phase inconclusive; do not rerun to replace it. This before/after control-plane evidence supports the observation window but does not create a cryptographic deployment attestation on each HTTP response.
+Immediately after each phase, retain a second minimized provider readback confirming the same source, deployment and alias, and record any observed configuration changes. A changed or unavailable deployment identity makes the phase inconclusive; do not rerun to replace it. Unavailable environment-value readback remains an explicit limitation; actual runtime-mode evidence comes from the five planned response markers, and missing or mismatched markers still fail admission. This before/after control-plane evidence supports the observation window but does not create a cryptographic deployment attestation on each HTTP response.
 
 ## Admit and interpret
 
