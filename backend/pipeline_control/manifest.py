@@ -206,7 +206,10 @@ def record_parity_attempt(
     candidate: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if ledger_path.exists():
-        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        try:
+            ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        except ValueError:
+            ledger = None
     else:
         ledger = {
             "schemaVersion": PARITY_LEDGER_SCHEMA_VERSION,
@@ -214,7 +217,10 @@ def record_parity_attempt(
             "cohort": None,
             "attempts": [],
         }
-    if ledger.get("schemaVersion") != PARITY_LEDGER_SCHEMA_VERSION:
+    if (
+        not isinstance(ledger, dict)
+        or ledger.get("schemaVersion") != PARITY_LEDGER_SCHEMA_VERSION
+    ):
         ledger = {
             "schemaVersion": PARITY_LEDGER_SCHEMA_VERSION,
             "consecutiveMatches": 0,
@@ -277,8 +283,7 @@ def record_parity_attempt(
             ),
         }
     )
-    ledger_path.parent.mkdir(parents=True, exist_ok=True)
-    ledger_path.write_text(json.dumps(ledger, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_json(ledger_path, ledger)
     return ledger
 
 

@@ -13,6 +13,7 @@ from backend.pipeline_control.manifest import (
     is_live_execution_success,
     load_json,
     record_parity_attempt,
+    write_compatible_summary,
 )
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.profiles import resolve_compute_profile
@@ -179,8 +180,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
     if last_live_manifest is not None:
         default = Path(__file__).resolve().parents[2] / "backend" / "log" / "cron" / "current-summary.json"
-        default.parent.mkdir(parents=True, exist_ok=True)
-        default.write_text(last_live_manifest.read_text(encoding="utf-8"), encoding="utf-8")
+        write_compatible_summary(default, load_json(last_live_manifest))
     print(",".join(results))
     return 0 if all(item == "Succeeded" for item in results) else 1
 
