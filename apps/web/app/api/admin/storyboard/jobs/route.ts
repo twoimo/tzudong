@@ -40,17 +40,21 @@ export async function GET(request: NextRequest) {
     return noStoreJson(telemetry, { ok: false, error: 'invalid_storyboard_job_query' }, { status: 400 });
   }
 
-  const supabase = createSupabaseServiceRoleClient();
-  const { data, error } = await supabase
-    .from('admin_storyboard_jobs')
-    .select(STORYBOARD_JOB_SELECT)
-    .eq('requested_by_admin_id', auth.userId)
-    .order('created_at', { ascending: false })
-    .limit(Math.min(50, limit));
-  if (error) return noStoreJson(telemetry, { ok: false, error: 'storyboard_jobs_list_failed' }, { status: 502 });
+  try {
+    const supabase = createSupabaseServiceRoleClient();
+    const { data, error } = await supabase
+      .from('admin_storyboard_jobs')
+      .select(STORYBOARD_JOB_SELECT)
+      .eq('requested_by_admin_id', auth.userId)
+      .order('created_at', { ascending: false })
+      .limit(Math.min(50, limit));
+    if (error) throw error;
 
-  const jobs = ((data ?? []) as StoryboardJobRow[]).map(sanitizeStoryboardJobRow);
-  return noStoreJson(telemetry, { ok: true, jobs });
+    const jobs = ((data ?? []) as StoryboardJobRow[]).map(sanitizeStoryboardJobRow);
+    return noStoreJson(telemetry, { ok: true, jobs });
+  } catch {
+    return noStoreJson(telemetry, { ok: false, error: 'storyboard_jobs_list_failed' }, { status: 502 });
+  }
 }
 
 export const POST = retiredStoryboardApi;
