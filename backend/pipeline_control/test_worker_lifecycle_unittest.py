@@ -205,5 +205,35 @@ class HungStepTests(unittest.TestCase):
         self.assertEqual(manifest["failedRequiredSteps"], ["Step 1 (URL Collection)"])
 
 
+class UnexpectedErrorTests(unittest.TestCase):
+    def test_error_in_a_step_fails_the_run_and_is_raised(self) -> None:
+        for error, code in (
+            (RuntimeError("step runner broke"), "worker_unexpected"),
+            (KeyboardInterrupt(), "worker_interrupted"),
+        ):
+            with self.subTest(error=type(error).__name__):
+                store = MemoryStore(clock=_Clock())
+                run = _enqueue(store)
+
+                def broken_step(argv: list[str]) -> int:
+                    raise error
+
+                with _local_pipeline() as root:
+                    with self.assertRaises(type(error)):
+                        process_one(
+                            store,
+                            live=True,
+                            runner=broken_step,
+                            manifest_path=root / "summary.json",
+                        )
+                    failed = store.get(run.id)
+                    self.assertEqual((failed.status, failed.error_code), ("Failed", code))
+                    self.assertEqual(_target_status(store, "tzuyang"), "Idle")
+                    manifest = _read(root / "summary.json")
+                    self.assertEqual(
+                        (manifest["finalStatus"], manifest["jobId"]), ("ERROR", run.id)
+                    )
+
+
 if __name__ == "__main__":
     unittest.main()
