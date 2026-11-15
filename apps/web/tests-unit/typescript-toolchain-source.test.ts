@@ -53,6 +53,7 @@ describe("TypeScript 7 dual-toolchain manifest contract", () => {
     expect(source("bunfig.toml").trim()).toBe([
       "[test]",
       'pathIgnorePatterns = ["performance/**/historical-*/**"]',
+      'preload = ["./tests-unit/support/server-only.ts"]',
     ].join("\n"));
   });
 

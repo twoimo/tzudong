@@ -1,2 +1,3 @@
 [test]
 pathIgnorePatterns = ["performance/**/historical-*/**"]
+preload = ["./tests-unit/support/server-only.ts"]
