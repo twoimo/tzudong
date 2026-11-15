@@ -19,6 +19,11 @@ MIGRATIONS = ROOT / "backend/supabase/migrations"
 MIGRATION = MIGRATIONS / "20261115062631_home_youtube_kpi_metrics.sql"
 PREIMAGES = Path(__file__).with_name("fixtures") / "home_kpi_g014_preimages_20261115.json"
 BEHAVIOR = Path(__file__).with_name("home_youtube_kpi_rpc.sql")
+ARCHIVE_BEHAVIOR = Path(__file__).with_name("home_youtube_kpi_archive_trigger.sql")
+ARCHIVE_SOURCE = MIGRATIONS / "20261013093518_storyboard_gemini_execution_v1.sql"
+ARCHIVE_SOURCE_SHA256 = "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e"
+ARCHIVE_BODY_SHA256 = "a0c1789c2fc116c6b07a1d40e4c1aba0a0e3eec49602e34a4c70f8f74487adf9"
+ARCHIVE_RELATIONS = ["projects", "jobs", "assets", "events", "revisions", "restores"]
 PREIMAGE_HASHES = {
     "assert_g014_definer_contract": "e879e3d3083f969cee5968b4064703bd7cc8227cc78e1950c78b06a8a0e5ddfa",
     "assert_g014_catalog_contract": "ef150f03928a8dfaeaa4365558408afe38454786f3965863219ba879b0d3ca05",
@@ -114,7 +119,18 @@ def expected_patched_body(definition: str, name: str) -> str:
     return previous.replace_exact(source, anchor, addition + anchor)
 
 
-def setup_database_sql(definitions: dict[str, str]) -> str:
+def archive_source_sql() -> str:
+    """Use the exact applied trigger body/bindings, also matched to hosted SHA."""
+    source = ARCHIVE_SOURCE.read_text()
+    if (digest(source) != ARCHIVE_SOURCE_SHA256
+            or digest(previous.tagged(source, "storyboard_archive_guard")) != ARCHIVE_BODY_SHA256):
+        raise ValueError("HOME_KPI_FIXTURE_ARCHIVE_SOURCE")
+    start = source.index("CREATE FUNCTION public.storyboard_production_reject_archived_write()")
+    end = source.index("DO $storyboard_gemini_admin$", start)
+    return source[start:end]
+
+
+def setup_database_sql(definitions: dict[str, str], *, archive_execute_drift: bool = True) -> str:
     statements = ["""
 CREATE SCHEMA privacy_retention AUTHORIZATION privacy_workflow_owner;
 REVOKE ALL ON SCHEMA privacy_retention FROM PUBLIC, anon, authenticated, service_role;
@@ -135,8 +151,7 @@ ALTER TABLE privacy_retention.g014_public_rpc_allowlist FORCE ROW LEVEL SECURITY
 CREATE POLICY owner_access ON privacy_retention.g014_public_rpc_allowlist
   FOR ALL TO privacy_workflow_owner USING(true) WITH CHECK(true);
 CREATE TABLE privacy_retention.privacy_retention_runs(id uuid);
-CREATE TABLE public.admin_storyboard_production_projects(id uuid);
-CREATE TABLE public.admin_storyboard_production_jobs(id uuid);
+CREATE TABLE public.admin_storyboard_production_projects(id uuid PRIMARY KEY, request jsonb NOT NULL);
 CREATE TABLE public.youtube_video_kpi_snapshots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   video_id text NOT NULL, channel_id text NOT NULL,
@@ -158,6 +173,20 @@ CREATE INDEX youtube_video_kpi_snapshots_bucket_views_idx ON public.youtube_vide
 CREATE INDEX youtube_video_kpi_snapshots_video_idx ON public.youtube_video_kpi_snapshots(video_id,bucket_started_at DESC);
 CREATE INDEX youtube_video_kpi_snapshots_channel_idx ON public.youtube_video_kpi_snapshots(channel_id,bucket_started_at DESC);
 """]
+    # Only fields read by the real installed guard are modeled. Seed archived
+    # and active rows before installing its six exact source-bound triggers.
+    statements.append("INSERT INTO public.admin_storyboard_production_projects VALUES "
+                      "('00000000-0000-0000-0000-000000000001','{\"workflow\":\"storyboard-mlx-v1\"}'),"
+                      "('00000000-0000-0000-0000-000000000002','{\"workflow\":\"storyboard-gemini-v1\"}');")
+    for suffix in ARCHIVE_RELATIONS:
+        relation = "public.admin_storyboard_production_" + suffix
+        if suffix != "projects":
+            statements.append("CREATE TABLE " + relation + " (id uuid PRIMARY KEY, project_id uuid NOT NULL REFERENCES public.admin_storyboard_production_projects(id));"
+                              "INSERT INTO " + relation + " VALUES "
+                              "('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001'),"
+                              "('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000002');")
+        statements.append("ALTER TABLE " + relation + " OWNER TO postgres; ALTER TABLE " + relation
+                          + " ENABLE ROW LEVEL SECURITY; GRANT SELECT,INSERT,UPDATE,DELETE ON " + relation + " TO service_role;")
     extra = body(definitions["assert_g014_definer_contract"]).split("UNION ALL VALUES", 1)[1].split("  LOOP", 1)[0]
     for signature in re.findall(r"'([^']+)'", extra):
         # Metadata-only private identities; no callable fixture business mocks.
@@ -166,6 +195,10 @@ CREATE INDEX youtube_video_kpi_snapshots_channel_idx ON public.youtube_video_kpi
     for name, definition in definitions.items():
         statements.append(definition.rstrip(";\n") + "; ALTER FUNCTION privacy_retention." + name + "() OWNER TO privacy_workflow_owner; REVOKE ALL ON FUNCTION privacy_retention." + name + "() FROM PUBLIC,anon,authenticated,service_role;")
     statements.append("SET ROLE privacy_workflow_owner; SELECT privacy_retention.assert_g014_public_rpc_allowlist(); SELECT privacy_retention.assert_g014_definer_contract(); RESET ROLE;")
+    statements.append("SET ROLE postgres;\n" + archive_source_sql())
+    if not archive_execute_drift:
+        statements.append("REVOKE EXECUTE ON FUNCTION public.storyboard_production_reject_archived_write() FROM service_role;")
+    statements.append("RESET ROLE;")
     return "\n".join(statements)
 
 
@@ -196,6 +229,29 @@ SELECT jsonb_build_object(
   'columns',(SELECT jsonb_agg(jsonb_build_array(attname,attacl) ORDER BY attnum) FROM pg_attribute
     WHERE attrelid='public.youtube_video_kpi_snapshots'::regclass AND attnum>0 AND NOT attisdropped),
   'rpc',(SELECT to_jsonb(p) FROM pg_proc p WHERE p.oid=to_regprocedure('public.get_home_youtube_kpi_metrics(text[])')),
+  'archiveGuard',(SELECT to_jsonb(p) FROM pg_proc p
+    WHERE p.oid='public.storyboard_production_reject_archived_write()'::regprocedure),
+  'archiveRoleExecute',jsonb_build_object(
+    'anon',has_function_privilege('anon','public.storyboard_production_reject_archived_write()','EXECUTE'),
+    'authenticated',has_function_privilege('authenticated','public.storyboard_production_reject_archived_write()','EXECUTE'),
+    'service_role',has_function_privilege('service_role','public.storyboard_production_reject_archived_write()','EXECUTE')),
+  'archiveTriggers',(SELECT jsonb_agg(to_jsonb(t) ORDER BY tgrelid,tgname) FROM pg_trigger t
+    WHERE tgfoid='public.storyboard_production_reject_archived_write()'::regprocedure),
+  'archiveDependencies',(SELECT jsonb_agg(to_jsonb(d) ORDER BY classid,objid,objsubid,refclassid,refobjid,refobjsubid,deptype)
+    FROM pg_depend d WHERE (classid='pg_proc'::regclass AND objid='public.storyboard_production_reject_archived_write()'::regprocedure)
+      OR (refclassid='pg_proc'::regclass AND refobjid='public.storyboard_production_reject_archived_write()'::regprocedure)),
+  'archiveRelations',(SELECT jsonb_agg(jsonb_build_object('name',relname,'owner',relowner,'acl',relacl,
+    'rls',relrowsecurity,'force',relforcerowsecurity) ORDER BY relname) FROM pg_class
+    WHERE relnamespace='public'::regnamespace AND relname IN (
+      'admin_storyboard_production_projects','admin_storyboard_production_jobs','admin_storyboard_production_assets',
+      'admin_storyboard_production_events','admin_storyboard_production_revisions','admin_storyboard_production_restores')),
+  'archiveRows',(SELECT jsonb_agg(jsonb_build_array(name,value) ORDER BY name,value->>'id') FROM (
+    SELECT 'projects' name,to_jsonb(r) value FROM public.admin_storyboard_production_projects r UNION ALL
+    SELECT 'jobs',to_jsonb(r) FROM public.admin_storyboard_production_jobs r UNION ALL
+    SELECT 'assets',to_jsonb(r) FROM public.admin_storyboard_production_assets r UNION ALL
+    SELECT 'events',to_jsonb(r) FROM public.admin_storyboard_production_events r UNION ALL
+    SELECT 'revisions',to_jsonb(r) FROM public.admin_storyboard_production_revisions r UNION ALL
+    SELECT 'restores',to_jsonb(r) FROM public.admin_storyboard_production_restores r) archive_state_rows),
   'effectiveOwnerAccess',jsonb_build_array(pg_has_role('postgres','privacy_workflow_owner','SET'),
     pg_has_role('postgres','privacy_workflow_owner','USAGE'))
 );

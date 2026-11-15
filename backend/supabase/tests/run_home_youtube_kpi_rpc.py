@@ -31,7 +31,8 @@ PASSWORD = "home-kpi-isolated-fixture"
 SOCKET = "/tmp/home-kpi-socket"
 LABEL = "org.tzudong.home-kpi-fixture"
 SOURCE_FILES = [Path(__file__), Path(fixture.__file__), fixture.MIGRATION, fixture.PREIMAGES,
-                fixture.BEHAVIOR, Path(fixture.previous.__file__)] + [fixture.MIGRATIONS / name for name in fixture.CANONICAL_INPUTS]
+                fixture.BEHAVIOR, fixture.ARCHIVE_BEHAVIOR, fixture.ARCHIVE_SOURCE,
+                Path(fixture.previous.__file__)] + [fixture.MIGRATIONS / name for name in fixture.CANONICAL_INPUTS]
 
 
 class FixtureFailure(RuntimeError):
@@ -170,7 +171,8 @@ exec postgres -D /tmp/home-kpi-data -c listen_addresses='' -c unix_socket_direct
             *, allow_failure: bool = False, single_transaction: bool = False,
             substage: str = "readback") -> subprocess.CompletedProcess[str]:
         checked(substage in {"bootstrap", "setup", "migration", "readback", "validator", "catalog_validator",
-                             "behavior", "reapply", "validator_drift", "rollback_setup", "rollback_migration"},
+                             "behavior", "archive_behavior", "archive_baseline", "archive_guard_rejection",
+                             "reapply", "validator_drift", "rollback_setup", "rollback_migration"},
                 "HOME_KPI_SQL_SUBSTAGE")
         self.owned()
         command = [
@@ -191,10 +193,10 @@ exec postgres -D /tmp/home-kpi-data -c listen_addresses='' -c unix_socket_direct
         checked(bool(output), "HOME_KPI_SQL_RESULT_MISSING")
         return json.loads(output[-1])
 
-    def setup(self, name: str, definitions: dict[str, str]) -> None:
+    def setup(self, name: str, definitions: dict[str, str], *, archive_execute_drift: bool = True) -> None:
         checked(re.fullmatch(r"kpi_[a-z_]+", name) is not None, "HOME_KPI_DATABASE_NAME")
         self.sql("CREATE DATABASE " + name + " OWNER postgres TEMPLATE template0;", substage="bootstrap")
-        self.sql(fixture.setup_database_sql(definitions), name, substage="setup")
+        self.sql(fixture.setup_database_sql(definitions, archive_execute_drift=archive_execute_drift), name, substage="setup")
 
     def cleanup(self) -> bool:
         if self.container_id is None:
@@ -221,11 +223,31 @@ def state_digest(state: dict) -> str:
     return fixture.digest(json.dumps(state, sort_keys=True, separators=(",", ":")))
 
 
+def verify_archive_behavior(database: OwnedDatabase, name: str) -> list[str]:
+    behavior = database.json(fixture.ARCHIVE_BEHAVIOR.read_text(), name, substage="archive_behavior")
+    expected = {relation + "_" + case for relation in fixture.ARCHIVE_RELATIONS for case in [
+        "archived_insert_denied", "archived_update_denied", "archived_to_active_denied",
+        "active_to_archived_denied", "active_insert_allowed", "active_update_allowed",
+    ]}
+    checked(behavior["count"] == 36 and len(behavior["cases"]) == 36 and set(behavior["cases"]) == expected,
+            "HOME_KPI_ARCHIVE_BEHAVIOR_INCOMPLETE")
+    return behavior["cases"]
+
+
 def verify_success(database: OwnedDatabase, variant: str, definitions: dict[str, str]) -> dict:
     name = "kpi_" + variant
-    database.setup(name, definitions)
+    archive_drift = variant == "hosted"
+    database.setup(name, definitions, archive_execute_drift=archive_drift)
     before = database.json(fixture.STATE_SQL, name)
     checked(before["migrationSchemaAccess"] == [True, False], "HOME_KPI_SCHEMA_ADMISSION")
+    checked(before["archiveRoleExecute"] == {"anon": False, "authenticated": False, "service_role": archive_drift},
+            "HOME_KPI_ARCHIVE_FIXTURE_ACL")
+    baseline = database.sql("SET ROLE privacy_workflow_owner; SELECT privacy_retention.assert_g014_public_rpc_allowlist(); RESET ROLE;",
+                            name, allow_failure=True, substage="archive_baseline")
+    checked((baseline.returncode != 0 and "G014 public RPC effective grantee matrix does not match the allowlist" in baseline.stderr)
+            if archive_drift else baseline.returncode == 0, "HOME_KPI_ARCHIVE_BASELINE_MISMATCH")
+    archive_before = verify_archive_behavior(database, name)
+    checked(database.json(fixture.STATE_SQL, name) == before, "HOME_KPI_ARCHIVE_BEHAVIOR_ROLLBACK")
     database.sql(fixture.MIGRATION.read_text(), name, "postgres", single_transaction=True, substage="migration")
     after = database.json(fixture.STATE_SQL, name)
     checked(before["memberships"] == after["memberships"] and after["effectiveOwnerAccess"] == [False, False],
@@ -233,6 +255,12 @@ def verify_success(database: OwnedDatabase, variant: str, definitions: dict[str,
     checked(before["table"] == after["table"] and before["columns"] == after["columns"], "HOME_KPI_TABLE_CHANGED")
     checked(before["schema"] == after["schema"] and after["migrationSchemaAccess"] == [True, False],
             "HOME_KPI_SCHEMA_CHANGED")
+    checked({k: v for k, v in before["archiveGuard"].items() if k != "proacl"}
+            == {k: v for k, v in after["archiveGuard"].items() if k != "proacl"}
+            and after["archiveRoleExecute"] == {"anon": False, "authenticated": False, "service_role": False},
+            "HOME_KPI_ARCHIVE_REPAIR_METADATA")
+    checked(all(before[key] == after[key] for key in ["archiveTriggers", "archiveDependencies", "archiveRelations", "archiveRows"]),
+            "HOME_KPI_ARCHIVE_REPAIR_CHANGED_STATE")
     for validator, metadata in before["validators"].items():
         next_metadata = after["validators"][validator]
         checked({k: v for k, v in metadata.items() if k != "prosrc"}
@@ -252,6 +280,9 @@ def verify_success(database: OwnedDatabase, variant: str, definitions: dict[str,
     catalog = definitions["assert_g014_catalog_contract"].replace(fixture.body(definitions["assert_g014_catalog_contract"]),
                                                                 after["validators"]["assert_g014_catalog_contract"]["prosrc"])
     database.sql(fixture.catalog_loop_sql(catalog), name, substage="catalog_validator")
+    archive_after = verify_archive_behavior(database, name)
+    checked(archive_after == archive_before and database.json(fixture.STATE_SQL, name) == after,
+            "HOME_KPI_ARCHIVE_BEHAVIOR_ROLLBACK")
     behavior = database.json(fixture.BEHAVIOR.read_text(), name, substage="behavior")
     checked(behavior["count"] == 10 and len(behavior["cases"]) == 10, "HOME_KPI_BEHAVIOR_INCOMPLETE")
     checked(database.json(fixture.STATE_SQL, name) == after, "HOME_KPI_BEHAVIOR_ROLLBACK")
@@ -276,6 +307,10 @@ def verify_success(database: OwnedDatabase, variant: str, definitions: dict[str,
                 "HOME_KPI_VALIDATOR_DRIFT_UNDETECTED")
         rejected.append(code)
     return {"behaviorCases": behavior["cases"], "validatorDriftCases": rejected,
+            "archiveTriggerCasesBefore": archive_before, "archiveTriggerCasesAfter": archive_after,
+            "archiveServiceExecuteBefore": archive_drift, "archiveServiceExecuteAfter": False,
+            "preexistingArchiveGrantMismatchReproduced": archive_drift,
+            "archiveMetadataBindingsRowsPreserved": True,
             "membershipsRestored": True, "validatorMetadataPreserved": True, "tableBoundaryPreserved": True,
             "schemaBoundaryPreserved": True,
             "strictReapplyRejectedWithoutChanges": True, "beforeSha256": state_digest(before), "afterSha256": state_digest(after)}
@@ -317,6 +352,33 @@ def verify_registration_rollback(database: OwnedDatabase, definitions: dict[str,
     return passed
 
 
+def verify_archive_guard_rejections(database: OwnedDatabase, definitions: dict[str, str]) -> list[str]:
+    definition = fixture.archive_source_sql().split("REVOKE ALL ON FUNCTION", 1)[0]
+    changed_source = definition.replace("CREATE FUNCTION ", "CREATE OR REPLACE FUNCTION ", 1).replace(
+        "END;\n$storyboard_archive_guard$;", "END;\n\n$storyboard_archive_guard$;", 1)
+    changes = [
+        ("archive_source", changed_source, "HOME_KPI_ARCHIVE_SOURCE_DRIFT"),
+        ("archive_cost", "ALTER FUNCTION public.storyboard_production_reject_archived_write() COST 101;", "HOME_KPI_ARCHIVE_SOURCE_DRIFT"),
+        ("archive_grantee", "GRANT EXECUTE ON FUNCTION public.storyboard_production_reject_archived_write() TO privacy_workflow_owner;", "HOME_KPI_ARCHIVE_ACL_DRIFT"),
+        ("archive_grant_option", "GRANT EXECUTE ON FUNCTION public.storyboard_production_reject_archived_write() TO service_role WITH GRANT OPTION;", "HOME_KPI_ARCHIVE_ACL_DRIFT"),
+        ("archive_trigger", "ALTER TABLE public.admin_storyboard_production_projects DISABLE TRIGGER storyboard_archive_projects_write_guard;", "HOME_KPI_ARCHIVE_TRIGGER_DRIFT"),
+        ("archive_dependency", "ALTER EXTENSION plpgsql ADD FUNCTION public.storyboard_production_reject_archived_write();", "HOME_KPI_ARCHIVE_DEPENDENCY_DRIFT"),
+    ]
+    passed = []
+    for case, change, expected in changes:
+        name = "kpi_" + case
+        database.setup(name, definitions)
+        database.sql(change, name, substage="rollback_setup")
+        before = database.json(fixture.STATE_SQL, name)
+        result = database.sql(fixture.MIGRATION.read_text(), name, "postgres", allow_failure=True,
+                              single_transaction=True, substage="archive_guard_rejection")
+        checked(result.returncode != 0 and safe_failure(result.stderr) == expected,
+                "HOME_KPI_ARCHIVE_DRIFT_UNDETECTED")
+        checked(database.json(fixture.STATE_SQL, name) == before, "HOME_KPI_ARCHIVE_REJECTION_CHANGED_STATE")
+        passed.append(case)
+    return passed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -329,7 +391,7 @@ def main() -> int:
     before = source_hashes()
     receipt: dict = {"schemaVersion": 1, "status": "started", "image": IMAGE, "imageConfig": IMAGE_CONFIG,
                      "sourceSha256": before, "hostedWrites": 0, "providerCalls": 0, "networkMode": "none",
-                     "limits": "Synthetic KPI data; actual allowlist/definer validators and exact catalog RPC loop. Full G014 relation graph, hosted deployment and performance are not proven."}
+                     "limits": "Synthetic KPI and archive data; actual allowlist/definer validators, catalog RPC loop and six archive triggers. Full G014 relation graph, hosted deployment and performance are not proven."}
     for key, variable in [("runId", "GITHUB_RUN_ID"), ("runAttempt", "GITHUB_RUN_ATTEMPT")]:
         value = os.environ.get(variable)
         if value and value.isdigit():
@@ -363,6 +425,9 @@ GRANT privacy_workflow_owner TO privacy_auth_bridge WITH ADMIN FALSE, INHERIT TR
             receipt["variants"][variant] = verify_success(database, variant, definitions)
         stage = "registration_rollback"
         receipt["registrationRollbackCases"] = verify_registration_rollback(database, hosted)
+        receipt["registrationRollbackRestoredArchiveAcl"] = True
+        stage = "archive_admission"
+        receipt["archiveAdmissionRejectionCases"] = verify_archive_guard_rejections(database, hosted)
         checked(source_hashes() == before, "HOME_KPI_SOURCE_CHANGED_DURING_TEST")
         receipt["status"] = "passed"
     except (FixtureFailure, ValueError, KeyError, OSError) as error:

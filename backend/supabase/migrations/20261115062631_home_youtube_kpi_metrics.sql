@@ -30,6 +30,154 @@ BEGIN
 END
 $home_kpi_prerequisites$;
 
+-- A read-only hosted baseline found exactly one pre-existing G014 mismatch:
+-- this installed trigger helper retained service_role EXECUTE. Its canonical
+-- 20261013190100 successor already removes that grant. Restore only that known
+-- boundary, in the same outer transaction as the new RPC and its registration.
+-- Installed triggers keep their function, source, owner and bindings intact.
+DO $home_kpi_archive_guard_acl$
+DECLARE
+  v_oid oid := pg_catalog.to_regprocedure('public.storyboard_production_reject_archived_write()');
+  v_before jsonb;
+  v_triggers_before jsonb;
+  v_dependencies_before jsonb;
+BEGIN
+  SELECT pg_catalog.to_jsonb(p) - 'proacl' INTO v_before
+    FROM pg_catalog.pg_proc p
+    WHERE p.oid = v_oid
+      AND p.proowner = 'postgres'::pg_catalog.regrole
+      AND p.prokind = 'f' AND p.pronargs = 0 AND p.pronargdefaults = 0
+      AND p.provariadic = 0::pg_catalog.oid AND p.proargnames IS NULL AND p.proallargtypes IS NULL
+      AND p.proargtypes = ''::pg_catalog.oidvector AND p.proargmodes IS NULL
+      AND p.proargdefaults IS NULL AND p.protrftypes IS NULL
+      AND p.prorettype = 'trigger'::pg_catalog.regtype
+      AND NOT p.proretset AND NOT p.prosecdef AND NOT p.proisstrict AND NOT p.proleakproof
+      AND p.provolatile = 'v' AND p.proparallel = 'u'
+      AND p.procost = 100 AND p.prorows = 0 AND p.prosupport = 0::pg_catalog.regproc
+      AND p.probin IS NULL AND p.prosqlbody IS NULL
+      AND p.prolang = (SELECT oid FROM pg_catalog.pg_language WHERE lanname = 'plpgsql')
+      AND p.proconfig = ARRAY['search_path=""']::text[]
+      AND pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc, 'UTF8')), 'hex')
+        = 'a0c1789c2fc116c6b07a1d40e4c1aba0a0e3eec49602e34a4c70f8f74487adf9';
+  IF v_before IS NULL THEN RAISE EXCEPTION 'HOME_KPI_ARCHIVE_SOURCE_DRIFT'; END IF;
+
+  -- Admit the observed owner+service ACL and the already-correct canonical
+  -- owner-only ACL. An unknown grantee, grantor or grant option fails closed.
+  IF EXISTS (
+    SELECT 1 FROM pg_catalog.pg_proc p
+    CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))) acl
+    WHERE p.oid = v_oid AND (
+      acl.grantee NOT IN ('postgres'::pg_catalog.regrole, 'service_role'::pg_catalog.regrole)
+      OR acl.grantor <> 'postgres'::pg_catalog.regrole
+      OR acl.privilege_type <> 'EXECUTE' OR acl.is_grantable
+    )
+  ) OR (
+    SELECT count(*) FROM pg_catalog.pg_proc p
+    CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))) acl
+    WHERE p.oid = v_oid AND acl.grantee = 'postgres'::pg_catalog.regrole
+  ) <> 1
+    OR (SELECT count(*) FROM pg_catalog.pg_proc p
+      CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))) acl
+      WHERE p.oid = v_oid) NOT IN (1, 2)
+    OR pg_catalog.has_function_privilege('anon', v_oid, 'EXECUTE')
+    OR pg_catalog.has_function_privilege('authenticated', v_oid, 'EXECUTE')
+    OR pg_catalog.has_function_privilege('service_role', v_oid, 'EXECUTE') IS DISTINCT FROM EXISTS (
+      SELECT 1 FROM pg_catalog.pg_proc p
+      CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))) acl
+      WHERE p.oid = v_oid AND acl.grantee = 'service_role'::pg_catalog.regrole
+    )
+  THEN RAISE EXCEPTION 'HOME_KPI_ARCHIVE_ACL_DRIFT'; END IF;
+
+  SELECT COALESCE(pg_catalog.jsonb_agg(pg_catalog.to_jsonb(t) ORDER BY t.tgrelid, t.tgname), '[]'::jsonb)
+    INTO v_triggers_before FROM pg_catalog.pg_trigger t WHERE t.tgfoid = v_oid;
+  IF pg_catalog.jsonb_array_length(v_triggers_before) <> 6 OR (
+    SELECT count(*) FROM pg_catalog.pg_trigger t
+    JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    JOIN (VALUES
+      ('admin_storyboard_production_projects', 'storyboard_archive_projects_write_guard'),
+      ('admin_storyboard_production_jobs', 'storyboard_archive_jobs_write_guard'),
+      ('admin_storyboard_production_assets', 'storyboard_archive_assets_write_guard'),
+      ('admin_storyboard_production_events', 'storyboard_archive_events_write_guard'),
+      ('admin_storyboard_production_revisions', 'storyboard_archive_revisions_write_guard'),
+      ('admin_storyboard_production_restores', 'storyboard_archive_restores_write_guard')
+    ) expected(relation_name, trigger_name) ON c.relname = expected.relation_name AND t.tgname = expected.trigger_name
+    WHERE t.tgfoid = v_oid AND n.nspname = 'public'
+      AND t.tgtype = 23 AND t.tgenabled = 'O' AND NOT t.tgisinternal
+      AND t.tgnargs = 0 AND t.tgattr = ''::pg_catalog.int2vector AND t.tgqual IS NULL
+      AND t.tgconstraint = 0 AND NOT t.tgdeferrable AND NOT t.tginitdeferred
+      AND t.tgoldtable IS NULL AND t.tgnewtable IS NULL
+  ) <> 6 THEN RAISE EXCEPTION 'HOME_KPI_ARCHIVE_TRIGGER_DRIFT'; END IF;
+
+  SELECT COALESCE(pg_catalog.jsonb_agg(pg_catalog.to_jsonb(d)
+      ORDER BY d.classid,d.objid,d.objsubid,d.refclassid,d.refobjid,d.refobjsubid,d.deptype), '[]'::jsonb)
+    INTO v_dependencies_before FROM pg_catalog.pg_depend d
+    WHERE (d.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.objid = v_oid)
+      OR (d.refclassid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.refobjid = v_oid);
+  IF (SELECT count(*) FROM pg_catalog.pg_depend d
+      WHERE d.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.objid = v_oid) <> 2
+    OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_depend d
+      WHERE d.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.objid = v_oid
+        AND d.refclassid = 'pg_catalog.pg_namespace'::pg_catalog.regclass AND d.refobjid = 'public'::pg_catalog.regnamespace)
+    OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_depend d
+      WHERE d.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.objid = v_oid
+        AND d.refclassid = 'pg_catalog.pg_language'::pg_catalog.regclass
+        AND d.refobjid = (SELECT oid FROM pg_catalog.pg_language WHERE lanname = 'plpgsql'))
+    OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_depend d
+      WHERE d.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.objid = v_oid
+        AND (d.objsubid <> 0 OR d.refobjsubid <> 0 OR d.deptype <> 'n' OR NOT (
+          (d.refclassid = 'pg_catalog.pg_namespace'::pg_catalog.regclass AND d.refobjid = 'public'::pg_catalog.regnamespace)
+          OR (d.refclassid = 'pg_catalog.pg_language'::pg_catalog.regclass
+            AND d.refobjid = (SELECT oid FROM pg_catalog.pg_language WHERE lanname = 'plpgsql'))
+        ))
+    )
+    OR (SELECT count(*) FROM pg_catalog.pg_depend d
+      WHERE d.refclassid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.refobjid = v_oid) <> 6
+    OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_depend d
+      WHERE d.refclassid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.refobjid = v_oid
+        AND (d.classid <> 'pg_catalog.pg_trigger'::pg_catalog.regclass OR d.objsubid <> 0
+          OR d.refobjsubid <> 0 OR d.deptype <> 'n' OR NOT EXISTS (
+            SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.oid = d.objid AND t.tgfoid = v_oid
+          ))
+    ) OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.tgfoid = v_oid AND NOT EXISTS (
+        SELECT 1 FROM pg_catalog.pg_depend d WHERE d.classid = 'pg_catalog.pg_trigger'::pg_catalog.regclass
+          AND d.objid = t.oid AND d.objsubid = 0 AND d.refclassid = 'pg_catalog.pg_proc'::pg_catalog.regclass
+          AND d.refobjid = v_oid AND d.refobjsubid = 0 AND d.deptype = 'n'
+      )
+    )
+  THEN RAISE EXCEPTION 'HOME_KPI_ARCHIVE_DEPENDENCY_DRIFT'; END IF;
+
+  REVOKE EXECUTE ON FUNCTION public.storyboard_production_reject_archived_write() FROM service_role;
+
+  IF (SELECT pg_catalog.to_jsonb(p) - 'proacl' FROM pg_catalog.pg_proc p WHERE p.oid = v_oid)
+      IS DISTINCT FROM v_before
+    OR (SELECT COALESCE(pg_catalog.jsonb_agg(pg_catalog.to_jsonb(t) ORDER BY t.tgrelid, t.tgname), '[]'::jsonb)
+      FROM pg_catalog.pg_trigger t WHERE t.tgfoid = v_oid) IS DISTINCT FROM v_triggers_before
+    OR (SELECT COALESCE(pg_catalog.jsonb_agg(pg_catalog.to_jsonb(d)
+        ORDER BY d.classid,d.objid,d.objsubid,d.refclassid,d.refobjid,d.refobjsubid,d.deptype), '[]'::jsonb)
+      FROM pg_catalog.pg_depend d
+      WHERE (d.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.objid = v_oid)
+        OR (d.refclassid = 'pg_catalog.pg_proc'::pg_catalog.regclass AND d.refobjid = v_oid))
+        IS DISTINCT FROM v_dependencies_before
+    OR pg_catalog.has_function_privilege('service_role', v_oid, 'EXECUTE')
+    OR pg_catalog.has_function_privilege('anon', v_oid, 'EXECUTE')
+    OR pg_catalog.has_function_privilege('authenticated', v_oid, 'EXECUTE')
+    OR (SELECT count(*) FROM pg_catalog.pg_proc p
+      CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))) acl
+      WHERE p.oid = v_oid) <> 1
+    OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_proc p
+      CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))) acl
+      WHERE p.oid = v_oid AND (acl.grantee <> 'postgres'::pg_catalog.regrole
+        OR acl.grantor <> 'postgres'::pg_catalog.regrole OR acl.privilege_type <> 'EXECUTE' OR acl.is_grantable)
+    )
+  THEN RAISE EXCEPTION 'HOME_KPI_ARCHIVE_READBACK_DRIFT'; END IF;
+END
+$home_kpi_archive_guard_acl$;
+
 CREATE FUNCTION public.get_home_youtube_kpi_metrics(p_video_ids text[])
 RETURNS jsonb
 LANGUAGE plpgsql

@@ -13,6 +13,26 @@ from backend.supabase.tests import run_home_youtube_kpi_rpc as runner
 
 
 class HomeKpiFixtureGuards(unittest.TestCase):
+    def test_archive_repair_preserves_all_previously_tested_rpc_source_bytes(self):
+        source = fixture.MIGRATION.read_text()
+        start = source.index("-- A read-only hosted baseline found exactly one pre-existing G014 mismatch:")
+        end = source.index("$home_kpi_archive_guard_acl$;", start) + len("$home_kpi_archive_guard_acl$;\n\n")
+        self.assertEqual(fixture.digest(source[:start] + source[end:]),
+                         "e338d9e5f2c31166abf6617bfb11ea03277f10d2eed4cab42ebd293eed125f1a")
+
+    def test_archive_fixture_rejects_source_drift_before_database_operation(self):
+        source = fixture.ARCHIVE_SOURCE.read_text()
+        admitted = fixture.archive_source_sql()
+        self.assertEqual(fixture.digest(fixture.previous.tagged(admitted, "storyboard_archive_guard")),
+                         fixture.ARCHIVE_BODY_SHA256)
+        self.assertEqual(admitted.count("CREATE TRIGGER storyboard_archive_"), 6)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / fixture.ARCHIVE_SOURCE.name
+            path.write_text(source + "\n")
+            with patch.object(fixture, "ARCHIVE_SOURCE", path):
+                with self.assertRaisesRegex(ValueError, "HOME_KPI_FIXTURE_ARCHIVE_SOURCE"):
+                    fixture.archive_source_sql()
+
     def test_exact_preimages_reconstruct_and_add_without_changing_old_source_bytes(self):
         migration = fixture.MIGRATION.read_text()
         for definitions in [fixture.hosted_definitions(), fixture.canonical_definitions()]:
