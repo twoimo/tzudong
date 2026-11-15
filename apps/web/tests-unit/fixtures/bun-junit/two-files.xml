@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="3" assertions="2" failures="0" skipped="1" time="0">
+  <testsuite name="tests-unit/alpha.test.ts" file="tests-unit/alpha.test.ts" tests="2" assertions="1" failures="0" skipped="1" time="0" hostname="fixture-host">
+    <testcase name="adds &amp; compares &lt;values&gt;" classname="" time="0" file="tests-unit/alpha.test.ts" line="2" assertions="1" />
+    <testcase name="skipped case" classname="" time="0" file="tests-unit/alpha.test.ts" line="3" assertions="0">
+      <skipped />
+    </testcase>
+  </testsuite>
+  <testsuite name="tests-unit/nested/beta.test.ts" file="tests-unit/nested/beta.test.ts" tests="1" assertions="1" failures="0" skipped="0" time="0" hostname="fixture-host">
+    <testsuite name="group" file="tests-unit/nested/beta.test.ts" line="2" tests="1" assertions="1" failures="0" skipped="0" time="0" hostname="fixture-host">
+      <testcase name="inner" classname="group" time="0" file="tests-unit/nested/beta.test.ts" line="3" assertions="1" />
+    </testsuite>
+  </testsuite>
+</testsuites>
