@@ -13,7 +13,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from backend.pipeline_control import worker
 from backend.pipeline_control.manifest import (
     PARITY_LEDGER_SCHEMA_VERSION,
     deletion_allowed,
@@ -51,6 +50,10 @@ class ParityLedgerDurabilityTests(unittest.TestCase):
 
 class HealthReportFailureTests(unittest.TestCase):
     def test_failed_health_report_emits_marker_and_keeps_exit_code(self) -> None:
+        # Imported here so the ledger tests above still load on Python 3.9,
+        # where worker's PEP 604 annotations fail at import time.
+        from backend.pipeline_control import worker
+
         secret = "provider said: token=abc123"
         stdout = io.StringIO()
         with contextlib.ExitStack() as stack:
