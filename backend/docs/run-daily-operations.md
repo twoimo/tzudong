@@ -113,8 +113,8 @@ PY
 | --- | --- |
 | `adapter_failed` | 단계가 0이 아닌 코드로 끝났습니다. 워커 로그에 `operation=step_timeout`이 있으면 단계 제한 시간을 넘긴 것입니다. |
 | `lease_expired` | 워커가 lease를 갱신하지 못했습니다. 워커 프로세스가 죽었거나 호스트가 절전 상태였습니다. |
-| `worker_unexpected` | 단계 실행 중 처리하지 않은 예외가 났습니다. 워커 로그의 traceback을 확인합니다. |
-| `worker_interrupted` | 단계 실행 중 워커가 SIGTERM, SIGHUP 또는 Ctrl-C를 받았습니다. |
+| `worker_unexpected` | 실행 중 처리하지 않은 예외가 났습니다. `TZUDONG_PIPELINE_PERSIST` mirror 쓰기 실패도 여기에 속합니다. 워커 로그의 traceback을 확인합니다. |
+| `worker_interrupted` | 실행 중 워커가 SIGTERM, SIGHUP 또는 Ctrl-C를 받았습니다. |
 | `step_timeout_invalid` | `TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS` 값이 0보다 큰 유한한 수가 아닙니다. |
 
 - 단계 제한 시간은 단계마다 2시간입니다. 시간이 지나면 워커가 그 단계의
@@ -129,6 +129,18 @@ PY
   `ps -eo pid,pgid,command | grep -E 'backend/restaurant-(crawling|evaluation)/scripts/'`로
   찾고 `kill -TERM -<pgid>`로 종료합니다. 그다음 lease가 끝나기 전에 lock을
   풀려면 `POST /v1/runs/{id}/cancel`을 호출합니다.
+- 워커가 실행 중 SIGTERM, SIGHUP 또는 Ctrl-C를 받으면 진행 중인 단계를
+  멈추고, 실행을 `Failed`로 기록하고, manifest를 쓴 다음 media cache를
+  지웁니다. cache를 지우는 도중 monitor daemon이 SIGKILL을 보내도 실행 기록과
+  manifest는 남고 lock은 풀린 상태입니다.
+- 단계 실행 중 `POST /v1/runs/{id}/pause`를 호출하면 그 단계가 끝날 때까지
+  실행은 `Fetching`으로 남습니다. 워커는 다음 단계를 시작하기 전에 실행을
+  `Paused`로 바꿉니다. 그 전에 `POST /v1/runs/{id}/resume`을 호출하면 pause가
+  취소되고 워커가 실행을 계속합니다.
+- `TZUDONG_PIPELINE_PERSIST`를 켠 상태에서 mirror 쓰기가 실패해도 워커는 끝난
+  실행을 `pipeline-store.json`에 먼저 기록하고 lock을 풉니다. 그다음 워커는
+  오류로 끝납니다. 끝난 실행을 mirror나 `pipeline-store.json`에 쓰지 못하면
+  워커 로그에 `operation=run_record_failed`와 오류 종류가 남습니다.
 - 다른 실행이 대상 lock을 잡고 있으면 워커는
   `operation=live_run_refused code=lock_held`를 출력하고 `ERROR` manifest만
   남깁니다. lock을 잡은 실행은 바꾸지 않습니다.
