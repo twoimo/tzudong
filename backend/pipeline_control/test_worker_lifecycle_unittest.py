@@ -582,6 +582,36 @@ class DurableMirrorOutageTests(unittest.TestCase):
             manifest = _read(root / "summary.json")
             self.assertEqual((manifest["finalStatus"], manifest["jobId"]), ("ERROR", run.id))
 
+    def test_mirror_refusing_the_final_success_write_keeps_the_success_in_the_manifest(
+        self,
+    ) -> None:
+        def mirror_refuses_the_final_write(run, *, lock_held, lock_key, audit) -> None:
+            if audit is not None and audit["transition"] in {"succeeded", "dry_run_succeeded"}:
+                raise PersistError("persist_failed")
+
+        for live in (True, False):
+            with self.subTest(live=live), _local_pipeline() as root:
+                path = root / "store.json"
+                run = _enqueue(FileStore(path, clock=_Clock()))
+                log = io.StringIO()
+                with patch.object(
+                    store_module, "persist_mutation", mirror_refuses_the_final_write
+                ), redirect_stdout(log):
+                    with self.assertRaises(PersistError):
+                        process_one(
+                            FileStore(path, clock=_Clock()),
+                            live=live,
+                            runner=lambda argv: 0,
+                            manifest_path=root / "summary.json",
+                        )
+                settled = FileStore(path, clock=_Clock())
+                self.assertEqual(settled.get(run.id).status, "Succeeded")
+                self.assertEqual(_target_status(settled, "tzuyang"), "Idle")
+                self.assertIn("operation=run_record_failed error=PersistError", log.getvalue())
+                manifest = _read(root / "summary.json")
+                self.assertEqual((manifest["finalStatus"], manifest["jobId"]), ("OK", run.id))
+                self.assertIs(manifest["liveExecutionSucceeded"], live)
+
 
 class StopSignalTests(unittest.TestCase):
     def _worker(self, script: str, *args: str) -> tuple[int, dict, dict, dict | None]:
