@@ -294,6 +294,19 @@ class RunWindowTests(unittest.TestCase):
         self.assertEqual((dry, live_result), ("Succeeded", "Succeeded"))
         self.assertTrue(steps)
 
+    def test_queued_dry_run_without_an_id_reuses_the_days_dry_run(self) -> None:
+        store = MemoryStore(clock=_Clock(1_700_000_000.0))
+
+        with _local_pipeline() as root:
+            summary = root / "live-runs" / "run-1-current-summary.json"
+            first = run_once(store, target="tzuyang", index=1, live=False)
+            first_job = _read(summary)["jobId"]
+            second = run_once(store, target="tzuyang", index=1, live=True, queued_dry_run=True)
+            second_job = _read(summary)["jobId"]
+
+        self.assertEqual((first, second), ("Succeeded", "Failed"))
+        self.assertEqual(second_job, first_job)
+
 
 class BusyTargetTests(unittest.TestCase):
     def test_busy_target_is_refused_and_no_holder_is_touched(self) -> None:
