@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT))
 from backend.supabase.tests import home_youtube_kpi_fixture as fixture  # noqa: E402
 
 IMAGE = "supabase/postgres:17.6.1.038@sha256:632b4da70fe03077f659e26ae5c2a2a177ab1348e487977afe822caef32f2676"
+IMAGE_MANIFEST = IMAGE.split("@", 1)[1]
 IMAGE_CONFIG = "sha256:e3d2cbf31805d05a5faa24969ff1126617e506d21f71993364aff5953e089263"
 EXPECTED_SERVER = "170006"
 PASSWORD = "home-kpi-isolated-fixture"
@@ -54,12 +55,39 @@ def safe_failure(stderr: str) -> str:
     return "HOME_KPI_SQL_" + match.group(1) if match else "HOME_KPI_COMMAND_FAILED"
 
 
+def image_readback(image: dict, daemon_version: str) -> dict:
+    """Retain only bounded image identity, never raw Docker inspect/config."""
+    image_id = image.get("Id", "")
+    digests = image.get("RepoDigests") or []
+    return {
+        "id": image_id if isinstance(image_id, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", image_id) else "invalid",
+        "repoDigests": sorted(value for value in digests if isinstance(value, str)
+                              and re.fullmatch(r"(?:docker\.io/)?supabase/postgres@sha256:[0-9a-f]{64}", value))[:8],
+        "architecture": image.get("Architecture") if image.get("Architecture") in {"amd64", "arm64"} else "unsupported",
+        "os": image.get("Os") if image.get("Os") in {"linux", "windows"} else "unsupported",
+        "daemonVersion": daemon_version if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9_.-]+)?", daemon_version)
+        and len(daemon_version) <= 64 else "unavailable",
+    }
+
+
+def admit_image(readback: dict) -> None:
+    # Moby's classic store reports the config digest; its containerd store
+    # reports the stored target descriptor digest. Both are exact known bytes
+    # of this platform-specific pin, and the RepoDigest must independently bind
+    # the pulled manifest. No index, arbitrary ID or alternate platform is admitted.
+    checked(readback["id"] in {IMAGE_CONFIG, IMAGE_MANIFEST}
+            and any(value in {"supabase/postgres@" + IMAGE_MANIFEST, "docker.io/supabase/postgres@" + IMAGE_MANIFEST}
+                    for value in readback["repoDigests"])
+            and readback["architecture"] == "amd64" and readback["os"] == "linux", "HOME_KPI_IMAGE_MISMATCH")
+
+
 class OwnedDatabase:
     def __init__(self) -> None:
         self.token = uuid.uuid4().hex
         self.name = "home-kpi-" + self.token
         self.container_id: str | None = None
         self.image_id: str | None = None
+        self.image_readback: dict | None = None
         self.launch_attempted = False
 
     @staticmethod
@@ -94,9 +122,10 @@ class OwnedDatabase:
         # One bounded pull, no automatic retry, and no changes to daemon settings.
         self.command(["docker", "pull", "--platform", "linux/amd64", IMAGE], timeout=300)
         image = json.loads(self.command(["docker", "image", "inspect", IMAGE]).stdout)[0]
-        self.image_id = image["Id"]
-        checked(self.image_id == IMAGE_CONFIG and image["Architecture"] == "amd64" and image["Os"] == "linux",
-                "HOME_KPI_IMAGE_MISMATCH")
+        daemon_version = self.command(["docker", "version", "--format", "{{.Server.Version}}"]).stdout.strip()
+        self.image_readback = image_readback(image, daemon_version)
+        admit_image(self.image_readback)
+        self.image_id = self.image_readback["id"]
         startup = """
 umask 077
 mkdir /tmp/home-kpi-socket
@@ -309,6 +338,8 @@ GRANT privacy_workflow_owner TO privacy_auth_bridge WITH ADMIN FALSE, INHERIT TR
         receipt["status"] = "failed"
         receipt["failure"] = {"stage": stage, "code": str(error) if isinstance(error, FixtureFailure) else "HOME_KPI_FIXTURE_INPUT"}
     finally:
+        if database.image_readback is not None:
+            receipt["imageReadback"] = database.image_readback
         try:
             receipt["ownedContainerRemoved"] = database.cleanup()
         except (FixtureFailure, ValueError, KeyError, OSError):

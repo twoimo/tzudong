@@ -81,6 +81,19 @@ class HomeKpiFixtureGuards(unittest.TestCase):
                 database.start()
             command.assert_not_called()
 
+    def test_exact_manifest_admission_handles_both_docker_image_stores(self):
+        for identity in [runner.IMAGE_CONFIG, runner.IMAGE_MANIFEST]:
+            image = {"Id": identity, "RepoDigests": ["supabase/postgres@" + runner.IMAGE_MANIFEST],
+                     "Architecture": "amd64", "Os": "linux", "Config": {"Env": ["SYNTHETIC_PRIVATE_DETAIL"]}}
+            readback = runner.image_readback(image, "29.5.2")
+            runner.admit_image(readback)
+            self.assertNotIn("SYNTHETIC_PRIVATE_DETAIL", json.dumps(readback))
+            for patch in [{"id": "sha256:" + "0" * 64}, {"repoDigests": []},
+                          {"repoDigests": ["supabase/postgres@sha256:" + "0" * 64]},
+                          {"architecture": "arm64"}, {"os": "windows"}]:
+                with self.assertRaisesRegex(runner.FixtureFailure, "HOME_KPI_IMAGE_MISMATCH"):
+                    runner.admit_image({**readback, **patch})
+
     def test_migration_execution_preserves_bytes_inside_psql_single_transaction(self):
         database = runner.OwnedDatabase()
         source = fixture.MIGRATION.read_text()
