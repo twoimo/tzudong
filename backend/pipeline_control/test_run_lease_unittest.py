@@ -3,8 +3,11 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from backend.pipeline_control import store as store_module
 from backend.pipeline_control.file_store import FileStore
+from backend.pipeline_control.persist import PersistError
 from backend.pipeline_control.state_machine import ControlPlaneError, RunRecord
 from backend.pipeline_control.store import LEASE_TTL_SECONDS, MemoryStore
 
@@ -116,6 +119,17 @@ class _LeaseContract:
         resumed = self.store.control(run.id, "resume", actor="operator", request_id="req-resume")
         self.assertEqual(resumed.status, "Queued")
 
+    def test_terminal_record_holds_when_the_durable_mirror_fails(self) -> None:
+        run = self._claimed("mirror-down-01")
+        with patch.object(
+            store_module, "persist_mutation", side_effect=PersistError("persist_failed")
+        ):
+            with self.assertRaises(PersistError):
+                self.store.finish_failed(run.id, "worker_unexpected")
+        settled = self.store.get(run.id)
+        self.assertEqual((settled.status, settled.error_code), ("Failed", "worker_unexpected"))
+        self.assertEqual(self._enqueue("mirror-down-02").status, "Queued")
+
     def test_heartbeat_for_a_cancelled_run_reports_cancelled_and_grants_no_lease(self) -> None:
         run = self._claimed("cancel-first-1")
         self.store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
@@ -141,6 +155,23 @@ class FileStoreLeaseTests(_LeaseContract, unittest.TestCase):
         api_process = FileStore(self.store.path, clock=self.clock)
         self._assert_target_locked("shared-second", api_process)
         self.assertEqual(api_process.get(run.id).status, "Fetching")
+
+    def test_enqueue_refused_by_the_durable_mirror_is_not_recorded(self) -> None:
+        with patch.object(
+            store_module, "persist_mutation", side_effect=PersistError("persist_failed")
+        ):
+            with self.assertRaises(PersistError):
+                self._enqueue("mirror-down-03")
+        _run, created = self.store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="mirror-down-03",
+            payload={},
+            actor="qa",
+            request_id="req-mirror-down-03",
+            dry_run=False,
+        )
+        self.assertTrue(created)
 
 
 if __name__ == "__main__":

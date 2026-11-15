@@ -14,6 +14,7 @@ from typing import Iterator
 from unittest.mock import patch
 
 from backend.pipeline_control import live_run
+from backend.pipeline_control import store as store_module
 from backend.pipeline_control.adapter import default_live_runner
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.graph import STEP_SPECS
@@ -400,6 +401,35 @@ class UnexpectedErrorTests(unittest.TestCase):
                     self.assertEqual(
                         (manifest["finalStatus"], manifest["jobId"]), ("ERROR", run.id)
                     )
+
+
+class DurableMirrorOutageTests(unittest.TestCase):
+    def test_mirror_outage_during_a_run_fails_it_with_a_manifest(self) -> None:
+        writes = {"n": 0}
+
+        def mirror_down_after_the_first_step(run, *, lock_held, lock_key, audit) -> None:
+            writes["n"] += 1
+            if writes["n"] > 2:
+                raise PersistError("persist_failed")
+
+        with _local_pipeline() as root:
+            path = root / "store.json"
+            run = _enqueue(FileStore(path, clock=_Clock()))
+            with patch.object(store_module, "persist_mutation", mirror_down_after_the_first_step):
+                with self.assertRaises(PersistError):
+                    process_one(
+                        FileStore(path, clock=_Clock()),
+                        live=True,
+                        runner=lambda argv: 0,
+                        manifest_path=root / "summary.json",
+                    )
+            settled = FileStore(path, clock=_Clock())
+            failed = settled.get(run.id)
+            self.assertEqual((failed.status, failed.error_code), ("Failed", "worker_unexpected"))
+            self.assertEqual(_target_status(settled, "tzuyang"), "Idle")
+            self.assertTrue((root / "summary.json").is_file())
+            manifest = _read(root / "summary.json")
+            self.assertEqual((manifest["finalStatus"], manifest["jobId"]), ("ERROR", run.id))
 
 
 class StopSignalTests(unittest.TestCase):
