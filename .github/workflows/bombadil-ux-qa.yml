@@ -32,12 +32,15 @@ jobs:
     timeout-minutes: 12
     env:
       CI: 'true'
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bombadil-browsers
-      NPM_CONFIG_CACHE: ${{ runner.temp }}/bombadil-npm-cache
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Set isolated cache paths
+        shell: bash
+        run: |
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s/bombadil-browsers\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'NPM_CONFIG_CACHE=%s/bombadil-npm-cache\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '24.22.1'

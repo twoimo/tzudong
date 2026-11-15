@@ -115,9 +115,11 @@ as a distributed spend limit. No live provider call is part of this QA record.
 | Targeted lint | 60 changed code files passed | Source/static checks |
 | Bombadil request policy | 5 passed, 0 failed | Static/method/URL boundaries, not browser execution |
 | First full web build | Failed: worker-only Python budget dependency entered the new route bundle | Found before deployment; fixed by preserving worker path and narrowing web planning |
+| Corrected full web build | Passed: compile, type check, 58 static pages and route CSS boundary verification | Local candidate; not a production deployment |
 | Local browser performance preflight | Previously denied; frozen evidence retained | Not retried or relabelled as successful |
 | Cloud browser → executor fixture | Connection refused because the runtimes have separate loopback networks | No tunnel, browser-profile attachment or hidden fallback |
 | New hosted component workflow | Execution and screenshots must be reviewed before rendered-UI success is claimed | Synthetic components, not full Next/auth/DB/map integration |
+| First hosted workflow registration | Failed before any job/browser: `runner.temp` is unavailable in job-level `env` | Moved cache-path setup into an executed step; original failed run retained |
 | Release and deployment | Exact-head protected checks and final deployment readback are required | Local results are not substitutes |
 
 Independent review corrected the video-cohort unit and analysis-time label,
