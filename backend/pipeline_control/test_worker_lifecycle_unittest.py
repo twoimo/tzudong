@@ -18,7 +18,7 @@ from backend.pipeline_control.graph import STEP_SPECS
 from backend.pipeline_control.live_run import run_once
 from backend.pipeline_control.persist import PersistError
 from backend.pipeline_control.state_machine import ControlPlaneError, RunRecord
-from backend.pipeline_control.store import MemoryStore
+from backend.pipeline_control.store import LEASE_TTL_SECONDS, MemoryStore
 from backend.pipeline_control.worker import process_one
 
 STEP_TIMEOUT_ENV = "TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS"
@@ -158,6 +158,64 @@ class LiveStepLeaseTests(unittest.TestCase):
         self.assertEqual(result, "Failed")
         self.assertEqual(store.get(run.id).error_code, "lease_expired")
         self.assertEqual(_target_status(store, "tzuyang"), "Queued")
+        self.assertEqual(manifest["finalStatus"], "ERROR")
+
+    def test_pause_and_resume_during_a_step_leave_the_run_with_its_worker(self) -> None:
+        for waited in (10.0, LEASE_TTL_SECONDS + 1):
+            with self.subTest(waited=waited):
+                clock = _Clock()
+                store = MemoryStore(clock=clock)
+                run = _enqueue(store)
+                during_step: dict[str, object] = {}
+
+                def step_paused_and_resumed_by_the_operator(argv: list[str]) -> int:
+                    if during_step:
+                        return 0
+                    store.control(run.id, "pause", actor="operator", request_id="req-pause")
+                    store.control(run.id, "resume", actor="operator", request_id="req-resume")
+                    clock.advance(waited)
+                    during_step["second worker claimed"] = store.claim() is not None
+                    try:
+                        _enqueue(store, key="lifecycle-rival")
+                        during_step["rival"] = "created"
+                    except ControlPlaneError as refused:
+                        during_step["rival"] = refused.code
+                    return 0
+
+                with _local_pipeline() as root:
+                    result = process_one(
+                        store,
+                        live=True,
+                        runner=step_paused_and_resumed_by_the_operator,
+                        manifest_path=root / "summary.json",
+                    )
+
+                self.assertEqual(
+                    during_step, {"second worker claimed": False, "rival": "lock_held"}
+                )
+                self.assertEqual((result, store.get(run.id).status), ("Succeeded", "Succeeded"))
+
+    def test_pause_during_a_step_stops_the_worker_at_the_next_step(self) -> None:
+        clock = _Clock()
+        store = MemoryStore(clock=clock)
+        run = _enqueue(store)
+        steps: list[list[str]] = []
+
+        def step_paused_by_the_operator(argv: list[str]) -> int:
+            steps.append(argv)
+            store.control(run.id, "pause", actor="operator", request_id="req-pause")
+            clock.advance(LEASE_TTL_SECONDS + 1)
+            return 0
+
+        with _local_pipeline() as root:
+            result = process_one(
+                store, live=True, runner=step_paused_by_the_operator, manifest_path=root / "summary.json"
+            )
+            manifest = _read(root / "summary.json")
+
+        self.assertEqual((result, len(steps)), ("Paused", 1))
+        self.assertEqual(store.get(run.id).status, "Paused")
+        self.assertEqual(_target_status(store, "tzuyang"), "Paused")
         self.assertEqual(manifest["finalStatus"], "ERROR")
 
     def test_operator_cancel_during_a_step_ends_the_run_cancelled(self) -> None:

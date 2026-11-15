@@ -93,6 +93,28 @@ class _LeaseContract:
                 self._assert_target_locked(f"stale-after-{finish.__name__}")
                 self.assertEqual(self.store.get(successor.id).status, "Queued")
 
+    def test_pause_and_resume_during_a_step_leave_the_run_with_its_worker(self) -> None:
+        run = self._claimed("resume-step-01")
+        self.store.beat(run.id, STEP_LEASE_SECONDS)
+        self.store.control(run.id, "pause", actor="operator", request_id="req-pause")
+        self.store.control(run.id, "resume", actor="operator", request_id="req-resume")
+        self.clock.advance(10)
+        self.assertIsNone(self.store.claim())
+        self.clock.advance(LEASE_TTL_SECONDS)
+        self._assert_target_locked("resume-step-02")
+        self.assertEqual(self.store.get(run.id).status, "Fetching")
+
+    def test_pause_during_a_step_takes_effect_at_the_next_step_boundary(self) -> None:
+        run = self._claimed("pause-step-001")
+        self.store.beat(run.id, STEP_LEASE_SECONDS)
+        self.store.control(run.id, "pause", actor="operator", request_id="req-pause")
+        self.clock.advance(LEASE_TTL_SECONDS + 1)
+        self._assert_target_locked("pause-step-002")
+        self.assertEqual(self.store.get(run.id).status, "Fetching")
+        self.assertEqual(self.store.beat(run.id, STEP_LEASE_SECONDS).status, "Paused")
+        resumed = self.store.control(run.id, "resume", actor="operator", request_id="req-resume")
+        self.assertEqual(resumed.status, "Queued")
+
     def test_heartbeat_for_a_cancelled_run_reports_cancelled_and_grants_no_lease(self) -> None:
         run = self._claimed("cancel-first-1")
         self.store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
