@@ -55,8 +55,12 @@ describe("admin console dashboard overhaul source contract", () => {
     expect(source).toContain('fetch("/api/admin/sentry?status=unresolved"');
     expect(source).toContain("fetchAdminYouTubeKpiCollectionLogs");
     expect(source).toContain("stats.pendingTotal");
-    expect(source).toContain('data-admin-operations-overview="true"');
-    expect(source).toContain('"조회 실패"');
-    expect(source).toContain('"확인 불가"');
+    expect(source).toContain('<AdminDashboardStatusSummary');
+    expect(source).toContain('summary={dashboardHeaderSummary}');
+    expect(read("components/admin/dashboard/AdminDashboardStatusSummary.tsx")).toContain('data-admin-operations-overview="true"');
+    expect(read("lib/admin/dashboard-status-summary.ts")).toContain("sentry.data!.issues.length");
+    expect(source).not.toContain('aria-label="현재 운영 상태" data-admin-operations-overview="true"');
+    expect(read("lib/admin/dashboard-status-summary.ts")).toContain("'조회 실패'");
+    expect(read("lib/admin/dashboard-status-summary.ts")).toContain("'미확인'");
   });
 });

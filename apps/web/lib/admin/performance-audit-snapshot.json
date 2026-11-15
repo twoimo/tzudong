@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "id": "kpi-origin-v2-20261115",
+  "label": "맛집 영상 KPI · 기존 조회와 RPC 비교",
+  "analyzedAtUtc": "2026-11-15T10:39:59.496Z",
+  "sourceSha": "d17885049e6add704bcb84a7a943f0427d613d29",
+  "analysisSha256": "80795786da10461b2cf2c5694b4c94128ef117d48d35a3ded191487ca20e4abf",
+  "cohortCount": 100,
+  "runtime": "Node 24.22.1 · Linux x64",
+  "sampleCountPerMode": 5,
+  "retryCount": 0,
+  "responseBytes": 34790,
+  "identicalResponseCount": 10,
+  "browser": {
+    "state": "unavailable",
+    "reason": "기존 측정 환경에서 브라우저 샌드박스 실행 제한으로 지표를 확보하지 못했습니다",
+    "metrics": [
+      "LCP",
+      "INP",
+      "CLS"
+    ]
+  },
+  "phases": [
+    {
+      "mode": "legacy",
+      "startedAtUtc": "2026-11-15T10:32:13.421Z",
+      "completedAtUtc": "2026-11-15T10:32:27.668Z",
+      "receiptSha256": "c8d55c42ad3d8fe4f87a0f3cb786b274330e70fe4f1a5567bd4da948860a2e73",
+      "metricsMs": {
+        "externalTotal": [
+          9971.786,
+          1088.477,
+          1177.385,
+          1275.453,
+          726.648
+        ],
+        "kpi-body": [
+          5.794,
+          0.871,
+          0.605,
+          0.547,
+          0.567
+        ],
+        "kpi-handler": [
+          2002.322,
+          536.737,
+          673.64,
+          608.082,
+          358.753
+        ],
+        "kpi-bucket-request": [
+          1481.427,
+          159.117,
+          292.782,
+          144.261,
+          121.779
+        ],
+        "kpi-rows-request": [
+          513.651,
+          376.436,
+          380.062,
+          463.083,
+          236.129
+        ]
+      }
+    },
+    {
+      "mode": "rpc",
+      "startedAtUtc": "2026-11-15T10:35:22.242Z",
+      "completedAtUtc": "2026-11-15T10:35:33.392Z",
+      "receiptSha256": "c42478b2fc2e78686900692d112cf58fcd1a7187c9bb36bcf6e11d348e48e7dd",
+      "metricsMs": {
+        "externalTotal": [
+          8028.048,
+          832.895,
+          901.518,
+          618.228,
+          762.694
+        ],
+        "kpi-body": [
+          4.956,
+          0.963,
+          0.562,
+          0.619,
+          0.616
+        ],
+        "kpi-handler": [
+          978.789,
+          267.941,
+          260.467,
+          112.289,
+          267.54
+        ],
+        "kpi-rpc-request": [
+          971.977,
+          266.341,
+          259.465,
+          111.281,
+          266.497
+        ],
+        "kpi-db-bucket": [
+          35.735,
+          0.054,
+          0.053,
+          0.056,
+          0.078
+        ],
+        "kpi-db-rows": [
+          10.233,
+          2.728,
+          2.69,
+          2.804,
+          2.703
+        ],
+        "kpi-db-total": [
+          50.077,
+          2.811,
+          2.791,
+          2.894,
+          2.809
+        ]
+      }
+    }
+  ]
+}

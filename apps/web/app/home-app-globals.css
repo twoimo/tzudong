@@ -457,6 +457,6 @@ div[style*="z-index"]>div>.custom-marker {
   }
 }
 .home-map-floating-control-text {
-  font-size: 0.75rem;
-  line-height: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }

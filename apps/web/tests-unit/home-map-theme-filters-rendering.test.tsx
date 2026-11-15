@@ -65,7 +65,7 @@ describe("HomeMapThemeFilters rendering", () => {
     expect(render()).not.toContain('data-allow-horizontal-scroll="true"');
   });
 
-  test("selecting a theme and either deselection action preserve the controlled callback contract", () => {
+  test("selecting and toggling a theme off preserve the controlled callback without a duplicate banner", () => {
     type Element = React.ReactElement<Record<string, unknown>>;
     const compiled = ts.transpileModule(readFileSync(new URL('../components/home/HomeMapThemeFilters.tsx', import.meta.url), 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
@@ -110,11 +110,9 @@ describe("HomeMapThemeFilters rendering", () => {
       (toggle.props.onClick as () => void)();
       expect(changes.at(-1)).toBeNull();
 
-      const clear = selected.find((button) => button.props['aria-pressed'] === undefined && typeof button.props.onClick === 'function')!;
-      (clear.props.onClick as () => void)();
-      expect(changes.at(-1)).toBeNull();
+      expect(selected).toHaveLength(HOME_MAP_THEME_FILTERS.length);
     }
-    expect(changes).toHaveLength(HOME_MAP_THEME_FILTERS.length * 3);
+    expect(changes).toHaveLength(HOME_MAP_THEME_FILTERS.length * 2);
   });
 
 });

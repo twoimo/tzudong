@@ -15,6 +15,7 @@ export const ADMIN_CONSOLE_MODULE_IDS = [
   "pipeline",
   "sentry",
   "knowledge-graph",
+  "web-performance",
 ] as const;
 
 export type AdminConsoleRouteModuleId = (typeof ADMIN_CONSOLE_MODULE_IDS)[number];

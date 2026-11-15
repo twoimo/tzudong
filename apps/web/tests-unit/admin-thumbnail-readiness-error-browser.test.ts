@@ -83,9 +83,12 @@ const readinessRequests = (page: Page) => page.evaluate(() => (globalThis as unk
     expect(await readinessRequests(page)).toBe(1);
     await playwrightExpect(page.getByText('기록 확인 실패', { exact: false }).first()).toBeVisible();
 
-    await page.getByRole('button', { name: '밥도둑 한상 썸네일 예시 불러오기' }).click();
-    await playwrightExpect(page.getByText('이미지 만들기 상태를 확인하지 못해 다시 확인하고 있어요.', { exact: false })).toBeVisible();
-    await playwrightExpect.poll(() => readinessRequests(page)).toBe(2);
+    await page.getByRole('button', { name: '밥도둑 한상 썸네일 구성 미리보기' }).click();
+    await playwrightExpect(page.getByRole('dialog', { name: '썸네일 구성 편집' })).toBeVisible();
+    await playwrightExpect(page.locator('#thumbnail-brief-topic')).not.toHaveValue('');
+    expect(await readinessRequests(page)).toBe(1);
+    await page.getByRole('button', { name: '생성 설정 닫기' }).click();
+    await playwrightExpect(page.locator('[data-thumbnail-gemini-generate]')).toBeDisabled();
     await playwrightExpect(status).toHaveText('확인 실패');
 
     await setFixture(page, { readinessDelayMs: 600 });
@@ -95,7 +98,7 @@ const readinessRequests = (page: Page) => page.evaluate(() => (globalThis as unk
     await playwrightExpect(retry).toBeFocused();
     await playwrightExpect(retry).toHaveAccessibleName('모델 상태 다시 확인');
     await playwrightExpect(retry).toBeFocused();
-    expect(await readinessRequests(page)).toBe(3);
+    expect(await readinessRequests(page)).toBe(2);
 
     await setFixture(page, { readinessOk: true });
     await page.keyboard.press('Enter');

@@ -34,6 +34,23 @@ function renderOverlay(overrides: Partial<ComponentProps<typeof NaverMapOverlayS
 }
 
 describe('NaverMapOverlayStack', () => {
+    test('places selected theme criteria in the same slot without hiding loading, errors or empty results', () => {
+        const ready = renderOverlay({ activeThemeId: 'hot-view' });
+        expect(ready).toContain('data-map-overlay-kind="theme"');
+        expect(ready.match(/<button/g)).toHaveLength(1);
+        expect(ready).toContain('aria-haspopup="dialog"');
+        expect(ready).toContain('aria-expanded="false"');
+        for (const override of [
+            { isLoadingRestaurants: true },
+            { restaurantsLength: 0 },
+            { mapToast: { message: '확인 필요', type: 'error' as const, isVisible: true } },
+        ]) {
+            const html = renderOverlay({ activeThemeId: 'hot-view', ...override });
+            expect(html).not.toContain('data-map-overlay-kind="theme"');
+            expect(html).not.toContain('필터 기준 보기');
+        }
+    });
+
     test('mounts exactly the loading notice at the highest priority', () => {
         const html = renderOverlay({
             announcementToastTitle: '공지',

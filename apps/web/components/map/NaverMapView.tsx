@@ -3748,6 +3748,7 @@ const NaverMapView = memo(({
             <div className="relative h-full">
                 {auxiliaryRuntimes}
                 <NaverMapSurface
+                    activeThemeId={filters.featuredTheme}
                     announcementToastTitle={announcementToastTitle}
                     badgePositionClass={floatingBadgePositionClass}
                     count={onlineUsersCount}
@@ -3768,6 +3769,7 @@ const NaverMapView = memo(({
                 {/* 모바일: z-0 스태킹 컨텍스트 밖에서 렌더링하여 MobileControlOverlay 위에 표시 */}
                 {isMobileOrTablet && (
                     <NaverMapOverlayStack
+                        activeThemeId={filters.featuredTheme}
                         announcementToastTitle={announcementToastTitle}
                         badgePositionClass={floatingBadgePositionClass}
                         count={onlineUsersCount}
@@ -3794,6 +3796,7 @@ const NaverMapView = memo(({
             {auxiliaryRuntimes}
             {/* 지도 영역 */}
             <NaverMapSurface
+                activeThemeId={filters.featuredTheme}
                 announcementToastTitle={announcementToastTitle}
                 badgePositionClass={floatingBadgePositionClass}
                 className="flex-1 h-full relative z-0"
@@ -3816,6 +3819,7 @@ const NaverMapView = memo(({
             {/* 모바일: z-0 스태킹 컨텍스트 밖에서 렌더링하여 MobileControlOverlay 위에 표시 */}
             {isMobileOrTablet && (
                 <NaverMapOverlayStack
+                    activeThemeId={filters.featuredTheme}
                     announcementToastTitle={announcementToastTitle}
                     badgePositionClass={floatingBadgePositionClass}
                     count={onlineUsersCount}

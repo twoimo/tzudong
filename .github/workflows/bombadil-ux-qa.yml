@@ -1,0 +1,89 @@
+name: Bombadil component UX QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/bombadil-ux-qa.yml'
+      - '.github/chrome-for-testing.v1.json'
+      - 'scripts/run-bombadil-qa.mjs'
+      - 'apps/web/tests/bombadil/**'
+      - 'apps/web/tests/fixtures/local-storyboard-ui/next-image-shim.ts'
+      - 'apps/web/components/**'
+      - 'apps/web/lib/admin/**'
+      - 'apps/web/lib/home-map-*.ts'
+      - 'apps/web/app/*.css'
+      - 'apps/web/styles/**'
+      - 'apps/web/package.json'
+      - 'apps/web/package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bombadil-component-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  component-qa:
+    name: Isolated components / sandboxed Chrome
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      CI: 'true'
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bombadil-browsers
+      NPM_CONFIG_CACHE: ${{ runner.temp }}/bombadil-npm-cache
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24.22.1'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.0'
+      - name: Install lock-authoritative dependencies without lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/bombadil-npm" --ignore-scripts --no-audit --no-fund npm@11.6.2
+          test "$(node "$RUNNER_TEMP/bombadil-npm/node_modules/npm/bin/npm-cli.js" --version)" = '11.6.2'
+          node "$RUNNER_TEMP/bombadil-npm/node_modules/npm/bin/npm-cli.js" --prefix apps/web ci --ignore-scripts --no-audit --no-fund
+          git diff --exit-code -- apps/web/package.json apps/web/package-lock.json
+      - name: Install pinned Bombadil binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/bombadil-tool"
+          curl --fail --location --proto '=https' --tlsv1.2 --max-time 90 \
+            'https://github.com/antithesishq/bombadil/releases/download/v0.7.10/bombadil-x86_64-linux' \
+            --output "$RUNNER_TEMP/bombadil-tool/bombadil"
+          printf '%s  %s\n' '6f2664ca7d4067017b4efb26db5c29d6dcfecdc78131f96989d336f12420cc1b' "$RUNNER_TEMP/bombadil-tool/bombadil" | sha256sum --check --status
+          test "$(stat -c '%s' "$RUNNER_TEMP/bombadil-tool/bombadil")" = '17972264'
+          chmod 0755 "$RUNNER_TEMP/bombadil-tool/bombadil"
+          "$RUNNER_TEMP/bombadil-tool/bombadil" --version
+      - name: Install the repository-pinned browser (no launch)
+        working-directory: apps/web
+        run: node node_modules/playwright/cli.js install --with-deps --no-shell chromium
+      - name: Verify bounded request policy
+        run: node --test apps/web/tests/bombadil/policy.test.mjs
+      - name: Run synthetic component journeys and bounded Bombadil properties
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-bombadil-qa.mjs --run-hosted \
+            --out "$RUNNER_TEMP/bombadil-qa-evidence" \
+            --bun "$(command -v bun)" \
+            --bombadil "$RUNNER_TEMP/bombadil-tool/bombadil"
+      - name: Retain minimized receipts and synthetic screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: bombadil-component-qa-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/bombadil-qa-evidence/*-receipt.json
+            ${{ runner.temp }}/bombadil-qa-evidence/desktop-*.png
+            ${{ runner.temp }}/bombadil-qa-evidence/mobile-*.png

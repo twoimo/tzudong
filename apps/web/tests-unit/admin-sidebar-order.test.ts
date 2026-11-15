@@ -8,7 +8,7 @@ import {
 import { ADMIN_CONSOLE_MODULE_IDS } from "../lib/admin/admin-module-routing";
 
 describe("admin sidebar order normalization", () => {
-  test("groups the 15 visible capabilities by operational purpose", () => {
+  test("groups the 16 visible capabilities by operational purpose", () => {
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.sections).toEqual([
       "대시보드", "검수·데이터", "콘텐츠", "사이트 운영", "플랫폼 도구",
     ]);
@@ -21,14 +21,14 @@ describe("admin sidebar order normalization", () => {
     ]);
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["사이트 운영"]).toEqual(["users", "banners"]);
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["플랫폼 도구"]).toEqual([
-      "pipeline", "knowledge-graph", "sentry", "routes", "llm", "audit",
+      "pipeline", "knowledge-graph", "sentry", "web-performance", "routes", "llm", "audit",
     ]);
     expect(ADMIN_SIDEBAR_SECTIONS).toHaveLength(5);
   });
 
   test("covers every visible route without changing route ids", () => {
     const sidebarModuleIds = new Set(Object.values(DEFAULT_ADMIN_SIDEBAR_ORDER.items).flat());
-    expect(sidebarModuleIds.size).toBe(15);
+    expect(sidebarModuleIds.size).toBe(16);
     expect([...sidebarModuleIds].sort()).toEqual(
       ADMIN_CONSOLE_MODULE_IDS.filter((id) => id !== "restaurant-refresh-history").sort(),
     );
@@ -52,7 +52,7 @@ describe("admin sidebar order normalization", () => {
     expect(normalized.items["콘텐츠"].slice(0, 3)).toEqual([
       "storyboard", "insights", "youtube-thumbnail-generator",
     ]);
-    expect(normalized.items["플랫폼 도구"].slice(0, 4)).toEqual([
+    expect(normalized.items["플랫폼 도구"].filter(id => id !== "web-performance").slice(0, 4)).toEqual([
       "pipeline", "knowledge-graph", "sentry", "audit",
     ]);
   });

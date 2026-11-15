@@ -1,0 +1,5 @@
+@import "../../app/globals.css";
+@import "../../app/app-globals.css";
+
+html, body, #root { height: 100%; margin: 0; min-width: 0; }
+body { overflow: hidden; }
