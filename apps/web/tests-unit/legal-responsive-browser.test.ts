@@ -65,7 +65,9 @@ for (const { name, Component, end } of documents) {
           expect(geometry.articleWidth).toBeLessThanOrEqual(Math.min(768, width - 32));
           expect(geometry.documentWidth).toBe(width);
 
-          // Chrome ignores Control+End on macOS.
+          // A user presses keys only after the page has painted. CI dropped a scroll key
+          // pressed before first-contentful-paint. Chrome ignores Control+End on macOS.
+          await ui.poll(() => page.evaluate(() => performance.getEntriesByName('first-contentful-paint').length)).toBe(1);
           await page.keyboard.press('End');
           await ui.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
           await ui(page.locator(end)).toBeInViewport();
