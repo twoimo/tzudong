@@ -5,7 +5,7 @@ Run lifecycle::
     Queued --claim--> Fetching --all steps pass--> Succeeded
     Queued | Fetching | Inserting --pause--> Paused --resume--> Queued
     Queued | Fetching | Inserting | Paused --cancel--> Cancelled
-    Queued | Fetching | Inserting | Paused --step or worker failure--> Failed
+    Fetching | Inserting | Paused --step or worker failure--> Failed
     Queued | Fetching | Inserting --lease lapsed--> Failed (lease_expired)
 
 ``Succeeded``, ``Failed``, and ``Cancelled`` are terminal. A terminal run does
