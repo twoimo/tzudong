@@ -431,7 +431,7 @@ class LiveAdapterTests(unittest.TestCase):
         import os
         import tempfile
         from pathlib import Path
-        from backend.pipeline_control import queue as queue_mod
+        from backend.pipeline_control import file_queue as queue_mod
         from backend.pipeline_control.live_run import run_once
         from backend.pipeline_control.store import MemoryStore
 

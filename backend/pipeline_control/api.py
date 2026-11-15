@@ -19,7 +19,7 @@ from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.targets import assert_admitted, load_targets
 from backend.utils.privacy_log import safe_error_name, sanitize_log_value
 from backend.pipeline_control.metrics import gauge_snapshot
-from backend.pipeline_control.queue import enqueue
+from backend.pipeline_control.file_queue import enqueue
 from backend.pipeline_control.impl_selector import python_reference
 
 STORE = FileStore()

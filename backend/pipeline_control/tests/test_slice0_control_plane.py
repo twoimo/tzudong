@@ -273,7 +273,7 @@ class HttpLoopTests(unittest.TestCase):
         self._orig_store = api_mod.STORE
         api_mod.STORE = FileStore()
         self._queue = tempfile.TemporaryDirectory()
-        from backend.pipeline_control import queue as queue_mod
+        from backend.pipeline_control import file_queue as queue_mod
 
         self._orig_queue = queue_mod.DEFAULT_QUEUE
         queue_mod.DEFAULT_QUEUE = Path(self._queue.name) / "pipeline-queue.jsonl"
@@ -286,7 +286,7 @@ class HttpLoopTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         from backend.pipeline_control import api as api_mod
-        from backend.pipeline_control import queue as queue_mod
+        from backend.pipeline_control import file_queue as queue_mod
 
         queue_mod.DEFAULT_QUEUE = self._orig_queue
         api_mod.STORE = self._orig_store

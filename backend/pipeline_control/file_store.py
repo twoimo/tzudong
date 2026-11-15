@@ -9,7 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from backend.pipeline_control.queue import _Lock
+from backend.pipeline_control.file_queue import _Lock
 from backend.pipeline_control.state_machine import RunRecord
 from backend.pipeline_control.store import LEASE_TTL_SECONDS, MemoryStore
 
