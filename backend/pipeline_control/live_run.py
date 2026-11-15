@@ -82,7 +82,7 @@ def run_once(
             target=target,
             profile=profile,
             idempotency_key=f"liverun{index:02d}-{target}-{profile}-{mode}-{utc_date}",
-            payload={"index": index, "live": live},
+            payload={"index": index, "live": use_live},
             actor="live_run",
             request_id=f"live-{index}",
             dry_run=not use_live,
