@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import math
 import os
+import signal
+import subprocess
 import time
-from typing import Any, Callable
+from contextlib import contextmanager
+from typing import Any, Callable, Iterator
 
 from backend.pipeline_control.es_index import index_document
 from backend.pipeline_control.events import classify_events_mode, publish
@@ -29,6 +33,12 @@ __all__ = [
     "execute_dry_run",
     "execute_steps",
 ]
+
+STEP_TIMEOUT_SECONDS = 2 * 60 * 60.0
+STEP_TIMEOUT_ENV = "TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS"
+STEP_TIMEOUT_EXIT_CODE = 124
+_STEP_POLL_SECONDS = 0.2
+_STEP_TERMINATE_GRACE_SECONDS = 2.0
 
 
 def emit_raw_document(run: RunRecord, *, step: str, status: str, skipped: bool) -> None:
@@ -59,11 +69,96 @@ def run_daily_helper_dry_run(step: str) -> dict[str, str]:
     return {"step": step, "mode": "dry_run"}
 
 
-def default_live_runner(argv: list[str]) -> int:
-    import subprocess
+def step_timeout_seconds() -> float:
+    raw = os.environ.get(STEP_TIMEOUT_ENV, "").strip()
+    if not raw:
+        return STEP_TIMEOUT_SECONDS
+    try:
+        seconds = float(raw)
+    except ValueError:
+        raise AdapterGraphError("step_timeout_invalid") from None
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise AdapterGraphError("step_timeout_invalid")
+    return seconds
 
-    completed = subprocess.run(argv, check=False)
-    return int(completed.returncode)
+
+@contextmanager
+def _deferred_stop_signals() -> Iterator[list[int]]:
+    """A step runs in its own session, so a signal sent to the worker's process
+    group does not reach the step."""
+
+    noted: list[int] = []
+
+    def note(signum: int, _frame: object) -> None:
+        noted.append(signum)
+
+    previous = {
+        signum: signal.signal(signum, note)
+        for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+        if signal.getsignal(signum) is not signal.SIG_IGN
+    }
+    try:
+        yield noted
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+    if noted:
+        if noted[0] == signal.SIGINT:
+            raise KeyboardInterrupt
+        raise SystemExit(128 + noted[0])
+
+
+def _step_group_alive(process: subprocess.Popen) -> bool:
+    process.poll()
+    try:
+        os.killpg(process.pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _terminate_step(process: subprocess.Popen) -> None:
+    deadline = time.monotonic() + _STEP_TERMINATE_GRACE_SECONDS
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+        while _step_group_alive(process):
+            if time.monotonic() >= deadline:
+                os.killpg(process.pid, signal.SIGKILL)
+                break
+            time.sleep(0.05)
+    except OSError:
+        pass
+    try:
+        process.wait(timeout=_STEP_TERMINATE_GRACE_SECONDS)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def default_live_runner(
+    argv: list[str],
+    timeout: float | None = None,
+    wall_clock: Callable[[], float] = time.time,
+) -> int:
+    budget = step_timeout_seconds() if timeout is None else timeout
+    deadline = wall_clock() + budget
+    with _deferred_stop_signals() as stop_signals:
+        process = subprocess.Popen(argv, start_new_session=True)
+        code = None
+        try:
+            while code is None and not stop_signals and (remaining := deadline - wall_clock()) > 0:
+                try:
+                    code = process.wait(timeout=min(remaining, _STEP_POLL_SECONDS))
+                except subprocess.TimeoutExpired:
+                    pass
+        except BaseException:
+            _terminate_step(process)
+            raise
+        if code is not None:
+            return code
+        _terminate_step(process)
+        if not stop_signals:
+            print(f"operation=step_timeout seconds={budget:g}")
+        return STEP_TIMEOUT_EXIT_CODE
 
 
 def skipped_live_steps(compute_profile: str | None = None) -> set[str]:
