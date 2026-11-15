@@ -84,7 +84,8 @@ def step_timeout_seconds() -> float:
 
 class StopSignals:
     """SIGINT, SIGTERM, and SIGHUP stop the worker where it is, except inside
-    ``held()``, where the stop waits until the block ends.
+    ``held()``, where the stop waits until the block ends. Inside
+    ``released()``, a stop raises at once again.
 
     A step runs in its own session, so a signal sent to the worker's process
     group does not reach the step. The runner holds a stop while it waits for
@@ -113,6 +114,11 @@ class StopSignals:
             raise _stop_exception(signum)
         self.held_signal = self.held_signal or signum
 
+    def _raise_held(self) -> None:
+        if self.held_signal is not None:
+            signum, self.held_signal = self.held_signal, None
+            raise _stop_exception(signum)
+
     @contextmanager
     def held(self) -> Iterator[None]:
         self._holds += 1
@@ -120,9 +126,17 @@ class StopSignals:
             yield
         finally:
             self._holds -= 1
-        if self.held_signal is not None and not self._holds:
-            signum, self.held_signal = self.held_signal, None
-            raise _stop_exception(signum)
+        if not self._holds:
+            self._raise_held()
+
+    @contextmanager
+    def released(self) -> Iterator[None]:
+        holds, self._holds = self._holds, 0
+        try:
+            self._raise_held()
+            yield
+        finally:
+            self._holds = holds
 
 
 def _stop_exception(signum: int) -> BaseException:

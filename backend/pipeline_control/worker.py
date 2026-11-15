@@ -496,52 +496,52 @@ def process_one(
     job_id_scope: str = "worker_execution",
 ) -> str | None:
     attempt = _Attempt(job_id_scope)
-    with StopSignals() as stops:
+    # A stop raises at once only inside _execute. Anywhere else it waits
+    # until the run is recorded, its manifest is written, and its cache is
+    # purged, so a stop cannot land between the steps and the record.
+    with StopSignals() as stops, stops.held():
+        attempt.run = store.claim(run_id) if run_id is not None else store.claim()
+        if attempt.run is None:
+            return None
         try:
-            with stops.held():
-                attempt.run = store.claim(run_id) if run_id is not None else store.claim()
-            if attempt.run is None:
-                return None
-            status, error_code = _execute(
-                store, attempt, live=live, runner=runner, run_id=run_id, stops=stops
-            )
+            with stops.released():
+                status, error_code = _execute(
+                    store, attempt, live=live, runner=runner, run_id=run_id, stops=stops
+                )
             unexpected = None
         except BaseException as exc:
-            if attempt.run is None:
-                raise
             status = "Failed"
             error_code, unexpected = _failure(exc)
-        with stops.held():
-            try:
-                status = _record(
-                    store, attempt.run, status, error_code, live=attempt.execution_mode == "live"
-                )
-                record_failure = None
-            except Exception as exc:
-                print(f"operation=run_record_failed error={safe_error_name(exc)}")
-                status, record_failure = "Failed", exc
-            write_run_manifest(
-                status,
-                manifest_path,
-                events=attempt.events,
-                run=attempt.run,
-                execution_mode=attempt.execution_mode,
-                data_sink=attempt.data_sink,
-                store=store,
-                job_id_scope=attempt.job_id_scope,
-                hosted_gate_rejection_code=attempt.hosted_gate_rejection_code,
+        try:
+            status = _record(
+                store, attempt.run, status, error_code, live=attempt.execution_mode == "live"
             )
+            record_failure = None
+        except Exception as exc:
+            print(f"operation=run_record_failed error={safe_error_name(exc)}")
+            status, record_failure = "Failed", exc
+        write_run_manifest(
+            status,
+            manifest_path,
+            events=attempt.events,
+            run=attempt.run,
+            execution_mode=attempt.execution_mode,
+            data_sink=attempt.data_sink,
+            store=store,
+            job_id_scope=attempt.job_id_scope,
+            hosted_gate_rejection_code=attempt.hosted_gate_rejection_code,
+        )
         try:
             attempt.purge_media_cache(status)
         except (OSError, ValueError, AdapterGraphError):
             # Settled provider/DB work stays settled. Purge is recoverable
             # local cleanup, never a reason to replay it.
             print("operation=media_cache_cleanup_deferred")
-        if unexpected is not None:
-            raise unexpected
-        if record_failure is not None:
-            raise record_failure
-        return status
+    if unexpected is not None:
+        raise unexpected
+    if record_failure is not None:
+        raise record_failure
+    return status
 
 
 def _execute(
