@@ -13,6 +13,7 @@ import {
     DEV_ADMIN_BYPASS_COOKIE_NAME,
     createDevAdminBypassCookieValue,
 } from '@/lib/auth/dev-admin-bypass-cookie'
+import { LOOPBACK_HOST_CASES } from './fixtures/loopback-host-cases'
 
 function loadProxyModule() {
     const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -375,6 +376,28 @@ test('로컬 production bundle smoke 우회는 명시 플래그와 로컬 호스
         expect(vercelResponse.headers.get('x-auth-checked')).toBe('1')
         expect(externalHostResponse.headers.get('x-auth-checked')).toBe('1')
         expect(updateSessionCalls).toBe(2)
+    } finally {
+        resetAdminBypassEnv()
+    }
+})
+
+test('Playwright 관리자 우회는 루프백 Host 헤더에서만 세션 갱신을 건너뛴다', async () => {
+    enableAdminBypassEnv()
+
+    try {
+        mock.module('@/lib/supabase/middleware', () => ({
+            updateSession: async () => NextResponse.json({ ok: true }, { headers: { 'x-auth-checked': '1' } }),
+        }))
+
+        const { proxy } = await loadProxyModule()
+        for (const { host, proxy: bypassed } of LOOPBACK_HOST_CASES) {
+            const headers = new Headers(adminBypassHeaders())
+            if (host === null) headers.delete('host')
+            else headers.set('host', host)
+
+            const response = await proxy(new NextRequest('http://localhost:3000/admin', { headers }))
+            expect(response.headers.get('x-auth-checked'), JSON.stringify(host)).toBe(bypassed ? null : '1')
+        }
     } finally {
         resetAdminBypassEnv()
     }

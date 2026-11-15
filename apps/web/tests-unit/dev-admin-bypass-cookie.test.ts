@@ -13,6 +13,7 @@ import {
     E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS,
     E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
 } from '@/lib/e2e-admin-route-bypass'
+import { LOOPBACK_HOST_CASES } from './fixtures/loopback-host-cases'
 
 const now = Date.UTC(2026, 5, 9, 9, 0, 0)
 const enabledEnv = {
@@ -52,6 +53,19 @@ describe('dev admin bypass cookie', () => {
         await expect(validateDevAdminBypassCookie({ cookieValue: `${cookieValue}x`, host: 'localhost:8080', env: enabledEnv, now })).resolves.toEqual({ ok: false, reason: 'bad_signature' })
         await expect(validateDevAdminBypassCookie({ cookieValue, host: 'localhost:8080', env: enabledEnv, now: now + 3_700_000 })).resolves.toEqual({ ok: false, reason: 'expired' })
         await expect(validateDevAdminBypassCookie({ cookieValue: 'not.a.cookie', host: 'localhost:8080', env: enabledEnv, now })).resolves.toEqual({ ok: false, reason: 'malformed_cookie' })
+    })
+
+    test('accepts a valid cookie only from loopback Host header values', async () => {
+        const cookieValue = await createDevAdminBypassCookieValue({
+            env: enabledEnv,
+            now,
+            nonce: 'unit-test-nonce',
+        })
+
+        for (const { host, devCookie } of LOOPBACK_HOST_CASES) {
+            const result = await validateDevAdminBypassCookie({ cookieValue, host, env: enabledEnv, now })
+            expect(result.ok, JSON.stringify(host)).toBe(devCookie)
+        }
     })
 
     test('limits local-host parsing and bootstrap next targets', () => {

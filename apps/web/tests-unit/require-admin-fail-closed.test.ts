@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import { LOOPBACK_HOST_CASES } from "./fixtures/loopback-host-cases";
+
 type NamedRow = Record<string, unknown> | null;
 
 type SupabaseState = {
@@ -317,6 +319,23 @@ describe("requireAdmin fail-closed contract", () => {
       if (!result.ok) return;
       expect(result.userId).toBe(ADMIN_ID);
       expect(result.userId).not.toBe(E2E_BYPASS_USER_ID);
+    });
+  });
+
+  test("honors the E2E bypass only from loopback Host header values", async () => {
+    await withRequireAdmin({ e2e: true }, async (requireAdmin) => {
+      state.authError = { message: "missing session" };
+
+      for (const { host, requireAdmin: bypassed } of LOOPBACK_HOST_CASES) {
+        setHeaders({
+          ...(host === null ? {} : { host }),
+          "x-e2e-admin-bypass": "1",
+          "x-e2e-admin-bypass-token": "fixture-bypass-token",
+        });
+
+        const result = await requireAdmin();
+        expect(result.ok ? result.userId : null, JSON.stringify(host)).toBe(bypassed ? E2E_BYPASS_USER_ID : null);
+      }
     });
   });
 
