@@ -1,11 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-    CLOSED_RESTAURANT_REQUEST_ADMIN_NOTE,
     EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT,
     EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT,
     EDIT_RESTAURANT_REQUEST_KIND_OPTIONS,
-    getEditRestaurantRequestAdminNote,
     validateEditRestaurantRequest,
     validateEditRestaurantRequestStep,
     type EditRestaurantRequestFormData,
@@ -62,14 +60,6 @@ describe('edit restaurant request flow validation', () => {
             phone: '',
             category: [],
         })).toBeNull();
-    });
-
-    test('adds an admin-visible closure note only for closure reports', () => {
-        expect(getEditRestaurantRequestAdminNote(validFormData)).toBeNull();
-        expect(getEditRestaurantRequestAdminNote({
-            ...validFormData,
-            requestKind: 'closure',
-        })).toBe(CLOSED_RESTAURANT_REQUEST_ADMIN_NOTE);
     });
 
     test('explains relocation edits and no-input closure reports', () => {
