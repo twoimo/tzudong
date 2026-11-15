@@ -2,7 +2,18 @@
   "schemaVersion": 1,
   "workerName": "tzudong-ci-governance",
   "repository": "twoimo/tzudong",
+  "execution": {
+    "provider": "github-actions",
+    "workflow": ".github/workflows/release-governance-ci.yml",
+    "requiredCheck": "Release",
+    "scope": "governance-contracts-only",
+    "cloudflareAutomaticBuilds": "paused"
+  },
   "productionBranch": "main",
+  "branchIncludes": [],
+  "branchExcludes": [
+    "*"
+  ],
   "previewsEnabled": false,
   "rootDirectory": "/.github/cloudflare",
   "buildCommand": "node ../scripts/run-cloudflare-governance.mjs --branch main",

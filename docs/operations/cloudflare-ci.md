@@ -1,26 +1,100 @@
 # Cloudflare Builds 거버넌스 CI
 
-기준일: **2026-11-12 KST**. 같은 작업 시점은 UTC로 2026-11-11이다.
+최신 구성 관측: **2026-11-15 06:13:46 UTC**. 아래 2026-11-12 KST 기록은
+Cloudflare 병행 실행을 도입했을 때의 이력이다.
 
-Cloudflare Workers Builds에서 GitHub `Release`의 실제 거버넌스 검사를 병행
-실행하고, 해당 커밋의 결과를 별도 `tzudong-ci-governance` Worker에 게시한다.
-웹 앱 배포와 전체 CI 이전은 이 단계의 범위가 아니다. GitHub의 기존 필수
-검사는 동일 SHA 비교와 보호 규칙 확인이 끝날 때까지 유지한다.
+계정의 Cloudflare Workers Builds 월간 한도가 소진되어, 기존 필수 GitHub
+`Release`가 같은 다섯 거버넌스 검사를 실행하는 대체 경로를 맡는다. 정확한
+후보의 `Release` 성공 후 이 Worker의 자동 push trigger만 정지한다. 기존
+GitHub 필수 검사와 Cloudflare 실패 기록을 유지한다. 웹 앱 배포, 전체 CI 이전,
+요금제 상향, 공개 Worker의 재배포는 이 변경의 범위가 아니다.
 
-## Main 중심 전환 후보: 원격 적용 전
+## 월간 한도와 GitHub 대체 실행
 
-현재 [.github/cloudflare/build-settings.json](../../.github/cloudflare/build-settings.json)은
-production branch와 build/deploy의 `--branch`를 함께 `main`으로 지정한다.
-이것은 [main 중심 전환](main-first-transition.md)의 **적용 예정 소스 구성**이며,
-이 변경에서 Workers Builds 설정 변경이나 main 실행 확인은 하지 않았다.
+다음은 변경 전 기준 소스 `98066a423644b06f8c9d0a96155714a9c10b26d5`와
+공급자 API에서 확인한 사실이다.
 
-최종 `develop → data → main` 보호 승격이 끝난 뒤 기존 trigger를 읽어 복구 값을
-보관하고, 같은 trigger의 세 값을 함께 바꾼다. root, preview 비활성화, 자격 증명,
-고정 도구 버전과 예산은 유지한다. 저장된 설정과 native main build를 다시 읽고,
-공개 receipt의 commit·tree·build ID 및 산출물 해시를 같은 실행과 대조한다.
-공급자 접근이 없으면 원격 적용을 미완료로 기록한다. 기존 develop 연결의 성공은
-main의 필수 GitHub 검사를 대신하지 않는다. 아래 develop 설정과 실행 수치는
-2026-11-12의 이력이며 이번 main 전환이 완료됐다는 증거가 아니다.
+| 관측 | 결과와 근거 |
+| --- | --- |
+| 현재 Worker 연결 | `tzudong-ci-governance`, repository `twoimo/tzudong`, 단일 `main` trigger, preview 비활성화 |
+| 보존할 명령 | root `/.github/cloudflare`, build/deploy 모두 `--branch main`, cache 활성화 |
+| 계정 한도 | [한도 API](https://developers.cloudflare.com/api/resources/workers_builds/methods/get_account_limits/) 응답 `has_reached_build_minutes_limit: true` |
+| 다음 갱신 | `2026-11-30T23:59:59.999Z` = 2026-12-01 08:59:59.999 KST |
+| 마지막 main의 Cloudflare 결과 | [check 132708736275](https://github.com/twoimo/tzudong/runs/132708736275), build `c3128eee-baf8-488a-93e9-bc321189e5eb`, `stopped` / `skipped`; 초기화·실행 시작 시각 없음, 실행 로그 없음 |
+| 변경 전 GitHub Release | [run 43680125865](https://github.com/twoimo/tzudong/actions/runs/43680125865), 같은 기준 SHA에서 success; 새 분류기 단계까지의 후보 결과는 별도 확인 필요 |
+
+한도 응답과 실행 전 skipped 상태를 각각 보존한다. 이 응답에 개별 build의
+상세 사유 코드가 없으므로 과거 모든 skip 원인을 한도로 단정하지 않는다.
+현재 한도 소진은 API 조회 권한 거부 또는 브라우저 측정 환경의 정책 차단과
+다른 상태다. 이 작업으로 브라우저 정책을 바꾸거나 차단된 측정을 재시도하지 않는다.
+
+[Release workflow](../../.github/workflows/release-governance-ci.yml)는 이미 현재
+SHA·tree 확인, 읽기 전용 권한, Node/Bun 고정, 20분 제한과 scored artifact 보존을
+갖추고 있다. 기존 job에 benchmark 분류기 테스트를 추가하여
+[Cloudflare checkPlan](../../.github/scripts/run-cloudflare-governance.mjs)의
+다섯 검사 묶음을 모두 실행한다.
+
+| 동일하게 실행하는 검사 | GitHub Release 명령 |
+| --- | --- |
+| Scorer 재실행·독립 validator | `bun test tests-unit/performance-backlog-governance.test.ts` |
+| Workflow·증거 계약 | `bun test tests-unit/release-workflow-governance-source.test.ts` |
+| 추적 문서 무결성 | `python3 -m unittest backend.utils.tests.test_tracked_document_integrity` |
+| Benchmark 범위·소스 정체성 | `node --test .github/scripts/classify-ci-benchmark.test.mjs` |
+| Cloudflare 정체성·시간 제한·배포 실패 경로 | `node --test .github/scripts/run-cloudflare-governance.test.mjs .github/scripts/deploy-cloudflare-governance.test.mjs` |
+
+별도 workflow나 web 의존성 설치를 추가하지 않는다. `Release`는 각 검사 실패를
+그대로 실패로 처리하고 기존 `backlog.scored.json`과 SHA-256 파일만 7일간 보존한다.
+소스 계약은 checkPlan의 모든 검사가 조건부 생략 없이 Release에 존재하는지 확인한다.
+`CI`, `Release`, `Security`, `Promotion Path` 필수 상태와 CodeQL·전체 CI 경로는
+유지한다. 이 scoped 검사의 성공은 합성 governance fixture 검증이며 전체 성능
+실측 통과나 새 Cloudflare 배포 성공을 뜻하지 않는다.
+
+### 자동 push trigger 정지와 readback
+
+[build-settings.json](../../.github/cloudflare/build-settings.json)은 **적용할 구성**을
+기록한다. 파일 수정은 원격 적용의 증거가 아니다. 공개
+[Workers Builds API](https://developers.cloudflare.com/api/resources/workers_builds/)의
+`PATCH /accounts/{account_id}/builds/triggers/{trigger_uuid}`는 branch include/exclude
+배열 변경을 지원한다. 대상은 위 Worker의 기존 trigger
+`0045f8da-1cef-4835-9d9f-6ea3125c56f6` 하나다.
+
+1. 정확한 변경 후보 SHA의 GitHub `Release`에서 위 다섯 검사와 artifact 보존이 성공했는지 확인한다.
+2. trigger를 다시 읽어 Worker·저장소·명령·root·preview 상태와 기존 `["main"]` / `[]` 배열을 확인한다. 예상과 다르면 먼저 차이를 검토한다.
+3. 다음 두 필드만 변경한다. 저장소 연결, Worker 배포, 토큰, 다른 Worker의 설정은 변경하지 않는다.
+
+   ```json
+   { "branch_includes": [], "branch_excludes": ["*"] }
+   ```
+
+4. trigger와 Worker build configuration을 다시 읽어 변경된 배열과 보존한 설정을 대조한다. 관측 시각, 후보 SHA, GitHub run URL과 설정 readback을 비식별 증거로 남긴다.
+5. 다음 실제 main push에서 해당 SHA의 GitHub 필수 검사와 Cloudflare 신규 실행 여부를 확인한다. 확인 전에는 자동 실행 정지가 실증됐다고 표시하지 않는다. 확인을 위한 빈 push·수동 build·재시도는 만들지 않는다.
+
+복구 입력은 같은 trigger의 다음 두 필드다. 복구 필요성을 검토한 뒤 저장된 값과
+후속 실행을 다시 확인하며 월간 quota 갱신만으로 자동 복구하지 않는다.
+
+```json
+{ "branch_includes": ["main"], "branch_excludes": [] }
+```
+
+`path_excludes: ["*"]`만으로 자동 실행을 정지하지 않는다. 공식
+[watch paths 문서](https://developers.cloudflare.com/workers/ci-cd/builds/build-watch-paths/)는
+파일 변경 0개 또는 3,000개 이상/20 commit 이상인 push에서 path matching을
+건너뛸 수 있다고 설명한다. `wrangler versions upload`도 배포만 바꿀 뿐
+[자동 build 실행은 유지한다](https://developers.cloudflare.com/workers/ci-cd/builds/#disconnecting-builds).
+공개 PATCH 스키마에 없는 `auto_build_enabled` 필드를 보내지 않는다.
+
+자동 실행을 정지해도 마지막 성공 Worker 배포는 남는다. 공개 `/receipt`의
+HTTP 200은 그 과거 commit·build ID의 결과이며 현재 GitHub fallback 성공으로
+바꾸어 게시하지 않는다. 현재 SHA의 검증은 해당 SHA의 GitHub run과 artifact를
+따른다. 원격 변경이 거부되면 거부 원인과 미완료 상태를 기록하고 GitHub 검사는
+계속 실행한다.
+
+## Main 연결과 이전 기록
+
+2026-11-15 API readback에서 production branch와 두 명령의 `--branch main`이
+이미 적용되어 있었다. 따라서 이전 main 전환의 “원격 적용 전” 상태는 현재
+설정에 해당하지 않는다. 아래 develop 설정·실행 수치와 2026-11-12 예산 관측은
+당시의 이력이며 현재 main의 성공 또는 잔여 한도를 증명하지 않는다.
 
 ## 구성 및 검증 기록
 
@@ -157,7 +231,7 @@ runner의 시간 제한은 한 번의 실행을 제한한다. 계정 월간 사�
 262회가 들어간다. 이는 계산 예시이며 호스팅 실측치가 아니다. 재시도도 사용량에
 포함해 기록하고, 불필요한 예약 실행이나 모든 브랜치 preview를 추가하지 않는다.
 
-후속 작업 시작 시 계정의 Worker 다섯 개에서 11월 이력 210건을 조회했다.
+2026-11-12 KST 후속 작업 시작 시 계정의 Worker 다섯 개에서 11월 이력 210건을 조회했다.
 초기화(없으면 실행 시작)부터 종료까지 합계는 **약 2,123.77분**이고,
 그중 `tzudong-ci-governance`는 8건 **24.41분**이다. 시작 시각이 없는 11건은
 합계에서 제외했다. 이는 **공식 사용량·청구 분량·잔여 quota가 아닌 관측 시간**이다.
@@ -191,15 +265,16 @@ runner가 실행하는 자식 프로세스 중 Wrangler에만 배포 자격 증�
 이 환경 변수 제한은 토큰 자체의 계정 권한 축소를 뜻하지 않는다.
 preview는 비활성화하고 지정한 저장소의 단일 신뢰 브랜치만 연결한다.
 최초 검증은 작업 브랜치로 실행했고, 기존 연결은 develop이었다. main 중심 정책
-설치 후에는 위 순서대로 main 하나로 정렬한다. fork PR이나 임의 branch의 코드를 배포 토큰이 있는
+설치 후 main 하나로 정렬된 상태를 2026-11-15에 읽어 확인했다. 현재 자동 실행
+정지 절차는 문서 상단을 따른다. fork PR이나 임의 branch의 코드를 배포 토큰이 있는
 경로에서 실행하지 않는다.
 
 ## GitHub에서 계속 맡는 검사
 
 GitHub `Release`, 전체 8-shard 단위 테스트, 앱 build/lint/typecheck, 플랫폼별
 검사, CodeQL, Security/npm/pip 감사, Dependabot, Nightly, 환경 보호와
-보호된 소스 PR을 유지한다. main 중심 정책은 기존 `develop → data → main`
-경로로 한 번 더 설치한 뒤 main PR로 전환한다. 기존 artifact 업로드와 보존
+보호된 소스 PR을 유지한다. main 중심 정책의 설치 이후 소스 PR은 보호된
+main을 대상으로 한다. 기존 artifact 업로드와 보존
 계약도 유지한다. 별도 CI Worker가 성공했다는 사실로 이 작업들의 성공 상태를
 대신 만들지 않는다.
 
@@ -262,7 +337,10 @@ Cloudflare의 의존성 캐시는 설치 최적화용이다. 캐시 복구는 �
 만든다. [공식 캐시 문서](https://developers.cloudflare.com/workers/ci-cd/builds/build-caching/)도
 캐시를 프로젝트 공유 데이터로 설명하며 별도 보존 한도를 둔다.
 
-## 비교 후 전환할 때 확인할 것
+## 초기 병행 실행의 전환 기준 기록
+
+다음은 최초 Cloudflare 병행 실행을 검토한 기준이다. 현재 한도 소진에 따른
+GitHub 대체 실행과 trigger 정지에는 문서 상단의 절차를 적용한다.
 
 1. 공급자 API에서 Worker, 저장소, root directory, 두 명령, branch, preview 비활성화를 읽어 확인한다.
 2. 실제 build ID와 커밋 SHA를 receipt 및 GitHub의 같은 SHA 결과에 연결한다. 실패·취소·시간 초과도 비교 대상으로 남긴다.
@@ -272,8 +350,8 @@ Cloudflare의 의존성 캐시는 설치 최적화용이다. 캐시 복구는 �
 
 ### 이전 develop 연속 실행 전환 절차
 
-다음은 초기 설치 절차의 기록이다. 현재 main 중심 전환에는 문서 맨 위의
-별도 순서를 적용하며 develop 연결을 다시 만들지 않는다.
+다음은 초기 설치 절차의 기록이다. 현재 main 연결과 자동 실행 정지는 문서 맨 위의
+절차를 적용하며 develop 연결을 다시 만들지 않는다.
 
 1. PR의 실제 검사와 CodeQL 결과를 확인하고 보호 규칙을 통과하는 정상 PR 병합으로 develop에 반영한다.
 2. Workers Builds의 기존 trigger 하나에서 branch를 `develop`으로, build/deploy 명령의 `--branch`도 `develop`으로 함께 바꾼다. Preview는 계속 끈다.

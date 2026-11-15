@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "bun:test";
+import { checkPlan as cloudflareGovernanceCheckPlan } from "../../../.github/scripts/run-cloudflare-governance.mjs";
 import { G009_ISSUER_PUBLIC_KEY } from "../scripts/assemble-release-visual-evidence.mjs";
 import { fetchEvidence, manifestInputKeys, parseJson, publicUrl, validateComponent, validateFreshness, validateReleaseManifest, verifyFinalReceiptCheck, verifyFinalReleaseEvidence, verifyProtectedFinalHealth, verifyRemoteRefs } from "../scripts/verify-final-release-evidence.mjs";
 
@@ -250,6 +251,38 @@ describe("release workflow governance source contracts", () => {
     expect(governanceCi).toContain("bun-version: '1.4.0'");
     expect(governanceCi).toContain("run: bun test tests-unit/performance-backlog-governance.test.ts");
     expect(governanceCi).toContain("run: bun test tests-unit/release-workflow-governance-source.test.ts");
+  });
+
+  it("runs every scoped Cloudflare governance check in the required GitHub Release job", () => {
+    const release = job(governanceCi, "governance-contract");
+    const steps = release.split(/\n      - /).slice(1);
+    const bunIsolationFlags = new Set(["--no-env-file", "--no-install", "--no-orphans"]);
+    for (const check of cloudflareGovernanceCheckPlan(root)) {
+      const runtime = check.command === process.execPath ? "node" : check.command;
+      const args = check.command === "bun" ? check.args.filter((arg: string) => !bunIsolationFlags.has(arg)) : check.args;
+      const command = `run: ${[runtime, ...args].join(" ")}`;
+      const matches = steps.filter((step) => step.split("\n").some((line) => line.trim() === command));
+      expect(matches).toHaveLength(1);
+      expect(matches[0]).not.toMatch(/\n\s+(?:if|continue-on-error):/);
+      if (check.cwd === root) expect(matches[0]).toContain("working-directory: .\n");
+      else expect(check.cwd).toBe(resolve(root, "apps/web"));
+    }
+    expect(release).toContain("name: Release\n");
+    expect(release).toContain("contents: read\n");
+    expect(release).not.toMatch(/\n    (?:if|continue-on-error):/);
+    expect(release).not.toContain("secrets.");
+    const settings = JSON.parse(read(".github/cloudflare/build-settings.json"));
+    expect(settings.execution).toEqual({
+      provider: "github-actions",
+      workflow: ".github/workflows/release-governance-ci.yml",
+      requiredCheck: "Release",
+      scope: "governance-contracts-only",
+      cloudflareAutomaticBuilds: "paused",
+    });
+    expect(settings.productionBranch).toBe("main");
+    expect(settings.branchIncludes).toEqual([]);
+    expect(settings.branchExcludes).toEqual(["*"]);
+    expect(settings.previewsEnabled).toBe(false);
   });
 
   it("rejects benchmark reports that are missing or bound to another lane", () => {
