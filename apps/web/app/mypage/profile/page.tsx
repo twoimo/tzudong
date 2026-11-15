@@ -1730,7 +1730,16 @@ export default function ProfilePage() {
                       계정 완전 삭제
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent
+                    className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+                    onFocusCapture={(event) => {
+                      // Radix suppresses scrolling for initial and wrapped focus.
+                      // Keep that focused control visible inside this bounded dialog.
+                      if (event.target instanceof HTMLElement) {
+                        event.target.scrollIntoView({ block: "nearest", inline: "nearest" });
+                      }
+                    }}
+                  >
                     <AlertDialogHeader>
                       <AlertDialogTitle>
                         계정을 완전히 삭제하시겠습니까?

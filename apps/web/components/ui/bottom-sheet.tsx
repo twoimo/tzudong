@@ -106,6 +106,7 @@ const NESTED_MODAL_PORTAL_ALLOW_SELECTOR = [
     '[role="alertdialog"]',
     '[data-radix-dialog-content]',
     '[data-radix-alert-dialog-content]',
+    '[data-slot="dialog-overlay"]',
 ].join(', ');
 
 export const BOTTOM_SHEET_BACKDROP_ATTRIBUTE = 'data-bottom-sheet-backdrop';
@@ -943,7 +944,10 @@ function BottomSheetComponent({
     ]);
 
     const handleDialogKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (!isModal) return;
+        if (!isModal || event.defaultPrevented) return;
+        // React portal events bubble through the sheet's component tree. The
+        // portaled dialog owns its keyboard loop and dismissal while it is open.
+        if (!sheetRef.current?.contains(event.target as Node)) return;
 
         if (event.key === 'Escape') {
             event.preventDefault();
@@ -1071,7 +1075,7 @@ function BottomSheetComponent({
     useEffect(() => {
         if (!isOpen) return;
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape' && !e.defaultPrevented) onClose();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -1079,6 +1083,8 @@ function BottomSheetComponent({
 
     useEffect(() => {
         if (!isOpen || !isModal) return;
+        const sheet = sheetRef.current;
+        if (!sheet) return;
 
         previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement
             ? document.activeElement
@@ -1099,24 +1105,6 @@ function BottomSheetComponent({
         };
 
         document.addEventListener('focusin', keepFocusInsideSheet);
-
-        return () => {
-            window.clearTimeout(focusTimer);
-            document.removeEventListener('focusin', keepFocusInsideSheet);
-
-            if (previouslyFocusedElementRef.current?.isConnected) {
-                previouslyFocusedElementRef.current.focus({ preventScroll: true });
-            }
-            previouslyFocusedElementRef.current = null;
-        };
-    }, [focusTrapAllowSelectors, isModal, isOpen]);
-
-
-    useEffect(() => {
-        if (!isOpen || !isModal) return;
-
-        const sheet = sheetRef.current;
-        if (!sheet) return;
         const activeSheet = sheet;
 
         const seen = new Set<HTMLElement>();
@@ -1149,6 +1137,11 @@ function BottomSheetComponent({
         hiddenModalSiblingStatesRef.current = hiddenStates;
 
         return () => {
+            window.clearTimeout(focusTimer);
+            document.removeEventListener('focusin', keepFocusInsideSheet);
+
+            // The opener may be one of these inert siblings. Restore its DOM
+            // eligibility before trying to focus it, in the same lifecycle.
             hiddenModalSiblingStatesRef.current.forEach(({ element, ariaHidden, inert }) => {
                 if (ariaHidden === null) {
                     element.removeAttribute('aria-hidden');
@@ -1158,8 +1151,12 @@ function BottomSheetComponent({
                 element.inert = inert;
             });
             hiddenModalSiblingStatesRef.current = [];
+            if (previouslyFocusedElementRef.current?.isConnected) {
+                previouslyFocusedElementRef.current.focus({ preventScroll: true });
+            }
+            previouslyFocusedElementRef.current = null;
         };
-    }, [isModal, isOpen]);
+    }, [focusTrapAllowSelectors, isModal, isOpen]);
 
     // Pull-to-Refresh 방지
     useEffect(() => {

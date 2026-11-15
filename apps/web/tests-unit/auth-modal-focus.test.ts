@@ -12,8 +12,9 @@ const source = ts.createSourceFile("AuthModal.tsx", readFileSync(
 function callback(name: string, bindings: Record<string, unknown>) {
   let expression: ts.Expression | undefined;
   function visit(node: ts.Node) {
-    if (ts.isJsxAttribute(node) && node.name.getText(source) === name
-      && node.initializer && ts.isJsxExpression(node.initializer)) {
+    if (!expression && ts.isJsxAttribute(node) && node.name.getText(source) === name
+      && node.initializer && ts.isJsxExpression(node.initializer)
+      && node.initializer.expression && ts.isArrowFunction(node.initializer.expression)) {
       expression = node.initializer.expression;
     }
     ts.forEachChild(node, visit);

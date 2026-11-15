@@ -55,6 +55,9 @@ beforeAll(async () => {
     plugins: [{ name: "journey-fixture", setup(builder) {
       builder.onResolve({ filter: /^journey-fixture-entry$/ }, () => ({ path: "entry", namespace: "fixture" }));
       builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: entry, loader: "tsx", resolveDir: root }));
+      // This fixture checks server markup; responsive browser tests compile the CSS owners.
+      builder.onResolve({ filter: /\.css$/ }, () => ({ path: "stylesheet", namespace: "fixture-css" }));
+      builder.onLoad({ filter: /.*/, namespace: "fixture-css" }, () => ({ contents: "", loader: "js" }));
       builder.onResolve({ filter: /^(?:journey-fixture-state|next\/|@\/|@tanstack\/react-query$)/ }, (args) =>
         inert[args.path] ? { path: args.path, namespace: "inert" } : { path: Bun.resolveSync("./" + args.path.slice(2), root) });
       builder.onLoad({ filter: /.*/, namespace: "inert" }, (args) => ({ contents: inert[args.path], loader: "tsx", resolveDir: root }));

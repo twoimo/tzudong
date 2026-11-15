@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "production-attribution.protocol.v1",
+  "declaredAtUtc": "2026-11-14T16:08:21Z",
+  "title": "Fixed-window production initial-navigation attribution",
+  "measurementUrl": "https://www.tzudong.app/?__perf=initial-load",
+  "payloadSchemaVersion": "production-attribution.snapshot.v1",
+  "scope": {
+    "classification": "observed-production-browser-diagnostic",
+    "route": "/",
+    "authentication": "logged-out",
+    "comparison": "same browser surface, actual desktop viewport, instrumentation-only baseline versus optimized candidate",
+    "fieldAdmissionCount": 0,
+    "g003AdmissionCount": 0,
+    "previousFixtureComparisonAllowed": false,
+    "limitations": [
+      "This is an observation of the actual production site in the available browser, not a population RUM result or a Lighthouse laboratory score.",
+      "The browser does not provide demonstrated control of viewport, CPU, network, browser cache, server cache, or process isolation for this series.",
+      "Do not claim cold first-visit, physical mobile or tablet, 4G, fixed CPU slowdown, or code-only causal improvement.",
+      "All before observations precede all after observations; deployment time, public data, CDN, backend and third-party changes can confound the difference.",
+      "The explicit diagnostic query suppresses delivery into existing field histograms; these visits must not be counted as ordinary human RUM.",
+      "The same numeric-only observation code must be present in both phases; the instrumentation-only release is the new baseline."
+    ]
+  },
+  "capture": {
+    "cutoffMs": 20000,
+    "timeOrigin": "The current document's Performance navigation time origin, in milliseconds.",
+    "freezeReason": "deadline",
+    "renderPolicy": "Keep observations in memory during the window; freeze values and disconnect observers before rendering the diagnostic output.",
+    "actualFreezeTime": "Record frozenAtMs separately. A delayed timer does not extend the 20000ms eligibility boundary.",
+    "supportedFields": "Unsupported or missing numeric measurements remain null and have an explicit support flag; never replace them with zero, a timeout, or another metric.",
+    "lcp": "The latest observed LCP candidate with startTimeMs <= 20000, before any trusted input or hidden state. This is fixed-window LCP, not a finalized field LCP.",
+    "longTasks": "Only completed long tasks whose start and end fall inside [0,20000] contribute. Sum max(durationMs - 50,0). This is completed-window long-task excess, not Lighthouse TBT or TTI. A task crossing the cutoff makes this metric non-comparable but does not invalidate unrelated valid navigation and paint observations.",
+    "resourceTiming": "Aggregate only bounded categories and numeric timing/count/byte data. Resource detail hidden by Timing-Allow-Origin is unknown, not zero cost.",
+    "applicationReadiness": "Controls and visible-map readiness are first successful DOM observations at a declared 500ms cadence. They are sampled upper bounds after actual readiness, not exact paint times. Keep the cadence unchanged in both phases and use at least 500ms absolute change before an improvement or regression classification.",
+    "legacyTti": "Always null in this series. No TTI or Lighthouse TBT inference is permitted."
+  },
+  "sampling": {
+    "phases": ["before", "after"],
+    "plannedAttemptsPerPhase": 5,
+    "requiredValidPerPhase": 5,
+    "declaredWarmupsPerPhase": 1,
+    "warmupAdmissionCount": 0,
+    "order": "all-before-then-all-after",
+    "concurrentObservations": 1,
+    "aggregation": "median",
+    "dispersion": "unscaled median absolute deviation",
+    "viewport": "Bind width, height and DPR from a setup-only production observation before the first timed trial. The viewport must be desktop width >= 1024 CSS px and identical in both phases and throughout each observation. Do not infer CSS dimensions from screenshot pixels.",
+    "navigationType": "navigate; use a fresh document in a new foreground tab for the one declared warm-up and for each of the five measured observations per phase. Retain the same measured viewport. This does not imply a fresh process, isolated cache or cold visit.",
+    "setup": "Exactly one declared unscored warm-up navigation per phase is retained as ordinal 0 before the five planned attempts. The before warm-up establishes actual viewport and DPR; freeze cohort.json before attempt 1. The after warm-up must match that frozen cohort. Do not add warm-ups or exclude a measured first attempt after seeing its result.",
+    "warmupInterpretation": "The single warm-up limits an obvious asymmetric first exposure to newly deployed assets. It does not establish that all resources are warm, that cache state is equal, or that server/CDN/provider caches are controlled.",
+    "cache": "Uncontrolled and not purged. Report observed known zero-transfer, known network-transfer and unknown ResourceTiming counts. Unknown cache observations do not by themselves invalidate a production diagnostic.",
+    "invalidAttempts": "Retain every planned attempt and its failure reasons. Invalid or incomplete attempts are not replaced to obtain five passing values. If a concrete collector defect requires a new series, preserve the entire old series and identify the revision before the new series starts.",
+    "comparisonWhenIncomplete": "Fewer than five valid observations in either phase leaves the timing comparison not-comparable; retain available values as diagnostic context."
+  },
+  "requiredValidity": [
+    "Exact snapshot schema, initial-load mode, 20000ms cutoff and deadline freeze.",
+    "Canonical www.tzudong.app hostname and root pathname; observed browser URL is the fixed measurement URL with no redirect or added parameters.",
+    "Source SHA matches the frozen phase source, with independent provider and public-health source/deployment identity readback outside the observation window.",
+    "The before and after observation implementation files have the same SHA-256; source and Git tree identities are retained per phase.",
+    "Document is visible at start and does not become hidden at or before cutoff.",
+    "No trusted input or viewport resize occurs at or before cutoff.",
+    "Initial and final actual CSS viewport and DPR equal the frozen setup viewport.",
+    "Navigation type equals the frozen setup type; startTime is 0, activationStart is 0 and redirectCount is 0.",
+    "Navigation responseStart is positive, and required paint values are positive and no later than cutoff.",
+    "Actual controls, complete data, constructed map, visible loaded map tile plus marker, and desktop panel are ready inside the cutoff.",
+    "No resource-buffer overflow, collector entry-cap exhaustion or diagnostic error is observed.",
+    "No values originating after the cutoff are substituted for unavailable window measurements."
+  ],
+  "comparison": {
+    "minimumRelativeChange": 0.10,
+    "noiseMultiplier": 2,
+    "noiseDefinition": "2 * max(before MAD, after MAD)",
+    "improvedWhen": "beforeMedian - afterMedian >= minimumAbsoluteChange AND relativeReduction >= 0.10 AND beforeMedian - afterMedian > noise",
+    "regressedWhen": "afterMedian - beforeMedian >= minimumAbsoluteChange AND relativeIncrease >= 0.10 AND afterMedian - beforeMedian > noise",
+    "zeroBaselineRelativeChange": null,
+    "otherwise": "no-confirmed-change",
+    "incomplete": "not-comparable",
+    "interpretation": "Passing these task-local observational gates is not a confidence interval, statistical significance test, field admission or code-only causal proof. Report all metrics and adverse directions."
+  },
+  "metrics": {
+    "ttfbMs": {"unit": "ms", "source": "navigation.responseStart - navigation.startTime", "minimumAbsoluteChange": 100, "target": 800},
+    "fcpMs": {"unit": "ms", "source": "paints.fcpMs", "minimumAbsoluteChange": 100, "target": 1800},
+    "windowLcpMs": {"unit": "ms", "source": "paints.windowLcp.startTimeMs", "minimumAbsoluteChange": 100, "target": 2500},
+    "controlsReadyMs": {"unit": "ms", "source": "milestones.controlsReady", "minimumAbsoluteChange": 500, "target": 3500},
+    "mapVisibleMs": {"unit": "ms", "source": "milestones.mapVisible", "minimumAbsoluteChange": 500, "target": 3500},
+    "completedWindowLongTaskExcessMs": {"unit": "ms", "source": "longTasks.longTaskBlockingSumMs", "minimumAbsoluteChange": 50, "target": null}
+  },
+  "attribution": {
+    "role": "Descriptive per-observation cause separation; do not add overlapping request or application phase durations.",
+    "ttfbRequestDuration": "Request start to responseStart includes network transit and server work; it is not server-only processing time.",
+    "fcp": "Report TTFB and firstByteToFCP separately.",
+    "lcp": "Report TTFB, resource-load delay, resource-load duration and element-render delay with their numeric basis and availability. Do not treat a hidden cross-origin timing as known zero.",
+    "server": "Provider traces or explicit Server-Timing are separate provenance; never infer them from a browser response duration.",
+    "resources": "A known same-origin or TAO-exposed zero transfer can indicate a cache path; an unavailable timing cannot. Record uncertainty without discarding all observations.",
+    "quantiles": "Do not sum independently aggregated medians or p75s to construct a total latency."
+  },
+  "evidence": {
+    "location": "apps/web/performance/production-attribution-20261115",
+    "rawInputs": "Preserve the exact DOM snapshot JSON text for each attempt and a bounded capture receipt containing phase, ordinal, observed URL and observation timestamp.",
+    "sourceBinding": "Freeze a phase metadata file with exact Git SHA, tree SHA, deployment ID, project ID and corroborated provider/health source identity before that phase's captures.",
+    "setupBinding": "Freeze actual viewport, DPR, navigation type and browser surface in cohort.json before the first measured attempt.",
+    "integrity": "SHA-256 artifact map of raw inputs, frozen protocol and cohort/phase metadata; record the map hash separately before scoring.",
+    "baselineRetention": "Seal the before-phase evidence before selecting a code optimization; the final map must retain the same baseline raw files.",
+    "validation": "A separate validator rechecks input binding, eligibility, scalar derivations and arithmetic against the detached expected artifact-map hash."
+  },
+  "privacy": {
+    "delivery": "No collector upload or telemetry POST; memory-only opt-in output read through the ordinary application UI.",
+    "allowed": "Bounded numeric measurements, fixed enums, public source/deployment identifiers and the fixed measurement URL.",
+    "forbidden": ["cookies", "headers", "credentials", "user identifiers", "raw resource URLs or query strings", "raw DOM selectors or text", "raw performance entries", "request or response bodies", "precise user location", "free-form provider errors"]
+  },
+  "references": [
+    "https://github.com/addyosmani/agent-skills/blob/39b723ceebf81474d0557c1fecd01eddab585563/agents/web-performance-auditor.md",
+    "https://github.com/GoogleChrome/web-vitals",
+    "https://web.dev/articles/optimize-lcp",
+    "https://web.dev/articles/ttfb",
+    "https://developer.chrome.com/docs/lighthouse/performance/interactive"
+  ]
+}

@@ -68,9 +68,9 @@ describe('G002 popup and insights hardening contracts', () => {
 
     expect(insightsSource).toContain('aria-label="트리맵 읽는 법"');
     expect(insightsSource).toContain('<PopoverTrigger asChild>');
-    expect(insightsSource).toContain('<PopoverContent aria-label="트리맵 읽는 법" side="bottom"');
+    expect(insightsSource).toMatch(/<PopoverContent[^>]*aria-label="트리맵 읽는 법"[^>]*side="bottom"/);
     expect(insightsSource).toContain('<p>{treemapLegendText}</p>');
-    expect(insightsSource).toContain('onOpenAutoFocus={(event) => event.preventDefault()}');
+    expect(insightsSource).toContain('event.preventDefault(); treemapHelpPanelRef.current?.focus();');
     expect(insightsSource).toContain('id="insights-treemap-legend"');
     expect(insightsSource).toContain('id="insights-treemap-small-cell-guidance"');
     expect(insightsSource).toContain('aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance"');

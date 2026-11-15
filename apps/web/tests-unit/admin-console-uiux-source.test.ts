@@ -1142,7 +1142,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="flex h-full min-h-0 flex-col overflow-hidden"',
     );
     expect(routeSkeletonSource).toContain(
-      "lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]",
+      '<AdminEvaluationLoadingTable frameRef={frameRef} rowCount={rowCount} />',
+    );
+    expect(consoleSource).toContain(
+      '<AdminEvaluationLoadingTable frameRef={desktopSkeletonRef} rowCount={desktopSkeletonCount} />',
+    );
+    expect(source("components/admin/AdminEvaluationLoadingTable.tsx")).toContain(
+      'grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px] gap-2 p-2',
     );
     expect(routeSkeletonSource).not.toContain("repeat(8,96px)");
     expect(routeSkeletonSource).toContain(
@@ -4076,7 +4082,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<AdminPageHeader title={getAdminModuleTitle("banners")}',
     );
     expect(bannersSource).toContain(
-      'embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-background font-sans"',
+      '"flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans text-foreground", embedded && "tracking-normal"',
     );
     expect(bannersSource).toContain(
       "xl:grid-cols-[minmax(0,1fr)_360px]",

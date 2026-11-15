@@ -1,5 +1,10 @@
 'use client';
 import { MapPanelHeader } from '@/components/home/map-panel-chrome';
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
+import {
+  createPaintCalibrationInitialLatestQueryMarker,
+  type PaintCalibrationLatestQueryMarker,
+} from '@/lib/performance/paint-calibration-milestones';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -121,6 +126,7 @@ export default function DesktopLeftPanelMapHome({
     useState(LATEST_RESTAURANT_INITIAL_RENDER_COUNT);
   const latestRestaurantScrollRootRef = useRef<HTMLDivElement | null>(null);
   const latestRestaurantLoadMoreRef = useRef<HTMLDivElement | null>(null);
+  const initialLatestCalibrationRef = useRef<PaintCalibrationLatestQueryMarker | null | undefined>(undefined);
   const desktopLeftPanelHomePopularQueryKey = useMemo(
     () =>
       getPopularRestaurantsQueryKey({
@@ -201,13 +207,22 @@ export default function DesktopLeftPanelMapHome({
     enabled: !resultSummary?.active,
     queryKey: desktopLeftPanelHomeLatestQueryKey,
     initialPageParam: 0,
-    queryFn: ({ pageParam }) => fetchLatestRestaurantPage({
-      offset: Number(pageParam) || 0,
-      fetchLimit: LATEST_RESTAURANT_PAGE_FETCH_LIMIT,
-      sort: latestRestaurantSort,
-      selectedRegion,
-      isKoreanOnly,
-    }),
+    queryFn: ({ pageParam }) => {
+      const offset = Number(pageParam) || 0;
+      const isInitialLatestScope = offset === 0 && latestRestaurantSort === 'latest'
+        && !selectedRegion && isKoreanOnly && !resultSummary?.active;
+      if (isInitialLatestScope && initialLatestCalibrationRef.current === undefined) {
+        initialLatestCalibrationRef.current = createPaintCalibrationInitialLatestQueryMarker();
+      }
+      return fetchLatestRestaurantPage({
+        offset,
+        fetchLimit: LATEST_RESTAURANT_PAGE_FETCH_LIMIT,
+        sort: latestRestaurantSort,
+        selectedRegion,
+        isKoreanOnly,
+        onCalibrationPhase: isInitialLatestScope ? initialLatestCalibrationRef.current ?? undefined : undefined,
+      });
+    },
     getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
@@ -215,6 +230,7 @@ export default function DesktopLeftPanelMapHome({
   useEffect(() => {
     if (resultSummary?.active ? resultSummary.status === 'pending' : isLoading || isLatestLoading) return;
     document.documentElement.dataset.homePanelReady = "true";
+    markInitialLoadMilestone('desktopPanelSettled');
   }, [isLatestLoading, isLoading, resultSummary?.active, resultSummary?.status]);
   useEffect(() => () => {
     delete document.documentElement.dataset.homePanelReady;
@@ -234,6 +250,12 @@ export default function DesktopLeftPanelMapHome({
     () => visibleLatestRestaurants.slice(0, visibleLatestRestaurantCount),
     [visibleLatestRestaurantCount, visibleLatestRestaurants],
   );
+  useEffect(() => {
+    if (resultSummary?.active || !isKoreanOnly || selectedRegion || latestRestaurantSort !== 'latest'
+      || isLatestLoading || isLatestFetching || isLatestError || renderedLatestRestaurants.length === 0) return;
+    initialLatestCalibrationRef.current?.('latestFirstCardCommitted');
+  }, [isKoreanOnly, isLatestError, isLatestFetching, isLatestLoading, latestRestaurantSort,
+    renderedLatestRestaurants, resultSummary?.active, selectedRegion]);
   const currentContextualPayload = useMemo(() => resultSummary
     ? reconcileHomeMapContextualResults(resultSummary, contextualRestaurantsPayload, isKoreanOnly ? 'domestic' : 'overseas')
     : contextualRestaurantsPayload, [resultSummary, contextualRestaurantsPayload, isKoreanOnly]);
@@ -606,7 +628,7 @@ export default function DesktopLeftPanelMapHome({
               </div>
             ) : (
               <>
-                {renderedLatestRestaurants.map((restaurant) => (
+                {renderedLatestRestaurants.map((restaurant, index) => (
                   <StampCard
                     key={restaurant.id}
                     restaurant={restaurant}
@@ -619,6 +641,7 @@ export default function DesktopLeftPanelMapHome({
                     onClick={handleRestaurantOpen}
                     size="default"
                     stampSize="compact"
+                    thumbnailPriority={index === 0}
                     showAddress
                     categoryFallback="맛집"
                   />

@@ -546,7 +546,7 @@ export default function ReviewsPage() {
             >
               <CardContent className={myPageListContentClass}>
                 {/* 헤더: 맛집명 + 상태 */}
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className={myPageCardTitleClass}>
@@ -564,7 +564,7 @@ export default function ReviewsPage() {
                     </div>
                     {/* 카테고리 */}
                     {review.categories.length > 0 && (
-                      <div className="flex gap-1 mt-1">
+                      <div className="flex flex-wrap gap-1 mt-1">
                         {review.categories.map((cat, idx) => (
                           <Badge
                             key={idx}
@@ -590,7 +590,8 @@ export default function ReviewsPage() {
                           setEditingReview(review);
                           setIsEditModalOpen(true);
                         }}
-                        className="text-amber-600 hover:text-amber-700 gap-1"
+                        className="h-11 min-w-11 touch-manipulation text-amber-600 hover:text-amber-700 gap-1"
+                        aria-label={`${review.restaurantName} 리뷰 수정 후 재제출`}
                       >
                         <RefreshCw className="h-4 w-4" />
                         <span className="hidden sm:inline">재제출</span>

@@ -4,6 +4,7 @@ import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { EvaluationEvidenceRecovery } from '@/components/admin/EvaluationEvidenceRecovery';
 
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminEvaluationLoadingTable } from "@/components/admin/AdminEvaluationLoadingTable";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
 import { createPortal } from 'react-dom';
@@ -789,69 +790,7 @@ function AdminEvaluationRouteSkeleton() {
 
         <AdminEvaluationStaticCardSkeleton count={mobileCardsCount} />
 
-        <div
-          ref={frameRef}
-          className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex"
-        >
-
-          <LoadingSurface label="검수 목록 로딩 중">
-
-            <div
-              className="grid bg-muted/35 px-2 py-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
-            >
-
-              {
-                ["선택", "검수 항목", "평가", "분류", "상태", "주소", "영상", "기록", "작업"].map(label => (
-                  <span key={label}>
-
-                    {label}
-
-                  </span>
-                ))
-              }
-
-            </div>
-
-            <div className="divide-y divide-border">
-
-              {
-                Array.from({ length: rowCount }, (_, index) => (
-                  <div
-                    key={index}
-                    className="grid min-h-16 items-center gap-2 p-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
-                  >
-
-                    <span>선택</span>
-
-                    <div>
-
-                      <p className="text-sm font-semibold">맛집 검수 항목</p>
-
-                      <p className="mt-1">영상과 맛집 정보</p>
-
-                    </div>
-
-                    {
-                      ["평가", "분류", "상태", "주소", "영상", "기록"].map(label => (
-                        <span key={label}>
-
-                          {label}
-
-                        </span>
-                      ))
-                    }
-
-                    <span>상세 보기</span>
-
-                  </div>
-                ))
-              }
-
-            </div>
-
-          </LoadingSurface>
-
-        </div>
+        <AdminEvaluationLoadingTable frameRef={frameRef} rowCount={rowCount} />
 
       </div>
 

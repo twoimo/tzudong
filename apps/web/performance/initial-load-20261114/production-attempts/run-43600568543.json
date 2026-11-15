@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "initial-load-run.v1",
+  "phase": "before",
+  "startedAt": "2026-11-14T13:36:42.153Z",
+  "endedAt": "2026-11-14T13:36:43.631Z",
+  "status": "invalid",
+  "sourceSha": "9316871f4220cd487b0e9575415ed2d760de8997",
+  "sourceTreeSha": "c1fab2db12098360109efeedb83d5495606328e8",
+  "deploymentId": "dpl_A2pdeTvSXQj52ixi3z9WMstWby8y",
+  "canonicalUrl": "https://www.tzudong.app/",
+  "url": "https://www.tzudong.app/?__qa=render-flow",
+  "pins": {
+    "lighthouse": "13.5.0",
+    "playwright": "1.64.1",
+    "chrome": "156.0.8078.4"
+  },
+  "trials": [],
+  "failures": [
+    "HEALTH_READBACK_HTTP_403"
+  ],
+  "browserLaunch": {
+    "headless": true,
+    "sandboxMode": "disabled-for-disposable-ci",
+    "scope": "disposable-github-runner-browser-process",
+    "explicitArgs": [
+      "--no-sandbox",
+      "--lang=ko-KR"
+    ],
+    "noSandboxObserved": null
+  },
+  "environment": {
+    "nodeVersion": "v24.22.2",
+    "platform": "linux",
+    "arch": "x64",
+    "cpuModels": [
+      "AMD EPYC 7763 64-Core Processor"
+    ],
+    "logicalCpuCount": 4,
+    "totalMemoryBytes": 16759439360,
+    "runner": {
+      "os": "Linux",
+      "arch": "X64",
+      "environment": "github-hosted",
+      "runId": "43600568543",
+      "runAttempt": "1"
+    }
+  },
+  "protocolSha256": "1d105370c00603d3539e7e82355c3e46647dd6ff5af49901595ad01951efb851",
+  "collectorSha256": "a4eb702210bc456d0075910b3f942ed5185c4ff6e80918221147ef98bc60efa4",
+  "harnessSourceSha": "1377fa82e50d8b490c6fd1b9425d92db1fd546ec",
+  "toolLockSha256": "b0a286803debb41c21ec6f8e01c3b83ab49eea5f7c261474b58d08b3aa42f404",
+  "appLockSha256": "a3ec2e853dd6cfb5664311097204e63da53eabc8c421be7da137e901daad04c4",
+  "browserContractSha256": "81f9db2648405ba5ac43d0816739b0cde2901fbfc3a25955444d676810cf038c",
+  "puppeteerVersion": "25.17.0",
+  "browserExecutable": "/home/runner/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome",
+  "healthReadbackFailure": {
+    "transport": "browser-public-navigation",
+    "isolatedFromMeasuredBrowser": true,
+    "credentialsUsed": false,
+    "browser": {
+      "product": "Google Chrome for Testing",
+      "version": "156.0.8078.4",
+      "executable": "/home/runner/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome"
+    },
+    "browserLaunch": {
+      "headless": true,
+      "sandboxMode": "disabled-for-disposable-ci",
+      "scope": "disposable-github-runner-browser-process",
+      "explicitArgs": [
+        "--no-sandbox"
+      ],
+      "noSandboxObserved": true
+    },
+    "observedAt": "2026-11-14T13:36:43.560Z",
+    "stage": "projection",
+    "httpStatus": 403,
+    "pageClassification": "challenge_document"
+  }
+}

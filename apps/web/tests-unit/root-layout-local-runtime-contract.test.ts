@@ -29,7 +29,8 @@ describe('root layout local runtime and CSP nonce contract', () => {
     expect(proxySource).toContain("requestHeaders.set('Content-Security-Policy', policy)");
     expect(layoutSource).toContain('import { headers } from "next/headers"');
     expect(layoutSource).toContain('export default async function RootLayout');
-    expect(layoutSource).toContain('const nonce = (await headers()).get("x-nonce") ?? undefined;');
+    expect(layoutSource).toContain('const requestHeaders = await headers();');
+    expect(layoutSource).toContain('const nonce = requestHeaders.get("x-nonce") ?? undefined;');
     expect(layoutSource).toContain('<LoadingProvider nonce={nonce}>');
     expect(layoutSource).not.toContain('import Script from "next/script"');
     expect(layoutSource).not.toContain('strategy="beforeInteractive"');
@@ -55,7 +56,16 @@ describe('root layout local runtime and CSP nonce contract', () => {
   test('keeps viewport sizing out of executable root markup', () => {
     expect(layoutSource).not.toContain('viewport-height-bootstrap');
     expect(layoutSource).not.toContain('viewport-height-fix.js');
-    expect(layoutSource).not.toContain('dangerouslySetInnerHTML');
+    expect(layoutSource).not.toMatch(/innerHeight|visualViewport|document\.documentElement\.style|setProperty\s*\(/);
+    // The independent paint calibration is the sole executable-markup exception.
+    // Its exact request derivation and nonce forwarding also have runtime tests.
+    expect(layoutSource).toContain('import { buildPaintCalibrationDiagnosticScript } from "@/lib/performance/paint-calibration-diagnostic";');
+    expect(layoutSource).toContain('const paintCalibration = requestHeaders.get(PAINT_CALIBRATION_REQUEST_HEADER) === "1";');
+    const calibrationScript = /\{paintCalibration\s*&&\s*<script\s+nonce=\{nonce\}\s+dangerouslySetInnerHTML=\{\{\s*__html:\s*buildPaintCalibrationDiagnosticScript\(process\.env\.VERCEL_GIT_COMMIT_SHA\),?\s*\}\}\s*\/>\}/g;
+    expect([...layoutSource.matchAll(calibrationScript)]).toHaveLength(1);
+    const outsideCalibration = layoutSource.replace(calibrationScript, '');
+    expect(outsideCalibration).not.toContain('dangerouslySetInnerHTML');
+    expect(outsideCalibration).not.toMatch(/<script\b/i);
     expect(layoutSource).not.toMatch(/readFile|fetch\(|process\.cwd/);
   });
 

@@ -7,6 +7,8 @@ import { resolveRootLayoutResourceHintPolicy } from "@/lib/root-layout-resource-
 import { RootSpeedInsights } from "./root-speed-insights";
 import { LocalWorkspaceBanner } from "@/components/home/LocalWorkspaceBanner";
 import { LoadingProvider } from "@/components/ui/loading-surface";
+import { buildPaintCalibrationDiagnosticScript } from "@/lib/performance/paint-calibration-diagnostic";
+import { PAINT_CALIBRATION_REQUEST_HEADER } from "@/lib/performance/paint-calibration-request";
 import "./globals.css";
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,7 @@ const notoSerifKr = Noto_Serif_KR({
     subsets: ["latin"],
     variable: "--font-display",
     display: "swap",
+    preload: false,
 });
 export const metadata: Metadata = {
     metadataBase: new URL(siteUrl),
@@ -110,7 +113,9 @@ export default async function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const nonce = (await headers()).get("x-nonce") ?? undefined;
+    const requestHeaders = await headers();
+    const nonce = requestHeaders.get("x-nonce") ?? undefined;
+    const paintCalibration = requestHeaders.get(PAINT_CALIBRATION_REQUEST_HEADER) === "1";
 
     return (
         <html
@@ -120,6 +125,9 @@ export default async function RootLayout({
             suppressHydrationWarning
         >
             <head>
+                {paintCalibration && <script nonce={nonce} dangerouslySetInnerHTML={{
+                    __html: buildPaintCalibrationDiagnosticScript(process.env.VERCEL_GIT_COMMIT_SHA),
+                }} />}
                 {/* [AEO] AI Engine Discovery */}
                 <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM Content Summary" />
                 <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM Full Dataset Context" />

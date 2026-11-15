@@ -1,5 +1,7 @@
 'use client';
 
+import '@/app/home-interactive-globals.css';
+
 import { LoadingSurface } from "@/components/ui/loading-surface";
 
 import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";

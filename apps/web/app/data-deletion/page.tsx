@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import '../legal-globals.css';
 import Link from 'next/link';
 import { pageHeadingTitleClass } from '@/components/layout/page-heading-styles';
 

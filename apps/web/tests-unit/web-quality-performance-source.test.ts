@@ -70,6 +70,24 @@ const tailwindEntries = {
     sources: ['"../components/restaurant"', '"../components/reviews"', '"../components/auth"', '"../components/ui"', '"../components/home/map-panel-chrome.tsx"'],
     exclusions: ['not "../**/*.test.*"', 'not "../tests-unit"'],
   },
+  "app/home-interactive-globals.css": {
+    sources: [
+      '"../components/auth"', '"../components/profile"', '"../components/overlay-pages"',
+      '"../components/feed"', '"../components/stamp"', '"../components/leaderboard"',
+      '"../components/reviews"', '"../components/legal"', '"../components/ui"',
+      '"../components/home/map-panel-chrome.tsx"',
+      '"../components/layout/page-heading-styles.ts"',
+      '"../hooks/useUserProfile.ts"',
+    ],
+    exclusions: [
+      'not "../**/*.{test,spec}.{js,jsx,ts,tsx}"',
+      'not "../{tests-unit,test,tests,fixtures}/**"',
+    ],
+  },
+  "app/legal-globals.css": {
+    sources: ['"./privacy/page.tsx"', '"./data-deletion/page.tsx"', '"../components/legal"', '"../components/layout/page-heading-styles.ts"'],
+    exclusions: [],
+  },
 } as const;
 
 const escapedClassSelector = (utility: string) =>
@@ -103,7 +121,9 @@ describe("Tailwind v4 source contracts", () => {
       });
       compiledEntries.set(entry, compiled.css);
       const compiledRoot = postcss.parse(compiled.css);
-      expect(compiledRoot.nodes.some((node) => node.type === "rule")).toBe(true);
+      let compiledRuleCount = 0;
+      compiledRoot.walkRules(() => { compiledRuleCount += 1; });
+      expect(compiledRuleCount).toBeGreaterThan(0);
     }
 
     expect(retainedUtilities.length).toBeGreaterThan(0);
@@ -556,8 +576,11 @@ describe("web quality performance source contracts", () => {
     );
     expect(pageSource).not.toContain("function HomeDeepLinkPreview()");
     expect(pageSource).not.toContain('id="home-deep-link-preview"');
-    expect(pageSource).not.toContain("searchParams: Promise");
-    expect(pageSource).not.toContain("export default async function HomePage");
+    // Reading Next's async search params is needed for the explicit diagnostic
+    // gate; it must not restore the removed server-side deep-link data request.
+    expect(pageSource).toContain("isInitialLoadDiagnosticRequest(await searchParams)");
+    expect(pageSource).toContain("diagnostic ? (await headers()).get('x-nonce')");
+    expect(pageSource).toContain("{diagnostic && <script nonce={nonce}");
     expect(pageSource).not.toContain("fetchHomeDeepLinkPreviewRestaurant");
     expect(pageSource).not.toContain(
       "fetchSupabaseRows<HomeDeepLinkPreviewRestaurant>",
@@ -2150,7 +2173,7 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain('@source "../lib/naver-map-overlay-timings.ts";');
     expect(mobileControlSource).toContain("document.documentElement.toggleAttribute('data-mobile-search-open', activeSheet === 'search')");
     expect(homeAppGlobalsSource).toContain('.mobile-map-status-badge');
-    expect(homeAppGlobalsSource).toContain('@media (max-width: 1279px)');
+    expect(homeAppGlobalsSource).toContain('@media (width < 1280px)');
     expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
     expect(homeAppGlobalsSource).toContain('margin-top: 0');
     expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
@@ -4708,11 +4731,10 @@ describe("web quality performance source contracts", () => {
     expect(mobileBottomNavSource).not.toContain(
       "HOME_NAV_PREFETCH_DELAY_MS = 8000",
     );
-    expect(mobileBottomNavSource).toContain(
-      "HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS = 2500",
-    );
-    expect(mobileBottomNavSource).toContain(
-      "runHomeNavPrefetchWhenIdle(prefetchNavigationTargets)",
+    expect(mobileBottomNavSource).not.toContain("HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS");
+    expect(mobileBottomNavSource).not.toContain("runHomeNavPrefetchWhenIdle");
+    expect(mobileBottomNavSource).toMatch(
+      /useEffect\(\(\) => \{\s*if \(pathname === '\/'\) return;[\s\S]*?NAV_ITEMS\.forEach/,
     );
     expect(mobileBottomNavSource).toContain("MOBILE_BOTTOM_NAV_BUTTON_STYLE");
     expect(mobileBottomNavSource).toContain("minHeight: 60");

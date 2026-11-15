@@ -1078,8 +1078,8 @@ function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagem
     );
 
     return (
-        <div className={cn("text-foreground", embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-background font-sans", featurePolish.polishedRoot)} data-admin-embedded-module-shell={embedded ? "true" : undefined} data-admin-embedded-module-id={embedded ? "banners" : undefined}>
-            <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", embedded ? "h-full" : "container mx-auto min-h-screen max-w-7xl p-3 md:p-4")}>
+        <div className={cn("flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans text-foreground", embedded && "tracking-normal", featurePolish.polishedRoot)} data-admin-embedded-module-shell={embedded ? "true" : undefined} data-admin-embedded-module-id={embedded ? "banners" : undefined}>
+            <div className={cn("relative z-10 flex h-full min-h-0 flex-1 flex-col", !embedded && "container mx-auto max-w-7xl p-3 md:p-4")}>
                 <AdminPageHeader title={getAdminModuleTitle("banners")} icon={ImageIcon} className="admin-cms-page-header"
                     data-admin-module-header={embedded ? "compact" : undefined} data-admin-module-header-module={embedded ? "banners" : undefined}
                     summary={<>전체 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(sortedBanners.length, '개')} · 활성 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(activeBannerCount, '개')} · 비활성 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(inactiveBannerCount, '개')} · 데스크톱 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(sidebarTargetCount)} · 모바일 {bannerListUnsettled ? <InlineCountSkeleton /> : formatBannerCount(mobileTargetCount)}</>}

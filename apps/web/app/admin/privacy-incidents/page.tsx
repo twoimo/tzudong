@@ -822,7 +822,7 @@ export default function PrivacyIncidentsPage() {
   };
 
   return (
-    <main className={`min-h-screen bg-muted/20 ${featurePolish.polishedRoot}`} data-privacy-incident-workflow="true">
+    <main className={`h-full min-h-0 overflow-y-auto bg-muted/20 ${featurePolish.polishedRoot}`} data-privacy-incident-workflow="true">
       <AdminPageHeader
         title="개인정보 사고 대응"
         titleId="admin-privacy-incidents-title"

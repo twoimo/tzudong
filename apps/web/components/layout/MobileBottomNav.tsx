@@ -36,8 +36,6 @@ const isMobileNavItemActive = (pathname: string | null, item: NavItem) => {
 
     return pathname === item.path;
 };
-type IdleCallbackHandle = number;
-const HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS = 2500;
 const MOBILE_BOTTOM_NAV_BUTTON_STYLE: CSSProperties = {
     minHeight: 60,
     paddingTop: 10,
@@ -45,21 +43,6 @@ const MOBILE_BOTTOM_NAV_BUTTON_STYLE: CSSProperties = {
     paddingBottom: 10,
     paddingLeft: 4,
 };
-
-function runHomeNavPrefetchWhenIdle(callback: () => void): () => void {
-    const idleWindow = window as Window & {
-        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => IdleCallbackHandle;
-        cancelIdleCallback?: (id: IdleCallbackHandle) => void;
-    };
-
-    if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
-        const handle = idleWindow.requestIdleCallback(callback, { timeout: HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS });
-        return () => idleWindow.cancelIdleCallback?.(handle);
-    }
-
-    const timer = window.setTimeout(callback, HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS);
-    return () => window.clearTimeout(timer);
-}
 
 interface MobileBottomNavProps {
     className?: string;
@@ -89,8 +72,10 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
         }
     }, [router]);
 
-    // [PERF] 홈 첫 화면에서는 Lighthouse/CWV 측정 창 이후에만 네비게이션 워밍
+    // 홈에서는 실제 탐색 의도가 있을 때 다음 경로를 미리 읽는다.
     useEffect(() => {
+        if (pathname === '/') return;
+
         const prefetchNavigationTargets = () => {
             NAV_ITEMS.forEach(({ path }) => prefetchRoute(path));
 
@@ -98,10 +83,6 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                 AUTH_NAV_ROUTES.forEach((path) => prefetchRoute(path));
             }
         };
-
-        if (pathname === '/') {
-            return runHomeNavPrefetchWhenIdle(prefetchNavigationTargets);
-        }
 
         prefetchNavigationTargets();
     }, [pathname, prefetchRoute, user?.id]);
