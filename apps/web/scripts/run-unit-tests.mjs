@@ -1,11 +1,12 @@
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { runBunTestFiles } from './unit-test-results.mjs';
 import { parseShardArgument, selectShard } from './unit-test-shards.mjs';
 
 const root = path.resolve('tests-unit');
 // Optional `--shard i/n` runs one deterministic slice of the sorted inventory;
-// CI uses four shards. This script is not a typecheck benchmark input, so
+// CI uses eight shards. This script is not a typecheck benchmark input, so
 // changes here keep the diagnostic CI path.
 const isolated = new Set([
   // This partial React Query mock omits keepPreviousData and must not replace
@@ -98,13 +99,13 @@ function run(filesToRun) {
     }
     return typeof result.status === 'number' ? result.status : 1;
   }
-  const reportArgs = localDiagnostic ? ['--reporter', 'junit', '--reporter-outfile', '/dev/fd/3'] : [];
-  const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '30000', ...reportArgs], {
+  if (!localDiagnostic) return runBunTestFiles(filesToRun, { args: ['--timeout', '30000'] });
+  const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '30000', '--reporter', 'junit', '--reporter-outfile', '/dev/fd/3'], {
     cwd: process.cwd(),
     env: process.env,
     // The extra fd is a private pipe: raw JUnit/console diagnostics never land
-    // in the nightly log or an artifact. Ordinary developer output is unchanged.
-    stdio: localDiagnostic ? ['inherit', 'ignore', 'ignore', 'pipe'] : 'inherit',
+    // in the nightly log or an artifact.
+    stdio: ['inherit', 'ignore', 'ignore', 'pipe'],
     maxBuffer: 32 * 1024 * 1024,
     shell: false,
   });
@@ -112,19 +113,17 @@ function run(filesToRun) {
     console.error(`[unit-tests] runner failed: ${result.error.code ?? result.error.name}`);
     return 1;
   }
-  if (localDiagnostic) {
-    const xml = result.output[3]?.toString('utf8');
-    const diagnostic = spawnSync('python3', [path.resolve('../../.github/scripts/nightly-unit-failure-sites.py')], {
-      input: JSON.stringify({ xml, files: filesToRun, exit_code: result.status }),
-      encoding: 'utf8', maxBuffer: 64 * 1024,
-      stdio: ['pipe', 'pipe', 'ignore'], shell: false,
-    });
-    if (diagnostic.status !== 0) {
-      console.error('[unit-tests] bounded diagnostic unavailable');
-      return 1;
-    }
-    console.log(`NIGHTLY_UNIT_DIAGNOSTIC=${diagnostic.stdout.trim()}`);
+  const xml = result.output[3]?.toString('utf8');
+  const diagnostic = spawnSync('python3', [path.resolve('../../.github/scripts/nightly-unit-failure-sites.py')], {
+    input: JSON.stringify({ xml, files: filesToRun, exit_code: result.status }),
+    encoding: 'utf8', maxBuffer: 64 * 1024,
+    stdio: ['pipe', 'pipe', 'ignore'], shell: false,
+  });
+  if (diagnostic.status !== 0) {
+    console.error('[unit-tests] bounded diagnostic unavailable');
+    return 1;
   }
+  console.log(`NIGHTLY_UNIT_DIAGNOSTIC=${diagnostic.stdout.trim()}`);
   return typeof result.status === 'number' ? result.status : 1;
 }
 
