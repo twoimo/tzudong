@@ -20,6 +20,7 @@ from backend.pipeline_control.state_machine import (
     lock_key,
     payload_hash,
     stale_reclaim_eligible,
+    step_boundary,
 )
 from backend.pipeline_control.metrics import record
 from backend.pipeline_control.persist import persist_mutation
@@ -173,8 +174,18 @@ class MemoryStore:
         run = self.get(run_id)
         if run.status in TERMINAL_STATUSES:
             return run
-        heartbeat(run, self.now(), lease_ttl)
-        self._persist(run, lock_held=True, audit=None)
+        before = run.status
+        step_boundary(run, self.now(), lease_ttl)
+        audit = None
+        if run.status != before:
+            self._audit(
+                actor="worker",
+                job_id=run.id,
+                transition="pause_approved",
+                request_id=run.request_id,
+            )
+            audit = self.audit[-1]
+        self._persist(run, lock_held=True, audit=audit)
         return run
 
     def claim(self, run_id: str | None = None) -> RunRecord | None:

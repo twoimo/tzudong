@@ -112,6 +112,7 @@ class _LeaseContract:
         self._assert_target_locked("pause-step-002")
         self.assertEqual(self.store.get(run.id).status, "Fetching")
         self.assertEqual(self.store.beat(run.id, STEP_LEASE_SECONDS).status, "Paused")
+        self.assertEqual(self.store.audit[-1]["transition"], "pause_approved")
         resumed = self.store.control(run.id, "resume", actor="operator", request_id="req-resume")
         self.assertEqual(resumed.status, "Queued")
 

@@ -346,6 +346,7 @@ class MetricCallSiteTests(unittest.TestCase):
             )
             store.claim()
             store.control(paused.id, "pause", actor="admin", request_id="req-m4p")
+            store.beat(paused.id)
             store.finish_dry_run(paused.id)
 
         self.assertEqual(
