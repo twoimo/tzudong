@@ -250,7 +250,7 @@ function extractRpcCalls(file: string, text: string, wrappers: readonly Wrapper[
 function* appSourceFiles(directory: string): Generator<string> {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name);
-    if (entry.isDirectory() && !NON_APP_DIRS.has(entry.name)) yield* appSourceFiles(path);
+    if (entry.isDirectory() && !(directory === appRoot && NON_APP_DIRS.has(entry.name))) yield* appSourceFiles(path);
     else if (entry.isFile() && SOURCE_FILE.test(entry.name) && !entry.name.endsWith('.d.ts')) yield path;
   }
 }
