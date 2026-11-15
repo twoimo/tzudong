@@ -11,13 +11,13 @@ const entry = `
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
-import {MainLayoutContent} from './components/layout/MainLayout';
-import PrivacyIncidentsPage from './app/admin/privacy-incidents/page';
-import {AdminPipelineDashboard} from './components/admin/pipeline/AdminPipelineDashboard';
-import {AdminKnowledgeGraphPanel} from './components/admin/AdminKnowledgeGraphPanel';
-import {AdminEvaluationLoadingTable} from './components/admin/AdminEvaluationLoadingTable';
-import {AdminPageHeader} from './components/admin/AdminPageHeader';
-import {LoadingProvider} from './components/ui/loading-surface';
+import {MainLayoutContent} from '@/components/layout/MainLayout';
+import PrivacyIncidentsPage from '@/app/admin/privacy-incidents/page';
+import {AdminPipelineDashboard} from '@/components/admin/pipeline/AdminPipelineDashboard';
+import {AdminKnowledgeGraphPanel} from '@/components/admin/AdminKnowledgeGraphPanel';
+import {AdminEvaluationLoadingTable} from '@/components/admin/AdminEvaluationLoadingTable';
+import {AdminPageHeader} from '@/components/admin/AdminPageHeader';
+import {LoadingProvider} from '@/components/ui/loading-surface';
 const mode=new URLSearchParams(location.search).get('fixture') || 'privacy';
 const client=new QueryClient({defaultOptions:{queries:{retry:false,refetchOnWindowFocus:false}}});
 function ConsoleBoundary({children}) {
@@ -72,6 +72,8 @@ export async function buildAdminResponsiveFixture() {
     plugins: [{ name: 'admin-responsive', setup(builder) {
       builder.onResolve({ filter: /^admin-responsive-entry$/ }, () => ({ path: 'entry', namespace: 'admin-fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'admin-fixture' }, () => ({ contents: entry, loader: 'tsx', resolveDir: appRoot }));
+      // Explicit app-root resolution also covers the virtual entry's imports.
+      // Bun's shared test process does not consistently honor its resolveDir.
       builder.onResolve({ filter: /^(?:next\/|@\/)/ }, args => mocks[args.path]
         ? { path: args.path, namespace: 'admin-mock' }
         : args.path.startsWith('@/') ? { path: Bun.resolveSync('./' + args.path.slice(2), appRoot) } : undefined);

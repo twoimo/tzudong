@@ -1253,9 +1253,18 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain(
       "divide-y divide-border/70",
     );
-    expect(desktopLeftPanelMapHomeSource).toContain(
-      "group flex min-h-14 w-full items-center gap-3 rounded-lg px-1 py-3 text-left",
+    const popularRestaurantRow = desktopLeftPanelMapHomeSource.match(
+      /<button\s+key=\{restaurant\.id\}[\s\S]*?<\/button>/,
+    )?.[0] ?? "";
+    expect(popularRestaurantRow).toContain('type="button"');
+    expect(popularRestaurantRow).toContain("onClick={() => handleRestaurantOpen(restaurant)}");
+    expect(popularRestaurantRow).toContain(
+      "group flex min-h-14 w-full items-center gap-3 rounded-lg px-1 py-2 text-left",
     );
+    expect(popularRestaurantRow).toContain(
+      "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+    );
+    expect(popularRestaurantRow).toContain('aria-label={`${restaurant.name} 인기 맛집 상세 보기`}');
     expect(desktopLeftPanelMapHomeSource).toContain(
       '<MapPin className="h-3 w-3 shrink-0"',
     );

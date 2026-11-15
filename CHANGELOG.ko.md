@@ -10,6 +10,10 @@
 
 ### 변경
 
+- 지도·관리자 상태 안내를 통합하고 영상 분석·썸네일 작업 간격을 정리합니다.
+  2×2 스토리보드와 명시적으로 설정하는 기획 대화, 관리자 성능 감사 메뉴를
+  추가합니다. 검증 범위와 한계는 [UI/UX QA 기록](docs/releases/user-journey-ux-qa-20261115.md)과
+  [Bombadil 컴포넌트 검증](docs/operations/bombadil-qa.md)에 남깁니다.
 - 사용자와 기여자가 필요한 경로를 찾도록 저장소와 문서 진입점을 정리합니다.
 - 두 언어의 릴리스 연표를 보완하고, 기존 8월 운영 기록은
   [변경 기록 아카이브](docs/archive/changelog/CHANGELOG.ko.md)에 보존합니다.

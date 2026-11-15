@@ -7,7 +7,7 @@ import { chromium, expect as playwrightExpect, type Browser, type Page } from '@
 const chrome = chromium.executablePath();
 const localTest = existsSync(chrome) ? test : test.skip;
 const A = '11111111-1111-4111-8111-111111111111';
-const HOLD_MESSAGE = '데이터베이스 전환이 완료될 때까지 새 생성과 변경은 보류됩니다.';
+const HOLD_MESSAGE = '새 생성과 변경은 준비 중이에요.';
 const UNKNOWN_MESSAGE = '제작 가능 여부를 확인하지 못했습니다. 목록을 다시 불러온 뒤 만들 수 있습니다.';
 let browser: Browser | undefined;
 let script: string;
@@ -31,6 +31,7 @@ const state = window.storyboardCatalogFixture = { catalog: 'fail', catalogReads:
 const reply = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
 window.fetch = async (url, init = {}) => {
   const path = new URL(url, location.href).pathname;
+  if (path === '/api/admin/storyboard/production/assistant') return reply({ ok: true, configured: false, provider: null });
   if (path === '/api/admin/storyboard/production' && (init.method || 'GET') === 'GET') {
     state.catalogReads++;
     if (state.catalog === 'fail') throw new TypeError('Fixture offline');
@@ -78,6 +79,7 @@ async function run(path: string, width: number, check: (page: Page) => Promise<v
   try {
     await page.goto(`http://storyboard.fixture.test${path}`);
     await page.addScriptTag({ content: script });
+    if (!path.includes('storyboardProject=')) await page.getByRole('button', { name: '제작 요청', exact: true }).click();
     await check(page);
     expect(errors).toEqual([]); expect(blocked).toEqual([]);
   } finally { await context.close(); }
@@ -93,7 +95,7 @@ for (const width of [1280, 390]) {
       await playwrightExpect(page.getByRole('button', { name: '프로젝트 만들기' })).toBeDisabled();
 
       await setCatalog(page, 'ready');
-      await page.getByRole('button', { name: '프로젝트 목록 다시 불러오기' }).click();
+      await page.getByRole('button', { name: '목록 다시 불러오기', exact: true }).click();
       await playwrightExpect(page.getByText(UNKNOWN_MESSAGE)).toHaveCount(0);
       await playwrightExpect(page.getByRole('textbox', { name: '제작 요청' })).toBeEnabled();
       await playwrightExpect(page.getByText(HOLD_MESSAGE, { exact: false })).toHaveCount(0);
@@ -117,7 +119,7 @@ localTest('failed catalog read keeps an open project locked with a reload path i
 localTest('a genuine database hold is still reported as a hold', async () => {
   await run('/admin?module=storyboard', 1280, async page => {
     await setCatalog(page, 'held');
-    await page.getByRole('button', { name: '프로젝트 목록 다시 불러오기' }).click();
+    await page.getByRole('button', { name: '목록 다시 불러오기', exact: true }).click();
     await playwrightExpect(page.getByText(HOLD_MESSAGE, { exact: false })).toBeVisible();
     await playwrightExpect(page.getByText(UNKNOWN_MESSAGE)).toHaveCount(0);
     await playwrightExpect(page.getByRole('button', { name: '프로젝트 만들기' })).toBeDisabled();

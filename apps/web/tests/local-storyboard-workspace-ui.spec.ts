@@ -131,6 +131,7 @@ test.beforeEach(async ({ page }) => {
   await page.route(`**${API}**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === API) await fulfill(route, CATALOG);
+    else if (path === `${API}/assistant`) await fulfill(route, { ok: true, configured: false, provider: null });
     else if (path.includes("/assets/")) await route.fulfill({ contentType: "image/png", body: PNG });
     else await fulfill(route, saved(path.split("/").at(-1)));
   });
@@ -146,7 +147,11 @@ test.afterEach(async ({ page }) => {
 async function open(page: Page, id?: string) {
   await page.goto(`${origin}/admin?module=storyboard${id ? `&storyboardProject=${id}` : ""}#workspace`);
   await expect(page.getByRole("heading", { name: "스토리보드 생성", exact: true })).toBeVisible();
-  if (!id) await expect(page.locator(`#local-text-model option[value="${STORYBOARD_GEMINI_TEXT_MODEL}"]`)).toHaveCount(1);
+  if (!id) {
+    await page.getByRole("button", { name: "제작 요청", exact: true }).click();
+    await page.getByText("모델과 제작 설정", { exact: true }).click();
+    await expect(page.locator(`#local-text-model option[value="${STORYBOARD_GEMINI_TEXT_MODEL}"]`)).toHaveCount(1);
+  }
   if (id) await expect(page.getByRole("heading", { name: "UI 계약용 프로젝트", exact: true })).toBeVisible();
 }
 
@@ -198,12 +203,12 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await expect(page.getByLabel("이미지 모델", { exact: true })).toHaveValue(STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL);
     await expect(page.locator('#local-text-model option')).toHaveCount(1);
     await expect(page.locator('#local-image-model option')).toHaveCount(2);
-    await expect(page.getByText("워커가 온라인으로 광고한 허용 모델만 선택할 수 있습니다.", { exact: false })).toBeVisible();
+    await expect(page.getByText("연결된 제작 모델만 선택할 수 있어요.", { exact: false })).toBeVisible();
     await expect(page.locator('#local-text-provider option[value="openai-api"]')).toBeDisabled();
     await expect(page.locator('#local-image-provider option[value="openai-api"]')).toBeDisabled();
     await expect(page.locator('option[value="chatgpt-manual"], option[value="grok-manual"], option[value="local-mlx"]')).toHaveCount(0);
     await page.clock.fastForward(20_000);
-    expect(requests.filter((url) => url.includes("/api/") || url.includes("/qa-history/"))).toEqual([`${origin}${API}`]);
+    expect(requests.filter((url) => url.includes("/api/") || url.includes("/qa-history/")).sort()).toEqual([`${origin}${API}`, `${origin}${API}/assistant`].sort());
     await expect(page.locator('[data-admin-storyboard-generator="true"]')).toHaveCount(0);
     await page.getByRole("button", { name: "연결 설정", exact: true }).click();
     await expect(page.getByRole("heading", { name: "제작 연결", exact: true })).toBeVisible();

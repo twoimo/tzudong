@@ -581,7 +581,9 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(workspace).toContain('storyboardWorkerSupportsPair');
     expect(workspace).toContain('STORYBOARD_GEMINI_TEXT_MODEL');
     expect(workspace).toContain('STORYBOARD_GEMINI_IMAGE_MODELS');
-    expect(workspace).toContain('OpenAI API 키는 서버 워커 환경에서만 읽습니다.');
+    expect(workspace).toContain('const providerReady = (provider: string) => models.some(model => model.owned_by === provider)');
+    expect(workspace).toContain('const available = choices.filter(item => item.provider === value.id && models.some(model => model.id === item.id))');
+    expect(workspace).not.toMatch(/\b(?:OPENAI_API_KEY|GEMINI_API_KEY|NEXT_PUBLIC_\w*API_KEY)\b/);
     expect(workspace).not.toMatch(/browser-openai|local-codex|codex-oauth/);
     expect(workspace).toContain('owned_by: z.enum(["gemini-api", "openai-api", "mlx-serve"]).optional()');
     expect(alias.trim().endsWith('export { AdminStoryboardGenerator } from "./AdminStoryboardGenerator";')).toBe(true);

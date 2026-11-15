@@ -5,12 +5,12 @@ import { join } from 'node:path';
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('admin storyboard canvas shell extraction', () => {
-  test('keeps current scene output inside the Gemini project workspace', () => {
+  test('keeps current scene output inside the production comic workspace', () => {
     const workspaceSource = source('components/admin/storyboard/LocalStoryboardWorkspace.tsx');
     const aliasSource = source('components/admin/storyboard/LegacyStoryboardReference.tsx');
 
     expect(workspaceSource).toContain('aria-labelledby="local-scenes-title"');
-    expect(workspaceSource).toContain('view.project.document.scenes.map');
+    expect(workspaceSource).toContain('<StoryboardComicBoard scenes={view.project.document.scenes}');
     expect(workspaceSource).toContain('function AssetImage');
     expect(workspaceSource).toContain('function Provenance');
     expect(workspaceSource).toContain('privateAssetUrl');

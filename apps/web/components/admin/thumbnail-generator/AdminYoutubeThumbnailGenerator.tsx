@@ -50,6 +50,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -70,6 +71,8 @@ import { useThumbnailGeminiQueue, thumbnailGeminiMessage } from './useThumbnailG
 import { useThumbnailChatQueue } from './useThumbnailChatQueue';
 import { STORYBOARD_GEMINI_IMAGE_MODELS } from '@/lib/admin/storyboard/gemini-models';
 import type { ThumbnailJob, ThumbnailEditorDocument } from '@/lib/admin/youtube-thumbnail-generator/queue-contract';
+import { reconcileThumbnailReferences } from '@/lib/admin/youtube-thumbnail-generator/reference-selection';
+import { ThumbnailBriefEditor } from './ThumbnailBriefEditor';
 
 type ProviderId = "local-codex" | "openai-gpt-image-2";
 type GenerationMode = "direct_provider" | "backend_agent";
@@ -3278,26 +3281,16 @@ export function AdminYoutubeThumbnailGenerator() {
     });
     setBaseImageRenderRevision((revision) => revision + 1);
     setActiveLayerId("headline");
-    markCanvasAction("예시 썸네일 생성 시작");
+    markCanvasAction("예시 구성 미리보기");
     pendingChatGenerationRequirementRef.current = null;
 
     return nextLayers;
   }
 
   function handleThumbnailGuidedExamplePresetClick(example: ThumbnailGuidedExamplePreset) {
-    const nextLayers = applyThumbnailGuidedExamplePreviewToCanvas(example);
-    const assistantMessageId = appendThumbnailChatCommand(
-      "예시 만들기",
-      example.response,
-    );
-    void runThumbnailGeneration({
-      providerId,
-      generationMode,
-      topic: example.topic,
-      headline: example.headline,
-      subHeadline: example.subHeadline,
-      textLayers: nextLayers,
-    }, assistantMessageId);
+    applyThumbnailGuidedExamplePreviewToCanvas(example);
+    appendThumbnailChatCommand("예시 구성 선택", "예시 문구와 배치를 미리 보았습니다. 구성을 확인한 뒤 ‘이 구성으로 생성’을 눌러 주세요.", "system");
+    setIsChatSettingsOpen(true);
   }
 
   function handleThumbnailGuidedExampleClick() {
@@ -4206,30 +4199,41 @@ export function AdminYoutubeThumbnailGenerator() {
     }
     setFileValidationMessage(validationMessages[0] ?? null);
 
-    const limitedFiles = nextFiles.slice(0, readinessLimits.maxFiles);
-    setFiles(limitedFiles);
-    setReferenceImageRoles((current) =>
-      limitedFiles.map((_, index) => current[index] ?? (index === 0 ? "host" : index === 1 ? "food" : "other")),
-    );
+    const selection = reconcileThumbnailReferences(files, referenceImageRoles, nextFiles, readinessLimits.maxFiles);
+    setFiles(selection.files);
+    setReferenceImageRoles(selection.roles);
 
     return {
-      acceptedCount: limitedFiles.length,
+      acceptedCount: selection.files.length,
       validationMessage: validationMessages[0] ?? null,
     };
   }
 
   function handleReferenceFilesSelected(nextFiles: File[]) {
-    const result = handleReferenceFilesChange(nextFiles);
     if (!nextFiles.length) {
       appendThumbnailChatAssistantNotice("참고 이미지 선택이 취소되었습니다. “참고 이미지 추가”라고 다시 입력하면 파일 선택창을 열 수 있습니다.");
       return;
     }
+
+    const result = handleReferenceFilesChange([...files, ...nextFiles]);
+    setIsChatSettingsOpen(true);
 
     appendThumbnailChatAssistantNotice(
       result.validationMessage
         ? `참고 이미지 ${result.acceptedCount}장을 반영했습니다. 확인 필요: ${result.validationMessage}`
         : `참고 이미지 ${result.acceptedCount}장을 다음 실제 썸네일 생성 요청에 함께 전달할 준비가 됐습니다.`,
     );
+  }
+
+  function previewThumbnailBrief() {
+    if (!topic.trim() || isGenerating || isChatAgentStreaming) return;
+    pushTextLayerUndoSnapshot(createTextEditorHistorySnapshot());
+    userCanvasResultLockedRef.current = true;
+    const copy = createNaturalGenerationCopy(topic, headline, subHeadline, textLayersRef.current);
+    syncNaturalGenerationCopyToCanvas(copy);
+    setActiveLayerId('headline');
+    markCanvasAction('문구 배치 미리보기');
+    setIsChatSettingsOpen(false);
   }
 
   async function runThumbnailGeneration(overrides: ThumbnailGenerationOverrides = {}, chatAssistantMessageId?: string, requestId?: string) {
@@ -4404,17 +4408,23 @@ export function AdminYoutubeThumbnailGenerator() {
   }
 
   function renderChatSettingsDropdownPanel() {
-    return <div className="space-y-3 bg-background p-3" data-thumbnail-chat-settings-panel="true" data-thumbnail-provider="gemini-api">
-      <div className="flex items-center justify-between gap-2"><p className="text-sm font-semibold">이미지 생성</p>
+    return <div className="space-y-4 bg-background p-4" data-thumbnail-chat-settings-panel="true" data-thumbnail-provider="gemini-api">
+      <div className="flex items-center justify-between gap-2"><h2 className="text-lg font-semibold">썸네일 구성</h2>
         <Button type="button" variant="ghost" size="icon" className="h-11 w-11 rounded-none" aria-label="생성 설정 닫기" onClick={() => setIsChatSettingsOpen(false)}><X className="h-4 w-4" /></Button></div>
-      <Label htmlFor="thumbnail-gemini-model">모델</Label>
+      <ThumbnailBriefEditor topic={topic} headline={headline} subHeadline={subHeadline}
+        files={files} roles={referenceImageRoles} disabled={isGenerating || isChatAgentStreaming} error={fileValidationMessage}
+        onTopicChange={setTopic} onHeadlineChange={setHeadline} onSubHeadlineChange={setSubHeadline}
+        onAddReferences={openThumbnailReferenceFilePicker}
+        onRemoveReference={(index) => { handleReferenceFilesChange(files.filter((_, fileIndex) => fileIndex !== index)); }}
+        onReferenceRoleChange={(index, role) => setReferenceImageRoles((current) => files.map((_, fileIndex) => fileIndex === index ? role : current[fileIndex] ?? 'other'))}
+        onPreview={previewThumbnailBrief} />
+      <div className="space-y-2 border-t border-border pt-4">
+      <Label htmlFor="thumbnail-gemini-model" className="text-sm font-medium">이미지 모델</Label>
       <Select value={geminiModel} onValueChange={(value) => { if (STORYBOARD_GEMINI_IMAGE_MODELS.some((model) => model.id === value)) setGeminiModel(value as typeof geminiModel); }}>
         <SelectTrigger id="thumbnail-gemini-model" className="min-h-11 rounded-none" aria-label="Gemini 이미지 모델"><SelectValue /></SelectTrigger>
         <SelectContent>{STORYBOARD_GEMINI_IMAGE_MODELS.map((model) => <SelectItem key={model.id} value={model.id}>{model.label}</SelectItem>)}</SelectContent>
       </Select>
-      <Button type="button" className="min-h-11 w-full rounded-none" disabled={!gemini.available || hasPendingGeminiJob || isGenerating} onClick={() => { setIsChatSettingsOpen(false); void runThumbnailGeneration(); }} data-thumbnail-gemini-generate="true">
-        <Wand2 className="mr-2 h-4 w-4" />썸네일 생성
-      </Button>
+      </div>
       {gemini.historyError && <p role="alert" className="text-xs text-destructive">{gemini.historyError}</p>}
       <Button type="button" variant="ghost" size="sm" className="min-h-11 w-full rounded-none" onClick={() => void gemini.refreshHistory()}>연결 다시 확인</Button>
     </div>;
@@ -4662,34 +4672,47 @@ export function AdminYoutubeThumbnailGenerator() {
                     {renderThumbnailHistoryDropdownPanel()}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <DropdownMenu open={isChatSettingsOpen} onOpenChange={setIsChatSettingsOpen}>
-                  <DropdownMenuTrigger asChild>
+                <Popover open={isChatSettingsOpen} onOpenChange={setIsChatSettingsOpen}>
+                  <PopoverTrigger asChild>
                     <Button
                       type="button"
                       variant={isChatSettingsOpen ? "secondary" : "ghost"}
-                      size="icon"
-                      className="h-11 w-11 rounded-none"
-                      aria-label="유튜브 썸네일 채팅 설정 열기"
-                      title="채팅 설정"
+                      size="sm"
+                      className="h-11 gap-1 rounded-none px-2 text-sm"
+                      aria-label="유튜브 썸네일 구성 편집"
+                      title="구성 편집"
                       data-thumbnail-chat-settings-toggle="true"
                       data-thumbnail-chat-settings-dropdown-trigger="true"
                       data-thumbnail-chat-settings-open={isChatSettingsOpen ? "true" : "false"}
                     >
-                      <Settings className="h-3.5 w-3.5" aria-hidden="true" />
+                      <Settings className="h-4 w-4" aria-hidden="true" />구성
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
+                  </PopoverTrigger>
+                  <PopoverContent
                     align="end"
-                    className="w-[min(280px,calc(100vw-2rem))] p-0"
+                    aria-label="썸네일 구성 편집"
+                    className="w-[min(26rem,calc(100vw-2rem))] max-h-[min(calc(100dvh-2rem),var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain p-0"
                     data-thumbnail-chat-settings-dropdown="true"
                     data-thumbnail-chat-settings-dropdown-parity="storyboard"
                   >
                     {renderChatSettingsDropdownPanel()}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </CardHeader>
+          <div className="shrink-0 space-y-2 border-b border-border px-3 pb-3" data-thumbnail-brief-summary="true">
+            <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+              <span className="min-w-0 truncate text-muted-foreground" title={topic}>{topic}</span>
+              <button type="button" className="min-h-11 shrink-0 underline underline-offset-2" onClick={() => setIsChatSettingsOpen(true)}
+                aria-label={`참고 이미지 ${files.length}장 확인`}>참고 {files.length}장</button>
+            </div>
+            {fileValidationMessage && <p role="alert" className="text-xs leading-5 text-destructive">{fileValidationMessage}</p>}
+            <Button type="button" className="min-h-11 w-full gap-2" disabled={!gemini.available || hasPendingGeminiJob || isGenerating || isChatAgentStreaming || Boolean(fileValidationMessage) || !topic.trim()}
+              onClick={() => { void runThumbnailGeneration(); }} data-thumbnail-gemini-generate="true">
+              <Wand2 className="h-4 w-4" aria-hidden="true" />{hasPendingGeminiJob || isGenerating ? '생성 작업 진행 중' : '이 구성으로 생성'}
+            </Button>
+          </div>
           {(chatQueue.state.handle || chatQueue.error) && <div className="flex min-w-0 items-center gap-2 border-b px-3 py-2 text-xs" data-thumbnail-chat-queue-status="true" role="status">
             <span className="min-w-0 flex-1 truncate">{chatQueue.error ?? (chatQueue.state.job?.state === 'succeeded' ? '채팅 완료' : chatQueue.state.job?.state === 'cancelled' ? '채팅 중단됨' : chatQueue.state.job?.state === 'unknown' ? '채팅 처리 확인 필요' : '채팅 처리 중')}</span>
             {chatQueue.state.job?.state === 'succeeded' && <button type="button" className="min-h-11 shrink-0 font-medium underline underline-offset-2" onClick={() => {
@@ -4761,7 +4784,7 @@ export function AdminYoutubeThumbnailGenerator() {
                               className="text-xs leading-5 text-muted-foreground"
                               data-thumbnail-chat-starter-guide-copy="true"
                             >
-                              음식·인물·문구를 적거나 예시를 선택하세요.
+                              예시를 골라 구성을 확인하거나 원하는 내용을 적어 주세요.
                             </p>
                           </div>
                           <div
@@ -4778,7 +4801,7 @@ export function AdminYoutubeThumbnailGenerator() {
                                   handleThumbnailGuidedExamplePresetClick(preset)
                                 }
                                 disabled={isGenerating || isChatAgentStreaming}
-                                aria-label={`${preset.headline} 썸네일 예시 불러오기`}
+                                  aria-label={`${preset.headline} 썸네일 구성 미리보기`}
                                 data-thumbnail-chat-example-card="true"
                                 data-thumbnail-chat-example-headline={preset.headline}
                               >

@@ -1,3 +1,5 @@
+import type { HomeMapThemeFilterId } from '@/lib/home-map-theme-filters';
+import { MapThemeNotice } from './MapThemeNotice';
 import {
     AnnouncementToastBadge,
     EmptyStateIndicator,
@@ -7,7 +9,7 @@ import {
 } from '@/components/map/naver-map-overlay-indicators';
 import { MapOverlayNotice } from '@/components/map/map-overlay-notice';
 
-export type NaverMapOverlayKind = 'loading' | 'map-toast' | 'announcement' | 'restaurant-count' | 'online-users' | 'empty';
+export type NaverMapOverlayKind = 'loading' | 'map-toast' | 'announcement' | 'restaurant-count' | 'online-users' | 'empty' | 'theme';
 
 export const NAVER_MAP_TIMED_OVERLAY_LIFECYCLE_POLICY = {
     lowerPriorityOnPreemption: 'drop',
@@ -28,16 +30,21 @@ export function resolveNaverMapTimedOverlayDropPlan(
     return {
         dropMapToast: overlayKind === 'loading',
         dropAnnouncement: overlayKind === 'loading' || overlayKind === 'map-toast',
-        dropRestaurantCount: overlayKind === 'loading' || overlayKind === 'map-toast' || overlayKind === 'announcement',
+        dropRestaurantCount: overlayKind === 'loading'
+            || overlayKind === 'map-toast'
+            || overlayKind === 'announcement'
+            || overlayKind === 'theme',
         dropOnlineUsers: overlayKind === 'loading'
             || overlayKind === 'map-toast'
             || overlayKind === 'announcement'
-            || overlayKind === 'restaurant-count',
+            || overlayKind === 'restaurant-count'
+            || overlayKind === 'theme',
     };
 }
 
 export function resolveNaverMapOverlayKind({
     hasAnnouncementTitle,
+    hasActiveTheme = false,
     isLoaded,
     isLoadingRestaurants,
     isMapToastVisible,
@@ -47,6 +54,7 @@ export function resolveNaverMapOverlayKind({
     showRestaurantCount,
 }: {
     hasAnnouncementTitle: boolean;
+    hasActiveTheme?: boolean;
     isLoaded: boolean;
     isLoadingRestaurants: boolean;
     isMapToastVisible: boolean;
@@ -58,6 +66,7 @@ export function resolveNaverMapOverlayKind({
     if (isLoadingRestaurants || !isLoaded) return 'loading';
     if (isMapToastVisible) return 'map-toast';
     if (showAnnouncementToast && hasAnnouncementTitle) return 'announcement';
+    if (restaurantsLength > 0 && hasActiveTheme) return 'theme';
     if (restaurantsLength > 0 && showRestaurantCount) return 'restaurant-count';
     if (showOnlineUsers) return 'online-users';
     if (restaurantsLength === 0) return 'empty';
@@ -65,6 +74,7 @@ export function resolveNaverMapOverlayKind({
 }
 
 export function NaverMapOverlayStack({
+    activeThemeId,
     announcementToastTitle,
     badgePositionClass,
     count,
@@ -80,6 +90,7 @@ export function NaverMapOverlayStack({
     showOnlineUsers,
     showRestaurantCount,
 }: {
+    activeThemeId?: HomeMapThemeFilterId | null;
     announcementToastTitle: string;
     badgePositionClass: string;
     count: number;
@@ -101,6 +112,7 @@ export function NaverMapOverlayStack({
 
     const overlayKind = resolveNaverMapOverlayKind({
         hasAnnouncementTitle: Boolean(announcementToastTitle),
+        hasActiveTheme: Boolean(activeThemeId),
         isLoaded,
         isLoadingRestaurants,
         isMapToastVisible: mapToast?.isVisible === true,
@@ -117,6 +129,7 @@ export function NaverMapOverlayStack({
     return (
         <div className="pointer-events-none absolute inset-0 z-[70]">
             <div className={badgePositionClass} data-map-overlay-kind={overlayKind}>
+                {overlayKind === 'theme' && activeThemeId ? <MapThemeNotice themeId={activeThemeId} /> : null}
                 {overlayKind === 'loading' ? (
                     <MapLoadingIndicator
                         isLoaded={isLoaded}

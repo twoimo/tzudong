@@ -33,8 +33,10 @@ describe("admin storyboard thinking trace source contract", () => {
     );
 
     expect(componentSource).toContain('data-admin-storyboard-toolbar="true"');
-    expect(componentSource).toContain('className="admin-storyboard-body min-w-0 p-3"');
-    expect(componentSource).toContain('const panelClass = "min-w-0 rounded-none bg-card');
+    expect(componentSource).toContain('className="admin-storyboard-body min-w-0 space-y-4 p-4"');
+    expect(componentSource).toContain('const panelClass = "min-w-0 rounded-xl border border-border bg-card');
+    expect(componentSource).toContain('<StoryboardComicBoard');
+    expect(componentSource).toContain('<StoryboardConversation');
     expect(componentSource).not.toContain("StoryboardChat");
     expect(componentSource).not.toContain("browser-openai-api-key");
   });
@@ -45,7 +47,7 @@ describe("admin storyboard thinking trace source contract", () => {
 
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     expect(consoleSource).toContain("<LoadingSurface");
-    expect(consoleSource).toContain('data-storyboard-module-loading-frame-grid="true"');
+    expect(consoleSource).toContain('<StoryboardWorkspaceSkeleton');
     expect(consoleSource).toContain('data-storyboard-viewport-fit="bounded"');
     expect(consoleSource).not.toContain("admin-module-loading-shimmer");
     for (const cssSource of [globalsSource, appGlobalsSource]) {
