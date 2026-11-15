@@ -2024,10 +2024,10 @@ describe("web quality performance source contracts", () => {
     expect(naverMapSource).toContain("HydratedDetailRestaurant");
     expect(naverMapSource).not.toContain("useRestaurantWithMergeContext");
     expect(naverMapSource).not.toContain(
-      "import('@/lib/naver-map-presence-client')",
+      "@/lib/online-presence",
     );
     expect(source("components/map/NaverMapPresenceRuntime.tsx")).toContain(
-      "startNaverMapPresence",
+      "startOnlinePresence",
     );
     expect(naverMapSource).toContain(
       "areClusterFeaturesEqual(previous, newClusters) ? previous : newClusters",
@@ -4671,10 +4671,10 @@ describe("web quality performance source contracts", () => {
       "useRestaurantWithMergeContext",
     );
     expect(source("components/map/NaverMapView.tsx")).not.toContain(
-      "import('@/lib/naver-map-presence-client')",
+      "@/lib/online-presence",
     );
     expect(source("components/map/NaverMapPresenceRuntime.tsx")).toContain(
-      "startNaverMapPresence",
+      "startOnlinePresence",
     );
     expect(source("components/admin/AdminConsoleOverview.tsx")).toContain(
       'fetch("/api/admin/pending-counts"',
