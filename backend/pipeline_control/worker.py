@@ -648,8 +648,8 @@ def main() -> int:
     # health outcome must never mask the pipeline's own exit code.
     try:
         write_health_report()
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"operation=health_report_failed error_type={type(exc).__name__}")
     return exit_code
 
 

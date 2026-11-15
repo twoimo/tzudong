@@ -46,6 +46,7 @@ class LazyMetaCache(dict):
     def __init__(self, directory):
         super().__init__()
         self.paths = {path.stem: path for path in directory.glob("*.jsonl")} if directory.exists() else {}
+        self.corrupt_lines = 0
     def __bool__(self):
         return bool(self.paths)
     def __len__(self):
@@ -57,35 +58,17 @@ class LazyMetaCache(dict):
             values = []
             with open(self.paths[key], encoding="utf-8") as source:
                 for line in source:
+                    if not line.strip(): continue
                     try:
                         value = json.loads(line)
                         if isinstance(value, dict): values.append(value)
                     except json.JSONDecodeError:
-                        continue
+                        self.corrupt_lines += 1
             super().__setitem__(key, values)
         return super().get(key, default)
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
-
-
-# [PERF] Meta 파일 사전 로딩 캐시 (비디오별 반복 파일 I/O 방지)
-def preload_meta_cache(meta_dir: Path) -> Dict[str, List[dict]]:
-    """모든 meta 파일의 JSONL 라인을 사전 로드"""
-    cache: Dict[str, List[dict]] = {}
-    if not meta_dir or not meta_dir.exists():
-        return cache
-    for f in meta_dir.glob("*.jsonl"):
-        lines = []
-        with open(f, "r", encoding="utf-8") as file:
-            for line in file:
-                try:
-                    lines.append(json.loads(line.strip()))
-                except Exception:
-                    pass
-        if lines:
-            cache[f.stem] = lines
-    return cache
 
 
 def _extract_youtube_meta(meta_obj: dict) -> dict:
@@ -952,6 +935,8 @@ def run_transform(channel: str, crawling_path: Path, evaluation_path: Path):
         stats["removed"] = removed
         ledger["files"] = file_cache
         atomic_write(receipt_path,json.dumps(ledger,separators=(",", ":")).encode()+b"\n")
+        if meta.corrupt_lines:
+            print(json.dumps({"operation":"transform_meta_corrupt_lines","count":meta.corrupt_lines},sort_keys=True))
         print(json.dumps({"operation":"transform_complete",**stats,"records":len(records)},sort_keys=True))
         return stats
 
