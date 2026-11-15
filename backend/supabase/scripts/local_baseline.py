@@ -58,6 +58,10 @@ WHERE c.relkind IN ('r','p','v','m','S')
 ORDER BY 1;
 """
 
+# The realtime service creates one realtime.messages partition per day around the
+# current date, so these names depend on when the stack started, not on the schema.
+ROLLING_PARTITION = re.compile(r"realtime\.messages_\d{4}_\d{2}_\d{2}")
+
 # A schema-only dump carries no CREATE ROLE, so every statement naming a project role
 # fails on a fresh cluster. Policies and default ACLs name roles that own nothing, so
 # ownership alone is not enough.
@@ -103,7 +107,8 @@ def psql(container: str, role: str, sql: str, *, database: str = "postgres",
 def object_names(container: str, role: str, database: str,
                  runner: Runner = subprocess.run) -> list[str]:
     return [line for line in psql(container, role, OBJECT_NAMES_SQL, database=database,
-                                  runner=runner).splitlines() if line]
+                                  runner=runner).splitlines()
+            if line and not ROLLING_PARTITION.fullmatch(line)]
 
 
 def idempotent_role(statement: str) -> str:

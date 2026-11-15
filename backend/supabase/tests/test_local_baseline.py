@@ -271,6 +271,50 @@ CREATE TABLE public.restaurants (id uuid);
             json.dumps(baseline.manifest)
 
 
+class RollingPartitionTests(unittest.TestCase):
+    CAPTURE_DAY = ["public.a", "realtime.messages",
+                   "realtime.messages_2026_11_11", "realtime.messages_2026_11_12"]
+    LATER_DAY = ["public.a", "realtime.messages",
+                 "realtime.messages_2026_11_16", "realtime.messages_2026_11_17"]
+
+    def _baseline(self, tmp: Path, names=CAPTURE_DAY) -> lb.Baseline:
+        return lb.capture("db", "postgres", tmp, source_image="img",
+                          runner=make_runner(names=names, roles=[]))
+
+    def test_a_stack_started_on_a_later_day_matches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp))
+            record = lb.check(baseline, "target", "postgres",
+                              runner=make_runner(names=self.LATER_DAY, roles=[]))
+            self.assertTrue(record["matches"])
+            self.assertEqual((record["missingObjects"], record["unexpectedObjects"]), ([], []))
+
+    def test_a_stack_started_on_a_later_day_is_provisioned(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp))
+            record = lb.provision(
+                baseline, "target", "postgres", preserve_platform=True,
+                runner=make_runner(names=[], roles=[], restored=self.LATER_DAY),
+            )
+            self.assertTrue(record["provisioned"])
+            self.assertEqual((record["missingObjectCount"], record["unexpectedObjectCount"]), (0, 0))
+
+    def test_captures_on_different_days_do_not_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            committed = self._baseline(Path(first))
+            live = self._baseline(Path(second), self.LATER_DAY)
+            self.assertEqual(lb.drift(committed, live.manifest), [])
+
+    def test_the_partitioned_table_is_still_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp))
+            observed = [name for name in self.CAPTURE_DAY if name != "realtime.messages"]
+            record = lb.check(baseline, "target", "postgres",
+                              runner=make_runner(names=observed, roles=[]))
+            self.assertFalse(record["matches"])
+            self.assertEqual(record["missingObjects"], ["realtime.messages"])
+
+
 if __name__ == "__main__":
     unittest.main()
 
