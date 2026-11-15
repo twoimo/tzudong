@@ -78,6 +78,15 @@ class MemoryStore:
             audit=audit,
         )
 
+    def _persist_finished(self, run: RunRecord, audit: dict[str, Any]) -> None:
+        # A finished run is committed here before the durable mirror, so a
+        # mirror outage raises but cannot leave the run holding its lock.
+        self._commit()
+        self._persist(run, lock_held=False, audit=audit)
+
+    def _commit(self) -> None:
+        pass
+
     def _release(self, run: RunRecord) -> None:
         key = lock_key(run.target, run.profile)
         if self.locks.get(key) == run.id:
@@ -222,7 +231,7 @@ class MemoryStore:
             transition="dry_run_succeeded",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_succeeded_total")
         return run
 
@@ -239,7 +248,7 @@ class MemoryStore:
             transition="succeeded",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_succeeded_total")
         return run
 
@@ -256,7 +265,7 @@ class MemoryStore:
             transition="failed",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_failed_total")
         return run
 

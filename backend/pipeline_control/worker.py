@@ -62,6 +62,7 @@ from backend.pipeline_control.store import (
     STEP_LEASE_MARGIN_SECONDS,
     MemoryStore,
 )
+from backend.utils.privacy_log import safe_error_name
 from backend.utils.supabase_rest import (
     PIPELINE_COMPUTE_PROFILE_ENV,
     PIPELINE_DATA_SINK_ENV,
@@ -511,9 +512,14 @@ def process_one(
             status = "Failed"
             error_code, unexpected = _failure(exc)
         with stops.held():
-            status = _record(
-                store, attempt.run, status, error_code, live=attempt.execution_mode == "live"
-            )
+            try:
+                status = _record(
+                    store, attempt.run, status, error_code, live=attempt.execution_mode == "live"
+                )
+                record_failure = None
+            except Exception as exc:
+                print(f"operation=run_record_failed error={safe_error_name(exc)}")
+                status, record_failure = "Failed", exc
             write_run_manifest(
                 status,
                 manifest_path,
@@ -533,6 +539,8 @@ def process_one(
             print("operation=media_cache_cleanup_deferred")
         if unexpected is not None:
             raise unexpected
+        if record_failure is not None:
+            raise record_failure
         return status
 
 

@@ -57,6 +57,9 @@ class FileStore(MemoryStore):
         tmp.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
         tmp.replace(self.path)
 
+    def _commit(self) -> None:
+        self._save_unlocked()
+
     def _mutate(self, fn):
         if self._nested():
             return fn()
