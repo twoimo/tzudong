@@ -1,4 +1,22 @@
-"""Run status, lock lease, and adapter step checkpoints."""
+"""Run status, lock lease, and adapter step checkpoints.
+
+Run lifecycle::
+
+    Queued --claim--> Fetching --all steps pass--> Succeeded
+    Queued --pause--> Paused --resume--> Queued
+    Fetching | Inserting --pause, then the next step boundary--> Paused
+    Queued | Fetching | Inserting | Paused --cancel--> Cancelled
+    Fetching | Inserting | Paused --step or worker failure--> Failed
+    Queued | Fetching | Inserting --lease lapsed--> Failed (lease_expired)
+
+``Succeeded``, ``Failed``, and ``Cancelled`` are terminal. A terminal run does
+not change again and does not hold its target lock.
+
+A worker holds a ``Fetching`` or ``Inserting`` run until its next step
+boundary. A pause of that run waits for the boundary, and a resume before the
+boundary withdraws the pause, so the run never returns to the queue while its
+step runs.
+"""
 
 from __future__ import annotations
 
@@ -20,6 +38,8 @@ RUN_STATUSES = (
     "Succeeded",
 )
 ACTIVE_LOCK_STATUSES = frozenset({"Queued", "Fetching", "Inserting", "Paused"})
+EXECUTING_STATUSES = frozenset({"Fetching", "Inserting"})
+TERMINAL_STATUSES = frozenset(RUN_STATUSES) - ACTIVE_LOCK_STATUSES
 TARGET_IDLE = "Idle"
 ILLEGAL_TRANSITION = "illegal_transition"
 PAUSE_FROM = frozenset({"Queued", "Fetching", "Inserting"})
@@ -84,6 +104,23 @@ def can_resume(status: str) -> bool:
 
 
 def apply_transition(run: RunRecord, action: str, now: float, lease_ttl: float) -> RunRecord:
+    if run.status in EXECUTING_STATUSES and action in {"pause", "resume"}:
+        if action == "resume" and not run.pause_requested:
+            raise ControlPlaneError(ILLEGAL_TRANSITION, 409)
+        run.pause_requested = action == "pause"
+        return run
+    return _transition_status(run, action, now, lease_ttl)
+
+
+def step_boundary(run: RunRecord, now: float, lease_ttl: float) -> RunRecord:
+    heartbeat(run, now, lease_ttl)
+    if run.pause_requested and run.status in EXECUTING_STATUSES:
+        run.pause_requested = False
+        _transition_status(run, "pause", now, lease_ttl)
+    return run
+
+
+def _transition_status(run: RunRecord, action: str, now: float, lease_ttl: float) -> RunRecord:
     native = runtime_function("R5-pipeline-graph", "apply_transition_status")
     if native is not None:
         try:

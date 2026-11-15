@@ -11,7 +11,7 @@ from typing import Any
 
 from backend.pipeline_control.queue import _Lock
 from backend.pipeline_control.state_machine import RunRecord
-from backend.pipeline_control.store import MemoryStore
+from backend.pipeline_control.store import LEASE_TTL_SECONDS, MemoryStore
 
 DEFAULT_STORE = Path(__file__).resolve().parents[1] / "log" / "cron" / "pipeline-store.json"
 
@@ -57,6 +57,9 @@ class FileStore(MemoryStore):
         tmp.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
         tmp.replace(self.path)
 
+    def _commit(self) -> None:
+        self._save_unlocked()
+
     def _mutate(self, fn):
         if self._nested():
             return fn()
@@ -97,8 +100,8 @@ class FileStore(MemoryStore):
             )
         )
 
-    def beat(self, run_id: str) -> RunRecord:
-        return self._mutate(lambda: super(FileStore, self).beat(run_id))
+    def beat(self, run_id: str, lease_ttl: float = LEASE_TTL_SECONDS) -> RunRecord:
+        return self._mutate(lambda: super(FileStore, self).beat(run_id, lease_ttl))
 
     def claim(self, run_id: str | None = None) -> RunRecord | None:
         return self._mutate(lambda: super(FileStore, self).claim(run_id))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from hashlib import sha256
 import json
 import os
@@ -10,12 +11,15 @@ import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable, Sequence
 
 from backend.pipeline_control.adapter import (
     CANONICAL_STEP_NAMES,
     SKIP_HEAVY_REASON,
+    StopSignals,
     execute_steps,
     noop_event_sink,
+    step_timeout_seconds,
 )
 from backend.pipeline_control.media_cache import owned_media_cache
 from backend.pipeline_control.graph import AdapterGraphError, STEP_SPECS
@@ -52,8 +56,17 @@ from backend.pipeline_control.schedule import (
     inspect_committed_cadence_sources,
     validate_cadence,
 )
-from backend.pipeline_control.state_machine import RunRecord
-from backend.pipeline_control.store import MemoryStore
+from backend.pipeline_control.state_machine import (
+    TERMINAL_STATUSES,
+    ControlPlaneError,
+    RunRecord,
+)
+from backend.pipeline_control.store import (
+    LEASE_TTL_SECONDS,
+    STEP_LEASE_MARGIN_SECONDS,
+    MemoryStore,
+)
+from backend.utils.privacy_log import safe_error_name
 from backend.utils.supabase_rest import (
     PIPELINE_COMPUTE_PROFILE_ENV,
     PIPELINE_DATA_SINK_ENV,
@@ -282,6 +295,7 @@ def write_run_manifest(
     missed_window_count: int = 0,
     reflection: dict | None = None,
     cadence_config_path: Path | None = None,
+    snapshots: Sequence[tuple[str, int]] = (),
 ) -> Path:
     if execution_mode not in {"dry_run", "live"}:
         raise ValueError("execution_mode_invalid")
@@ -398,7 +412,6 @@ def write_run_manifest(
     input_provenance = payload["hashProvenance"]["inputSha256"]
     output_provenance = payload["hashProvenance"]["outputSha256"]
     if ok and execution_mode == "live" and data_sink == "local_db":
-        snapshots = independent_local_db_snapshots()
         if (
             len(snapshots) == 3
             and snapshots[0] == snapshots[1] == snapshots[2]
@@ -461,6 +474,23 @@ def write_run_manifest(
     return write_compatible_summary(destination, payload)
 
 
+_CODED_FAILURES = (KafkaPublishError, AdapterGraphError, ProfileError, EsIndexError)
+
+
+@dataclass
+class _Attempt:
+    """What one worker attempt knows about its claimed run so far."""
+
+    job_id_scope: str
+    run: RunRecord | None = None
+    execution_mode: str = "dry_run"
+    data_sink: str | None = None
+    hosted_gate_rejection_code: str | None = None
+    events: list[dict] = field(default_factory=list)
+    snapshots: list[tuple[str, int]] = field(default_factory=list)
+    purge_media_cache: Callable[[str], None] = lambda _status: None
+
+
 def process_one(
     store: MemoryStore,
     *,
@@ -470,160 +500,164 @@ def process_one(
     run_id: str | None = None,
     job_id_scope: str = "worker_execution",
 ) -> str | None:
-    run = store.claim(run_id) if run_id is not None else store.claim()
-    if run is None:
-        return None
+    attempt = _Attempt(job_id_scope)
+    # A stop raises at once only inside _execute. Anywhere else it waits
+    # until the run is recorded, its manifest is written, and its cache is
+    # purged, so a stop cannot land between the steps and the record.
+    with StopSignals() as stops, stops.held():
+        attempt.run = store.claim(run_id) if run_id is not None else store.claim()
+        if attempt.run is None:
+            return None
+        try:
+            with stops.released():
+                status, error_code = _execute(
+                    store, attempt, live=live, runner=runner, run_id=run_id, stops=stops
+                )
+            unexpected = None
+        except BaseException as exc:
+            status = "Failed"
+            error_code, unexpected = _failure(exc)
+        if status != "Succeeded":
+            # This manifest does not depend on the record, so it lands
+            # before the record's durable mirror write, which can stall.
+            _write_manifest(store, attempt, status, manifest_path)
+        try:
+            recorded = _record(
+                store, attempt.run, status, error_code, live=attempt.execution_mode == "live"
+            )
+            record_failure = None
+        except Exception as exc:
+            print(f"operation=run_record_failed error={safe_error_name(exc)}")
+            recorded, record_failure = _local_status(store, attempt.run), exc
+        if status == "Succeeded":
+            _write_manifest(store, attempt, recorded, manifest_path)
+        try:
+            attempt.purge_media_cache(recorded)
+        except (OSError, ValueError, AdapterGraphError):
+            # Settled provider/DB work stays settled. Purge is recoverable
+            # local cleanup, never a reason to replay it.
+            print("operation=media_cache_cleanup_deferred")
+    if unexpected is not None:
+        raise unexpected
+    if record_failure is not None:
+        raise record_failure
+    return recorded
+
+
+def _write_manifest(
+    store: MemoryStore, attempt: _Attempt, status: str, path: Path | None
+) -> None:
+    write_run_manifest(
+        status,
+        path,
+        events=attempt.events,
+        run=attempt.run,
+        execution_mode=attempt.execution_mode,
+        data_sink=attempt.data_sink,
+        store=store,
+        job_id_scope=attempt.job_id_scope,
+        hosted_gate_rejection_code=attempt.hosted_gate_rejection_code,
+        snapshots=attempt.snapshots,
+    )
+
+
+def _execute(
+    store: MemoryStore,
+    attempt: _Attempt,
+    *,
+    live: bool | None,
+    runner,
+    run_id: str | None,
+    stops: StopSignals,
+) -> tuple[str, str]:
+    run = attempt.run
     if run_id is not None and run.id != run_id:
-        store.finish_failed(run.id, "run_id_mismatch")
-        write_run_manifest(
-            "Failed",
-            manifest_path,
-            run=run,
-            execution_mode="dry_run",
-            store=store,
-            job_id_scope="api_run",
-        )
-        return "Failed"
-
-    def should_stop() -> str | None:
-        checkpoint = getattr(store, "checkpoint", None)
-        if checkpoint is not None:
-            current = checkpoint(run.id, adapter_index=run.adapter_index)
-        else:
-            current = store.get(run.id)
-            store.beat(run.id)
-        if current.status == "Cancelled":
-            return "Cancelled"
-        if current.status == "Paused":
-            return "Paused"
-        return None
-
-    use_live = live_enabled() if live is None else live
-    execution_mode = "live" if use_live and not run.dry_run else "dry_run"
-    try:
-        preflight_data_sink(compute_profile=run.profile)
-    except ProfileError as exc:
-        store.finish_failed(run.id, exc.code)
-        write_run_manifest(
-            "Failed",
-            manifest_path,
-            run=run,
-            execution_mode=execution_mode,
-            store=store,
-            job_id_scope=job_id_scope,
-        )
-        return "Failed"
+        attempt.job_id_scope = "api_run"
+        return "Failed", "run_id_mismatch"
+    use_live = (live_enabled() if live is None else live) and not run.dry_run
+    attempt.execution_mode = "live" if use_live else "dry_run"
+    preflight_data_sink(compute_profile=run.profile)
+    step_timeout = step_timeout_seconds()
     try:
         boundary = admit_pipeline_supabase_boundary(
             profile=run.profile,
-            execution_mode=execution_mode,
+            execution_mode=attempt.execution_mode,
         )
-        data_sink = boundary.data_sink
     except SupabaseRestConfigurationError:
-        store.finish_failed(run.id, "supabase_data_boundary_rejected")
-        rejection_code = map_hosted_gate_rejection_code(
+        attempt.hosted_gate_rejection_code = map_hosted_gate_rejection_code(
             profile=run.profile,
-            execution_mode=execution_mode,
+            execution_mode=attempt.execution_mode,
         )
-        write_run_manifest(
-            "Failed",
-            manifest_path,
-            run=run,
-            execution_mode=execution_mode,
-            store=store,
-            job_id_scope=job_id_scope,
-            hosted_gate_rejection_code=rejection_code,
-        )
-        return "Failed"
-    collected: list[dict] = []
+        return "Failed", "supabase_data_boundary_rejected"
+    attempt.data_sink = boundary.data_sink
+    lease_ttl = step_timeout + STEP_LEASE_MARGIN_SECONDS if use_live else LEASE_TTL_SECONDS
+
+    def should_stop() -> str | None:
+        checkpoint = getattr(store, "checkpoint", None)
+        with stops.held():
+            if checkpoint is not None:
+                current = checkpoint(run.id, adapter_index=run.adapter_index)
+            else:
+                current = store.beat(run.id, lease_ttl)
+        if current.status == "Paused" or current.status in TERMINAL_STATUSES:
+            return current.status
+        return None
 
     def emit(event: dict) -> None:
-        collected.append(event)
+        attempt.events.append(event)
         noop_event_sink(event)
 
-    success_recorded = False
+    with _bound_pipeline_execution_environment(
+        data_sink=attempt.data_sink,
+        execution_mode=attempt.execution_mode,
+        compute_profile=run.profile,
+    ):
+        with owned_media_cache(run.id, enabled=use_live) as purge_media_cache:
+            attempt.purge_media_cache = purge_media_cache
+            status = execute_steps(
+                run,
+                should_stop=should_stop,
+                emit=emit,
+                live=use_live,
+                runner=runner,
+                data_sink=attempt.data_sink,
+                compute_profile=run.profile,
+            )
+    if status == "Succeeded" and use_live and attempt.data_sink == "local_db":
+        # Network reads run here, where a stop interrupts them, and never
+        # inside the record, where a stop waits for them.
+        attempt.snapshots = independent_local_db_snapshots()
+    return status, "adapter_failed"
+
+
+def _failure(exc: BaseException) -> tuple[str, BaseException | None]:
+    """The error code to record, and the exception to raise once it is recorded."""
+    if isinstance(exc, OSError):
+        return "worker_io_failed", None
+    if isinstance(exc, _CODED_FAILURES):
+        return exc.code, None
+    if isinstance(exc, Exception):
+        return "worker_unexpected", exc
+    return "worker_interrupted", exc
+
+
+def _local_status(store: MemoryStore, run: RunRecord) -> str:
+    """The local store's status for a run whose record raised. The store
+    commits a finished run before its mirror write, so a mirror failure
+    leaves a terminal status here."""
     try:
-        with _bound_pipeline_execution_environment(
-            data_sink=data_sink,
-            execution_mode=execution_mode,
-            compute_profile=run.profile,
-        ):
-            with owned_media_cache(run.id, enabled=use_live and not run.dry_run) as media_completed:
-                result = execute_steps(
-                    run,
-                    should_stop=should_stop,
-                    emit=emit,
-                    live=use_live and not run.dry_run,
-                    runner=runner,
-                    data_sink=data_sink,
-                    compute_profile=run.profile,
-                )
-                if result == 'Succeeded':
-                    if execution_mode == "live":
-                        store.finish_succeeded(run.id)
-                    else:
-                        store.finish_dry_run(run.id)
-                    success_recorded = True
-                    try:
-                        media_completed()
-                    except (OSError, ValueError, AdapterGraphError):
-                        # Settled provider/DB work stays successful. Purge is
-                        # recoverable local cleanup, never a reason to replay it.
-                        print("operation=media_cache_cleanup_deferred")
-                elif result in {"Failed", "Cancelled", "Paused"}:
-                    try: media_completed(result)
-                    except (OSError, ValueError, AdapterGraphError):
-                        print("operation=media_cache_cleanup_deferred")
-    except OSError:
-        store.finish_failed(run.id, "worker_io_failed")
-        write_run_manifest("Failed", manifest_path, events=collected, run=run,
-                           execution_mode=execution_mode, data_sink=data_sink,
-                           store=store, job_id_scope=job_id_scope)
+        status = store.get(run.id).status
+    except (OSError, ValueError, ControlPlaneError):
         return "Failed"
-    except (KafkaPublishError, AdapterGraphError, ProfileError) as exc:
-        store.finish_failed(run.id, exc.code)
-        write_run_manifest(
-            "Failed",
-            manifest_path,
-            events=collected,
-            run=run,
-            execution_mode=execution_mode,
-            data_sink=data_sink,
-            store=store,
-            job_id_scope=job_id_scope,
-        )
-        return "Failed"
-    except EsIndexError as exc:
-        store.finish_failed(run.id, exc.code)
-        write_run_manifest(
-            "Failed",
-            manifest_path,
-            events=collected,
-            run=run,
-            execution_mode=execution_mode,
-            data_sink=data_sink,
-            store=store,
-            job_id_scope=job_id_scope,
-        )
-        return "Failed"
-    if result == "Succeeded" and not success_recorded:
-        if execution_mode == "live":
-            store.finish_succeeded(run.id)
-        else:
-            store.finish_dry_run(run.id)
-    elif result == "Failed":
-        store.finish_failed(run.id)
-    write_run_manifest(
-        result,
-        manifest_path,
-        events=collected,
-        run=run,
-        execution_mode=execution_mode,
-        data_sink=data_sink,
-        store=store,
-        job_id_scope=job_id_scope,
-    )
-    return result
+    return status if status in TERMINAL_STATUSES else "Failed"
+
+
+def _record(store: MemoryStore, run: RunRecord, status: str, error_code: str, *, live: bool) -> str:
+    if status == "Succeeded":
+        return (store.finish_succeeded(run.id) if live else store.finish_dry_run(run.id)).status
+    if status == "Failed":
+        store.finish_failed(run.id, error_code)
+    return status
 
 
 def main() -> int:

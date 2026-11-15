@@ -14,16 +14,19 @@ from backend.pipeline_control.state_machine import (
     Profile,
     RunRecord,
     TARGET_IDLE,
+    TERMINAL_STATUSES,
     apply_transition,
     heartbeat,
     lock_key,
     payload_hash,
     stale_reclaim_eligible,
+    step_boundary,
 )
 from backend.pipeline_control.metrics import record
 from backend.pipeline_control.persist import persist_mutation
 
 LEASE_TTL_SECONDS = 30.0
+STEP_LEASE_MARGIN_SECONDS = 300.0
 PUBLIC_LIST_KEYS = (
     "id",
     "target",
@@ -74,6 +77,20 @@ class MemoryStore:
             lock_key=held_lock_key if held_lock_key is not None else lock_key(run.target, run.profile),
             audit=audit,
         )
+
+    def _persist_finished(self, run: RunRecord, audit: dict[str, Any]) -> None:
+        # A finished run is committed here before the durable mirror, so a
+        # mirror outage raises but cannot leave the run holding its lock.
+        self._commit()
+        self._persist(run, lock_held=False, audit=audit)
+
+    def _commit(self) -> None:
+        pass
+
+    def _release(self, run: RunRecord) -> None:
+        key = lock_key(run.target, run.profile)
+        if self.locks.get(key) == run.id:
+            del self.locks[key]
 
     def _reclaim(self) -> None:
         now = self.now()
@@ -153,7 +170,7 @@ class MemoryStore:
         run = self.get(run_id)
         apply_transition(run, action, self.now(), LEASE_TTL_SECONDS)
         if run.status == "Cancelled":
-            self.locks.pop(lock_key(run.target, run.profile), None)
+            self._release(run)
         self._audit(actor=actor, job_id=run.id, transition=action, request_id=request_id)
         self._persist(
             run,
@@ -162,10 +179,22 @@ class MemoryStore:
         )
         return run
 
-    def beat(self, run_id: str) -> RunRecord:
+    def beat(self, run_id: str, lease_ttl: float = LEASE_TTL_SECONDS) -> RunRecord:
         run = self.get(run_id)
-        heartbeat(run, self.now(), LEASE_TTL_SECONDS)
-        self._persist(run, lock_held=True, audit=None)
+        if run.status in TERMINAL_STATUSES:
+            return run
+        before = run.status
+        step_boundary(run, self.now(), lease_ttl)
+        audit = None
+        if run.status != before:
+            self._audit(
+                actor="worker",
+                job_id=run.id,
+                transition="pause_approved",
+                request_id=run.request_id,
+            )
+            audit = self.audit[-1]
+        self._persist(run, lock_held=True, audit=audit)
         return run
 
     def claim(self, run_id: str | None = None) -> RunRecord | None:
@@ -191,54 +220,52 @@ class MemoryStore:
 
     def finish_dry_run(self, run_id: str) -> RunRecord:
         run = self.get(run_id)
-        if run.status == "Cancelled":
-            return run
-        if run.status == "Paused":
+        if run.status == "Paused" or run.status in TERMINAL_STATUSES:
             return run
         run.adapter_index = len(ADAPTER_STEPS)
         run.status = "Succeeded"
-        self.locks.pop(lock_key(run.target, run.profile), None)
+        self._release(run)
         self._audit(
             actor="worker",
             job_id=run.id,
             transition="dry_run_succeeded",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_succeeded_total")
         return run
 
     def finish_succeeded(self, run_id: str) -> RunRecord:
         run = self.get(run_id)
-        if run.status == "Cancelled":
-            return run
-        if run.status == "Paused":
+        if run.status == "Paused" or run.status in TERMINAL_STATUSES:
             return run
         run.adapter_index = len(ADAPTER_STEPS)
         run.status = "Succeeded"
-        self.locks.pop(lock_key(run.target, run.profile), None)
+        self._release(run)
         self._audit(
             actor="worker",
             job_id=run.id,
             transition="succeeded",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_succeeded_total")
         return run
 
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
         run = self.get(run_id)
+        if run.status in TERMINAL_STATUSES:
+            return run
         run.status = "Failed"
         run.error_code = error_code
-        self.locks.pop(lock_key(run.target, run.profile), None)
+        self._release(run)
         self._audit(
             actor="worker",
             job_id=run.id,
             transition="failed",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_failed_total")
         return run
 
