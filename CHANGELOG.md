@@ -8,6 +8,13 @@ full scope, verification records and limitations of each release.
 
 ## Unreleased
 
+### Fixed
+
+- Remove the empty desktop row between the thumbnail canvas and its tools,
+  retaining the 16:9 canvas and small-height fitting behavior.
+- Keep storyboard direct-writing and proposal-transfer guidance consistent
+  with the existing production readiness hold.
+
 ### Changed
 
 - Consolidate map and administrator status, tighten video/thumbnail workflows,

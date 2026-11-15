@@ -353,7 +353,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   const readinessUnknownMessage = "제작 가능 여부를 확인하지 못했습니다. 목록을 다시 불러온 뒤 만들 수 있습니다.";
 
   function reviewProposal(value: string) {
-    if (createController.current || creating) return false;
+    if (actionsHeld || createController.current || creating) return false;
     if (!selectProject(null)) return false;
     setPrompt(value); setNewPanel("request"); setMobileView("conversation");
     requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus());
@@ -465,7 +465,7 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
             </nav>
             <div hidden={newPanel !== "chat"} className="h-[clamp(400px,60vh,600px)]">
               <StoryboardConversation context={{ prompt: prompt.slice(0, 4000), scene: null }} sceneCount={Number.isInteger(sceneCount) ? sceneCount : 6}
-                onUsePrompt={reviewProposal} disabled={creating} onWriteRequest={() => { setNewPanel("request"); requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus()); }} />
+                onUsePrompt={reviewProposal} canWriteRequest={!actionsHeld && !creating} disabled={creating} onWriteRequest={() => { if (actionsHeld || creating) return; setNewPanel("request"); requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus()); }} />
             </div>
             <div hidden={newPanel !== "request"} data-scroll-owner="storyboard-create-request" className="max-h-[min(74vh,720px)] overflow-y-auto overscroll-contain p-1">
         <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title" data-layout-primitives="form-flow">
@@ -839,7 +839,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
           <StoryboardConversation context={{ prompt: view.project.request.prompt.slice(0, 4000), scene: (() => {
             const scene = view.project.document?.scenes.find(item => item.sceneNo === selectedScene);
             return scene ? { sceneNo: scene.sceneNo, title: scene.title, description: scene.description, caption: scene.caption } : null;
-          })() }} sceneCount={view.project.request.sceneCount} onUsePrompt={onUsePrompt} disabled={!!editing || busy || archived} />
+          })() }} sceneCount={view.project.request.sceneCount} onUsePrompt={onUsePrompt} canWriteRequest={!featureHeld && !editing && !busy && !archived} disabled={!!editing || busy || archived} />
         </aside>
       </div>
     </>}

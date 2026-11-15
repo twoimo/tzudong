@@ -192,3 +192,44 @@ The hosted fixture has its own [bounded execution and receipt contract](../opera
 Record the actual workflow run, source SHA, screenshot review, release checks,
 rollback deployment and production readback in the release result. A failed or
 missing check must remain visible and is not a successful acceptance result.
+
+## Protected merge and staged user-flow follow-up
+
+PR #3847 head `7e094e1fff88b5835c2dd48a790f1092ae5a3547` passed all applicable
+protected checks before normal squash merge to `4321439291aa37548d96847040b1d13990c3bd67`.
+Both have tree `a03072b4bd6da5d04917a12e36bb0aedb6f12b98`. Final PR CI
+[`43711646415`](https://github.com/twoimo/tzudong/actions/runs/43711646415)
+passed 6,259 unit tests with 13 pre-existing environment skips and no failures;
+its four compiler benchmark profiles also completed. Postmerge CI
+[`43712801882`](https://github.com/twoimo/tzudong/actions/runs/43712801882)
+and CodeQL [`43712801841`](https://github.com/twoimo/tzudong/actions/runs/43712801841)
+both succeeded on the exact merge. Release and Security succeeded as well.
+The optional Cloudflare Workers check remained failed with no detailed cause in
+its GitHub output; the approved Release governance fallback succeeded. This is
+not Cloudflare build or deployment success.
+
+Production candidate `dpl_GuRkcVveyLWofjYFerxF2mSGqQpa` reached READY with custom
+domain assignment skipped. Its own `/api/health` returned the exact merge SHA,
+deployment and project identities. The operator completed secure sign-in to the
+candidate origin, and authenticated dashboard, audit, insights, thumbnail and
+storyboard views were inspected without production-record writes or AI generation.
+The audit's RPC/DB filter returned all five samples and its export parsed as the
+expected sanitized JSON. The sidebar settings opened and closed with Escape.
+
+At 1363×936, the dashboard and storyboard document had zero horizontal overflow.
+The four empty storyboard panels measured 337.5×274.797px each, with 12px gaps in
+two rows and two columns. This is a live staged observation, separate from the
+synthetic browser/SSR contracts above. The candidate origin still encountered
+Naver map authentication failure; this is not successful provider-origin map QA.
+
+This staged review found two additional issues before domain promotion. The
+thumbnail's desktop `1fr` row reserved roughly 149px between its rendered canvas
+and tools. It now uses a shrinkable 16:9 flex item followed by a non-shrinking
+toolbar, preserving the existing fit calculation, mobile scroll and edit handles.
+The assistant-unavailable message also offered direct request writing while the
+actual form was held. It now derives request actions from the existing readiness
+state and blocks proposal transfer while held or busy; planner availability stays
+independent. Focused non-browser checks cover the layout contract and actual
+conversation SSR/proposal callback. A new candidate's rendered behavior and final
+production promotion still require their own readback; this first staged build
+was not promoted by this record.
