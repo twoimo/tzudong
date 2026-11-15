@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import builtins
+import contextlib
 import importlib.util
+import io
 import json
 import sys
 import tempfile
@@ -54,7 +56,7 @@ LAAJ_LINE = {
 
 
 class TransformRuleMergeReadAmplificationTests(unittest.TestCase):
-    def _run_transform(self, line_count: int) -> tuple[int, list[dict]]:
+    def _run_transform(self, line_count: int, meta_text: str = "") -> tuple[int, list[dict]]:
         with tempfile.TemporaryDirectory() as root:
             root_path = Path(root)
             crawling = root_path / "crawling"
@@ -66,6 +68,8 @@ class TransformRuleMergeReadAmplificationTests(unittest.TestCase):
             laaj_dir = evaluation / "evaluation" / "laaj_results"
             rule_dir.mkdir(parents=True)
             laaj_dir.mkdir(parents=True)
+            if meta_text:
+                (crawling / "meta" / "videoA.jsonl").write_text(meta_text, encoding="utf-8")
 
             rule_file = rule_dir / "videoA.jsonl"
             rule_file.write_text(
@@ -130,6 +134,28 @@ class TransformRuleMergeReadAmplificationTests(unittest.TestCase):
         self.assertEqual(1, rule_opens)
         self.assertEqual(1, len(rows))
         self.assertEqual("정원분식", rows[0]["origin_name"])
+
+    def test_corrupt_meta_lines_are_counted_and_surfaced(self):
+        meta_text = (
+            json.dumps({"recollect_id": 0, "title": "영상 제목"}, ensure_ascii=False)
+            + "\n\n"
+            + '{"recollect_id": 1, "title": "잘린\n'
+        )
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            _, rows = self._run_transform(line_count=1, meta_text=meta_text)
+
+        self.assertEqual("영상 제목", rows[0]["youtube_meta"]["title"])
+        events = [json.loads(line) for line in stdout.getvalue().splitlines()]
+        self.assertIn({"operation": "transform_meta_corrupt_lines", "count": 1}, events)
+
+    def test_clean_meta_emits_no_corrupt_line_warning(self):
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            self._run_transform(line_count=1, meta_text='{"recollect_id": 0}\n')
+
+        operations = [json.loads(line)["operation"] for line in stdout.getvalue().splitlines()]
+        self.assertEqual(["transform_complete"], operations)
 
 
 if __name__ == "__main__":
