@@ -1751,7 +1751,7 @@ SQL
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$index_prerequisites"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
-    20261026120000_atomic_edit_submission_request.sql|20261026130000_atomic_edit_public_business_phone.sql|20261028195647_sponsorship_base_metadata_manual_confirmation.sql|20261115062631_home_youtube_kpi_metrics.sql)
+    20261026120000_atomic_edit_submission_request.sql|20261026130000_atomic_edit_public_business_phone.sql|20261028195647_sponsorship_base_metadata_manual_confirmation.sql|20261115074830_home_youtube_kpi_metrics.sql)
       # These immutable sources have no BEGIN/COMMIT. Their SET LOCAL, LOCK,
       # and any ON COMMIT DROP witnesses require the caller's outer transaction.
       # Replay the original bytes, preserving every executor/G014 assertion.

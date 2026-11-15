@@ -16,7 +16,7 @@ from backend.supabase.tests import test_service_invoker_contract as previous
 
 ROOT = Path(__file__).resolve().parents[3]
 MIGRATIONS = ROOT / "backend/supabase/migrations"
-MIGRATION = MIGRATIONS / "20261115062631_home_youtube_kpi_metrics.sql"
+MIGRATION = MIGRATIONS / "20261115074830_home_youtube_kpi_metrics.sql"
 PREIMAGES = Path(__file__).with_name("fixtures") / "home_kpi_g014_preimages_20261115.json"
 BEHAVIOR = Path(__file__).with_name("home_youtube_kpi_rpc.sql")
 ARCHIVE_BEHAVIOR = Path(__file__).with_name("home_youtube_kpi_archive_trigger.sql")
