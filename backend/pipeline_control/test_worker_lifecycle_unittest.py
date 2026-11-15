@@ -3,6 +3,8 @@ from __future__ import annotations
 import io
 import json
 import os
+import signal
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -23,6 +25,107 @@ from backend.pipeline_control.worker import process_one
 
 STEP_TIMEOUT_ENV = "TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS"
 DAY = 86_400.0
+REPO_ROOT = Path(__file__).resolve().parents[2]
+WORKER_ENVIRONMENT = {
+    "PATH": os.environ.get("PATH", ""),
+    "TZUDONG_DATA_ENV": "local_db",
+    "TZUDONG_DATA_SINK": "local_db",
+    "PIPELINE_CONTROL_DSN": "postgresql://tzudong@127.0.0.1:54322/postgres",
+    "RUN_DAILY_EXECUTION_SHA": "a" * 40,
+}
+WORKER_SIGNALLED_DURING_A_PHASE = """
+import os, sys
+from functools import partial
+from pathlib import Path
+from unittest.mock import patch
+
+from backend.pipeline_control import adapter, media_cache, worker
+from backend.pipeline_control.file_store import FileStore
+
+root, phase, signum = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3])
+store = FileStore(root / "store.json")
+run, _ = store.create_run(
+    target="tzuyang",
+    profile="heavy_local",
+    idempotency_key="signalled-001",
+    payload={},
+    actor="qa",
+    request_id="req-signalled",
+    dry_run=phase == "dry_run_step",
+)
+(root / "run_id").write_text(run.id)
+owner, name = {
+    "claim": (store, "claim"),
+    "preflight": (worker, "preflight_data_sink"),
+    "raw_document": (adapter, "emit_raw_document"),
+    "dry_run_step": (adapter, "run_daily_helper_dry_run"),
+    "cache_cleanup": (media_cache.shutil, "rmtree"),
+}[phase]
+call = getattr(owner, name)
+
+
+def signalled(*args, **kwargs):
+    os.kill(os.getpid(), signum)
+    return call(*args, **kwargs)
+
+
+with patch.object(owner, name, signalled), patch.object(
+    worker, "owned_media_cache", partial(media_cache.owned_media_cache, root=root / "run-cache")
+):
+    worker.process_one(
+        store, live=True, runner=lambda argv: 0, manifest_path=root / "summary.json", run_id=run.id
+    )
+"""
+WORKER_KILLED_WHILE_CLEANING_UP_A_STOPPED_STEP = """
+import os, signal, subprocess, sys
+from functools import partial
+from pathlib import Path
+from unittest.mock import patch
+
+from backend.pipeline_control import media_cache, worker
+from backend.pipeline_control.adapter import default_live_runner
+from backend.pipeline_control.file_store import FileStore
+
+root = Path(sys.argv[1])
+store = FileStore(root / "store.json")
+run, _ = store.create_run(
+    target="tzuyang",
+    profile="heavy_local",
+    idempotency_key="killed-000001",
+    payload={},
+    actor="qa",
+    request_id="req-killed",
+    dry_run=False,
+)
+(root / "run_id").write_text(run.id)
+spawn = subprocess.Popen
+spawned = []
+
+
+def spawn_then_stop(*args, **kwargs):
+    process = spawn(*args, **kwargs)
+    if not spawned:
+        spawned.append(process)
+        os.kill(os.getpid(), signal.SIGTERM)
+    return process
+
+
+def killed_by_the_daemon(*args, **kwargs):
+    os.kill(os.getpid(), signal.SIGKILL)
+
+
+subprocess.Popen = spawn_then_stop
+with patch.object(media_cache.shutil, "rmtree", killed_by_the_daemon), patch.object(
+    worker, "owned_media_cache", partial(media_cache.owned_media_cache, root=root / "run-cache")
+):
+    worker.process_one(
+        store,
+        live=True,
+        runner=lambda argv: default_live_runner([sys.executable, "-c", "import time; time.sleep(30)"]),
+        manifest_path=root / "summary.json",
+        run_id=run.id,
+    )
+"""
 
 
 class _Clock:
@@ -297,6 +400,62 @@ class UnexpectedErrorTests(unittest.TestCase):
                     self.assertEqual(
                         (manifest["finalStatus"], manifest["jobId"]), ("ERROR", run.id)
                     )
+
+
+class StopSignalTests(unittest.TestCase):
+    def _worker(self, script: str, *args: str) -> tuple[int, dict, dict, dict | None]:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            worker = subprocess.run(
+                [sys.executable, "-c", script, str(root), *args],
+                cwd=REPO_ROOT,
+                env=WORKER_ENVIRONMENT,
+                capture_output=True,
+                timeout=60,
+            )
+            store = _read(root / "store.json")
+            run = store["runs"][(root / "run_id").read_text()]
+            summary = root / "summary.json"
+            manifest = _read(summary) if summary.exists() else None
+        return worker.returncode, run, store["locks"], manifest
+
+    def _assert_recorded_failed(self, run: dict, locks: dict, manifest: dict | None) -> None:
+        self.assertEqual((run["status"], run["error_code"]), ("Failed", "worker_interrupted"))
+        self.assertEqual(locks, {})
+        self.assertIsNotNone(manifest)
+        self.assertEqual((manifest["finalStatus"], manifest["jobId"]), ("ERROR", run["id"]))
+
+    def test_stop_signal_outside_a_step_fails_the_run_with_a_manifest(self) -> None:
+        for phase, signum in (
+            ("claim", signal.SIGTERM),
+            ("preflight", signal.SIGTERM),
+            ("raw_document", signal.SIGTERM),
+            ("raw_document", signal.SIGHUP),
+            ("dry_run_step", signal.SIGTERM),
+        ):
+            with self.subTest(phase=phase, signal=signum.name):
+                code, run, locks, manifest = self._worker(
+                    WORKER_SIGNALLED_DURING_A_PHASE, phase, str(int(signum))
+                )
+                self._assert_recorded_failed(run, locks, manifest)
+                self.assertEqual(code, 128 + signum)
+
+    def test_stop_signal_during_cleanup_keeps_the_recorded_success(self) -> None:
+        code, run, locks, manifest = self._worker(
+            WORKER_SIGNALLED_DURING_A_PHASE, "cache_cleanup", str(int(signal.SIGTERM))
+        )
+
+        self.assertEqual(run["status"], "Succeeded")
+        self.assertEqual(locks, {})
+        self.assertIsNotNone(manifest)
+        self.assertEqual((manifest["finalStatus"], manifest["jobId"]), ("OK", run["id"]))
+        self.assertEqual(code, 128 + signal.SIGTERM)
+
+    def test_kill_during_cleanup_after_a_stopped_step_leaves_the_run_recorded(self) -> None:
+        code, run, locks, manifest = self._worker(WORKER_KILLED_WHILE_CLEANING_UP_A_STOPPED_STEP)
+
+        self._assert_recorded_failed(run, locks, manifest)
+        self.assertEqual(code, -signal.SIGKILL)
 
 
 class RunWindowTests(unittest.TestCase):
