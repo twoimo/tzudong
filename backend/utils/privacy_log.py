@@ -293,3 +293,13 @@ def sanitize_log_value(
             active_containers.remove(container_id)
 
     return sanitize(value, 0)
+
+
+def sanitize_uuid_log_value(value: Any) -> Any:
+    """Sanitize one id field. Keep it as is only when it is exactly a lowercase
+    canonical UUID string, and sanitize anything else as ``sanitize_log_value``
+    does. Nested values never get the exemption.
+    """
+    if type(value) is str and _CANONICAL_UUID_RE.fullmatch(value):
+        return value
+    return sanitize_log_value(value)
