@@ -14,19 +14,11 @@ export const PUBLIC_LIST_KEYS = [
   "error_code",
   "dry_run",
   "adapter_index",
+  "pause_requested",
 ] as const;
 
 export type PipelineListKey = (typeof PUBLIC_LIST_KEYS)[number];
 export type PipelineRunAction = "enqueue" | "pause" | "resume" | "cancel";
-export type PipelineListJob = {
-  id: string;
-  target: string;
-  profile: string;
-  status: string;
-  error_code?: string | null;
-  dry_run?: boolean;
-  adapter_index?: number;
-};
 
 export function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -193,7 +185,11 @@ export function snapshotRevision(input: {
       }),
       jobs: jobs.map((row) => {
         const item = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
-        return { id: String(item.id ?? ""), status: String(item.status ?? "") };
+        return {
+          id: String(item.id ?? ""),
+          status: String(item.status ?? ""),
+          pause_requested: item.pause_requested === true,
+        };
       }),
     }),
   );
