@@ -174,7 +174,9 @@ def main(argv: list[str] | None = None) -> int:
     }
     store: MemoryStore = FileStore()
     with stop_signals() as stops, stops.held():
-        queued = [{"queued": True, **job} for job in drain()]
+        # A stop ends the wait for the queue lock at once. Once the rows are
+        # taken, a stop waits until their runs are recorded.
+        queued = [{"queued": True, **job} for job in drain(waiting=stops.released)]
         if queued:
             try:
                 return _run_jobs(store, queued, args.target, live)

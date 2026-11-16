@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+Waiting = Callable[[], AbstractContextManager[object]]
 
 DEFAULT_QUEUE = Path(__file__).resolve().parents[1] / "log" / "cron" / "pipeline-queue.jsonl"
 
@@ -32,9 +35,10 @@ def _rollback_poison(path: Path, existed: bool, size: int) -> None:
 
 
 class _Lock:
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, waiting: Waiting = nullcontext) -> None:
         self.path = path
         self.handle = None
+        self.waiting = waiting
 
     def __enter__(self):
         lock = _lock_path(self.path)
@@ -42,7 +46,8 @@ class _Lock:
         self.handle = lock.open("a+")
         import fcntl
 
-        fcntl.flock(self.handle.fileno(), fcntl.LOCK_EX)
+        with self.waiting():
+            fcntl.flock(self.handle.fileno(), fcntl.LOCK_EX)
         return self.handle
 
     def __exit__(self, *exc: object) -> None:
@@ -62,11 +67,11 @@ def enqueue(payload: dict[str, Any], path: Path | None = None) -> Path:
     return destination
 
 
-def drain(path: Path | None = None) -> list[dict[str, Any]]:
+def drain(path: Path | None = None, *, waiting: Waiting = nullcontext) -> list[dict[str, Any]]:
     source = path or DEFAULT_QUEUE
     if not source.exists():
         return []
-    with _Lock(source):
+    with _Lock(source, waiting):
         if not source.exists():
             return []
         tmp = source.with_suffix(source.suffix + ".taking")
