@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
@@ -16,6 +17,7 @@ from unittest.mock import patch
 from backend.pipeline_control import adapter, file_queue, live_run
 from backend.pipeline_control.dsn_guard import DsnGuardError
 from backend.pipeline_control.file_store import FileStore
+from backend.pipeline_control.store import LEASE_TTL_SECONDS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKER_ENVIRONMENT = {
@@ -59,6 +61,14 @@ with patch.object(owner, name, call_then_stop), patch.object(
 
 def _read(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+class _Clock:
+    def __init__(self) -> None:
+        self.now = time.time()
+
+    def __call__(self) -> float:
+        return self.now
 
 
 class QueuedRunTests(unittest.TestCase):
@@ -189,6 +199,52 @@ class QueuedRunTests(unittest.TestCase):
         )
         self.assertEqual(store["locks"], {})
         self.assertEqual(file_queue.drain(self.queue), [])
+
+    def _first_run_outlives_the_lease_of_the_second(self, *, then_stop: bool) -> list[str]:
+        run_ids = self._enqueue_like_the_api(2)
+        clock = _Clock()
+        steps: list[str] = []
+
+        def step_on_a_slow_host(step: str) -> None:
+            if not steps:
+                clock.now += LEASE_TTL_SECONDS + 1
+                if then_stop:
+                    raise KeyboardInterrupt
+            steps.append(step)
+
+        with self._worker_in_this_process(), patch.object(
+            live_run, "FileStore", lambda: FileStore(clock=clock)
+        ), patch.object(adapter, "run_daily_helper_dry_run", step_on_a_slow_host):
+            if then_stop:
+                with self.assertRaises(KeyboardInterrupt):
+                    live_run.main([])
+            else:
+                self.assertEqual(live_run.main([]), 1)
+        return run_ids
+
+    def _assert_run_expired_with_its_manifest(self, run_ids: list[str], index: int) -> None:
+        store = _read(self.root / "store.json")
+        run_id = run_ids[index - 1]
+        run = store["runs"][run_id]
+        self.assertEqual((run["status"], run["error_code"]), ("Failed", "lease_expired"))
+        summary = self.root / "live-runs" / f"run-{index}-current-summary.json"
+        self.assertTrue(summary.exists(), "the run has no manifest")
+        manifest = _read(summary)
+        self.assertEqual((manifest["finalStatus"], manifest["jobId"]), ("ERROR", run_id))
+        self.assertEqual(store["locks"], {})
+
+    def test_taken_run_whose_lease_ended_before_its_turn_gets_a_manifest_that_names_it(self) -> None:
+        run_ids = self._first_run_outlives_the_lease_of_the_second(then_stop=False)
+
+        self._assert_run_expired_with_its_manifest(run_ids, 2)
+
+    def test_stop_leaves_a_manifest_for_a_taken_run_whose_lease_ended(self) -> None:
+        run_ids = self._first_run_outlives_the_lease_of_the_second(then_stop=True)
+
+        self._assert_run_expired_with_its_manifest(run_ids, 2)
+        first = _read(self.root / "store.json")["runs"][run_ids[0]]
+        self.assertEqual((first["status"], first["error_code"]), ("Failed", "worker_interrupted"))
+        self.assertEqual(_read(self.root / "live-runs" / "run-1-current-summary.json")["jobId"], run_ids[0])
 
     def test_error_before_the_worker_claims_a_queued_run_fails_that_run(self) -> None:
         run_ids = self._enqueue_like_the_api(2)
