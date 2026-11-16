@@ -108,6 +108,26 @@ class PrivacyLogTests(unittest.TestCase):
             [0, "[TRUNCATED]"],
         )
 
+    def test_uuid_keys_keep_only_canonical_uuids_and_never_override_sensitive_keys(self) -> None:
+        run_id = "d107033f-3a53-4406-af19-13543470ddb2"
+        mangled = redact_log_text(run_id)
+        self.assertNotEqual(mangled, run_id)
+        self.assertEqual(sanitize_log_value({"id": run_id}), {"id": mangled})
+
+        keys = frozenset({"id", "token", "latitude"})
+        sanitized = sanitize_log_value(
+            {"id": run_id, "token": run_id, "latitude": run_id, "items": [{"id": "010-1234-5678"}]},
+            uuid_keys=keys,
+        )
+        self.assertEqual(
+            sanitized,
+            {"id": run_id, "token": REDACTED, "latitude": REDACTED, "items": [{"id": REDACTED}]},
+        )
+        self.assertEqual(
+            sanitize_log_value({"id": run_id}, max_string_length=20, uuid_keys=keys),
+            {"id": "d107033f-[TRUNCATED]"},
+        )
+
     def test_logger_redacts_terminal_files_json_and_stats(self) -> None:
         secret = "logger-secret-987"
         with TemporaryDirectory() as directory:
