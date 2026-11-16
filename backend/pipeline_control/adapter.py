@@ -94,7 +94,7 @@ class StopSignals:
 
     def __init__(self) -> None:
         self.held_signal: int | None = None
-        self._holds = 0
+        self._holding = False
         self._previous: dict[int, Any] = {}
 
     def __enter__(self) -> StopSignals:
@@ -110,33 +110,38 @@ class StopSignals:
             signal.signal(signum, handler)
 
     def _stop(self, signum: int, _frame: object) -> None:
-        if not self._holds:
-            raise _stop_exception(signum)
-        self.held_signal = self.held_signal or signum
+        if self._holding:
+            self.held_signal = self.held_signal or signum
+        else:
+            self._raise_and_hold(signum)
+
+    def _raise_and_hold(self, signum: int) -> None:
+        self._holding = True
+        raise _stop_exception(signum)
 
     def _raise_held(self) -> None:
         if self.held_signal is not None:
             signum, self.held_signal = self.held_signal, None
-            raise _stop_exception(signum)
+            self._raise_and_hold(signum)
 
     @contextmanager
     def held(self) -> Iterator[None]:
-        self._holds += 1
+        outer, self._holding = self._holding, True
         try:
             yield
         finally:
-            self._holds -= 1
-        if not self._holds:
+            self._holding = outer
+        if not outer:
             self._raise_held()
 
     @contextmanager
     def released(self) -> Iterator[None]:
-        holds, self._holds = self._holds, 0
+        outer, self._holding = self._holding, False
         try:
             self._raise_held()
             yield
         finally:
-            self._holds = holds
+            self._holding = outer
 
 
 def _stop_exception(signum: int) -> BaseException:
