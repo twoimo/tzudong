@@ -475,7 +475,7 @@
       "taskId": "12",
       "evidenceClasses": ["checkpoint", "source"],
       "implementationPaths": [".github/workflows/daily-crawler.yml", "backend/bin/run_hosted_new_video_pipeline.py", "backend/pipeline_control/health.py", "backend/pipeline_control/manifest.py", "backend/pipeline_control/worker.py"],
-      "verificationModules": ["backend.pipeline_control.test_end_to_end_lite_run", "backend.pipeline_control.test_worker_lifecycle_unittest", "backend.pipeline_control.test_run_lease_unittest", "backend.pipeline_control.test_step_runner_unittest", "backend.pipeline_control.test_durable_writes_unittest"],
+      "verificationModules": ["backend.pipeline_control.test_end_to_end_lite_run", "backend.pipeline_control.test_worker_lifecycle_unittest", "backend.pipeline_control.test_run_lease_unittest", "backend.pipeline_control.test_step_runner_unittest", "backend.pipeline_control.test_durable_writes_unittest", "backend.pipeline_control.test_api_run_id_redaction_unittest"],
       "externalEvidenceTypes": []
     },
     {
