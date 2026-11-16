@@ -1313,6 +1313,32 @@ class OperatorSnapshotTests(unittest.TestCase):
         self.assertEqual(self._status(snap, "tzuyang"), "Paused")
         self.assertEqual(len(snap["jobs"]), 1)
 
+    def test_listed_run_shows_a_pause_that_waits_for_the_step_boundary(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snappend01",
+            payload={},
+            actor="admin",
+            request_id="req-pp",
+        )
+        store.claim()
+
+        def listed() -> tuple[str, bool]:
+            snap = store.operator_snapshot(load_targets())
+            self._allowlisted(snap["jobs"])
+            return snap["jobs"][0]["status"], snap["jobs"][0]["pause_requested"]
+
+        self.assertEqual(listed(), ("Fetching", False))
+        store.control(run.id, "pause", actor="admin", request_id="req-pp2")
+        self.assertEqual(listed(), ("Fetching", True))
+        store.control(run.id, "resume", actor="admin", request_id="req-pp3")
+        self.assertEqual(listed(), ("Fetching", False))
+        store.control(run.id, "pause", actor="admin", request_id="req-pp4")
+        store.beat(run.id)
+        self.assertEqual(listed(), ("Paused", False))
+
     def test_overlay_idle_after_success_and_fail(self) -> None:
         store = MemoryStore(clock=lambda: 1_000.0)
         ok, _ = store.create_run(
