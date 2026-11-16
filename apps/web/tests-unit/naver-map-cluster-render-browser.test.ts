@@ -27,6 +27,12 @@ const daejeon: FixtureRestaurant[] = ['A', 'B', 'C', 'D', 'E'].map((letter, inde
     id: `daejeon-${letter.toLowerCase()}`, name: `합성 대전 ${letter}`, lat: 36.35, lng: 127.38 + index * 0.005,
     categories: ['한식'], road_address: `대전광역시 서구 합성로 ${index + 1}`,
 }));
+// Two restaurants in one Seoul district stay below the three-marker district cluster at zoom 11-12.
+const gangnam: FixtureRestaurant[] = [
+    { id: 'gangnam-a', name: '합성 강남 A', lat: 37.5172, lng: 127.0473, categories: ['한식'], road_address: '서울특별시 강남구 합성로 1' },
+    { id: 'gangnam-b', name: '합성 강남 B', lat: 37.5152, lng: 127.0433, categories: ['일식'], road_address: '서울특별시 강남구 합성로 2' },
+];
+const seocho: FixtureRestaurant = { id: 'seocho-a', name: '합성 서초 A', lat: 37.4837, lng: 127.0324, categories: ['중식'], road_address: '서울특별시 서초구 합성로 1' };
 
 const entry = `
 import React, {useEffect, useState} from 'react';
@@ -150,6 +156,18 @@ async function selectRestaurant(page: Page, id: string | null) {
     }, id);
     await ui.poll(() => page.evaluate(() => (globalThis as unknown as { __committedSelectedId: string | null }).__committedSelectedId)).toBe(id);
 }
+async function recordMarkerWidths(page: Page, name: string) {
+    await page.evaluate(label => {
+        const widths: string[] = [];
+        (window as unknown as { __recordedMarkerWidths: string[] }).__recordedMarkerWidths = widths;
+        new MutationObserver(() => {
+            const button = document.querySelector(`button.tzudong-individual-marker[aria-label="${label}"]`);
+            widths.push(button ? getComputedStyle(button).width : 'missing');
+        }).observe(document.body, { childList: true, subtree: true, attributes: true });
+    }, `${name} 상세 보기`);
+}
+const recordedMarkerWidths = (page: Page) => page.evaluate(() =>
+    (window as unknown as { __recordedMarkerWidths: string[] }).__recordedMarkerWidths);
 const markerCountFrames = (page: Page) => page.evaluate(() =>
     (window as unknown as { __markerCountFrames: number[] }).__markerCountFrames);
 const readIO = (page: Page) => page.evaluate(() => (globalThis as unknown as { __clusterIO: ClusterIO }).__clusterIO);
@@ -280,6 +298,67 @@ describe('NaverMapView cluster and marker rendering', () => {
             await ui(individualMarkers(page)).toHaveCount(5);
             expect(await markerWidth(page, busan[2].name)).toBe('42px');
             expect(await markerWidth(page, busan[0].name)).toBe('32px');
+            expect(errors).toEqual([]);
+        } finally { await page.close(); }
+    }, 60_000);
+
+    browserTest('a selected marker from an expanded cluster stays enlarged while the map zooms back out', async () => {
+        const { page, errors } = await openMap({ lat: 35.1587, lng: 129.1604, z: 11 });
+        try {
+            await cluster(page, 5).click();
+            for (const restaurant of busan) await ui(marker(page, restaurant.name)).toHaveCount(1);
+            await marker(page, busan[1].name).click();
+            await ui.poll(() => markerWidth(page, busan[1].name)).toBe('42px');
+
+            await recordMarkerWidths(page, busan[1].name);
+            await setMapZoom(page, 11);
+            await ui.poll(async () => (await lastContextual(page))?.zoom).toBe(11);
+            await ui(individualMarkers(page)).toHaveCount(5);
+            await ui(anyCluster(page)).toHaveCount(0);
+            expect(await markerWidth(page, busan[1].name)).toBe('42px');
+            expect(await markerWidth(page, busan[0].name)).toBe('32px');
+            expect((await recordedMarkerWidths(page)).filter(width => width !== '42px')).toEqual([]);
+            expect(errors).toEqual([]);
+        } finally { await page.close(); }
+    }, 60_000);
+
+    browserTest('a selected marker in a small Seoul district stays enlarged when the result set changes', async () => {
+        const { page, errors } = await openMap({ lat: 37.5005, lng: 127.0400, z: 12 }, gangnam);
+        try {
+            for (const restaurant of gangnam) await ui(marker(page, restaurant.name)).toHaveCount(1);
+            await ui(anyCluster(page)).toHaveCount(0);
+            await selectRestaurant(page, gangnam[0].id);
+            await ui.poll(() => markerWidth(page, gangnam[0].name)).toBe('42px');
+
+            await recordMarkerWidths(page, gangnam[0].name);
+            await setRestaurants(page, [...gangnam, seocho]);
+            await ui(marker(page, seocho.name)).toHaveCount(1);
+            await ui(individualMarkers(page)).toHaveCount(3);
+            await ui(anyCluster(page)).toHaveCount(0);
+            expect(await mapZoom(page)).toBe(12);
+            expect(await markerWidth(page, gangnam[0].name)).toBe('42px');
+            expect(await markerWidth(page, gangnam[1].name)).toBe('32px');
+            expect((await recordedMarkerWidths(page)).filter(width => width !== '42px')).toEqual([]);
+            expect(errors).toEqual([]);
+        } finally { await page.close(); }
+    }, 60_000);
+
+    browserTest('a selected single point in the supercluster view stays enlarged when the result set changes', async () => {
+        const { page, errors } = await openMap({ lat: 36.35, lng: 127.39, z: 12 }, daejeon);
+        try {
+            for (const restaurant of daejeon) await ui(marker(page, restaurant.name)).toHaveCount(1);
+            await ui(anyCluster(page)).toHaveCount(0);
+            await selectRestaurant(page, daejeon[2].id);
+            await ui.poll(() => markerWidth(page, daejeon[2].name)).toBe('42px');
+
+            await recordMarkerWidths(page, daejeon[2].name);
+            await setRestaurants(page, daejeon.slice(0, 4));
+            await ui(marker(page, daejeon[4].name)).toHaveCount(0);
+            await ui(individualMarkers(page)).toHaveCount(4);
+            expect(await mapZoom(page)).toBe(12);
+            expect(await markerWidth(page, daejeon[2].name)).toBe('42px');
+            expect(await markerWidth(page, daejeon[0].name)).toBe('32px');
+            expect((await recordedMarkerWidths(page)).filter(width => width !== '42px')).toEqual([]);
             expect(errors).toEqual([]);
         } finally { await page.close(); }
     }, 60_000);
