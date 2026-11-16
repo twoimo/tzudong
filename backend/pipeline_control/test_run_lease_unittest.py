@@ -130,6 +130,13 @@ class _LeaseContract:
         self.assertEqual(self.store.audit[-1]["transition"], "cancel_approved")
         self.assertEqual(self._enqueue("cancel-step-03").status, "Queued")
 
+    def test_cancel_wins_over_a_pause_that_waits_for_the_same_step_boundary(self) -> None:
+        run = self._claimed("cancel-pause-1")
+        self.store.control(run.id, "pause", actor="operator", request_id="req-pause")
+        self.store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+        self.assertEqual(self.store.beat(run.id).status, "Cancelled")
+        self.assertEqual(self._enqueue("cancel-pause-2").status, "Queued")
+
     def test_cancelled_run_of_a_dead_worker_keeps_its_target_until_the_lease_ends(self) -> None:
         run = self._claimed("cancel-dead-01")
         self.store.beat(run.id, STEP_LEASE_SECONDS)
