@@ -167,6 +167,29 @@ class RunIdResponseTests(unittest.TestCase):
                 self.assertEqual(respond(body)[key], redact_log_text(value))
                 self.assertNotEqual(respond(body)[key], value)
 
+    def test_only_a_canonical_uuid_string_directly_under_the_exact_id_key_is_exempt(self):
+        phone_hyphen_run = "010-1234-5678-010-1234-5678-010-1234"
+        version_0 = FAILED_RUN_ID[:14] + "0" + FAILED_RUN_ID[15:]
+        version_9 = FAILED_RUN_ID[:14] + "9" + FAILED_RUN_ID[15:]
+        variant_c = FAILED_RUN_ID[:19] + "c" + FAILED_RUN_ID[20:]
+        variant_0 = FAILED_RUN_ID[:19] + "0" + FAILED_RUN_ID[20:]
+        cases = [
+            ({"id": phone_hyphen_run}, {"id": redact_log_text(phone_hyphen_run)}),
+            ({"id": version_0}, {"id": redact_log_text(version_0)}),
+            ({"id": version_9}, {"id": redact_log_text(version_9)}),
+            ({"id": variant_c}, {"id": redact_log_text(variant_c)}),
+            ({"id": variant_0}, {"id": redact_log_text(variant_0)}),
+            ({"Id": FAILED_RUN_ID}, {"Id": redact_log_text(FAILED_RUN_ID)}),
+            ({"ID": FAILED_RUN_ID}, {"ID": redact_log_text(FAILED_RUN_ID)}),
+            ({"_id": FAILED_RUN_ID}, {"_id": redact_log_text(FAILED_RUN_ID)}),
+            ({"id": [FAILED_RUN_ID]}, {"id": [redact_log_text(FAILED_RUN_ID)]}),
+        ]
+        for body, expected in cases:
+            with self.subTest(body=body):
+                self.assertNotEqual(expected, body)
+                self.assertEqual(respond(body), expected)
+        self.assertNotIn("010-1234-5678", json.dumps(respond({"id": phone_hyphen_run})))
+
 
 if __name__ == "__main__":
     unittest.main()
