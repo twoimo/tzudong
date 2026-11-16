@@ -316,7 +316,9 @@ class AtomicMemoryStore:
 
     def finish_dry_run(self, run_id: str) -> RunRecord:
         with self._gate:
-            run = self.runs[run_id]
+            run = self.runs.get(run_id)
+            if run is None:
+                raise ControlPlaneError("run_not_found", 404)
             if run.status not in SUCCEED_FROM:
                 return run
             run.adapter_index = len(ADAPTER_STEPS)
@@ -328,7 +330,9 @@ class AtomicMemoryStore:
 
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
         with self._gate:
-            run = self.runs[run_id]
+            run = self.runs.get(run_id)
+            if run is None:
+                raise ControlPlaneError("run_not_found", 404)
             if run.status not in FAIL_FROM:
                 return run
             run.status = "Failed"
