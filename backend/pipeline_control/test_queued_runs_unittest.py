@@ -57,6 +57,28 @@ with patch.object(owner, name, call_then_stop), patch.object(
 ), patch.object(live_run, "CANDIDATE_DIR", root / "live-runs"):
     raise SystemExit(live_run.main([]))
 """
+WORKER_STOPPED_WHILE_IT_WAITS_FOR_THE_QUEUE = """
+import fcntl, os, signal, sys, threading
+from pathlib import Path
+from unittest.mock import patch
+
+from backend.pipeline_control import file_queue, live_run
+
+root = Path(sys.argv[1])
+flock = fcntl.flock
+
+
+def stop_while_waiting(fd, operation):
+    if operation == fcntl.LOCK_EX:
+        threading.Timer(0.5, os.kill, (os.getpid(), signal.SIGTERM)).start()
+    return flock(fd, operation)
+
+
+with patch.object(fcntl, "flock", stop_while_waiting), patch.object(
+    file_queue, "DEFAULT_QUEUE", root / "pipeline-queue.jsonl"
+), patch.object(live_run, "CANDIDATE_DIR", root / "live-runs"):
+    raise SystemExit(live_run.main([]))
+"""
 
 
 def _read(path: Path) -> dict:
@@ -169,6 +191,22 @@ class QueuedRunTests(unittest.TestCase):
 
         self.assertFalse((self.root / "store.json").exists())
         self.assertFalse((self.root / "live-runs").exists())
+
+    def test_stop_while_the_worker_waits_for_the_queue_ends_it_and_takes_nothing(self) -> None:
+        run_ids = self._enqueue_like_the_api(1)
+
+        with file_queue._Lock(self.queue):
+            worker = subprocess.run(
+                [sys.executable, "-c", WORKER_STOPPED_WHILE_IT_WAITS_FOR_THE_QUEUE, str(self.root)],
+                cwd=REPO_ROOT,
+                env=self.environment,
+                capture_output=True,
+                timeout=30,
+            )
+
+        self.assertEqual(worker.returncode, 128 + signal.SIGTERM)
+        self.assertEqual(_read(self.root / "store.json")["runs"][run_ids[0]]["status"], "Queued")
+        self.assertEqual([row["id"] for row in file_queue.drain(self.queue)], run_ids)
 
     def test_error_in_a_queued_run_fails_the_queued_runs_after_it(self) -> None:
         run_ids = self._enqueue_like_the_api(2)
