@@ -15,9 +15,14 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.pipeline_control.pg_store import PostgresStore
+from backend.pipeline_control.pg_store import AtomicMemoryStore, PostgresStore
 from backend.pipeline_control.state_machine import TERMINAL_STATUSES
-from backend.pipeline_control.test_store_parity_unittest import make_call
+from backend.pipeline_control.test_store_parity_unittest import (
+    Answer,
+    answers,
+    call_sequences,
+    make_call,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = (
@@ -160,6 +165,19 @@ class PostgresStoreTests(unittest.TestCase):
 
         self.assertEqual((beaten.status, beaten.pause_requested), ("Fetching", True))
         self.assertEqual(self.store.checkpoint(run_id).status, "Paused")
+
+    def test_model_answers_every_call_sequence_like_the_real_store(self) -> None:
+        different = []
+        for claimed, calls in call_sequences():
+            model = answers(AtomicMemoryStore(clock=lambda: 1_000.0), calls, claimed=claimed)
+            run_id = self._enqueue(claimed=claimed)
+            real = [
+                Answer(make_call(self.store, run_id, name, step), *self._observe(run_id))
+                for step, name in enumerate(calls)
+            ]
+            if real != model:
+                different.append((claimed, calls, real, model))
+        self.assertEqual(different[:3], [])
 
 
 if __name__ == "__main__":

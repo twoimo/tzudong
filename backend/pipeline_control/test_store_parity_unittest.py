@@ -99,6 +99,22 @@ class _StoreContract:
 
                 self.assertEqual((_observe(store, run_id), list(store.audit)), recorded)
 
+    def test_paused_run_keeps_its_pause_request_until_it_is_resumed(self) -> None:
+        for claimed in (False, True):
+            with self.subTest(claimed=claimed):
+                store = self.make_store()
+                run_id = _enqueue(store, claimed=claimed)
+                make_call(store, run_id, "pause", 0)
+                if claimed:
+                    make_call(store, run_id, "boundary", 1)
+                paused = store.get(run_id)
+                self.assertEqual((paused.status, paused.pause_requested), ("Paused", True))
+
+                make_call(store, run_id, "resume", 2)
+
+                resumed = store.get(run_id)
+                self.assertEqual((resumed.status, resumed.pause_requested), ("Queued", False))
+
 
 class MemoryStoreContractTests(_StoreContract, unittest.TestCase):
     def make_store(self):
@@ -146,6 +162,29 @@ class EveryCallSequenceTests(unittest.TestCase):
                         break
             with self.subTest(store=store):
                 self.assertEqual(changed[:3], [])
+
+    def test_postgres_model_answers_an_unfinished_run_like_memory_store(self) -> None:
+        different = []
+        for (claimed, calls), memory in self.memory.items():
+            for step, (ours, theirs) in enumerate(zip(memory, self.model[claimed, calls])):
+                if ours != theirs:
+                    different.append((claimed, calls[: step + 1], ours, theirs))
+                if ours != theirs or ours.status in TERMINAL_STATUSES:
+                    break
+        self.assertEqual(different[:3], [])
+
+    def test_only_a_boundary_or_a_resume_of_a_finished_run_is_answered_differently(self) -> None:
+        different = set()
+        for (claimed, calls), memory in self.memory.items():
+            finished = False
+            for name, ours, theirs in zip(calls, memory, self.model[claimed, calls]):
+                if finished and ours.result != theirs.result:
+                    different.add((name, ours.result, theirs.result))
+                finished = finished or ours.status in TERMINAL_STATUSES
+        self.assertEqual(
+            different,
+            {("boundary", "ok", "illegal_transition"), ("resume", "illegal_transition", "ok")},
+        )
 
 
 if __name__ == "__main__":
