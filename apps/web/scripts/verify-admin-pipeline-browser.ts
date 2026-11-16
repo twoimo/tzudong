@@ -28,10 +28,14 @@ await context.addInitScript(() => { localStorage.setItem('tzudong:e2e-admin-shel
 let scenario: 'available' | 'unavailable' | 'malformed' | 'gha' = 'available';
 let phase: 'normal' | 'stale' | 'apply-unavailable' = 'normal';
 let gets = 0, postsFulfilled = 0, externalDenied = 0, otherPostsDenied = 0, pageErrors = 0, consoleErrors = 0;
-const job = { id: '22222222-2222-4222-8222-222222222222', target: 'tzuyang', profile: 'heavy_local', status: 'Fetching', dry_run: true, adapter_index: 0, pause_requested: false };
+const job = { id: '22222222-2222-4222-8222-222222222222', target: 'tzuyang', profile: 'heavy_local', status: 'Fetching', dry_run: true, adapter_index: 0, pause_requested: false, cancel_requested: false };
 let currentJob = { ...job };
 const executing = () => currentJob.status === 'Fetching' || currentJob.status === 'Inserting';
-const stepBoundary = () => { if (currentJob.pause_requested && executing()) currentJob = { ...currentJob, status: 'Paused', pause_requested: false }; };
+const stepBoundary = () => {
+  if (!executing()) return;
+  if (currentJob.cancel_requested) currentJob = { ...currentJob, status: 'Cancelled' };
+  else if (currentJob.pause_requested) currentJob = { ...currentJob, status: 'Paused', pause_requested: false };
+};
 const fixtureEvents = [
   { name: 'Step 1 (URL Collection)', status: 'completed', durationSeconds: 1.25 },
   { name: 'Step 2 (Metadata)', status: 'completed', durationSeconds: 2 },
@@ -69,6 +73,7 @@ await context.route('**/*', async route => {
     if (phase === 'apply-unavailable') { await fulfill({ error: 'DO_NOT_RENDER_PRIVATE_RAW' }, 502); return; }
     if (body.action === 'pause') currentJob = executing() ? { ...currentJob, pause_requested: true } : { ...currentJob, status: 'Paused' };
     if (body.action === 'resume') currentJob = executing() ? { ...currentJob, pause_requested: false } : { ...currentJob, status: 'Queued', pause_requested: false };
+    if (body.action === 'cancel') currentJob = { ...currentJob, status: executing() ? currentJob.status : 'Cancelled', cancel_requested: true };
     await fulfill({ accepted: true, job: currentJob, readback: currentJob, audit: 'pipeline_control.audit' }); return;
   }
   if (url.pathname === '/api/admin/pipeline' && request.method() === 'GET') {

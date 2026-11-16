@@ -9,7 +9,7 @@ import sys
 import tempfile
 import time
 import unittest
-from contextlib import contextmanager, redirect_stdout
+from contextlib import contextmanager, redirect_stdout, suppress
 from pathlib import Path
 from typing import Iterator
 from unittest.mock import patch
@@ -78,6 +78,32 @@ with patch.object(owner, name, signalled), patch.object(
         store, live=True, runner=lambda argv: 0, manifest_path=root / "summary.json", run_id=run.id
     )
 """
+WORKER_STOPPED_AFTER_CREATING_ITS_RUN = """
+import os, signal, sys
+from pathlib import Path
+from unittest.mock import patch
+
+from backend.pipeline_control import live_run
+from backend.pipeline_control.file_store import FileStore
+
+root = Path(sys.argv[1])
+create_run = FileStore.create_run
+
+
+def create_run_then_stop(self, **kwargs):
+    run, created = create_run(self, **kwargs)
+    (root / "run_id").write_text(run.id)
+    os.kill(os.getpid(), signal.SIGTERM)
+    return run, created
+
+
+with patch.object(FileStore, "create_run", create_run_then_stop), patch.object(
+    live_run, "CANDIDATE_DIR", root
+):
+    live_run.run_once(
+        FileStore(root / "store.json"), target="tzuyang", index=1, live=True, runner=lambda argv: 0
+    )
+"""
 WORKER_KILLED_WHILE_CLEANING_UP_A_STOPPED_STEP = """
 import os, signal, subprocess, sys
 from functools import partial
@@ -129,14 +155,26 @@ with patch.object(media_cache.shutil, "rmtree", killed_by_the_daemon), patch.obj
     )
 """
 WORKER_STOPPED_AT_EACH_LINE = """
-import io, json, os, signal, sys, tempfile
+import contextlib, io, json, os, signal, sys, tempfile
 from contextlib import redirect_stdout
 from functools import partial
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.pipeline_control import media_cache, worker
+from backend.pipeline_control import adapter, media_cache, worker
+from backend.pipeline_control.adapter import StopSignals
 from backend.pipeline_control.file_store import FileStore
+
+first, second = (int(arg) for arg in sys.argv[1:3])
+in_a_real_step = sys.argv[3] == "in_a_real_step"
+STOP_SIGNAL_CODE = {
+    function.__code__
+    for function in (
+        getattr(member, "__wrapped__", member)
+        for member in (*vars(StopSignals).values(), adapter.stop_signals)
+    )
+    if hasattr(function, "__code__")
+}
 
 
 class Escaped(BaseException):
@@ -145,11 +183,6 @@ class Escaped(BaseException):
 
 def escaped(signum, frame):
     raise Escaped()
-
-
-def step_that_fills_the_cache(argv):
-    (Path(os.environ["VIDEO_CACHE_DIR"]) / "frame.bin").write_bytes(b"x")
-    return 0
 
 
 def stopped_at(event):
@@ -166,26 +199,65 @@ def stopped_at(event):
             dry_run=False,
         )
         lines = []
+        sent = []
+        real_step = []
+
+        def stop(signum):
+            sent.append(signum)
+            os.kill(os.getpid(), signum)
+
+        def step_that_fills_the_cache(argv):
+            (Path(os.environ["VIDEO_CACHE_DIR"]) / "frame.bin").write_bytes(b"x")
+            if not in_a_real_step or real_step:
+                return 0
+            real_step.append("running")
+            try:
+                return adapter.default_live_runner(["/usr/bin/true"])
+            finally:
+                real_step.append("ended")
+
+        def traced(code):
+            if in_a_real_step:
+                return real_step == ["running"] and code.co_filename in (
+                    adapter.__file__,
+                    contextlib.__file__,
+                )
+            return (
+                code is worker.process_one.__code__
+                or code in STOP_SIGNAL_CODE
+                or code.co_filename == contextlib.__file__
+            )
 
         def trace(frame, kind, arg):
-            if frame.f_code is not worker.process_one.__code__:
+            if not traced(frame.f_code):
                 return None
 
             def line(frame, kind, arg):
                 if kind == "line":
-                    lines.append(frame.f_lineno)
+                    lines.append(f"{frame.f_code.co_name}:{frame.f_lineno}")
                     if len(lines) == event:
-                        os.kill(os.getpid(), signal.SIGTERM)
+                        stop(first)
                 return line
 
             return line
 
-        signal.signal(signal.SIGTERM, escaped)
-        sys.settrace(trace)
-        try:
-            with patch.object(
-                worker, "owned_media_cache", partial(media_cache.owned_media_cache, root=root / "run-cache")
-            ), redirect_stdout(io.StringIO()):
+        def stopped_again(record):
+            def recording(*args, **kwargs):
+                if second and len(sent) == 1:
+                    stop(second)
+                return record(*args, **kwargs)
+
+            return recording
+
+        for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+            signal.signal(signum, escaped)
+        with patch.object(
+            worker, "owned_media_cache", partial(media_cache.owned_media_cache, root=root / "run-cache")
+        ), patch.object(FileStore, "finish_failed", stopped_again(FileStore.finish_failed)), patch.object(
+            FileStore, "finish_succeeded", stopped_again(FileStore.finish_succeeded)
+        ), redirect_stdout(io.StringIO()):
+            sys.settrace(trace)
+            try:
                 worker.process_one(
                     store,
                     live=True,
@@ -193,10 +265,10 @@ def stopped_at(event):
                     manifest_path=root / "summary.json",
                     run_id=run.id,
                 )
-        except BaseException:
-            pass
-        finally:
-            sys.settrace(None)
+            except BaseException:
+                pass
+            finally:
+                sys.settrace(None)
         state = json.loads((root / "store.json").read_text())
         return lines, {
             "line": lines[event - 1] if 0 < event <= len(lines) else None,
@@ -497,6 +569,43 @@ class LiveStepLeaseTests(unittest.TestCase):
         self.assertEqual(store.get(run.id).status, "Cancelled")
         self.assertEqual(manifest["finalStatus"], "ERROR")
 
+    def test_cancel_during_a_step_keeps_the_target_busy_until_the_step_ends(self) -> None:
+        clock = _Clock()
+        steps: list[list[str]] = []
+        rival_steps: list[list[str]] = []
+        during_step: dict[str, object] = {}
+
+        with _local_pipeline() as root:
+            path = root / "store.json"
+            run = _enqueue(FileStore(path, clock=clock))
+
+            def step_cancelled_by_the_operator(argv: list[str]) -> int:
+                steps.append(argv)
+                api = FileStore(path, clock=clock)
+                api.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+                during_step["second worker"] = run_once(
+                    FileStore(path, clock=clock),
+                    target="tzuyang",
+                    index=1,
+                    live=True,
+                    runner=lambda argv: rival_steps.append(argv) or 0,
+                )
+                during_step["target"] = _target_status(api, "tzuyang")
+                return 0
+
+            result = process_one(
+                FileStore(path, clock=clock),
+                live=True,
+                runner=step_cancelled_by_the_operator,
+                manifest_path=root / "summary.json",
+            )
+            settled = FileStore(path, clock=clock)
+            self.assertEqual(during_step, {"second worker": "Failed", "target": "Fetching"})
+            self.assertEqual(rival_steps, [])
+            self.assertEqual((result, len(steps)), ("Cancelled", 1))
+            self.assertEqual(settled.get(run.id).status, "Cancelled")
+            self.assertEqual(_target_status(settled, "tzuyang"), "Idle")
+
 
 class HungStepTests(unittest.TestCase):
     def test_hung_step_fails_the_run(self) -> None:
@@ -614,7 +723,9 @@ class DurableMirrorOutageTests(unittest.TestCase):
 
 
 class StopSignalTests(unittest.TestCase):
-    def _worker(self, script: str, *args: str) -> tuple[int, dict, dict, dict | None]:
+    def _worker(
+        self, script: str, *args: str, summary: str = "summary.json"
+    ) -> tuple[int, dict, dict, dict | None]:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             worker = subprocess.run(
@@ -626,8 +737,7 @@ class StopSignalTests(unittest.TestCase):
             )
             store = _read(root / "store.json")
             run = store["runs"][(root / "run_id").read_text()]
-            summary = root / "summary.json"
-            manifest = _read(summary) if summary.exists() else None
+            manifest = _read(root / summary) if (root / summary).exists() else None
         return worker.returncode, run, store["locks"], manifest
 
     def _stopped_like_the_daemon(self, stalled: str) -> tuple[dict, dict, dict | None]:
@@ -657,7 +767,10 @@ class StopSignalTests(unittest.TestCase):
                     time.sleep(0.05)
             finally:
                 if worker.poll() is None:
-                    os.killpg(worker.pid, signal.SIGKILL)
+                    # The worker can exit after this poll. macOS then refuses
+                    # the signal with EPERM until the worker is reaped.
+                    with suppress(ProcessLookupError, PermissionError):
+                        os.killpg(worker.pid, signal.SIGKILL)
                 worker.wait()
             store = _read(root / "store.json")
             run = store["runs"][(root / "run_id").read_text()]
@@ -685,6 +798,16 @@ class StopSignalTests(unittest.TestCase):
                 self._assert_recorded_failed(run, locks, manifest)
                 self.assertEqual(code, 128 + signum)
 
+    def test_stop_right_after_the_worker_creates_its_run_fails_the_run_with_a_manifest(
+        self,
+    ) -> None:
+        code, run, locks, manifest = self._worker(
+            WORKER_STOPPED_AFTER_CREATING_ITS_RUN, summary="run-1-current-summary.json"
+        )
+
+        self._assert_recorded_failed(run, locks, manifest)
+        self.assertEqual(code, 128 + signal.SIGTERM)
+
     def test_stop_signal_during_cleanup_keeps_the_recorded_success(self) -> None:
         code, run, locks, manifest = self._worker(
             WORKER_SIGNALLED_DURING_A_PHASE, "cache_cleanup", str(int(signal.SIGTERM))
@@ -702,9 +825,11 @@ class StopSignalTests(unittest.TestCase):
         self._assert_recorded_failed(run, locks, manifest)
         self.assertEqual(code, -signal.SIGKILL)
 
-    def test_stop_at_any_line_of_a_run_leaves_it_recorded_and_cleaned_up(self) -> None:
+    def _assert_a_stop_at_any_line_leaves_the_run_settled(
+        self, first: int, second: int = 0, where: str = "in_the_worker"
+    ) -> None:
         worker = subprocess.run(
-            [sys.executable, "-c", WORKER_STOPPED_AT_EACH_LINE],
+            [sys.executable, "-c", WORKER_STOPPED_AT_EACH_LINE, str(first), str(second), where],
             cwd=REPO_ROOT,
             env=WORKER_ENVIRONMENT,
             capture_output=True,
@@ -725,8 +850,22 @@ class StopSignalTests(unittest.TestCase):
 
         self.assertEqual([outcome for outcome in outcomes if not settled(outcome)], [])
         self.assertEqual(
-            {outcome["status"] for outcome in outcomes}, {"Queued", "Failed", "Succeeded"}
+            {outcome["status"] for outcome in outcomes},
+            {"Failed"} if where == "in_a_real_step" else {"Queued", "Failed", "Succeeded"},
         )
+
+    def test_stop_at_any_line_of_a_run_leaves_it_recorded_and_cleaned_up(self) -> None:
+        self._assert_a_stop_at_any_line_leaves_the_run_settled(signal.SIGTERM)
+
+    def test_second_stop_while_the_run_is_recorded_leaves_it_recorded_and_cleaned_up(self) -> None:
+        self._assert_a_stop_at_any_line_leaves_the_run_settled(signal.SIGTERM, signal.SIGTERM)
+
+    def test_stop_in_the_step_runner_then_another_signal_leaves_the_run_recorded(self) -> None:
+        for first, second in ((signal.SIGHUP, signal.SIGINT), (signal.SIGINT, signal.SIGHUP)):
+            with self.subTest(first=first.name, second=second.name):
+                self._assert_a_stop_at_any_line_leaves_the_run_settled(
+                    first, second, where="in_a_real_step"
+                )
 
     def test_stop_while_the_mirror_stalls_leaves_a_manifest_within_the_daemon_grace(self) -> None:
         run, locks, manifest = self._stopped_like_the_daemon("mirror")

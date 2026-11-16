@@ -5,7 +5,8 @@ Run lifecycle::
     Queued --claim--> Fetching --all steps pass--> Succeeded
     Queued --pause--> Paused --resume--> Queued
     Fetching | Inserting --pause, then the next step boundary--> Paused
-    Queued | Fetching | Inserting | Paused --cancel--> Cancelled
+    Queued | Paused --cancel--> Cancelled
+    Fetching | Inserting --cancel, then the next step boundary--> Cancelled
     Fetching | Inserting | Paused --step or worker failure--> Failed
     Queued | Fetching | Inserting --lease lapsed--> Failed (lease_expired)
 
@@ -13,9 +14,15 @@ Run lifecycle::
 not change again and does not hold its target lock.
 
 A worker holds a ``Fetching`` or ``Inserting`` run until its next step
-boundary. A pause of that run waits for the boundary, and a resume before the
-boundary withdraws the pause, so the run never returns to the queue while its
-step runs.
+boundary. A pause or a cancel of that run waits for the boundary, so the run
+never returns to the queue and never frees its target while its step runs. A
+resume before the boundary withdraws the pause. A cancel cannot be withdrawn.
+Every accepted cancel sets ``cancel_requested``, as the Postgres ``control_job``
+does, whether it applies at once or at the boundary.
+
+A run that ends before the boundary ends ``Succeeded`` or ``Failed``, and the
+pending pause or cancel does not apply. A dead worker reaches no boundary, so
+the lapsed lease ends its run.
 """
 
 from __future__ import annotations
@@ -104,17 +111,26 @@ def can_resume(status: str) -> bool:
 
 
 def apply_transition(run: RunRecord, action: str, now: float, lease_ttl: float) -> RunRecord:
-    if run.status in EXECUTING_STATUSES and action in {"pause", "resume"}:
-        if action == "resume" and not run.pause_requested:
-            raise ControlPlaneError(ILLEGAL_TRANSITION, 409)
-        run.pause_requested = action == "pause"
-        return run
-    return _transition_status(run, action, now, lease_ttl)
+    if run.status not in EXECUTING_STATUSES:
+        _transition_status(run, action, now, lease_ttl)
+    elif action == "pause":
+        run.pause_requested = True
+    elif action == "resume" and run.pause_requested:
+        run.pause_requested = False
+    elif action != "cancel":
+        raise ControlPlaneError(ILLEGAL_TRANSITION, 409)
+    if action == "cancel":
+        run.cancel_requested = True
+    return run
 
 
 def step_boundary(run: RunRecord, now: float, lease_ttl: float) -> RunRecord:
     heartbeat(run, now, lease_ttl)
-    if run.pause_requested and run.status in EXECUTING_STATUSES:
+    if run.status not in EXECUTING_STATUSES:
+        return run
+    if run.cancel_requested:
+        _transition_status(run, "cancel", now, lease_ttl)
+    elif run.pause_requested:
         run.pause_requested = False
         _transition_status(run, "pause", now, lease_ttl)
     return run

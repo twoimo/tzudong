@@ -20,6 +20,7 @@ from backend.pipeline_control.adapter import (
     execute_steps,
     noop_event_sink,
     step_timeout_seconds,
+    stop_signals,
 )
 from backend.pipeline_control.media_cache import owned_media_cache
 from backend.pipeline_control.graph import AdapterGraphError, STEP_SPECS
@@ -504,7 +505,7 @@ def process_one(
     # A stop raises at once only inside _execute. Anywhere else it waits
     # until the run is recorded, its manifest is written, and its cache is
     # purged, so a stop cannot land between the steps and the record.
-    with StopSignals() as stops, stops.held():
+    with stop_signals() as stops, stops.held():
         attempt.run = store.claim(run_id) if run_id is not None else store.claim()
         if attempt.run is None:
             return None

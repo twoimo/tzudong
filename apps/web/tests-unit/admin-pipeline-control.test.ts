@@ -7,6 +7,7 @@ import {
   PIPELINE_CONTROL_CONFIRMATION_TEXT,
   PIPELINE_LIVE_ENQUEUE_CONFIRMATION,
   PUBLIC_LIST_KEYS,
+  allowlistedPipelineJob,
   assertPipelineGuardedBody,
   buildPipelinePreviewHash,
   snapshotRevision,
@@ -445,12 +446,16 @@ describe("admin pipeline control contract", () => {
     const backendStore = source("../../backend/pipeline_control/store.py");
     const backendKeys = backendStore.match(/^PUBLIC_LIST_KEYS = \(([^)]*)\)/m)?.[1].match(/"[a-z_]+"/g)?.map(key => key.slice(1, -1));
     expect(PUBLIC_LIST_KEYS).toEqual(backendKeys);
+    const pendingCancel = { id: RUN_ID, status: "Fetching", pause_requested: false, cancel_requested: true };
+    expect(allowlistedPipelineJob({ ...pendingCancel, actor: "admin" })).toEqual(pendingCancel);
   });
 
-  test("a preview goes stale when a pending pause is requested or withdrawn", () => {
+  test("a preview goes stale when a pending pause is requested or withdrawn, or a cancel is requested", () => {
     const snapshot = (job: Record<string, unknown>) => ({ targets: [{ id: "tzuyang", status: "Fetching" }], jobs: [{ id: RUN_ID, status: "Fetching", ...job }] });
-    expect(snapshotRevision(snapshot({ pause_requested: true }))).not.toBe(snapshotRevision(snapshot({ pause_requested: false })));
-    expect(snapshotRevision(snapshot({}))).toBe(snapshotRevision(snapshot({ pause_requested: false })));
+    for (const flag of ["pause_requested", "cancel_requested"]) {
+      expect(snapshotRevision(snapshot({ [flag]: true }))).not.toBe(snapshotRevision(snapshot({ [flag]: false })));
+      expect(snapshotRevision(snapshot({}))).toBe(snapshotRevision(snapshot({ [flag]: false })));
+    }
   });
 
   test("source test requires gated Grafana iframe after CSP gate", () => {

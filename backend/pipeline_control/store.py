@@ -36,11 +36,13 @@ PUBLIC_LIST_KEYS = (
     "dry_run",
     "adapter_index",
     "pause_requested",
+    "cancel_requested",
 )
 OPERATOR_FAILURE_CAP = 20
 _OPERATOR_PROFILES = ("heavy_local", "lite_gha")
 _STATUS_RANK = {"Inserting": 3, "Fetching": 2, "Queued": 1, "Paused": 0}
 _PROFILE_RANK = {"heavy_local": 1, "lite_gha": 0}
+_BOUNDARY_TRANSITIONS = {"Paused": "pause_approved", "Cancelled": "cancel_approved"}
 
 
 class MemoryStore:
@@ -79,11 +81,16 @@ class MemoryStore:
             audit=audit,
         )
 
-    def _persist_finished(self, run: RunRecord, audit: dict[str, Any]) -> None:
+    def _persist_finished(
+        self,
+        run: RunRecord,
+        audit: dict[str, Any],
+        held_lock_key: str | None = None,
+    ) -> None:
         # A finished run is committed here before the durable mirror, so a
         # mirror outage raises but cannot leave the run holding its lock.
         self._commit()
-        self._persist(run, lock_held=False, audit=audit)
+        self._persist(run, lock_held=False, audit=audit, held_lock_key=held_lock_key)
 
     def _commit(self) -> None:
         pass
@@ -107,12 +114,7 @@ class MemoryStore:
                     transition="lease_reclaim",
                     request_id=run.request_id,
                 )
-                self._persist(
-                    run,
-                    lock_held=False,
-                    held_lock_key=key,
-                    audit=self.audit[-1],
-                )
+                self._persist_finished(run, self.audit[-1], held_lock_key=key)
 
     def create_run(
         self,
@@ -186,16 +188,20 @@ class MemoryStore:
             return run
         before = run.status
         step_boundary(run, self.now(), lease_ttl)
-        audit = None
-        if run.status != before:
-            self._audit(
-                actor="worker",
-                job_id=run.id,
-                transition="pause_approved",
-                request_id=run.request_id,
-            )
-            audit = self.audit[-1]
-        self._persist(run, lock_held=True, audit=audit)
+        if run.status == before:
+            self._persist(run, lock_held=True, audit=None)
+            return run
+        self._audit(
+            actor="worker",
+            job_id=run.id,
+            transition=_BOUNDARY_TRANSITIONS[run.status],
+            request_id=run.request_id,
+        )
+        if run.status == "Cancelled":
+            self._release(run)
+            self._persist_finished(run, self.audit[-1])
+        else:
+            self._persist(run, lock_held=True, audit=self.audit[-1])
         return run
 
     def claim(self, run_id: str | None = None) -> RunRecord | None:

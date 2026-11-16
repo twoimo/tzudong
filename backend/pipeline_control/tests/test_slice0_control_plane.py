@@ -1339,6 +1339,34 @@ class OperatorSnapshotTests(unittest.TestCase):
         store.beat(run.id)
         self.assertEqual(listed(), ("Paused", False))
 
+    def test_listed_run_shows_a_cancel_that_waits_for_the_step_boundary(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapcanc01",
+            payload={},
+            actor="admin",
+            request_id="req-cp",
+        )
+        store.claim()
+
+        def listed() -> list[tuple[str, bool, bool]]:
+            snap = store.operator_snapshot(load_targets())
+            self._allowlisted(snap["jobs"])
+            return [
+                (job["status"], job["cancel_requested"], job["pause_requested"])
+                for job in snap["jobs"]
+            ]
+
+        self.assertEqual(listed(), [("Fetching", False, False)])
+        store.control(run.id, "cancel", actor="admin", request_id="req-cp2")
+        self.assertEqual(listed(), [("Fetching", True, False)])
+        store.control(run.id, "pause", actor="admin", request_id="req-cp3")
+        self.assertEqual(listed(), [("Fetching", True, True)])
+        store.beat(run.id)
+        self.assertEqual(listed(), [])
+
     def test_overlay_idle_after_success_and_fail(self) -> None:
         store = MemoryStore(clock=lambda: 1_000.0)
         ok, _ = store.create_run(

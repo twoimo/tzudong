@@ -119,6 +119,59 @@ class _LeaseContract:
         resumed = self.store.control(run.id, "resume", actor="operator", request_id="req-resume")
         self.assertEqual(resumed.status, "Queued")
 
+    def test_cancel_during_a_step_takes_effect_at_the_next_step_boundary(self) -> None:
+        run = self._claimed("cancel-step-01")
+        self.store.beat(run.id, STEP_LEASE_SECONDS)
+        requested = self.store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+        self.assertEqual((requested.status, requested.cancel_requested), ("Fetching", True))
+        self.clock.advance(LEASE_TTL_SECONDS + 1)
+        self._assert_target_locked("cancel-step-02")
+        self.assertEqual(self.store.beat(run.id, STEP_LEASE_SECONDS).status, "Cancelled")
+        self.assertEqual(self.store.audit[-1]["transition"], "cancel_approved")
+        self.assertEqual(self._enqueue("cancel-step-03").status, "Queued")
+
+    def test_cancel_of_a_queued_or_paused_run_ends_it_at_once_and_records_the_request(self) -> None:
+        queued = self._enqueue("cancel-queue-1")
+        cancelled = self.store.control(queued.id, "cancel", actor="operator", request_id="req-cancel")
+        self.assertEqual((cancelled.status, cancelled.cancel_requested), ("Cancelled", True))
+        paused = self._enqueue("cancel-queue-2")
+        self.store.control(paused.id, "pause", actor="operator", request_id="req-pause")
+        cancelled = self.store.control(paused.id, "cancel", actor="operator", request_id="req-cancel")
+        self.assertEqual((cancelled.status, cancelled.cancel_requested), ("Cancelled", True))
+        self.assertEqual(self._enqueue("cancel-queue-3").status, "Queued")
+
+    def test_cancel_wins_over_a_pause_that_waits_for_the_same_step_boundary(self) -> None:
+        run = self._claimed("cancel-pause-1")
+        self.store.control(run.id, "pause", actor="operator", request_id="req-pause")
+        self.store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+        self.assertEqual(self.store.beat(run.id).status, "Cancelled")
+        self.assertEqual(self._enqueue("cancel-pause-2").status, "Queued")
+
+    def test_cancelled_run_of_a_dead_worker_keeps_its_target_until_the_lease_ends(self) -> None:
+        run = self._claimed("cancel-dead-01")
+        self.store.beat(run.id, STEP_LEASE_SECONDS)
+        self.store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+        self.clock.advance(STEP_LEASE_SECONDS - 1)
+        self._assert_target_locked("cancel-dead-02")
+        self.clock.advance(2)
+        successor = self._enqueue("cancel-dead-03")
+        self._assert_reclaimed(run)
+        self.assertEqual(successor.status, "Queued")
+
+    def test_cancel_after_the_lease_ended_is_refused_and_records_the_run_lease_expired(self) -> None:
+        run = self._claimed("cancel-late-01")
+        self.clock.advance(LEASE_TTL_SECONDS + 1)
+        with self.assertRaises(ControlPlaneError) as refused:
+            self.store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+        self.assertEqual(refused.exception.code, "illegal_transition")
+        self._assert_reclaimed(run)
+
+    def test_cancel_during_the_last_step_leaves_the_finished_run_succeeded(self) -> None:
+        run = self._claimed("cancel-last-01")
+        self.store.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+        self.assertEqual(self.store.finish_succeeded(run.id).status, "Succeeded")
+        self.assertEqual(self._enqueue("cancel-last-02").status, "Queued")
+
     def test_terminal_record_holds_when_the_durable_mirror_fails(self) -> None:
         run = self._claimed("mirror-down-01")
         with patch.object(
