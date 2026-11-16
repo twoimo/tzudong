@@ -22,6 +22,11 @@ const busan: FixtureRestaurant[] = [
 ];
 const daegu: FixtureRestaurant = { id: 'daegu-a', name: '합성 대구 A', lat: 35.8714, lng: 128.6014, categories: ['한식'], road_address: '대구광역시 중구 합성로 4' };
 const fixtureRestaurants = [...busan, daegu];
+// Five points 0.005 degrees apart span 0.02 degrees: inside one 40px cluster radius at index zoom 10, wider than it at index zoom 12.
+const daejeon: FixtureRestaurant[] = ['A', 'B', 'C', 'D', 'E'].map((letter, index) => ({
+    id: `daejeon-${letter.toLowerCase()}`, name: `합성 대전 ${letter}`, lat: 36.35, lng: 127.38 + index * 0.005,
+    categories: ['한식'], road_address: `대전광역시 서구 합성로 ${index + 1}`,
+}));
 
 const entry = `
 import React, {useEffect, useState} from 'react';
@@ -39,6 +44,7 @@ function Fixture(){
   const [restaurants,setRestaurants]=useState(store.get());
   useEffect(()=>store.subscribe(()=>setRestaurants(store.get())),[]);
   useEffect(()=>{globalThis.__selectRestaurant=setSelectedId;},[]);
+  useEffect(()=>{globalThis.__committedSelectedId=selectedId;},[selectedId]);
   const selected=restaurants.find(r=>r.id===selectedId)??null;
   return <NaverMapView filters={filters} selectedRegion={null} searchedRestaurant={null} selectedRestaurant={selected} refreshTrigger={0}
     onMarkerClick={r=>{io.markerClicks.push(r.id);setSelectedId(r.id);}}
@@ -111,6 +117,12 @@ async function openMap(camera: { lat: number; lng: number; z: number }, restaura
     }, restaurants);
     await page.addScriptTag({ content: naverStub });
     await page.addScriptTag({ content: captureMaps });
+    await page.evaluate(() => {
+        const frames: number[] = [];
+        (window as unknown as { __markerCountFrames: number[] }).__markerCountFrames = frames;
+        new MutationObserver(() => frames.push(document.querySelectorAll('button.tzudong-individual-marker').length))
+            .observe(document.body, { childList: true, subtree: true });
+    });
     await page.addScriptTag({ content: bundle });
     await ui(page.getByTestId('mock-naver-overlay')).toHaveCount(1);
     return { page, errors };
@@ -132,9 +144,14 @@ const setMapZoom = (page: Page, zoom: number) => page.evaluate(value => {
 const setRestaurants = (page: Page, restaurants: FixtureRestaurant[]) => page.evaluate(next => {
     (globalThis as unknown as { __restaurantStore: { set(next: unknown): void } }).__restaurantStore.set(next);
 }, restaurants);
-const selectRestaurant = (page: Page, id: string | null) => page.evaluate(value => {
-    (globalThis as unknown as { __selectRestaurant(id: string | null): void }).__selectRestaurant(value);
-}, id);
+async function selectRestaurant(page: Page, id: string | null) {
+    await page.evaluate(value => {
+        (globalThis as unknown as { __selectRestaurant(id: string | null): void }).__selectRestaurant(value);
+    }, id);
+    await ui.poll(() => page.evaluate(() => (globalThis as unknown as { __committedSelectedId: string | null }).__committedSelectedId)).toBe(id);
+}
+const markerCountFrames = (page: Page) => page.evaluate(() =>
+    (window as unknown as { __markerCountFrames: number[] }).__markerCountFrames);
 const readIO = (page: Page) => page.evaluate(() => (globalThis as unknown as { __clusterIO: ClusterIO }).__clusterIO);
 const lastContextual = async (page: Page) => (await readIO(page)).contextual.at(-1);
 
@@ -211,6 +228,58 @@ describe('NaverMapView cluster and marker rendering', () => {
             await ui.poll(() => markerWidth(page, busan[0].name)).toBe('42px');
             await ui.poll(() => markerWidth(page, busan[1].name)).toBe('32px');
             expect((await readIO(page)).markerClicks).toEqual([busan[0].id]);
+            expect(errors).toEqual([]);
+        } finally { await page.close(); }
+    }, 60_000);
+
+    browserTest('a supercluster splits into markers at zoom 12 and regroups at zoom 11', async () => {
+        const { page, errors } = await openMap({ lat: 36.35, lng: 127.39, z: 10 }, daejeon);
+        try {
+            await ui(cluster(page, 5)).toHaveCount(1);
+            await ui(individualMarkers(page)).toHaveCount(0);
+            expect((await markerCountFrames(page)).filter(count => count > 0)).toEqual([]);
+
+            await setMapZoom(page, 12);
+            for (const restaurant of daejeon) await ui(marker(page, restaurant.name)).toHaveCount(1);
+            await ui(anyCluster(page)).toHaveCount(0);
+
+            await setMapZoom(page, 11);
+            await ui(cluster(page, 5)).toHaveCount(1);
+            await ui(individualMarkers(page)).toHaveCount(0);
+
+            await setMapZoom(page, 13);
+            await ui(individualMarkers(page)).toHaveCount(5);
+            await ui(anyCluster(page)).toHaveCount(0);
+            expect(errors).toEqual([]);
+        } finally { await page.close(); }
+    }, 60_000);
+
+    browserTest('the selected marker is still enlarged on the first frame after the result set changes', async () => {
+        const { page, errors } = await openMap({ lat: 35.1587, lng: 129.1604, z: 16 });
+        try {
+            for (const restaurant of busan) await ui(marker(page, restaurant.name)).toHaveCount(1);
+            await selectRestaurant(page, busan[1].id);
+            await ui.poll(() => markerWidth(page, busan[1].name)).toBe('42px');
+
+            await setRestaurants(page, [busan[0], busan[1], busan[2]]);
+            await ui(individualMarkers(page)).toHaveCount(3);
+            expect(await markerWidth(page, busan[1].name)).toBe('42px');
+            expect(await markerWidth(page, busan[0].name)).toBe('32px');
+            expect(await markerWidth(page, busan[2].name)).toBe('32px');
+            expect(errors).toEqual([]);
+        } finally { await page.close(); }
+    }, 60_000);
+
+    browserTest('a restaurant selected while clustered is enlarged as soon as its marker appears', async () => {
+        const { page, errors } = await openMap({ lat: 35.1587, lng: 129.1604, z: 11 });
+        try {
+            await ui(cluster(page, 5)).toHaveCount(1);
+            await selectRestaurant(page, busan[2].id);
+
+            await setMapZoom(page, 16);
+            await ui(individualMarkers(page)).toHaveCount(5);
+            expect(await markerWidth(page, busan[2].name)).toBe('42px');
+            expect(await markerWidth(page, busan[0].name)).toBe('32px');
             expect(errors).toEqual([]);
         } finally { await page.close(); }
     }, 60_000);
