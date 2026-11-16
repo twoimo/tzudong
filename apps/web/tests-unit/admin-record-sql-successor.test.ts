@@ -1,9 +1,10 @@
 import { afterAll, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import {
   assertSuccessorDatabaseTarget,
@@ -359,8 +360,50 @@ const readyToolchainDecisionPending = Date.now() < Date.parse('2026-12-16T00:00:
   expect(() => loadSuccessorManifest()).not.toThrow();
 });
 
-test('production manifest loader fails closed when a statement vector drifts', () => {
-  expect(() => loadSuccessorManifest({ readVectorImpl: () => ['drift'] })).toThrow('SUCCESSOR_SOURCE_DRIFT');
+// The real toolchain pin is the open operator case above, so this copy of the repository pins the
+// toolchain it ships and keeps every other pin. The loader then reaches the statement vector check.
+async function loaderWithMatchingToolchain() {
+  const root = mkdtempSync(join(tmpdir(), 'admin-record-successor-loader-'));
+  directories.push(root);
+  const copy = (path: string) => {
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    copyFileSync(new URL(`../../../${path}`, import.meta.url), join(root, path));
+  };
+  [
+    'admin-record-sql-successor.mjs',
+    'apply-supabase-migration.mjs',
+    'privacy-safe-cli-log.mjs',
+    'supabase-migration-bundle.mjs',
+    'supabase-migration-transaction.mjs',
+    'vercel-rollback-readback.mjs',
+  ].forEach(script => copy(`apps/web/scripts/${script}`));
+  manifestDocument.toolchain.forEach((entry: any) => copy(entry.path));
+  copy(manifestDocument.legacyReleaseManifest.path);
+  manifestDocument.migrations.forEach((migration: any) => copy(migration.path));
+  const toolchain = manifestDocument.toolchain.map((entry: any) => ({
+    path: entry.path,
+    sha256: sha256(readFileSync(join(root, entry.path))),
+  }));
+  writeFileSync(join(root, '.github/admin-record-sql-successor.v1.json'), `${JSON.stringify({ ...manifestDocument, toolchain }, null, 2)}\n`);
+  const controller = await import(pathToFileURL(join(root, 'apps/web/scripts/admin-record-sql-successor.mjs')).href);
+  return controller.loadSuccessorManifest as typeof loadSuccessorManifest;
+}
+
+test('production manifest loader fails closed when a statement vector drifts', async () => {
+  const load = await loaderWithMatchingToolchain();
+  const pinnedVector = (migration: any) => migration.originalStatementVector;
+  expect(load({ readVectorImpl: pinnedVector }).materials.map(material => material.path))
+    .toEqual(manifestDocument.migrations.map((migration: any) => migration.path));
+
+  const vectorReads: string[] = [];
+  const lastPath = manifestDocument.migrations.at(-1).path;
+  expect(() => load({
+    readVectorImpl: (migration: any) => {
+      vectorReads.push(migration.path);
+      return migration.path === lastPath ? ['drift'] : pinnedVector(migration);
+    },
+  })).toThrow('SUCCESSOR_SOURCE_DRIFT');
+  expect(vectorReads).toEqual(manifestDocument.migrations.map((migration: any) => migration.path));
 });
 
 test('production ready manifest still rejects corrupt fence custody before checkout, transport or journal creation', () => {
