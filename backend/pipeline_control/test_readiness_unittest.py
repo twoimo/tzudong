@@ -689,5 +689,71 @@ class CliContractTest(unittest.TestCase):
         self.assertIn("orchestration-readiness", result["needs"])
 
 
+# Tracked pipeline_control test modules that no CI step runs on purpose,
+# mapped to the reason. Every other test module must be named by a workflow
+# step or by DEFAULT_TEST_MODULES.
+CI_UNRUN_TEST_MODULES: dict[str, str] = {}
+
+_WORKFLOW_MODULE = re.compile(r"\bbackend(?:\.[A-Za-z0-9_]+)+")
+# A folded `>-` step joins its lines, so a commented module can sit mid-line.
+_SHELL_COMMENT = re.compile(r"(?:^|\s)#.*$")
+
+
+def _modules_named_by_workflow_steps(workflows: Path) -> set[str]:
+    import yaml
+
+    named: set[str] = set()
+    for path in sorted(workflows.glob("*.yml")):
+        workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for job in workflow.get("jobs", {}).values():
+            for step in job.get("steps", []):
+                for line in str(step.get("run", "")).splitlines():
+                    named.update(_WORKFLOW_MODULE.findall(_SHELL_COMMENT.sub("", line)))
+    return named
+
+
+class CiReachabilityTest(unittest.TestCase):
+    maxDiff = None
+
+    def test_every_pipeline_control_test_module_runs_in_ci(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z", "--", "backend/pipeline_control"],
+            cwd=REPOSITORY_ROOT,
+            capture_output=True,
+            check=True,
+        ).stdout.decode("utf-8").split("\0")
+        modules = sorted(
+            ".".join(Path(path).with_suffix("").parts)
+            for path in tracked
+            if Path(path).name.startswith("test_") and path.endswith(".py")
+        )
+        named = _modules_named_by_workflow_steps(
+            REPOSITORY_ROOT / ".github" / "workflows"
+        ) | set(DEFAULT_TEST_MODULES)
+
+        def reached(module: str) -> bool:
+            return any(name == module or name.startswith(module + ".") for name in named)
+
+        self.assertEqual(
+            [module for module in modules
+             if not reached(module) and module not in CI_UNRUN_TEST_MODULES],
+            [],
+            "CI never runs these modules. Add each to readiness.DEFAULT_TEST_MODULES "
+            "with a traceability task, to the security-audit.yml step that runs its "
+            "siblings, or to CI_UNRUN_TEST_MODULES with the reason.",
+        )
+        for module, reason in CI_UNRUN_TEST_MODULES.items():
+            with self.subTest(excluded=module):
+                self.assertIn(module, modules)
+                self.assertFalse(reached(module), "CI runs it, so drop the exclusion")
+                self.assertTrue(reason.strip())
+
+    def test_a_change_to_a_pipeline_control_test_runs_security(self) -> None:
+        assert_security_scope(self, [
+            "backend/pipeline_control/test_new_unittest.py",
+            "backend/pipeline_control/tests/test_new.py",
+        ])
+
+
 if __name__ == "__main__":
     unittest.main()
