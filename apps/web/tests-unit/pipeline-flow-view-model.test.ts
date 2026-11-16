@@ -180,7 +180,7 @@ describe('pipeline execution read model', () => {
     const intact = parsePipelineStatus(status({ failures: [failure] }));
     expect(intact.failures.map(f => f.id)).toEqual([runId]);
     expect(pipelineDisplayIsReliable(intact, undefined)).toBe(true);
-    expect(canControlPipelineJob('job_api', { ...intact.failures[0], status: 'Queued' }, 'cancel')).toBe(true);
+    expect(pipelineJobRow('job_api', { ...intact.failures[0], status: 'Queued' }).controls.map(control => control.action)).toContain('cancel');
     const rewritten = parsePipelineStatus(status({ failures: [{ ...failure, id: 'd107033f-3a53-4406-af[REDACTED]ddb2' }] }));
     expect(rewritten.failures).toEqual([]);
     expect(pipelineDisplayIsReliable(rewritten, undefined)).toBe(false);
