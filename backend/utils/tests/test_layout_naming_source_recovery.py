@@ -120,6 +120,29 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
             "file_queue.py.",
         )
 
+    def test_no_tracked_claude_md_hides_agents_md(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=ROOT,
+            capture_output=True,
+            check=True,
+        ).stdout.decode("utf-8").split("\0")
+        hiding = []
+        for raw in filter(None, tracked):
+            path = PurePosixPath(raw)
+            if path.name not in {"CLAUDE.md", "CLAUDE.local.md"}:
+                continue
+            at_root = str(path.parent) in {".", ".claude"}
+            in_web = raw.startswith("apps/web/") and not raw.startswith("apps/web/performance/")
+            if at_root or in_web:
+                hiding.append(raw)
+        self.assertEqual(
+            hiding,
+            [],
+            "Claude Code stops reading AGENTS.md once a CLAUDE.md exists at or above "
+            "its working directory. Keep guidance in AGENTS.md and delete these files.",
+        )
+
     def test_checkers_are_read_only_and_have_bounded_codes(self) -> None:
         layout_source = LAYOUT_CHECKER.read_text(encoding="utf-8")
         rename_source = RENAME_CHECKER.read_text(encoding="utf-8")
