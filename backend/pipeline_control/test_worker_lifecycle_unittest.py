@@ -143,7 +143,10 @@ first, second = (int(arg) for arg in sys.argv[1:3])
 in_a_real_step = sys.argv[3] == "in_a_real_step"
 STOP_SIGNAL_CODE = {
     function.__code__
-    for function in (getattr(member, "__wrapped__", member) for member in vars(StopSignals).values())
+    for function in (
+        getattr(member, "__wrapped__", member)
+        for member in (*vars(StopSignals).values(), adapter.stop_signals)
+    )
     if hasattr(function, "__code__")
 }
 

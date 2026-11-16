@@ -95,19 +95,6 @@ class StopSignals:
     def __init__(self) -> None:
         self.held_signal: int | None = None
         self._holding = False
-        self._previous: dict[int, Any] = {}
-
-    def __enter__(self) -> StopSignals:
-        self._previous = {
-            signum: signal.signal(signum, self._stop)
-            for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-            if signal.getsignal(signum) is not signal.SIG_IGN
-        }
-        return self
-
-    def __exit__(self, *_exc: object) -> None:
-        for signum, handler in self._previous.items():
-            signal.signal(signum, handler)
 
     def _stop(self, signum: int, _frame: object) -> None:
         if self._holding:
@@ -148,6 +135,34 @@ def _stop_exception(signum: int) -> BaseException:
     return KeyboardInterrupt() if signum == signal.SIGINT else SystemExit(128 + signum)
 
 
+@contextmanager
+def stop_signals() -> Iterator[StopSignals]:
+    """Yield the ``StopSignals`` that handles the stop signals of the process.
+
+    The handlers belong to the process. A block inside another block gets
+    the object of the outer block and binds nothing, so every stop reaches
+    one hold.
+    """
+    previous = {
+        signum: signal.getsignal(signum)
+        for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+    }
+    for handler in previous.values():
+        installed = getattr(handler, "__self__", None)
+        if isinstance(installed, StopSignals):
+            yield installed
+            return
+    stops = StopSignals()
+    try:
+        for signum, handler in previous.items():
+            if handler is not signal.SIG_IGN:
+                signal.signal(signum, stops._stop)
+        yield stops
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
 def _step_group_alive(process: subprocess.Popen) -> bool:
     process.poll()
     try:
@@ -181,7 +196,7 @@ def default_live_runner(
 ) -> int:
     budget = step_timeout_seconds() if timeout is None else timeout
     deadline = wall_clock() + budget
-    with StopSignals() as stops, stops.held():
+    with stop_signals() as stops, stops.held():
         process = subprocess.Popen(argv, start_new_session=True)
         code = None
         try:
