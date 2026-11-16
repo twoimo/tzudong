@@ -129,14 +129,30 @@ with patch.object(media_cache.shutil, "rmtree", killed_by_the_daemon), patch.obj
     )
 """
 WORKER_STOPPED_AT_EACH_LINE = """
-import io, json, os, signal, sys, tempfile
+import contextlib, io, json, os, signal, sys, tempfile
 from contextlib import redirect_stdout
 from functools import partial
 from pathlib import Path
 from unittest.mock import patch
 
 from backend.pipeline_control import media_cache, worker
+from backend.pipeline_control.adapter import StopSignals
 from backend.pipeline_control.file_store import FileStore
+
+stops = int(sys.argv[1])
+STOP_SIGNAL_CODE = {
+    function.__code__
+    for function in (getattr(member, "__wrapped__", member) for member in vars(StopSignals).values())
+    if hasattr(function, "__code__")
+}
+
+
+def traced(code):
+    return (
+        code is worker.process_one.__code__
+        or code in STOP_SIGNAL_CODE
+        or code.co_filename == contextlib.__file__
+    )
 
 
 class Escaped(BaseException):
@@ -166,26 +182,41 @@ def stopped_at(event):
             dry_run=False,
         )
         lines = []
+        sent = []
+
+        def stop():
+            sent.append(True)
+            os.kill(os.getpid(), signal.SIGTERM)
 
         def trace(frame, kind, arg):
-            if frame.f_code is not worker.process_one.__code__:
+            if not traced(frame.f_code):
                 return None
 
             def line(frame, kind, arg):
                 if kind == "line":
-                    lines.append(frame.f_lineno)
+                    lines.append(f"{frame.f_code.co_name}:{frame.f_lineno}")
                     if len(lines) == event:
-                        os.kill(os.getpid(), signal.SIGTERM)
+                        stop()
                 return line
 
             return line
 
+        def stopped_again(record):
+            def recording(*args, **kwargs):
+                if stops == 2 and len(sent) == 1:
+                    stop()
+                return record(*args, **kwargs)
+
+            return recording
+
         signal.signal(signal.SIGTERM, escaped)
-        sys.settrace(trace)
-        try:
-            with patch.object(
-                worker, "owned_media_cache", partial(media_cache.owned_media_cache, root=root / "run-cache")
-            ), redirect_stdout(io.StringIO()):
+        with patch.object(
+            worker, "owned_media_cache", partial(media_cache.owned_media_cache, root=root / "run-cache")
+        ), patch.object(FileStore, "finish_failed", stopped_again(FileStore.finish_failed)), patch.object(
+            FileStore, "finish_succeeded", stopped_again(FileStore.finish_succeeded)
+        ), redirect_stdout(io.StringIO()):
+            sys.settrace(trace)
+            try:
                 worker.process_one(
                     store,
                     live=True,
@@ -193,10 +224,10 @@ def stopped_at(event):
                     manifest_path=root / "summary.json",
                     run_id=run.id,
                 )
-        except BaseException:
-            pass
-        finally:
-            sys.settrace(None)
+            except BaseException:
+                pass
+            finally:
+                sys.settrace(None)
         state = json.loads((root / "store.json").read_text())
         return lines, {
             "line": lines[event - 1] if 0 < event <= len(lines) else None,
@@ -739,9 +770,9 @@ class StopSignalTests(unittest.TestCase):
         self._assert_recorded_failed(run, locks, manifest)
         self.assertEqual(code, -signal.SIGKILL)
 
-    def test_stop_at_any_line_of_a_run_leaves_it_recorded_and_cleaned_up(self) -> None:
+    def _assert_a_stop_at_any_line_leaves_the_run_settled(self, stops: int) -> None:
         worker = subprocess.run(
-            [sys.executable, "-c", WORKER_STOPPED_AT_EACH_LINE],
+            [sys.executable, "-c", WORKER_STOPPED_AT_EACH_LINE, str(stops)],
             cwd=REPO_ROOT,
             env=WORKER_ENVIRONMENT,
             capture_output=True,
@@ -764,6 +795,12 @@ class StopSignalTests(unittest.TestCase):
         self.assertEqual(
             {outcome["status"] for outcome in outcomes}, {"Queued", "Failed", "Succeeded"}
         )
+
+    def test_stop_at_any_line_of_a_run_leaves_it_recorded_and_cleaned_up(self) -> None:
+        self._assert_a_stop_at_any_line_leaves_the_run_settled(stops=1)
+
+    def test_second_stop_while_the_run_is_recorded_leaves_it_recorded_and_cleaned_up(self) -> None:
+        self._assert_a_stop_at_any_line_leaves_the_run_settled(stops=2)
 
     def test_stop_while_the_mirror_stalls_leaves_a_manifest_within_the_daemon_grace(self) -> None:
         run, locks, manifest = self._stopped_like_the_daemon("mirror")
