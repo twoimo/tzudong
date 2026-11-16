@@ -139,6 +139,7 @@ DEFAULT_TEST_MODULES = (
     "backend.pipeline_control.test_step_runner_unittest",
     "backend.pipeline_control.test_durable_writes_unittest",
     "backend.pipeline_control.test_api_run_id_redaction_unittest",
+    "backend.pipeline_control.test_event_index_id_redaction_unittest",
     "backend.pipeline_control.tests.test_slice0_control_plane",
     "backend.pipeline_control.tests.test_postgres_control",
     "backend.pipeline_control.tests.test_api_input_validation",

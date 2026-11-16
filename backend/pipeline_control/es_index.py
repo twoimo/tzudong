@@ -10,7 +10,11 @@ import os
 from typing import Any
 from urllib.parse import urlparse
 
-from backend.utils.privacy_log import safe_error_name, sanitize_log_value
+from backend.utils.privacy_log import (
+    safe_error_name,
+    sanitize_log_value,
+    sanitize_uuid_log_value,
+)
 
 INDICES = {
     "run.lifecycle": "pipeline-logs-v1",
@@ -57,6 +61,10 @@ RAW_ALLOWLIST = frozenset(
         "payload_hash",
     }
 )
+# job_id is the run id that the store mints with uuid4. request_id and
+# payload_hash keep free-text redaction. Callers choose request_id through
+# X-Request-Id and can steer payload_hash through the request body.
+_UUID_KEYS = frozenset({"job_id"})
 
 
 class EsIndexError(Exception):
@@ -101,7 +109,7 @@ def admit_es_url(*, data_env: str | None, url: str | None) -> str:
 
 def allowlisted_log_doc(document: dict[str, Any]) -> dict[str, Any]:
     return {
-        key: sanitize_log_value(value)
+        key: sanitize_uuid_log_value(value) if key in _UUID_KEYS else sanitize_log_value(value)
         for key, value in document.items()
         if key in LOG_ALLOWLIST
     }
@@ -109,7 +117,7 @@ def allowlisted_log_doc(document: dict[str, Any]) -> dict[str, Any]:
 
 def allowlisted_raw_doc(document: dict[str, Any]) -> dict[str, Any]:
     return {
-        key: sanitize_log_value(value)
+        key: sanitize_uuid_log_value(value) if key in _UUID_KEYS else sanitize_log_value(value)
         for key, value in document.items()
         if key in RAW_ALLOWLIST
     }

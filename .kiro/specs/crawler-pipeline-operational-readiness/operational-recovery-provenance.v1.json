@@ -598,9 +598,9 @@
       "sourceGitBlobSha1": "ddf90e7faae4363dddfc1d488d973e10ff64463c",
       "sourceSha256": "51cddf1f1a2bff68b392c4e9b6414de1731f81b7501e2fc141707fb377f8ac38",
       "sourceBytes": 11111,
-      "candidateGitBlobSha1": "f7c4cc62a78fd16f421fa1359ab2227032bf4866",
-      "candidateSha256": "2fd8c27b51267bfe97e9029328e6612f89f39a2d48e734659d9890f76c34c519",
-      "candidateBytes": 14391
+      "candidateGitBlobSha1": "7b7905cf538dac8c5f355cc62fcebffc753f8810",
+      "candidateSha256": "56533258156cf774642c34df56c95d4e9de52efd2c27f5aef5beafe1af4aa3a7",
+      "candidateBytes": 14796
     },
     {
       "sourcePath": "backend/deploy/pipeline-control/otel-collector.yaml",
@@ -771,6 +771,21 @@
             "candidateBytes": 11089
           },
           "reason": "On-demand local pipeline candidate closes owned Kafka consumers, retries bounded operational failures, and validates Elasticsearch bulk success before offset commit. Candidate binding only; no hosted or Mac runtime claim. Historical recovery source objects remain unchanged."
+        }
+      ]
+    },
+    {
+      "baseCandidateCommit": "64b6405c4d7f2347d364510efcc88e2a6c3b87d5",
+      "changes": [
+        {
+          "path": "backend/pipeline_control/es_index.py",
+          "previousBinding": {
+            "candidatePath": "backend/pipeline_control/es_index.py",
+            "candidateGitBlobSha1": "f7c4cc62a78fd16f421fa1359ab2227032bf4866",
+            "candidateSha256": "2fd8c27b51267bfe97e9029328e6612f89f39a2d48e734659d9890f76c34c519",
+            "candidateBytes": 14391
+          },
+          "reason": "PR #3887 candidate keeps an exact lowercase canonical UUID under the top-level job_id of each allowlisted index document and sanitizes every other field on its own as before. Candidate binding only; no merge, privacy countersign or hosted claim. Historical recovery source objects remain unchanged."
         }
       ]
     }
