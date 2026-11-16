@@ -145,8 +145,9 @@ PY
   뒤에 워커가 신호를 받거나 예외로 끝나면, 아직 `Queued`인 실행도 모두 `Failed`로
   끝내고 실행마다 manifest를 남깁니다. 가져온 작업은 queue로 돌아가지 않습니다.
   다시 실행하려면 새 `Idempotency-Key`로 `POST /v1/runs`를 호출합니다. 워커가
-  SIGKILL처럼 정리 없이 죽으면 그 실행들은 `Queued`로 남고, lease가 끝난 뒤
-  `lease_expired`로 정리됩니다.
+  SIGKILL처럼 정리 없이 죽거나 `TZUDONG_PIPELINE_PERSIST` mirror 쓰기가 계속
+  실패하면 그 실행들은 `Queued`로 남고, lease가 끝난 뒤 `lease_expired`로
+  정리됩니다.
 - 단계 실행 중 `POST /v1/runs/{id}/pause`를 호출하면 그 단계가 끝날 때까지
   실행은 `Fetching`으로 남습니다. 워커는 다음 단계를 시작하기 전에 실행을
   `Paused`로 바꿉니다. 그 전에 `POST /v1/runs/{id}/resume`을 호출하면 pause가
