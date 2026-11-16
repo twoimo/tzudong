@@ -237,7 +237,10 @@ class AtomicMemoryStore:
                 run.pause_requested = False
                 if run.status == "Paused":
                     run.status = "Queued"
-                heartbeat(run, now, LEASE_TTL_SECONDS)
+                # control_job also accepts the resume of a finished run that still
+                # has pause_requested, and heartbeat() refuses a finished run.
+                run.heartbeat_at = now
+                run.lease_until = now + LEASE_TTL_SECONDS
                 self._audit(actor=actor, job_id=run.id, transition="resume", request_id=request_id)
                 return run
             raise ControlPlaneError("illegal_transition", 409)

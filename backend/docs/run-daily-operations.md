@@ -150,7 +150,9 @@ PY
 - 단계 실행 중 `POST /v1/runs/{id}/pause`를 호출하면 그 단계가 끝날 때까지
   실행은 `Fetching`으로 남습니다. 워커는 다음 단계를 시작하기 전에 실행을
   `Paused`로 바꿉니다. 그 전에 `POST /v1/runs/{id}/resume`을 호출하면 pause가
-  취소되고 워커가 실행을 계속합니다.
+  취소되고 워커가 실행을 계속합니다. `GET /v1/runs`와 `GET /v1/runs/{id}`는 pause를
+  받은 실행에 `pause_requested: true`를 보여 줍니다. 이 값은 실행이 `Paused`가 된
+  뒤에도 남고, resume이 지웁니다.
 - 단계 실행 중 `POST /v1/runs/{id}/cancel`을 호출하면 그 단계가 끝날 때까지
   실행은 `Fetching`으로 남고 대상 lock도 유지됩니다. `GET /v1/runs`와
   `GET /v1/runs/{id}`는 `cancel_requested: true`를 보여 주고, 관리자 콘솔은
