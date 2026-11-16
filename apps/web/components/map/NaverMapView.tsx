@@ -5,7 +5,6 @@ import { createClusterIndexBuildScheduler } from '@/lib/cluster-index-build-sche
 import { clearNaverDeviceLocationMarker, createNaverCancellableCallback, createNaverOneShotCallback, removeNaverMapListener } from '@/lib/naver-map-event-cleanup';
 
 import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
-import type { CSSProperties } from "react";
 import { useAuth } from "@/contexts/AuthContextBase";
 import { useQueryClient } from "@tanstack/react-query";
 import { readHomeRouteMemory, writeHomeRouteMemory } from "@/hooks/use-home-route-memory";
@@ -18,7 +17,6 @@ import type { FilterState } from "@/components/filters/filter-state";
 import type { Restaurant, Region } from "@/types/restaurant";
 import type { Announcement } from "@/types/announcement";
 import type { Tables } from "@/integrations/supabase/types";
-import { REGION_MAP_CONFIG } from "@/config/maps";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
 import { NaverMapSurface } from "@/components/map/naver-map-surface";
@@ -71,7 +69,6 @@ import {
 import { markerPool } from "@/lib/marker-pool";
 import { primeCategoryMarkerImages } from "@/lib/category-marker-image-primer";
 import {
-    createClusterMarkerHTML,
     clusterAnimationManager,
     injectClusterCSS,
     removeClusterCSS
@@ -87,8 +84,6 @@ import {
     RESTAURANT_MARKER_ASSET_VERSION,
 } from "@/lib/restaurant-marker-kind";
 import {
-    buildClusterMarkerContent,
-    buildClusterMarkerFeature,
     buildNaverClusterAnimationIconPlan,
     buildNaverClusterMarkerRenderPlan,
 } from "@/lib/naver-map-cluster-visuals";
@@ -106,7 +101,6 @@ import {
 } from "@/lib/expanded-cluster-restaurant-snapshot";
 import {
     buildRestaurantLookup,
-    findMatchingRestaurantInList,
 } from "@/lib/map-restaurant-lookup";
 import {
     buildPostSearchSwipeCandidates,
@@ -120,9 +114,7 @@ import {
 } from "@/lib/map-query-helpers";
 import {
     fillExtendedBounds,
-    getPrimaryCategory,
     isPointInSeoul,
-    isRestaurantInViewport,
 } from "@/lib/naver-map-view-helpers";
 import {
     buildNaverMapOptions,
@@ -149,7 +141,7 @@ import {
     shouldClearEmptyClusterState,
     shouldReportNaverMarkerRenderPerformance,
 } from "@/lib/naver-map-render-plan";
-import { debounce, LruCache } from "@/lib/map-runtime-helpers";
+import { debounce } from "@/lib/map-runtime-helpers";
 import {
     resolveRestaurantDetailPanelElement,
     shouldResetNaverMapOnPathChange,
@@ -225,7 +217,6 @@ import {
     reuseMarkerAnchor,
     reuseProjectedLatLng,
 } from "@/lib/naver-map-overlap-helpers";
-import { resolveNaverResizeOffsets } from "@/lib/naver-map-resize-offset-helpers";
 import {
     buildNaverWindowResizeCleanup,
     buildNaverWindowResizeHandler,
@@ -402,11 +393,6 @@ const hasValidNaverDeviceLocation = (
   location.lng <= 180 &&
   Number.isFinite(zoom);
 
-/**
- * [OPTIMIZATION] HTML 마커 콘텐츠 캐시 (LRU 기반)
- * 각 레스토랑의 선택/비선택 상태별로 HTML을 캐싱하여 재사용
- */
-const markerContentCache = new LruCache<string, string>(500);
 type VisibleMarkerReviewRow = Pick<
     Tables<'reviews'>,
     'id' | 'restaurant_id' | 'user_id' | 'content' | 'food_photos' | 'created_at' | 'is_pinned'
@@ -1242,8 +1228,6 @@ const NaverMapView = memo(({
 
         // 정리: 컴포넌트 언마운트 시
         return () => {
-            markerContentCache.clear();
-
             // 클러스터 CSS 및 애니메이션 정리
             removeClusterCSS();
             clusterAnimationManager.clear();
@@ -3012,7 +2996,6 @@ const NaverMapView = memo(({
                                 { content: markerContent, anchor: anchorForMarker(restaurantId, visual.anchor.x, visual.anchor.y) },
                                 map,
                                 () => {
-                                    // ... existing click logic ...
                                     if (restaurant) {
                                         handleMarkerRestaurantSelection(restaurant);
                                     }
@@ -3023,9 +3006,6 @@ const NaverMapView = memo(({
                 }
             } else {
                 // 개별 마커 모드 (클러스터링 없음)
-                // 참고: 서울 자치구 모드가 활성화된 경우, 서울 내의 개별 마커를 숨겨야 할까요?
-                // 아마도 네, 클러스터링을 강제하기 위해서입니다.
-
                 contextualRestaurants.forEach(restaurant => {
                     // Expanded markers already rendered from this same source need
                     // no second SDK icon read/options/click-handler replacement.
@@ -3111,7 +3091,7 @@ const NaverMapView = memo(({
                 }
             };
         }
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, overlappingMarkerOffsets, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection, resetMarkerRenderRetry, scheduleMarkerRenderRetry, resolveMarkerRestaurant, mapOptimization.clusterAnimationEnabled]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, overlappingMarkerOffsets, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection, resetMarkerRenderRetry, scheduleMarkerRenderRetry, resolveMarkerRestaurant, mapOptimization.clusterAnimationEnabled]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
@@ -3133,7 +3113,6 @@ const NaverMapView = memo(({
             };
 
             if (isRegionalClusterMode) {
-                // ... (기존 코드)
                 regionalClusters.forEach((cluster) => {
                     const markerId = `regional-${cluster.region}`;
                     const marker = markerPool.get(markerId);
@@ -3270,7 +3249,7 @@ const NaverMapView = memo(({
         // ref 업데이트
         prevSelectedMarkerIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
 
-    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById, expandedClusterRestaurantIds, visibleMarkerReviewBubbles, isMobileOrTablet, resolveMarkerRestaurant]);
+    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, visibleMarkerReviewBubbles, isMobileOrTablet, resolveMarkerRestaurant]);
 
 
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
