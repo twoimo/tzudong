@@ -104,8 +104,9 @@ describe('bookmark reads that resolve merged duplicate restaurants', () => {
             f.client.setQueryData(['bookmark-ids', USER_ID], [canonical.id]);
             const { toggleBookmark } = f.render(() => f.hooks.useToggleBookmark());
 
-            await expect(toggleBookmark(canonical.id, true)).rejects.toThrow('BOOKMARK_RESTAURANTS_UNAVAILABLE');
+            await toggleBookmark(canonical.id, true);
 
+            expect(f.toasts).toHaveLength(1);
             expect(bookmarkCalls(f.calls)).toEqual([]);
             expect(f.client.getQueryData(['bookmark-ids', USER_ID])).toEqual([canonical.id]);
         });
