@@ -15,6 +15,7 @@ export const PUBLIC_LIST_KEYS = [
   "dry_run",
   "adapter_index",
   "pause_requested",
+  "cancel_requested",
 ] as const;
 
 export type PipelineListKey = (typeof PUBLIC_LIST_KEYS)[number];
@@ -189,6 +190,7 @@ export function snapshotRevision(input: {
           id: String(item.id ?? ""),
           status: String(item.status ?? ""),
           pause_requested: item.pause_requested === true,
+          cancel_requested: item.cancel_requested === true,
         };
       }),
     }),

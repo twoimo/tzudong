@@ -145,12 +145,13 @@ PY
   `Paused`로 바꿉니다. 그 전에 `POST /v1/runs/{id}/resume`을 호출하면 pause가
   취소되고 워커가 실행을 계속합니다.
 - 단계 실행 중 `POST /v1/runs/{id}/cancel`을 호출하면 그 단계가 끝날 때까지
-  실행은 `Fetching`으로 남고 대상 lock도 유지됩니다. `GET /v1/runs/{id}`는
-  `cancel_requested: true`를 보여 줍니다. 워커는 다음 단계를 시작하기 전에
-  실행을 `Cancelled`로 끝내고 lock을 풉니다. cancel은 취소할 수 없습니다.
-  마지막 단계 도중에 호출한 cancel은 적용되지 않고, 실행은 `Succeeded` 또는
-  `Failed`로 끝납니다. `Queued`나 `Paused` 실행은 cancel 즉시 `Cancelled`로
-  끝납니다.
+  실행은 `Fetching`으로 남고 대상 lock도 유지됩니다. `GET /v1/runs`와
+  `GET /v1/runs/{id}`는 `cancel_requested: true`를 보여 주고, 관리자 콘솔은
+  `취소 요청됨`을 표시하며 실행 제어 버튼을 숨깁니다. 워커는 다음 단계를
+  시작하기 전에 실행을 `Cancelled`로 끝내고 lock을 풉니다. cancel은 취소할 수
+  없습니다. 마지막 단계 도중에 호출한 cancel은 적용되지 않고, 실행은
+  `Succeeded` 또는 `Failed`로 끝납니다. `Queued`나 `Paused` 실행은 cancel 즉시
+  `Cancelled`로 끝납니다.
 - `TZUDONG_PIPELINE_PERSIST`를 켠 상태에서 mirror 쓰기가 실패해도 워커는 끝난
   실행을 `pipeline-store.json`에 먼저 기록하고 lock을 풉니다. manifest는 이
   기록을 따르므로 성공한 실행은 `OK` manifest를 남깁니다. 그다음 워커는

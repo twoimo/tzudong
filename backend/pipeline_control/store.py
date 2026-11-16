@@ -36,6 +36,7 @@ PUBLIC_LIST_KEYS = (
     "dry_run",
     "adapter_index",
     "pause_requested",
+    "cancel_requested",
 )
 OPERATOR_FAILURE_CAP = 20
 _OPERATOR_PROFILES = ("heavy_local", "lite_gha")
