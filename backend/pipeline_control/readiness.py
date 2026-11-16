@@ -147,6 +147,7 @@ DEFAULT_TEST_MODULES = (
     "backend.pipeline_control.tests.test_live_and_cutover",
     "backend.pipeline_control.tests.test_live_evidence",
     "backend.pipeline_control.tests.test_manifest_parity",
+    "backend.pipeline_control.test_queued_runs_unittest",
     "backend.utils.tests.test_supabase_boundary_pbt",
     "backend.utils.tests.test_env_contract_pbt",
     "backend.utils.tests.test_env_contract_preflight_ordering",
