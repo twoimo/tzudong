@@ -592,6 +592,7 @@ class LiveAdapterTests(unittest.TestCase):
                 "TZUDONG_DATA_ENV": "local_db",
                 "TZUDONG_DATA_SINK": "local_db",
                 "TZUDONG_PIPELINE_LIVE": "1",
+                "TZUDONG_COMPUTE_PROFILE": "heavy_local",
                 "RUN_DAILY_EXECUTION_SHA": "a" * 40,
             },
             clear=False,
