@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.pipeline_control.pg_store import AtomicMemoryStore, PostgresStore
-from backend.pipeline_control.state_machine import TERMINAL_STATUSES
+from backend.pipeline_control.state_machine import TERMINAL_STATUSES, ControlPlaneError
 from backend.pipeline_control.test_store_parity_unittest import (
     Answer,
     answers,
@@ -148,6 +148,35 @@ class PostgresStoreTests(unittest.TestCase):
                 self.assertEqual(make_call(self.store, run_id, finish, 1), "ok")
 
                 self.assertEqual((self._observe(run_id), self._audit(run_id)), recorded)
+
+    def test_claim_that_cannot_write_its_audit_row_leaves_the_run_queued(self) -> None:
+        run_id = self._enqueue()
+        with self.admin.cursor() as cur:
+            cur.execute(
+                """
+                CREATE FUNCTION public.refuse_audit() RETURNS trigger LANGUAGE plpgsql
+                AS $$ BEGIN RAISE EXCEPTION 'audit_unavailable'; END $$;
+                CREATE TRIGGER refuse_audit BEFORE INSERT ON pipeline_control.audit
+                FOR EACH ROW EXECUTE FUNCTION public.refuse_audit();
+                """
+            )
+
+        def allow_audit() -> None:
+            with self.admin.cursor() as cur:
+                cur.execute(
+                    "DROP TRIGGER IF EXISTS refuse_audit ON pipeline_control.audit;"
+                    "DROP FUNCTION IF EXISTS public.refuse_audit();"
+                )
+
+        self.addCleanup(allow_audit)
+
+        with self.assertRaises(ControlPlaneError):
+            self.store.claim(run_id)
+
+        self.assertEqual((self._observe(run_id), self._audit(run_id)), (("Queued", None, True, False, False), []))
+        allow_audit()
+        self.assertEqual(self.store.claim(run_id).status, "Fetching")
+        self.assertEqual(self._audit(run_id), ["claim"])
 
     def test_heartbeat_leaves_a_pending_pause_for_the_step_boundary(self) -> None:
         run_id = self._enqueue(claimed=True)
