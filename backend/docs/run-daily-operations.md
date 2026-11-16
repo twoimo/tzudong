@@ -135,11 +135,12 @@ PY
   그 호출이 실행을 `lease_expired`로 정리합니다.
 - 워커가 실행 중 SIGTERM, SIGHUP 또는 Ctrl-C를 받으면 진행 중인 단계를
   멈추고, 실행을 `Failed`로 끝내고, 실행 기록과 manifest를 남긴 다음 media
-  cache를 지웁니다. 성공한 live 실행의 evidence를 읽는 도중 받은 신호도 실행을
-  `Failed`로 끝냅니다. 워커가 실행을 기록하는 도중 받은 신호는 manifest와 cache
-  삭제가 끝난 다음 적용되고, 실행은 기록된 상태로 남습니다. cache를 지우는
-  도중 monitor daemon이 SIGKILL을 보내도 실행 기록과 manifest는 남고 lock은
-  풀린 상태입니다.
+  cache를 지웁니다. 워커가 기본 실행을 만든 직후, 첫 단계를 시작하기 전에 받은
+  신호도 그 실행을 `Failed`로 끝내고 manifest를 남깁니다. 성공한 live 실행의
+  evidence를 읽는 도중 받은 신호도 실행을 `Failed`로 끝냅니다. 워커가 실행을
+  기록하는 도중 받은 신호는 manifest와 cache 삭제가 끝난 다음 적용되고, 실행은
+  기록된 상태로 남습니다. cache를 지우는 도중 monitor daemon이 SIGKILL을 보내도
+  실행 기록과 manifest는 남고 lock은 풀린 상태입니다.
 - 단계 실행 중 `POST /v1/runs/{id}/pause`를 호출하면 그 단계가 끝날 때까지
   실행은 `Fetching`으로 남습니다. 워커는 다음 단계를 시작하기 전에 실행을
   `Paused`로 바꿉니다. 그 전에 `POST /v1/runs/{id}/resume`을 호출하면 pause가
