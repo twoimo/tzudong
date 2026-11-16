@@ -155,7 +155,7 @@ describe('expanded cluster restaurant snapshot', () => {
     });
 
     test('map view resolves markers through the snapshot instead of copying both lookup maps', () => {
-        const source = readFileSync(join(import.meta.dir, '../components/map/NaverMapView.tsx'), 'utf8');
+        const source = readFileSync(join(import.meta.dir, '../components/map/use-naver-map-cluster-render.ts'), 'utf8');
 
         expect(source).toContain('retainExpandedClusterRestaurantSnapshot(');
         expect(source).toContain('resolveExpandedClusterRestaurant(');
