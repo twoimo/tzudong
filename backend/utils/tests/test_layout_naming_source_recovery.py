@@ -143,6 +143,34 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
             "its working directory. Keep guidance in AGENTS.md and delete these files.",
         )
 
+    def test_discover_reaches_every_pipeline_control_test_module(self) -> None:
+        package = PurePosixPath("backend/pipeline_control")
+        tracked = set(
+            subprocess.run(
+                ["git", "ls-files", "-z", "--", str(package)],
+                cwd=ROOT,
+                capture_output=True,
+                check=True,
+            ).stdout.decode("utf-8").split("\0")
+        )
+        directories = set()
+        for raw in filter(None, tracked):
+            path = PurePosixPath(raw)
+            if path.name.startswith("test_") and path.suffix == ".py":
+                directories.update(
+                    parent for parent in path.parents if parent == package or package in parent.parents
+                )
+        skipped = sorted(
+            str(directory) for directory in directories if f"{directory}/__init__.py" not in tracked
+        )
+        self.assertEqual(
+            skipped,
+            [],
+            "`unittest discover -s backend/pipeline_control -t .` skips a directory "
+            "that has no `__init__.py` and reports no error, so the tests in it "
+            "never run. Add an `__init__.py` to each directory.",
+        )
+
     def test_checkers_are_read_only_and_have_bounded_codes(self) -> None:
         layout_source = LAYOUT_CHECKER.read_text(encoding="utf-8")
         rename_source = RENAME_CHECKER.read_text(encoding="utf-8")
