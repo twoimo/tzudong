@@ -24,6 +24,8 @@ from backend.pipeline_control.impl_selector import python_reference
 
 STORE = FileStore()
 _REQUEST_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+# Run ids are server-generated UUIDs that callers echo back in control paths.
+_UUID_RESPONSE_KEYS = frozenset({"id"})
 
 
 def build_store():
@@ -62,7 +64,8 @@ def _bounded_request_id(value: object) -> str:
 
 
 def _json(handler: BaseHTTPRequestHandler, status: int, body: dict[str, Any]) -> None:
-    payload = json.dumps(sanitize_log_value(body), ensure_ascii=True).encode("utf-8")
+    safe_body = sanitize_log_value(body, uuid_keys=_UUID_RESPONSE_KEYS)
+    payload = json.dumps(safe_body, ensure_ascii=True).encode("utf-8")
     request_id = _bounded_request_id(handler.headers.get("X-Request-Id"))
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json")

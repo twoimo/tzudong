@@ -97,6 +97,9 @@ _SENSITIVE_KEYS = frozenset(
         "ocrcontent",
     }
 )
+_CANONICAL_UUID_RE = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+)
 _COORDINATE_KEYS = frozenset(
     {"lat", "latitude", "lng", "lon", "longitude", "위도", "경도", "좌표", "coordinate", "coordinates", "coord", "coords"}
 )
@@ -201,8 +204,18 @@ def sanitize_log_value(
     max_depth: int = DEFAULT_MAX_DEPTH,
     max_entries: int = DEFAULT_MAX_ENTRIES,
     max_string_length: int = DEFAULT_MAX_STRING_LENGTH,
+    *,
+    uuid_keys: frozenset[str] = frozenset(),
 ) -> Any:
-    """Convert values into bounded JSON-safe primitives without unsafe object coercion."""
+    """Convert values into bounded JSON-safe primitives without unsafe object coercion.
+
+    A string under a mapping key in ``uuid_keys`` is kept as is only when it is
+    exactly a lowercase canonical UUID, which holds no free text. The phone
+    redactor would otherwise rewrite digit runs inside it. Any other value under
+    such a key gets the same redaction as free text.
+    """
+    if isinstance(uuid_keys, str):
+        raise TypeError("uuid_keys must be a collection of exact keys, not a str")
     depth_limit = _normalise_limit(max_depth, DEFAULT_MAX_DEPTH)
     entry_limit = _normalise_limit(max_entries, DEFAULT_MAX_ENTRIES)
     string_limit = _normalise_limit(max_string_length, DEFAULT_MAX_STRING_LENGTH)
@@ -257,6 +270,12 @@ def sanitize_log_value(
                     safe_key = unique_key(sanitized, raw_key)
                     if _is_sensitive_key(raw_key) or _is_coordinate_key(raw_key):
                         sanitized[safe_key] = REDACTED
+                    elif (
+                        raw_key in uuid_keys
+                        and type(item) is str
+                        and _CANONICAL_UUID_RE.fullmatch(item)
+                    ):
+                        sanitized[safe_key] = _truncate(item, string_limit)
                     else:
                         sanitized[safe_key] = sanitize(item, depth + 1)
                     last_key = safe_key

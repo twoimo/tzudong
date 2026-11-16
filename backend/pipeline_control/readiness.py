@@ -137,6 +137,7 @@ DEFAULT_TEST_MODULES = (
     "backend.pipeline_control.test_run_lease_unittest",
     "backend.pipeline_control.test_step_runner_unittest",
     "backend.pipeline_control.test_durable_writes_unittest",
+    "backend.pipeline_control.test_api_run_id_redaction_unittest",
     "backend.utils.tests.test_supabase_boundary_pbt",
     "backend.utils.tests.test_env_contract_pbt",
     "backend.utils.tests.test_env_contract_preflight_ordering",

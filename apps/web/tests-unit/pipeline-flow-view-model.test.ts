@@ -174,6 +174,17 @@ describe('pipeline execution read model', () => {
     for (const flag of ['true', 1, null, undefined]) expect(row({ pause_requested: flag }).label).toBe('수집 중');
     expect(row({ pause_requested: true }, 'github_actions')).toEqual({ label: '수집 중', note: null, controls: [] });
   });
+  test('a recent failure keeps control unlocked only while the API returns its run id intact', () => {
+    const runId = 'd107033f-3a53-4406-af19-13543470ddb2';
+    const failure = { ...job, id: runId, status: 'Failed', error_code: 'adapter_failed' };
+    const intact = parsePipelineStatus(status({ failures: [failure] }));
+    expect(intact.failures.map(f => f.id)).toEqual([runId]);
+    expect(pipelineDisplayIsReliable(intact, undefined)).toBe(true);
+    expect(pipelineJobRow('job_api', { ...intact.failures[0], status: 'Queued' }).controls.map(control => control.action)).toContain('cancel');
+    const rewritten = parsePipelineStatus(status({ failures: [{ ...failure, id: 'd107033f-3a53-4406-af[REDACTED]ddb2' }] }));
+    expect(rewritten.failures).toEqual([]);
+    expect(pipelineDisplayIsReliable(rewritten, undefined)).toBe(false);
+  });
 });
 describe('pipeline preview and confirmation', () => {
   const now = Date.parse('2026-10-04T00:00:00Z');
