@@ -78,6 +78,32 @@ with patch.object(owner, name, signalled), patch.object(
         store, live=True, runner=lambda argv: 0, manifest_path=root / "summary.json", run_id=run.id
     )
 """
+WORKER_STOPPED_AFTER_CREATING_ITS_RUN = """
+import os, signal, sys
+from pathlib import Path
+from unittest.mock import patch
+
+from backend.pipeline_control import live_run
+from backend.pipeline_control.file_store import FileStore
+
+root = Path(sys.argv[1])
+create_run = FileStore.create_run
+
+
+def create_run_then_stop(self, **kwargs):
+    run, created = create_run(self, **kwargs)
+    (root / "run_id").write_text(run.id)
+    os.kill(os.getpid(), signal.SIGTERM)
+    return run, created
+
+
+with patch.object(FileStore, "create_run", create_run_then_stop), patch.object(
+    live_run, "CANDIDATE_DIR", root
+):
+    live_run.run_once(
+        FileStore(root / "store.json"), target="tzuyang", index=1, live=True, runner=lambda argv: 0
+    )
+"""
 WORKER_KILLED_WHILE_CLEANING_UP_A_STOPPED_STEP = """
 import os, signal, subprocess, sys
 from functools import partial
@@ -697,7 +723,9 @@ class DurableMirrorOutageTests(unittest.TestCase):
 
 
 class StopSignalTests(unittest.TestCase):
-    def _worker(self, script: str, *args: str) -> tuple[int, dict, dict, dict | None]:
+    def _worker(
+        self, script: str, *args: str, summary: str = "summary.json"
+    ) -> tuple[int, dict, dict, dict | None]:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             worker = subprocess.run(
@@ -709,8 +737,7 @@ class StopSignalTests(unittest.TestCase):
             )
             store = _read(root / "store.json")
             run = store["runs"][(root / "run_id").read_text()]
-            summary = root / "summary.json"
-            manifest = _read(summary) if summary.exists() else None
+            manifest = _read(root / summary) if (root / summary).exists() else None
         return worker.returncode, run, store["locks"], manifest
 
     def _stopped_like_the_daemon(self, stalled: str) -> tuple[dict, dict, dict | None]:
@@ -770,6 +797,16 @@ class StopSignalTests(unittest.TestCase):
                 )
                 self._assert_recorded_failed(run, locks, manifest)
                 self.assertEqual(code, 128 + signum)
+
+    def test_stop_right_after_the_worker_creates_its_run_fails_the_run_with_a_manifest(
+        self,
+    ) -> None:
+        code, run, locks, manifest = self._worker(
+            WORKER_STOPPED_AFTER_CREATING_ITS_RUN, summary="run-1-current-summary.json"
+        )
+
+        self._assert_recorded_failed(run, locks, manifest)
+        self.assertEqual(code, 128 + signal.SIGTERM)
 
     def test_stop_signal_during_cleanup_keeps_the_recorded_success(self) -> None:
         code, run, locks, manifest = self._worker(
