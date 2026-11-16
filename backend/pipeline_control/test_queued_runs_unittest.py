@@ -104,7 +104,7 @@ class QueuedRunTests(unittest.TestCase):
             "PIPELINE_CONTROL_STORE_PATH": str(self.root / "store.json"),
         }
 
-    def _enqueue_like_the_api(self, count: int) -> list[str]:
+    def _enqueue_like_the_api(self, count: int, *, dry_run: bool = True) -> list[str]:
         store = FileStore(self.root / "store.json")
         run_ids = []
         for number, target in enumerate(TARGETS[:count], start=1):
@@ -112,10 +112,10 @@ class QueuedRunTests(unittest.TestCase):
                 target=target,
                 profile="heavy_local",
                 idempotency_key=f"queued-run-{number:04d}",
-                payload={"dryRun": True},
+                payload={"dryRun": dry_run},
                 actor="api",
                 request_id=f"req-queued-{number}",
-                dry_run=True,
+                dry_run=dry_run,
             )
             file_queue.enqueue(
                 {
@@ -295,6 +295,54 @@ class QueuedRunTests(unittest.TestCase):
 
         self._assert_each_run_failed_with_its_manifest(run_ids, "worker_unexpected")
 
+
+    def _cancel(self, run_id: str) -> None:
+        FileStore(self.root / "store.json").control(
+            run_id, "cancel", actor="operator", request_id="req-cancel"
+        )
+
+    def _modes_and_job_ids(self, count: int) -> list[tuple[str, str | None]]:
+        manifests = [
+            _read(self.root / "live-runs" / f"run-{index}-current-summary.json")
+            for index in range(1, count + 1)
+        ]
+        return [(manifest["executionMode"], manifest["jobId"]) for manifest in manifests]
+
+    def test_failure_manifests_of_taken_live_runs_record_the_live_mode(self) -> None:
+        run_ids = self._enqueue_like_the_api(2, dry_run=False)
+        self._cancel(run_ids[1])
+
+        with self._worker_in_this_process(
+            PIPELINE_CONTROL_DSN="postgresql://tzudong@10.0.0.5:5432/postgres"
+        ):
+            with self.assertRaises(DsnGuardError):
+                live_run.main(["--live"])
+
+        self.assertEqual(self._modes_and_job_ids(2), [("live", run_ids[0]), ("live", run_ids[1])])
+
+    def test_manifest_of_a_live_run_the_worker_cannot_claim_records_the_live_mode(self) -> None:
+        run_ids = self._enqueue_like_the_api(1, dry_run=False)
+        self._cancel(run_ids[0])
+
+        with self._worker_in_this_process():
+            self.assertEqual(live_run.main(["--live"]), 1)
+
+        self.assertEqual(self._modes_and_job_ids(1), [("live", run_ids[0])])
+
+    def test_manifest_of_a_refused_default_live_run_records_the_live_mode(self) -> None:
+        FileStore(self.root / "store.json").create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="lock-holder-01",
+            payload={},
+            actor="api",
+            request_id="req-lock-holder",
+        )
+
+        with self._worker_in_this_process():
+            self.assertEqual(live_run.main(["--live"]), 1)
+
+        self.assertEqual(self._modes_and_job_ids(1), [("live", None)])
 
 if __name__ == "__main__":
     unittest.main()
