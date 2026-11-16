@@ -237,8 +237,6 @@ class AtomicMemoryStore:
                 run.pause_requested = False
                 if run.status == "Paused":
                     run.status = "Queued"
-                # control_job also accepts the resume of a finished run that still
-                # has pause_requested, and heartbeat() refuses a finished run.
                 run.heartbeat_at = now
                 run.lease_until = now + LEASE_TTL_SECONDS
                 self._audit(actor=actor, job_id=run.id, transition="resume", request_id=request_id)
@@ -515,8 +513,6 @@ class PostgresStore:
         error_code: str | None = None,
         adapter_index: int | None = None,
     ) -> tuple[RunRecord, bool]:
-        # One statement changes the status, the lock, and the audit trail
-        # together. It changes none of them for a run in another status.
         rows = self._execute(
             """
             WITH finished AS (

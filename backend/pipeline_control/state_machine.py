@@ -12,8 +12,6 @@ Run lifecycle::
 
 ``Succeeded``, ``Failed``, and ``Cancelled`` are terminal. The first terminal
 status of a run stands, and a terminal run does not hold its target lock.
-``SUCCEED_FROM`` and ``FAIL_FROM`` name the statuses that a finish can end, for
-every store.
 
 A worker holds a ``Fetching`` or ``Inserting`` run until its next step
 boundary. A pause or a cancel of that run waits for the boundary, so the run

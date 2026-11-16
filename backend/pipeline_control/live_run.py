@@ -122,13 +122,6 @@ def run_once(
 
 
 def _fail_unclaimed(store: MemoryStore, jobs: list[dict], error: BaseException) -> None:
-    """Fail each queued run that the worker took off the queue and did not claim.
-
-    No later worker can claim these runs, because their rows have left the
-    queue. A returned row would not help. A queued run's lease ends after 30
-    seconds, and a worker that finds queue rows does not create its default run.
-    """
-
     error_code = "worker_unexpected" if isinstance(error, Exception) else "worker_interrupted"
     for index, job in enumerate(jobs, start=1):
         run_id = str(job.get("id") or "").strip()
@@ -160,9 +153,6 @@ def main(argv: list[str] | None = None) -> int:
         "yes",
     }
     store: MemoryStore = FileStore()
-    # A stop waits while the worker takes the queue rows. If the worker took
-    # any, the stop also waits until the run of each row is recorded, so it
-    # cannot end the worker between a take and a claim.
     with stop_signals() as stops, stops.held():
         queued = [{"queued": True, **job} for job in drain()]
         if queued:

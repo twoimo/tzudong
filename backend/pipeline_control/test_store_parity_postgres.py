@@ -1,9 +1,3 @@
-"""Real local PostgreSQL contract of PostgresStore; opt in with TZUDONG_TEST_POSTGRES_BIN.
-
-Creates an isolated cluster with a private Unix socket and no TCP listener. The
-cluster holds only the pipeline_control migrations, and the test always stops it.
-"""
-
 from __future__ import annotations
 
 import itertools
@@ -83,8 +77,6 @@ class PostgresStoreTests(unittest.TestCase):
         cls.addClassCleanup(cls.store.close)
 
     def _enqueue(self, *, claimed: bool = False) -> str:
-        # The enqueue RPC cannot insert, because jobs.id has no default. The
-        # FileStore mirror writes a run with its id, and so does this test.
         run_id, target = str(uuid.uuid4()), f"target-{uuid.uuid4().hex}"
         with self.admin.cursor() as cur:
             cur.execute(

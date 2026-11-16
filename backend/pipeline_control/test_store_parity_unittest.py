@@ -12,8 +12,6 @@ from backend.pipeline_control.state_machine import TERMINAL_STATUSES, ControlPla
 from backend.pipeline_control.store import MemoryStore
 
 CALLS = ("pause", "resume", "cancel", "boundary", "finish_succeeded", "finish_failed")
-# Three calls reach every status and request flag that a run can have. The
-# fourth call then makes every call on each of them.
 LONGEST = 4
 
 
