@@ -10,8 +10,10 @@ Run lifecycle::
     Fetching | Inserting | Paused --step or worker failure--> Failed
     Queued | Fetching | Inserting --lease lapsed--> Failed (lease_expired)
 
-``Succeeded``, ``Failed``, and ``Cancelled`` are terminal. A terminal run does
-not change again and does not hold its target lock.
+``Succeeded``, ``Failed``, and ``Cancelled`` are terminal. The first terminal
+status of a run stands, and a terminal run does not hold its target lock.
+``SUCCEED_FROM`` and ``FAIL_FROM`` name the statuses that a finish can end, for
+every store.
 
 A worker holds a ``Fetching`` or ``Inserting`` run until its next step
 boundary. A pause or a cancel of that run waits for the boundary, so the run
@@ -51,6 +53,8 @@ TARGET_IDLE = "Idle"
 ILLEGAL_TRANSITION = "illegal_transition"
 PAUSE_FROM = frozenset({"Queued", "Fetching", "Inserting"})
 CANCEL_FROM = frozenset({"Queued", "Fetching", "Inserting", "Paused"})
+SUCCEED_FROM = frozenset({"Queued", "Fetching", "Inserting"})
+FAIL_FROM = ACTIVE_LOCK_STATUSES
 
 Profile = Literal["heavy_local", "lite_gha"]
 

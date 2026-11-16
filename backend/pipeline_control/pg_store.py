@@ -16,8 +16,10 @@ from backend.pipeline_control.state_machine import (
     ACTIVE_LOCK_STATUSES,
     ADAPTER_STEPS,
     ControlPlaneError,
+    FAIL_FROM,
     Profile,
     RunRecord,
+    SUCCEED_FROM,
     TARGET_IDLE,
     heartbeat,
     lock_key,
@@ -314,7 +316,7 @@ class AtomicMemoryStore:
     def finish_dry_run(self, run_id: str) -> RunRecord:
         with self._gate:
             run = self.runs[run_id]
-            if run.status in {"Cancelled", "Paused"}:
+            if run.status not in SUCCEED_FROM:
                 return run
             run.adapter_index = len(ADAPTER_STEPS)
             run.status = "Succeeded"
@@ -326,6 +328,8 @@ class AtomicMemoryStore:
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
         with self._gate:
             run = self.runs[run_id]
+            if run.status not in FAIL_FROM:
+                return run
             run.status = "Failed"
             run.error_code = error_code
             self.locks.pop(lock_key(run.target, run.profile), None)
@@ -436,7 +440,7 @@ class PostgresStore:
                     adapter_index = COALESCE(%s, adapter_index),
                     updated_at = now()
                 WHERE id = %s
-                RETURNING pipeline_control._job_json(pipeline_control.jobs)
+                RETURNING pipeline_control._job_json(jobs)
                 """,
                 (adapter_index, run_id),
             )
@@ -470,7 +474,7 @@ class PostgresStore:
                   AND status = 'Queued'
                   AND pause_requested = false
                   AND cancel_requested = false
-                RETURNING pipeline_control._job_json(pipeline_control.jobs)
+                RETURNING pipeline_control._job_json(jobs)
                 """,
                 (self.worker_id, self.worker_id, run_id),
             )
@@ -498,68 +502,73 @@ class PostgresStore:
         record("tzudong_pipeline_runs_claimed_total")
         return run_from_job(payload)
 
-    def finish_dry_run(self, run_id: str) -> RunRecord:
-        run = self.get(run_id)
-        if run.status in {"Cancelled", "Paused"}:
-            return run
+    def _finish(
+        self,
+        run_id: str,
+        status: str,
+        sources: frozenset[str],
+        transition: str,
+        *,
+        error_code: str | None = None,
+        adapter_index: int | None = None,
+    ) -> tuple[RunRecord, bool]:
+        # One statement changes the status, the lock, and the audit trail
+        # together. It changes none of them for a run in another status.
         rows = self._execute(
             """
-            UPDATE pipeline_control.jobs
-            SET status = 'Succeeded',
-                adapter_index = %s,
-                next_step = %s,
-                updated_at = now()
-            WHERE id = %s
-            RETURNING pipeline_control._job_json(pipeline_control.jobs)
+            WITH finished AS (
+                UPDATE pipeline_control.jobs
+                SET status = %s,
+                    error_code = COALESCE(%s, error_code),
+                    adapter_index = COALESCE(%s, adapter_index),
+                    next_step = COALESCE(%s, next_step),
+                    updated_at = now()
+                WHERE id = %s AND status = ANY(%s)
+                RETURNING id, request_id, pipeline_control._job_json(jobs) AS run
+            ), released AS (
+                DELETE FROM pipeline_control.locks
+                WHERE job_id IN (SELECT id FROM finished)
+            ), audited AS (
+                INSERT INTO pipeline_control.audit (actor, job_id, transition, request_id)
+                SELECT %s, id, %s, request_id FROM finished
+            )
+            SELECT run FROM finished
             """,
-            (len(ADAPTER_STEPS), len(ADAPTER_STEPS), run_id),
+            (
+                status,
+                error_code,
+                adapter_index,
+                adapter_index,
+                run_id,
+                sorted(sources),
+                self.worker_id,
+                transition,
+            ),
         )
-        self._execute(
-            "DELETE FROM pipeline_control.locks WHERE job_id = %s",
-            (run_id,),
-        )
-        self._execute(
-            """
-            INSERT INTO pipeline_control.audit (actor, job_id, transition, request_id)
-            VALUES (%s, %s, 'dry_run_succeeded', %s)
-            """,
-            (self.worker_id, run_id, run.request_id),
-        )
-        record("tzudong_pipeline_runs_succeeded_total")
+        if not rows:
+            return self.get(run_id), False
         payload = rows[0][0]
         if isinstance(payload, str):
             payload = json.loads(payload)
-        return run_from_job(payload)
+        return run_from_job(payload), True
+
+    def finish_dry_run(self, run_id: str) -> RunRecord:
+        run, finished = self._finish(
+            run_id,
+            "Succeeded",
+            SUCCEED_FROM,
+            "dry_run_succeeded",
+            adapter_index=len(ADAPTER_STEPS),
+        )
+        if finished:
+            record("tzudong_pipeline_runs_succeeded_total")
+        return run
 
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
-        run = self.get(run_id)
-        rows = self._execute(
-            """
-            UPDATE pipeline_control.jobs
-            SET status = 'Failed',
-                error_code = %s,
-                updated_at = now()
-            WHERE id = %s
-            RETURNING pipeline_control._job_json(pipeline_control.jobs)
-            """,
-            (error_code, run_id),
-        )
-        self._execute(
-            "DELETE FROM pipeline_control.locks WHERE job_id = %s",
-            (run_id,),
-        )
-        self._execute(
-            """
-            INSERT INTO pipeline_control.audit (actor, job_id, transition, request_id)
-            VALUES (%s, %s, 'failed', %s)
-            """,
-            (self.worker_id, run_id, run.request_id),
-        )
-        record("tzudong_pipeline_runs_failed_total")
-        payload = rows[0][0]
-        if isinstance(payload, str):
-            payload = json.loads(payload)
-        return run_from_job(payload)
+        run, finished = self._finish(run_id, "Failed", FAIL_FROM, "failed", error_code=error_code)
+        if finished:
+            record("tzudong_pipeline_runs_failed_total")
+        return run
 
     def public_run(self, run: RunRecord) -> dict[str, Any]:
         body = asdict(run)

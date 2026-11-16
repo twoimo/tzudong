@@ -11,8 +11,10 @@ from backend.pipeline_control.state_machine import (
     ACTIVE_LOCK_STATUSES,
     ADAPTER_STEPS,
     ControlPlaneError,
+    FAIL_FROM,
     Profile,
     RunRecord,
+    SUCCEED_FROM,
     TARGET_IDLE,
     TERMINAL_STATUSES,
     apply_transition,
@@ -227,7 +229,7 @@ class MemoryStore:
 
     def finish_dry_run(self, run_id: str) -> RunRecord:
         run = self.get(run_id)
-        if run.status == "Paused" or run.status in TERMINAL_STATUSES:
+        if run.status not in SUCCEED_FROM:
             return run
         run.adapter_index = len(ADAPTER_STEPS)
         run.status = "Succeeded"
@@ -244,7 +246,7 @@ class MemoryStore:
 
     def finish_succeeded(self, run_id: str) -> RunRecord:
         run = self.get(run_id)
-        if run.status == "Paused" or run.status in TERMINAL_STATUSES:
+        if run.status not in SUCCEED_FROM:
             return run
         run.adapter_index = len(ADAPTER_STEPS)
         run.status = "Succeeded"
@@ -261,7 +263,7 @@ class MemoryStore:
 
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
         run = self.get(run_id)
-        if run.status in TERMINAL_STATUSES:
+        if run.status not in FAIL_FROM:
             return run
         run.status = "Failed"
         run.error_code = error_code
