@@ -171,6 +171,25 @@ class QueuedRunTests(unittest.TestCase):
 
         self._assert_each_run_failed_with_its_manifest(run_ids, "worker_unexpected")
 
+    def test_error_while_no_manifest_can_be_written_still_fails_every_taken_run(self) -> None:
+        run_ids = self._enqueue_like_the_api(2)
+        for index in range(1, 3):
+            (self.root / "live-runs" / f"run-{index}-current-summary.json").mkdir(parents=True)
+
+        with self._worker_in_this_process(), patch.object(
+            adapter, "run_daily_helper_dry_run", side_effect=RuntimeError("step error")
+        ):
+            with self.assertRaises(RuntimeError):
+                live_run.main([])
+
+        store = _read(self.root / "store.json")
+        self.assertEqual(
+            [(store["runs"][run_id]["status"], store["runs"][run_id]["error_code"]) for run_id in run_ids],
+            [("Failed", "worker_unexpected")] * 2,
+        )
+        self.assertEqual(store["locks"], {})
+        self.assertEqual(file_queue.drain(self.queue), [])
+
     def test_error_before_the_worker_claims_a_queued_run_fails_that_run(self) -> None:
         run_ids = self._enqueue_like_the_api(2)
 
