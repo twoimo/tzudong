@@ -23,6 +23,7 @@ import {
     hasVisibleMarkerReviewBubbles,
     scheduleVisibleMarkerReviewBubbleClamp,
     useNaverMapClusterRender,
+    type NaverClusterExpansion,
     type NaverMapLike,
 } from "@/components/map/use-naver-map-cluster-render";
 import {
@@ -48,7 +49,10 @@ import {
     resolveDeviceLocationMapRenderPlan,
     type DeviceMapLocation,
 } from "@/lib/device-location-map";
-import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
+import {
+    HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
+    type HomeMapContextualRestaurantsPayload,
+} from "@/lib/home-map-contextual-restaurants";
 import { markerPool } from "@/lib/marker-pool";
 import { primeCategoryMarkerImages } from "@/lib/category-marker-image-primer";
 import { clusterAnimationManager } from "@/lib/cluster-marker";
@@ -1487,6 +1491,14 @@ const NaverMapView = memo(({
     // Map, count and list consume the same complete current query result.
     const displayRestaurants = restaurants;
 
+    const handleClusterExpand = useCallback(({ center, islandViewport, resolveTargetZoom }: NaverClusterExpansion) => {
+        activateNoncriticalMapEffects();
+        hasUserMovedMapRef.current = true;
+        if (fitIslandClusterViewport(islandViewport)) return;
+        const targetZoom = Math.max(HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM, resolveTargetZoom());
+        jumpWithPanelOffset(center.lat, center.lng, targetZoom);
+    }, [activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset]);
+
     const { resolveMarkerRestaurant } = useNaverMapClusterRender({
         map: { mapRef, mapInstanceRef, isMapInitialized, markerRenderSignatureRef },
         displayRestaurants,
@@ -1495,9 +1507,9 @@ const NaverMapView = memo(({
         selection: { selectedRestaurant, gridSelectedRestaurant, activeSearchedRestaurant },
         device: { isMobileOrTablet, mapOptimization },
         visibleMarkerReviewBubbles,
-        camera: { activateNoncriticalMapEffects, hasUserMovedMapRef, fitIslandClusterViewport, jumpWithPanelOffset },
         events: {
             onMarkerSelect: handleMarkerRestaurantSelection,
+            onClusterExpand: handleClusterExpand,
             onReviewBubbleTargetsChange: setVisibleMarkerReviewBubbleTargets,
             onVisibleRestaurantsChange,
             onContextualRestaurantsChange,

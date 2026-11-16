@@ -357,8 +357,9 @@ describe('mobile home map regression guards', () => {
         expect(mapSource).toContain('const jumpWithPanelOffset = useCallback');
         expect(mapSource).toContain('map.setZoom(targetZoom, false)');
         expect(mapSource).toContain('map.setCenter(adjustedCenter)');
-        expect(clusterRenderSource).toContain('jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom)');
-        expect(clusterRenderSource).toContain('jumpWithPanelOffset(lat, lng, targetZoom)');
+        expect(mapSource).toContain('jumpWithPanelOffset(center.lat, center.lng, targetZoom)');
+        expect(clusterRenderSource).toContain('center: cluster.center,');
+        expect(clusterRenderSource).toContain('center: { lat, lng },');
         expect(mapSource + clusterRenderSource).not.toContain('morphWithPanelOffset');
     });
     test('mobile restaurant detail sheet peeks on map interaction without skipping fullscreen tap sequence', () => {

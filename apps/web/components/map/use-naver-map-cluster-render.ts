@@ -424,7 +424,7 @@ function areStringArraysEqual(previous: readonly string[], next: readonly string
     return previous.length === next.length && previous.every((value, index) => value === next[index]);
 }
 
-export type NaverMapClusterRenderMap = {
+type NaverMapClusterRenderMap = {
     mapRef: RefObject<HTMLDivElement | null>;
     mapInstanceRef: ReadonlyRef<NaverMapLike | null>;
     isMapInitialized: boolean;
@@ -432,21 +432,22 @@ export type NaverMapClusterRenderMap = {
     markerRenderSignatureRef: MutableRefObject<MarkerRenderSignature | null>;
 };
 
-export type NaverMapClusterRenderSelection = {
+type NaverMapClusterRenderSelection = {
     selectedRestaurant: Restaurant | null;
     gridSelectedRestaurant: Restaurant | null | undefined;
     activeSearchedRestaurant: Restaurant | null;
 };
 
-export type NaverMapClusterRenderCamera = {
-    activateNoncriticalMapEffects(): void;
-    hasUserMovedMapRef: MutableRefObject<boolean>;
-    fitIslandClusterViewport(viewport: ReturnType<typeof resolveNaverIslandClusterViewportByRegion>): boolean;
-    jumpWithPanelOffset(targetLat: number, targetLng: number, targetZoom: number): void;
+export type NaverClusterExpansion = {
+    center: { lat: number; lng: number };
+    islandViewport: ReturnType<typeof resolveNaverIslandClusterViewportByRegion>;
+    // The camera owner calls this only when the island fit declines, so the zoom is read at click time.
+    resolveTargetZoom(): number;
 };
 
-export type NaverMapClusterRenderEvents = {
+type NaverMapClusterRenderEvents = {
     onMarkerSelect(restaurant: Restaurant): void;
+    onClusterExpand(expansion: NaverClusterExpansion): void;
     onReviewBubbleTargetsChange(targets: VisibleMarkerReviewBubbleTarget[]): void;
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
     onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload) => void;
@@ -460,7 +461,6 @@ export type NaverMapClusterRenderOptions = {
     selection: NaverMapClusterRenderSelection;
     device: { isMobileOrTablet: boolean; mapOptimization: MapOptimizationSettings };
     visibleMarkerReviewBubbles: Record<string, VisibleMarkerReviewBubble>;
-    camera: NaverMapClusterRenderCamera;
     events: NaverMapClusterRenderEvents;
 };
 
@@ -478,8 +478,7 @@ export function useNaverMapClusterRender({
     selection: { selectedRestaurant, gridSelectedRestaurant, activeSearchedRestaurant },
     device: { isMobileOrTablet, mapOptimization },
     visibleMarkerReviewBubbles,
-    camera: { activateNoncriticalMapEffects, hasUserMovedMapRef, fitIslandClusterViewport, jumpWithPanelOffset },
-    events: { onMarkerSelect, onReviewBubbleTargetsChange, onVisibleRestaurantsChange, onContextualRestaurantsChange },
+    events: { onMarkerSelect, onClusterExpand, onReviewBubbleTargetsChange, onVisibleRestaurantsChange, onContextualRestaurantsChange },
 }: NaverMapClusterRenderOptions): NaverMapClusterRenderState {
     const pendingOffscreenMarkerRendersRef = useRef<(() => void) | null>(null);
     const extendedBoundsRef = useRef({ south: 0, west: 0, north: 0, east: 0 });
@@ -1351,19 +1350,12 @@ export function useNaverMapClusterRender({
                         cluster.region,
                         cluster.popularityTier,
                         () => {
-                            activateNoncriticalMapEffects();
-                            hasUserMovedMapRef.current = true;
                             setExpandedClusterRestaurantIds(cluster.restaurantIds);
-                            if (fitIslandClusterViewport(resolveNaverIslandClusterViewportByRegion(cluster.region))) {
-                                return;
-                            }
-
-                            const currentZoom = map.getZoom();
-                            const targetZoom = Math.max(
-                                HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
-                                getRegionalClusterTargetZoom(currentZoom, clusterIndexMaxZoom),
-                            );
-                            jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
+                            onClusterExpand({
+                                center: cluster.center,
+                                islandViewport: resolveNaverIslandClusterViewportByRegion(cluster.region),
+                                resolveTargetZoom: () => getRegionalClusterTargetZoom(map.getZoom(), clusterIndexMaxZoom),
+                            });
                         }
                     );
             });
@@ -1416,15 +1408,12 @@ export function useNaverMapClusterRender({
                         cluster.region,
                         cluster.popularityTier,
                         () => {
-                            activateNoncriticalMapEffects();
-                            hasUserMovedMapRef.current = true;
                             setExpandedClusterRestaurantIds(cluster.restaurantIds);
-                            const currentZoom = map.getZoom();
-                            const targetZoom = Math.max(
-                                HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
-                                getSeoulDistrictTargetZoom(currentZoom, clusterIndexMaxZoom),
-                            );
-                            jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
+                            onClusterExpand({
+                                center: cluster.center,
+                                islandViewport: null,
+                                resolveTargetZoom: () => getSeoulDistrictTargetZoom(map.getZoom(), clusterIndexMaxZoom),
+                            });
                         }
                     );
                 });
@@ -1507,8 +1496,6 @@ export function useNaverMapClusterRender({
                                 clusterId,
                                 feature.properties.popularityTier,
                                 () => {
-                                    activateNoncriticalMapEffects();
-                                    hasUserMovedMapRef.current = true;
                                     let expandedRestaurantIds: string[] = [];
                                     try {
                                         expandedRestaurantIds = expandCluster(clusterIndexRef.current!, clusterId);
@@ -1516,22 +1503,18 @@ export function useNaverMapClusterRender({
                                     } catch {
                                         setExpandedClusterRestaurantIds([]);
                                     }
-                                    const islandViewport = resolveNaverIslandClusterViewportForRestaurants(
-                                        expandedRestaurantIds
-                                            .map((restaurantId) => resolveMarkerRestaurant(restaurantId))
-                                            .filter(Boolean) as Restaurant[],
-                                    );
-                                    if (fitIslandClusterViewport(islandViewport)) {
-                                        return;
-                                    }
-
-                                    const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
-                                    const currentZoom = map.getZoom();
-                                    const targetZoom = Math.max(
-                                        HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
-                                        getSuperclusterTargetZoom(currentZoom, expansionZoom, clusterIndexMaxZoom),
-                                    );
-                                    jumpWithPanelOffset(lat, lng, targetZoom);
+                                    onClusterExpand({
+                                        center: { lat, lng },
+                                        islandViewport: resolveNaverIslandClusterViewportForRestaurants(
+                                            expandedRestaurantIds
+                                                .map((restaurantId) => resolveMarkerRestaurant(restaurantId))
+                                                .filter(Boolean) as Restaurant[],
+                                        ),
+                                        resolveTargetZoom: () => {
+                                            const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
+                                            return getSuperclusterTargetZoom(map.getZoom(), expansionZoom, clusterIndexMaxZoom);
+                                        },
+                                    });
                                 }
                             );
                         } else {
@@ -1659,7 +1642,7 @@ export function useNaverMapClusterRender({
                 }
             };
         }
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, overlappingMarkerOffsets, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onVisibleRestaurantsChange, onContextualRestaurantsChange, onMarkerSelect, onReviewBubbleTargetsChange, resetMarkerRenderRetry, scheduleMarkerRenderRetry, resolveMarkerRestaurant, mapOptimization.clusterAnimationEnabled, hasUserMovedMapRef, mapInstanceRef, mapRef, markerRenderSignatureRef]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerRenderRetryTick, markerViewportRevision, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, overlappingMarkerOffsets, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, onClusterExpand, onVisibleRestaurantsChange, onContextualRestaurantsChange, onMarkerSelect, onReviewBubbleTargetsChange, resetMarkerRenderRetry, scheduleMarkerRenderRetry, resolveMarkerRestaurant, mapOptimization.clusterAnimationEnabled, mapInstanceRef, mapRef, markerRenderSignatureRef]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
