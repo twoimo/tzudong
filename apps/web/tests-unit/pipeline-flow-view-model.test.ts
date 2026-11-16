@@ -8,6 +8,7 @@ import { parseOperationsSnapshot } from '../lib/admin/operations-view-model';
 const id = '22222222-2222-4222-8222-222222222222';
 const job = { id, target: 'tzuyang', profile: 'heavy_local', status: 'Fetching', dry_run: true, adapter_index: 0 };
 const status = (overrides: Record<string, unknown> = {}) => ({ source: 'job_api', jobs: [job], targets: [{ id: 'tzuyang', status: 'Fetching' }], failures: [], ...overrides });
+const row = (overrides: Record<string, unknown>, source = 'job_api') => { const s = parsePipelineStatus(status({ source, jobs: [{ ...job, ...overrides }] })); return pipelineJobRow(s.source, s.jobs[0]); };
 const events = PIPELINE_FLOW_STAGES.flatMap(stage => stage.steps.map(name => ({ name, status: 'completed', durationSeconds: 1.5 })));
 const manifest = (steps: unknown = events, overrides: Record<string, unknown> = {}) => parsePipelineManifest({ runDaily: { manifestStatus: 'available', stepEvents: steps, checkedAt: '2026-10-04T00:00:00Z', stale: false, ...overrides } });
 const stage = (id: string, steps: unknown) => buildPipelineStages(manifest(steps)).find(stage => stage.id === id)!;
@@ -163,7 +164,6 @@ describe('pipeline execution read model', () => {
     for (const modified of [{ ...j, id: '123' }, { ...j, profile: 'unknown' as const }, ...['Succeeded', 'Failed', 'Cancelled', 'Unknown'].map(status => ({ ...j, status }))]) expect(actions(modified)).toEqual([]);
   });
   test('a pause of a running run stays pending until the step boundary, and resume withdraws it', () => {
-    const row = (overrides: Record<string, unknown>, source = 'job_api') => { const s = parsePipelineStatus(status({ source, jobs: [{ ...job, ...overrides }] })); return pipelineJobRow(s.source, s.jobs[0]); };
     const pause = { action: 'pause', label: '일시 정지' }, cancel = { action: 'cancel', label: '실행 취소' };
     for (const [running, label] of [['Fetching', '수집 중'], ['Inserting', '저장 중']]) {
       expect(row({ status: running, pause_requested: true })).toEqual({ label: '일시 정지 요청됨', note: '현재 단계가 끝나면 멈춥니다.', controls: [{ action: 'resume', label: '일시 정지 요청 취소' }, cancel] });
@@ -173,6 +173,18 @@ describe('pipeline execution read model', () => {
     expect(row({ status: 'Paused', pause_requested: true })).toEqual({ label: '일시 정지', note: null, controls: [{ action: 'resume', label: '다시 시작' }, cancel] });
     for (const flag of ['true', 1, null, undefined]) expect(row({ pause_requested: flag }).label).toBe('수집 중');
     expect(row({ pause_requested: true }, 'github_actions')).toEqual({ label: '수집 중', note: null, controls: [] });
+  });
+  test('a cancel of a running run stays pending until the step boundary, wins over a pending pause, and offers no control', () => {
+    const pending = { label: '취소 요청됨', note: '현재 단계가 끝나면 취소됩니다.', controls: [] };
+    for (const running of ['Fetching', 'Inserting']) {
+      expect(row({ status: running, cancel_requested: true })).toEqual(pending);
+      expect(row({ status: running, cancel_requested: true, pause_requested: true })).toEqual(pending);
+    }
+    // The flag stays on a run that ended before the boundary, and on a run cancelled while Queued or Paused.
+    expect(row({ status: 'Failed', cancel_requested: true })).toEqual({ label: '실패', note: null, controls: [] });
+    expect(row({ status: 'Cancelled', cancel_requested: true })).toEqual({ label: '취소', note: null, controls: [] });
+    for (const flag of ['true', 1, null, undefined]) expect(row({ cancel_requested: flag }).controls.map(control => control.action)).toEqual(['pause', 'cancel']);
+    expect(row({ cancel_requested: true }, 'github_actions')).toEqual({ label: '수집 중', note: null, controls: [] });
   });
   test('a recent failure keeps control unlocked only while the API returns its run id intact', () => {
     const runId = 'd107033f-3a53-4406-af19-13543470ddb2';
