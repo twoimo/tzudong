@@ -17,6 +17,8 @@ A worker holds a ``Fetching`` or ``Inserting`` run until its next step
 boundary. A pause or a cancel of that run waits for the boundary, so the run
 never returns to the queue and never frees its target while its step runs. A
 resume before the boundary withdraws the pause. A cancel cannot be withdrawn.
+Every accepted cancel sets ``cancel_requested``, as the Postgres ``control_job``
+does, whether it applies at once or at the boundary.
 
 A run that ends before the boundary ends ``Succeeded`` or ``Failed``, and the
 pending pause or cancel does not apply. A dead worker reaches no boundary, so
@@ -110,15 +112,15 @@ def can_resume(status: str) -> bool:
 
 def apply_transition(run: RunRecord, action: str, now: float, lease_ttl: float) -> RunRecord:
     if run.status not in EXECUTING_STATUSES:
-        return _transition_status(run, action, now, lease_ttl)
-    if action == "cancel":
-        run.cancel_requested = True
+        _transition_status(run, action, now, lease_ttl)
     elif action == "pause":
         run.pause_requested = True
     elif action == "resume" and run.pause_requested:
         run.pause_requested = False
-    else:
+    elif action != "cancel":
         raise ControlPlaneError(ILLEGAL_TRANSITION, 409)
+    if action == "cancel":
+        run.cancel_requested = True
     return run
 
 
