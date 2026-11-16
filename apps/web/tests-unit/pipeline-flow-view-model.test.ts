@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, pipelineDisplayIsReliable, PIPELINE_FLOW_DOCUMENT, PIPELINE_FLOW_EDGES, PIPELINE_FLOW_STAGES } from '../lib/admin/pipeline-flow-view-model';
+import { buildPipelineStages, parsePipelineManifest, parsePipelineStatus, pipelineJobRow, pipelineJobsForDisplay, pipelineDisplayIsReliable, PIPELINE_FLOW_DOCUMENT, PIPELINE_FLOW_EDGES, PIPELINE_FLOW_STAGES } from '../lib/admin/pipeline-flow-view-model';
 import { parsePipelineActionPreview, pipelineApplyBody, type PipelineActionInput } from '../lib/admin/pipeline-action-preview';
 import { assertPipelineGuardedBody, buildPipelinePreviewHash, PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION } from '../lib/admin/pipeline-control';
 import { parseOperationsSnapshot } from '../lib/admin/operations-view-model';
@@ -67,7 +67,7 @@ describe('pipeline execution read model', () => {
     expect(result.jobs).toHaveLength(1);
     expect(result.jobs[0]).toMatchObject({ status: 'Unknown', dry_run: undefined, adapter_index: null });
     expect(JSON.stringify(result)).not.toContain('private');
-    expect(canControlPipelineJob(result.source, result.jobs[0], 'pause')).toBe(false);
+    expect(pipelineJobRow(result.source, result.jobs[0]).controls).toEqual([]);
     expect(pipelineJobsForDisplay(parsePipelineStatus(status({ source: 'future', jobs: [{ ...job, status: 'Succeeded', dry_run: false }] })), undefined)[0]).toMatchObject({ status: 'Unknown', hasError: false, dry_run: undefined, adapter_index: null });
   });
   test('unknown target states retain the target but make otherwise valid API snapshots partial', () => {
@@ -107,7 +107,7 @@ describe('pipeline execution read model', () => {
     for (const [status, conclusion, expected] of cases) expect(pipelineJobsForDisplay(s, gha(99, status, conclusion))[0].status).toBe(expected);
     expect(pipelineJobsForDisplay(s, gha(99, 'in_progress', null))[0].hasError).toBe(false);
     expect(pipelineJobsForDisplay(s, gha(99, 'completed', 'failure'))[0].hasError).toBe(true);
-    expect(canControlPipelineJob(s.source, pipelineJobsForDisplay(s, gha(99, 'in_progress', null))[0], 'pause')).toBe(false);
+    expect(pipelineJobRow(s.source, pipelineJobsForDisplay(s, gha(99, 'in_progress', null))[0]).controls).toEqual([]);
   });
   test('manifest and operations agree on actual GitHub failure semantics without enabling controls', () => {
     const payload = status({ source: 'github_actions', jobs: [{ ...job, id: '99', profile: 'lite_gha', status: 'Failed', error_code: 'github_crawler', dry_run: false }] });
@@ -127,7 +127,7 @@ describe('pipeline execution read model', () => {
       expect(displayed).toMatchObject({ status: expected, hasError: expected === 'Failed', dry_run: undefined, adapter_index: null });
       const operations = parseOperationsSnapshot('pipeline', { ...payload, githubRun: { id: '99', status: runStatus, conclusion } });
       expect(operations.rows[0].metrics.find(metric => metric.id === 'failed')?.value).toBe(expected === 'Failed' ? 1 : 0);
-      for (const action of ['pause', 'resume', 'cancel'] as const) expect(canControlPipelineJob(snapshot.source, displayed, action)).toBe(false);
+      expect(pipelineJobRow(snapshot.source, displayed).controls).toEqual([]);
     }
     expect(snapshot.jobs[0]).toMatchObject({ status: 'Failed', hasError: true, dry_run: false, adapter_index: 0 });
   });
@@ -152,15 +152,27 @@ describe('pipeline execution read model', () => {
     expect(snapshot.partial).toBe(true);
     const otherRun = parsePipelineManifest({ githubActions: { ...raw, latestRunId: 100, latestRunConclusion: 'failure' } });
     expect(pipelineJobsForDisplay(snapshot, otherRun)[0]).toMatchObject({ status: 'Failed', hasError: true });
-    for (const action of ['pause', 'resume', 'cancel'] as const) expect(canControlPipelineJob(snapshot.source, recovered[0], action)).toBe(false);
+    expect(pipelineJobRow(snapshot.source, recovered[0]).controls).toEqual([]);
   });
   test('controls require API, UUID, known profile and a valid transition', () => {
     const j = parsePipelineStatus(status()).jobs[0];
-    expect(canControlPipelineJob('job_api', j, 'pause')).toBe(true);
-    expect(canControlPipelineJob('job_api', j, 'cancel')).toBe(true);
-    expect(canControlPipelineJob('job_api', j, 'resume')).toBe(false);
-    expect(canControlPipelineJob('job_api', { ...j, status: 'Paused' }, 'resume')).toBe(true);
-    for (const modified of [{ ...j, id: '123' }, { ...j, profile: 'unknown' as const }, { ...j, status: 'Succeeded' }]) expect(canControlPipelineJob('job_api', modified, 'pause')).toBe(false);
+    const actions = (job: typeof j) => pipelineJobRow('job_api', job).controls.map(control => control.action);
+    expect(actions(j)).toEqual(['pause', 'cancel']);
+    expect(actions({ ...j, status: 'Queued' })).toEqual(['pause', 'cancel']);
+    expect(actions({ ...j, status: 'Paused' })).toEqual(['resume', 'cancel']);
+    for (const modified of [{ ...j, id: '123' }, { ...j, profile: 'unknown' as const }, ...['Succeeded', 'Failed', 'Cancelled', 'Unknown'].map(status => ({ ...j, status }))]) expect(actions(modified)).toEqual([]);
+  });
+  test('a pause of a running run stays pending until the step boundary, and resume withdraws it', () => {
+    const row = (overrides: Record<string, unknown>, source = 'job_api') => { const s = parsePipelineStatus(status({ source, jobs: [{ ...job, ...overrides }] })); return pipelineJobRow(s.source, s.jobs[0]); };
+    const pause = { action: 'pause', label: '일시 정지' }, cancel = { action: 'cancel', label: '실행 취소' };
+    for (const [running, label] of [['Fetching', '수집 중'], ['Inserting', '저장 중']]) {
+      expect(row({ status: running, pause_requested: true })).toEqual({ label: '일시 정지 요청됨', note: '현재 단계가 끝나면 멈춥니다.', controls: [{ action: 'resume', label: '일시 정지 요청 취소' }, cancel] });
+      expect(row({ status: running, pause_requested: false })).toEqual({ label, note: null, controls: [pause, cancel] });
+    }
+    // Postgres keeps pause_requested on a run that was paused while Queued.
+    expect(row({ status: 'Paused', pause_requested: true })).toEqual({ label: '일시 정지', note: null, controls: [{ action: 'resume', label: '다시 시작' }, cancel] });
+    for (const flag of ['true', 1, null, undefined]) expect(row({ pause_requested: flag }).label).toBe('수집 중');
+    expect(row({ pause_requested: true }, 'github_actions')).toEqual({ label: '수집 중', note: null, controls: [] });
   });
 });
 describe('pipeline preview and confirmation', () => {
