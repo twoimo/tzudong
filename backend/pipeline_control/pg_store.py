@@ -440,13 +440,14 @@ class PostgresStore:
                     lease_until = now() + interval '30 seconds',
                     adapter_index = COALESCE(%s, adapter_index),
                     updated_at = now()
-                WHERE id = %s
+                WHERE id = %s AND status = ANY(%s)
                 RETURNING pipeline_control._job_json(jobs)
                 """,
-                (adapter_index, run_id),
+                (adapter_index, run_id, sorted(ACTIVE_LOCK_STATUSES)),
             )
             if not rows:
-                raise ControlPlaneError("run_not_found", 404)
+                self.get(run_id)
+                raise ControlPlaneError("illegal_transition", 409)
             payload = rows[0][0]
             if isinstance(payload, str):
                 payload = json.loads(payload)

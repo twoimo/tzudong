@@ -16,7 +16,6 @@ from backend.pipeline_control.state_machine import (
     RunRecord,
     SUCCEED_FROM,
     TARGET_IDLE,
-    TERMINAL_STATUSES,
     apply_transition,
     heartbeat,
     lock_key,
@@ -186,8 +185,6 @@ class MemoryStore:
 
     def beat(self, run_id: str, lease_ttl: float = LEASE_TTL_SECONDS) -> RunRecord:
         run = self.get(run_id)
-        if run.status in TERMINAL_STATUSES:
-            return run
         before = run.status
         step_boundary(run, self.now(), lease_ttl)
         if run.status == before:

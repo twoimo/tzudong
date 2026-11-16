@@ -596,10 +596,17 @@ def _execute(
     def should_stop() -> str | None:
         checkpoint = getattr(store, "checkpoint", None)
         with stops.held():
-            if checkpoint is not None:
-                current = checkpoint(run.id, adapter_index=run.adapter_index)
-            else:
-                current = store.beat(run.id, lease_ttl)
+            try:
+                if checkpoint is not None:
+                    current = checkpoint(run.id, adapter_index=run.adapter_index)
+                else:
+                    current = store.beat(run.id, lease_ttl)
+            except ControlPlaneError as refused:
+                # A store refuses the heartbeat of a run that another process
+                # finished, such as a lease reclaim while the host slept.
+                if refused.code != "illegal_transition":
+                    raise
+                current = store.get(run.id)
         if current.status == "Paused" or current.status in TERMINAL_STATUSES:
             return current.status
         return None
