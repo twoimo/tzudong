@@ -518,10 +518,15 @@ def process_one(
         except BaseException as exc:
             status = "Failed"
             error_code, unexpected = _failure(exc)
+        manifest_failure = None
         if status != "Succeeded":
             # This manifest does not depend on the record, so it lands
             # before the record's durable mirror write, which can stall.
-            _write_manifest(store, attempt, status, manifest_path)
+            try:
+                _write_manifest(store, attempt, status, manifest_path)
+            except Exception as exc:
+                print(f"operation=run_manifest_failed error={safe_error_name(exc)}")
+                manifest_failure = exc
         try:
             recorded = _record(
                 store, attempt.run, status, error_code, live=attempt.execution_mode == "live"
@@ -542,6 +547,8 @@ def process_one(
         raise unexpected
     if record_failure is not None:
         raise record_failure
+    if manifest_failure is not None:
+        raise manifest_failure
     return recorded
 
 
@@ -596,10 +603,17 @@ def _execute(
     def should_stop() -> str | None:
         checkpoint = getattr(store, "checkpoint", None)
         with stops.held():
-            if checkpoint is not None:
-                current = checkpoint(run.id, adapter_index=run.adapter_index)
-            else:
-                current = store.beat(run.id, lease_ttl)
+            try:
+                if checkpoint is not None:
+                    current = checkpoint(run.id, adapter_index=run.adapter_index)
+                else:
+                    current = store.beat(run.id, lease_ttl)
+            except ControlPlaneError as refused:
+                # A store refuses the heartbeat of a run that another process
+                # finished, such as a lease reclaim while the host slept.
+                if refused.code != "illegal_transition":
+                    raise
+                current = store.get(run.id)
         if current.status == "Paused" or current.status in TERMINAL_STATUSES:
             return current.status
         return None

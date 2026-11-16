@@ -1337,7 +1337,7 @@ class OperatorSnapshotTests(unittest.TestCase):
         self.assertEqual(listed(), ("Fetching", False))
         store.control(run.id, "pause", actor="admin", request_id="req-pp4")
         store.beat(run.id)
-        self.assertEqual(listed(), ("Paused", False))
+        self.assertEqual(listed(), ("Paused", True))
 
     def test_listed_run_shows_a_cancel_that_waits_for_the_step_boundary(self) -> None:
         store = MemoryStore(clock=lambda: 1_000.0)

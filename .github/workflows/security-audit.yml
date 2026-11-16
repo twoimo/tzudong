@@ -266,7 +266,7 @@ jobs:
           python -m pip install --require-hashes --only-binary=:all: -r backend/supabase/scripts/g037-hosted-closure-requirements.txt
           export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
           test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
-          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests backend.supabase.tests.test_g037_readonly_transaction_postgres backend.supabase.tests.test_release_readiness_observation -v
+          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.pipeline_control.test_store_parity_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests backend.supabase.tests.test_g037_readonly_transaction_postgres backend.supabase.tests.test_release_readiness_observation -v
 
       - name: Verify local event delivery and recovery
         env:
