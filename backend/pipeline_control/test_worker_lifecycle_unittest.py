@@ -497,6 +497,43 @@ class LiveStepLeaseTests(unittest.TestCase):
         self.assertEqual(store.get(run.id).status, "Cancelled")
         self.assertEqual(manifest["finalStatus"], "ERROR")
 
+    def test_cancel_during_a_step_keeps_the_target_busy_until_the_step_ends(self) -> None:
+        clock = _Clock()
+        steps: list[list[str]] = []
+        rival_steps: list[list[str]] = []
+        during_step: dict[str, object] = {}
+
+        with _local_pipeline() as root:
+            path = root / "store.json"
+            run = _enqueue(FileStore(path, clock=clock))
+
+            def step_cancelled_by_the_operator(argv: list[str]) -> int:
+                steps.append(argv)
+                api = FileStore(path, clock=clock)
+                api.control(run.id, "cancel", actor="operator", request_id="req-cancel")
+                during_step["second worker"] = run_once(
+                    FileStore(path, clock=clock),
+                    target="tzuyang",
+                    index=1,
+                    live=True,
+                    runner=lambda argv: rival_steps.append(argv) or 0,
+                )
+                during_step["target"] = _target_status(api, "tzuyang")
+                return 0
+
+            result = process_one(
+                FileStore(path, clock=clock),
+                live=True,
+                runner=step_cancelled_by_the_operator,
+                manifest_path=root / "summary.json",
+            )
+            settled = FileStore(path, clock=clock)
+            self.assertEqual(during_step, {"second worker": "Failed", "target": "Fetching"})
+            self.assertEqual(rival_steps, [])
+            self.assertEqual((result, len(steps)), ("Cancelled", 1))
+            self.assertEqual(settled.get(run.id).status, "Cancelled")
+            self.assertEqual(_target_status(settled, "tzuyang"), "Idle")
+
 
 class HungStepTests(unittest.TestCase):
     def test_hung_step_fails_the_run(self) -> None:
