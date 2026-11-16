@@ -214,6 +214,8 @@ def sanitize_log_value(
     redactor would otherwise rewrite digit runs inside it. Any other value under
     such a key gets the same redaction as free text.
     """
+    if isinstance(uuid_keys, str):
+        raise TypeError("uuid_keys must be a collection of exact keys, not a str")
     depth_limit = _normalise_limit(max_depth, DEFAULT_MAX_DEPTH)
     entry_limit = _normalise_limit(max_entries, DEFAULT_MAX_ENTRIES)
     string_limit = _normalise_limit(max_string_length, DEFAULT_MAX_STRING_LENGTH)

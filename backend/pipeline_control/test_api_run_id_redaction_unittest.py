@@ -20,7 +20,7 @@ from unittest import mock
 from backend.pipeline_control import api
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.state_machine import RunRecord
-from backend.utils.privacy_log import REDACTED, redact_log_text
+from backend.utils.privacy_log import REDACTED, redact_log_text, sanitize_log_value
 
 UUID_SEED = 20261116
 # The first and second version-4 UUIDs from random.Random(UUID_SEED) that the
@@ -189,6 +189,10 @@ class RunIdResponseTests(unittest.TestCase):
                 self.assertNotEqual(expected, body)
                 self.assertEqual(respond(body), expected)
         self.assertNotIn("010-1234-5678", json.dumps(respond({"id": phone_hyphen_run})))
+
+    def test_a_bare_string_is_rejected_as_the_uuid_key_set(self):
+        with self.assertRaises(TypeError):
+            sanitize_log_value({"i": FAILED_RUN_ID, "d": FAILED_RUN_ID, "": FAILED_RUN_ID}, uuid_keys="id")
 
 
 if __name__ == "__main__":
