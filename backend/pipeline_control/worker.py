@@ -518,10 +518,15 @@ def process_one(
         except BaseException as exc:
             status = "Failed"
             error_code, unexpected = _failure(exc)
+        manifest_failure = None
         if status != "Succeeded":
             # This manifest does not depend on the record, so it lands
             # before the record's durable mirror write, which can stall.
-            _write_manifest(store, attempt, status, manifest_path)
+            try:
+                _write_manifest(store, attempt, status, manifest_path)
+            except Exception as exc:
+                print(f"operation=run_manifest_failed error={safe_error_name(exc)}")
+                manifest_failure = exc
         try:
             recorded = _record(
                 store, attempt.run, status, error_code, live=attempt.execution_mode == "live"
@@ -542,6 +547,8 @@ def process_one(
         raise unexpected
     if record_failure is not None:
         raise record_failure
+    if manifest_failure is not None:
+        raise manifest_failure
     return recorded
 
 

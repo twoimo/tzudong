@@ -23,6 +23,7 @@ from backend.pipeline_control.profiles import resolve_compute_profile
 from backend.pipeline_control.targets import assert_admitted
 from backend.pipeline_control.worker import process_one, write_run_manifest
 from backend.pipeline_control.file_queue import drain
+from backend.utils.privacy_log import safe_error_name
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CANDIDATE_DIR = REPO_ROOT / "backend" / "log" / "cron" / "live-runs"
@@ -125,17 +126,24 @@ def _fail_unclaimed(store: MemoryStore, jobs: list[dict], error: BaseException) 
     error_code = "worker_unexpected" if isinstance(error, Exception) else "worker_interrupted"
     for index, job in enumerate(jobs, start=1):
         run_id = str(job.get("id") or "").strip()
-        run = store.claim(run_id) if run_id else None
-        if run is None:
+        try:
+            run = store.claim(run_id) if run_id else None
+            if run is None:
+                continue
+            store.finish_failed(run.id, error_code)
+        except Exception as exc:
+            print(f"operation=run_record_failed error={safe_error_name(exc)}")
             continue
-        write_run_manifest(
-            "Failed",
-            CANDIDATE_DIR / f"run-{index}-current-summary.json",
-            run=run,
-            store=store,
-            job_id_scope="api_run",
-        )
-        store.finish_failed(run.id, error_code)
+        try:
+            write_run_manifest(
+                "Failed",
+                CANDIDATE_DIR / f"run-{index}-current-summary.json",
+                run=run,
+                store=store,
+                job_id_scope="api_run",
+            )
+        except Exception as exc:
+            print(f"operation=run_manifest_failed error={safe_error_name(exc)}")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -171,6 +171,9 @@ PY
   쓰기 전에 남지만, 성공한 실행의 manifest는 mirror 쓰기가 끝난 다음 씁니다.
   그동안 monitor daemon이 워커를 SIGKILL로 끝내면 `pipeline-store.json`의
   `Succeeded` 기록만 남습니다.
+- 실행의 manifest를 쓰지 못해도 워커는 실행을 기록하고 lock을 풉니다. 워커
+  로그에 `operation=run_manifest_failed`와 오류 종류가 남고, 워커는 오류로
+  끝납니다.
 - 다른 실행이 대상 lock을 잡고 있으면 워커는
   `operation=live_run_refused code=lock_held`를 출력하고 `ERROR` manifest만
   남깁니다. lock을 잡은 실행은 바꾸지 않습니다.
