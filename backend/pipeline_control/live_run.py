@@ -17,7 +17,7 @@ from backend.pipeline_control.manifest import (
     record_parity_attempt,
     write_compatible_summary,
 )
-from backend.pipeline_control.state_machine import ControlPlaneError
+from backend.pipeline_control.state_machine import TERMINAL_STATUSES, ControlPlaneError, RunRecord
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.profiles import resolve_compute_profile
 from backend.pipeline_control.targets import assert_admitted
@@ -70,6 +70,7 @@ def run_once(
             write_run_manifest(
                 "Failed",
                 manifest,
+                run=_taken_run(store, claimed_id),
                 execution_mode="dry_run",
                 store=store,
                 job_id_scope="api_run",
@@ -122,26 +123,37 @@ def run_once(
     return result
 
 
+def _taken_run(store: MemoryStore, run_id: str) -> RunRecord | None:
+    try:
+        return store.get(run_id)
+    except ControlPlaneError:
+        return None
+
+
+def _manifest_names(manifest: Path, run: RunRecord) -> bool:
+    try:
+        return load_json(manifest).get("jobId") == run.id
+    except (OSError, ValueError):
+        return False
+
+
 def _fail_unclaimed(store: MemoryStore, jobs: list[dict], error: BaseException) -> None:
+    """Fail each taken run that is still queued. Write the manifest of each
+    taken run that has ended, unless the attempt that ran it wrote one."""
     error_code = "worker_unexpected" if isinstance(error, Exception) else "worker_interrupted"
     for index, job in enumerate(jobs, start=1):
         run_id = str(job.get("id") or "").strip()
+        manifest = CANDIDATE_DIR / f"run-{index}-current-summary.json"
         try:
-            run = store.claim(run_id) if run_id else None
-            if run is None:
-                continue
-            store.finish_failed(run.id, error_code)
+            claimed = store.claim(run_id) if run_id else None
+            run = store.finish_failed(claimed.id, error_code) if claimed else _taken_run(store, run_id)
         except Exception as exc:
             print(f"operation=run_record_failed error={safe_error_name(exc)}")
             continue
+        if run is None or run.status not in TERMINAL_STATUSES or _manifest_names(manifest, run):
+            continue
         try:
-            write_run_manifest(
-                "Failed",
-                CANDIDATE_DIR / f"run-{index}-current-summary.json",
-                run=run,
-                store=store,
-                job_id_scope="api_run",
-            )
+            write_run_manifest(run.status, manifest, run=run, store=store, job_id_scope="api_run")
         except Exception as exc:
             print(f"operation=run_manifest_failed error={safe_error_name(exc)}")
 
