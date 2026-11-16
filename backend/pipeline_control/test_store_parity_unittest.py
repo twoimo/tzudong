@@ -98,6 +98,12 @@ class _StoreContract:
 
                 self.assertEqual((_observe(store, run_id), list(store.audit)), recorded)
 
+    def test_finish_of_an_unknown_run_is_refused_as_not_found(self) -> None:
+        store = self.make_store()
+        for finish in ("finish_succeeded", "finish_failed"):
+            with self.subTest(finish=finish):
+                self.assertEqual(make_call(store, "unknown-run", finish, 0), "run_not_found")
+
     def test_heartbeat_of_a_finished_run_is_refused_and_changes_nothing(self) -> None:
         for ended_by in ("cancel", "finish_succeeded", "finish_failed"):
             with self.subTest(ended_by=ended_by):
