@@ -2013,10 +2013,10 @@ describe("web quality performance source contracts", () => {
     expect(source("components/map/NaverMapPresenceRuntime.tsx")).toContain(
       "startOnlinePresence",
     );
-    expect(naverMapSource).toContain(
+    expect(source("components/map/use-naver-map-cluster-render.ts")).toContain(
       "areClusterFeaturesEqual(previous, newClusters) ? previous : newClusters",
     );
-    expect(naverMapSource).toContain(
+    expect(source("components/map/use-naver-map-cluster-render.ts")).toContain(
       "areRegionalClustersEqual(previous, newRegionalClusters) ? previous : newRegionalClusters",
     );
     expect(naverMapSource).toContain("RESTAURANT_COUNT_TOAST_SETTLE_DELAY_MS");
@@ -2034,7 +2034,9 @@ describe("web quality performance source contracts", () => {
     expect(source("components/map/naver-map-overlay-stack.tsx")).toContain(
       "count={restaurantCountToastCount}",
     );
-    expect(naverMapSource).not.toContain(
+    expect(
+      naverMapSource + source("components/map/use-naver-map-cluster-render.ts"),
+    ).not.toContain(
       'import { supabase } from "@/integrations/supabase/client"',
     );
     expect(source("hooks/use-restaurants.tsx")).toContain("fetchSupabaseRows");
@@ -4618,7 +4620,9 @@ describe("web quality performance source contracts", () => {
     expect(source("app/home-supabase-actions.ts")).not.toContain(
       "@/integrations/supabase/client",
     );
-    expect(source("components/map/NaverMapView.tsx")).not.toContain(
+    expect(
+      source("components/map/NaverMapView.tsx") + source("components/map/use-naver-map-cluster-render.ts"),
+    ).not.toContain(
       "@/integrations/supabase/client",
     );
     expect(source("components/map/NaverMapView.tsx")).toContain(

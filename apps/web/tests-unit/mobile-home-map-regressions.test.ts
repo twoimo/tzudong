@@ -352,13 +352,14 @@ describe('mobile home map regression guards', () => {
 
     test('cluster marker zoom jumps immediately without Naver morph animation', () => {
         const mapSource = source('components/map/NaverMapView.tsx');
+        const clusterRenderSource = source('components/map/use-naver-map-cluster-render.ts');
 
         expect(mapSource).toContain('const jumpWithPanelOffset = useCallback');
         expect(mapSource).toContain('map.setZoom(targetZoom, false)');
         expect(mapSource).toContain('map.setCenter(adjustedCenter)');
-        expect(mapSource).toContain('jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom)');
-        expect(mapSource).toContain('jumpWithPanelOffset(lat, lng, targetZoom)');
-        expect(mapSource).not.toContain('morphWithPanelOffset');
+        expect(clusterRenderSource).toContain('jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom)');
+        expect(clusterRenderSource).toContain('jumpWithPanelOffset(lat, lng, targetZoom)');
+        expect(mapSource + clusterRenderSource).not.toContain('morphWithPanelOffset');
     });
     test('mobile restaurant detail sheet peeks on map interaction without skipping fullscreen tap sequence', () => {
         const containerSource = source('components/home/home-map-container.tsx');
