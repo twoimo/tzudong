@@ -113,8 +113,8 @@ PY
 | --- | --- |
 | `adapter_failed` | 단계가 0이 아닌 코드로 끝났습니다. 워커 로그에 `operation=step_timeout`이 있으면 단계 제한 시간을 넘긴 것입니다. |
 | `lease_expired` | 워커가 lease를 갱신하지 못했습니다. 워커 프로세스가 죽었거나 호스트가 절전 상태였습니다. |
-| `worker_unexpected` | 실행 중 처리하지 않은 예외가 났습니다. `TZUDONG_PIPELINE_PERSIST` mirror 쓰기 실패도 여기에 속합니다. 워커 로그의 traceback을 확인합니다. |
-| `worker_interrupted` | 실행 중 워커가 SIGTERM, SIGHUP 또는 Ctrl-C를 받았습니다. |
+| `worker_unexpected` | 실행 중 처리하지 않은 예외가 났습니다. `TZUDONG_PIPELINE_PERSIST` mirror 쓰기 실패도 여기에 속합니다. 워커가 queue에서 가져온 실행을 시작하기 전에 예외로 끝나도 이 코드가 남습니다. 워커 로그의 traceback을 확인합니다. |
+| `worker_interrupted` | 실행 중 워커가 SIGTERM, SIGHUP 또는 Ctrl-C를 받았습니다. 워커가 queue에서 가져온 실행을 시작하기 전에 신호를 받아도 이 코드가 남습니다. |
 | `step_timeout_invalid` | `TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS` 값이 0보다 큰 유한한 수가 아닙니다. |
 
 - 단계 제한 시간은 단계마다 2시간입니다. 시간이 지나면 워커가 그 단계의
@@ -141,6 +141,12 @@ PY
   기록하는 도중 받은 신호는 manifest와 cache 삭제가 끝난 다음 적용되고, 실행은
   기록된 상태로 남습니다. cache를 지우는 도중 monitor daemon이 SIGKILL을 보내도
   실행 기록과 manifest는 남고 lock은 풀린 상태입니다.
+- 워커는 queue의 작업을 한꺼번에 가져온 다음 하나씩 실행합니다. 작업을 가져온
+  뒤에 워커가 신호를 받거나 예외로 끝나면, 아직 `Queued`인 실행도 모두 `Failed`로
+  끝내고 실행마다 manifest를 남깁니다. 가져온 작업은 queue로 돌아가지 않습니다.
+  다시 실행하려면 새 `Idempotency-Key`로 `POST /v1/runs`를 호출합니다. 워커가
+  SIGKILL처럼 정리 없이 죽으면 그 실행들은 `Queued`로 남고, lease가 끝난 뒤
+  `lease_expired`로 정리됩니다.
 - 단계 실행 중 `POST /v1/runs/{id}/pause`를 호출하면 그 단계가 끝날 때까지
   실행은 `Fetching`으로 남습니다. 워커는 다음 단계를 시작하기 전에 실행을
   `Paused`로 바꿉니다. 그 전에 `POST /v1/runs/{id}/resume`을 호출하면 pause가

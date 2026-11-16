@@ -154,6 +154,12 @@ class QueuedRunTests(unittest.TestCase):
         self._assert_each_run_failed_with_its_manifest(run_ids, "worker_interrupted")
         self.assertEqual(code, 128 + signal.SIGTERM)
 
+    def test_stop_while_the_worker_finds_no_queued_run_creates_no_run(self) -> None:
+        self._stopped_worker("taking_the_rows")
+
+        self.assertFalse((self.root / "store.json").exists())
+        self.assertFalse((self.root / "live-runs").exists())
+
     def test_error_in_a_queued_run_fails_the_queued_runs_after_it(self) -> None:
         run_ids = self._enqueue_like_the_api(2)
 

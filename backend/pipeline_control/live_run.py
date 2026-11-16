@@ -121,6 +121,30 @@ def run_once(
     return result
 
 
+def _fail_unclaimed(store: MemoryStore, jobs: list[dict], error: BaseException) -> None:
+    """Fail each queued run that the worker took off the queue and did not claim.
+
+    No later worker can claim these runs, because their rows have left the
+    queue. A returned row would not help. A queued run's lease ends after 30
+    seconds, and a worker that finds queue rows does not create its default run.
+    """
+
+    error_code = "worker_unexpected" if isinstance(error, Exception) else "worker_interrupted"
+    for index, job in enumerate(jobs, start=1):
+        run_id = str(job.get("id") or "").strip()
+        run = store.claim(run_id) if run_id else None
+        if run is None:
+            continue
+        write_run_manifest(
+            "Failed",
+            CANDIDATE_DIR / f"run-{index}-current-summary.json",
+            run=run,
+            store=store,
+            job_id_scope="api_run",
+        )
+        store.finish_failed(run.id, error_code)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", default=os.environ.get("TZUDONG_PIPELINE_TARGET", "tzuyang"))
@@ -136,19 +160,26 @@ def main(argv: list[str] | None = None) -> int:
         "yes",
     }
     store: MemoryStore = FileStore()
-    queued = drain()
+    # A stop waits while the worker takes the queue rows. If the worker took
+    # any, the stop also waits until the run of each row is recorded, so it
+    # cannot end the worker between a take and a claim.
+    with stop_signals() as stops, stops.held():
+        queued = [{"queued": True, **job} for job in drain()]
+        if queued:
+            try:
+                return _run_jobs(store, queued, args.target, live)
+            except BaseException as error:
+                _fail_unclaimed(store, queued, error)
+                raise
+    jobs = [{"queued": False} for _ in range(args.count)] or [{"queued": False}]
+    return _run_jobs(store, jobs, args.target, live)
+
+
+def _run_jobs(store: MemoryStore, jobs: list[dict], default_target: str, live: bool) -> int:
     results: list[str] = []
     last_live_manifest = None
-    jobs: list[dict] = []
-    queued_jobs = [{"queued": True, **job} for job in queued]
-    if queued_jobs:
-        jobs.extend(queued_jobs)
-    else:
-        jobs.extend({"queued": False} for _ in range(args.count))
-    if not jobs:
-        jobs = [{"queued": False}]
     for index, job in enumerate(jobs, start=1):
-        target = str(job.get("target") or args.target)
+        target = str(job.get("target") or default_target)
         queued_dry = job.get("dry_run") if job.get("queued") else None
         queued_id = str(job.get("id") or "").strip() if job.get("queued") else None
         result = run_once(
