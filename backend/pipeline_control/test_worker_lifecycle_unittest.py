@@ -9,7 +9,7 @@ import sys
 import tempfile
 import time
 import unittest
-from contextlib import contextmanager, redirect_stdout
+from contextlib import contextmanager, redirect_stdout, suppress
 from pathlib import Path
 from typing import Iterator
 from unittest.mock import patch
@@ -725,7 +725,10 @@ class StopSignalTests(unittest.TestCase):
                     time.sleep(0.05)
             finally:
                 if worker.poll() is None:
-                    os.killpg(worker.pid, signal.SIGKILL)
+                    # The worker can exit after this poll. macOS then refuses
+                    # the signal with EPERM until the worker is reaped.
+                    with suppress(ProcessLookupError, PermissionError):
+                        os.killpg(worker.pid, signal.SIGKILL)
                 worker.wait()
             store = _read(root / "store.json")
             run = store["runs"][(root / "run_id").read_text()]
