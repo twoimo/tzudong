@@ -40,6 +40,7 @@ def run_once(
     queued_run_id: str | None = None,
 ) -> str:
     use_live = live and queued_dry_run is not True
+    requested_mode = "live" if use_live else "dry_run"
     assert_admitted(target)
     admit_dsn(
         data_env=os.environ.get("TZUDONG_DATA_ENV", "local_db"),
@@ -53,7 +54,7 @@ def run_once(
             write_run_manifest(
                 "Failed",
                 manifest,
-                execution_mode="dry_run",
+                execution_mode=requested_mode,
                 store=store,
                 job_id_scope="api_run",
             )
@@ -71,7 +72,7 @@ def run_once(
                 "Failed",
                 manifest,
                 run=_taken_run(store, claimed_id),
-                execution_mode="dry_run",
+                execution_mode=requested_mode,
                 store=store,
                 job_id_scope="api_run",
             )
@@ -99,6 +100,7 @@ def run_once(
             write_run_manifest(
                 "Failed",
                 manifest,
+                execution_mode=requested_mode,
                 store=store,
                 job_id_scope="worker_execution",
             )
@@ -116,6 +118,7 @@ def run_once(
             "Failed",
             manifest,
             run=run,
+            execution_mode=requested_mode,
             store=store,
             job_id_scope="worker_execution",
         )
@@ -137,13 +140,14 @@ def _manifest_names(manifest: Path, run: RunRecord) -> bool:
         return False
 
 
-def _fail_unclaimed(store: MemoryStore, jobs: list[dict], error: BaseException) -> None:
+def _fail_unclaimed(store: MemoryStore, jobs: list[dict], error: BaseException, live: bool) -> None:
     """Fail each taken run that is still queued. Write the manifest of each
     taken run that has ended, unless the attempt that ran it wrote one."""
     error_code = "worker_unexpected" if isinstance(error, Exception) else "worker_interrupted"
     for index, job in enumerate(jobs, start=1):
         run_id = str(job.get("id") or "").strip()
         manifest = CANDIDATE_DIR / f"run-{index}-current-summary.json"
+        requested_mode = "live" if live and job.get("dry_run") is not True else "dry_run"
         try:
             claimed = store.claim(run_id) if run_id else None
             run = store.finish_failed(claimed.id, error_code) if claimed else _taken_run(store, run_id)
@@ -153,7 +157,14 @@ def _fail_unclaimed(store: MemoryStore, jobs: list[dict], error: BaseException) 
         if run is None or run.status not in TERMINAL_STATUSES or _manifest_names(manifest, run):
             continue
         try:
-            write_run_manifest(run.status, manifest, run=run, store=store, job_id_scope="api_run")
+            write_run_manifest(
+                run.status,
+                manifest,
+                run=run,
+                execution_mode=requested_mode,
+                store=store,
+                job_id_scope="api_run",
+            )
         except Exception as exc:
             print(f"operation=run_manifest_failed error={safe_error_name(exc)}")
 
@@ -181,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 return _run_jobs(store, queued, args.target, live)
             except BaseException as error:
-                _fail_unclaimed(store, queued, error)
+                _fail_unclaimed(store, queued, error, live)
                 raise
     jobs = [{"queued": False} for _ in range(args.count)] or [{"queued": False}]
     return _run_jobs(store, jobs, args.target, live)
