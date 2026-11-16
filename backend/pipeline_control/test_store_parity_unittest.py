@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 import tempfile
 import unittest
+from dataclasses import asdict
 from pathlib import Path
 from typing import Iterator, NamedTuple
 
@@ -97,6 +98,22 @@ class _StoreContract:
 
                 self.assertEqual((_observe(store, run_id), list(store.audit)), recorded)
 
+    def test_heartbeat_of_a_finished_run_is_refused_and_changes_nothing(self) -> None:
+        for ended_by in ("cancel", "finish_succeeded", "finish_failed"):
+            with self.subTest(ended_by=ended_by):
+                store = self.make_store()
+                run_id = _enqueue(store)
+                make_call(store, run_id, ended_by, 0)
+                recorded = asdict(store.get(run_id)), list(store.audit), dict(store.locks)
+
+                with self.assertRaises(ControlPlaneError) as refused:
+                    store.beat(run_id)
+
+                self.assertEqual(refused.exception.code, "illegal_transition")
+                self.assertEqual(
+                    (asdict(store.get(run_id)), list(store.audit), dict(store.locks)), recorded
+                )
+
     def test_paused_run_keeps_its_pause_request_until_it_is_resumed(self) -> None:
         for claimed in (False, True):
             with self.subTest(claimed=claimed):
@@ -171,7 +188,7 @@ class EveryCallSequenceTests(unittest.TestCase):
                     break
         self.assertEqual(different[:3], [])
 
-    def test_only_a_boundary_or_a_resume_of_a_finished_run_is_answered_differently(self) -> None:
+    def test_only_a_resume_of_a_finished_run_is_answered_differently(self) -> None:
         different = set()
         for (claimed, calls), memory in self.memory.items():
             finished = False
@@ -179,10 +196,7 @@ class EveryCallSequenceTests(unittest.TestCase):
                 if finished and ours.result != theirs.result:
                     different.add((name, ours.result, theirs.result))
                 finished = finished or ours.status in TERMINAL_STATUSES
-        self.assertEqual(
-            different,
-            {("boundary", "ok", "illegal_transition"), ("resume", "illegal_transition", "ok")},
-        )
+        self.assertEqual(different, {("resume", "illegal_transition", "ok")})
 
 
 if __name__ == "__main__":

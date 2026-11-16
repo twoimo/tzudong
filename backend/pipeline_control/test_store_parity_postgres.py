@@ -178,6 +178,19 @@ class PostgresStoreTests(unittest.TestCase):
         self.assertEqual(self.store.claim(run_id).status, "Fetching")
         self.assertEqual(self._audit(run_id), ["claim"])
 
+    def test_heartbeat_of_a_finished_run_is_refused_and_changes_nothing(self) -> None:
+        for ended_by in ("cancel", "finish_succeeded", "finish_failed"):
+            with self.subTest(ended_by=ended_by):
+                run_id = self._enqueue()
+                make_call(self.store, run_id, ended_by, 0)
+                recorded = self.store.get(run_id), self._audit(run_id)
+
+                with self.assertRaises(ControlPlaneError) as refused:
+                    self.store.beat(run_id)
+
+                self.assertEqual(refused.exception.code, "illegal_transition")
+                self.assertEqual((self.store.get(run_id), self._audit(run_id)), recorded)
+
     def test_heartbeat_leaves_a_pending_pause_for_the_step_boundary(self) -> None:
         run_id = self._enqueue(claimed=True)
         self.store.control(run_id, "pause", actor="operator", request_id="req-pause")
