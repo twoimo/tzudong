@@ -147,14 +147,16 @@ function FeedPageContent() {
 
 export default function FeedPage() {
     return (
-        <Suspense fallback={(
-            <GlobalLoader
-                message="피드를 불러오는 중..."
-                subMessage="리뷰와 맛집 정보를 준비하고 있습니다"
-                fullScreen
-            />
-        )}>
-            <FeedPageContent />
-        </Suspense>
+        <div data-mobile-only-route="contents">
+            <Suspense fallback={(
+                <GlobalLoader
+                    message="피드를 불러오는 중..."
+                    subMessage="리뷰와 맛집 정보를 준비하고 있습니다"
+                    fullScreen
+                />
+            )}>
+                <FeedPageContent />
+            </Suspense>
+        </div>
     );
 }

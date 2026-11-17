@@ -125,7 +125,7 @@ export default function LeaderboardPage() {
     if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-hidden relative">
+        <div className="flex flex-col h-full bg-background overflow-hidden relative" data-mobile-only-route="true">
             <div
                 ref={scrollRef}
                 className="h-full overflow-y-auto"
