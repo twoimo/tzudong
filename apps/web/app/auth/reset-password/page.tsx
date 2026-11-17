@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/lib/no-toast';
 import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from '@/lib/debug-log';
 import { openBrowserPasswordRecovery } from '@/lib/auth/isolated-browser-pkce';
+import { isAcceptableNewPasswordLength, MAX_NEW_PASSWORD_LENGTH, NEW_PASSWORD_LENGTH_ERROR, NEW_PASSWORD_LENGTH_HINT } from '@/lib/auth/password-policy';
 type Recovery = Awaited<ReturnType<typeof openBrowserPasswordRecovery>>;
 
 export default function ResetPasswordPage() {
@@ -73,8 +74,8 @@ export default function ResetPasswordPage() {
             return;
         }
 
-        if (newPassword.length < 8 || newPassword.length > 12) {
-            toast.error('비밀번호는 8자 이상 12자 이하여야 합니다');
+        if (!isAcceptableNewPasswordLength(newPassword)) {
+            toast.error(NEW_PASSWORD_LENGTH_ERROR);
             return;
         }
 
@@ -162,11 +163,12 @@ export default function ResetPasswordPage() {
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             autoComplete="new-password"
+                            maxLength={MAX_NEW_PASSWORD_LENGTH}
                             enterKeyHint="next"
                             className="h-10 sm:h-11"
                         />
                         <p className="text-xs text-muted-foreground">
-                            8자 이상 12자 이하로 입력해주세요
+                            {NEW_PASSWORD_LENGTH_HINT}
                         </p>
                     </div>
                     <div className="space-y-2">
@@ -178,6 +180,7 @@ export default function ResetPasswordPage() {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             autoComplete="new-password"
+                            maxLength={MAX_NEW_PASSWORD_LENGTH}
                             enterKeyHint="done"
                             className="h-10 sm:h-11"
                         />

@@ -2639,6 +2639,7 @@ describe("web quality performance source contracts", () => {
     expect(reviewCardSource).toContain(
       "text-xs font-medium tabular-nums transition-colors group-active:text-red-500",
     );
+    expect(reviewCardSource).toContain("<BookmarkButton");
     expect(reviewCardSource).toContain('"text-muted-foreground');
     expect(reviewCardSource).toContain('"text-red-500"');
     expect(reviewCardSource).not.toContain(
@@ -4712,9 +4713,11 @@ describe("web quality performance source contracts", () => {
     );
     expect(mobileBottomNavSource).not.toContain("HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS");
     expect(mobileBottomNavSource).not.toContain("runHomeNavPrefetchWhenIdle");
-    expect(mobileBottomNavSource).toMatch(
-      /useEffect\(\(\) => \{\s*if \(pathname === '\/'\) return;[\s\S]*?NAV_ITEMS\.forEach/,
+    expect(mobileBottomNavSource).toContain(
+      "BOTTOM_NAV_HOME_PREFETCH_IDLE_MS = 1500",
     );
+    expect(mobileBottomNavSource).toContain("scheduleBottomNavPrefetch(");
+    expect(mobileBottomNavSource).not.toContain("if (pathname === '/') return;");
     expect(mobileBottomNavSource).toContain("MOBILE_BOTTOM_NAV_BUTTON_STYLE");
     expect(mobileBottomNavSource).toContain("minHeight: 60");
     expect(mobileBottomNavSource).toContain(

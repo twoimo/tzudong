@@ -122,7 +122,6 @@ export default function LeaderboardPage() {
         }
     }, [isLoading, currentUser, leaderboardData]);
 
-    if (!isMounted) return null;
     if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
 
     return (
@@ -140,7 +139,6 @@ export default function LeaderboardPage() {
                 <MapPanelHeader
                     variant="page"
                     titleAs="h1"
-                    eyebrow="리뷰로 쌓는 맛집 랭킹"
                     title="쯔동여지도 랭킹"
                     titleIcon={<Trophy />}
                     titleAddon={(
@@ -179,7 +177,7 @@ export default function LeaderboardPage() {
                                         </PopoverContent>
                                     </Popover>
                     )}
-                    description="맛집 리뷰를 작성하고 랭킹을 올려보세요!"
+                    description="맛집 리뷰를 작성하고 랭킹을 올려보세요"
                     actions={(
                             <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
                                 <TabsList className="h-8">

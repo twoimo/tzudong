@@ -28,7 +28,7 @@ const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 function FeedPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
-    const [isMounted, setIsMounted] = useState(false);
+    const [, setIsMounted] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRestaurantSheetOpen, setIsRestaurantSheetOpen] = useState(false);
@@ -56,8 +56,6 @@ function FeedPageContent() {
         };
     }, [router, searchParams]);
 
-    // Mount 전에는 아무것도 렌더링하지 않음 (Hydration Mismatch 방지)
-    if (!isMounted) return null;
     if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
 
     const handleOpenRestaurantDetail = (restaurant: FeedRestaurantRecord) => {

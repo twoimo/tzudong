@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 const MAX_VIDEO_IDS = 120;
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/;
 const MAX_YOUTUBE_KPI_REQUEST_BYTES = 8 * 1024;
+const HOME_KPI_CDN_CACHE = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300, must-revalidate';
 
 function normalizeVideoIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -23,6 +24,34 @@ function normalizeVideoIds(value: unknown): string[] {
   }
 
   return [...uniqueIds];
+}
+
+export async function GET(request: NextRequest) {
+  const timing = createHomeKpiServerTiming();
+  const mode = resolveHomeKpiQueryMode(process.env.TZUDONG_HOME_KPI_QUERY_MODE);
+  const respond = (metrics: Awaited<ReturnType<typeof getLatestYouTubeKpiMetricsForVideoIds>>, cacheControl: string) =>
+    NextResponse.json({ metrics }, {
+      status: 200,
+      headers: { 'Cache-Control': cacheControl, 'Server-Timing': timing.header(mode) },
+    });
+
+  if (mode === null) return respond([], 'no-store');
+
+  const query = new URL(request.url).search;
+  if (Buffer.byteLength(query) > MAX_YOUTUBE_KPI_REQUEST_BYTES) {
+    return respond([], 'no-store');
+  }
+
+  const videoIds = normalizeVideoIds(new URL(request.url).searchParams.getAll('videoIds'));
+  if (videoIds.length === 0) return respond([], 'public, max-age=60');
+
+  try {
+    const metrics = await getLatestYouTubeKpiMetricsForVideoIds(videoIds, { mode, observe: timing.observe });
+    return respond(metrics, HOME_KPI_CDN_CACHE);
+  } catch {
+    console.error('[home/youtube-kpi] failed:');
+    return respond([], 'no-store');
+  }
 }
 
 export async function POST(request: NextRequest) {

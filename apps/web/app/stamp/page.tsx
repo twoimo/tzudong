@@ -194,6 +194,7 @@ export default function StampPage() {
     // const { isMobileOrTablet, isDesktop } = useDeviceType(); // Hook check replaced
     const { isMobileOrTablet, isDesktop } = useDeviceType(); // Keep for logic usage later, but NOT for redirect
     const [isMounted, setIsMounted] = useState(false);
+    const [isPhone, setIsPhone] = useState(false);
     const reviewContinuationHandled = useRef<string | null>(null);
 
     useEffect(() => {
@@ -215,6 +216,14 @@ export default function StampPage() {
             mediaQuery.removeEventListener('change', redirectIfDesktop);
         };
     }, [router]);
+
+    useEffect(() => {
+        const phoneQuery = window.matchMedia('(max-width: 767px)');
+        const syncPhone = () => setIsPhone(phoneQuery.matches);
+        syncPhone();
+        phoneQuery.addEventListener('change', syncPhone);
+        return () => phoneQuery.removeEventListener('change', syncPhone);
+    }, []);
 
     // --- 상태 (State) ---
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -935,7 +944,6 @@ export default function StampPage() {
                         <MapPanelHeader
                             variant="page"
                             titleAs="h1"
-                            eyebrow="쯔양이 다녀간 맛집 도장깨기"
                             title="쯔동여지도 도장"
                             titleIcon={<Trophy />}
                             count={isRestaurantsLoading || isRestaurantsError ? undefined : totalRestaurantCount}
@@ -944,7 +952,7 @@ export default function StampPage() {
                                     <LoadingSurface label="전체 맛집 수 집계 중"><span className="block text-xs leading-4">00개</span></LoadingSurface>
                                 </div>
                             ) : isRestaurantsError ? <span className="text-xs text-muted-foreground" role="status">전체 수 확인 불가</span> : undefined}
-                            description="맛집을 찾아 도장을 찍어보세요!"
+                            description="맛집을 찾아 도장을 찍어보세요"
                             actions={(
                                 <>
                                     {/* Unvisited Only Toggle */}
@@ -1156,7 +1164,7 @@ export default function StampPage() {
                         {reviewContinuationError && <p role="alert" className="px-4 py-2 text-sm text-destructive">{reviewContinuationError}</p>}
 
                         <div
-                            className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background"
+                            className="flex-1 min-h-0 px-3 sm:px-4 pt-3 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] md:pb-4 bg-background"
                             data-stamp-loading-behavior="static-shell-dynamic-skeleton"
                         >
                             {!isStampDynamicLoading && isStampReadSuccess && filteredAndSortedRestaurants.length === 0 && (
@@ -1193,7 +1201,7 @@ export default function StampPage() {
                                         </div>
                                     )}
                                     <LoadingSurface label="도장 맛집 목록 로딩 중">
-                                        <div className="grid gap-3 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
+                                        <div className={isPhone ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4"}>
                                             {Array.from({ length: STAMP_PAGE_SIZE }, (_, index) => (
                                                 <article key={index} className="space-y-2">
                                                     <svg viewBox="0 0 320 180" role="img" aria-label="맛집 사진" className="aspect-video w-full rounded-lg">
@@ -1215,13 +1223,13 @@ export default function StampPage() {
                                 </div>
                             ) : viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
+                                <div className={isPhone ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"}>
                                     {displayedCards.map((restaurant) => {
                                         const isGuideCard = restaurant.id === STAMP_GUIDE_DEMO_RESTAURANT.id;
                                         if (isGuideCard) {
                                             return (
+                                                <div key={restaurant.id} className="col-span-full">
                                                 <StampCard
-                                                    key={restaurant.id}
                                                     restaurant={restaurant}
                                                     isVisited={true}
                                                     isUserStampsReady={true}
@@ -1236,6 +1244,7 @@ export default function StampPage() {
                                                     guideDescription={STAMP_GUIDE_DESCRIPTION}
                                                     onGuideClose={dismissStampGuide}
                                                 />
+                                                </div>
                                             );
                                         }
 
@@ -1252,6 +1261,7 @@ export default function StampPage() {
                                                 onClick={handleRestaurantClick}
                                                 size={isDesktop ? "compact" : "default"}
                                                 stampSize={isDesktop ? "compact" : "mobile"}
+                                                layout={isPhone ? "list" : undefined}
                                             />
                                         );
                                     })}
