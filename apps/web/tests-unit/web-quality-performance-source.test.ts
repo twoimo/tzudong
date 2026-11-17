@@ -965,6 +965,19 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeControlPanelSource).toContain("return shellFallback(desktopPanelLoad);");
     expect(homeControlPanelSource).toContain("if (!failed) return null;");
+    expect(source("app/globals.css")).toContain(`[data-mobile-only-route="contents"] {
+  display: contents;
+}
+
+@media (min-width: 1280px) {
+  [data-mobile-only-route] {
+    display: none !important;
+  }
+}`);
+    expect(source("lib/viewport-breakpoints.ts")).toContain("tabletMax: 1279");
+    expect(source("app/feed/page.tsx")).toContain('<div data-mobile-only-route="contents">');
+    expect(source("app/stamp/page.tsx")).toContain('data-mobile-only-route={hasReviewContinuation ? undefined : "true"}');
+    expect(source("app/leaderboard/page.tsx")).toContain('data-mobile-only-route="true"');
     expect(homeControlPanelSource).toContain("shouldLoadDesktopPanel");
     expect(homeControlPanelSource).not.toContain(
       "function DesktopControlPanelLoadingShell()",
