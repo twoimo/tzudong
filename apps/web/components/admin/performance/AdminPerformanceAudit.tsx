@@ -52,8 +52,8 @@ export function AdminPerformanceAudit() {
     actions={<Button type="button" variant="outline" size="sm" className="h-10 gap-2" onClick={exportSnapshot}><Download className="h-4 w-4" aria-hidden="true" />측정 데이터</Button>}
     contentClassName="overflow-y-auto overscroll-contain" scrollOwner="admin-performance-audit"
   >
-    <div className="mx-auto grid w-full max-w-[1440px] gap-4 p-3 sm:p-4" data-admin-performance-audit="true">
-      <section className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border px-4 py-3 text-sm" aria-label="측정 범위">
+    <div className="grid min-h-full w-full gap-2" data-admin-performance-audit="true">
+      <section className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-3 py-2 text-sm" aria-label="측정 범위">
         <span className="font-medium">맛집 영상 KPI</span>
         <span>요청 <strong className="font-medium tabular-nums">10 / 10</strong> 성공</span>
         <span>동일 영상 <strong className="font-medium tabular-nums">{audit.cohortCount}개</strong></span>
@@ -61,8 +61,8 @@ export function AdminPerformanceAudit() {
         <span className="text-muted-foreground">각 5회 · 순차 요청 · 재시도 없음</span>
       </section>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
-        <section className="min-w-0 rounded-xl border p-4" aria-labelledby={`${chartId}-title`}>
+      <div className="grid min-w-0 gap-2 xl:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+        <section className="min-w-0 rounded-xl border p-3" aria-labelledby={`${chartId}-title`}>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id={`${chartId}-title`} className="text-base font-medium">조회 방식별 처리 시간</h2>
             <span className="text-xs text-muted-foreground">중앙값 · ms · 낮을수록 빠름</span>
@@ -87,7 +87,7 @@ export function AdminPerformanceAudit() {
           </figure>
         </section>
 
-        <section className="min-w-0 rounded-xl border p-4" aria-labelledby="audit-findings-title">
+        <section className="min-w-0 rounded-xl border p-3" aria-labelledby="audit-findings-title">
           <h2 id="audit-findings-title" className="text-base font-medium">원인 분리</h2>
           <dl className="mt-4 divide-y text-sm">
             <div className="pb-3"><dt className="text-muted-foreground">RPC의 DB 내부 처리</dt><dd className="mt-1 text-2xl font-medium tabular-nums">{formatAuditMs(getAuditComparison('database').after?.median)} <span className="text-sm text-muted-foreground">ms</span></dd></div>

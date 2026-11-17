@@ -8311,7 +8311,7 @@ function AuditPlaceholder() {
       contentClassName="overflow-y-auto"
     >
       <div
-        className="min-h-[480px]"
+        className="flex min-h-full min-w-0 flex-col"
         onFocus={() => { auditPanelHadFocusRef.current = true; }}
         onBlur={(event) => {
           if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) auditPanelHadFocusRef.current = false;
@@ -9924,7 +9924,7 @@ export function AdminConsoleOverview({
                 ? "overflow-y-auto md:overflow-hidden"
                 : "overflow-y-auto",
           )}
-          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 0.75rem)" : "1rem" }}
+          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 8px)" : "8px" }}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"

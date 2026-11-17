@@ -9,7 +9,7 @@ export const mapPanelIconButtonClass =
   "h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary";
 
 export const pageHeaderIconButtonClass =
-  "h-10 w-10 shrink-0 rounded-full bg-muted/45 shadow-none hover:bg-muted";
+  "h-11 w-11 shrink-0 rounded-lg bg-muted/45 shadow-none hover:bg-muted";
 export const pageHeaderTitleClass =
   `flex items-center gap-2 ${pageHeadingTitleClass}`;
 export const pageHeaderDescriptionClass =

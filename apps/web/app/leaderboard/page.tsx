@@ -147,7 +147,7 @@ export default function LeaderboardPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0"
+                                                className="hidden xs:inline-flex h-11 w-11 rounded-lg hover:bg-muted shrink-0"
                                                 title="랭킹 및 티어 산정 기준 보기"
                                                 aria-label="랭킹 및 티어 산정 기준 보기"
                                             >
