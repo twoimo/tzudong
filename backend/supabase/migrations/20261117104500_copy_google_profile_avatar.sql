@@ -36,6 +36,10 @@ BEGIN
 END;
 $$;
 
+ALTER FUNCTION public.handle_new_user_avatar() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.handle_new_user_avatar()
+  FROM PUBLIC, anon, authenticated, service_role, supabase_auth_admin;
+
 DROP TRIGGER IF EXISTS on_auth_user_created_avatar ON auth.users;
 CREATE TRIGGER on_auth_user_created_avatar
   AFTER INSERT OR UPDATE OF raw_user_meta_data ON auth.users
