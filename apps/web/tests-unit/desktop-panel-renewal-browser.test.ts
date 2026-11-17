@@ -415,8 +415,13 @@ for (const surface of ['outer-mobile','outer-desktop','bookmark','notification',
   await page.route('**/*',route=>route.request().resourceType()==='document'?route.fulfill({contentType:'text/html',body:'<!doctype html><div id="root"></div>'}):route.abort());
   await page.goto('https://renewal.test/');await page.evaluate(({title,surface})=>Object.assign(globalThis,{__heldPanels:[title],__initialIntent:surface}),{title,surface});
   await page.addScriptTag({content:await renewalPanelBundle(mobile?'mobile':surface as 'outer-mobile'|'outer-desktop')});
-  await browserExpect(page.locator('[data-deferred-panel-state="loading"]')).toBeVisible();
-  await browserExpect(page.getByText(/로그인 후 .*확인할 수 있어요/)).toHaveCount(0);
+  if (surface.startsWith('outer')) {
+    await browserExpect(page.locator('[data-deferred-panel-state="loading"]')).toHaveCount(0);
+    await browserExpect(page.getByRole('heading', { name: '지도 메뉴', exact: true })).toHaveCount(0);
+  } else {
+    await browserExpect(page.locator('[data-deferred-panel-state="loading"]')).toBeVisible();
+    await browserExpect(page.getByText(/로그인 후 .*확인할 수 있어요/)).toHaveCount(0);
+  }
   await page.evaluate(title=>(globalThis as unknown as {__fixture:{release(title:string):void}}).__fixture.release(title),title);
   await browserExpect(page.locator('[data-loaded-panel="'+title+'"]')).toBeVisible();
  }finally{await browser.close();}
