@@ -43,6 +43,43 @@ const MOBILE_BOTTOM_NAV_BUTTON_STYLE: CSSProperties = {
     paddingBottom: 10,
     paddingLeft: 4,
 };
+const BOTTOM_NAV_HOME_PREFETCH_IDLE_MS = 1500;
+const BOTTOM_NAV_PREFETCH_STAGGER_MS = 250;
+
+function scheduleBottomNavPrefetch(callback: () => void, timeoutMs: number): () => void {
+    if (typeof window === 'undefined') {
+        return () => undefined;
+    }
+
+    const idleWindow = window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+    };
+
+    if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
+        const handle = idleWindow.requestIdleCallback(callback, { timeout: timeoutMs });
+        return () => idleWindow.cancelIdleCallback?.(handle);
+    }
+
+    const timer = window.setTimeout(callback, timeoutMs);
+    return () => window.clearTimeout(timer);
+}
+
+function shouldPrefetchBottomNavRoutes() {
+    if (typeof navigator === 'undefined' || navigator.onLine === false) {
+        return false;
+    }
+
+    const connection = (navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+
+    if (!connection) {
+        return true;
+    }
+
+    return connection.saveData !== true && connection.effectiveType?.includes('2g') !== true;
+}
 
 interface MobileBottomNavProps {
     className?: string;
@@ -61,10 +98,6 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
     const [, startTransition] = useTransition();
 
     const prefetchRoute = useCallback((path: string) => {
-        if (process.env.NODE_ENV === 'development') {
-            return;
-        }
-
         try {
             router.prefetch(path);
         } catch {
@@ -72,19 +105,42 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
         }
     }, [router]);
 
-    // 홈에서는 실제 탐색 의도가 있을 때 다음 경로를 미리 읽는다.
+    // 홈은 지도가 먼저 그려진 뒤에, 그 외 화면은 현재 화면이 준비된 뒤에
+    // 하단 메뉴의 나머지 경로를 읽어 둔다. 클릭 순간에 읽으면 그 사이에 본문이 빈다.
     useEffect(() => {
-        if (pathname === '/') return;
+        if (!shouldPrefetchBottomNavRoutes()) {
+            return;
+        }
 
-        const prefetchNavigationTargets = () => {
-            NAV_ITEMS.forEach(({ path }) => prefetchRoute(path));
+        const routes = NAV_ITEMS.map((item) => item.path).filter((path) => path !== pathname);
+        let cancelled = false;
+        const timers: number[] = [];
+        const run = () => {
+            if (cancelled) {
+                return;
+            }
 
-            if (user?.id) {
-                AUTH_NAV_ROUTES.forEach((path) => prefetchRoute(path));
+            const stagger = process.env.NODE_ENV === 'development' ? BOTTOM_NAV_PREFETCH_STAGGER_MS : 0;
+            routes.forEach((path, index) => {
+                timers.push(window.setTimeout(() => {
+                    if (!cancelled) prefetchRoute(path);
+                }, index * stagger));
+            });
+
+            if (process.env.NODE_ENV !== 'development' && pathname !== '/' && user?.id) {
+                MYPAGE_SUB_ROUTES.forEach((path) => prefetchRoute(path));
             }
         };
+        const cancelIdle = scheduleBottomNavPrefetch(
+            run,
+            pathname === '/' ? BOTTOM_NAV_HOME_PREFETCH_IDLE_MS : 1,
+        );
 
-        prefetchNavigationTargets();
+        return () => {
+            cancelled = true;
+            cancelIdle();
+            timers.forEach((timer) => window.clearTimeout(timer));
+        };
     }, [pathname, prefetchRoute, user?.id]);
 
     const handleNavIntent = useCallback((item: NavItem, isActive: boolean) => {

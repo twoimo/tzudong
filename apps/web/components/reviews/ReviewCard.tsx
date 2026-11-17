@@ -293,7 +293,7 @@ export const ReviewCard = React.memo(function ReviewCard({
             {...cardInteractionProps}
         >
             {/* 헤더 영역 */}
-            <div className="flex items-start justify-between gap-2 border-b border-border/30 p-4">
+            <div className="flex items-start justify-between gap-2 border-b border-border/30 px-3 py-2">
                 <div className="flex min-w-0 flex-1 items-start gap-2">
                     <Avatar className="h-8 w-8 shrink-0 bg-muted">
                         {profileAvatarUrl && (
@@ -316,10 +316,10 @@ export const ReviewCard = React.memo(function ReviewCard({
                         </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                        <div className="flex min-h-8 flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-end gap-1.5">
                             <Link
                                 href={`/user/${review.userId}`}
-                                className="inline-flex min-h-8 min-w-0 max-w-full items-center rounded text-sm font-medium hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="inline-flex h-8 items-end pb-0.5 min-w-0 max-w-full rounded text-sm font-medium leading-5 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     if (onUserClick) {
@@ -331,7 +331,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                                 <span className="truncate">{review.userName}</span>
                             </Link>
                             {review.isVerified && (
-                                <Badge variant="default" className="gap-1 rounded-md border-0 bg-muted px-2 py-1 text-xs font-normal text-muted-foreground">
+                                <Badge variant="default" className="mb-0.5 gap-1 rounded-md border-0 bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
                                     <CheckCircle className="h-3 w-3" aria-hidden="true" />
                                     인증
                                 </Badge>
@@ -339,11 +339,11 @@ export const ReviewCard = React.memo(function ReviewCard({
                         </div>
                         <button
                             type="button"
-                            className="flex min-h-11 w-full items-center gap-1 rounded text-left text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="flex h-8 w-full items-start gap-1 rounded pt-0.5 text-left text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             onClick={handleRestaurantClick}
                             aria-label={`${review.restaurantName} 맛집 상세 보기`}
                         >
-                            <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                             <span className="min-w-0 break-words leading-5">{review.restaurantName}</span>
                         </button>
                     </div>

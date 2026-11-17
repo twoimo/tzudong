@@ -105,11 +105,14 @@ describe('requested user login continuation', () => {
         const modal = readFileSync(path.join(webRoot, 'components/auth/AuthModal.tsx'), 'utf8');
         const onboardingRoute = readFileSync(path.join(webRoot, 'app/api/privacy/onboarding/route.ts'), 'utf8');
 
-        expect(modal).toContain('const MAX_SIGNUP_PASSWORD_LENGTH = 72;');
-        expect(modal).toContain('password.length > MAX_SIGNUP_PASSWORD_LENGTH');
-        expect(modal).toContain('8자 이상 72자 이하로 입력해주세요.');
-        expect(modal.match(/maxLength=\{isExistingAccountRecovery \? undefined : MAX_SIGNUP_PASSWORD_LENGTH\}/g)).toHaveLength(4);
-        expect(onboardingRoute).toContain('value.password.length <= 72');
-        expect(modal).not.toContain('MAX_SIGNUP_PASSWORD_LENGTH = 12');
+        const passwordPolicy = readFileSync(path.join(webRoot, 'lib/auth/password-policy.ts'), 'utf8');
+        expect(passwordPolicy).toContain('export const MAX_NEW_PASSWORD_LENGTH = 72;');
+        expect(passwordPolicy).toContain('export const MIN_NEW_PASSWORD_LENGTH = 8;');
+        expect(modal).toContain('isAcceptableNewPasswordLength(password)');
+        expect(modal).toContain('NEW_PASSWORD_LENGTH_HINT');
+        expect(modal.match(/maxLength=\{isExistingAccountRecovery \? undefined : MAX_NEW_PASSWORD_LENGTH\}/g)).toHaveLength(4);
+        expect(onboardingRoute).toContain('isAcceptableNewPasswordLength(value.password)');
+        expect(modal).not.toContain('= 12');
+        expect(onboardingRoute).not.toContain('value.password.length <= 72');
     });
 });

@@ -56,6 +56,7 @@ export default function LeaderboardPage() {
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const [displayLimit, setDisplayLimit] = useState(LEADERBOARD_PAGE_SIZE);
     const [isMounted, setIsMounted] = useState(false);
+    const [isDesktopRoute, setIsDesktopRoute] = useState(false);
     const leaderboardBottomNavAutoHide = useMobileBottomNavAutoHide({
         scrollRef,
         source: 'leaderboard-page-scroll',
@@ -67,7 +68,9 @@ export default function LeaderboardPage() {
 
         const mediaQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
         const redirectIfDesktop = () => {
-            if (mediaQuery.matches) {
+            const desktop = mediaQuery.matches;
+            setIsDesktopRoute(desktop);
+            if (desktop) {
                 router.replace('/?panel=leaderboard');
             }
         };
@@ -122,8 +125,7 @@ export default function LeaderboardPage() {
         }
     }, [isLoading, currentUser, leaderboardData]);
 
-    if (!isMounted) return null;
-    if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
+    if (isDesktopRoute) return null;
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden relative">
@@ -179,7 +181,7 @@ export default function LeaderboardPage() {
                                         </PopoverContent>
                                     </Popover>
                     )}
-                    description="맛집 리뷰를 작성하고 랭킹을 올려보세요!"
+                    description="맛집 리뷰를 작성하고 랭킹을 올려보세요"
                     actions={(
                             <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
                                 <TabsList className="h-8">

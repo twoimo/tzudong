@@ -28,7 +28,7 @@ const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 function FeedPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
-    const [isMounted, setIsMounted] = useState(false);
+    const [isDesktopRoute, setIsDesktopRoute] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRestaurantSheetOpen, setIsRestaurantSheetOpen] = useState(false);
@@ -37,15 +37,14 @@ function FeedPageContent() {
     const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
 
     useEffect(() => {
-        setIsMounted(true);
-
         const mediaQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
         const redirectIfDesktop = () => {
-            if (mediaQuery.matches) {
-                const reviewId = searchParams.get('review');
-                const target = reviewId ? `/?panel=feed&review=${encodeURIComponent(reviewId)}` : '/?panel=feed';
-                router.replace(target);
-            }
+            const desktop = mediaQuery.matches;
+            setIsDesktopRoute(desktop);
+            if (!desktop) return;
+            const reviewId = searchParams.get('review');
+            const target = reviewId ? `/?panel=feed&review=${encodeURIComponent(reviewId)}` : '/?panel=feed';
+            router.replace(target);
         };
 
         redirectIfDesktop();
@@ -56,9 +55,7 @@ function FeedPageContent() {
         };
     }, [router, searchParams]);
 
-    // Mount 전에는 아무것도 렌더링하지 않음 (Hydration Mismatch 방지)
-    if (!isMounted) return null;
-    if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
+    if (isDesktopRoute) return null;
 
     const handleOpenRestaurantDetail = (restaurant: FeedRestaurantRecord) => {
         setRestaurantSheetHeightRequestKey(0);
