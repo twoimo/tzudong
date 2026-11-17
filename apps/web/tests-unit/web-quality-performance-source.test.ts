@@ -2546,6 +2546,9 @@ describe("web quality performance source contracts", () => {
     expect(source("components/home/map-panel-chrome.tsx")).toContain(
       '"h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary"',
     );
+    expect(source("components/home/map-panel-chrome.tsx")).toContain(
+      '"h-11 w-11 shrink-0 rounded-lg bg-muted/45 shadow-none hover:bg-muted"',
+    );
     expect(userProfilePanelSource).toContain("<StampCard");
     expect(userProfilePanelSource).toContain("<ReviewCard");
     expect(userProfilePanelSource).toContain('size="default"');
@@ -2918,6 +2921,7 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardPageSource).toContain(
       'aria-label="랭킹 및 티어 산정 기준 보기"',
     );
+    expect(leaderboardPageSource).toContain("h-11 w-11 rounded-lg");
   });
 
   test("desktop direct feature routes hand off to the home left panel and suppress popup blockers", () => {
