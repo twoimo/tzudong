@@ -413,9 +413,6 @@
 }
 @media (min-width: 1024px) {
   [data-admin-console-shell="true"] [data-slot="table-cell"] { padding-block: 4px; }
-  [data-admin-dashboard-widget-card="impact"]:not([data-admin-dashboard-card-fullscreen="true"]),
-  [data-admin-dashboard-widget-card="trend"]:not([data-admin-dashboard-card-fullscreen="true"]) { min-height: 264px; }
-  [data-admin-dashboard-widget-card="ops"] { min-height: 264px; }
 }
 @media (max-width: 1023px) {
   .admin-page-header-actions :is(button, select, input, a[data-slot="button"]),
@@ -512,4 +509,40 @@
 [data-admin-sidebar-account-menu-content="true"] [data-admin-sidebar-account-summary="true"] p:last-child { font-size: 12px; font-weight: 400; }
 @media (max-width: 767px) {
   [data-admin-dashboard-management="true"] > .admin-page-header .admin-page-header-controls { flex-basis: 100%; }
+}
+
+/* Desktop overview fills the canvas. Chart rows take the leftover height, and a
+   short window still scrolls because the grid keeps a 160px row minimum. */
+@media (min-width: 1024px) {
+  [data-admin-dashboard-management="true"],
+  [data-admin-dashboard-management-skeleton="true"] {
+    height: auto;
+    min-height: 100%;
+  }
+  [data-admin-dashboard-management="true"] > div[data-admin-dashboard-order-mode],
+  [data-admin-dashboard-management-skeleton="true"] > div[data-admin-dashboard-order-mode] {
+    flex: 1 1 auto;
+    min-height: min-content;
+    align-content: stretch;
+    grid-template-rows: auto minmax(160px, 1fr) minmax(160px, 1fr);
+  }
+  [data-admin-dashboard-management="true"] [data-admin-dashboard-widget-card]:not([data-admin-dashboard-kpi-card]):not([data-admin-dashboard-card-fullscreen="true"]),
+  [data-admin-dashboard-management-skeleton="true"] [data-admin-dashboard-skeleton-card] {
+    min-height: 0;
+    height: 100%;
+  }
+  [data-admin-dashboard-management="true"] [data-admin-dashboard-widget-card]:not([data-admin-dashboard-kpi-card]):not([data-admin-dashboard-card-fullscreen="true"]) > :last-child,
+  [data-admin-dashboard-management-skeleton="true"] [data-admin-dashboard-skeleton-card] > :last-child {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  [data-admin-dashboard-management="true"] [data-admin-dashboard-line-chart="ztd"],
+  [data-admin-dashboard-management="true"] [data-admin-dashboard-bubble-chart="ztd"],
+  [data-admin-dashboard-management="true"] [data-admin-dashboard-area-chart="ztd"] {
+    min-height: 0;
+    overflow: hidden;
+  }
+  [data-admin-dashboard-management="true"] [data-admin-dashboard-progressive-table="true"] {
+    max-height: none;
+  }
 }
