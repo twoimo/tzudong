@@ -78,12 +78,22 @@ async function run(options: { width?: number; pathname?: string; loggedIn?: bool
 }
 
 for (const width of [390, 820]) for (const idle of [true, false]) {
-  test(`home does not fetch unchosen routes at ${width}px with ${idle ? 'idle callbacks' : 'timer fallback'}`, async () => {
+  test(`home prefetches the other destinations after the map can paint at ${width}px with ${idle ? 'idle callbacks' : 'timer fallback'}`, async () => {
     await run({ width, idle }, async page => {
-      await page.evaluate(() => (window as FixtureWindow).__bottomNavFixture.flushIdle());
-      await page.clock.runFor(3000);
-      await page.evaluate(() => (window as FixtureWindow).__bottomNavFixture.flushIdle());
       expect(await state(page)).toEqual({ events: [], authRequests: [] });
+      if (idle) {
+        await page.clock.runFor(1500);
+        expect(await state(page)).toEqual({ events: [], authRequests: [] });
+        await page.evaluate(() => (window as FixtureWindow).__bottomNavFixture.flushIdle());
+      } else {
+        await page.clock.runFor(1499);
+        expect(await state(page)).toEqual({ events: [], authRequests: [] });
+        await page.clock.runFor(1);
+      }
+      expect(await state(page)).toEqual({
+        events: ['/feed', '/stamp', '/leaderboard', '/mypage/profile'].map(path => ({ kind: 'prefetch' as const, path })),
+        authRequests: [],
+      });
     });
   }, 30_000);
 }

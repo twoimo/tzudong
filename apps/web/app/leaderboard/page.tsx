@@ -56,7 +56,6 @@ export default function LeaderboardPage() {
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const [displayLimit, setDisplayLimit] = useState(LEADERBOARD_PAGE_SIZE);
     const [isMounted, setIsMounted] = useState(false);
-    const [isDesktopRoute, setIsDesktopRoute] = useState(false);
     const leaderboardBottomNavAutoHide = useMobileBottomNavAutoHide({
         scrollRef,
         source: 'leaderboard-page-scroll',
@@ -68,9 +67,7 @@ export default function LeaderboardPage() {
 
         const mediaQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
         const redirectIfDesktop = () => {
-            const desktop = mediaQuery.matches;
-            setIsDesktopRoute(desktop);
-            if (desktop) {
+            if (mediaQuery.matches) {
                 router.replace('/?panel=leaderboard');
             }
         };
@@ -125,7 +122,7 @@ export default function LeaderboardPage() {
         }
     }, [isLoading, currentUser, leaderboardData]);
 
-    if (isDesktopRoute) return null;
+    if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden relative">

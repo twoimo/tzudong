@@ -199,10 +199,6 @@ export default function StampPage() {
 
     useEffect(() => {
         setIsMounted(true);
-        const phoneQuery = window.matchMedia('(max-width: 767px)');
-        const syncPhone = () => setIsPhone(phoneQuery.matches);
-        syncPhone();
-        phoneQuery.addEventListener('change', syncPhone);
 
         const mediaQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
         const redirectIfDesktop = () => {
@@ -217,10 +213,17 @@ export default function StampPage() {
         mediaQuery.addEventListener('change', redirectIfDesktop);
 
         return () => {
-            phoneQuery.removeEventListener('change', syncPhone);
             mediaQuery.removeEventListener('change', redirectIfDesktop);
         };
     }, [router]);
+
+    useEffect(() => {
+        const phoneQuery = window.matchMedia('(max-width: 767px)');
+        const syncPhone = () => setIsPhone(phoneQuery.matches);
+        syncPhone();
+        phoneQuery.addEventListener('change', syncPhone);
+        return () => phoneQuery.removeEventListener('change', syncPhone);
+    }, []);
 
     // --- 상태 (State) ---
     const [viewMode, setViewMode] = useState<ViewMode>("grid");

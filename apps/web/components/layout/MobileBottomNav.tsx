@@ -112,7 +112,9 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
             return;
         }
 
-        const routes = NAV_ITEMS.map((item) => item.path).filter((path) => path !== pathname);
+        const routes = pathname === '/'
+            ? NAV_ITEMS.map((item) => item.path).filter((path) => path !== pathname)
+            : NAV_ITEMS.map((item) => item.path);
         let cancelled = false;
         const timers: number[] = [];
         const run = () => {
@@ -122,6 +124,10 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
 
             const stagger = process.env.NODE_ENV === 'development' ? BOTTOM_NAV_PREFETCH_STAGGER_MS : 0;
             routes.forEach((path, index) => {
+                if (stagger === 0) {
+                    prefetchRoute(path);
+                    return;
+                }
                 timers.push(window.setTimeout(() => {
                     if (!cancelled) prefetchRoute(path);
                 }, index * stagger));
@@ -131,10 +137,16 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                 MYPAGE_SUB_ROUTES.forEach((path) => prefetchRoute(path));
             }
         };
-        const cancelIdle = scheduleBottomNavPrefetch(
-            run,
-            pathname === '/' ? BOTTOM_NAV_HOME_PREFETCH_IDLE_MS : 1,
-        );
+
+        if (pathname !== '/') {
+            run();
+            return () => {
+                cancelled = true;
+                timers.forEach((timer) => window.clearTimeout(timer));
+            };
+        }
+
+        const cancelIdle = scheduleBottomNavPrefetch(run, BOTTOM_NAV_HOME_PREFETCH_IDLE_MS);
 
         return () => {
             cancelled = true;
