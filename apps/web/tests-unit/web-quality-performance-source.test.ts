@@ -964,6 +964,7 @@ describe("web quality performance source contracts", () => {
       "window.addEventListener('touchstart', requestMobileOverlay",
     );
     expect(homeControlPanelSource).toContain("return shellFallback(desktopPanelLoad);");
+    expect(homeControlPanelSource).toContain("if (!failed) return null;");
     expect(homeControlPanelSource).toContain("shouldLoadDesktopPanel");
     expect(homeControlPanelSource).not.toContain(
       "function DesktopControlPanelLoadingShell()",

@@ -926,7 +926,7 @@ export default function StampPage() {
 
     return (
         <>
-            <Group orientation="horizontal" className="h-full bg-background" data-testid="stamp-page-container">
+            <Group orientation="horizontal" className="h-full bg-background" data-testid="stamp-page-container" data-mobile-only-route={hasReviewContinuation ? undefined : "true"}>
                 {/* 왼쪽 패널 - 메인 콘텐츠 */}
                 <Panel id="main-list-panel" defaultSize={isRightPanelVisible ? "70%" : "100%"} minSize="30%" className="overflow-hidden">
                     {/* 스크롤 컨테이너 */}
