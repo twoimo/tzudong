@@ -86,7 +86,7 @@
     "idb": "^8.0.3",
     "lucide-react": "^1.48.0",
     "maplibre-gl": "^6.11.2",
-    "next": "16.4.2",
+    "next": "16.4.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-error-boundary": "^6.1.6",
@@ -103,7 +103,7 @@
     "ztd-charts": "0.11.3"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "16.4.2",
+    "@next/bundle-analyzer": "16.4.6",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/postcss": "^4.3.3",
@@ -118,7 +118,7 @@
     "braces": "file:vendor/tzudong-braces-3.0.3-tzudong.2.tgz",
     "dotenv": "^18.0.9",
     "eslint": "^9.39.5",
-    "eslint-config-next": "16.4.2",
+    "eslint-config-next": "16.4.6",
     "minimatch": "file:vendor/tzudong-minimatch-3.1.5-tzudong.1.tgz",
     "postcss": "^8.5.32",
     "supabase": "^2.121.0",
