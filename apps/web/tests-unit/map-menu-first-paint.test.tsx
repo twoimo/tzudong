@@ -33,9 +33,9 @@ describe("map menu first paint", () => {
 
     expect(DESKTOP_MIN_WIDTH_QUERY).toBe("(min-width: 1280px)");
     expect(globals).toContain(
-      `@media ${DESKTOP_MIN_WIDTH_QUERY} {\n  [data-mobile-only-route] {\n    display: none !important;\n  }\n}`,
+      `[data-mobile-only-route="contents"] {\n  display: contents;\n}\n\n@media ${DESKTOP_MIN_WIDTH_QUERY} {\n  [data-mobile-only-route] {\n    display: none !important;\n  }\n}`,
     );
-    expect(feed).toContain('<div data-mobile-only-route="true">');
+    expect(feed).toContain('<div data-mobile-only-route="contents">');
     expect(stamp).toContain('data-mobile-only-route={hasReviewContinuation ? undefined : "true"}');
     expect(leaderboard).toContain('data-mobile-only-route="true"');
   });

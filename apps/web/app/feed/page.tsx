@@ -147,7 +147,7 @@ function FeedPageContent() {
 
 export default function FeedPage() {
     return (
-        <div data-mobile-only-route="true">
+        <div data-mobile-only-route="contents">
             <Suspense fallback={(
                 <GlobalLoader
                     message="피드를 불러오는 중..."
