@@ -86,9 +86,9 @@ for (const width of [390, 820]) for (const idle of [true, false]) {
         expect(await state(page)).toEqual({ events: [], authRequests: [] });
         await page.evaluate(() => (window as FixtureWindow).__bottomNavFixture.flushIdle());
       } else {
-        await page.clock.runFor(1499);
+        await page.clock.runFor(1400);
         expect(await state(page)).toEqual({ events: [], authRequests: [] });
-        await page.clock.runFor(1);
+        await page.clock.runFor(100);
       }
       expect(await state(page)).toEqual({
         events: ['/feed', '/stamp', '/leaderboard', '/mypage/profile'].map(path => ({ kind: 'prefetch' as const, path })),

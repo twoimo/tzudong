@@ -2639,6 +2639,7 @@ describe("web quality performance source contracts", () => {
     expect(reviewCardSource).toContain(
       "text-xs font-medium tabular-nums transition-colors group-active:text-red-500",
     );
+    expect(reviewCardSource).toContain("<BookmarkButton");
     expect(reviewCardSource).toContain('"text-muted-foreground');
     expect(reviewCardSource).toContain('"text-red-500"');
     expect(reviewCardSource).not.toContain(
