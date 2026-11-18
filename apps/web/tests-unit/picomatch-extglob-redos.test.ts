@@ -41,6 +41,19 @@ describe('vendored picomatch repeated extglobs', () => {
       expect(source).toContain('analysis.collapse');
       expect(packed).toContain('analysis.collapse');
       expect(packed).toContain(`"name": "${copy.name}"`);
+      expect(packed).not.toContain('REGEX_REMOVE_BACKSLASH');
+    });
+
+    test(`${copy.dir} removes escapes without stalling on open brackets`, () => {
+      const { removeBackslashes } = require(join(webRoot, 'vendor', copy.dir, 'lib/utils.js'));
+      expect(removeBackslashes('a\\b')).toBe('ab');
+      expect(removeBackslashes('foo\\')).toBe('foo\\');
+      expect(removeBackslashes('[a\\b]')).toBe('[a\\b]');
+      expect(removeBackslashes('[a\\b\n]')).toBe('[a\\b\n]');
+      expect(removeBackslashes('\n\\\n')).toBe('\n\\\n');
+      const started = performance.now();
+      expect(removeBackslashes('['.repeat(30000))).toBe('['.repeat(30000));
+      expect(performance.now() - started).toBeLessThan(1000);
     });
   }
 

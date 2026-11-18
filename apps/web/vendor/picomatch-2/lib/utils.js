@@ -4,7 +4,6 @@ const path = require('path');
 const win32 = process.platform === 'win32';
 const {
   REGEX_BACKSLASH,
-  REGEX_REMOVE_BACKSLASH,
   REGEX_SPECIAL_CHARS,
   REGEX_SPECIAL_CHARS_GLOBAL
 } = require('./constants');
@@ -15,10 +14,53 @@ exports.isRegexChar = str => str.length === 1 && exports.hasRegexChars(str);
 exports.escapeRegex = str => str.replace(REGEX_SPECIAL_CHARS_GLOBAL, '\\$1');
 exports.toPosixSlashes = str => str.replace(REGEX_BACKSLASH, '/');
 
+const isLineTerminator = ch => ch === '\n' || ch === '\r' || ch === '\u2028' || ch === '\u2029';
+
+// Keep a bracket class intact and drop other escapes, without a backtracking scan.
 exports.removeBackslashes = str => {
-  return str.replace(REGEX_REMOVE_BACKSLASH, match => {
-    return match === '\\' ? '' : match;
-  });
+  let out = '';
+  let i = 0;
+  const n = str.length;
+  while (i < n) {
+    if (str[i] === '[') {
+      let j = i + 1;
+      let end = -1;
+      let limit = n;
+      while (j < n) {
+        if (isLineTerminator(str[j])) {
+          if (j + 1 < n && str[j + 1] === ']') end = j + 1;
+          else limit = j;
+          break;
+        }
+        if (j >= i + 2 && str[j] === ']' && str[j - 1] !== '\\') {
+          end = j;
+          break;
+        }
+        j += 1;
+      }
+      if (end !== -1) {
+        out += str.slice(i, end + 1);
+        i = end + 1;
+        continue;
+      }
+      while (i < limit) {
+        if (str[i] === '\\' && i + 1 < n && !isLineTerminator(str[i + 1])) {
+          i += 1;
+          continue;
+        }
+        out += str[i];
+        i += 1;
+      }
+      continue;
+    }
+    if (str[i] === '\\' && i + 1 < n && !isLineTerminator(str[i + 1])) {
+      i += 1;
+      continue;
+    }
+    out += str[i];
+    i += 1;
+  }
+  return out;
 };
 
 exports.supportsLookbehinds = () => {

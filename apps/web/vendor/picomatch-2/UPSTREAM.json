@@ -8,6 +8,7 @@
   "localChanges": [
     "Collapse a repeated extglob whose single branch is made of single-character matchers and stars, so +(*a) no longer compiles to a nested unbounded quantifier.",
     "Literalize other single-branch wildcard extglobs that can still backtrack, including bash mode.",
-    "Rename the package to @tzudong/picomatch-2 so the unresolved registry advisory is not reintroduced by the picomatch name."
+    "Rename the package to @tzudong/picomatch-2 so the unresolved registry advisory is not reintroduced by the picomatch name.",
+    "Replace the polynomial bracket scan in removeBackslashes with a linear walk that keeps the same escapes."
   ]
 }
