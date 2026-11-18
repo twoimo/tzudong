@@ -44,3 +44,4 @@ Each feature file starts with an H1 title and one paragraph that describes the u
 - [Restaurant edit request](./edit-request.md) covers the home detail panel entry and the `/global-map` entry.
 - [Online presence](./online-presence.md) covers the map viewer count across two visitors.
 - [Admin console access](./admin-access.md) covers the signed-out, admin, and disabled-admin outcomes.
+- [Legal contact text](./legal-contact.md) covers the public privacy and data-deletion pages leaving no email address in the server HTML.

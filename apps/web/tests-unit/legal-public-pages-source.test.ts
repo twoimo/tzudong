@@ -20,7 +20,12 @@ describe('public legal and app-review readiness contracts', () => {
     expect(privacyPage).toContain('siteConfig.legal.dataDeletionPath');
 
     expect(dataDeletionPage).toContain('계정 완전 삭제');
-    expect(dataDeletionPage).toContain('supportMailto');
+    expect(dataDeletionPage).toContain('HydratedSupportLink');
+    expect(dataDeletionPage).not.toContain('mailto:');
+    expect(dataDeletionPage).not.toContain('contact.email');
+    expect(privacyPage).toContain('HydratedSupportLink');
+    expect(privacyPage).not.toContain('mailto:');
+    expect(privacyPage).not.toContain('contact.email');
     expect(dataDeletionPage).toContain('siteConfig.legal.myPageProfilePath');
     expect(dataDeletionPage).toContain('리뷰·제보 등 서비스 무결성 검토가 필요한 콘텐츠는 승인된 기준이 있을 때');
     expect(dataDeletionPage).toContain('모든 시스템 또는 제공자 백업에서의 삭제 완료를 단정하지 않습니다.');
@@ -36,7 +41,8 @@ describe('public legal and app-review readiness contracts', () => {
     expect(authModal).toContain('import { PrivacyPolicyContent } from "@/components/legal/PrivacyPolicyContent";');
     expect(authModal).not.toContain('const PrivacyPolicyContent = memo');
     expect(privacyContent).toContain('export const PrivacyPolicyContent');
-    expect(privacyContent).toContain('siteConfig.contact.email');
+    expect(privacyContent).toContain('HydratedContactEmail');
+    expect(privacyContent).not.toContain('contact.email');
   });
 
   test('support and operator copy is centralized away from UI components', () => {
