@@ -1,0 +1,21 @@
+{
+  "name": "@tzudong/picomatch-4",
+  "version": "4.0.7-tzudong.1",
+  "description": "Vendored picomatch 4.0.7 with the GHSA-fc5q-39xc-vjpf repeated-extglob collapse. Not an official upstream release.",
+  "private": true,
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
+  "homepage": "https://github.com/micromatch/picomatch",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=12"
+  },
+  "files": [
+    "index.js",
+    "posix.js",
+    "lib",
+    "LICENSE",
+    "UPSTREAM.json"
+  ]
+}
