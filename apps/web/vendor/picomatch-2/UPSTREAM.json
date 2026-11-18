@@ -1,0 +1,13 @@
+{
+  "package": "picomatch",
+  "version": "2.3.2",
+  "source": "https://github.com/micromatch/picomatch/tree/2.3.2",
+  "advisory": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+  "proposedUpstreamChange": "https://github.com/micromatch/picomatch/pull/268",
+  "notAnOfficialUpstreamRelease": true,
+  "localChanges": [
+    "Collapse a repeated extglob whose single branch is made of single-character matchers and stars, so +(*a) no longer compiles to a nested unbounded quantifier.",
+    "Literalize other single-branch wildcard extglobs that can still backtrack, including bash mode.",
+    "Rename the package to @tzudong/picomatch-2 so the unresolved registry advisory is not reintroduced by the picomatch name."
+  ]
+}
