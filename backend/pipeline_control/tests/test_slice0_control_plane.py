@@ -273,7 +273,7 @@ class HttpLoopTests(unittest.TestCase):
         self._orig_store = api_mod.STORE
         api_mod.STORE = FileStore()
         self._queue = tempfile.TemporaryDirectory()
-        from backend.pipeline_control import queue as queue_mod
+        from backend.pipeline_control import file_queue as queue_mod
 
         self._orig_queue = queue_mod.DEFAULT_QUEUE
         queue_mod.DEFAULT_QUEUE = Path(self._queue.name) / "pipeline-queue.jsonl"
@@ -286,7 +286,7 @@ class HttpLoopTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         from backend.pipeline_control import api as api_mod
-        from backend.pipeline_control import queue as queue_mod
+        from backend.pipeline_control import file_queue as queue_mod
 
         queue_mod.DEFAULT_QUEUE = self._orig_queue
         api_mod.STORE = self._orig_store
@@ -1312,6 +1312,60 @@ class OperatorSnapshotTests(unittest.TestCase):
         snap = store.operator_snapshot(load_targets())
         self.assertEqual(self._status(snap, "tzuyang"), "Paused")
         self.assertEqual(len(snap["jobs"]), 1)
+
+    def test_listed_run_shows_a_pause_that_waits_for_the_step_boundary(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snappend01",
+            payload={},
+            actor="admin",
+            request_id="req-pp",
+        )
+        store.claim()
+
+        def listed() -> tuple[str, bool]:
+            snap = store.operator_snapshot(load_targets())
+            self._allowlisted(snap["jobs"])
+            return snap["jobs"][0]["status"], snap["jobs"][0]["pause_requested"]
+
+        self.assertEqual(listed(), ("Fetching", False))
+        store.control(run.id, "pause", actor="admin", request_id="req-pp2")
+        self.assertEqual(listed(), ("Fetching", True))
+        store.control(run.id, "resume", actor="admin", request_id="req-pp3")
+        self.assertEqual(listed(), ("Fetching", False))
+        store.control(run.id, "pause", actor="admin", request_id="req-pp4")
+        store.beat(run.id)
+        self.assertEqual(listed(), ("Paused", True))
+
+    def test_listed_run_shows_a_cancel_that_waits_for_the_step_boundary(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapcanc01",
+            payload={},
+            actor="admin",
+            request_id="req-cp",
+        )
+        store.claim()
+
+        def listed() -> list[tuple[str, bool, bool]]:
+            snap = store.operator_snapshot(load_targets())
+            self._allowlisted(snap["jobs"])
+            return [
+                (job["status"], job["cancel_requested"], job["pause_requested"])
+                for job in snap["jobs"]
+            ]
+
+        self.assertEqual(listed(), [("Fetching", False, False)])
+        store.control(run.id, "cancel", actor="admin", request_id="req-cp2")
+        self.assertEqual(listed(), [("Fetching", True, False)])
+        store.control(run.id, "pause", actor="admin", request_id="req-cp3")
+        self.assertEqual(listed(), [("Fetching", True, True)])
+        store.beat(run.id)
+        self.assertEqual(listed(), [])
 
     def test_overlay_idle_after_success_and_fail(self) -> None:
         store = MemoryStore(clock=lambda: 1_000.0)

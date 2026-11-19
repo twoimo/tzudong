@@ -12,7 +12,7 @@ import type { Restaurant } from '../types/restaurant';
 
 // Execute the actual component's retained-row -> signature/swipe bindings.
 // Include the current result/selection guard; this is not a component mount or SDK test.
-const source = readFileSync(new URL('../components/map/NaverMapView.tsx', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../components/map/use-naver-map-cluster-render.ts', import.meta.url), 'utf8');
 const file = ts.createSourceFile('map.tsx', source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);
 const names = new Set(['publishedSelectedRestaurant', 'publishedSearchedRestaurant',
     'markerKindSignature', 'restaurantLookup', 'displayRestaurantLookup', 'displayRestaurantIds',

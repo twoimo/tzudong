@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import type { Json } from '@/integrations/supabase/types';
+import { isRecord } from '@/lib/validation/records';
 
 export const TREND_JOB_REQUEST_KINDS = ['trend_proposal_run', 'dry_run'] as const;
 export const TREND_JOB_STATUSES = ['queued', 'claimed', 'succeeded', 'failed', 'cancelled'] as const;
@@ -17,17 +18,13 @@ export type NormalizedAdminTrendJobRequest = {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
-
 function normalizeJson(value: unknown): Json {
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('invalid-json');
     return value;
   }
   if (Array.isArray(value)) return value.map(normalizeJson);
-  if (isPlainRecord(value)) {
+  if (isRecord(value)) {
     return Object.fromEntries(
       Object.entries(value)
         .filter(([, item]) => item !== undefined)
@@ -59,7 +56,7 @@ export function buildTrendJobRequestHash(input: Pick<NormalizedAdminTrendJobRequ
 }
 
 export function normalizeTrendJobRequestBody(value: unknown): NormalizedAdminTrendJobRequest {
-  if (!isPlainRecord(value)) throw new Error('invalid_trend_job_request');
+  if (!isRecord(value)) throw new Error('invalid_trend_job_request');
   const requestKind = value.requestKind;
   if (requestKind !== 'trend_proposal_run' && requestKind !== 'dry_run') throw new Error('invalid_trend_job_request');
   const correlationId = typeof value.correlationId === 'string' ? value.correlationId.trim() : '';
@@ -67,9 +64,9 @@ export function normalizeTrendJobRequestBody(value: unknown): NormalizedAdminTre
   if (!UUID_PATTERN.test(correlationId) || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
     throw new Error('invalid_trend_job_request');
   }
-  const parameters = normalizeJson(isPlainRecord(value.parameters) ? value.parameters : {}) as Record<string, Json>;
+  const parameters = normalizeJson(isRecord(value.parameters) ? value.parameters : {}) as Record<string, Json>;
   const windowValue = parameters.window;
-  if (isPlainRecord(windowValue)) {
+  if (isRecord(windowValue)) {
     const from = typeof windowValue.from === 'string' ? Date.parse(windowValue.from) : NaN;
     const to = typeof windowValue.to === 'string' ? Date.parse(windowValue.to) : NaN;
     if (Number.isFinite(from) && Number.isFinite(to) && from > to) throw new Error('trend_job_request_window_invalid');

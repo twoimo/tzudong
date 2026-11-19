@@ -78,6 +78,15 @@ restart loop. The existing worker is one batch invocation, which can process
 queued work; it is not a promise to claim exactly one queued item. Its existing
 dry-run/live and queue-safety rules still apply.
 
+With no queued work, the worker records `TZUDONG_PIPELINE_COUNT` default runs,
+one by default, for each target, UTC date, compute profile, and mode. A second
+invocation on the same date does not run the steps again and reports `Failed`.
+To run again on the same date, enqueue a run through the API. The worker must
+claim that run within 30 seconds, or the run ends `lease_expired`. The worker
+run lifecycle section of the
+[run_daily runbook](../docs/run-daily-operations.md) lists the step timeout,
+the lease, and the error codes.
+
 ## Events and search
 
 Events select `kafka` mode and the shared **local Postgres outbox** for API,

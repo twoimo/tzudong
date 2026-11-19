@@ -97,8 +97,8 @@ async function bundle(sourceRoot: string) {
             ${lifecycle.join(';\n')};
             const onSuccess = () => { counts.success++; };
             const onClose = () => { counts.closes++; };
-            const ocrAbortControllerRef = useRef(null);
-            const setReceiptVerificationInputMode = () => {}, setForceOcrRefresh = () => {}, setOcrFocusTarget = () => {}, setOcrProgress = () => {}, setOcrFallbackNotice = () => {}, setAiFilledFields = () => {};
+            const cancelPendingReceiptSelection = () => verificationSelectionRef.current.invalidate(), resetReceiptStep = () => replaceVerificationPhoto(null);
+            const setOcrFocusTarget = () => {}, setAiFilledFields = () => {};
             ${handlers}
             useLayoutEffect(() => { registry.set(label, { autoSave, loadDraft, handleSubmit, handleClose, setContent, draftScopeRef, content }); });
             return <output>{content}</output>;

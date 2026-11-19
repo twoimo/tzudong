@@ -34,8 +34,8 @@ describe("mypage CRUD QA/QC source contracts", () => {
     expect(profileSource).toContain("await changeBrowserAccountPassword({");
     expect(profileSource).toContain("userId: user.id, email: user.email, password: currentPassword, newPassword");
     expect(profileSource).toContain("newPassword !== confirmPassword");
-    expect(profileSource).toContain("newPassword.length < 8");
-    expect(profileSource).toContain("newPassword.length > 12");
+    expect(profileSource).toContain("isAcceptableNewPasswordLength(newPassword)");
+    expect(profileSource).not.toContain("newPassword.length > 12");
   });
 
   test("bookmark and review deletion are owner-scoped and invalidate their read models", () => {

@@ -230,11 +230,6 @@ public.youtube_channel_kpi_snapshots
 public.youtube_thumbnail_releases
 public.youtube_video_kpi_snapshots
 realtime.messages
-realtime.messages_2026_11_11
-realtime.messages_2026_11_12
-realtime.messages_2026_11_13
-realtime.messages_2026_11_14
-realtime.messages_2026_11_15
 realtime.schema_migrations
 realtime.subscription
 realtime.subscription_id_seq

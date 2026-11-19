@@ -302,7 +302,7 @@ export function MyPageLayoutContent({
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}
         >
           <div
-            className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4 md:hidden"
+            className="shrink-0 border-b border-border bg-background px-3 py-2 sm:px-4 sm:py-3 md:hidden"
             data-mypage-mobile-route-header="true"
           >
             <div className="flex items-start justify-between gap-3">

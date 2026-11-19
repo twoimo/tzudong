@@ -15,6 +15,7 @@ const parse = (path: string) => ts.createSourceFile(path,
 const detail = parse('../components/restaurant/RestaurantDetailPanel.tsx');
 const card = parse('../components/reviews/ReviewCard.tsx');
 const composer = parse('../components/reviews/ReviewModal.tsx');
+const receiptStep = parse('../components/reviews/receipt-step/ReceiptStep.tsx');
 const editor = parse('../components/reviews/ReviewEditModal.tsx');
 const submission = parse('../components/modals/RestaurantSubmissionModal.tsx');
 
@@ -182,18 +183,18 @@ describe('form keyboard recovery', () => {
     });
 
     test('a held review service cannot open its receipt input or accept a dropped receipt', () => {
-        const input = find(composer, node => ts.isJsxSelfClosingElement(node) && node.tagName.getText(composer) === 'input'
-            && node.getText(composer).includes('ref={verificationFileInputRef}'));
-        const drop = find(composer, node => ts.isJsxAttribute(node) && node.name.getText(composer) === 'onDrop'
-            && node.getText(composer).includes('handleVerificationDrop')) as ts.JsxAttribute;
+        const input = find(receiptStep, node => ts.isJsxSelfClosingElement(node) && node.tagName.getText(receiptStep) === 'input'
+            && node.getText(receiptStep).includes('ref={verificationFileInputRef}'));
+        const drop = find(receiptStep, node => ts.isJsxAttribute(node) && node.name.getText(receiptStep) === 'onDrop'
+            && node.getText(receiptStep).includes('handleVerificationDrop')) as ts.JsxAttribute;
         const handleVerificationDrop = () => {};
         for (const featureHeld of [false, true]) {
-            const element = execute<ReactElement<{ disabled: boolean }>>(input, composer, {
+            const element = execute<ReactElement<{ disabled: boolean }>>(input, receiptStep, {
                 createElement, featureHeld, verificationFileInputRef: { current: null },
                 RECEIPT_IMAGE_ACCEPT: 'image/png', handleVerificationPhotoChange: () => {},
             });
             expect(element.props.disabled).toBe(featureHeld);
-            const handler = execute<unknown>((drop.initializer as ts.JsxExpression).expression!, composer, { featureHeld, handleVerificationDrop });
+            const handler = execute<unknown>((drop.initializer as ts.JsxExpression).expression!, receiptStep, { featureHeld, handleVerificationDrop });
             expect(handler).toBe(featureHeld ? undefined : handleVerificationDrop);
         }
     });

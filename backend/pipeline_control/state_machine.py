@@ -1,4 +1,31 @@
-"""Run status, lock lease, and adapter step checkpoints."""
+"""Run status, lock lease, and adapter step checkpoints.
+
+Run lifecycle::
+
+    Queued --claim--> Fetching --all steps pass--> Succeeded
+    Queued --pause--> Paused --resume--> Queued
+    Fetching | Inserting --pause, then the next step boundary--> Paused
+    Queued | Paused --cancel--> Cancelled
+    Fetching | Inserting --cancel, then the next step boundary--> Cancelled
+    Fetching | Inserting | Paused --step or worker failure--> Failed
+    Queued | Fetching | Inserting --lease lapsed--> Failed (lease_expired)
+
+``Succeeded``, ``Failed``, and ``Cancelled`` are terminal. The first terminal
+status of a run stands, and a terminal run does not hold its target lock.
+
+A worker holds a ``Fetching`` or ``Inserting`` run until its next step
+boundary. A pause or a cancel of that run waits for the boundary, so the run
+never returns to the queue and never frees its target while its step runs. A
+resume before the boundary withdraws the pause. A cancel cannot be withdrawn.
+Every accepted pause sets ``pause_requested`` and every accepted cancel sets
+``cancel_requested``, as the Postgres ``control_job`` does, whether the request
+applies at once or at the boundary. A ``Paused`` run keeps ``pause_requested``
+until a resume clears it.
+
+A run that ends before the boundary ends ``Succeeded`` or ``Failed``, and the
+pending pause or cancel does not apply. A dead worker reaches no boundary, so
+the lapsed lease ends its run.
+"""
 
 from __future__ import annotations
 
@@ -20,10 +47,14 @@ RUN_STATUSES = (
     "Succeeded",
 )
 ACTIVE_LOCK_STATUSES = frozenset({"Queued", "Fetching", "Inserting", "Paused"})
+EXECUTING_STATUSES = frozenset({"Fetching", "Inserting"})
+TERMINAL_STATUSES = frozenset(RUN_STATUSES) - ACTIVE_LOCK_STATUSES
 TARGET_IDLE = "Idle"
 ILLEGAL_TRANSITION = "illegal_transition"
 PAUSE_FROM = frozenset({"Queued", "Fetching", "Inserting"})
 CANCEL_FROM = frozenset({"Queued", "Fetching", "Inserting", "Paused"})
+SUCCEED_FROM = frozenset({"Queued", "Fetching", "Inserting"})
+FAIL_FROM = ACTIVE_LOCK_STATUSES
 
 Profile = Literal["heavy_local", "lite_gha"]
 
@@ -84,6 +115,29 @@ def can_resume(status: str) -> bool:
 
 
 def apply_transition(run: RunRecord, action: str, now: float, lease_ttl: float) -> RunRecord:
+    if run.status not in EXECUTING_STATUSES:
+        _transition_status(run, action, now, lease_ttl)
+    elif action not in {"pause", "cancel"} and not (action == "resume" and run.pause_requested):
+        raise ControlPlaneError(ILLEGAL_TRANSITION, 409)
+    if action == "cancel":
+        run.cancel_requested = True
+    else:
+        run.pause_requested = action == "pause"
+    return run
+
+
+def step_boundary(run: RunRecord, now: float, lease_ttl: float) -> RunRecord:
+    heartbeat(run, now, lease_ttl)
+    if run.status not in EXECUTING_STATUSES:
+        return run
+    if run.cancel_requested:
+        _transition_status(run, "cancel", now, lease_ttl)
+    elif run.pause_requested:
+        _transition_status(run, "pause", now, lease_ttl)
+    return run
+
+
+def _transition_status(run: RunRecord, action: str, now: float, lease_ttl: float) -> RunRecord:
     native = runtime_function("R5-pipeline-graph", "apply_transition_status")
     if native is not None:
         try:
