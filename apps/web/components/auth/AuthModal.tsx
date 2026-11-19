@@ -1,5 +1,11 @@
 import "@/app/home-interactive-globals.css";
 import { captureBrowserLogout } from "@/lib/auth/browser-logout";
+import {
+  isAcceptableNewPasswordLength,
+  MAX_NEW_PASSWORD_LENGTH,
+  NEW_PASSWORD_LENGTH_ERROR,
+  NEW_PASSWORD_LENGTH_HINT,
+} from "@/lib/auth/password-policy";
 import { beginBrowserAuthIntent, publishBrowserSignupPkce } from "@/lib/auth/browser-oauth-commit";
 import { requestBrowserPasswordRecovery, startBrowserGoogleOAuth } from "@/lib/auth/isolated-browser-pkce";
 import { beginBrowserDraftCleanup } from "@/lib/privacy/browser-draft-lifecycle";
@@ -120,8 +126,6 @@ const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "현재 만 14세 미만은 가입�
 const POLICY_VERSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POLICY_CONTENT_SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const POLICY_LOAD_TIMEOUT_MS = 15_000;
-const MIN_SIGNUP_PASSWORD_LENGTH = 8;
-const MAX_SIGNUP_PASSWORD_LENGTH = 72;
 
 function OnboardingConsentFields({
   ageBand,
@@ -549,9 +553,9 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     // 신규 가입 비밀번호 규칙을 적용하지 않는다. 실제 검증은 서버 로그인이 담당한다.
     if (
       !isExistingAccountRecovery
-      && (password.length < MIN_SIGNUP_PASSWORD_LENGTH || password.length > MAX_SIGNUP_PASSWORD_LENGTH)
+      && !isAcceptableNewPasswordLength(password)
     ) {
-      toast.error("비밀번호는 8자 이상 72자 이하여야 합니다");
+      toast.error(NEW_PASSWORD_LENGTH_ERROR);
       return;
     }
     if (!isExistingAccountRecovery && password !== confirmPassword) {
@@ -1010,7 +1014,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
+                    maxLength={isExistingAccountRecovery ? undefined : MAX_NEW_PASSWORD_LENGTH}
                     aria-describedby={isExistingAccountRecovery ? undefined : "signup-password-help"}
                     autoComplete="new-password"
                     enterKeyHint="next"
@@ -1018,7 +1022,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                   />
                   {!isExistingAccountRecovery && (
                     <p id="signup-password-help" className="text-xs text-muted-foreground">
-                      8자 이상 72자 이하로 입력해주세요.
+                      {NEW_PASSWORD_LENGTH_HINT}
                     </p>
                   )}
                 </div>
@@ -1030,7 +1034,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
+                    maxLength={isExistingAccountRecovery ? undefined : MAX_NEW_PASSWORD_LENGTH}
                     autoComplete="new-password"
                     enterKeyHint="done"
                     className="h-11 text-base md:text-base"
@@ -1287,7 +1291,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
+                    maxLength={isExistingAccountRecovery ? undefined : MAX_NEW_PASSWORD_LENGTH}
                     aria-describedby={isExistingAccountRecovery ? undefined : "signup-password-help"}
                     autoComplete="new-password"
                     enterKeyHint="next"
@@ -1295,7 +1299,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                   />
                   {!isExistingAccountRecovery && (
                     <p id="signup-password-help" className="text-xs text-muted-foreground">
-                      8자 이상 72자 이하로 입력해주세요.
+                      {NEW_PASSWORD_LENGTH_HINT}
                     </p>
                   )}
                 </div>
@@ -1307,7 +1311,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    maxLength={isExistingAccountRecovery ? undefined : MAX_SIGNUP_PASSWORD_LENGTH}
+                    maxLength={isExistingAccountRecovery ? undefined : MAX_NEW_PASSWORD_LENGTH}
                     autoComplete="new-password"
                     enterKeyHint="done"
                     className="h-11 text-base md:text-base"

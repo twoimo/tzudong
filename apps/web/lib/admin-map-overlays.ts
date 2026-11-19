@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import type { Json, Tables } from '@/integrations/supabase/types';
+import { isRecord } from '@/lib/validation/records';
 
 export const ADMIN_MAP_OVERLAY_TYPES = ['trend', 'seasonal'] as const;
 export const ADMIN_MAP_OVERLAY_ROUTE_ACTIONS = ['upsert', 'deactivate'] as const;
@@ -139,9 +140,6 @@ export function parseAdminMapOverlayRestaurantIds(value: string | null): string[
   }
   return restaurantIds;
 }
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function readString(value: unknown): string | null {
   return typeof value === 'string' ? value.trim() : null;
@@ -180,7 +178,7 @@ function normalizeJsonValue(value: unknown): Json {
   if (Array.isArray(value)) {
     return value.map((item) => normalizeJsonValue(item));
   }
-  if (isPlainRecord(value)) {
+  if (isRecord(value)) {
     const normalized: { [key: string]: Json | undefined } = {};
     for (const [key, item] of Object.entries(value)) {
       if (item !== undefined) normalized[key] = normalizeJsonValue(item);
@@ -191,7 +189,7 @@ function normalizeJsonValue(value: unknown): Json {
 }
 
 function normalizeEvidence(value: unknown): Json {
-  if (!isPlainRecord(value)) throw new Error('invalid-evidence');
+  if (!isRecord(value)) throw new Error('invalid-evidence');
   return normalizeJsonValue(value);
 }
 
@@ -236,7 +234,7 @@ export function mapAdminMapOverlayRouteActionToRpcAction(action: AdminMapOverlay
 }
 
 export function normalizeAdminMapOverlayPreviewRequest(body: unknown): NormalizedAdminMapOverlayPreviewRequest {
-  if (!isPlainRecord(body)) throw new Error('invalid-request');
+  if (!isRecord(body)) throw new Error('invalid-request');
 
   const action = readString(body.action);
   if (!action || !ADMIN_MAP_OVERLAY_ROUTE_ACTION_SET.has(action)) {

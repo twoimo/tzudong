@@ -1,7 +1,7 @@
 import type { EvaluationRecord } from '@/types/evaluation';
 import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
 import { getEvaluationCompletenessIssues } from '@/lib/admin-evaluation-completeness';
-import { isRecord } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import { getRecordApprovalEligibility } from './evaluation-approval-eligibility';
 
 /** Read-only list projection. Every action fetches the complete current row. */

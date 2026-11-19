@@ -3,6 +3,7 @@ import 'server-only';
 import { isMissingReviewVerificationObject } from '@/lib/reviews/private-verification';
 import { assertPrivacySafe } from '@/lib/privacy/sanitize';
 import type { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { isRecord } from '@/lib/validation/records';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECEIPT_SCHEMA_VERSION = 'receipt_summary_v1';
@@ -32,10 +33,6 @@ type ReceiptFailureData = {
 type SupabaseAdmin = ReturnType<typeof createSupabaseServiceRoleClient>;
 
 export class AdminReceiptRowFailurePersistenceError extends Error {}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 
 function hasExpectedReceiptData(value: unknown, expected: ReceiptFailureData): boolean {
   if (!isRecord(value)) return false;

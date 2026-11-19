@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { changeBrowserAccountPassword } from "@/lib/auth/isolated-browser-account";
+import { isAcceptableNewPasswordLength, MAX_NEW_PASSWORD_LENGTH, NEW_PASSWORD_LENGTH_ERROR } from "@/lib/auth/password-policy";
 import {
   Card,
   CardContent,
@@ -403,6 +404,7 @@ export default function ProfilePage() {
     proofId: string;
     expiresAt: string;
     bearerToken: string;
+    idempotencyKey: string;
     reauthentication: AccountDeletionReauthenticationSession;
   }> | null>(null);
   const [deletionProgressMessage, setDeletionProgressMessage] = useState<string | null>(null);
@@ -665,8 +667,8 @@ export default function ProfilePage() {
       return;
     }
 
-    if (newPassword.length < 8 || newPassword.length > 12) {
-      toast.error("비밀번호는 8자 이상 12자 이하여야 합니다");
+    if (!isAcceptableNewPasswordLength(newPassword)) {
+      toast.error(NEW_PASSWORD_LENGTH_ERROR);
       return;
     }
 
@@ -741,6 +743,7 @@ export default function ProfilePage() {
           proofId: proof.proofId,
           expiresAt: proof.expiresAt,
           bearerToken: freshSession.bearerToken,
+          idempotencyKey: createAccountDeletionIdempotencyKey(),
           reauthentication: freshSession,
         });
         setDeletionPassword("");
@@ -756,8 +759,7 @@ export default function ProfilePage() {
         throw new Error("proof_expired");
       }
 
-      const idempotencyKey = createAccountDeletionIdempotencyKey();
-      const response = await fetch("/api/account/delete", {
+      const submitDeletion = () => fetch("/api/account/delete", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -769,11 +771,20 @@ export default function ProfilePage() {
           requestId: deletionSession.preview.requestId,
           previewHash: deletionSession.preview.previewHash,
           confirmationText: deleteConfirmationText,
-          idempotencyKey,
+          idempotencyKey: deletionSession.idempotencyKey,
           sourceManifestHash: deletionSession.preview.sourceManifestHash,
         }),
       });
-      const payload = await response.json().catch(() => null);
+      let response = await submitDeletion();
+      let payload = await response.json().catch(() => null);
+      if (
+        response.status !== 202
+        && isConsentRecord(payload)
+        && payload.reasonCode === "DB_OR_SESSION_CLEANUP_FAILED"
+      ) {
+        response = await submitDeletion();
+        payload = await response.json().catch(() => null);
+      }
       if (
         response.status !== 202
         || !isConsentRecord(payload)
@@ -1447,6 +1458,7 @@ export default function ProfilePage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="새 비밀번호를 입력하세요…"
+                    maxLength={MAX_NEW_PASSWORD_LENGTH}
                     className="h-11 pr-12 text-base lg:text-base"
                   />
                   <Button
@@ -1481,6 +1493,7 @@ export default function ProfilePage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="새 비밀번호를 다시 입력하세요…"
+                    maxLength={MAX_NEW_PASSWORD_LENGTH}
                     className="h-11 pr-12 text-base lg:text-base"
                   />
                   <Button

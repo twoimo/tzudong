@@ -1336,7 +1336,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).not.toContain('var(--font-noto-serif-kr, "Noto Serif KR")');
     expect(appGlobalsSource).not.toContain("serif !important;");
     expect(consoleSource).toContain(
-      "grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_auto_auto] lg:content-start lg:overflow-visible",
+      "grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)] lg:overflow-visible",
     );
     expect(consoleSource).toContain('activeModuleId === "overview"');
     expect(consoleSource).toContain('? "overflow-y-auto"');
@@ -2448,8 +2448,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "flex min-h-[360px] flex-col overflow-hidden p-2 sm:min-h-[220px]",
     );
-    expect(chartAdapterSource).toContain("height={208}");
-    expect(chartAdapterSource).toContain("height={224}");
+    expect(chartAdapterSource).toContain("useDashboardChartHeight(fallback)");
+    expect(chartAdapterSource).toContain("fallback={208}");
+    expect(chartAdapterSource).toContain("fallback={224}");
     expect(chartAdapterSource).toContain("height={Math.max(104, metric.rows.length * 24)}");
     expect(consoleSource).not.toContain("AdminDashboardLedgerCard");
     expect(consoleSource).not.toContain("AdminDashboardGaugeCard");
@@ -3960,7 +3961,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("md:h-full md:min-h-0");
     expect(consoleSource).toContain("lg:grid-cols-10");
     expect(consoleSource).toContain(
-      "lg:grid-rows-[auto_auto_auto]",
+      "lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)]",
     );
     expect(consoleSource).not.toContain(
       "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",
@@ -3968,7 +3969,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(tailwindSource).toContain("lg:grid-cols-10");
     expect(tailwindSource).toContain("lg:flex-1");
     expect(tailwindSource).toContain(
-      "lg:grid-rows-[auto_auto_auto]",
+      "lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)]",
+    );
+    expect(adminUiSource).toContain(
+      "grid-template-rows: auto minmax(160px, 1fr) minmax(160px, 1fr);",
     );
     expect(tailwindSource).not.toContain(
       "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",

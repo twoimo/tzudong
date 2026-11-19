@@ -1,3 +1,5 @@
+import { isNonNullObject } from '@/lib/validation/records';
+
 export const OCR_DAILY_QUOTA = 5;
 
 type QueryBuilder = {
@@ -38,9 +40,6 @@ type OcrQuotaRpcRow = {
   reset_at: string;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
 const isNonNegativeSafeInteger = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 
@@ -54,7 +53,7 @@ function parseOcrQuotaRpcRow(data: unknown): OcrQuotaRpcRow {
   }
 
   const row = Array.isArray(data) ? data[0] : data;
-  if (!isRecord(row)) {
+  if (!isNonNullObject(row)) {
     throw new Error('OCR_QUOTA_RESPONSE_INVALID');
   }
 

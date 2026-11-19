@@ -59,6 +59,7 @@ import {
     ADMIN_RECEIPT_OCR_PROMPT_VERSION,
     authorizeReceiptOcrExecution,
 } from '@/lib/ocr/admin-receipt-recovery';
+import { isRecord } from '@/lib/validation/records';
 
 
 const MAX_RECEIPT_TEXT_LENGTH = 120;
@@ -146,10 +147,6 @@ function getSupabaseAdmin() {
 
 function getSupabaseStorageAdmin() {
     return createSupabaseStorageServerClient();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
 function noStoreJson(body: unknown, init: ResponseInit = {}) {
