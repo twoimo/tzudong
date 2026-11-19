@@ -213,6 +213,8 @@ describe('restaurant submission privacy boundaries', () => {
         const submitSource = source('app/api/mypage/submissions/submit/route.ts');
         const deleteSource = source('app/api/mypage/submissions/delete/route.ts');
         const draftSource = source('lib/submissionDraftDB.ts');
+        const draftStoreSource = source('lib/drafts/bounded-draft-store.ts');
+        const draftFieldsSource = source('lib/drafts/draft-fields.ts');
         const adminSource = source('app/admin/evaluations/page.tsx');
         const submitNewSource = submitSource.slice(
             submitSource.indexOf('async function submitNew('),
@@ -239,8 +241,11 @@ describe('restaurant submission privacy boundaries', () => {
         expect(submitSource).toContain('PRIVACY_UNSAFE_VALUE_REASON');
         expect(deleteSource).toContain('PRIVACY_UNSAFE_VALUE_REASON');
         expect(draftSource).toContain('PRIVACY_UNSAFE_VALUE_REASON');
-        expect(draftSource.indexOf('assertPrivacySafe(draft)')).toBeLessThan(
-            draftSource.indexOf('transaction.store.put(normalizedDraft)'),
+        expect(draftSource).toContain('assertPrivacySafe(draft)');
+        expect(draftSource).toContain('parseInput: (draft: Omit<SubmissionDraft, \'savedAt\'>, now) => readDraft(draft, false, now)');
+        expect(draftStoreSource.indexOf('config.parseInput(draft, Date.now())')).toBeGreaterThan(-1);
+        expect(draftStoreSource.indexOf('config.parseInput(draft, Date.now())')).toBeLessThan(
+            draftStoreSource.indexOf('transaction.store.put(persistedDraft)'),
         );
         expect(adminSource).not.toContain('callSubmissionApprovalRpc');
         expect(adminSource).toContain('recordActions.run(submissionApprovalInput(input))');
@@ -249,7 +254,7 @@ describe('restaurant submission privacy boundaries', () => {
         expect(guardedAction.indexOf('checkPayloadPrivacy(request.payload)')).toBeGreaterThan(-1);
         expect(guardedAction.indexOf('checkPayloadPrivacy(request.payload)')).toBeLessThan(guardedAction.indexOf('await rpc('));
 
-        for (const sourceText of [submitSource, deleteSource, draftSource, adminSource]) {
+        for (const sourceText of [submitSource, deleteSource, draftSource, draftStoreSource, draftFieldsSource, adminSource]) {
             expect(sourceText).not.toContain('console.');
             expect(sourceText).not.toContain('error.message');
         }

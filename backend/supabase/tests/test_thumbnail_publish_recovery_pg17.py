@@ -90,7 +90,7 @@ class ThumbnailPublishPg17(unittest.TestCase):
         env = {**self.env, 'FIXTURE_PSQL': str(PG/'psql'), 'FIXTURE_PG_PORT': str(self.port)}
         policy = '(version 1)(allow default)(deny network*)(allow network-outbound (remote ip "localhost:*"))'
         script = ROOT/'apps/web/tests-unit/fixtures/thumbnail-publish-pg17.ts'
-        result = subprocess.run(['/usr/bin/sandbox-exec', '-p', policy, str(BUN), '--no-env-file', 'run', str(script), mode],
+        result = subprocess.run(['/usr/bin/sandbox-exec', '-p', policy, str(BUN), '--no-env-file', '--conditions=react-server', 'run', str(script), mode],
                                 cwd=ROOT/'apps/web', env=env, text=True, capture_output=True, timeout=20)
         (self.root/(mode+'.log')).write_text(result.stdout+'\n'+result.stderr)
         self.assertEqual(0, result.returncode, result.stderr)

@@ -145,8 +145,10 @@ test('authenticated browser proof is challenge-bound, redacted, and fail-closed'
     expect(routeSource).not.toContain('access_token:');
     expect(routeSource).not.toContain('sessionId: sessionId');
 
-    expect(middlewareSource).toContain("rpc('is_current_auth_session_active' as never)");
-    expect(middlewareSource).toContain('if (activeSessionError || activeSession !== true)');
+    const adminAccessSource = await readFile(resolve(root, 'lib/auth/admin-access.ts'), 'utf8');
+    expect(adminAccessSource).toContain("rpc('is_current_auth_session_active' as never)");
+    expect(adminAccessSource).toContain('return !error && data === true;');
+    expect(middlewareSource).toContain("if (adminAccess === 'inactive-session')");
     expect(middlewareSource).toContain('clearSupabaseAuthCookies(request, supabaseResponse)');
 });
 test('release smoke classifies existing sessions only and cannot create privacy admission evidence', async () => {
@@ -733,6 +735,7 @@ test('revocation migration, active-session authorization, and containment are fa
     const migration = await readFile(resolve(root, '../../backend/supabase/migrations/20260711000100_release_auth_session_revocation.sql'), 'utf8');
     const parentSource = await readFile(resolve(root, 'scripts/run-auth-release-smoke.mjs'), 'utf8');
     const requireAdminSource = await readFile(resolve(root, 'lib/auth/require-admin.ts'), 'utf8');
+    const adminAccessSource = await readFile(resolve(root, 'lib/auth/admin-access.ts'), 'utf8');
     const middlewareSource = await readFile(resolve(root, 'lib/supabase/middleware.ts'), 'utf8');
     expect(migration).toContain("to_regclass('auth.sessions')");
     expect(migration).toContain("to_regclass('auth.refresh_tokens')");
@@ -805,19 +808,22 @@ test('revocation migration, active-session authorization, and containment are fa
     expect(parentSource).toContain("if (teardown) return;");
 
     const getUserIndex = requireAdminSource.indexOf('supabase.auth.getUser()');
-    const activeSessionIndex = requireAdminSource.indexOf("rpc('is_current_auth_session_active' as never)");
-    const roleIndex = requireAdminSource.indexOf(".from('user_roles' as never)");
-    expect(activeSessionIndex).toBeGreaterThan(getUserIndex);
+    const adminAccessIndex = requireAdminSource.indexOf('checkAdminAccess(supabase, user.id)');
+    expect(adminAccessIndex).toBeGreaterThan(getUserIndex);
+    const activeSessionIndex = adminAccessSource.indexOf("if (!(await isCurrentSessionActive(supabase))) return 'inactive-session';");
+    const roleIndex = adminAccessSource.indexOf(".from('user_roles')");
+    expect(activeSessionIndex).toBeGreaterThan(-1);
     expect(activeSessionIndex).toBeLessThan(roleIndex);
-    expect(requireAdminSource).toContain('activeSessionError || activeSession !== true');
+    expect(requireAdminSource).toContain("if (adminAccess === 'inactive-session')");
     expect(requireAdminSource).toContain("NextResponse.json({ error: 'Unauthorized' }, { status: 401 })");
     expect(middlewareSource).toContain("pathname.startsWith('/api/admin/')");
     expect(middlewareSource).toContain('const isProtectedAdminRequest');
     expect(middlewareSource).toContain('isAdminNavigationRequest(request)');
     expect(middlewareSource).toContain("adminJsonResponseWithSessionCookies(sourceResponse, 'Unauthorized', 401)");
     expect(middlewareSource).toContain("adminJsonResponseWithSessionCookies(sourceResponse, 'Forbidden', 403)");
-    expect(middlewareSource).toContain("accountStatusError || accountStatus?.account_status !== 'active'");
-    expect(middlewareSource).not.toContain('isMissingOptionalAdminStatusStoreError');
+    expect(middlewareSource).toContain('checkAdminAccess(supabase, authUserId)');
+    expect(adminAccessSource).toContain("accountStatusError || accountStatus?.account_status !== 'active'");
+    expect(adminAccessSource).not.toContain('isMissingOptionalAdminStatusStoreError');
 });
 test('Linux supervisor runtime selection fails closed outside verified Node 24', () => {
     const configured = resolve(tmpdir(), 'configured-node24');

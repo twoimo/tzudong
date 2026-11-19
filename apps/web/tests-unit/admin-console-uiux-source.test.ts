@@ -214,16 +214,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(workspaceSource).toContain(
       'className="h-full min-h-0 min-w-0 overflow-y-auto bg-background text-foreground"',
     );
-    expect(workspaceSource).toContain('className="admin-storyboard-body min-w-0 p-3"');
+    expect(workspaceSource).toContain('className="admin-storyboard-body min-w-0 space-y-4 p-4"');
     const adminStyles = source("styles/admin-ui.css");
     expectCssDeclaration(adminStyles, '[data-admin-storyboard-toolbar="true"]', "flex-wrap", "wrap");
     expectCssDeclaration(adminStyles, ".admin-storyboard-body", "padding", "12px");
     expect(workspaceSource).toContain(
-      'lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]',
+      'lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]',
     );
     expect(workspaceSource).toContain(
-      'lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]',
+      '<StoryboardComicBoard scenes={view.project.document.scenes}',
     );
+    expect(workspaceSource).toContain('<StoryboardConversation');
+    expect(workspaceSource).toContain('aria-label="작업 공간 보기"');
+    expect(workspaceSource).toContain('aria-label="장면 작업 공간 보기"');
+    const boardSource = source('components/admin/storyboard/StoryboardComicBoard.tsx');
+    expect(boardSource).toContain('grid-cols-2 grid-rows-2');
+    expect(boardSource).toContain('aria-label="다음 네 컷"');
     expect(workspaceSource).toContain('aria-labelledby="local-scenes-title"');
     expect(workspaceSource).toContain('break-words');
     expect(workspaceSource).toContain('[overflow-wrap:anywhere]');
@@ -515,9 +521,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       )?.[1] ?? "";
     expect(loadingBranch).toContain("if (embedded)");
     expect(loadingBranch).toContain("return renderEmbeddedShell(");
-    expect(loadingBranch).toContain("<InsightsClientLoadingSkeleton />");
+    expect(loadingBranch).toContain("<InsightsClientLoadingSkeleton embedded chartMinHeight={chartConstraints.minHeight} />");
     expect(loadingBranch).toContain("'데이터를 불러오는 중입니다.'");
-    expect(loadingBranch).toContain("return <InsightsClientLoadingSkeleton />");
+    expect(loadingBranch).toContain("return <InsightsClientLoadingSkeleton chartMinHeight={chartConstraints.minHeight} />");
+    expect(insightsSource).toContain("style={{ minHeight: chartMinHeight }}");
+    expect(insightsSource).toContain("embedded ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-hidden p-2 md:p-4'");
 
     const errorBranch =
       insightsSource.match(
@@ -919,61 +927,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-console-content-loading="true"',
     );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-grid="true"',
-    );
-    expect(consoleSource).toContain(
-      "flex h-full min-h-0 flex-col overflow-hidden bg-background",
-    );
-    expect(consoleSource).toContain(
-      "rounded-md border border-border/70 bg-card shadow-none",
-    );
-    expect(consoleSource).toContain(
-      "border-0 bg-card/80 shadow-none",
-    );
-    expect(consoleSource).not.toContain(
-      'data-storyboard-module-loading-layout="canvas-only"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-chat="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-chat-shell="static"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-canvas="true"',
-    );
-    expect(consoleSource).not.toContain(
-      'data-storyboard-module-loading-canvas-blank="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-frame-grid="true"',
-    );
-    expect(consoleSource).not.toContain(
-      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)_auto]",
-    );
-    expect(consoleSource).not.toContain(
-      "grid h-full min-h-[420px] grid-cols-1 gap-2 overflow-hidden sm:grid-cols-2",
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-composer="true"',
-    );
-    expect(consoleSource).not.toContain(
-      'data-storyboard-module-loading-chat-actions="outside-bubble"',
-    );
-    expect(consoleSource).toContain(
-      "data-storyboard-module-loading-cut={String(cutNo)}",
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-shimmer="false"',
-    );
+    // The outer preload owner and the loaded workspace use the same real skeleton.
+    // This prevents a second layout with fake conversation text during chunk loading.
+    const storyboardSkeleton = source("components/admin/storyboard/StoryboardWorkspaceSkeleton.tsx");
+    expect(consoleSource).toContain("<StoryboardWorkspaceSkeleton />");
+    expect(consoleSource).toContain("flex h-full min-h-0 flex-col overflow-hidden bg-background");
+    expect(consoleSource).toContain("min-h-0 flex-1 overflow-y-auto overscroll-contain");
+    expect(storyboardSkeleton).toContain('aria-busy="true"');
+    expect(storyboardSkeleton).toContain('aria-hidden="true"');
+    expect(storyboardSkeleton).toContain("grid-cols-2 grid-rows-2");
+    expect(storyboardSkeleton).toContain("lg:grid-cols-[minmax(0,1fr)_minmax(320px,360px)]");
+    expect(storyboardSkeleton).not.toMatch(/animate-pulse|backdrop-blur|shimmer|bg-gradient/);
     expect(consoleSource).not.toContain("admin-module-loading-shimmer");
     expect(consoleSource).toContain("<LoadingSurface");
     expect(consoleSource).toContain("<LoadingPreview");
-    expect(consoleSource).toContain("STORYBOARD_MODULE_LOADING_CUT_NOS.map");
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-glass="false"',
-    );
     expect(consoleSource).toContain('data-thumbnail-module-loading="true"');
     expect(consoleSource).toContain(
       'data-thumbnail-module-loading-layout="page-shell"',
@@ -1189,9 +1156,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(refreshHistorySource).toContain(
       'aria-label="맛집 최신화 이력 로딩 중"',
     );
-    expect(insightsSource).toContain("function InsightsClientLoadingSkeleton()");
+    expect(insightsSource).toContain("function InsightsClientLoadingSkeleton(");
     expect(insightsSource).toContain('data-insights-client-loading="true"');
-    expect(insightsSource).toContain("return <InsightsClientLoadingSkeleton />;");
+    expect(insightsSource).toContain("return <InsightsClientLoadingSkeleton chartMinHeight={chartConstraints.minHeight} />;");
     const userLoadingSample = usersSource.split("function UserTableSkeleton()")[1]?.split("function StatusBadge")[0] ?? "";
     expect(userLoadingSample).toContain('<LoadingSurface label="사용자 목록 로딩 중">');
     expect(userLoadingSample).not.toContain("<button");
@@ -1335,7 +1302,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(sidebarSectionsSource).toContain('getSidebarConsoleItems(["restaurants", "submissions", "reviews"])');
     expect(sidebarSectionsSource).toContain('getSidebarConsoleItems(["insights", "storyboard", "youtube-thumbnail-generator"])');
     expect(sidebarSectionsSource).toContain('getSidebarConsoleItems(["users", "banners"])');
-    expect(sidebarSectionsSource).toContain('getSidebarConsoleItems(["pipeline", "knowledge-graph", "sentry"])');
+    expect(sidebarSectionsSource).toContain('getSidebarConsoleItems(["pipeline", "knowledge-graph", "sentry", "web-performance"])');
     expect(sidebarSectionsSource).toContain('id: "routes"');
     expect(sidebarSectionsSource).toContain('id: "llm"');
     expect(sidebarSectionsSource).toContain('"audit"');
@@ -1369,7 +1336,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).not.toContain('var(--font-noto-serif-kr, "Noto Serif KR")');
     expect(appGlobalsSource).not.toContain("serif !important;");
     expect(consoleSource).toContain(
-      "grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_auto_auto] lg:content-start lg:overflow-visible",
+      "grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)] lg:overflow-visible",
     );
     expect(consoleSource).toContain('activeModuleId === "overview"');
     expect(consoleSource).toContain('? "overflow-y-auto"');
@@ -2481,8 +2448,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "flex min-h-[360px] flex-col overflow-hidden p-2 sm:min-h-[220px]",
     );
-    expect(chartAdapterSource).toContain("height={208}");
-    expect(chartAdapterSource).toContain("height={224}");
+    expect(chartAdapterSource).toContain("useDashboardChartHeight(fallback)");
+    expect(chartAdapterSource).toContain("fallback={208}");
+    expect(chartAdapterSource).toContain("fallback={224}");
     expect(chartAdapterSource).toContain("height={Math.max(104, metric.rows.length * 24)}");
     expect(consoleSource).not.toContain("AdminDashboardLedgerCard");
     expect(consoleSource).not.toContain("AdminDashboardGaugeCard");
@@ -2786,7 +2754,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "pathname === '/api/admin' || pathname.startsWith('/api/admin/')",
     );
     expect(middlewareSource).toContain("isAdminNavigationRequest");
-    expect(middlewareSource).toContain("eq('role', 'admin')");
+    expect(middlewareSource).toContain("checkAdminAccess(supabase, authUserId)");
+    expect(source("lib/auth/admin-access.ts")).toContain("eq('role', 'admin')");
     expect(middlewareSource).toContain(
       "const redirectAdminLoginWithSessionCookies",
     );
@@ -3112,7 +3081,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(sidebarOrderSource).toContain('"검수·데이터": ["restaurants", "submissions", "reviews"]');
     expect(sidebarOrderSource).toContain('콘텐츠: ["insights", "storyboard", "youtube-thumbnail-generator"]');
     expect(sidebarOrderSource).toContain('"사이트 운영": ["users", "banners"]');
-    expect(sidebarOrderSource).toContain('"플랫폼 도구": ["pipeline", "knowledge-graph", "sentry", "routes", "llm", "audit"]');
+    expect(sidebarOrderSource).toContain('"플랫폼 도구": ["pipeline", "knowledge-graph", "sentry", "web-performance", "routes", "llm", "audit"]');
     expect(sidebarOrderRouteSource).toContain(
       'from "@/lib/admin/sidebar-order"',
     );
@@ -3511,13 +3480,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("const sidebarAccountAvatarClassName");
     expect(consoleSource).toContain(
-      '"relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary transition-colors group-hover/sidebar-account:bg-primary/15"',
+      '"relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-muted text-muted-foreground"',
     );
     expect(consoleSource).toContain(
-      'const sidebarAccountAvatarIconClassName = "h-5 w-5 -translate-y-px"',
+      'const sidebarAccountAvatarIconClassName = "h-4 w-4"',
     );
     expect(consoleSource).toContain(
-      ': "h-10 w-full min-w-0 justify-start gap-2 rounded-md border border-border bg-background px-2 py-1 text-foreground shadow-none',
+      ': "h-14 w-full min-w-0 justify-start gap-3 rounded-lg px-2 py-2 text-foreground shadow-none',
     );
     expect(consoleSource).toContain(
       'className={sidebarAccountAvatarClassName}',
@@ -3963,7 +3932,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(adminUiSource).toContain(
       '[data-admin-dashboard-card-title-row="single-line"] { flex-wrap: nowrap; align-items: center; gap: 0.5rem; }',
     );
-    expect(adminUiSource).not.toContain("flex-basis: 100%");
+    expect(adminUiSource).not.toMatch(/^\s*\.admin-page-header-controls \{ flex-basis: 100%; \}/m);
+    expect(adminUiSource).toContain('[data-admin-dashboard-management="true"] > .admin-page-header .admin-page-header-controls { flex-basis: 100%; }');
     expect(adminUiSource).toContain(
       ".admin-cms-table tbody tr { background: transparent; }",
     );
@@ -3991,7 +3961,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("md:h-full md:min-h-0");
     expect(consoleSource).toContain("lg:grid-cols-10");
     expect(consoleSource).toContain(
-      "lg:grid-rows-[auto_auto_auto]",
+      "lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)]",
     );
     expect(consoleSource).not.toContain(
       "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",
@@ -3999,7 +3969,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(tailwindSource).toContain("lg:grid-cols-10");
     expect(tailwindSource).toContain("lg:flex-1");
     expect(tailwindSource).toContain(
-      "lg:grid-rows-[auto_auto_auto]",
+      "lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)]",
+    );
+    expect(adminUiSource).toContain(
+      "grid-template-rows: auto minmax(160px, 1fr) minmax(160px, 1fr);",
     );
     expect(tailwindSource).not.toContain(
       "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",

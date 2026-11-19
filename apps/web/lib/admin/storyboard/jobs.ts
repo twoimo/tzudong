@@ -1,4 +1,5 @@
 import type { Json } from '@/integrations/supabase/types';
+import { isRecord } from '@/lib/validation/records';
 
 export type StoryboardJobStatus = 'queued' | 'claimed' | 'succeeded' | 'failed' | 'cancelled';
 
@@ -47,10 +48,6 @@ export function buildQueuedStoryboardJobReadiness(): StoryboardJobReadiness {
     fallbackReasonCode: 'storyboard_async_worker_pending',
     message: '스토리보드 생성 요청이 비동기 작업으로 등록되었습니다. 워커가 claim/finalize할 때까지 성공처럼 표시하지 않습니다.',
   };
-}
-
-function isRecord(value: Json | null): value is Record<string, Json> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
 export function normalizeStoryboardJobReadiness(value: Json | null): StoryboardJobReadiness {

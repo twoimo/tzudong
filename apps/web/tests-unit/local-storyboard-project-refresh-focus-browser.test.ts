@@ -32,6 +32,7 @@ window.storyboardProjectRefresh = fixture;
 const reply = value => new Response(JSON.stringify(value), { status: 200, headers: { 'Content-Type': 'application/json' } });
 window.fetch = async url => {
   const path = new URL(url, location.href).pathname;
+  if (path === '/api/admin/storyboard/production/assistant') return reply({ ok: true, configured: false, provider: null });
   if (path === '/api/admin/storyboard/production') return reply({ ok: true, readiness: READY, workers, projects: [summary] });
   if (path !== '/api/admin/storyboard/production/' + A) throw new Error('Unexpected fixture request');
   fixture.reads += 1;
@@ -78,7 +79,7 @@ localTest('storyboard project refresh keeps keyboard focus while the saved proje
       await page.goto(`http://storyboard.fixture.test/admin?module=storyboard&storyboardProject=${A}`);
       await page.addScriptTag({ content: script });
       const workspace = page.getByLabel('저장된 스토리보드');
-      await playwrightExpect(workspace.getByRole('status')).toContainText('일부 결과 저장됨');
+      await playwrightExpect(workspace.getByRole('status', { name: '프로젝트 저장 상태', exact: true })).toContainText('일부 결과 저장됨');
       const refresh = workspace.getByRole('button', { name: '새로고침' });
       await page.evaluate(() => { window.storyboardProjectRefresh.hold = true; });
       await refresh.focus();
@@ -88,7 +89,7 @@ localTest('storyboard project refresh keeps keyboard focus while the saved proje
       await playwrightExpect(refresh).not.toHaveAttribute('disabled');
       await page.evaluate(() => window.storyboardProjectRefresh.release());
       await playwrightExpect(refresh).toBeFocused();
-      await playwrightExpect(workspace.getByRole('status')).toContainText('일부 결과 저장됨');
+      await playwrightExpect(workspace.getByRole('status', { name: '프로젝트 저장 상태', exact: true })).toContainText('일부 결과 저장됨');
       expect(errors).toEqual([]); expect(blocked).toEqual([]);
     } finally {
       await context.close();
@@ -114,7 +115,7 @@ localTest('a failed storyboard project read stays unread while refreshing', asyn
       await page.goto(`http://storyboard.fixture.test/admin?module=storyboard&storyboardProject=${A}&failProject=1`);
       await page.addScriptTag({ content: script });
       const workspace = page.getByLabel('저장된 스토리보드');
-      const status = workspace.getByRole('status');
+      const status = workspace.getByRole('status', { name: '프로젝트 저장 상태', exact: true });
       await playwrightExpect(status).toHaveText('아직 저장 결과를 확인하지 못했습니다.');
       await playwrightExpect(workspace.getByRole('alert')).toContainText('요청 상태를 확인하지 못했습니다.');
       const refresh = workspace.getByRole('button', { name: '새로고침' });

@@ -1,5 +1,6 @@
 import type { FilterState } from '@/components/filters/filter-state';
 import type { Restaurant, Region } from '@/types/restaurant';
+import { isNonNullObject } from '@/lib/validation/records';
 
 export const HOME_DETAIL_HISTORY_STATE_KIND = 'tzudong.home.detail.v1';
 export const HOME_LIST_HISTORY_STATE_KIND = 'tzudong.home.list.v1';
@@ -120,15 +121,12 @@ export function buildHomeListState(input: {
   };
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string');
 
 export function isHomeDetailHistoryState(value: unknown): value is HomeDetailHistoryState {
   return (
-    isRecord(value) &&
+    isNonNullObject(value) &&
     value.kind === HOME_DETAIL_HISTORY_STATE_KIND &&
     typeof value.restaurantId === 'string' &&
     resolveHomeMapModeParam(value.mapMode as string | null) !== null &&
@@ -140,7 +138,7 @@ export function isHomeDetailHistoryState(value: unknown): value is HomeDetailHis
 
 export function isHomeListHistoryState(value: unknown): value is HomeListHistoryState {
   return (
-    isRecord(value) &&
+    isNonNullObject(value) &&
     value.kind === HOME_LIST_HISTORY_STATE_KIND &&
     typeof value.restaurantId === 'string' &&
     resolveHomeMapModeParam(value.mapMode as string | null) !== null &&
@@ -172,7 +170,7 @@ function utf8ByteLength(value: string): number {
 
 function isCompactRestaurant(value: unknown): value is HomeRestoreCompactRestaurant {
   return (
-    isRecord(value) &&
+    isNonNullObject(value) &&
     typeof value.id === 'string' &&
     typeof value.name === 'string' &&
     (value.lat === undefined || value.lat === null || typeof value.lat === 'number') &&
@@ -181,7 +179,7 @@ function isCompactRestaurant(value: unknown): value is HomeRestoreCompactRestaur
 }
 
 export function isHomeRestoreSnapshotV1(value: unknown): value is HomeRestoreSnapshotV1 {
-  if (!isRecord(value)) return false;
+  if (!isNonNullObject(value)) return false;
   if (value.version !== HOME_RESTORE_SNAPSHOT_VERSION) return false;
   if (typeof value.createdAt !== 'number' || !Number.isFinite(value.createdAt)) return false;
   if (resolveHomeMapModeParam(value.mapMode as string | null) === null) return false;
@@ -189,7 +187,7 @@ export function isHomeRestoreSnapshotV1(value: unknown): value is HomeRestoreSna
   if (value.panelRestaurantId !== null && typeof value.panelRestaurantId !== 'string') return false;
   if (value.searchedRestaurantId !== null && typeof value.searchedRestaurantId !== 'string') return false;
   if (value.searchedRestaurant !== undefined && value.searchedRestaurant !== null && !isCompactRestaurant(value.searchedRestaurant)) return false;
-  if (!isRecord(value.filters) || !isStringArray(value.filters.categories)) return false;
+  if (!isNonNullObject(value.filters) || !isStringArray(value.filters.categories)) return false;
   if (value.selectedRegion !== null && typeof value.selectedRegion !== 'string') return false;
   if (value.selectedCountry !== null && typeof value.selectedCountry !== 'string') return false;
   if (value.activePanel !== 'map' && value.activePanel !== 'detail' && value.activePanel !== 'control') return false;

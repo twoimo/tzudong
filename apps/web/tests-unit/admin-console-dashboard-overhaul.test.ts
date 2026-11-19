@@ -26,7 +26,8 @@ describe("admin console dashboard overhaul source contract", () => {
       source.indexOf("function AdminDashboardOpsSummaryCard("),
     );
 
-    expect(source).toContain("lg:grid-rows-[auto_auto_auto] lg:content-start");
+    expect(source).toContain("lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)]");
+    expect(source).not.toContain("lg:content-start");
     expect(source).not.toMatch(/(?:-?(?:m(?:t|b|l|r|x|y)?|p(?:t|b|l|r|x|y)?|gap(?:-x|-y)?|space-x|space-y))-(?:0\.5|1\.5|2\.5)\b/);
     expect(kpiCard).toContain("grid-rows-[auto_minmax(0,1fr)]");
     expect(kpiCard).toContain("truncate whitespace-nowrap text-xs");
@@ -55,8 +56,12 @@ describe("admin console dashboard overhaul source contract", () => {
     expect(source).toContain('fetch("/api/admin/sentry?status=unresolved"');
     expect(source).toContain("fetchAdminYouTubeKpiCollectionLogs");
     expect(source).toContain("stats.pendingTotal");
-    expect(source).toContain('data-admin-operations-overview="true"');
-    expect(source).toContain('"조회 실패"');
-    expect(source).toContain('"확인 불가"');
+    expect(source).toContain('<AdminDashboardStatusSummary');
+    expect(source).toContain('summary={dashboardHeaderSummary}');
+    expect(read("components/admin/dashboard/AdminDashboardStatusSummary.tsx")).toContain('data-admin-operations-overview="true"');
+    expect(read("lib/admin/dashboard-status-summary.ts")).toContain("sentry.data!.issues.length");
+    expect(source).not.toContain('aria-label="현재 운영 상태" data-admin-operations-overview="true"');
+    expect(read("lib/admin/dashboard-status-summary.ts")).toContain("'조회 실패'");
+    expect(read("lib/admin/dashboard-status-summary.ts")).toContain("'미확인'");
   });
 });

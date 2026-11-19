@@ -186,12 +186,17 @@ describe('admin user-management source contract', () => {
     expect(updateRouteSource).toContain('readbackId: readbackAuditId');
     expect(updateRouteSource).toContain('latestPreflightAuditId');
     expect(updateRouteSource).toContain("status: 'failed'");
-    expect(requireAdminSource).toContain('user_account_status');
-    expect(requireAdminSource).toContain("accountStatusError || accountStatus?.account_status !== 'active'");
-    expect(requireAdminSource).not.toContain('isMissingOptionalAdminStatusStoreError');
-    expect(middlewareSource).toContain('user_account_status');
-    expect(middlewareSource).toContain("accountStatusError || accountStatus?.account_status !== 'active'");
-    expect(middlewareSource).not.toContain('isMissingOptionalAdminStatusStoreError');
+    const adminAccessSource = source('lib/auth/admin-access.ts');
+    expect(adminAccessSource).toContain('user_account_status');
+    expect(adminAccessSource).toContain(
+      "accountStatusError || accountStatus?.account_status !== 'active' || accountStatus.disabled_at !== null",
+    );
+    expect(adminAccessSource).not.toContain('isMissingOptionalAdminStatusStoreError');
+    for (const gateSource of [requireAdminSource, middlewareSource]) {
+      expect(gateSource).toContain("from '@/lib/auth/admin-access'");
+      expect(gateSource).not.toContain('user_account_status');
+      expect(gateSource).not.toContain('user_roles');
+    }
     expect(auditSource).not.toContain('service_role');
     expect(auditSource).toContain("rpc('append_admin_user_audit_event'");
     expect(auditSource).toContain("typeof data === 'string' && UUID_PATTERN.test(data)");

@@ -1,9 +1,11 @@
+import type { HomeMapThemeFilterId } from '@/lib/home-map-theme-filters';
 import type { RefObject } from 'react';
 
 import { NaverMapOverlayStack } from '@/components/map/naver-map-overlay-stack';
 import { cn } from '@/lib/utils';
 
 export function NaverMapSurface({
+    activeThemeId,
     announcementToastTitle,
     badgePositionClass,
     className,
@@ -22,6 +24,7 @@ export function NaverMapSurface({
     showOnlineUsers,
     showRestaurantCount,
 }: {
+    activeThemeId?: HomeMapThemeFilterId | null;
     announcementToastTitle: string;
     badgePositionClass: string;
     className?: string;
@@ -55,6 +58,7 @@ export function NaverMapSurface({
 
             {renderOverlayStack && (
                 <NaverMapOverlayStack
+                    activeThemeId={activeThemeId}
                     announcementToastTitle={announcementToastTitle}
                     badgePositionClass={badgePositionClass}
                     count={count}

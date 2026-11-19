@@ -34,8 +34,8 @@ describe("mypage CRUD QA/QC source contracts", () => {
     expect(profileSource).toContain("await changeBrowserAccountPassword({");
     expect(profileSource).toContain("userId: user.id, email: user.email, password: currentPassword, newPassword");
     expect(profileSource).toContain("newPassword !== confirmPassword");
-    expect(profileSource).toContain("newPassword.length < 8");
-    expect(profileSource).toContain("newPassword.length > 12");
+    expect(profileSource).toContain("isAcceptableNewPasswordLength(newPassword)");
+    expect(profileSource).not.toContain("newPassword.length > 12");
   });
 
   test("bookmark and review deletion are owner-scoped and invalidate their read models", () => {
@@ -104,6 +104,9 @@ describe("mypage CRUD QA/QC source contracts", () => {
     expect(editSubmissionModalSource).toContain("fetch('/api/mypage/submissions/edit'");
     expect(editSubmissionModalSource).not.toContain(".from('restaurant_submissions')");
     expect(editSubmissionModalSource).not.toContain(".from('restaurant_submission_items')");
+    const globalMapSource = source("app/global-map/page.tsx");
+    expect(globalMapSource).toContain('import("@/components/modals/EditRestaurantModal")');
+    expect(globalMapSource).not.toMatch(/\.from\(\s*['"]restaurant_submission(?:s|_items)['"]\s*\)/);
     expect(editRouteSource).toContain("service.rpc('submit_restaurant_edit_request'");
     expect(editRouteSource).toContain('p_user_id: user.id');
     expect(editRouteSource).toContain('isSavedRestaurantEdit(outcome, payload.youtube_reviews.length)');

@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { StoryboardProductionError, buildStoryboardDraftPrompt, parseStoryboardDraft, type StoryboardProductionRequest } from './production-contract';
 import { STORYBOARD_OPENAI_TEXT_MODEL, STORYBOARD_OPENAI_IMAGE_MODEL, isAllowedStoryboardOpenAIModel } from './openai-models';
+import { buildStoryboardAssistantPrompt, storyboardAssistantAnswerSchema, STORYBOARD_ASSISTANT_JSON_SCHEMA,
+  STORYBOARD_ASSISTANT_RESPONSE_BYTES, type StoryboardAssistantRequest } from './assistant-contract';
 
 type Usage = { model: string; responseId: string | null; inputTokens: number | null; outputTokens: number | null; totalTokens: number | null };
 const timeoutMs = 45_000;
-function resolveKey(env: NodeJS.ProcessEnv = process.env): string | null {
+export function resolveStoryboardOpenAIKey(env: NodeJS.ProcessEnv = process.env): string | null {
   if (typeof window !== 'undefined') throw new StoryboardProductionError('provider_not_configured');
   const value = env.OPENAI_API_KEY?.trim();
   return value && /^sk-[A-Za-z0-9_-]{20,}$/.test(value) ? value : null;
@@ -34,7 +36,7 @@ export class OpenAIStoryboardClient {
   private catalog?: { expiresAt: number; models: ReturnType<OpenAIStoryboardClient['declaredModels']> };
   constructor(options: { apiKey?: string; env?: NodeJS.ProcessEnv; fetcher?: typeof fetch; onUsage?: (usage: Usage) => void } = {}) {
     if (typeof window !== 'undefined') throw new StoryboardProductionError('provider_not_configured');
-    const key = options.apiKey ?? resolveKey(options.env);
+    const key = options.apiKey ?? resolveStoryboardOpenAIKey(options.env);
     if (!key) throw new StoryboardProductionError('provider_not_configured');
     this.key = key;
     this.fetcher = options.fetcher ?? fetch; this.onUsage = options.onUsage;
@@ -66,7 +68,7 @@ export class OpenAIStoryboardClient {
     } catch (error) { if (error instanceof StoryboardProductionError) throw error; signal?.throwIfAborted(); throw new StoryboardProductionError('provider_failed'); }
     finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   }
-  private async post(path: string, body: unknown, signal?: AbortSignal): Promise<Record<string, unknown>> {
+  private async post(path: string, body: unknown, signal?: AbortSignal, maxResponseBytes = 20 * 1024 * 1024): Promise<Record<string, unknown>> {
     signal?.throwIfAborted();
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
     const abort = () => controller.abort(); signal?.addEventListener('abort', abort, { once: true });
@@ -77,7 +79,7 @@ export class OpenAIStoryboardClient {
       if (!response.body) throw new StoryboardProductionError('invalid_model_response');
       const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let length = 0;
       while (true) { const part = await reader.read(); if (part.done) break; length += part.value.byteLength;
-        if (length > 20 * 1024 * 1024) { await reader.cancel(); throw new StoryboardProductionError('model_response_too_large'); } chunks.push(part.value); }
+        if (length > maxResponseBytes) { await reader.cancel(); throw new StoryboardProductionError('model_response_too_large'); } chunks.push(part.value); }
       let data: unknown; try { data = JSON.parse(Buffer.concat(chunks.map(part => Buffer.from(part))).toString('utf8')); } catch { data = null; }
       if (!data || typeof data !== 'object' || Array.isArray(data)) throw new StoryboardProductionError('invalid_model_response');
       return data as Record<string, unknown>;
@@ -112,6 +114,26 @@ export class OpenAIStoryboardClient {
     const usageInfo = { inputTokens: numberOrNull(usage.input_tokens), outputTokens: numberOrNull(usage.output_tokens), totalTokens: numberOrNull(usage.total_tokens) };
     try { this.onUsage?.({ model, responseId: str(response.id), ...usageInfo }); } catch { /* optional telemetry */ }
     return { draft, provenance: { ...this.proof(model, str(response.model) ?? '', str(response.id)), usage: usageInfo } };
+  }
+  /** One bounded text response; no tools, storage, image generation or automatic retry. */
+  async plan(request: StoryboardAssistantRequest, signal: AbortSignal) {
+    const model = request.provider.model;
+    if (request.provider.id !== 'openai-api' || !isAllowedStoryboardOpenAIModel(model, 'text')) throw new StoryboardProductionError('model_not_selected');
+    const response = await this.post('responses', { model, input: buildStoryboardAssistantPrompt(request),
+      max_output_tokens: 2048, store: false, tools: [],
+      text: { format: { type: 'json_schema', name: 'storyboard_plan', strict: true, schema: STORYBOARD_ASSISTANT_JSON_SCHEMA } },
+    }, signal, STORYBOARD_ASSISTANT_RESPONSE_BYTES * 2);
+    if (response.status !== 'completed' || response.incomplete_details) throw new StoryboardProductionError('invalid_model_response');
+    const parts = (Array.isArray(response.output) ? response.output : []).flatMap(item => Array.isArray(obj(item).content) ? obj(item).content as unknown[] : []).map(obj);
+    if (parts.some(part => part.type === 'refusal')) throw new StoryboardProductionError('provider_failed');
+    const texts = parts.filter(part => part.type === 'output_text');
+    const text = texts.length === 1 ? str(texts[0].text) : null;
+    if (!text || Buffer.byteLength(text, 'utf8') > STORYBOARD_ASSISTANT_RESPONSE_BYTES) throw new StoryboardProductionError('invalid_model_response');
+    let value: unknown;
+    try { value = JSON.parse(text); } catch { throw new StoryboardProductionError('invalid_structured_response'); }
+    const answer = storyboardAssistantAnswerSchema.safeParse(value);
+    if (!answer.success) throw new StoryboardProductionError('invalid_structured_response');
+    return { answer: answer.data, provenance: this.proof(model, str(response.model) ?? '', str(response.id)) };
   }
   async image(request: StoryboardProductionRequest, prompt: string, signal?: AbortSignal) {
     const model = request.providers.image.model;

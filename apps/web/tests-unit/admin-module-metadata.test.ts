@@ -14,8 +14,8 @@ import {
 import { ADMIN_SIDEBAR_ITEM_IDS } from "../lib/admin/sidebar-order";
 
 describe("admin module title metadata", () => {
-  test("covers every route and all 15 sidebar modules with a non-empty title", () => {
-    expect(ADMIN_SIDEBAR_ITEM_IDS).toHaveLength(15);
+  test("covers every route and all 16 sidebar modules with a non-empty title", () => {
+    expect(ADMIN_SIDEBAR_ITEM_IDS).toHaveLength(16);
     expect(Object.keys(ADMIN_MODULE_TITLES).sort()).toEqual(
       [...ADMIN_CONSOLE_MODULE_IDS].sort(),
     );
@@ -25,10 +25,10 @@ describe("admin module title metadata", () => {
     }
   });
 
-  test("groups all 15 visible capabilities without exposing the refresh-history subview", () => {
+  test("groups all 16 visible capabilities without exposing the refresh-history subview", () => {
     const groupedIds = Object.values(ADMIN_MODULE_GROUPS).flat();
-    expect(groupedIds).toHaveLength(15);
-    expect(new Set(groupedIds).size).toBe(15);
+    expect(groupedIds).toHaveLength(16);
+    expect(new Set(groupedIds).size).toBe(16);
     expect(groupedIds.sort()).toEqual(
       ADMIN_SIDEBAR_ITEM_IDS.slice().sort(),
     );

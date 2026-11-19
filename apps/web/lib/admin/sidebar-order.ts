@@ -1,3 +1,5 @@
+import { isRecord } from '@/lib/validation/records';
+
 export const ADMIN_SIDEBAR_SECTIONS = [
   "대시보드",
   "검수·데이터",
@@ -19,6 +21,7 @@ export const ADMIN_SIDEBAR_ITEM_IDS = [
   "pipeline",
   "knowledge-graph",
   "sentry",
+  "web-performance",
   "routes",
   "llm",
   "audit",
@@ -39,7 +42,7 @@ export const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference = {
     "검수·데이터": ["restaurants", "submissions", "reviews"],
     콘텐츠: ["insights", "storyboard", "youtube-thumbnail-generator"],
     "사이트 운영": ["users", "banners"],
-    "플랫폼 도구": ["pipeline", "knowledge-graph", "sentry", "routes", "llm", "audit"],
+    "플랫폼 도구": ["pipeline", "knowledge-graph", "sentry", "web-performance", "routes", "llm", "audit"],
   },
 };
 
@@ -64,14 +67,11 @@ const legacyItemSection: Record<string, AdminSidebarSectionLabel> = {
   pipeline: "플랫폼 도구",
   "knowledge-graph": "플랫폼 도구",
   sentry: "플랫폼 도구",
+  "web-performance": "플랫폼 도구",
   routes: "플랫폼 도구",
   llm: "플랫폼 도구",
   audit: "플랫폼 도구",
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
 
 function normalizeSection(value: unknown): AdminSidebarSectionLabel | null {
   if (typeof value !== "string") return null;

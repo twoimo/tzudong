@@ -78,9 +78,8 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
-  const supabase = createSupabaseServiceRoleClient();
-
   try {
+    const supabase = createSupabaseServiceRoleClient();
     const [submissionsResult, recommendationRequestsResult, reviewsResult] = await Promise.all([
       supabase
         .from("restaurant_submissions")

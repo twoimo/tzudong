@@ -360,7 +360,7 @@ function TreemapDetailContent({ leaf, viewMode, period, metricMode }: {
     );
 }
 
-function InsightsClientLoadingSkeleton() {
+function InsightsClientLoadingSkeleton({ embedded = false, chartMinHeight }: { embedded?: boolean; chartMinHeight: number }) {
     return (
         <div
             className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
@@ -372,19 +372,19 @@ function InsightsClientLoadingSkeleton() {
 
             <span className="sr-only">영상 성과 분석 필터와 트리맵 영역을 불러오는 중입니다.</span>
 
-            <div className="min-h-0 flex-1 overflow-hidden p-2 md:p-4">
+            <div className={embedded ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-hidden p-2 md:p-4'}>
 
-                <Card className="flex h-full min-h-0 flex-col overflow-hidden border border-border">
+                <Card className="flex h-full min-h-0 flex-col overflow-x-hidden overflow-y-auto border border-border">
 
-                    <div className="border-b border-border p-2 md:p-3">
+                    <div className="shrink-0 border-b border-border p-3">
 
                         <LoadingPreview kind="navigation" compact showHeader={false} label="성과 분석 필터 로딩 중" />
 
                     </div>
 
-                    <CardContent className="min-h-0 flex-1 overflow-hidden p-2">
+                    <CardContent className="min-h-0 flex-1 shrink-0 overflow-hidden p-0" style={{ minHeight: chartMinHeight }}>
 
-                        <LoadingPreview kind="chart" label="영상 성과 분석 화면 로딩 중" className="h-full min-h-[360px]" />
+                        <LoadingPreview kind="chart" label="영상 성과 분석 화면 로딩 중" className="h-full min-h-0" />
 
                     </CardContent>
 
@@ -909,12 +909,12 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     if (isLoading && !canRender) {
         if (embedded) {
             return renderEmbeddedShell(
-                <InsightsClientLoadingSkeleton />,
+                <InsightsClientLoadingSkeleton embedded chartMinHeight={chartConstraints.minHeight} />,
                 '데이터를 불러오는 중입니다.',
             );
         }
 
-        return <InsightsClientLoadingSkeleton />;
+        return <InsightsClientLoadingSkeleton chartMinHeight={chartConstraints.minHeight} />;
     }
     if (treemapReadFailed || !treemapQuery.data) {
         const errorContent = (
@@ -967,9 +967,9 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) insightsCardHadFocusRef.current = false;
                     }}
                     className="overflow-x-hidden overflow-y-auto border border-border h-full flex flex-col min-h-0 outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                    <div className="shrink-0 border-b border-border p-3 md:p-4 space-y-3">
-                        <div className="flex min-w-0 items-center justify-between gap-3">
-                            <div className="flex min-w-0 items-baseline gap-3">
+                    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-border p-3" data-insights-controls="integrated">
+                        <div className="flex min-w-0 flex-wrap items-center gap-3">
+                            <div className="flex min-w-0 items-baseline gap-2">
                                 <h2 className="truncate text-base font-semibold tracking-tight">영상 성과 인사이트</h2>
                                 <p className="shrink-0 text-sm text-muted-foreground">전체 {selectedCount.toLocaleString()}개</p>
                             </div>
@@ -980,7 +980,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 <PopoverTrigger asChild>
                                     <Button
                                         ref={tileNavigatorRef} type="button" size="sm" variant="outline"
-                                        className="h-11 md:h-9 px-3 text-xs" disabled={chartRows.length === 0}
+                                         className="h-11 px-3 text-sm md:h-10" disabled={chartRows.length === 0}
                                         aria-describedby="insights-treemap-navigation-help"
                                         onFocus={() => setTileNavigatorFocused(true)} onBlur={() => setTileNavigatorFocused(false)}
                                         onKeyDown={handleTileNavigatorKeyDown}
@@ -1016,31 +1016,29 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                 </PopoverContent>
                             </Popover>
                         </div>
-                        <div className="pb-1">
-                            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 md:gap-3">
                                 <fieldset className="inline-flex min-w-0 max-w-full items-center gap-2">
                                     <legend className="sr-only">표시 방식</legend><span className="text-xs text-muted-foreground">모드</span>
-                                    <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
-                                        {VIEW_MODE_OPTIONS.map((option) => <Button key={option.value} type="button" size="sm" variant={viewMode === option.value ? 'default' : 'ghost'} onClick={() => handleSetViewMode(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
+                                    <div className="inline-flex min-w-0 max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
+                                        {VIEW_MODE_OPTIONS.map((option) => <Button key={option.value} type="button" size="sm" variant={viewMode === option.value ? 'default' : 'ghost'} aria-pressed={viewMode === option.value} onClick={() => handleSetViewMode(option.value)} className="h-11 shrink-0 whitespace-nowrap rounded-none px-3 text-sm md:h-10">{option.label}</Button>)}
                                     </div>
                                 </fieldset>
                                 <fieldset className="inline-flex min-w-0 max-w-full items-center gap-2">
                                     <legend className="sr-only">지표</legend><span className="text-xs text-muted-foreground">지표</span>
-                                    <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
-                                        {METRIC_OPTIONS.map((option) => <Button key={option.value} type="button" size="sm" variant={metricMode === option.value ? 'default' : 'ghost'} onClick={() => handleSetMetricMode(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
+                                    <div className="inline-flex min-w-0 max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
+                                        {METRIC_OPTIONS.map((option) => <Button key={option.value} type="button" size="sm" variant={metricMode === option.value ? 'default' : 'ghost'} aria-pressed={metricMode === option.value} onClick={() => handleSetMetricMode(option.value)} className="h-11 shrink-0 whitespace-nowrap rounded-none px-3 text-sm md:h-10">{option.label}</Button>)}
                                     </div>
                                 </fieldset>
                                 <fieldset className="inline-flex min-w-0 max-w-full items-center gap-2">
                                     <legend className="sr-only">기간</legend><span className="text-xs text-muted-foreground">기간</span>
-                                    <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
-                                        {periodOptionsForView.map((option) => <Button key={option.value} type="button" size="sm" variant={period === option.value ? 'default' : 'ghost'} onClick={() => handleSetPeriod(option.value)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{option.label}</Button>)}
+                                    <div className="inline-flex min-w-0 max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
+                                        {periodOptionsForView.map((option) => <Button key={option.value} type="button" size="sm" variant={period === option.value ? 'default' : 'ghost'} aria-pressed={period === option.value} onClick={() => handleSetPeriod(option.value)} className="h-11 shrink-0 whitespace-nowrap rounded-none px-3 text-sm md:h-10">{option.label}</Button>)}
                                     </div>
                                 </fieldset>
                                 <fieldset className="inline-flex min-w-0 max-w-full items-center gap-2">
                                     <legend className="sr-only">클러스터 크기</legend><span className="text-xs text-muted-foreground">클러스터</span>
-                                    <div className="inline-flex max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
-                                        <Button type="button" size="sm" variant={clusterStep === null ? 'default' : 'ghost'} onClick={() => handleSetClusterStep(null)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">전체</Button>
-                                        {clusterStepOptions.map((step) => <Button key={step} type="button" size="sm" variant={clusterStep === step ? 'default' : 'ghost'} onClick={() => handleSetClusterStep(step)} className="h-11 md:h-9 rounded-none px-3 text-xs whitespace-nowrap">{formatClusterValueByMode(metricMode, step)}</Button>)}
+                                    <div className="inline-flex min-w-0 max-w-full overflow-x-auto border border-border" data-allow-horizontal-scroll="true" data-horizontal-scroll-owner="insights-controls">
+                                        <Button type="button" size="sm" variant={clusterStep === null ? 'default' : 'ghost'} aria-pressed={clusterStep === null} onClick={() => handleSetClusterStep(null)} className="h-11 shrink-0 whitespace-nowrap rounded-none px-3 text-sm md:h-10">전체</Button>
+                                        {clusterStepOptions.map((step) => <Button key={step} type="button" size="sm" variant={clusterStep === step ? 'default' : 'ghost'} aria-pressed={clusterStep === step} onClick={() => handleSetClusterStep(step)} className="h-11 shrink-0 whitespace-nowrap rounded-none px-3 text-sm md:h-10">{formatClusterValueByMode(metricMode, step)}</Button>)}
                                     </div>
                                 </fieldset>
                                 <div className="ml-auto flex min-h-11 items-center gap-2 text-xs text-muted-foreground">
@@ -1053,8 +1051,6 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                         </PopoverContent>
                                     </Popover>
                                 </div>
-                            </div>
-                        </div>
                         <div className="sr-only">
                             <p id="insights-treemap-legend">{treemapLegendText}</p>
                             <p id="insights-treemap-small-cell-guidance">{treemapSmallCellGuidance}</p>

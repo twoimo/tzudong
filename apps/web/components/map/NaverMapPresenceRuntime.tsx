@@ -2,11 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 
-import { startNaverMapPresence } from '@/lib/naver-map-presence-client';
+import { supabase } from '@/integrations/supabase/client';
 import {
     resolveNaverInitialOnlineToastPlan,
     resolveNaverOnlineToastDisplayPlan,
 } from '@/lib/naver-map-presence-helpers';
+import { startOnlinePresence } from '@/lib/online-presence';
 
 const ONLINE_USERS_TOAST_INTERVAL_MS = 30000;
 
@@ -67,10 +68,10 @@ export default function NaverMapPresenceRuntime({
             );
         };
 
-        const cleanupPresence = startNaverMapPresence({
-            intervalMs: ONLINE_USERS_TOAST_INTERVAL_MS,
-            onInterval: showOnlineToast,
-            onSync: (count) => {
+        const cleanupPresence = startOnlinePresence({
+            client: supabase,
+            channelName: 'map-online-users',
+            onCount: (count) => {
                 onOnlineUsersCountChange(count);
 
                 const initialToastPlan = resolveNaverInitialOnlineToastPlan({
@@ -90,9 +91,11 @@ export default function NaverMapPresenceRuntime({
                 }
             },
         });
+        const toastInterval = window.setInterval(showOnlineToast, ONLINE_USERS_TOAST_INTERVAL_MS);
 
         return () => {
             cleanupPresence();
+            window.clearInterval(toastInterval);
             clearInitialTimer();
             clearHideTimer();
             onShowOnlineUsersChange(false);

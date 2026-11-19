@@ -142,7 +142,6 @@ const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
     '@source "../components/map";',
     '@source "../components/search";',
     '@source "../components/filters";',
-    '@source "../components/region";',
     '@source "../components/skeletons";',
     '@source "../components/ui";',
     '@source "../lib/naver-map-overlay-position-helpers.ts";',
@@ -209,6 +208,8 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
   'admin-evaluation-table',
   'knowledge-graph-canvas',
   'insights-controls',
+  'performance-comparison-table',
+  'performance-samples-table',
 ] as const;
 
 // Mobile theme controls use their already-approved horizontal owner to keep
@@ -531,6 +532,44 @@ describe('public surface design contract', () => {
     expect(designSource).toContain(
       'Naver map cluster marker overflow remains a provider-specific exception outside this policy',
     );
+  });
+
+  test('performance tables keep their approved horizontal overflow keyboard-accessible and named', () => {
+    const source = ts.createSourceFile('AdminPerformanceAudit.tsx', readApp('components/admin/performance/AdminPerformanceAudit.tsx'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const elements: ts.JsxElement[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxElement(node)) elements.push(node);
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    const attribute = (node: ts.JsxElement, name: string) => node.openingElement.attributes.properties
+      .find((prop): prop is ts.JsxAttribute => ts.isJsxAttribute(prop) && prop.name.getText(source) === name)?.initializer;
+    const stringAttribute = (node: ts.JsxElement, name: string) => {
+      const value = attribute(node, name);
+      return value && ts.isStringLiteral(value) ? value.text : undefined;
+    };
+
+    for (const [owner, label, width] of [
+      ['performance-comparison-table', '성능 구간 비교 표', 'min-w-[540px]'],
+      ['performance-samples-table', '개별 요청 측정 표', 'min-w-[480px]'],
+    ]) {
+      const wrappers = elements.filter((node) => stringAttribute(node, 'data-horizontal-scroll-owner') === owner);
+      expect(wrappers).toHaveLength(1);
+      const wrapper = wrappers[0];
+      expect(wrapper.openingElement.tagName.getText(source)).toBe('div');
+      expect(stringAttribute(wrapper, 'data-allow-horizontal-scroll')).toBe('true');
+      expect(stringAttribute(wrapper, 'className')?.split(/\s+/)).toContain('overflow-x-auto');
+      expect(stringAttribute(wrapper, 'role')).toBe('region');
+      expect(stringAttribute(wrapper, 'aria-label')).toBe(label);
+      const tabIndex = attribute(wrapper, 'tabIndex');
+      expect(tabIndex && ts.isJsxExpression(tabIndex) ? tabIndex.expression?.getText(source) : undefined).toBe('0');
+      const tables = wrapper.children.filter((node): node is ts.JsxElement => ts.isJsxElement(node) && node.openingElement.tagName.getText(source) === 'table');
+      expect(tables).toHaveLength(1);
+      expect(stringAttribute(tables[0], 'className')?.split(/\s+/)).toContain(width);
+      const captions = tables[0].children.filter((node): node is ts.JsxElement => ts.isJsxElement(node) && node.openingElement.tagName.getText(source) === 'caption');
+      expect(captions).toHaveLength(1);
+      expect(stringAttribute(captions[0], 'className')?.split(/\s+/)).toContain('sr-only');
+    }
   });
 
   test('the exported Table compatibility allowlist retains its approved tokens without admitting unknowns', () => {

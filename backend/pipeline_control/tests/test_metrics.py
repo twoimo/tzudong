@@ -334,6 +334,7 @@ class MetricCallSiteTests(unittest.TestCase):
             )
             store.claim()
             store.control(cancelled.id, "cancel", actor="admin", request_id="req-m3c")
+            store.beat(cancelled.id)
             store.finish_dry_run(cancelled.id)
 
             paused, _ = store.create_run(
@@ -346,6 +347,7 @@ class MetricCallSiteTests(unittest.TestCase):
             )
             store.claim()
             store.control(paused.id, "pause", actor="admin", request_id="req-m4p")
+            store.beat(paused.id)
             store.finish_dry_run(paused.id)
 
         self.assertEqual(

@@ -1,3 +1,5 @@
+import { hasExactKeys, isPlainRecord } from '@/lib/validation/records';
+
 export const PUBLIC_PROFILE_SUMMARIES_RPC = "read_public_profile_summaries" as const;
 export const PUBLIC_PROFILE_LEADERBOARD_RPC = "read_public_profile_leaderboard" as const;
 export const PUBLIC_PROFILE_LEADERBOARD_PAGE_RPC =
@@ -76,34 +78,6 @@ export const ANONYMOUS_PUBLIC_REVIEWER_NICKNAME = "익명 사용자";
 
 function fail(code: PublicProfileReadErrorCode): never {
   throw new PublicProfileReadError(code);
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-  } catch {
-    return false;
-  }
-}
-
-function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]) {
-  try {
-    const descriptors = Object.getOwnPropertyDescriptors(value);
-    const actualKeys = Object.keys(descriptors).sort();
-    const expectedKeys = [...keys].sort();
-    return (
-      actualKeys.length === expectedKeys.length &&
-      actualKeys.every((key, index) => key === expectedKeys[index]) &&
-      expectedKeys.every((key) => "value" in descriptors[key]!)
-    );
-  } catch {
-    return false;
-  }
 }
 
 function hasOwnDataProperties(

@@ -31,7 +31,7 @@ type SupabaseMockState = {
   authError?: unknown;
   role?: { role: string } | null;
   roleError?: unknown;
-  accountStatus?: { account_status: string } | null;
+  accountStatus?: { account_status: string; disabled_at?: string | null } | null;
   accountStatusError?: unknown;
   activeSession?: boolean;
   activeSessionError?: unknown;
@@ -447,7 +447,7 @@ describe('admin middleware login redirect', () => {
     supabaseMockState = {
       userId: 'admin-user-id',
       role: { role: 'admin' },
-      accountStatus: { account_status: 'active' },
+      accountStatus: { account_status: 'active', disabled_at: null },
       activeSession: false,
     };
 
@@ -476,11 +476,29 @@ describe('admin middleware login redirect', () => {
     expect(location).toBe('http://localhost:3000/');
   });
 
+  test('비활성화 시각이 남은 관리자는 관리자 페이지와 API 모두에서 거부된다', async () => {
+    supabaseMockState = {
+      userId: 'admin-user-id',
+      role: { role: 'admin' },
+      accountStatus: { account_status: 'active', disabled_at: '2026-10-23T00:00:00Z' },
+    };
+
+    const { updateSession } = await loadMiddleware();
+    const navigation = await updateSession(adminRequest());
+    expect(navigation.status).toBe(307);
+    expect(navigation.headers.get('cache-control')).toBe('no-store');
+    expect(navigation.headers.get('location')).toBe('http://localhost:3000/');
+
+    const api = await updateSession(adminRequest('/api/admin/release-auth-proof', 'POST'));
+    expect(api.status).toBe(403);
+    await expect(api.json()).resolves.toEqual({ error: 'Forbidden' });
+  });
+
   test('관리자는 요청한 관리자 페이지를 그대로 통과한다', async () => {
     supabaseMockState = {
       userId: 'admin-user-id',
       role: { role: 'admin' },
-      accountStatus: { account_status: 'active' },
+      accountStatus: { account_status: 'active', disabled_at: null },
     };
 
     const { updateSession } = await loadMiddleware();
@@ -585,7 +603,7 @@ describe('admin middleware login redirect', () => {
     supabaseMockState = {
       userId: 'admin-user-id',
       role: { role: 'admin' },
-      accountStatus: { account_status: 'active' },
+      accountStatus: { account_status: 'active', disabled_at: null },
       activeSession: false,
     };
     response = await updateSession(adminRequest('/api/admin/release-auth-proof', 'POST'));

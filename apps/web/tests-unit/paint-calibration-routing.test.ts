@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { isPaintCalibrationRequest, PAINT_CALIBRATION_REQUEST_HEADER } from '../lib/performance/paint-calibration-request';
+import { isLoopbackHost, normalizeHostName } from '../lib/auth/loopback-host';
 
 type Node = { type: unknown; props: Record<string, unknown> & { children?: unknown } };
 type FixtureResponse = { status: number; headers: Headers; forwardedHeaders?: Headers };
@@ -49,6 +50,7 @@ function proxyFixture() {
             getE2EAdminRouteBypassExpectedToken: () => '', isE2EAdminRouteBypassEnvEnabled: () => false,
         },
         '@/lib/auth/dev-admin-bypass-cookie': { getDevAdminBypassCookieFromHeader: () => null, validateDevAdminBypassCookie: () => ({ ok: false }) },
+        '@/lib/auth/loopback-host': { isLoopbackHost, normalizeHostName },
         '@/lib/auth/public-eligibility-session': { classifyPublicEligibilitySessionRoute: () => 'credentialless-public', isCredentiallessFieldVitalsPost: () => false },
         '@/lib/auth/auth-redirect': { isHomePrivacyOnboardingRequest: () => false },
         '@/lib/security/same-origin-mutation': { isTrustedSameOriginMutation: () => true },

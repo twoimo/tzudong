@@ -3,6 +3,9 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 import { StoryboardProjectLibrary } from "./StoryboardProjectLibrary";
+import { StoryboardComicBoard } from "./StoryboardComicBoard";
+import { StoryboardConversation } from "./StoryboardConversation";
+import { StoryboardWorkspaceSkeleton } from "./StoryboardWorkspaceSkeleton";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { z } from "zod";
@@ -30,9 +33,9 @@ import { FEATURE_DATABASE_HELD, parseFeatureDatabaseReadiness } from "@/lib/runt
 const API = "/api/admin/storyboard/production";
 const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
 const POLL_MS = 2500;
-const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-none border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:py-2";
-const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-none border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
-const panelClass = "min-w-0 rounded-none bg-card admin-detail-section !rounded-none p-3 text-card-foreground";
+const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
+const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50 sm:text-sm";
+const panelClass = "min-w-0 rounded-xl border border-border bg-card p-4 text-card-foreground";
 
 const statusSchema = z.enum(["waiting_worker", "generating", "awaiting_import", "partial", "ready", "failed", "cancelled"]);
 // These are frontend HTTP views, deliberately independent of the server-only store.
@@ -205,6 +208,8 @@ function ProviderField({ kind, value, models, onChange }: {
 export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = {}) {
   const [showSetup, setShowSetup] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [newPanel, setNewPanel] = useState<"chat" | "request">("chat");
+  const [mobileView, setMobileView] = useState<"board" | "conversation">("conversation");
   const [catalog, setCatalog] = useState<Catalog>({ ok: true, projects: [], workers: [], readiness: FEATURE_DATABASE_HELD });
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogBusy, setCatalogBusy] = useState(true);
@@ -315,12 +320,14 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   }, [catalogTick, refreshCatalog]);
 
   const selectProject = useCallback((id: string | null) => {
-    if (id === projectId || !mayLeave()) return;
+    if (id === projectId) return true;
+    if (!mayLeave()) return false;
     const url = new URL(window.location.href);
     if (id) url.searchParams.set(PROJECT_QUERY, id); else url.searchParams.delete(PROJECT_QUERY);
     window.history.pushState(window.history.state, "", url);
     acceptedLocation.current = { href: window.location.href, state: window.history.state };
     setProjectId(id); setShowSetup(false); setShowLibrary(false);
+    return true;
   }, [mayLeave, projectId]);
   const updateSummary = useCallback((project: Project) => {
     const item = { id: project.id, revision: project.revision, status: project.status,
@@ -344,6 +351,14 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   // Readiness is unknown until a catalog read succeeds, so actions stay locked without claiming a database hold.
   const actionsHeld = featureHeld || !catalogLoaded;
   const readinessUnknownMessage = "제작 가능 여부를 확인하지 못했습니다. 목록을 다시 불러온 뒤 만들 수 있습니다.";
+
+  function reviewProposal(value: string) {
+    if (actionsHeld || createController.current || creating) return false;
+    if (!selectProject(null)) return false;
+    setPrompt(value); setNewPanel("request"); setMobileView("conversation");
+    requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus());
+    return true;
+  }
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -378,89 +393,48 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
   }
 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
+    data-layout-primitives="scroll-body-shell stack" data-scroll-owner="storyboard-workspace"
     className="h-full min-h-0 min-w-0 overflow-y-auto bg-background text-foreground">
     <AdminPageHeader title={getAdminModuleTitle("storyboard")} titleId="local-storyboard-title" icon={Clapperboard}
-      actions={<div className="flex min-w-0 items-center gap-2" data-admin-storyboard-toolbar="true">
+      actions={<div className="flex min-w-0 flex-wrap items-center gap-2" data-admin-storyboard-toolbar="true">
         <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
         <select id="local-project-select" className={inputClass + " !mt-0 admin-storyboard-project-switch"} value={projectId ?? ""}
           onChange={(event) => selectProject(event.target.value || null)}>
           <option value="">저장된 프로젝트 선택</option>
           {catalog.projects.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </select>
-        {projectId && <button type="button" className={buttonClass} aria-expanded={showLibrary} aria-controls="local-storyboard-project-library"
-          onClick={() => setShowLibrary((value) => !value)}>프로젝트 목록</button>}
+        <button type="button" className={buttonClass} aria-expanded={showLibrary} aria-controls="local-storyboard-project-library"
+          onClick={() => setShowLibrary((value) => !value)}>프로젝트 목록</button>
         <button type="button" className={buttonClass} aria-expanded={showSetup} onClick={() => setShowSetup((value) => !value)}>연결 설정</button>
         {projectId && <button type="button" className={buttonClass + " !border-primary !bg-primary !text-primary-foreground"} onClick={() => {
-          selectProject(null);
+          selectProject(null); setNewPanel("request"); setMobileView("conversation");
           requestAnimationFrame(() => {
-            if ((document.getElementById("local-project-select") as HTMLSelectElement | null)?.value === "") {
-              document.getElementById("local-storyboard-prompt")?.focus();
-            }
+            if ((document.getElementById("local-project-select") as HTMLSelectElement | null)?.value === "") document.getElementById("local-storyboard-prompt")?.focus();
           });
         }}>새 프로젝트</button>}
       </div>}
     />
-    <div className="admin-storyboard-body min-w-0 p-3">
-    {departureNotice && <p role="alert" className="mb-3 text-sm text-destructive">{departureNotice}</p>}
-    {featureHeld && <p role="status" className="mb-3 rounded-none border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">{message('feature_database_held')}</p>}
-    {catalogError && projectId && !showLibrary && <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 text-sm text-destructive">
-      <span>{catalogError}</span>
-      <button type="button" className={`${buttonClass} aria-disabled:cursor-not-allowed aria-disabled:opacity-50`} aria-disabled={catalogBusy || undefined} aria-busy={catalogBusy || undefined} onClick={() => { if (!catalogBusy) setCatalogTick((value) => value + 1); }}>목록 다시 불러오기</button>
-    </div>}
-    <div className={`grid min-w-0 items-start gap-4 ${!projectId || showLibrary ? "lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]" : ""}`}>
-      <div className="order-2 min-w-0" hidden={!!projectId && !showLibrary}>
-        <StoryboardProjectLibrary projects={catalog.projects} selectedId={projectId} statusLabels={STATUSES}
-          busy={catalogBusy} error={catalogError} countUnknown={!catalogLoaded} onRefresh={() => setCatalogTick((value) => value + 1)} onSelect={(id) => {
-            selectProject(id);
-            if (!id) return;
-            requestAnimationFrame(() => {
-              const active = document.activeElement;
-              const hidden = active instanceof HTMLElement && Boolean(active.closest("[hidden]"));
-              if (active === document.body || hidden) document.getElementById("local-project-select")?.focus();
-            });
-          }}
-          onStart={() => {
-            selectProject(null);
-            requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus());
-          }} />
-      </div>
-    <div className={`order-1 grid min-w-0 items-start gap-4 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]" : ""}`}>
-      {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${projectId ? "order-2" : "order-1 w-full"}`} aria-label="프로젝트 설정과 기록">
-        {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
-          <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>
-          {!catalogLoaded && catalogError && <p role="status" className="mt-2 text-sm text-muted-foreground">{readinessUnknownMessage}</p>}
-          <fieldset disabled={creating || actionsHeld} className="mt-3 min-w-0 space-y-3">
-            <div className="text-sm">
-              <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
-              <textarea id="local-storyboard-prompt" className={`${inputClass} break-keep`} rows={4} required maxLength={8000}
-                placeholder="예: 아침 빵을 준비하는 제빵사의 10초 장면. 동작과 카메라 구도를 구체적으로 작성해 주세요."
-                value={prompt} onChange={(event) => setPrompt(event.target.value)} />
-            </div>
-            <p className="text-xs text-muted-foreground">프롬프트 기반 창작 초안입니다. 외부 검색, 영상 조회, 사실 확인은 수행하지 않으며 참고 자료는 아직 연결되지 않았습니다.</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-sm">
-                <label className="block" htmlFor="local-scene-count">장면 수 (5–12)</label>
-                <input id="local-scene-count" className={inputClass} type="number" min={5} max={12} step={1} required
-                  value={sceneCount} onChange={(event) => setSceneCount(event.target.valueAsNumber)} />
-              </div>
-              <div className="text-sm">
-                <label className="block" htmlFor="local-image-size">화면 비율</label>
-                <select id="local-image-size" className={inputClass} value={dimensions} onChange={(event) => setDimensions(event.target.value)}>
-                  <option value="1024x576">가로 · 16:9</option><option value="576x1024">세로 · 9:16</option><option value="1024x1024">정사각 · 1:1</option>
-                </select>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">워커가 온라인으로 광고한 허용 모델만 선택할 수 있습니다. OpenAI API 키는 서버 워커 환경에서만 읽습니다.</p>
-            <div className="grid min-w-0 gap-4 md:grid-cols-2">
-              <ProviderField kind="text" value={textProvider} models={textModels} onChange={setTextProvider} />
-              <ProviderField kind="image" value={imageProvider} models={imageModels} onChange={setImageProvider} />
-            </div>
-            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating || actionsHeld || !selectedModelsAvailable}>
-              {creating ? "저장 요청 중…" : "프로젝트 만들기"}
-            </button>
-          </fieldset>
-          {createError && <p role="alert" className="mt-3 text-sm text-destructive">{createError}</p>}
-        </form>}
+    <div className="admin-storyboard-body min-w-0 space-y-4 p-4">
+      {departureNotice && <p role="alert" className="text-sm text-destructive">{departureNotice}</p>}
+      {featureHeld && <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 p-3">
+        <p className="text-sm leading-6">새 생성과 변경은 준비 중이에요. 저장된 프로젝트와 이력은 계속 볼 수 있어요.</p>
+        <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick(value => value + 1)}>제작 가능 여부 다시 확인</button>
+      </div>}
+      {catalogError && !showLibrary && <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+        <span>{catalogError}</span><button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick(value => value + 1)}>목록 다시 불러오기</button>
+      </div>}
+      {showLibrary && <StoryboardProjectLibrary projects={catalog.projects} selectedId={projectId} statusLabels={STATUSES}
+        busy={catalogBusy} error={catalogError} countUnknown={!catalogLoaded} onRefresh={() => setCatalogTick(value => value + 1)} onSelect={id => {
+          if (!selectProject(id)) return;
+          requestAnimationFrame(() => {
+            const active = document.activeElement;
+            const hidden = active instanceof HTMLElement && Boolean(active.closest("[hidden]"));
+            // Closing the library removes the chosen button. If the project read
+            // fails, retain a useful keyboard target instead of leaving focus on body.
+            if (active === document.body || hidden) document.getElementById("local-project-select")?.focus();
+          });
+        }}
+        onStart={() => { selectProject(null); setNewPanel("request"); setMobileView("conversation"); requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus()); }} />}
         {showSetup && <section className={panelClass} aria-labelledby="local-workers-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 id="local-workers-title" className="font-semibold">제작 연결</h3>
@@ -477,23 +451,79 @@ export function LocalStoryboardWorkspace({ archive }: { archive?: ReactNode } = 
             </p>)}
           </div>)}
         </section>}
-      </aside>}
-      {projectId && <div className="order-1 min-w-0"><SavedProjectWorkspace key={projectId} projectId={projectId} featureHeld={actionsHeld}
-        onProject={updateSummary} onDepartureChange={onDepartureChange} onActivePoll={refreshWorkers} /></div>}
-    </div>
-    </div>
-    {archive}
+      {!projectId && <>
+        <nav aria-label="작업 공간 보기" className="flex gap-2 lg:hidden">
+          {([["board", "네 컷 미리보기"], ["conversation", "대화와 제작 요청"]] as const).map(([id, label]) => <button key={id} type="button" className={`${buttonClass} flex-1 ${mobileView === id ? 'border-primary text-primary' : ''}`} aria-pressed={mobileView === id} onClick={() => setMobileView(id)}>{label}</button>)}
+        </nav>
+        <div data-layout-primitives="split-sidebar panel-layout" className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+          <div className={mobileView === "board" ? "min-w-0" : "hidden min-w-0 lg:block"}>
+            <StoryboardComicBoard scenes={[]} selectedScene={1} onSelect={() => undefined} state="empty" />
+          </div>
+          <aside aria-label="이야기 기획" className={mobileView === "conversation" ? "min-w-0" : "hidden min-w-0 lg:block"}>
+            <nav aria-label="이야기 만드는 방법" className="mb-3 grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-1">
+              {([["chat", "AI와 대화"], ["request", "제작 요청"]] as const).map(([id, label]) => <button key={id} type="button" aria-pressed={newPanel === id} className={`${buttonClass} ${newPanel === id ? 'bg-background text-foreground' : 'border-transparent text-muted-foreground'}`} onClick={() => setNewPanel(id)}>{label}</button>)}
+            </nav>
+            <div hidden={newPanel !== "chat"} className="h-[clamp(400px,60vh,600px)]">
+              <StoryboardConversation context={{ prompt: prompt.slice(0, 4000), scene: null }} sceneCount={Number.isInteger(sceneCount) ? sceneCount : 6}
+                onUsePrompt={reviewProposal} canWriteRequest={!actionsHeld && !creating} disabled={creating} onWriteRequest={() => { if (actionsHeld || creating) return; setNewPanel("request"); requestAnimationFrame(() => document.getElementById("local-storyboard-prompt")?.focus()); }} />
+            </div>
+            <div hidden={newPanel !== "request"} data-scroll-owner="storyboard-create-request" className="max-h-[min(74vh,720px)] overflow-y-auto overscroll-contain p-1">
+        <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title" data-layout-primitives="form-flow">
+          <h3 id="local-request-title" className="font-semibold">어떤 이야기를 만들까요?</h3>
+          {!catalogLoaded && catalogError && <p role="status" className="mt-2 text-sm text-muted-foreground">{readinessUnknownMessage}</p>}
+          <fieldset disabled={creating || actionsHeld} className="mt-3 min-w-0 space-y-3">
+            <div className="text-sm">
+              <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
+              <textarea id="local-storyboard-prompt" className={`${inputClass} break-keep`} rows={4} required maxLength={8000}
+                placeholder="예: 시장 국수집의 첫인상부터 마지막 한 입까지, 따뜻한 분위기로 소개해 주세요."
+                value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+            </div>
+            <p className="text-xs text-muted-foreground">만들고 싶은 흐름과 분위기를 적어 주세요. 외부 검색이나 영상 조회는 하지 않아요.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-sm">
+                <label className="block" htmlFor="local-scene-count">장면 수 (5–12)</label>
+                <input id="local-scene-count" className={inputClass} type="number" min={5} max={12} step={1} required
+                  value={sceneCount} onChange={(event) => setSceneCount(event.target.valueAsNumber)} />
+              </div>
+              <div className="text-sm">
+                <label className="block" htmlFor="local-image-size">화면 비율</label>
+                <select id="local-image-size" className={inputClass} value={dimensions} onChange={(event) => setDimensions(event.target.value)}>
+                  <option value="1024x576">가로 · 16:9</option><option value="576x1024">세로 · 9:16</option><option value="1024x1024">정사각 · 1:1</option>
+                </select>
+              </div>
+            </div>
+            <details className="rounded-lg border border-border p-3"><summary className="cursor-pointer text-sm font-medium">모델과 제작 설정</summary><p className="my-3 text-xs leading-5 text-muted-foreground">연결된 제작 모델만 선택할 수 있어요. 키는 서버에서 관리해요.</p>
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
+              <ProviderField kind="text" value={textProvider} models={textModels} onChange={setTextProvider} />
+              <ProviderField kind="image" value={imageProvider} models={imageModels} onChange={setImageProvider} />
+            </div>
+            </details>
+            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating || actionsHeld || !selectedModelsAvailable}>
+              {creating ? "저장 요청 중…" : "프로젝트 만들기"}
+            </button>
+          </fieldset>
+          {!selectedModelsAvailable && catalogLoaded && !featureHeld && <p role="status" className="mt-3 text-sm text-muted-foreground">제작 연결을 기다리고 있어요. 연결 설정에서 상태를 다시 확인할 수 있어요.</p>}
+          {createError && <p role="alert" className="mt-3 text-sm text-destructive">{createError}</p>}
+        </form>
+            </div>
+          </aside>
+        </div>
+      </>}
+      {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} featureHeld={actionsHeld}
+        onProject={updateSummary} onDepartureChange={onDepartureChange} onActivePoll={refreshWorkers} onUsePrompt={reviewProposal} />}
+      {archive}
     </div>
   </section>;
 }
 
-function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureChange, onActivePoll }: {
+function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureChange, onActivePoll, onUsePrompt }: {
   projectId: string; featureHeld: boolean;
   onProject: (project: Project) => void; onDepartureChange: (state: DepartureState) => void;
-  onActivePoll: () => void;
+  onActivePoll: () => void; onUsePrompt: (prompt: string) => boolean | void;
 }) {
   const [view, setView] = useState<View | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"scenes" | "history">("scenes");
+  const [mobilePane, setMobilePane] = useState<"board" | "chat">("board");
   const [selectedScene, setSelectedScene] = useState(1);
   const [readTick, setReadTick] = useState(0);
   const [readError, setReadError] = useState<string | null>(null);
@@ -671,7 +701,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
           {view && <button type="button" className={buttonClass} disabled={busy || !view.project.document} onClick={() => { void download(); }}>내보내기</button>}
         </div>
       </div>
-      <div aria-live="polite" role="status" className="mt-3 text-sm">
+      <div aria-live="polite" aria-atomic="true" role="status" aria-label="프로젝트 저장 상태" className="mt-3 text-sm">
         {loading && !view && !readError ? "저장된 결과 확인 중…" : view ? STATUSES[view.project.status] : "아직 저장 결과를 확인하지 못했습니다."}
         {busy && " · 요청 처리 중…"}{notice && <p className="mt-1">{notice}</p>}
       </div>
@@ -708,6 +738,7 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
         {active && <p className="mt-2 text-sm text-muted-foreground">작업이 실행되거나 워커를 기다리는 동안 편집과 가져오기를 잠급니다. 이 화면을 닫아도 서버 작업은 취소되지 않습니다.</p>}
       </>}
     </div>
+    {loading && !view && !readError && <StoryboardWorkspaceSkeleton />}
     <AlertDialog open={Boolean(retryConfirmation)} onOpenChange={open => { if (!open && !busy) setRetryConfirmation(null); }}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>확인되지 않은 생성을 다시 요청할까요?</AlertDialogTitle><AlertDialogDescription>이전 요청이 처리됐을 수 있습니다. 저장 결과를 확인한 뒤 진행하세요. 재요청은 크레딧을 추가 사용할 수 있습니다.</AlertDialogDescription></AlertDialogHeader>
       {writeError && <p role="alert" className="text-sm text-destructive">{writeError}</p>}
@@ -725,6 +756,11 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
             className={`min-h-11 rounded-none px-3 py-2 text-sm ${workspaceView === id ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:bg-background hover:text-foreground"}`}
             onClick={() => setWorkspaceView(id)}>{label}</button>)}
       </nav>
+      {workspaceView === "scenes" && <nav aria-label="장면 작업 공간 보기" className="flex gap-2 lg:hidden">
+        {([["board", "네 컷과 편집"], ["chat", "AI와 대화"]] as const).map(([id, label]) => <button key={id} type="button" className={`${buttonClass} flex-1`} aria-pressed={mobilePane === id} disabled={!!editing} onClick={() => setMobilePane(id)}>{label}</button>)}
+      </nav>}
+      <div data-layout-primitives="split-sidebar panel-layout" className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
+        <div className={workspaceView === "history" ? "min-w-0 space-y-4 lg:col-span-2" : mobilePane === "board" ? "min-w-0" : "hidden min-w-0 lg:block"}>
       {workspaceView === "history" && <VersionHistory key={projectId} projectId={projectId}
         revision={view.project.revision} disabled={locked || !!editing || !view.project.document || archived} onRestore={mutate} />}
       {workspaceView === "scenes" && (view.project.document ? <section aria-labelledby="local-scenes-title" className="min-w-0 space-y-3">
@@ -732,17 +768,9 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
           <h3 id="local-scenes-title" className="font-semibold">저장된 장면 {view.project.document.scenes.length}개 · 이미지 {view.project.document.scenes.filter((scene) => scene.image).length}개</h3>
           <details className="mt-1 text-sm text-muted-foreground"><summary className="cursor-pointer">전체 줄거리</summary><p className="mt-2 break-words [overflow-wrap:anywhere]">{view.project.document.logline}</p></details>
         </div>
-        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
-          <nav aria-label="장면 선택" className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
-            {view.project.document.scenes.map((scene) => <button key={scene.sceneNo} type="button"
-              className={`w-36 shrink-0 rounded-none p-2 text-left transition-colors lg:w-full ${selectedScene === scene.sceneNo ? "bg-muted ring-1 ring-primary/60" : "hover:bg-muted/60"}`}
-              aria-label={`장면 ${scene.sceneNo} 선택`} aria-current={selectedScene === scene.sceneNo ? "step" : undefined}
-              disabled={!!editing} onClick={() => setSelectedScene(scene.sceneNo)}>
-              {scene.image && <SceneThumbnail asset={scene.image} projectId={projectId} />}
-              <span className="mt-2 block truncate text-sm font-medium">{scene.sceneNo} · {scene.title}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">{scene.durationSec}초 · {scene.imageError ? "이미지 오류" : scene.image ? "이미지 저장됨" : "이미지 대기"}</span>
-            </button>)}
-          </nav>
+        <div className="min-w-0 space-y-3">
+            <StoryboardComicBoard scenes={view.project.document.scenes} selectedScene={selectedScene} onSelect={setSelectedScene} disabled={!!editing}
+              renderImage={scene => scene.image && <AssetImage key={`${scene.image.id}-${scene.image.original.sha256}`} asset={scene.image} projectId={projectId} title={scene.title} compact />} />
           {view.project.document.scenes.filter((scene) => scene.sceneNo === selectedScene).map((scene) => <article className={panelClass} key={scene.sceneNo} aria-labelledby={`local-scene-${scene.sceneNo}`}>
             <h4 id={`local-scene-${scene.sceneNo}`} className="break-words font-semibold [overflow-wrap:anywhere]">{scene.sceneNo}. {scene.title}</h4>
             <p className="mb-3 text-xs text-muted-foreground">{scene.durationSec}초 · 장면 v{scene.revision}</p>
@@ -754,17 +782,15 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
               <button type="button" className={buttonClass} aria-label={`장면 ${scene.sceneNo} 이미지 프롬프트 복사`}
                 onClick={() => { void copy(`${JSON.stringify({ schema: STORYBOARD_WORKFLOW, projectId, revision: view.project.revision, sceneNo: scene.sceneNo })}\n${scene.imagePrompt}`); }}>이미지 프롬프트 복사</button>
             </div>
-            <div className="mt-4 grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-            <div className="min-w-0">
-            {scene.image ? <AssetImage key={`${scene.image.id}-${scene.image.original.sha256}`} asset={scene.image} projectId={projectId} title={scene.title} />
-              : <div className="flex aspect-video items-center justify-center rounded-none border border-dashed border-border bg-muted p-4 text-sm text-muted-foreground">저장된 이미지 없음</div>}
             {scene.imageError && <p role="alert" className="mt-2 text-sm text-destructive">{message(scene.imageError)}</p>}
-            </div>
-            <div className="min-w-0">
-            {!editing && <dl className="grid gap-4 break-words text-sm [overflow-wrap:anywhere]">
+            <div className="mt-3 min-w-0">
+            {!editing && <details className="text-sm"><summary className="cursor-pointer font-medium">선택한 컷의 내용과 출처</summary>
+            <dl className="mt-3 grid gap-4 break-words text-sm [overflow-wrap:anywhere]">
               {[["장면 설명", scene.description], ["촬영 방향", scene.visualDirection], ["내레이션", scene.narration], ["자막", scene.caption], ["제작 메모", scene.productionNotes.join("\n")]].map(([label, value]) =>
                 <div key={label}><dt className="font-medium">{label}</dt><dd className="whitespace-pre-wrap text-muted-foreground">{value || "없음"}</dd></div>)}
-            </dl>}
+            </dl>
+            {scene.image && <p className="mt-3 text-xs text-muted-foreground"><Provenance value={scene.image.provenance} /></p>}
+            </details>}
             {editing?.draft.sceneNo === scene.sceneNo && <form onSubmit={saveEdit} className="mt-3" aria-label={`장면 ${scene.sceneNo} 편집 양식`}
               onKeyDown={(event) => { if (event.key === "Escape" && !busy) { event.preventDefault(); finishEdit(); } }}>
               <fieldset disabled={locked} className="space-y-2">
@@ -789,10 +815,10 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
               <button type="button" className={`${buttonClass} mt-2`} disabled={busy} onClick={finishEdit}>편집 닫기</button>
             </form>}
             </div>
-            </div>
           </article>)}
-        </div>
-      </section> : <div className={panelClass}><p className="text-sm text-muted-foreground">{archived ? "저장된 장면 기록이 없습니다." : "장면 생성 결과를 기다리고 있습니다."}</p></div>)}
+          </div>
+      </section> : <StoryboardComicBoard scenes={[]} selectedScene={1} onSelect={() => undefined} state={readError ? "error" : active ? "waiting" : "empty"}
+          message={archived ? "저장된 장면 기록이 없어요." : active ? "완료된 장면부터 표시돼요. 다른 작업을 해도 생성은 이어져요." : "아직 저장된 장면이 없어요. 작업 상태를 확인해 주세요."} />)}
       {workspaceView === "history" && <section className={panelClass} aria-labelledby="local-events-title">
         <h3 id="local-events-title" className="font-semibold">프로젝트 변경 이력</h3>
         {view.events.length === 0 && <p className="mt-2 text-sm text-muted-foreground">서버에서 제공한 이력이 없습니다.</p>}
@@ -807,6 +833,15 @@ function SavedProjectWorkspace({ projectId, featureHeld, onProject, onDepartureC
           </li>;
         })}</ol>
       </section>}
+        </div>
+        <aside aria-label="선택한 장면 기획 대화" hidden={workspaceView === "history"}
+          className={`${workspaceView === "history" ? "hidden" : mobilePane === "chat" ? "block" : "hidden lg:block"} h-[clamp(400px,68vh,680px)] min-w-0 lg:sticky lg:top-3`}>
+          <StoryboardConversation context={{ prompt: view.project.request.prompt.slice(0, 4000), scene: (() => {
+            const scene = view.project.document?.scenes.find(item => item.sceneNo === selectedScene);
+            return scene ? { sceneNo: scene.sceneNo, title: scene.title, description: scene.description, caption: scene.caption } : null;
+          })() }} sceneCount={view.project.request.sceneCount} onUsePrompt={onUsePrompt} canWriteRequest={!featureHeld && !editing && !busy && !archived} disabled={!!editing || busy || archived} />
+        </aside>
+      </div>
     </>}
   </section>;
 }
@@ -907,16 +942,6 @@ function VersionHistory({ projectId, revision, disabled, onRestore }: {
   </section>;
 }
 
-function SceneThumbnail({ asset, projectId }: { asset: StoryboardProductionAsset; projectId: string }) {
-  const variant = asset.web[0] ?? asset.original;
-  const url = privateAssetUrl(projectId, asset.id, variant.path);
-  return url ? (
-    // Authenticated private thumbnails bypass the public image optimizer.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="" width={variant.width} height={variant.height} className="aspect-video w-full rounded-none object-cover" loading="lazy" />
-  ) : null;
-}
-
 function Provenance({ value }: { value: StoryboardProductionAsset["provenance"] }) {
   const labels = { "local-worker": "로컬 워커", "official-api": "공식 API", "user-import": "사용자 가져오기" };
   const usage = value.usage;
@@ -925,22 +950,22 @@ function Provenance({ value }: { value: StoryboardProductionAsset["provenance"] 
     {usage && ` · 토큰 입력 ${usage.inputTokens ?? '미제공'} / 출력 ${usage.outputTokens ?? '미제공'} / 전체 ${usage.totalTokens ?? '미제공'}`}
     {value.modelEvidence === "unverified" ? " · 모델 미검증" : value.modelEvidence === 'installed-catalog-and-request' ? ' · 허용 목록 + 요청 기준' : ''}</span>;
 }
-function AssetImage({ asset, projectId, title }: { asset: StoryboardProductionAsset; projectId: string; title: string }) {
+function AssetImage({ asset, projectId, title, compact = false }: { asset: StoryboardProductionAsset; projectId: string; title: string; compact?: boolean }) {
   const [failed, setFailed] = useState(false);
   const variants = asset.web.flatMap((variant) => {
     const url = privateAssetUrl(projectId, asset.id, variant.path);
     return url ? [{ ...variant, url }] : [];
   }).sort((a, b) => a.width - b.width);
   const source = variants.at(-1)?.url ?? privateAssetUrl(projectId, asset.id, asset.original.path);
-  return <figure className="min-w-0">
+  return <figure className={compact ? "flex h-full min-h-0 w-full min-w-0 items-center justify-center" : "min-w-0"}>
     {source && !failed ? (
       // Authenticated private variants must bypass Next's public image optimizer.
       // eslint-disable-next-line @next/next/no-img-element
       <img src={source} srcSet={variants.map((variant) => `${variant.url} ${variant.width}w`).join(", ") || undefined}
-        sizes="(min-width: 1024px) calc(100vw - 400px), calc(100vw - 64px)"
+        sizes={compact ? "(min-width: 1024px) calc((100vw - 660px) / 2), calc((100vw - 48px) / 2)" : "(min-width: 1024px) calc(100vw - 400px), calc(100vw - 64px)"}
         width={asset.original.width} height={asset.original.height} alt={title} loading="lazy" decoding="async"
-        className="max-h-[440px] w-full rounded-none bg-muted object-contain" onError={() => setFailed(true)} />
+        className={compact ? "h-full min-h-0 w-full object-contain" : "max-h-[440px] w-full rounded-lg bg-muted object-contain"} onError={() => setFailed(true)} />
     ) : <p role="alert" className="rounded-none border border-dashed border-border p-4 text-sm">저장된 이미지를 불러오지 못했습니다. 프로젝트를 새로고침하세요.</p>}
-    <figcaption className="mt-1 text-xs text-muted-foreground"><Provenance value={asset.provenance} /></figcaption>
+    {!compact && <figcaption className="mt-1 text-xs text-muted-foreground"><Provenance value={asset.provenance} /></figcaption>}
   </figure>;
 }

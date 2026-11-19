@@ -1626,7 +1626,7 @@ export function EvaluationTable({
         ref={tableScrollContainerRef}
         className={cn(
           shouldRenderMobile
-            ? "flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain space-y-3 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+12px)]"
+            ? "flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain space-y-3 pb-2"
             : "flex h-full min-h-0 flex-1 flex-col space-y-3"
         )}
       >

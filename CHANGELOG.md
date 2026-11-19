@@ -8,8 +8,20 @@ full scope, verification records and limitations of each release.
 
 ## Unreleased
 
+### Fixed
+
+- Remove the empty desktop row between the thumbnail canvas and its tools,
+  retaining the 16:9 canvas and small-height fitting behavior.
+- Keep storyboard direct-writing and proposal-transfer guidance consistent
+  with the existing production readiness hold.
+
 ### Changed
 
+- Consolidate map and administrator status, tighten video/thumbnail workflows,
+  add a four-panel storyboard with explicitly configured planning chat, and expose
+  retained performance evidence in the administrator sidebar. See the scoped
+  [UI/UX QA record](docs/releases/user-journey-ux-qa-20261115.md) and
+  [Bombadil component harness](docs/operations/bombadil-qa.md) for verification limits.
 - Organize repository and documentation entry points for users and contributors.
 - Restore the bilingual release chronology and preserve the original August
   operational records in the [changelog archive](docs/archive/changelog/CHANGELOG.md).

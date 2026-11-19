@@ -1,24 +1,49 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 
-import { HydratedContactEmail } from '../components/legal/HydratedContactEmail';
+import { HydratedContactEmail, HydratedSupportLink } from '../components/legal/HydratedContactEmail';
+import DataDeletionPage from '../app/data-deletion/page';
+import PrivacyPage from '../app/privacy/page';
+import { siteConfig } from '../lib/site-config';
 
 describe('contact text hydration across HTML email rewriting', () => {
   test('keeps SSR readable while leaving no visible address for an edge HTML rewrite', () => {
-    const email = 'contact@example.test';
-    const html = renderToString(<HydratedContactEmail email={email} />);
+    const html = renderToString(<HydratedContactEmail />);
 
     expect(html).toContain('이메일 표시 중');
     expect(html).toContain('aria-busy="true"');
-    expect(html).not.toContain(email);
+    expect(html).not.toContain(siteConfig.contact.email);
+    expect(html).not.toContain('@');
     expect(html).not.toContain('<a');
   });
 
-  test('has the same initial server markup for different configured contact values', () => {
-    // A provider can rewrite visible addresses in HTML but not a stable status
-    // label. Client hydration must therefore begin with this same markup.
-    const first = renderToString(<HydratedContactEmail email="first@example.test" />);
-    const second = renderToString(<HydratedContactEmail email="second@example.test" />);
-    expect(first).toBe(second);
+  test('does not accept the address as a prop a server component can serialize', () => {
+    const source = readFileSync(new URL('../components/legal/HydratedContactEmail.tsx', import.meta.url), 'utf8');
+    expect(source).toContain('export function HydratedContactEmail()');
+    expect(source).toContain('siteConfig.contact.email');
+    expect(source).not.toContain('HydratedContactEmail({ email }');
+  });
+
+  test('keeps a support link free of the address until hydration', () => {
+    const html = renderToString(createElement(HydratedSupportLink, {
+      subject: '삭제 요청',
+      className: 'support',
+      label: 'address',
+    }));
+
+    expect(html).toContain('지원 요청 준비 중');
+    expect(html).not.toContain('mailto:');
+    expect(html).not.toContain('@');
+  });
+
+  test('legal pages leave no address in the server document', () => {
+    const html = `${renderToString(createElement(PrivacyPage))}${renderToString(createElement(DataDeletionPage))}`;
+
+    expect(html).not.toContain('mailto:');
+    expect(html).not.toContain('@');
+    expect(html).toContain('data-hydrated-support-link="true"');
+    expect(html).toContain('data-hydrated-contact-email="true"');
   });
 });

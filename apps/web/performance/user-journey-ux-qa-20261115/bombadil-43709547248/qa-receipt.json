@@ -1,0 +1,33 @@
+{
+  "schema": "tzudong-bombadil-hosted-qa-v1",
+  "scope": "isolated-actual-components-synthetic-state",
+  "sourceSha": "50ce8726e2424fe2f6460eb5dbc55c5cb3ed0579",
+  "startedAtUtc": "2026-11-15T11:35:12.220Z",
+  "status": "failed",
+  "browserLaunchAttempts": 1,
+  "productionRequests": 0,
+  "providerRequests": 0,
+  "arbitraryExternalForwarding": false,
+  "sandboxRequested": true,
+  "sandboxDisableFlagsPresent": null,
+  "browserVersion": null,
+  "phaseResults": [],
+  "blockedRequests": 0,
+  "blockedWebSockets": 0,
+  "unexpectedPages": 0,
+  "pageErrors": 0,
+  "bombadil": {
+    "version": "0.7.10",
+    "sha256": "6f2664ca7d4067017b4efb26db5c29d6dcfecdc78131f96989d336f12420cc1b"
+  },
+  "browserExecutableSha256": "377a9fc07b495c3b8d0ab8ec1fdfd153641759f9756fea34d8dfce4de82f5025",
+  "launchFailureCategory": "explicit_sandbox_denial",
+  "failureCode": "QA_BROWSER_LAUNCH_FAILED_STOP_NO_RETRY",
+  "blockedProxyRequests": 0,
+  "server": {
+    "allowed": 0,
+    "denied": 0,
+    "capabilityReads": 0
+  },
+  "finishedAtUtc": "2026-11-15T11:35:13.387Z"
+}

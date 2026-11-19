@@ -1,4 +1,4 @@
-import { memo, type CSSProperties, type ReactNode } from 'react';
+import { memo, type CSSProperties, type ReactNode, type ComponentPropsWithoutRef, type Ref } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -56,7 +56,8 @@ export const MapOverlayNotice = memo(({
 ));
 MapOverlayNotice.displayName = 'MapOverlayNotice';
 
-type MapOverlayNoticeButtonProps = Omit<MapOverlayNoticeProps, 'ariaBusy' | 'role'> & {
+type MapOverlayNoticeButtonProps = Omit<MapOverlayNoticeProps, 'ariaBusy' | 'role'> & Omit<ComponentPropsWithoutRef<'button'>, 'children' | 'style' | 'className' | 'onClick'> & {
+    ref?: Ref<HTMLButtonElement>;
     ariaLabel: string;
     onClick?: () => void;
 };
@@ -70,8 +71,12 @@ export const MapOverlayNoticeButton = memo(({
     icon = <MapOverlayStatusDot />,
     onClick,
     style,
+    ref,
+    ...buttonProps
 }: MapOverlayNoticeButtonProps) => (
     <button
+        {...buttonProps}
+        ref={ref}
         type="button"
         onClick={onClick}
         style={style}

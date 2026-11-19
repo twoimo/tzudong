@@ -14,7 +14,7 @@ let denseRows: any[] = [];
 let badFingerprint = false;
 let failEmbed = false;
 let failLegacy = false;
-mock.module('@/lib/admin/storyboard/rag-actions-auth', () => ({ authenticateStoryboardRagAction: async () => ({ ok: true, userId: 'owner' }) }));
+mock.module('@/lib/auth/require-admin', () => ({ requireAdmin: async () => ({ ok: true, userId: 'owner' }) }));
 mock.module('@/lib/security/same-origin-mutation', () => ({ isTrustedSameOriginMutation: () => true }));
 mock.module('@/lib/supabase/service-role', () => ({ createSupabaseServiceRoleClient: () => ({
   rpc: async (_name: string, args: any) => { rpcArgs.push(args); return { data: denseRows, error: null }; },

@@ -7,13 +7,15 @@ import {
   PIPELINE_CONTROL_CONFIRMATION_TEXT,
   PIPELINE_LIVE_ENQUEUE_CONFIRMATION,
   PUBLIC_LIST_KEYS,
+  allowlistedPipelineJob,
   assertPipelineGuardedBody,
   buildPipelinePreviewHash,
+  snapshotRevision,
 } from "../lib/admin/pipeline-control";
 import { GUARDED_MUTATION_CONFIRMATION } from "../lib/admin/guarded-mutation-contract";
 import { sha256Hex } from "../lib/admin/sha256-hex";
 import { parseGithubWorkflowState, parseOperationsSnapshot } from "../lib/admin/operations-view-model";
-import { canControlPipelineJob, parsePipelineStatus } from "../lib/admin/pipeline-flow-view-model";
+import { parsePipelineStatus, pipelineJobRow } from "../lib/admin/pipeline-flow-view-model";
 
 const root = process.cwd();
 const RUN_ID = "22222222-2222-4222-8222-222222222222";
@@ -71,7 +73,7 @@ describe("GitHub pipeline fallback GET semantics", () => {
       expect(operations.state).toBe("limited");
       expect(operations.rows[0].metrics.map(metric => metric.value)).toEqual([Number(failed), null, null, null]);
       const pipeline = parsePipelineStatus(data);
-      for (const action of ["pause", "resume", "cancel"] as const) expect(canControlPipelineJob(pipeline.source, pipeline.jobs[0], action)).toBe(false);
+      expect(pipelineJobRow(pipeline.source, pipeline.jobs[0]).controls).toEqual([]);
       expect(fixture.requests.map(request => request.method)).toEqual(["GET", "GET"]);
     }
   });
@@ -439,16 +441,21 @@ describe("admin pipeline control contract", () => {
       "heartbeat_at",
     ]) {
       expect(post).not.toContain(key);
+      expect(PUBLIC_LIST_KEYS).not.toContain(key);
     }
-    expect(PUBLIC_LIST_KEYS).toEqual([
-      "id",
-      "target",
-      "profile",
-      "status",
-      "error_code",
-      "dry_run",
-      "adapter_index",
-    ]);
+    const backendStore = source("../../backend/pipeline_control/store.py");
+    const backendKeys = backendStore.match(/^PUBLIC_LIST_KEYS = \(([^)]*)\)/m)?.[1].match(/"[a-z_]+"/g)?.map(key => key.slice(1, -1));
+    expect(PUBLIC_LIST_KEYS).toEqual(backendKeys);
+    const pendingCancel = { id: RUN_ID, status: "Fetching", pause_requested: false, cancel_requested: true };
+    expect(allowlistedPipelineJob({ ...pendingCancel, actor: "admin" })).toEqual(pendingCancel);
+  });
+
+  test("a preview goes stale when a pending pause is requested or withdrawn, or a cancel is requested", () => {
+    const snapshot = (job: Record<string, unknown>) => ({ targets: [{ id: "tzuyang", status: "Fetching" }], jobs: [{ id: RUN_ID, status: "Fetching", ...job }] });
+    for (const flag of ["pause_requested", "cancel_requested"]) {
+      expect(snapshotRevision(snapshot({ [flag]: true }))).not.toBe(snapshotRevision(snapshot({ [flag]: false })));
+      expect(snapshotRevision(snapshot({}))).toBe(snapshotRevision(snapshot({ [flag]: false })));
+    }
   });
 
   test("source test requires gated Grafana iframe after CSP gate", () => {
@@ -468,7 +475,7 @@ describe("admin pipeline control contract", () => {
 
   test("dashboard keeps controls behind action eligibility and explicit ticket confirmation", () => {
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
-    expect(dashboard).toContain("canControlPipelineJob(snapshot?.source, job, action)");
+    expect(dashboard).toContain("pipelineJobRow(snapshot?.source, job)");
     for (const selector of ["data-admin-pipeline-jobs", "data-admin-pipeline-job", "data-admin-pipeline-enqueue", "data-pipeline-preview", "data-pipeline-apply"]) expect(dashboard).toContain(selector);
     expect(source("lib/admin/pipeline-action-preview.ts")).toContain("idempotencyKey: preview.idempotencyKey");
     expect(dashboard).not.toContain("payload.error");

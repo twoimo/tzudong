@@ -24,7 +24,7 @@ describe("G028 account deletion reauthentication UI contract", () => {
     expect(page).toContain("Authorization: `Bearer ${freshSession.bearerToken}`");
     expect(page).toContain("bearerToken: freshSession.bearerToken");
     expect(page).toContain("Authorization: `Bearer ${deletionSession.bearerToken}`");
-    for (const field of ["userId:", "proofId:", "requestId:", "previewHash:", "confirmationText:", "idempotencyKey,", "sourceManifestHash:"]) {
+    for (const field of ["userId:", "proofId:", "requestId:", "previewHash:", "confirmationText:", "idempotencyKey: deletionSession.idempotencyKey", "sourceManifestHash:"]) {
       expect(page).toContain(field);
     }
   });

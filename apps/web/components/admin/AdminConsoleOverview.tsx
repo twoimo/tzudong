@@ -1,6 +1,8 @@
 "use client";
 
+import { AdminDashboardStatusSummary } from "@/components/admin/dashboard/AdminDashboardStatusSummary";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { StoryboardWorkspaceSkeleton } from "@/components/admin/storyboard/StoryboardWorkspaceSkeleton";
 import { AdminEvaluationLoadingTable } from "@/components/admin/AdminEvaluationLoadingTable";
 
 import dynamic from "next/dynamic";
@@ -30,6 +32,7 @@ import {
   Bot,
   Bug,
   CheckCircle2,
+  ChevronsUpDown,
   ClipboardCheck,
   Clapperboard,
   ClipboardList,
@@ -155,7 +158,6 @@ type ConsoleModule = {
   priority?: "urgent" | "normal";
 };
 
-const STORYBOARD_MODULE_LOADING_CUT_NOS = [1, 2, 3, 4] as const;
 const THUMBNAIL_MODULE_LOADING_TOOL_IDS = Array.from(
   { length: 12 },
   (_, index) => index + 1,
@@ -173,6 +175,15 @@ type SidebarSection = {
 };
 
 const consoleModules: ConsoleModule[] = [
+  {
+    id: "web-performance",
+    title: getAdminModuleTitle("web-performance"),
+    description: "웹 성능 측정과 API 처리 구간을 확인합니다.",
+    href: "/admin?module=web-performance",
+    icon: Activity,
+    badge: "측정 기록",
+    actionLabel: "성능 감사 보기",
+  },
   {
     id: "knowledge-graph",
     title: getAdminModuleTitle("knowledge-graph"),
@@ -416,7 +427,7 @@ const sidebarSections: SidebarSection[] = [
   {
     label: "플랫폼 도구",
     items: [
-      ...getSidebarConsoleItems(["pipeline", "knowledge-graph", "sentry"]),
+      ...getSidebarConsoleItems(["pipeline", "knowledge-graph", "sentry", "web-performance"]),
       {
         id: "routes",
         title: getAdminModuleTitle("routes"),
@@ -701,6 +712,10 @@ function loadAdminSentryModule() {
   return import("@/components/admin/AdminSentryPanel").then((module) => module.AdminSentryPanel);
 }
 
+function loadAdminPerformanceAudit() {
+  return import("@/components/admin/performance/AdminPerformanceAudit").then(module => module.AdminPerformanceAudit);
+}
+
 function loadAdminKnowledgeGraphModule() {
   return import("@/components/admin/AdminKnowledgeGraphPanel").then((module) => module.AdminKnowledgeGraphPanel);
 }
@@ -966,6 +981,8 @@ const AdminUsersModule = dynamic(loadAdminUsersModule, {
   loading: () => null,
 });
 
+const AdminPerformanceAudit = dynamic(loadAdminPerformanceAudit, { ssr: false, loading: () => null });
+
 const AdminSentryModule = dynamic(loadAdminSentryModule, { ssr: false, loading: () => null });
 const AdminKnowledgeGraphModule = dynamic(loadAdminKnowledgeGraphModule, { ssr: false, loading: () => null });
 
@@ -1023,6 +1040,8 @@ function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
       return loadAdminUsersModule();
     case "sentry":
       return loadAdminSentryModule();
+    case "web-performance":
+      return loadAdminPerformanceAudit();
     case "knowledge-graph":
       return loadAdminKnowledgeGraphModule();
     case "insights":
@@ -3736,7 +3755,10 @@ function AdminDashboardManagementSkeleton() {
         KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
       </p>
 
-      <div className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_auto_auto] lg:content-start lg:overflow-visible">
+      <div
+        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)] lg:overflow-visible"
+        data-admin-dashboard-order-mode="off"
+      >
         <AdminDashboardKpiCard
           widgetId="subscribers"
           title="현재 구독자"
@@ -4354,7 +4376,7 @@ function AdminDashboardMultiLineChart({
   }
 
   return (
-    <div className="min-h-[190px] flex-1" data-admin-dashboard-line-chart="ztd">
+    <div className="flex min-h-[190px] min-w-0 flex-1 flex-col" data-admin-dashboard-line-chart="ztd">
       <ZtdDashboardTrendChart data={chartData} visibleSeries={visibleSeries} totalPointCount={totalPointCount} />
     </div>
   );
@@ -4389,7 +4411,7 @@ function AdminDashboardBubbleChart({
   }
 
   return (
-    <div className="min-h-[230px] flex-1" data-admin-dashboard-bubble-chart="ztd">
+    <div className="flex min-h-[230px] min-w-0 flex-1 flex-col" data-admin-dashboard-bubble-chart="ztd">
       <ZtdDashboardBubbleChart data={chartData} />
     </div>
   );
@@ -4560,7 +4582,7 @@ function AdminDashboardAreaChart({ points }: { points: AdminDashboardTrendPoint[
     return <div className="flex h-full min-h-[160px] items-center justify-center bg-background text-xs font-semibold text-muted-foreground">표시할 변동 데이터가 없습니다.</div>;
   }
   return (
-    <div className="min-h-[190px] flex-1" data-admin-dashboard-area-chart="ztd">
+    <div className="flex min-h-[190px] min-w-0 flex-1 flex-col" data-admin-dashboard-area-chart="ztd">
       <ZtdDashboardEngagementChart data={chartData} />
     </div>
   );
@@ -6411,22 +6433,33 @@ function AdminDashboardManagementPanel({
       dashboardSummaryRef.current?.focus({ preventScroll: true });
     }
   }, [dashboardDataErrorKind, isDashboardRetrying]);
-  const dashboardHeaderSummary = dashboardDataErrorKind
-    ? (
-      <span className="inline-flex flex-wrap items-center gap-2" role="alert" data-admin-dashboard-read-error={dashboardDataErrorKind}>
-        <span>{dashboardDataErrorKind === "metrics" ? "지표 데이터 확인 필요" : "일부 운영 데이터 확인 필요"}</span>
-        <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" aria-busy={isDashboardRetrying} onClick={retryDashboardData}>
-          {isDashboardRetrying ? "조회 중…" : "다시 조회"}
-        </Button>
-      </span>
-    )
-    : (
-      <span ref={dashboardSummaryRef} tabIndex={-1} className="focus-visible:outline-none">
-        {isLoading && !overviewHeadlineKnown
-          ? "KPI 데이터 조회 중"
-          : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`}
-      </span>
-    );
+  const latestCollectionRun = collectionLogsQuery.data?.workflow?.runs?.[0];
+  const dashboardHeaderSummary = (
+    <span ref={dashboardSummaryRef} tabIndex={-1} className="inline-flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 focus-visible:outline-none">
+      <AdminDashboardStatusSummary
+        pendingTotal={stats.pendingTotal}
+        totalRestaurants={stats.totalRestaurants}
+        totalVideos={stats.totalVideos}
+        isLoading={isLoading}
+        collection={{
+          isLoading: collectionLogsQuery.isLoading,
+          hasError: adminQueryLastReadFailed(collectionLogsQuery),
+          workflowAvailable: Boolean(collectionLogsQuery.data?.workflow?.available),
+          latestRunLabel: latestCollectionRun ? getCollectionLogStatusLabel(latestCollectionRun.status, latestCollectionRun.conclusion) : null,
+          snapshotLabel: collectionLogsQuery.data?.snapshot?.available ? `저장 확인 · ${formatDashboardDateTime(collectionLogsQuery.data.snapshot.fetchedAt)}` : null,
+        }}
+        sentry={{ isLoading: sentryOverviewQuery.isLoading, hasError: adminQueryLastReadFailed(sentryOverviewQuery), data: sentryOverviewQuery.data }}
+      />
+      {dashboardDataErrorKind ? (
+        <span className="inline-flex flex-wrap items-center gap-2" role="alert" data-admin-dashboard-read-error={dashboardDataErrorKind}>
+          <span>{dashboardDataErrorKind === "metrics" ? "지표 데이터 확인 필요" : "일부 운영 데이터 확인 필요"}</span>
+          <Button type="button" variant="outline" size="sm" className="h-8 px-2 text-xs" aria-busy={isDashboardRetrying} onClick={retryDashboardData}>
+            {isDashboardRetrying ? "조회 중…" : "다시 조회"}
+          </Button>
+        </span>
+      ) : null}
+    </span>
+  );
 
   return (
     <section
@@ -6513,23 +6546,6 @@ function AdminDashboardManagementPanel({
           />
         </div>}
       />
-      <section className="grid grid-cols-1 gap-2 border-b border-border/70 px-3 py-2 sm:grid-cols-3" aria-label="현재 운영 상태" data-admin-operations-overview="true">
-        <div className="min-w-0 border-l-2 border-primary pl-2">
-          <p className="text-2xs font-semibold text-muted-foreground">검수 대기</p>
-          <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{typeof stats.pendingTotal === "number" ? `${formatNumber(stats.pendingTotal)}건` : isLoading ? "조회 중" : "확인 불가"}</p>
-          <p className="text-2xs text-muted-foreground">제보·리뷰 큐</p>
-        </div>
-        <div className="min-w-0 border-l-2 border-border pl-2">
-          <p className="text-2xs font-semibold text-muted-foreground">KPI 수집</p>
-          <p className="mt-1 truncate text-sm font-semibold text-foreground">{adminQueryLastReadFailed(collectionLogsQuery) ? "조회 실패" : collectionLogsQuery.data?.workflow?.runs?.[0] ? getCollectionLogStatusLabel(collectionLogsQuery.data.workflow?.runs?.[0].status, collectionLogsQuery.data.workflow?.runs?.[0].conclusion) : collectionLogsQuery.data?.workflow?.available ? "실행 내역 없음" : collectionLogsQuery.isLoading ? "조회 중" : "확인 불가"}</p>
-          <p className="truncate text-2xs text-muted-foreground">{collectionLogsQuery.data?.snapshot?.available ? `저장 확인 · ${formatDashboardDateTime(collectionLogsQuery.data.snapshot?.fetchedAt)}` : "저장 상태 미확인"}</p>
-        </div>
-        <div className="min-w-0 border-l-2 border-border pl-2">
-          <p className="text-2xs font-semibold text-muted-foreground">미해결 Sentry 오류</p>
-          <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{adminQueryLastReadFailed(sentryOverviewQuery) ? "조회 실패" : sentryOverviewQuery.data?.state === "connected" ? `${formatNumber(sentryOverviewQuery.data.issues.reduce((sum, issue) => sum + issue.count, 0))}건` : sentryOverviewQuery.data?.state === "not_configured" ? "연결 미설정" : sentryOverviewQuery.isLoading ? "조회 중" : "확인 불가"}</p>
-          <p className="text-2xs text-muted-foreground">기존 Sentry API 기준</p>
-        </div>
-      </section>
       {shouldShowMobileDashboardLoadingPrompt ? (
         <p
           className="admin-detail-section mb-2 bg-muted/30 px-3 py-2 text-xs font-medium leading-5 text-muted-foreground md:hidden"
@@ -6569,7 +6585,7 @@ function AdminDashboardManagementPanel({
       ) : null}
 
       <div
-        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_auto_auto] lg:content-start lg:overflow-visible"
+        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)] lg:overflow-visible"
         data-admin-dashboard-order-mode={
           isDashboardOrderEditorOpen ? "direct-drag" : "off"
         }
@@ -7853,8 +7869,8 @@ function AdminSidebar({
     </PopoverContent>
   );
   const sidebarAccountAvatarClassName =
-    "relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary transition-colors group-hover/sidebar-account:bg-primary/15";
-  const sidebarAccountAvatarIconClassName = "h-5 w-5 -translate-y-px";
+    "relative grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-muted text-muted-foreground";
+  const sidebarAccountAvatarIconClassName = "h-4 w-4";
 
   const renderSidebarAccountMenuContent = (contentId: string) => (
     <PopoverContent
@@ -7914,7 +7930,7 @@ function AdminSidebar({
             "group/sidebar-account transition-colors duration-150 focus-visible:ring-primary focus-visible:ring-offset-background",
             isCollapsed
               ? "grid h-10 w-10 place-items-center rounded-md bg-transparent p-0 text-muted-foreground shadow-none hover:bg-background/80 hover:text-foreground dark:hover:bg-muted/55"
-              : "h-10 w-full min-w-0 justify-start gap-2 rounded-md border border-border bg-background px-2 py-1 text-foreground shadow-none hover:bg-secondary/80 hover:text-accent-foreground dark:border-border/70 dark:bg-background/80",
+              : "h-14 w-full min-w-0 justify-start gap-3 rounded-lg px-2 py-2 text-foreground shadow-none hover:bg-muted",
           )}
           aria-label={`${accountDisplayName} 계정 및 사이드바 설정 열기`}
           data-admin-sidebar-account-trigger={isCollapsed ? "collapsed" : "expanded"}
@@ -7928,13 +7944,14 @@ function AdminSidebar({
             <UserRound className={sidebarAccountAvatarIconClassName} aria-hidden="true" />
           </span>
           <span className={cn("min-w-0 flex-1 text-left", isCollapsed && "sr-only")}>
-            <span className="block truncate text-xs font-extrabold text-foreground">
+            <span className="block truncate text-sm font-medium leading-5 text-foreground">
               {accountDisplayName}
             </span>
-            <span className="block truncate text-2xs font-semibold text-muted-foreground">
-              계정·표시·메뉴 설정
+            <span className="block truncate text-xs font-normal leading-4 text-muted-foreground">
+              관리자 계정
             </span>
           </span>
+          {!isCollapsed && <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden="true" />}
         </Button>
       </PopoverTrigger>
       {renderSidebarAccountMenuContent("admin-sidebar-account-menu")}
@@ -8294,7 +8311,7 @@ function AuditPlaceholder() {
       contentClassName="overflow-y-auto"
     >
       <div
-        className="min-h-[480px]"
+        className="flex min-h-full min-w-0 flex-col"
         onFocus={() => { auditPanelHadFocusRef.current = true; }}
         onBlur={(event) => {
           if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) auditPanelHadFocusRef.current = false;
@@ -8538,6 +8555,8 @@ function InlineModulePanel({
         return <AdminPipelineDashboard key="admin-pipeline" />;
       case "sentry":
         return <AdminSentryModule key="admin-sentry" />;
+      case "web-performance":
+        return <AdminPerformanceAudit key="admin-performance" />;
       case "knowledge-graph":
         return <AdminKnowledgeGraphModule key="admin-knowledge-graph" />;
       default: {
@@ -8658,6 +8677,7 @@ function getAdminConsoleCanvasSkeletonConfig(
         icon: UsersRound,
         variant: "user-table",
       };
+    case "web-performance":
     case "insights":
       return {
         moduleId,
@@ -8709,7 +8729,7 @@ function AdminConsoleCanvasSkeleton({ moduleId }: { moduleId: AdminModuleId }) {
 
   return (
     <section
-      className="flex h-full min-h-[520px] min-w-0 flex-col overflow-hidden rounded-md border border-border bg-background shadow-none md:min-h-0"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-none"
       data-admin-console-content-loading="true"
       data-admin-sidebar-module-loading="page-shell"
       data-admin-sidebar-module-loading-viewport="true"
@@ -9094,12 +9114,9 @@ function AdminStoryboardModuleLoadingSkeleton() {
       data-storyboard-module-loading="true"
       data-storyboard-module-loading-layout="page-shell"
       data-storyboard-viewport-fit="bounded"
-      style={{ height: "calc(var(--full-height, 100vh) - 2rem)", maxHeight: "100%", minHeight: 0 }}
-      role="status"
       aria-busy="true"
       aria-label="스토리보드 생성 화면 로딩 중"
     >
-
       <AdminPageHeader
         title={getAdminModuleTitle("storyboard")}
         icon={Clapperboard}
@@ -9107,127 +9124,9 @@ function AdminStoryboardModuleLoadingSkeleton() {
         data-admin-module-header="compact"
         data-admin-module-header-module="storyboard"
       />
-
-      <div
-        className="grid min-h-0 flex-1 gap-3 overflow-hidden p-2"
-        data-storyboard-desktop-split-layout="inline-grid"
-        data-storyboard-module-loading-grid="true"
-        style={{
-
-          display: "grid",
-          gridTemplateColumns: "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
-          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))"
-        }}
-      >
-
-        <section
-          className="flex min-h-0 flex-col overflow-hidden rounded-md border border-border/70 bg-card shadow-none p-3"
-          aria-label="스토리보드 도우미 준비 영역"
-          data-storyboard-module-loading-chat-shell="static"
-          style={{
-
-            gridColumn: "var(--storyboard-input-panel-column, 2)",
-            gridRow: "var(--storyboard-input-panel-row, 1)",
-            minWidth: 0
-          }}
-        >
-
-          <div className="min-h-0 flex-1" data-storyboard-module-loading-chat="true">
-
-            <LoadingSurface label="스토리보드 도우미 준비 중">
-
-              <div className="space-y-4">
-
-                <h2 className="text-sm font-semibold">스토리보드 도우미</h2>
-
-                <p className="max-w-[88%] rounded-xl border p-3 text-sm">영상의 주제와 장면 구성을 준비해요.</p>
-
-                <p className="ml-auto max-w-[88%] rounded-xl border p-3 text-sm">장면의 분위기와 흐름</p>
-
-              </div>
-
-            </LoadingSurface>
-
-          </div>
-
-          <div className="shrink-0" data-storyboard-module-loading-composer="true">
-
-            <LoadingPreview kind="navigation" compact showHeader={false} label="스토리보드 입력 영역 준비 중" />
-
-          </div>
-
-        </section>
-
-        <section
-          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none p-2"
-          aria-label="스토리보드 캔버스 준비 영역"
-          data-storyboard-module-loading-canvas="true"
-          style={{
-
-            gridColumn: "var(--storyboard-result-panel-column, 1)",
-            gridRow: "var(--storyboard-result-panel-row, 1)",
-            minWidth: 0
-          }}
-        >
-
-          <div className="shrink-0" data-storyboard-module-loading-toolbar="true">
-
-            <LoadingPreview kind="navigation" compact showHeader={false} label="장면 도구 준비 중" />
-
-          </div>
-
-          <div className="min-h-0 flex-1" data-storyboard-module-loading-frame-grid="true">
-
-            {
-              STORYBOARD_MODULE_LOADING_CUT_NOS.map(cutNo => (
-                <div
-                  key={cutNo}
-                  className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/80"
-                  data-storyboard-module-loading-cut={String(cutNo)}
-                  data-storyboard-module-loading-glass="false"
-                  data-storyboard-module-loading-shimmer="false"
-                >
-
-                  <LoadingSurface label="스토리보드 장면 준비 중" className="h-full">
-
-                    <article className="flex h-full min-h-0 flex-col">
-
-                      <svg viewBox="0 0 320 180" role="img" aria-label="장면 미리보기" className="min-h-0 w-full flex-1">
-
-                        <rect width="320" height="180" fill="currentColor" opacity="0.08" />
-
-                      </svg>
-
-                      <div className="shrink-0 space-y-1 px-3 py-2 text-xs">
-
-                        <p>
-
-                          {"장면 "}
-
-                          {cutNo}
-
-                        </p>
-
-                        <p>화면 구성과 대사</p>
-
-                        <p>장면 설명</p>
-
-                      </div>
-
-                    </article>
-
-                  </LoadingSurface>
-
-                </div>
-              ))
-            }
-
-          </div>
-
-        </section>
-
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <StoryboardWorkspaceSkeleton />
       </div>
-
     </section>
   );
 }
@@ -9235,7 +9134,7 @@ function AdminStoryboardModuleLoadingSkeleton() {
 function AdminYoutubeThumbnailModuleLoadingSkeleton() {
   return (
     <section
-      className="relative flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-background md:min-h-0"
+      className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
       data-thumbnail-module-loading="true"
       data-thumbnail-module-loading-layout="page-shell"
       data-thumbnail-module-loading-parity="storyboard-shell"
@@ -9255,7 +9154,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
       />
 
       <div
-        className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden p-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+        className="grid min-h-0 flex-1 grid-cols-1 auto-rows-max gap-2 overflow-y-auto p-2 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
       >
 
         <section
@@ -10025,7 +9924,7 @@ export function AdminConsoleOverview({
                 ? "overflow-y-auto md:overflow-hidden"
                 : "overflow-y-auto",
           )}
-          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 0.75rem)" : "1rem" }}
+          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 8px)" : "8px" }}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"

@@ -28,8 +28,9 @@ const assert = (label: string, condition: boolean) => expect(condition, label).t
 const approvedSources = new Set([
   'lib/privacy/onboarding.ts', 'lib/privacy/eligibility.ts', 'lib/privacy/policy.ts',
   'lib/privacy/processing-inventory.ts', 'lib/security/bounded-json-request.ts',
-  'lib/security/same-origin-mutation.ts', 'lib/auth/auth-redirect.ts', 'lib/auth/callback-origin.ts',
+  'lib/security/same-origin-mutation.ts', 'lib/auth/auth-redirect.ts', 'lib/auth/callback-origin.ts', 'lib/auth/password-policy.ts',
   'lib/auth/callback-session.ts', 'lib/auth/session-cookies.ts', 'lib/auth/signup-pkce-handoff.ts', 'lib/profile-mutation.ts',
+  'lib/validation/records.ts',
   'app/api/privacy/onboarding/route.ts', 'app/auth/callback/route.ts',
 ]);
 

@@ -463,10 +463,10 @@ export default function DesktopLeftPanelMapHome({
         ) : null}
         {!hasContextualRestaurants ? (
           <div
-            className="bg-background px-4 pb-4 pt-4"
+            className="bg-background px-4 pb-3 pt-4"
             data-desktop-left-panel-popular-restaurants="true"
           >
-          <div className="mb-3">
+          <div className="mb-2">
             <BrandSectionHeading title="많이 찾는 맛집" />
           </div>
 
@@ -515,7 +515,7 @@ export default function DesktopLeftPanelMapHome({
                     key={restaurant.id}
                     type="button"
                     onClick={() => handleRestaurantOpen(restaurant)}
-                    className="group flex min-h-14 w-full items-center gap-3 rounded-lg px-1 py-3 text-left hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                    className="group flex min-h-14 w-full items-center gap-3 rounded-lg px-1 py-2 text-left hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                     aria-label={`${restaurant.name} 인기 맛집 상세 보기`}
                   >
                     <span
@@ -526,7 +526,7 @@ export default function DesktopLeftPanelMapHome({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                        <span className="min-w-0 truncate text-sm font-medium text-foreground">
                           {restaurant.name}
                         </span>
                         {trendBadge ? (
@@ -562,7 +562,7 @@ export default function DesktopLeftPanelMapHome({
           className="border-t border-border/70 px-4 pt-4"
           data-desktop-left-panel-latest-restaurants="true"
         >
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
             <BrandSectionHeading title="영상 속 맛집" />
             <Select
               value={latestRestaurantSort}
@@ -571,7 +571,7 @@ export default function DesktopLeftPanelMapHome({
               }
             >
               <SelectTrigger
-                className="!h-11 !w-auto min-w-24 shrink-0 gap-2 rounded-lg border-border bg-background !px-3 !text-xs font-medium text-foreground shadow-none hover:bg-secondary focus:ring-2 focus:ring-ring [&>span]:line-clamp-1"
+                className="!h-11 !w-auto min-w-24 shrink-0 gap-2 rounded-lg border-border bg-background !px-3 !text-sm font-medium text-foreground shadow-none hover:bg-secondary focus:ring-2 focus:ring-ring [&>span]:line-clamp-1"
                 aria-label="영상 속 맛집 정렬"
               >
                 <SelectValue placeholder="정렬" />

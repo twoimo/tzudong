@@ -35,10 +35,12 @@ describe("Bun historical evidence discovery boundary", () => {
         "historical-deadbeef",
         "archived-failure.test.ts",
       );
-      for (const file of [activeUnit, activePerformance, archived]) {
+      const preload = path.join("tests-unit", "support", "server-only.ts");
+      for (const file of [activeUnit, activePerformance, archived, path.join(root, preload)]) {
         mkdirSync(path.dirname(file), { recursive: true });
       }
       writeFileSync(path.join(root, "bunfig.toml"), readFileSync(path.join(webRoot, "bunfig.toml")));
+      writeFileSync(path.join(root, preload), readFileSync(path.join(webRoot, preload)));
       writeFileSync(activeUnit, activeTestSource("active-unit", activeMarker));
       writeFileSync(activePerformance, activeTestSource("active-performance", activeMarker));
       writeFileSync(archived, [

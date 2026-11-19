@@ -1,0 +1,29 @@
+{
+  "schema": "tzudong-storyboard-catalog-readiness-v1",
+  "observedAtUtc": "2026-11-15 11:45:30 UTC",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "sourceSha": "d17885049e6add704bcb84a7a943f0427d613d29",
+  "scope": "read-only fixed catalog existence predicates; no user records, credentials, provider calls or schema changes",
+  "preflight": {
+    "required_roles_exist": true,
+    "required_relations_exist": false,
+    "required_guard_functions_exist": false,
+    "inspection_role_is_readiness_execution_owner": false,
+    "private_readiness_source_matches_reviewed_contract": false
+  },
+  "namedPresence": {
+    "reviews_table": true,
+    "generation_helper": false,
+    "public_readiness_rpc": false,
+    "storage_delete_guard": false,
+    "storage_update_guard": false,
+    "private_readiness_rpc": false,
+    "receipt_results_table": false,
+    "capability_marker_table": false,
+    "review_generations_table": false
+  },
+  "diagnosticBExecuted": false,
+  "diagnosticCExecuted": false,
+  "reason": "Preflight existence and execution-role predicates did not pass. No role change or migration was attempted.",
+  "limitation": "This confirms missing capability/guard objects in the connected production project. It does not establish worker or provider readiness, nor test an authenticated user-specific capability response."
+}

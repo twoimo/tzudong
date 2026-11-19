@@ -597,6 +597,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     <ErrorBoundary FallbackComponent={MapViewErrorFallback}>
       <div className="relative w-full h-full flex">
         <MapViewSurface
+          activeThemeId={filters.featuredTheme}
           isLoadingRestaurants={isLoadingRestaurants}
           mapRef={mapRef}
           onAdminAddRestaurant={onAdminAddRestaurant}

@@ -13,7 +13,7 @@ import {
   readStoryboardRouteJson,
   STORYBOARD_ROUTE_NO_STORE_HEADERS,
 } from '@/lib/admin/storyboard/route-telemetry';
-import { authenticateStoryboardRagAction } from '@/lib/admin/storyboard/rag-actions-auth';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import {
   StoryboardRagWorkerError,
   embedStoryboardRagTexts,
@@ -75,7 +75,7 @@ function failClosedCode(
 export async function POST(request: NextRequest) {
   const traceId = crypto.randomUUID();
   const telemetry = createStoryboardRouteTelemetry('admin-storyboard-rag-documents');
-  const auth = await authenticateStoryboardRagAction(request, traceId);
+  const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
   if (!auth.ok) return auth.response;
   if (!isTrustedSameOriginMutation(request)) {
     return NextResponse.json(

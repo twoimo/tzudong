@@ -209,7 +209,8 @@ describe('naver map marker render guard', () => {
     });
 
     test('keeps an empty desktop marker render from poisoning the render signature', () => {
-        const source = readFileSync(join(process.cwd(), 'components/map/NaverMapView.tsx'), 'utf8');
+        const source = readFileSync(join(process.cwd(), 'components/map/use-naver-map-cluster-render.ts'), 'utf8');
+        const viewSource = readFileSync(join(process.cwd(), 'components/map/NaverMapView.tsx'), 'utf8');
 
         expect(source).toContain('MARKER_RENDER_EMPTY_RETRY_LIMIT');
         expect(source).toContain('CLUSTER_INDEX_IDLE_TIMEOUT_MS');
@@ -217,7 +218,7 @@ describe('naver map marker render guard', () => {
         expect(source).toContain('markerRenderSignatureRef.current = null;');
         expect(source).toContain('setMarkerRenderRetryTick((tick) => tick + 1)');
         expect(source).toContain('markerPool.getStats().activeCount > 0');
-        expect(source).not.toContain("document.querySelector('.cluster-marker-container')");
+        expect(source + viewSource).not.toContain("document.querySelector('.cluster-marker-container')");
         expect(source).toContain('activeIds.size === 0 && displayRestaurants.length > 0');
         expect(source).toContain('markerRenderRetryTick');
     });

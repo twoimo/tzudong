@@ -94,7 +94,7 @@ const thumbnailMutationRoutes = [
     maximumBytes: 4 * 1024,
     maximumBytesDeclaration: 'const MAX_THUMBNAIL_RELEASE_CANDIDATE_PROMOTION_REQUEST_BYTES = 4 * 1024;',
     readerCall: 'readBoundedJsonRequest(request, MAX_THUMBNAIL_RELEASE_CANDIDATE_PROMOTION_REQUEST_BYTES)',
-    mutationWork: 'promoteThumbnailReleaseCandidateFromRoute(candidateId)',
+    mutationWork: 'promoteThumbnailReleaseCandidateFromRoute(candidateId, auth.userId)',
   },
   {
     routePath: 'app/api/admin/youtube-thumbnail-generator/releases/publish/route.ts',

@@ -244,7 +244,7 @@ class AtomicHttpSameIdTests(unittest.TestCase):
         os.environ.pop("TZUDONG_PIPELINE_PERSIST", None)
         os.environ.pop("TZUDONG_PIPELINE_STORE", None)
         from backend.pipeline_control import api as api_mod
-        from backend.pipeline_control import queue as queue_mod
+        from backend.pipeline_control import file_queue as queue_mod
 
         self._orig_store = api_mod.STORE
         self._queue = tempfile.TemporaryDirectory()
@@ -259,7 +259,7 @@ class AtomicHttpSameIdTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         from backend.pipeline_control import api as api_mod
-        from backend.pipeline_control import queue as queue_mod
+        from backend.pipeline_control import file_queue as queue_mod
 
         queue_mod.DEFAULT_QUEUE = self._orig_queue
         api_mod.STORE = self._orig_store

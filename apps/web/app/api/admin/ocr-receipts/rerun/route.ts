@@ -18,6 +18,7 @@ import {
     buildReceiptOcrWorkflowInputs,
     buildBoundReceiptOcrRecoveryWorkflowInputs,
     dispatchReceiptOcrWorkflow,
+    RECEIPT_OCR_WORKFLOW_FETCH_TIMEOUT_MS,
     RECEIPT_OCR_WORKFLOW_FILE,
 } from '@/lib/ocr/workflow-dispatch';
 import {
@@ -249,6 +250,7 @@ export async function POST(request: Request) {
                     'Authorization': `Bearer ${GITHUB_TOKEN}`,
                     'Accept': 'application/vnd.github.v3+json',
                 },
+                signal: AbortSignal.timeout(RECEIPT_OCR_WORKFLOW_FETCH_TIMEOUT_MS),
             },
         );
         if (!workflowPreflightResponse.ok) {

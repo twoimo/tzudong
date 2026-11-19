@@ -14,7 +14,6 @@
 @source "../components/map";
 @source "../components/search";
 @source "../components/filters";
-@source "../components/region";
 @source "../components/skeletons";
 @source "../components/ui";
 @source "../lib/naver-map-overlay-position-helpers.ts";
@@ -457,6 +456,6 @@ div[style*="z-index"]>div>.custom-marker {
   }
 }
 .home-map-floating-control-text {
-  font-size: 0.75rem;
-  line-height: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }

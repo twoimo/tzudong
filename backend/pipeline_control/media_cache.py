@@ -58,11 +58,9 @@ def owned_media_cache(run_id: str, *, enabled: bool, root: Path | None = None):
         shutil.rmtree(cache)
 
     try:
+        # The caller purges only after it records the run, because a purge can
+        # outlast the grace period between a stop signal and SIGKILL.
         yield completed
-    except BaseException:
-        try: completed("Failed")
-        except (OSError, ValueError, AdapterGraphError): pass
-        raise
     finally:
         os.environ.pop('VIDEO_CACHE_DIR', None)
         if previous_owner is None: os.environ.pop('PIPELINE_OWNED_VIDEO_CACHE_RUN_ID', None)

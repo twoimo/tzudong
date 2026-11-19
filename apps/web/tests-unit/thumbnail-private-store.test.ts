@@ -312,7 +312,7 @@ describe('thumbnail immutable private storage and checkpoints', () => {
       // Exercise the real SDK with fixture HTTP on every platform. macOS also
       // retains its additional OS egress-denial proof; Linux/Windows do not claim it.
       for (const sandboxed of process.platform === 'darwin' ? [false, true] : [false]) {
-      const args = ['--no-env-file', 'run', join(import.meta.dir, 'fixtures/thumbnail-private-storage-sdk.ts')];
+      const args = ['--no-env-file', '--conditions=react-server', 'run', join(import.meta.dir, 'fixtures/thumbnail-private-storage-sdk.ts')];
       const child = spawnSync(sandboxed ? '/usr/bin/sandbox-exec' : process.execPath,
         sandboxed ? ['-p', '(version 1)(allow default)(deny network*)', process.execPath, ...args] : args, {
         cwd: join(import.meta.dir, '..'), encoding: 'utf8', timeout: 15_000,

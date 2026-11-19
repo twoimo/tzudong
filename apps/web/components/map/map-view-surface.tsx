@@ -1,15 +1,18 @@
+import type { HomeMapThemeFilterId } from '@/lib/home-map-theme-filters';
 import type { RefObject } from 'react';
 
 import { MapViewAdminAddButton } from '@/components/map/map-view-sidepanels';
 import { MapViewOverlayStack } from '@/components/map/map-view-overlay-stack';
 
 export function MapViewSurface({
+    activeThemeId,
     isLoadingRestaurants,
     mapRef,
     onAdminAddRestaurant,
     restaurantCount,
     showRestaurantCount,
 }: {
+    activeThemeId?: HomeMapThemeFilterId | null;
     isLoadingRestaurants: boolean;
     mapRef: RefObject<HTMLDivElement | null>;
     onAdminAddRestaurant?: () => void;
@@ -24,6 +27,7 @@ export function MapViewSurface({
             />
 
             <MapViewOverlayStack
+                activeThemeId={activeThemeId}
                 isLoadingRestaurants={isLoadingRestaurants}
                 restaurantCount={restaurantCount}
                 showRestaurantCount={showRestaurantCount}
