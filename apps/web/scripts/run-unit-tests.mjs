@@ -37,6 +37,9 @@ const isolated = new Set([
   // These import real lazy targets, including ephemeral auth client exports.
   // Whole-module browser client mocks in the general group omit those exports.
   'lazy-map-boundaries.test.ts',
+  // admin-review-merge replaces the browser client and omits this export.
+  // The avatar render imports it, and that mock stays in the shared process.
+  'review-card-avatar.test.tsx',
   'lazy-overlay-boundaries.test.ts',
   'notification-consent.test.ts',
   'review-modal-map-panel-helpers.test.ts',
