@@ -307,7 +307,7 @@ export const StampCard = memo(function StampCard({
                                         onClick={handleGuideClose}
                                         className={cn(
                                             "pointer-events-auto absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80",
-                                            isCompact ? "w-5 h-5" : "w-6 h-6"
+                                            "h-11 w-11"
                                         )}
                                         aria-label="가이드 닫기"
                                         data-stamp-guide-close="true"

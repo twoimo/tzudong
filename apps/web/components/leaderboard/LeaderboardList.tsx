@@ -64,7 +64,7 @@ export function LeaderboardList({
                                 compactLeftPanel
                                     ? "flex w-full max-w-full items-center gap-2 overflow-hidden pl-2 pr-5 py-4 sm:gap-2.5 sm:pl-2 sm:pr-5 sm:py-4.5 md:pl-2 md:pr-5 lg:gap-2.5 lg:pl-2 lg:pr-5 lg:py-3 transition-colors hover:bg-muted/50 min-w-0"
                                     : mobilePanel
-                                        ? "flex w-full max-w-full items-center gap-2 overflow-hidden px-4 py-4 sm:gap-4 sm:px-6 sm:py-4.5 transition-colors hover:bg-muted/50 min-w-0"
+                                        ? "flex w-full max-w-full items-center gap-2 overflow-hidden px-3 py-3 sm:gap-3 sm:px-4 sm:py-3 transition-colors hover:bg-muted/50 min-w-0"
                                         : "flex w-full max-w-full items-center gap-1.5 sm:gap-4 md:gap-5 overflow-hidden pl-2 pr-2 sm:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
                                 isCurrentUser && "bg-primary/5 border-l-4 border-l-primary"
                             )}

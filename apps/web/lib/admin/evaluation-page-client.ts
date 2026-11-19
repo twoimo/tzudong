@@ -1,5 +1,5 @@
 import type { CategoryStats } from '@/types/evaluation';
-import { isRecord } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import type { findSameVideoDuplicateWarningCandidates } from '@/lib/admin-same-video-duplicate-warning';
 import type { findRestaurantIdentityWarnings } from '@/lib/admin-restaurant-identity-warning';
 

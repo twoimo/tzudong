@@ -21,8 +21,8 @@ def completed(stdout: bytes = b"", stderr: bytes = b"", code: int = 0) -> subpro
     return subprocess.CompletedProcess(args=[], returncode=code, stdout=stdout, stderr=stderr)
 
 
-def make_runner(*, names, roles, restored=None, setup_stderr=b"", restore_stderr=b"",
-                setup_exit_code=0, restore_exit_code=0):
+def make_runner(*, names, roles, restored=None, partitions=(), setup_stderr=b"",
+                restore_stderr=b"", setup_exit_code=0, restore_exit_code=0):
     """Answer docker calls by what they ask for, and switch names after the restore."""
     state = {"restored": False}
     captured = {}
@@ -33,6 +33,8 @@ def make_runner(*, names, roles, restored=None, setup_stderr=b"", restore_stderr
             return completed(stdout=b"-- schema\n")
         if "pg_catalog.pg_roles r" in joined:
             return completed(stdout=("\n".join(roles) + ("\n" if roles else "")).encode())
+        if "pg_catalog.pg_inherits" in joined:
+            return completed(stdout="".join(f"{name}\n" for name in partitions).encode())
         if "pg_catalog.pg_class c" in joined:
             pool = (restored if state["restored"] else names) or []
             return completed(stdout=("\n".join(pool) + ("\n" if pool else "")).encode())
@@ -269,6 +271,76 @@ CREATE TABLE public.restaurants (id uuid);
         with tempfile.TemporaryDirectory() as tmp:
             baseline = self._baseline(Path(tmp), ["public.a"])
             json.dumps(baseline.manifest)
+
+
+def daily_partitions(names):
+    """The catalog's answer for a stack whose realtime.messages_* tables are all attached."""
+    return [name for name in names if name.startswith("realtime.messages_")]
+
+
+class RollingPartitionTests(unittest.TestCase):
+    CAPTURE_DAY = ["public.a", "realtime.messages",
+                   "realtime.messages_2026_11_11", "realtime.messages_2026_11_12"]
+    LATER_DAY = ["public.a", "realtime.messages",
+                 "realtime.messages_2026_11_16", "realtime.messages_2026_11_17"]
+
+    def _runner(self, names, **kwargs):
+        restored = kwargs.get("restored") or []
+        return make_runner(names=names, roles=[],
+                           partitions=daily_partitions(names + restored), **kwargs)
+
+    def _baseline(self, tmp: Path, names=CAPTURE_DAY) -> lb.Baseline:
+        return lb.capture("db", "postgres", tmp, source_image="img", runner=self._runner(names))
+
+    def test_a_stack_started_on_a_later_day_matches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp))
+            record = lb.check(baseline, "target", "postgres", runner=self._runner(self.LATER_DAY))
+            self.assertTrue(record["matches"])
+            self.assertEqual((record["missingObjects"], record["unexpectedObjects"]), ([], []))
+
+    def test_a_stack_started_on_a_later_day_is_provisioned(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp))
+            record = lb.provision(
+                baseline, "target", "postgres", preserve_platform=True,
+                runner=self._runner([], restored=self.LATER_DAY),
+            )
+            self.assertTrue(record["provisioned"])
+            self.assertEqual((record["missingObjectCount"], record["unexpectedObjectCount"]), (0, 0))
+
+    def test_captures_on_different_days_do_not_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            committed = self._baseline(Path(first))
+            live = self._baseline(Path(second), self.LATER_DAY)
+            self.assertEqual(lb.drift(committed, live.manifest), [])
+
+    def test_the_partitioned_table_is_still_required(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp))
+            observed = [name for name in self.CAPTURE_DAY if name != "realtime.messages"]
+            record = lb.check(baseline, "target", "postgres", runner=self._runner(observed))
+            self.assertFalse(record["matches"])
+            self.assertEqual(record["missingObjects"], ["realtime.messages"])
+
+    def test_a_partition_named_with_non_ascii_digits_is_checked(self) -> None:
+        lookalike = "realtime.messages_\u0662\u0660\u0662\u0666_\u0661\u0661_\u0661\u0666"
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp))
+            record = lb.check(baseline, "target", "postgres",
+                              runner=self._runner(self.LATER_DAY + [lookalike]))
+            self.assertFalse(record["matches"])
+            self.assertEqual(record["unexpectedObjects"], [lookalike])
+
+    def test_a_table_named_like_a_partition_but_not_attached_is_checked(self) -> None:
+        detached = "realtime.messages_2026_11_18"
+        names = self.LATER_DAY + [detached]
+        with tempfile.TemporaryDirectory() as tmp:
+            baseline = self._baseline(Path(tmp))
+            record = lb.check(baseline, "target", "postgres", runner=make_runner(
+                names=names, roles=[], partitions=daily_partitions(self.LATER_DAY)))
+            self.assertFalse(record["matches"])
+            self.assertEqual(record["unexpectedObjects"], [detached])
 
 
 if __name__ == "__main__":

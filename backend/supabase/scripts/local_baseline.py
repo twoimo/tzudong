@@ -58,6 +58,21 @@ WHERE c.relkind IN ('r','p','v','m','S')
 ORDER BY 1;
 """
 
+# The realtime service creates one realtime.messages partition per day around the
+# current date, so these names depend on when the stack started, not on the schema.
+# A name is left out only when it is spelled that way and the catalog lists it as a
+# partition of realtime.messages. Python's \d also matches non-ASCII digits.
+ROLLING_PARTITION = re.compile(r"realtime\.messages_[0-9]{4}_[0-9]{2}_[0-9]{2}")
+REALTIME_PARTITIONS_SQL = """
+SELECT n.nspname || '.' || child.relname FROM pg_catalog.pg_inherits i
+JOIN pg_catalog.pg_class child ON child.oid = i.inhrelid
+JOIN pg_catalog.pg_namespace n ON n.oid = child.relnamespace
+JOIN pg_catalog.pg_class parent ON parent.oid = i.inhparent
+JOIN pg_catalog.pg_namespace parent_n ON parent_n.oid = parent.relnamespace
+WHERE parent_n.nspname = 'realtime' AND parent.relname = 'messages'
+ORDER BY 1;
+"""
+
 # A schema-only dump carries no CREATE ROLE, so every statement naming a project role
 # fails on a fresh cluster. Policies and default ACLs name roles that own nothing, so
 # ownership alone is not enough.
@@ -102,8 +117,13 @@ def psql(container: str, role: str, sql: str, *, database: str = "postgres",
 
 def object_names(container: str, role: str, database: str,
                  runner: Runner = subprocess.run) -> list[str]:
-    return [line for line in psql(container, role, OBJECT_NAMES_SQL, database=database,
-                                  runner=runner).splitlines() if line]
+    def rows(sql: str) -> list[str]:
+        return [line for line in psql(container, role, sql, database=database,
+                                      runner=runner).splitlines() if line]
+
+    partitions = set(rows(REALTIME_PARTITIONS_SQL))
+    return [name for name in rows(OBJECT_NAMES_SQL)
+            if not (name in partitions and ROLLING_PARTITION.fullmatch(name))]
 
 
 def idempotent_role(statement: str) -> str:

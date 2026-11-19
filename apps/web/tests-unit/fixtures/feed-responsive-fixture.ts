@@ -38,7 +38,10 @@ export async function buildFeedResponsiveFixture(mode: 'home-link' | 'feed') {
     '@tanstack/react-query': `
       const pages=[{reviews:Array.from({length:12},(_,index)=>({id:'fixture-'+index,userId:'fixture-user',restaurantId:'fixture-place',restaurantName:'합성 맛집',userName:'합성 작성자',visitedAt:'2026-11-01',createdAt:'2026-11-01T00:00:00Z',content:'스크롤과 하단 조작 영역을 검증하는 합성 후기 '+index,photos:[],categories:['한식'],likeCount:0,isLikedByUser:false,restaurant:null}))}];
       const noop=()=>{};const client={invalidateQueries:noop};
+      const idleQuery={data:undefined,error:null,isError:false,isLoading:false,isPending:false,isFetching:false,refetch:noop};
       export const useQueryClient=()=>client;
+      export const useQuery=()=>idleQuery;
+      export const useMutation=()=>({mutate:noop,mutateAsync:async()=>undefined,isPending:false,isLoading:false});
       export const useInfiniteQuery=()=>({data:{pages},refetch:noop,fetchNextPage:noop,hasNextPage:true,isError:false,isLoading:false,isFetching:false,isFetchingNextPage:false});
     `,
   };

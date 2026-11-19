@@ -6,6 +6,7 @@ digest, no scratch file slipped in, and a live capture that differs produces dri
 rather than silence.
 """
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -33,6 +34,12 @@ class CommittedBaselineTests(unittest.TestCase):
         names = [line for line in (BASELINE / "objects.txt").read_text().splitlines() if line]
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(len(names), lb.load_baseline(BASELINE).manifest["objectCount"])
+
+    def test_the_object_list_is_what_a_capture_of_it_writes(self) -> None:
+        names = [line for line in (BASELINE / "objects.txt").read_text().splitlines() if line]
+        listing = subprocess.CompletedProcess([], 0, ("\n".join(names) + "\n").encode(), b"")
+        self.assertEqual(lb.object_names("db", "postgres", "postgres",
+                                         runner=lambda command, capture_output: listing), names)
 
     def test_roles_cover_the_privacy_workflow_owner(self) -> None:
         # Measured: 119 restore errors were this role missing, so the baseline must

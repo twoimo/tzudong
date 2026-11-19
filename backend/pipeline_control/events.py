@@ -7,7 +7,11 @@ import os
 from typing import Any
 from urllib.parse import urlparse
 
-from backend.utils.privacy_log import safe_error_name, sanitize_log_value
+from backend.utils.privacy_log import (
+    safe_error_name,
+    sanitize_log_value,
+    sanitize_uuid_log_value,
+)
 
 TOPICS = {
     "run.lifecycle": "tzudong.pipeline.run.lifecycle.v1",
@@ -35,6 +39,9 @@ ENVELOPE_ALLOWLIST = frozenset(
         "timestamp",
     }
 )
+# job_id is the run id that the store mints with uuid4. request_id keeps
+# free-text redaction because callers choose it through X-Request-Id.
+_UUID_KEYS = frozenset({"job_id"})
 
 
 class KafkaPublishError(Exception):
@@ -93,7 +100,7 @@ def admit_bootstrap(*, data_env: str | None, bootstrap: str | None) -> str:
 
 def allowlisted_event(event: dict[str, Any]) -> dict[str, Any]:
     return {
-        key: sanitize_log_value(value)
+        key: sanitize_uuid_log_value(value) if key in _UUID_KEYS else sanitize_log_value(value)
         for key, value in event.items()
         if key in ENVELOPE_ALLOWLIST
     }

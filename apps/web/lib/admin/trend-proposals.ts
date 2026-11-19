@@ -10,6 +10,7 @@ import {
   type NormalizedAdminMapOverlayPreviewRequest,
 } from '@/lib/admin-map-overlays';
 import type { Json } from '@/integrations/supabase/types';
+import { isRecord } from '@/lib/validation/records';
 
 export const TREND_PROPOSAL_STATUSES = ['pending', 'approved', 'rejected', 'superseded', 'expired'] as const;
 export const TREND_PROPOSAL_REVIEW_TRANSITIONS = ['rejected', 'superseded', 'expired'] as const;
@@ -128,10 +129,6 @@ export type TrendProposalRowInput = {
   updated_at?: string;
 };
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
 function readString(value: unknown): string | null {
   return typeof value === 'string' ? value.trim() : null;
 }
@@ -209,7 +206,7 @@ function parseTrendProposalCursor(value: string | null): TrendProposalCursor | n
   if (!value) return null;
   try {
     const decoded = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as unknown;
-    if (!isPlainRecord(decoded)) throw new Error('invalid-cursor');
+    if (!isRecord(decoded)) throw new Error('invalid-cursor');
     const createdAt = normalizeCursorTimestamp(decoded.createdAt);
     const id = readString(decoded.id);
     if (!isUuid(id)) throw new Error('invalid-cursor');
@@ -235,8 +232,8 @@ export function parseTrendProposalListQuery(searchParams: URLSearchParams): Tren
 }
 
 export function normalizeTrendProposalPreviewRequest(body: unknown): TrendProposalPreviewRequest {
-  const record = isPlainRecord(body) ? body : {};
-  const editsRecord = isPlainRecord(record.edits) ? record.edits : {};
+  const record = isRecord(body) ? body : {};
+  const editsRecord = isRecord(record.edits) ? record.edits : {};
   const activeFrom = normalizeOptionalTimestamp(editsRecord.activeFrom ?? editsRecord.active_from, 'invalid_trend_proposal_preview_request');
   const activeUntil = normalizeOptionalTimestamp(editsRecord.activeUntil ?? editsRecord.active_until, 'invalid_trend_proposal_preview_request');
   if (activeFrom && activeUntil && new Date(activeFrom).getTime() > new Date(activeUntil).getTime()) {
@@ -254,7 +251,7 @@ export function normalizeTrendProposalPreviewRequest(body: unknown): TrendPropos
 }
 
 export function normalizeTrendProposalReviewRequest(body: unknown): NormalizedTrendProposalReviewRequest {
-  if (!isPlainRecord(body)) throw new Error('invalid_trend_proposal_review_request');
+  if (!isRecord(body)) throw new Error('invalid_trend_proposal_review_request');
   const transition = readString(body.transition);
   if (!transition || !(TREND_PROPOSAL_REVIEW_TRANSITIONS as readonly string[]).includes(transition)) {
     throw new Error('invalid_trend_proposal_review_request');
@@ -294,7 +291,7 @@ function readStringArray(value: unknown): string[] {
 }
 
 function readEvidenceRecord(evidence: Json): Record<string, unknown> {
-  return isPlainRecord(evidence) ? evidence : {};
+  return isRecord(evidence) ? evidence : {};
 }
 
 export function summarizeTrendProposalEvidence(evidence: Json): TrendProposalEvidenceSummary {
@@ -305,7 +302,7 @@ export function summarizeTrendProposalEvidence(evidence: Json): TrendProposalEvi
     ...readStringArray(record.source_types),
   ]);
   for (const observation of observations) {
-    if (!isPlainRecord(observation)) continue;
+    if (!isRecord(observation)) continue;
     const sourceType = readString(observation.sourceType ?? observation.source_type);
     if (sourceType) sourceTypes.add(sourceType);
   }
@@ -325,8 +322,8 @@ export function summarizeTrendProposalEvidence(evidence: Json): TrendProposalEvi
 
 function readNestedRecord(row: Record<string, unknown>, key: string): Record<string, unknown> | null {
   const value = row[key];
-  if (Array.isArray(value)) return isPlainRecord(value[0]) ? value[0] : null;
-  return isPlainRecord(value) ? value : null;
+  if (Array.isArray(value)) return isRecord(value[0]) ? value[0] : null;
+  return isRecord(value) ? value : null;
 }
 
 function readNumber(value: unknown): number | null {

@@ -4,6 +4,7 @@ import type { ReceiptOcrEnvelope } from '@/lib/ocr/receipt-normalization';
 import type { OcrRoutingProvider } from '@/lib/ocr/runtime-config';
 import type { SelectedRestaurantContext } from '@/lib/ocr/restaurant-matching';
 import type { ReceiptOcrData } from '@/lib/ocr/types';
+import { isRecord } from '@/lib/validation/records';
 
 export const DURABLE_RECEIPT_OCR_SCHEMA_VERSION = 'receipt-public-ocr-v1';
 export const RECEIPT_OCR_DEFAULT_GENERATION = '00000000-0000-0000-0000-000000000000';
@@ -177,10 +178,6 @@ export async function publishReviewReceiptOcrResult(
     throw new DurableReceiptOcrPersistenceError();
   }
   return data;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 export function hasDurableOcrReviewResult(value: unknown): boolean {

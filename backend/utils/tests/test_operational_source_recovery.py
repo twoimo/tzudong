@@ -113,7 +113,9 @@ class OperationalRecoveryProvenanceTests(unittest.TestCase):
             path = ROOT.joinpath(*_safe_path(entry["candidatePath"]).parts)
             data = path.read_bytes()
             self.assertEqual(len(data), entry["candidateBytes"], entry["candidatePath"])
-            self.assertEqual(_git_blob_sha(data), entry["candidateGitBlobSha1"])
+            self.assertEqual(
+                _git_blob_sha(data), entry["candidateGitBlobSha1"], entry["candidatePath"]
+            )
             self.assertEqual(
                 hashlib.sha256(data).hexdigest(),
                 entry["candidateSha256"],
@@ -133,9 +135,9 @@ class OperationalRecoveryProvenanceTests(unittest.TestCase):
             self.assertEqual(set(entry), {"path", "gitBlobSha1", "sha256", "bytes"})
             path = ROOT.joinpath(*_safe_path(entry["path"]).parts)
             data = path.read_bytes()
-            self.assertEqual(len(data), entry["bytes"])
-            self.assertEqual(_git_blob_sha(data), entry["gitBlobSha1"])
-            self.assertEqual(hashlib.sha256(data).hexdigest(), entry["sha256"])
+            self.assertEqual(len(data), entry["bytes"], entry["path"])
+            self.assertEqual(_git_blob_sha(data), entry["gitBlobSha1"], entry["path"])
+            self.assertEqual(hashlib.sha256(data).hexdigest(), entry["sha256"], entry["path"])
             candidate_only.add(entry["path"])
 
         transforms = document["candidateTransformations"]

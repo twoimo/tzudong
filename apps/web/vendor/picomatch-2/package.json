@@ -1,0 +1,19 @@
+{
+  "name": "@tzudong/picomatch-2",
+  "version": "2.3.2-tzudong.1",
+  "description": "Vendored picomatch 2.3.2 with the GHSA-fc5q-39xc-vjpf repeated-extglob collapse. Not an official upstream release.",
+  "private": true,
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
+  "homepage": "https://github.com/micromatch/picomatch",
+  "engines": {
+    "node": ">=8.6"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "LICENSE",
+    "UPSTREAM.json"
+  ]
+}

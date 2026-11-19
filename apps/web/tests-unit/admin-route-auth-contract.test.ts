@@ -89,6 +89,7 @@ const publicHomeMapSources = [
   'app/home-client.tsx',
   'components/home/home-map-container.tsx',
   'components/map/NaverMapView.tsx',
+  'components/map/use-naver-map-cluster-render.ts',
   'components/map/naver-map-surface.tsx',
   'components/home/MobileControlOverlay.tsx',
   'components/home/SubmissionFloatingButton.tsx',

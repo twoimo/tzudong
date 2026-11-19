@@ -1,7 +1,8 @@
 import { Buffer } from 'node:buffer';
 import { EvaluationRawWarningGroups } from './evaluation-warning-raw-groups';
 import { EvaluationWarningStream } from './evaluation-warning-stream';
-import { isRecord, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from './normalize-evaluation-record';
+import { normalizeEvaluationRecord, withAdminEvaluationDisplayName } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 
 type Row = ReturnType<typeof withAdminEvaluationDisplayName>;

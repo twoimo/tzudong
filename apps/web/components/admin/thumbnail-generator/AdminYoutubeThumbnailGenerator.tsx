@@ -4091,7 +4091,7 @@ export function AdminYoutubeThumbnailGenerator() {
             type="button"
             tabIndex={-1}
             aria-label="문구 크기 조절"
-            className={`pointer-events-auto absolute h-3 w-3 rounded-full border-2 border-sky-500 bg-white/95 ring-1 ring-slate-950/10 transition-transform hover:scale-110 ${positionClass}`}
+            className={`pointer-events-auto absolute h-3 w-3 rounded-full border-2 border-primary bg-background transition-colors hover:bg-muted ${positionClass}`}
             data-thumbnail-text-transform-handle-state={state}
             data-thumbnail-text-transform-handle-mode="resize"
             data-thumbnail-text-resize-handle={handleId}
@@ -4107,7 +4107,7 @@ export function AdminYoutubeThumbnailGenerator() {
           type="button"
           tabIndex={-1}
           aria-label="문구 회전"
-          className="pointer-events-auto absolute -top-8 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full border-2 border-sky-500 bg-white/95 text-sky-600 ring-1 ring-slate-950/10 transition-transform hover:scale-110"
+          className="pointer-events-auto absolute -top-8 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border-2 border-primary bg-background text-foreground transition-colors hover:bg-muted"
           data-thumbnail-text-transform-handle-state={state}
           data-thumbnail-text-transform-handle-mode="rotate"
           data-thumbnail-text-rotate-handle="true"
