@@ -162,7 +162,7 @@ class LiveGraphTests(unittest.TestCase):
         calls=[]
         @contextmanager
         def media_cache(*args,**kwargs):
-            def completed():
+            def completed(outcome):
                 self.assertEqual(store.get(run.id).status,'Succeeded')
                 raise PermissionError('synthetic cleanup failure')
             yield completed

@@ -10,6 +10,9 @@ import {
 } from '@/lib/ocr/review-modal-ocr-ux';
 
 const reviewModalSource = readFileSync(new URL('../components/reviews/ReviewModal.tsx', import.meta.url), 'utf8');
+const receiptHookSource = readFileSync(new URL('../components/reviews/receipt-step/use-receipt-step.ts', import.meta.url), 'utf8');
+const receiptOcrSource = readFileSync(new URL('../components/reviews/receipt-step/receipt-ocr.ts', import.meta.url), 'utf8');
+const receiptViewSource = readFileSync(new URL('../components/reviews/receipt-step/ReceiptStep.tsx', import.meta.url), 'utf8');
 
 describe('review modal OCR UX helpers', () => {
   test('suppresses automatic OCR navigation while the user is actively editing', () => {
@@ -136,60 +139,72 @@ describe('review modal OCR selected restaurant guard', () => {
 
 describe('review modal OCR terminal recovery contract', () => {
   test('keeps the receipt photo attached and reuses one terminal notice helper', () => {
-    expect(reviewModalSource).toContain('사진만 첨부하고 직접 입력');
-    expect(reviewModalSource).toContain('다시 분석');
-    expect(reviewModalSource).toContain('void analyzeReceipt(verificationPhoto)');
-    expect(reviewModalSource).toContain('disabled={!verificationPhoto || isAnalyzing || ocrLimitReached}');
+    expect(receiptViewSource).toContain('사진만 첨부하고 직접 입력');
+    expect(receiptViewSource).toContain('다시 분석');
+    expect(receiptHookSource).toContain('void analyzeReceipt(verificationPhoto)');
+    expect(receiptViewSource).toContain('disabled={!verificationPhoto || isAnalyzing || ocrLimitReached}');
 
-    expect(reviewModalSource.match(/const renderOcrFallbackNotice = \(\) =>/g)).toHaveLength(1);
-    expect(reviewModalSource.match(/\{renderOcrFallbackNotice\(\)\}/g)).toHaveLength(3);
-    expect(reviewModalSource).toContain("const isTerminalError = ocrFallbackNotice.type === 'error'");
-    expect(reviewModalSource).toContain('terminal?: boolean');
-    expect(reviewModalSource).toContain('status?: number');
-    expect(reviewModalSource).toContain('if (parsed.payload.terminal)');
-    expect(reviewModalSource).toContain('new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422, parsed.payload.code)');
+    expect(receiptViewSource.match(/const isTerminalError = /g)).toHaveLength(1);
+    expect(reviewModalSource.match(/<ReceiptStep receipt=\{receipt\}/g)).toHaveLength(3);
+    expect(receiptViewSource).toContain("const isTerminalError = ocrFallbackNotice?.type === 'error'");
+    expect(receiptOcrSource).toContain('terminal?: boolean');
+    expect(receiptOcrSource).toContain('status?: number');
+    expect(receiptHookSource).toContain('if (parsed.payload.terminal)');
+    expect(receiptHookSource).toContain('new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422, parsed.payload.code)');
   });
 
   test('never resends a receipt after a dropped stream or a durable pending result', () => {
-    expect(reviewModalSource).toContain("['FEATURE_DATABASE_HELD', 'OCR_RESULT_PROCESSING', 'OCR_RESULT_INDETERMINATE']");
-    expect(reviewModalSource).toContain("type: 'pending'");
-    expect(reviewModalSource).toContain('분석 연결이 끊겨 저장된 결과를 확인하고 있어요.');
-    expect(reviewModalSource).toContain("fetch('/api/ocr/results/status'");
-    expect(reviewModalSource).toContain('reconcileInterruptedOcrReadback({');
-    expect(reviewModalSource).toContain('void analyzeReceipt(verificationPhoto, undefined, true)');
-    expect(reviewModalSource).toContain('결과 확인');
-    expect(reviewModalSource).toContain('statusOnly\n                    ? await readReceiptOcrStatus');
-    expect(reviewModalSource).not.toContain("fetch('/api/ocr/extract',");
+    expect(receiptOcrSource).toContain("['FEATURE_DATABASE_HELD', 'OCR_RESULT_PROCESSING', 'OCR_RESULT_INDETERMINATE']");
+    expect(receiptHookSource).toContain("type: 'pending'");
+    expect(receiptHookSource).toContain('분석 연결이 끊겨 저장된 결과를 확인하고 있어요.');
+    expect(receiptHookSource).toContain("fetch('/api/ocr/results/status'");
+    expect(receiptHookSource).toContain('reconcileInterruptedOcrReadback({');
+    expect(receiptHookSource).toContain('void analyzeReceipt(verificationPhoto, undefined, true)');
+    expect(receiptViewSource).toContain('결과 확인');
+    expect(receiptHookSource).toContain('statusOnly\n                    ? await readReceiptOcrStatus');
+    for (const source of [reviewModalSource, receiptHookSource]) {
+      expect(source).not.toContain("fetch('/api/ocr/extract',");
+    }
   });
 
   test('routes every photo-only choice through the current OCR intent cancellation boundary', () => {
-    expect(reviewModalSource).toContain('const verificationInputModeRef = useRef<VerificationInputMode>("ai")');
-    expect(reviewModalSource).toContain('receiptOcrPreparationRef.current.invalidate()');
+    expect(receiptHookSource).toContain('const verificationInputModeRef = useRef(INITIAL_RECEIPT_SAVE_INPUTS.verificationInputMode)');
+    expect(receiptHookSource).toContain('verificationInputMode: "ai",');
+    expect(receiptHookSource).toContain('receiptOcrPreparationRef.current.invalidate()');
+    expect(receiptHookSource).toContain('onPhotoOnly();');
+    expect(reviewModalSource).toContain('onPhotoOnly: stopOcrAutoNavigation');
     expect(reviewModalSource).toContain('userStepOverrideDuringOcrRef.current = true');
-    expect(reviewModalSource).toContain('setOcrResultRef(null)');
-    expect(reviewModalSource).toContain('setOcrResultRevision(null)');
-    expect(reviewModalSource).toContain('ocrResultRef: null');
-    expect(reviewModalSource).toContain('ocrResultRevision: null');
-    expect(reviewModalSource).toContain('ocrAbortControllerRef.current?.abort()');
-    expect(reviewModalSource.match(/onClick=\{\(\) => setReceiptVerificationInputMode\("manual"\)\}/g)).toHaveLength(3);
-    expect(reviewModalSource).not.toContain('onClick={() => setVerificationInputMode("manual")}');
+    expect(receiptHookSource).toContain('setOcrResultRef(null)');
+    expect(receiptHookSource).toContain('setOcrResultRevision(null)');
+    expect(receiptHookSource).toContain('ocrResultRef: null');
+    expect(receiptHookSource).toContain('ocrResultRevision: null');
+    expect(receiptHookSource).toContain('ocrAbortControllerRef.current?.abort()');
+    expect(receiptViewSource.match(/onClick=\{\(\) => setReceiptVerificationInputMode\("manual"\)\}/g)).toHaveLength(1);
+    expect(reviewModalSource.match(/<ReceiptStep receipt=\{receipt\}/g)).toHaveLength(3);
+    expect(receiptHookSource.match(/setVerificationInputMode\(/g)).toHaveLength(1);
+    for (const source of [reviewModalSource, receiptViewSource]) {
+      expect(source).not.toContain('setVerificationInputMode(');
+    }
   });
 
   test('rejects late photo preparation after a newer selection', () => {
-    expect(reviewModalSource).toContain('const selection = verificationSelectionRef.current.begin()');
-    expect(reviewModalSource).toContain('const selectionGeneration = selection.generation');
-    expect(reviewModalSource).toContain('signal: selection.signal');
-    expect(reviewModalSource).toContain('!replaceVerificationPhoto(preparedFile, selectionGeneration)');
-    expect(reviewModalSource).toContain('verificationSelectionRef.current.isCurrent(selectionGeneration)');
-    const directInvalidations = reviewModalSource.match(/verificationSelectionRef\.current\.invalidate\(\)/g)?.length ?? 0;
-    const capturedInvalidations = reviewModalSource.match(/verificationSelection\.invalidate\(\)/g)?.length ?? 0;
+    expect(receiptHookSource).toContain('const selection = verificationSelectionRef.current.begin()');
+    expect(receiptHookSource).toContain('const selectionGeneration = selection.generation');
+    expect(receiptHookSource).toContain('signal: selection.signal');
+    expect(receiptHookSource).toContain('!replaceVerificationPhoto(preparedFile, selectionGeneration)');
+    expect(receiptHookSource).toContain('verificationSelectionRef.current.isCurrent(selectionGeneration)');
+    const directInvalidations = receiptHookSource.match(/verificationSelectionRef\.current\.invalidate\(\)/g)?.length ?? 0;
+    const capturedInvalidations = receiptHookSource.match(/verificationSelection\.invalidate\(\)/g)?.length ?? 0;
     expect(directInvalidations + capturedInvalidations).toBeGreaterThanOrEqual(4);
+    expect(reviewModalSource).toContain('cancelPendingReceiptSelection();');
   });
 
   test('uses safe user-facing copy for force OCR refresh toggle', () => {
-    expect(reviewModalSource).toContain('OCR 다시 분석');
-    expect(reviewModalSource).toContain('이번 분석은 캐시 없이 재호출');
-    expect(reviewModalSource).not.toContain('dev/admin: OCR 강제 재호출');
+    expect(receiptViewSource).toContain('OCR 다시 분석');
+    expect(receiptViewSource).toContain('이번 분석은 캐시 없이 재호출');
+    for (const source of [reviewModalSource, receiptViewSource]) {
+      expect(source).not.toContain('dev/admin: OCR 강제 재호출');
+    }
   });
 
   test('shows the shared content limit and requires a complete AI binding before submit', () => {

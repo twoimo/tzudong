@@ -16,6 +16,7 @@ import {
 } from './types';
 import type { ThumbnailReleaseHostPresenceProof } from './release-candidates';
 import { normalizeThumbnailReleaseHostPresenceProof } from './release-candidates';
+import { isRecord } from '@/lib/validation/records';
 
 export const THUMBNAIL_LOCAL_HISTORY_WRITE_ENV = 'THUMBNAIL_LOCAL_HISTORY_WRITE';
 export const THUMBNAIL_HISTORY_ROOT_ENV = 'THUMBNAIL_HISTORY_ROOT';
@@ -78,10 +79,6 @@ type LegacyHistorySource = {
   path: string;
   imageBaseUrl: string;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 
 function toString(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';

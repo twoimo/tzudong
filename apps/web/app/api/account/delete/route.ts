@@ -613,25 +613,27 @@ const deleteAccount = async (request: NextRequest) => {
       }
     }
 
-    const result = await supabase.rpc('begin_account_deletion_apply_with_reauth', {
-      p_proof_id: body.proofId,
-      p_actor_user_id: user.id,
-      p_target_user_id: body.userId,
-      p_request_id: body.requestId,
-      p_preview_hash: body.previewHash,
-      p_confirmation_text: body.confirmationText,
-      p_idempotency_key: body.idempotencyKey,
-      p_source_manifest_hash: body.sourceManifestHash,
-    });
-    const begin = asSingleRow(result.data);
-    if (result.error) {
-      const reasonCode = rpcFailureReasonCode(result.error);
-      return reasonCode ? failureResponse(reasonCode) : serverFailureResponse();
-    }
-    if (!begin || begin.reason_code !== 'APPLY_STARTED') return serverFailureResponse();
+    if (!replayReadback) {
+      const result = await supabase.rpc('begin_account_deletion_apply_with_reauth', {
+        p_proof_id: body.proofId,
+        p_actor_user_id: user.id,
+        p_target_user_id: body.userId,
+        p_request_id: body.requestId,
+        p_preview_hash: body.previewHash,
+        p_confirmation_text: body.confirmationText,
+        p_idempotency_key: body.idempotencyKey,
+        p_source_manifest_hash: body.sourceManifestHash,
+      });
+      const begin = asSingleRow(result.data);
+      if (result.error) {
+        const reasonCode = rpcFailureReasonCode(result.error);
+        return reasonCode ? failureResponse(reasonCode) : serverFailureResponse();
+      }
+      if (!begin || begin.reason_code !== 'APPLY_STARTED') return serverFailureResponse();
 
-    const beginStatus = ownerStatusFromRow(begin, statusQuery, null);
-    if (!beginStatus || beginStatus.status !== 'in_progress') return serverFailureResponse();
+      const beginStatus = ownerStatusFromRow(begin, statusQuery, null);
+      if (!beginStatus || beginStatus.status !== 'in_progress') return serverFailureResponse();
+    }
 
     const cleanupResult = await supabaseAdmin.rpc('apply_account_deletion_database_cleanup', {
       p_actor_user_id: user.id,

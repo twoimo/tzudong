@@ -3755,7 +3755,10 @@ function AdminDashboardManagementSkeleton() {
         KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
       </p>
 
-      <div className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_auto_auto] lg:content-start lg:overflow-visible">
+      <div
+        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)] lg:overflow-visible"
+        data-admin-dashboard-order-mode="off"
+      >
         <AdminDashboardKpiCard
           widgetId="subscribers"
           title="현재 구독자"
@@ -4373,7 +4376,7 @@ function AdminDashboardMultiLineChart({
   }
 
   return (
-    <div className="min-h-[190px] flex-1" data-admin-dashboard-line-chart="ztd">
+    <div className="flex min-h-[190px] min-w-0 flex-1 flex-col" data-admin-dashboard-line-chart="ztd">
       <ZtdDashboardTrendChart data={chartData} visibleSeries={visibleSeries} totalPointCount={totalPointCount} />
     </div>
   );
@@ -4408,7 +4411,7 @@ function AdminDashboardBubbleChart({
   }
 
   return (
-    <div className="min-h-[230px] flex-1" data-admin-dashboard-bubble-chart="ztd">
+    <div className="flex min-h-[230px] min-w-0 flex-1 flex-col" data-admin-dashboard-bubble-chart="ztd">
       <ZtdDashboardBubbleChart data={chartData} />
     </div>
   );
@@ -4579,7 +4582,7 @@ function AdminDashboardAreaChart({ points }: { points: AdminDashboardTrendPoint[
     return <div className="flex h-full min-h-[160px] items-center justify-center bg-background text-xs font-semibold text-muted-foreground">표시할 변동 데이터가 없습니다.</div>;
   }
   return (
-    <div className="min-h-[190px] flex-1" data-admin-dashboard-area-chart="ztd">
+    <div className="flex min-h-[190px] min-w-0 flex-1 flex-col" data-admin-dashboard-area-chart="ztd">
       <ZtdDashboardEngagementChart data={chartData} />
     </div>
   );
@@ -6582,7 +6585,7 @@ function AdminDashboardManagementPanel({
       ) : null}
 
       <div
-        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_auto_auto] lg:content-start lg:overflow-visible"
+        className="grid min-w-0 auto-rows-min grid-cols-2 gap-2 overflow-x-clip overflow-y-visible lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)] lg:overflow-visible"
         data-admin-dashboard-order-mode={
           isDashboardOrderEditorOpen ? "direct-drag" : "off"
         }
@@ -8308,7 +8311,7 @@ function AuditPlaceholder() {
       contentClassName="overflow-y-auto"
     >
       <div
-        className="min-h-[480px]"
+        className="flex min-h-full min-w-0 flex-col"
         onFocus={() => { auditPanelHadFocusRef.current = true; }}
         onBlur={(event) => {
           if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) auditPanelHadFocusRef.current = false;
@@ -9921,7 +9924,7 @@ export function AdminConsoleOverview({
                 ? "overflow-y-auto md:overflow-hidden"
                 : "overflow-y-auto",
           )}
-          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 0.75rem)" : "1rem" }}
+          style={{ paddingBottom: isAdminMobileViewport ? "calc(env(safe-area-inset-bottom) + 8px)" : "8px" }}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"

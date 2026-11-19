@@ -28,8 +28,14 @@ await context.addInitScript(() => { localStorage.setItem('tzudong:e2e-admin-shel
 let scenario: 'available' | 'unavailable' | 'malformed' | 'gha' = 'available';
 let phase: 'normal' | 'stale' | 'apply-unavailable' = 'normal';
 let gets = 0, postsFulfilled = 0, externalDenied = 0, otherPostsDenied = 0, pageErrors = 0, consoleErrors = 0;
-const job = { id: '22222222-2222-4222-8222-222222222222', target: 'tzuyang', profile: 'heavy_local', status: 'Fetching', dry_run: true, adapter_index: 0 };
+const job = { id: '22222222-2222-4222-8222-222222222222', target: 'tzuyang', profile: 'heavy_local', status: 'Fetching', dry_run: true, adapter_index: 0, pause_requested: false, cancel_requested: false };
 let currentJob = { ...job };
+const executing = () => currentJob.status === 'Fetching' || currentJob.status === 'Inserting';
+const stepBoundary = () => {
+  if (!executing()) return;
+  if (currentJob.cancel_requested) currentJob = { ...currentJob, status: 'Cancelled' };
+  else if (currentJob.pause_requested) currentJob = { ...currentJob, status: 'Paused', pause_requested: false };
+};
 const fixtureEvents = [
   { name: 'Step 1 (URL Collection)', status: 'completed', durationSeconds: 1.25 },
   { name: 'Step 2 (Metadata)', status: 'completed', durationSeconds: 2 },
@@ -65,8 +71,9 @@ await context.route('**/*', async route => {
     if (body.action === 'enqueue' && body.dryRun === false) assert.equal(body.liveConfirmationText, 'LIVE_ENQUEUE');
     mutationChecks.push({ action: body.action, dryRun: body.dryRun ?? null, sameIdentity: true, ticketPreserved: true, fulfilledInBrowser: true });
     if (phase === 'apply-unavailable') { await fulfill({ error: 'DO_NOT_RENDER_PRIVATE_RAW' }, 502); return; }
-    if (body.action === 'pause') currentJob = { ...currentJob, status: 'Paused' };
-    if (body.action === 'resume') currentJob = { ...currentJob, status: 'Fetching' };
+    if (body.action === 'pause') currentJob = executing() ? { ...currentJob, pause_requested: true } : { ...currentJob, status: 'Paused' };
+    if (body.action === 'resume') currentJob = executing() ? { ...currentJob, pause_requested: false } : { ...currentJob, status: 'Queued', pause_requested: false };
+    if (body.action === 'cancel') currentJob = { ...currentJob, status: executing() ? currentJob.status : 'Cancelled', cancel_requested: true };
     await fulfill({ accepted: true, job: currentJob, readback: currentJob, audit: 'pipeline_control.audit' }); return;
   }
   if (url.pathname === '/api/admin/pipeline' && request.method() === 'GET') {
@@ -170,15 +177,36 @@ for (const width of (statesOnly ? [] : consoleProbe ? [390] : [390, 834, 1423]))
 if (!renderOnly) {
   if (!statesOnly) {
     await panel.locator('[data-pipeline-open-controls]').click();
-    await controls.locator('[data-admin-pipeline-pause]').click(); await page.locator('[data-pipeline-preview]').waitFor();
-    const apply = page.locator('[data-pipeline-apply]'); assert.equal(await apply.isDisabled(), true); assert.equal(mutationChecks.length, 0);
-    await page.getByLabel(`확인 문구 (${GUARDED_MUTATION_CONFIRMATION})`, { exact: true }).fill(GUARDED_MUTATION_CONFIRMATION);
-    const readsBefore = gets; await apply.click(); await controls.locator('[data-admin-pipeline-resume]').waitFor(); assert(gets > readsBefore);
+    const row = controls.locator(`[data-admin-pipeline-job="${job.id}"]`), apply = page.locator('[data-pipeline-apply]');
+    const confirmControl = async (selector: string, title: string) => {
+      await row.locator(selector).click(); await page.locator('[data-pipeline-preview]').waitFor();
+      assert.equal(await page.locator('[data-pipeline-preview] p').first().textContent(), `${title} 확인`);
+      assert.equal(await apply.isDisabled(), true);
+      await page.getByLabel(`확인 문구 (${GUARDED_MUTATION_CONFIRMATION})`, { exact: true }).fill(GUARDED_MUTATION_CONFIRMATION);
+      const readsBefore = gets; await apply.click(); await page.locator('[data-pipeline-preview]').waitFor({ state: 'detached' }); return readsBefore;
+    };
+    const awaitPendingPause = async (readsBefore: number) => {
+      await row.getByText('일시 정지 요청됨', { exact: true }).waitFor(); assert(gets > readsBefore);
+      assert((await row.textContent())?.includes('현재 단계가 끝나면 멈춥니다.'));
+      assert.equal(await row.locator('[data-admin-pipeline-pause]').count(), 0, 'a second pause is not offered');
+      assert.equal(await row.locator('[data-admin-pipeline-resume]').textContent(), '일시 정지 요청 취소');
+    };
+    assert.equal(mutationChecks.length, 0);
+    await awaitPendingPause(await confirmControl('[data-admin-pipeline-pause]', '일시 정지'));
+    await confirmControl('[data-admin-pipeline-resume]', '일시 정지 요청 취소');
+    await row.getByText('수집 중', { exact: true }).waitFor();
+    assert.equal(await row.locator('[data-admin-pipeline-pause]').textContent(), '일시 정지');
+    await awaitPendingPause(await confirmControl('[data-admin-pipeline-pause]', '일시 정지'));
+    stepBoundary();
+    await row.getByText('일시 정지', { exact: true }).waitFor();
+    assert.equal(await row.locator('[data-admin-pipeline-resume]').textContent(), '다시 시작'); assert.equal(await row.getByText('일시 정지 요청됨').count(), 0);
+    assert.deepEqual(mutationChecks.map(check => check.action), ['pause', 'resume', 'pause'], 'withdrawing a pending pause sends resume');
+    cases.push({ scenario: 'pause-at-step-boundary', pendingShown: true, secondPauseOffered: false, withdrawn: true, pausedAfterBoundary: true });
     await controls.locator('[data-admin-pipeline-enqueue-live]').click(); await page.locator('[data-pipeline-preview]').waitFor();
     await page.getByLabel(`확인 문구 (${GUARDED_MUTATION_CONFIRMATION})`, { exact: true }).fill(GUARDED_MUTATION_CONFIRMATION); assert.equal(await apply.isDisabled(), true);
     await page.getByLabel('실제 수집 확인 (LIVE_ENQUEUE)', { exact: true }).fill('LIVE_ENQUEUE');
     phase = 'apply-unavailable'; await apply.click(); await page.locator('[data-pipeline-preview]').waitFor({ state: 'detached' });
-    assert.equal((await controls.textContent())?.includes('DO_NOT_RENDER_PRIVATE_RAW'), false); assert.equal(mutationChecks.length, 2);
+    assert.equal((await controls.textContent())?.includes('DO_NOT_RENDER_PRIVATE_RAW'), false); assert.equal(mutationChecks.length, 4);
     phase = 'stale'; await controls.locator('[data-admin-pipeline-enqueue]').click(); await controls.getByRole('status').filter({ hasText: '실행 상태가 바뀌었습니다' }).waitFor(); assert.equal(await page.locator('[data-pipeline-preview]').count(), 0);
     phase = 'normal'; await controls.locator('[data-admin-pipeline-enqueue]').click(); await page.locator('[data-pipeline-preview]').waitFor();
     const postsBeforeDismiss = postsFulfilled;

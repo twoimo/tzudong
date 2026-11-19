@@ -1,4 +1,4 @@
-import { isRecord } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import { buildPipelinePreviewHash, PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION, type PipelineRunAction } from './pipeline-control';
 
 export type PipelineActionInput = { action: PipelineRunAction; target: string; profile: 'heavy_local' | 'lite_gha'; runId?: string; live?: boolean };

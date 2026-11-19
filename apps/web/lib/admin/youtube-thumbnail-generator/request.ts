@@ -22,6 +22,7 @@ import {
   THUMBNAIL_PROVIDER_IDS,
   THUMBNAIL_REFERENCE_ROLES,
 } from './types';
+import { isRecord } from '@/lib/validation/records';
 
 const THUMBNAIL_REMOTE_IMAGE_ALLOWED_HOSTNAMES = ['i.ytimg.com', 'img.youtube.com'] as const;
 export const THUMBNAIL_MAX_TOTAL_BYTES = 33_554_432;
@@ -96,10 +97,6 @@ type TrustedRemoteImageAddress = {
 type TrustedRemoteImageDeadline = {
   expiresAt: number;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 
 function stripThumbnailControlChars(value: string) {
   return value.replace(THUMBNAIL_CONTROL_CHARS_PATTERN, '');

@@ -65,8 +65,11 @@ function fixture(options: {
       (_all, names: string, specifier: string) => `const {${names.replace(/\bas\b/g, ':')}} = require(${JSON.stringify(specifier)});`)
     .replace(/export (?=(?:const|async function|function) )/g, '');
   if (/^\s*(?:import|export)\b/m.test(transformed)) throw new Error('UNSUPPORTED_FIXTURE_MODULE_SYNTAX');
-  const output: { post?: (request: Request) => Promise<Response> } = {};
-  runInNewContext(`${transformed}\noutput.post = POST;`, {
+  const output: {
+    post?: (request: Request) => Promise<Response>;
+    get?: (request: Request) => Promise<Response>;
+  } = {};
+  runInNewContext(`${transformed}\noutput.post = POST;\noutput.get = GET;`, {
     output,
     require(specifier: string) {
       if (!Object.hasOwn(dependencies, specifier)) throw new Error('UNDECLARED_FIXTURE_IMPORT');
@@ -74,6 +77,8 @@ function fixture(options: {
     },
     process: { env: { TZUDONG_HOME_KPI_QUERY_MODE: options.mode } },
     console: { error: (...args: unknown[]) => errors.push(args) },
+    Buffer,
+    URL,
   }, { timeout: 1000 });
 
   return {
@@ -84,6 +89,11 @@ function fixture(options: {
       return output.post!(new Request(`https://home-kpi.fixture.invalid/api/home/youtube-kpi${query}`, {
         method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body,
       }));
+    },
+    async get(videoIds: string[]) {
+      const params = new URLSearchParams();
+      for (const videoId of videoIds) params.append('videoIds', videoId);
+      return output.get!(new Request(`https://home-kpi.fixture.invalid/api/home/youtube-kpi?${params}`));
     },
   };
 }
@@ -305,5 +315,17 @@ describe('home KPI POST timing and mode boundary', () => {
     expect(response.headers.get('server-timing')).not.toContain('kpi-db-invalid');
     expect(response.headers.get('server-timing')).toContain('kpi-handler;dur=10');
     expect(await response.json()).toEqual({ metrics: METRICS });
+  });
+
+  test('GET exposes the same metrics on a CDN-cacheable response', async () => {
+    const harness = fixture({ events: [{ name: 'rpcRequest', durationMs: 7 }] });
+    const response = await harness.get(['video_A', 'video_B']);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe(
+      'public, max-age=0, s-maxage=60, stale-while-revalidate=300, must-revalidate',
+    );
+    expect(await response.json()).toEqual({ metrics: METRICS });
+    expect(harness.calls).toEqual([{ ids: ['video_A', 'video_B'], mode: 'rpc' }]);
+    expect(harness.bodyReads).toBe(0);
   });
 });

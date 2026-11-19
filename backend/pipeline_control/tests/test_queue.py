@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from backend.pipeline_control import queue
+from backend.pipeline_control import file_queue
 
 
 class FilesystemQueueTests(unittest.TestCase):
@@ -22,7 +22,7 @@ class FilesystemQueueTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            self.assertEqual(queue.drain(path), [{"job": "one"}, {"job": "two"}])
+            self.assertEqual(file_queue.drain(path), [{"job": "one"}, {"job": "two"}])
             self.assertFalse(path.exists())
             self.assertFalse(path.with_suffix(path.suffix + ".taking").exists())
             self.assertEqual(
@@ -33,9 +33,9 @@ class FilesystemQueueTests(unittest.TestCase):
     def test_drain_missing_or_empty_queue_is_empty(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "pipeline.jsonl"
-            self.assertEqual(queue.drain(path), [])
+            self.assertEqual(file_queue.drain(path), [])
             path.write_text("\n  \n", encoding="utf-8")
-            self.assertEqual(queue.drain(path), [])
+            self.assertEqual(file_queue.drain(path), [])
             self.assertFalse(path.exists())
 
     def test_drain_restores_taken_queue_when_input_read_fails(self) -> None:
@@ -45,7 +45,7 @@ class FilesystemQueueTests(unittest.TestCase):
             path.write_bytes(original)
 
             with self.assertRaises(UnicodeDecodeError):
-                queue.drain(path)
+                file_queue.drain(path)
 
             self.assertEqual(path.read_bytes(), original)
             self.assertFalse(path.with_suffix(path.suffix + ".taking").exists())

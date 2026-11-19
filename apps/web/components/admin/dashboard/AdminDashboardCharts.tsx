@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useLayoutEffect, useState, type ReactNode } from "react";
 import { buildAdminDashboardOpsChartData } from "@/lib/admin/dashboard-ops-chart-data";
 import {
   AreaChart,
@@ -43,6 +43,42 @@ function Theme({ children }: { children: ReactNode }) {
     <ThemeProvider theme={adminChartTheme} base="light" locale="ko-KR" cssVars={false}>
       {children}
     </ThemeProvider>
+  );
+}
+
+function useDashboardChartHeight(fallback: number) {
+  const [node, setNode] = useState<HTMLDivElement | null>(null);
+  const [height, setHeight] = useState(fallback);
+
+  useLayoutEffect(() => {
+    const target = node?.parentElement;
+    if (!target) return;
+    const update = () => {
+      const measured = Math.floor(target.getBoundingClientRect().height);
+      const next = measured >= 96 ? measured : fallback;
+      setHeight((current) => (Math.abs(current - next) < 2 ? current : next));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [fallback, node]);
+
+  return { setNode, height };
+}
+
+function DashboardChartFrame({
+  fallback,
+  children,
+}: {
+  fallback: number;
+  children: (height: number) => ReactNode;
+}) {
+  const { setNode, height } = useDashboardChartHeight(fallback);
+  return (
+    <div ref={setNode} className="h-full min-h-0 w-full">
+      {children(height)}
+    </div>
   );
 }
 
@@ -100,12 +136,14 @@ export function DashboardTrendChart({
 }) {
   if (!data.length || !visibleSeries.length) return null;
   return (
-    <Theme>
+    <DashboardChartFrame fallback={208}>
+      {(height) => (
+      <Theme>
       <LineChart
         data={data}
         x="label"
         y={[...visibleSeries]}
-        height={208}
+        height={height}
         showLabels={false}
         showXAxis
         showYAxis
@@ -119,9 +157,11 @@ export function DashboardTrendChart({
         )}
         ariaLabel="조회수, 참여, 참여율 정규화 비교 추이"
         description={`실제 데이터 ${data.length}개 표시, 전체 대상 ${totalPointCount}개. 숨김 처리된 지표는 표시하지 않습니다.`}
-        className="w-full"
+        className="h-full w-full"
       />
-    </Theme>
+      </Theme>
+      )}
+    </DashboardChartFrame>
   );
 }
 
@@ -132,14 +172,16 @@ export function DashboardBubbleChart({
 }) {
   if (!data.length) return null;
   return (
-    <Theme>
+    <DashboardChartFrame fallback={224}>
+      {(height) => (
+      <Theme>
       <BubbleChart
         data={data}
         x="조회수"
         y="참여"
         size="규모"
         label="title"
-        height={224}
+        height={height}
         format="compact"
         showLabels
         animate={false}
@@ -154,9 +196,11 @@ export function DashboardBubbleChart({
         }}
         ariaLabel="영상별 조회수와 참여 규모 분산"
         description="점 하나가 실제 영상 하나입니다. 가로축은 조회수, 세로축은 좋아요와 댓글의 합, 원 크기는 참여 수입니다."
-        className="w-full"
+        className="h-full w-full"
       />
-    </Theme>
+      </Theme>
+      )}
+    </DashboardChartFrame>
   );
 }
 
@@ -167,12 +211,14 @@ export function DashboardEngagementChart({
 }) {
   if (!data.length) return null;
   return (
-    <Theme>
+    <DashboardChartFrame fallback={208}>
+      {(height) => (
+      <Theme>
       <AreaChart
         data={data}
         x="label"
         y="참여율"
-        height={208}
+        height={height}
         format="decimal"
         unit="%"
         showLabels={false}
@@ -185,9 +231,11 @@ export function DashboardEngagementChart({
         )}
         ariaLabel="영상별 참여율 추이"
         description="선택 기간의 실제 참여율입니다. 참여율은 좋아요와 댓글을 조회수로 나눈 값입니다."
-        className="w-full"
+        className="h-full w-full"
       />
-    </Theme>
+      </Theme>
+      )}
+    </DashboardChartFrame>
   );
 }
 

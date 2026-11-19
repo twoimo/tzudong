@@ -1,4 +1,4 @@
-import { isRecord } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import type { EvaluationQuery, EvaluationFilters } from './evaluation-query';
 
 const filterKeys = new Set(['status', 'visit_authenticity', 'rb_inference_score', 'rb_grounding_TF', 'review_faithfulness_score', 'geocoding_success', 'category_validity_TF', 'category_TF']);

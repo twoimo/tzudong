@@ -15,6 +15,7 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createSupabaseStorageServerClient } from '@/lib/supabase/storage-server';
 import type { AdminProviderReadiness as ProviderReadiness } from '@/types/admin-system-status';
 import type { Json } from '@/integrations/supabase/types';
+import { isRecord } from '@/lib/validation/records';
 
 export const THUMBNAIL_RELEASE_KEY = 'youtube-thumbnail-generator/current';
 export const THUMBNAIL_RELEASE_STORAGE_BUCKET = 'youtube-thumbnail-releases';
@@ -178,9 +179,6 @@ export type ThumbnailReleaseRegistryOptions = ThumbnailReleaseOptions & {
   releaseId?: string;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 function isJson(value: unknown): value is Json {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
   if (typeof value === 'number') return Number.isFinite(value);
