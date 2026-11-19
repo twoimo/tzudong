@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, prepareDraftDeletion, type ReviewDraft } from "@/lib/reviewDraftDB";
 import {
     buildReviewPhotoObjectPath,
@@ -32,56 +31,17 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import {
-    OCR_PROGRESS_STEPS,
     addAiFilledField,
-    getOcrProgressRank,
-    reconcileInterruptedOcrReadback,
     shouldSuppressOcrAutoNavigation,
     canReplaceSelectedRestaurantFromOcr,
-    type OcrProgressStage,
     type ReviewOcrFieldKey,
 } from "@/lib/ocr/review-modal-ocr-ux";
-import {
-    prepareVerificationUploadFile,
-    ReceiptUploadPreparationError,
-} from "@/lib/ocr/receipt-upload-preparation";
-import { createLatestSelection } from "@/lib/ocr/latest-selection";
+import { compressFoodImage } from "@/components/reviews/review-photo-files";
+import { ReceiptPhotoGuide, ReceiptStep } from "@/components/reviews/receipt-step/ReceiptStep";
+import type { OCRResult } from "@/components/reviews/receipt-step/receipt-ocr";
+import { INITIAL_RECEIPT_SAVE_INPUTS, useReceiptStep, type ReceiptSaveInputs } from "@/components/reviews/receipt-step/use-receipt-step";
 
-// 음식 사진용 압축 옵션 (스토리지 최적화)
-const FOOD_PHOTO_OPTIONS = {
-    maxSizeMB: 0.3,           // 최대 300KB
-    maxWidthOrHeight: 1200,   // 최대 1200px
-    fileType: "image/webp" as const,
-    useWebWorker: true,
-};
-const SUPPORTED_RECEIPT_MIME_TYPES = new Set([
-    "image/avif",
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-]);
-const RECEIPT_IMAGE_ACCEPT = "image/avif,image/jpeg,image/png,image/webp";
 const REVIEW_CONTENT_MAX_LENGTH = 4_000;
-const isSupportedReceiptImage = (file: File): boolean => SUPPORTED_RECEIPT_MIME_TYPES.has(file.type);
-
-// 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
-const generateSafeFilename = (extension: string = ".webp"): string => {
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const timestamp = Date.now();
-    return `${timestamp}_${randomString}${extension}`;
-};
-
-// 음식 사진 압축 (WebP - 스토리지 최적화)
-const compressFoodImage = async (file: File): Promise<File> => {
-    try {
-        const compressedBlob = await imageCompression(file, FOOD_PHOTO_OPTIONS);
-        const safeFileName = generateSafeFilename(".webp");
-        return new File([compressedBlob], safeFileName, { type: "image/webp" });
-    } catch (error) {
-        console.warn("음식 사진 압축 실패, 원본 사용:");
-        return file;
-    }
-};
 // The controller retains exactly one operation in memory; draft persistence stays unchanged.
 function createReviewSaveOperation(
     currentOwner: () => string | undefined,
@@ -269,82 +229,6 @@ const CATEGORIES = [
 
 type Category = typeof CATEGORIES[number];
 
-interface OCRItem {
-    name: string;
-    price: number | null;
-}
-
-type OcrFieldTrustPayload = {
-    field?: string;
-    level?: 'high' | 'medium' | 'low';
-    source?: string;
-    reason?: string;
-    needsReview?: boolean;
-};
-
-export interface OCRResult {
-    store_name?: string;
-    date?: string;
-    time?: string;
-    items?: OCRItem[];
-    total_amount?: number;
-    category?: string;
-    review_draft?: string;
-    confidence?: number;
-    field_trust?: OcrFieldTrustPayload[];
-    needs_review?: string[];
-    ocr_result_ref?: string;
-    ocr_result_revision?: string;
-    cache_reused?: boolean;
-}
-
-type OcrProgressState = {
-    message: string;
-    stage: OcrProgressStage;
-    model?: string;
-    fields: string[];
-    fallbackUsed?: boolean;
-};
-
-type OcrStreamPayload = {
-    code?: string;
-    message?: string;
-    model?: string;
-    stage?: OcrProgressStage;
-    data?: Partial<OCRResult>;
-    final?: boolean;
-    attempt?: { model?: string; ok?: boolean; elapsedMs?: number };
-    detail?: string;
-    terminal?: boolean;
-    status?: number;
-};
-
-type OcrFallbackNotice = {
-    type: 'fallback' | 'error' | 'pending';
-    message: string;
-    detail?: string;
-};
-
-class OcrStreamHttpError extends Error {
-    status: number;
-    code?: string;
-
-    constructor(message: string, status: number, code?: string) {
-        super(message);
-        this.name = 'OcrStreamHttpError';
-        this.status = status;
-        this.code = code;
-    }
-}
-
-type OcrQuotaPayload = {
-    used: number;
-    max: number | null;
-    remaining: number | null;
-    unlimited?: boolean;
-    resetAt: string;
-};
-
 interface RestaurantNameRow {
     id: string;
     name: string;
@@ -383,25 +267,6 @@ function mapRestaurantNameRows(rows: readonly unknown[] | null): RestaurantNameR
     });
 }
 
-
-type OcrRestaurantContextSource = {
-    id?: string | null;
-    name?: string | null;
-    road_address?: string | null;
-    jibun_address?: string | null;
-    category?: string | null;
-    categories?: string[] | null;
-};
-
-function appendSelectedRestaurantOcrContext(formData: FormData, restaurant: OcrRestaurantContextSource | null | undefined) {
-    if (restaurant?.id) formData.append('selectedRestaurantId', restaurant.id);
-    if (restaurant?.name) formData.append('selectedRestaurantName', restaurant.name);
-    if (restaurant?.road_address) formData.append('selectedRestaurantRoadAddress', restaurant.road_address);
-    if (restaurant?.jibun_address) formData.append('selectedRestaurantJibunAddress', restaurant.jibun_address);
-    const category = restaurant?.category ?? restaurant?.categories?.[0];
-    if (category) formData.append('selectedRestaurantCategory', category);
-}
-
 function buildRestaurantSearchCandidates(value: string): string[] {
     const normalized = value.trim().replace(/\s+/g, ' ');
     if (!normalized) return [];
@@ -433,11 +298,10 @@ function scoreRestaurantNameMatch(restaurantName: string, receiptName: string): 
     }, 0);
 }
 
-type VerificationInputMode = "ai" | "manual";
 type ReviewFormStep = 1 | 2 | 3;
 type OcrFocusTarget = "restaurant" | "date" | "time" | "category" | "review";
 
-type ReviewSaveInputsSnapshot = {
+type ReviewSaveInputsSnapshot = ReceiptSaveInputs & {
     revision: number;
     ownerId: string | undefined;
     restaurantId: string | undefined;
@@ -446,13 +310,7 @@ type ReviewSaveInputsSnapshot = {
     visitedTime: string;
     categories: Category[];
     content: string;
-    verificationPhoto: File | null;
     foodPhotos: File[];
-    verificationInputMode: VerificationInputMode;
-    isAnalyzing: boolean;
-    ocrRunGeneration: number;
-    ocrResultRef: string | null;
-    ocrResultRevision: string | null;
 };
 
 function sameReviewSaveInputsSnapshot(a: ReviewSaveInputsSnapshot, b: ReviewSaveInputsSnapshot): boolean {
@@ -481,24 +339,6 @@ const REVIEW_FORM_STEPS: Array<{ id: ReviewFormStep; label: string }> = [
     { id: 3, label: "리뷰" },
 ];
 
-
-function ObjectUrlPreviewImage({ src, alt, className }: { src: string | null; alt: string; className?: string }) {
-    if (!src) {
-        return null;
-    }
-
-    return (
-        // eslint-disable-next-line @next/next/no-img-element -- Local blob URLs are already browser-local previews; Next Image can fail to paint them on Android pickers.
-        <img
-            src={src}
-            alt={alt}
-            className={className}
-            loading="eager"
-            decoding="sync"
-        />
-    );
-}
-
 export function ReviewModal(props: ReviewModalProps) {
     const { user } = useAuth();
     // Owner transitions discard the previous composer's inputs and controller.
@@ -513,7 +353,6 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const [visitedTime, setVisitedTime] = useState("");
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
-    const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const foodPhotosRef = useRef<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -523,16 +362,12 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const consumerNotifiedRef = useRef(false);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
-    // OCR 분석 상태
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [ocrProgress, setOcrProgress] = useState<OcrProgressState | null>(null);
-    const [verificationInputMode, setVerificationInputMode] = useState<VerificationInputMode>("ai");
-    const [forceOcrRefresh, setForceOcrRefresh] = useState(false);
     const [ocrFocusTarget, setOcrFocusTarget] = useState<OcrFocusTarget | null>(null);
     const [aiFilledFields, setAiFilledFields] = useState<Set<ReviewOcrFieldKey>>(() => new Set());
-    const [ocrFallbackNotice, setOcrFallbackNotice] = useState<OcrFallbackNotice | null>(null);
-    const [ocrResultRef, setOcrResultRef] = useState<string | null>(null);
-    const [ocrResultRevision, setOcrResultRevision] = useState<string | null>(null);
+    const lastOcrRevealSignatureRef = useRef<string | null>(null);
+    const lastManualOcrInteractionAtRef = useRef(0);
+    const userStepOverrideDuringOcrRef = useRef(false);
+    const manuallyEditedOcrFieldsRef = useRef<Set<ReviewOcrFieldKey>>(new Set());
     const [currentStep, setCurrentStep] = useState<ReviewFormStep>(1);
 
     // 맛집 검색 상태
@@ -552,9 +387,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const submitInFlightRef = useRef(false);
     const closeRequestedRef = useRef(false);
     const composerOpenRef = useRef(isOpen);
-    const ocrRunGenerationRef = useRef(0);
     const saveInputRevisionRef = useRef(0);
-    const verificationInputModeRef = useRef<VerificationInputMode>("ai");
     const latestSaveInputsRef = useRef<ReviewSaveInputsSnapshot>({
         revision: 0,
         ownerId: user?.id,
@@ -564,23 +397,59 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         visitedTime,
         categories,
         content,
-        verificationPhoto,
         foodPhotos,
-        verificationInputMode,
-        isAnalyzing,
-        ocrRunGeneration: 0,
-        ocrResultRef,
-        ocrResultRevision,
+        ...INITIAL_RECEIPT_SAVE_INPUTS,
     });
     const reviseLatestSaveInputs = useCallback((patch: Partial<Omit<ReviewSaveInputsSnapshot, 'revision'>>) => {
         const revision = saveInputRevisionRef.current + 1;
         saveInputRevisionRef.current = revision;
         latestSaveInputsRef.current = { ...latestSaveInputsRef.current, ...patch, revision };
     }, []);
-    const ocrAbortControllerRef = useRef<AbortController | null>(null);
-    const ocrRecoveryContextRef = useRef<{ file: File; restaurant: OcrRestaurantContextSource | null } | null>(null);
-    const verificationSelectionRef = useRef(createLatestSelection());
-    const receiptOcrPreparationRef = useRef(createLatestSelection());
+    const { data: featureReadiness, mutate: mutateFeatureReadiness, isValidating: isCheckingFeatureReadiness } = useSWR(
+        isOpen && user ? '/api/runtime-compatibility/features' : null,
+        () => fetchFeatureDatabaseReadiness(),
+        { revalidateOnFocus: false, dedupingInterval: 60_000, shouldRetryOnError: false },
+    );
+    const featureHeld = featureReadiness?.status !== 'ready';
+
+    const resetOcrAutofill = useCallback(() => {
+        setAiFilledFields(new Set());
+        lastOcrRevealSignatureRef.current = null;
+        lastManualOcrInteractionAtRef.current = 0;
+        userStepOverrideDuringOcrRef.current = false;
+        manuallyEditedOcrFieldsRef.current = new Set();
+    }, []);
+    const stopOcrAutoNavigation = useCallback(() => {
+        userStepOverrideDuringOcrRef.current = true;
+    }, []);
+    const receipt = useReceiptStep({
+        isOpen,
+        userId: user?.id,
+        featureHeld,
+        ocrContextRestaurant: reviewTargetRestaurant,
+        reviseLatestSaveInputs,
+        ocrEvents: {
+            onModelAnalysisStart: resetOcrAutofill,
+            onPhotoOnly: stopOcrAutoNavigation,
+            onFields: applyReceiptOcrFields,
+            onResult: applyReceiptOcrResult,
+        },
+    });
+    const {
+        verificationPhoto,
+        verificationInputMode,
+        isAnalyzing,
+        ocrResultRef,
+        ocrResultRevision,
+        verificationInputModeRef,
+        ocrRunGenerationRef,
+        replaceVerificationPhoto,
+        setReceiptVerificationInputMode,
+        resetReceiptStep,
+        cancelPendingReceiptSelection,
+        noteOcrFieldApplied,
+        noteOcrNavigationSuppressed,
+    } = receipt;
 
     useLayoutEffect(() => {
         if (draftScopeRef.current.ownerId !== user?.id || draftScopeRef.current.restaurantId !== reviewTargetRestaurant?.id || !isOpen) {
@@ -607,17 +476,14 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             ocrResultRevision,
         });
         saveOperationRef.current ??= createReviewSaveOperation(() => saveOwnerRef.current, () => draftScopeRef.current.revision);
-    }, [user?.id, isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, reviewTargetRestaurant?.id, reviewTargetRestaurant?.name, verificationInputMode, isAnalyzing, ocrResultRef, ocrResultRevision, reviseLatestSaveInputs]);
+    }, [user?.id, isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, reviewTargetRestaurant?.id, reviewTargetRestaurant?.name, verificationInputMode, isAnalyzing, ocrResultRef, ocrResultRevision, ocrRunGenerationRef, reviseLatestSaveInputs]);
 
     useLayoutEffect(() => {
         const operation = saveOperationRef.current!;
-        const verificationSelection = verificationSelectionRef.current;
-        const receiptOcrPreparation = receiptOcrPreparationRef.current;
         if (isOpen) {
             closeRequestedRef.current = false;
             consumerNotifiedRef.current = false;
         } else {
-            verificationSelection.invalidate();
             void operation.cancel();
         }
         return () => {
@@ -628,56 +494,13 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             // for it and preserves objects whenever its outcome stays unknown.
             operation.requestCancel();
             void operation.cancel();
-            verificationSelection.invalidate();
-            receiptOcrPreparation.invalidate();
-            ocrRunGenerationRef.current += 1;
-            ocrAbortControllerRef.current?.abort();
-            ocrAbortControllerRef.current = null;
-            ocrRecoveryContextRef.current = null;
         };
     }, [isOpen, user?.id]);
 
 
     // 드래그 앤 드롭을 위한 ref들
-    const verificationDropRef = useRef<HTMLDivElement>(null);
     const foodPhotosDropRef = useRef<HTMLDivElement>(null);
-    const verificationFileInputRef = useRef<HTMLInputElement>(null);
     const foodPhotosFileInputRef = useRef<HTMLInputElement>(null);
-    const verificationPhotoUrlRef = useRef<string | null>(null);
-    const lastOcrRevealSignatureRef = useRef<string | null>(null);
-    const lastManualOcrInteractionAtRef = useRef(0);
-    const userStepOverrideDuringOcrRef = useRef(false);
-    const manuallyEditedOcrFieldsRef = useRef<Set<ReviewOcrFieldKey>>(new Set());
-
-    const setReceiptVerificationInputMode = useCallback((mode: VerificationInputMode) => {
-        verificationInputModeRef.current = mode;
-        setVerificationInputMode(mode);
-        if (mode !== "manual") {
-            reviseLatestSaveInputs({ verificationInputMode: mode });
-            return;
-        }
-
-        // Keep the selected photo/preparation alive, but revoke every AI start or
-        // readback lease so a late compressor/status result cannot change the form.
-        receiptOcrPreparationRef.current.invalidate();
-        const ocrRunGeneration = ocrRunGenerationRef.current + 1;
-        ocrRunGenerationRef.current = ocrRunGeneration;
-        ocrAbortControllerRef.current?.abort();
-        ocrAbortControllerRef.current = null;
-        userStepOverrideDuringOcrRef.current = true;
-        setOcrResultRef(null);
-        setOcrResultRevision(null);
-        reviseLatestSaveInputs({
-            verificationInputMode: mode,
-            isAnalyzing: false,
-            ocrRunGeneration,
-            ocrResultRef: null,
-            ocrResultRevision: null,
-        });
-        setIsAnalyzing(false);
-        setOcrProgress(null);
-        setOcrFallbackNotice(null);
-    }, [reviseLatestSaveInputs]);
     const mobileFrameRef = useRef<HTMLDivElement>(null);
     const mobileScrollRef = useRef<HTMLDivElement>(null);
     const desktopReviewMapPanelRef = useRef<HTMLElement>(null);
@@ -808,9 +631,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     }, [isOpen]);
 
     // 드래그 상태
-    const [isVerificationDragging, setIsVerificationDragging] = useState(false);
     const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
-    const [verificationPhotoUrl, setVerificationPhotoUrl] = useState<string | null>(null);
 
     const getOcrFocusClass = useCallback((target: OcrFocusTarget) => (
         ocrFocusTarget === target
@@ -847,9 +668,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     const focusOcrTarget = useCallback((target: OcrFocusTarget, delayMs = 0) => {
         window.setTimeout(() => {
             if (isOcrNavigationSuppressed()) {
-                setOcrProgress(prev => prev
-                    ? { ...prev, message: '사용자 입력 중이라 자동 이동 없이 값만 채웠어요.' }
-                    : prev);
+                noteOcrNavigationSuppressed();
                 return;
             }
 
@@ -882,7 +701,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 setOcrFocusTarget(current => current === target ? null : current);
             }, 2200);
         }, delayMs);
-    }, [isMobileOrTablet, isOcrNavigationSuppressed]);
+    }, [isMobileOrTablet, isOcrNavigationSuppressed, noteOcrNavigationSuppressed]);
 
     const getOcrFocusTargetForPatch = useCallback((data: Partial<OCRResult>): OcrFocusTarget | null => {
         if (data.date) return "date";
@@ -924,42 +743,6 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         }
     }, [focusOcrTarget, getOcrFocusTargetForPatch]);
 
-    // 인증 사진 미리보기 URL은 렌더 중 생성하지 않고 이벤트에서 동기 갱신해
-    // 모바일 파일 선택기 복귀 직후 바텀시트가 재계산되며 깜빡이는 일을 줄인다.
-    const replaceVerificationPhoto = useCallback((file: File | null, expectedGeneration?: number) => {
-        if (expectedGeneration === undefined) {
-            verificationSelectionRef.current.invalidate();
-            receiptOcrPreparationRef.current.invalidate();
-        } else if (!verificationSelectionRef.current.isCurrent(expectedGeneration)) {
-            return false;
-        }
-        const ocrRunGeneration = ocrRunGenerationRef.current + 1;
-        ocrRunGenerationRef.current = ocrRunGeneration;
-        ocrAbortControllerRef.current?.abort();
-        ocrAbortControllerRef.current = null;
-        ocrRecoveryContextRef.current = null;
-        setIsAnalyzing(false);
-        setOcrProgress(null);
-        if (verificationPhotoUrlRef.current) {
-            URL.revokeObjectURL(verificationPhotoUrlRef.current);
-        }
-
-        const nextUrl = file ? URL.createObjectURL(file) : null;
-        verificationPhotoUrlRef.current = nextUrl;
-        setVerificationPhotoUrl(nextUrl);
-        setVerificationPhoto(file);
-        setOcrResultRef(null);
-        setOcrResultRevision(null);
-        reviseLatestSaveInputs({
-            verificationPhoto: file,
-            isAnalyzing: false,
-            ocrRunGeneration,
-            ocrResultRef: null,
-            ocrResultRevision: null,
-        });
-        return true;
-    }, [reviseLatestSaveInputs]);
-
     const foodPhotoUrls = useMemo(() => {
         return foodPhotos.map(photo => URL.createObjectURL(photo));
     }, [foodPhotos]);
@@ -967,89 +750,11 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     // URL 정리 (메모리 누수 방지)
     useEffect(() => {
         return () => {
-            if (verificationPhotoUrlRef.current) {
-                URL.revokeObjectURL(verificationPhotoUrlRef.current);
-                verificationPhotoUrlRef.current = null;
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        return () => {
             foodPhotoUrls.forEach(url => URL.revokeObjectURL(url));
         };
     }, [foodPhotoUrls]);
 
     // 메모이제이션된 이벤트 핸들러들
-    const handleVerificationPhotoSelected = async (file: File) => {
-        const selection = verificationSelectionRef.current.begin();
-        const selectionGeneration = selection.generation;
-        const ocrPreparation = verificationInputModeRef.current === "ai"
-            ? receiptOcrPreparationRef.current.begin()
-            : null;
-        const ocrRunGeneration = ocrRunGenerationRef.current + 1;
-        ocrRunGenerationRef.current = ocrRunGeneration;
-        reviseLatestSaveInputs({ isAnalyzing: false, ocrRunGeneration });
-        ocrAbortControllerRef.current?.abort();
-        ocrAbortControllerRef.current = null;
-        setIsAnalyzing(false);
-        setOcrProgress(null);
-        try {
-            if (featureHeld) {
-                toast({ title: "리뷰 기능 준비 중", description: FEATURE_DATABASE_HELD_MESSAGE });
-                return;
-            }
-            if (!isSupportedReceiptImage(file)) {
-                toast({
-                    title: "지원하지 않는 영수증 형식",
-                    description: "JPG, PNG, WebP 또는 AVIF 이미지를 선택해 주세요.",
-                    variant: "destructive",
-                });
-                return;
-            }
-            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-            const preparedFile = await prepareVerificationUploadFile({
-                file,
-                filename: generateSafeFilename(`.${ext}`),
-                compress: imageCompression,
-                signal: selection.signal,
-            });
-            if (!selection.isCurrent() || !replaceVerificationPhoto(preparedFile, selectionGeneration)) return;
-            verificationFileInputRef.current?.blur();
-            if (ocrPreparation?.isCurrent() && verificationInputModeRef.current === "ai") {
-                // Android 파일 선택기 복귀 직후 requestAnimationFrame이 누락되는 케이스가 있어
-                // macrotask로 OCR을 시작한다. 상태 업데이트는 이미 큐에 들어가므로 미리보기가 먼저 그려진다.
-                window.setTimeout(() => {
-                    if (verificationSelectionRef.current.isCurrent(selectionGeneration)
-                        && ocrPreparation.isCurrent()
-                        && verificationInputModeRef.current === "ai") {
-                        void analyzeReceipt(preparedFile, selectionGeneration);
-                    }
-                }, 0);
-            }
-        } catch (error) {
-            if (!selection.isCurrent() || selection.signal.aborted) return;
-            toast({
-                title: "영수증 사진을 준비하지 못했습니다",
-                description: error instanceof ReceiptUploadPreparationError && error.code === 'too_large'
-                    ? "5MB 이하 이미지로 다시 선택해 주세요. 분석 요청은 전송되지 않았습니다."
-                    : "JPG, PNG, WebP 또는 AVIF 이미지를 선택해 주세요.",
-                variant: "destructive",
-            });
-        } finally {
-            selection.complete();
-            ocrPreparation?.complete();
-        }
-    };
-
-    const handleVerificationPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            void handleVerificationPhotoSelected(file);
-        }
-        e.target.value = '';
-    };
-
     const appendFoodPhotos = useCallback((files: File[]) => {
         if (files.length === 0) return;
         const current = foodPhotosRef.current;
@@ -1086,31 +791,6 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         e.stopPropagation();
     }, []);
 
-    const handleVerificationDragEnter = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsVerificationDragging(true);
-    }, []);
-
-    const handleVerificationDragLeave = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsVerificationDragging(false);
-    }, []);
-
-    const handleVerificationDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsVerificationDragging(false);
-
-        const files = Array.from(e.dataTransfer.files);
-        const imageFiles = files.filter(isSupportedReceiptImage);
-
-        if (imageFiles.length > 0) {
-            void handleVerificationPhotoSelected(imageFiles[0]);
-        }
-    };
-
     const handleFoodPhotosDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1135,10 +815,6 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
     }, [appendFoodPhotos]);
 
     // 파일 선택기 열기 함수들 (useCallback으로 메모이제이션)
-    const openVerificationFileDialog = useCallback(() => {
-        verificationFileInputRef.current?.click();
-    }, []);
-
     const openFoodPhotosFileDialog = useCallback(() => {
         foodPhotosFileInputRef.current?.click();
     }, []);
@@ -1234,14 +910,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         if (field) {
             markAiFilledField(field);
         }
-        setOcrProgress(prev => {
-            if (!prev) return prev;
-            return {
-                ...prev,
-                fields: prev.fields.includes(label) ? prev.fields : [...prev.fields, label],
-            };
-        });
-    }, [markAiFilledField]);
+        noteOcrFieldApplied(label);
+    }, [markAiFilledField, noteOcrFieldApplied]);
 
     const applyOcrFieldPatch = useCallback((data: Partial<OCRResult>) => {
         const manuallyEdited = manuallyEditedOcrFieldsRef.current;
@@ -1270,403 +940,114 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         }
     }, [markOcrFieldApplied, restaurant]);
 
-    const handleOcrStreamEvent = useCallback((event: string, payload: OcrStreamPayload) => {
-        if (event === 'progress' && payload.message) {
-            setOcrProgress(prev => ({
-                message: payload.message ?? prev?.message ?? 'AI가 영수증을 분석하고 있어요.',
-                stage: payload.stage ?? prev?.stage ?? 'prepare',
-                model: payload.model ?? prev?.model,
-                fields: prev?.fields ?? [],
-                fallbackUsed: prev?.fallbackUsed,
-            }));
-            return;
-        }
-
-        if (event === 'model_attempt' && payload.attempt?.model) {
-            setOcrProgress(prev => ({
-                message: payload.attempt?.ok === false
-                    ? '더 정확한 모델로 다시 확인하고 있어요.'
-                    : 'AI 분석 결과를 정리하고 있어요.',
-                stage: payload.attempt?.ok === false ? 'model_retry' : 'model_start',
-                model: payload.attempt?.model,
-                fields: prev?.fields ?? [],
-                fallbackUsed: prev?.fallbackUsed,
-            }));
-            return;
-        }
-
-        if (event === 'field_patch' && payload.data) {
-            applyOcrFieldPatch(payload.data);
-            if (payload.final) {
-                revealOcrAutoFillSequence(payload.data);
-            } else {
-                const target = getOcrFocusTargetForPatch(payload.data);
-                if (target && target !== "review") {
-                    focusOcrTarget(target);
-                }
-            }
-            setOcrProgress(prev => ({
-                message: payload.final ? '자동 입력 결과를 최종 확인하고 있어요.' : '인식한 정보를 바로 입력하고 있어요.',
-                stage: payload.final ? 'finalize' : 'patching',
-                model: payload.model ?? prev?.model,
-                fields: prev?.fields ?? [],
-                fallbackUsed: prev?.fallbackUsed,
-            }));
-        }
-    }, [applyOcrFieldPatch, focusOcrTarget, getOcrFocusTargetForPatch, revealOcrAutoFillSequence]);
-
-    const parseOcrStreamFrame = useCallback((frame: string): { event: string; payload: OcrStreamPayload } | null => {
-        let event = 'message';
-        const dataLines: string[] = [];
-
-        for (const line of frame.split(/\r?\n/)) {
-            if (line.startsWith('event:')) {
-                event = line.slice('event:'.length).trim();
-            } else if (line.startsWith('data:')) {
-                dataLines.push(line.slice('data:'.length).trim());
-            }
-        }
-
-        if (dataLines.length === 0) return null;
-        try {
-            return { event, payload: JSON.parse(dataLines.join('\n')) as OcrStreamPayload };
-        } catch {
-            return null;
-        }
-    }, []);
-
-    const isAbortError = useCallback((error: unknown) => {
-        return (error instanceof DOMException && error.name === 'AbortError')
-            || (error instanceof Error && error.name === 'AbortError');
-    }, []);
-
-    const isTerminalOcrStreamError = useCallback((error: unknown) => (
-        error instanceof OcrStreamHttpError
-        && ([400, 401, 403, 413, 415, 422, 429].includes(error.status)
-            || ['FEATURE_DATABASE_HELD', 'OCR_RESULT_PROCESSING', 'OCR_RESULT_INDETERMINATE'].includes(error.code ?? ''))
-    ), []);
-
-    const isPendingOcrStreamError = useCallback((error: unknown) => (
-        error instanceof OcrStreamHttpError
-        && ['OCR_RESULT_PROCESSING', 'OCR_RESULT_INDETERMINATE'].includes(error.code ?? '')
-    ), []);
-
-    const analyzeReceiptWithStream = useCallback(async (file: File, token: string, signal: AbortSignal, forceRefresh: boolean): Promise<OCRResult> => {
-        const formData = new FormData();
-        formData.append('image', file);
-        const context: OcrRestaurantContextSource | null | undefined = selectedRestaurant || restaurant;
-        const recoveryContext = context ? { ...context, categories: context.categories?.slice() } : null;
-        ocrRecoveryContextRef.current = { file, restaurant: recoveryContext };
-        appendSelectedRestaurantOcrContext(formData, recoveryContext);
-        if (forceRefresh) {
-            formData.append('force', '1');
-        }
-
-        signal.throwIfAborted();
-        const response = await fetch('/api/ocr/extract/stream', {
-            method: 'POST',
-            body: formData,
-            signal,
-            headers: { 'Authorization': `Bearer ${token}` },
-            credentials: 'include',
-        });
-
-        signal.throwIfAborted();
-        if (!response.ok || !response.body) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new OcrStreamHttpError(errorData.error || 'OCR 스트리밍 분석 실패', response.status, errorData.code);
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let finalData: OCRResult | null = null;
-
-        while (true) {
-            const { done, value } = await reader.read();
-            signal.throwIfAborted();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const frames = buffer.split(/\r?\n\r?\n/);
-            buffer = frames.pop() ?? '';
-
-            for (const frame of frames) {
-                const parsed = parseOcrStreamFrame(frame);
-                if (!parsed) continue;
-                if (parsed.event === 'error') {
-                    const streamErrorMessage = parsed.payload.detail || parsed.payload.message || 'OCR 스트리밍 분석 실패';
-                    if (parsed.payload.terminal) {
-                        throw new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422, parsed.payload.code);
-                    }
-                    throw new Error(streamErrorMessage);
-                }
-                handleOcrStreamEvent(parsed.event, parsed.payload);
-                if (parsed.event === 'done' && parsed.payload.data) {
-                    finalData = parsed.payload.data as OCRResult;
-                }
-            }
-        }
-
-        signal.throwIfAborted();
-        const parsed = parseOcrStreamFrame(buffer + decoder.decode());
-        if (parsed) {
-            if (parsed.event === 'error') {
-                const streamErrorMessage = parsed.payload.detail || parsed.payload.message || 'OCR 스트리밍 분석 실패';
-                if (parsed.payload.terminal) {
-                    throw new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422, parsed.payload.code);
-                }
-                throw new Error(streamErrorMessage);
-            }
-            handleOcrStreamEvent(parsed.event, parsed.payload);
-            if (parsed.event === 'done' && parsed.payload.data) {
-                finalData = parsed.payload.data as OCRResult;
-            }
-        }
-
-        if (!finalData) throw new Error('OCR 스트리밍 결과가 비어 있습니다.');
-        return finalData;
-    }, [handleOcrStreamEvent, parseOcrStreamFrame, restaurant, selectedRestaurant]);
-
-    const readReceiptOcrStatus = useCallback(async (file: File, token: string, signal: AbortSignal): Promise<OCRResult> => {
-        const formData = new FormData();
-        formData.append('image', file);
-        const recovery = ocrRecoveryContextRef.current;
-        appendSelectedRestaurantOcrContext(formData,
-            recovery?.file === file ? recovery.restaurant : selectedRestaurant || restaurant);
-        const response = await fetch('/api/ocr/results/status', {
-            method: 'POST',
-            body: formData,
-            signal,
-            headers: { 'Authorization': `Bearer ${token}` },
-            credentials: 'include',
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status !== 200) {
-            throw new OcrStreamHttpError(payload.error || 'OCR 결과 확인 실패', response.status, payload.code);
-        }
-        return payload as OCRResult;
-    }, [restaurant, selectedRestaurant]);
-
-    // OCR 분석 실행 (모달 내부에서 처리)
-    async function analyzeReceipt(
-        file: File,
-        expectedSelectionGeneration?: number,
-        statusOnly = false,
-    ) {
-        if (expectedSelectionGeneration !== undefined
-            && !verificationSelectionRef.current.isCurrent(expectedSelectionGeneration)) return;
-        if (featureHeld) {
-            setOcrFallbackNotice({ type: 'error', message: FEATURE_DATABASE_HELD_MESSAGE });
-            return;
-        }
-        // OCR 결과 캐시는 provider/model/prompt/preprocess-aware server cache만 사용한다.
-        // file metadata 기반 sessionStorage cache는 provider 전환 실험을 오염시킬 수 있어 사용하지 않는다.
-        setIsAnalyzing(true);
-        setOcrProgress({ message: statusOnly ? '저장된 분석 결과를 확인하고 있어요.' : '영수증 사진을 준비하고 있어요.', stage: 'prepare', fields: [] });
-        setOcrFallbackNotice(null);
-        if (!statusOnly) {
-            setAiFilledFields(new Set());
-            lastOcrRevealSignatureRef.current = null;
-            lastManualOcrInteractionAtRef.current = 0;
-            userStepOverrideDuringOcrRef.current = false;
-            manuallyEditedOcrFieldsRef.current = new Set();
-        }
-        ocrAbortControllerRef.current?.abort();
-        const ocrRunGeneration = ocrRunGenerationRef.current + 1;
-        ocrRunGenerationRef.current = ocrRunGeneration;
-        reviseLatestSaveInputs({ isAnalyzing: true, ocrRunGeneration });
-        const abortController = new AbortController();
-        ocrAbortControllerRef.current = abortController;
-        const shouldForceOcrRefresh = canForceOcrRefresh && forceOcrRefresh;
-        const isCurrentOcrRun = () => !abortController.signal.aborted
-            && ocrRunGenerationRef.current === ocrRunGeneration;
-        try {
-            let data: OCRResult;
-
-            if (!user) {
-                throw new Error('로그인이 필요한 서비스입니다');
-            }
-
-            // [보안] 3. 토큰 직접 조회 (쿠키 전송 실패 대비)
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-            if (!isCurrentOcrRun()) return;
-
-            if (!token) {
-                throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
-            }
-
-            try {
-                data = statusOnly
-                    ? await readReceiptOcrStatus(file, token, abortController.signal)
-                    : await analyzeReceiptWithStream(file, token, abortController.signal, shouldForceOcrRefresh);
-            } catch (streamError) {
-                if (!isCurrentOcrRun() || isAbortError(streamError)) return;
-                if (statusOnly) throw streamError;
-                if (isTerminalOcrStreamError(streamError) && !isPendingOcrStreamError(streamError)) {
-                    if (streamError instanceof OcrStreamHttpError && streamError.status === 429) {
-                        mutateQuota();
-                    }
-                    throw streamError;
-                }
-                setOcrFallbackNotice({
-                    type: 'pending',
-                    message: '분석 연결이 끊겨 저장된 결과를 확인하고 있어요.',
-                    detail: '같은 사진을 AI에 다시 보내지 않습니다.',
-                });
-                data = await reconcileInterruptedOcrReadback({
-                    signal: abortController.signal,
-                    readStatus: () => readReceiptOcrStatus(file, token, abortController.signal),
-                    isProcessingError: error => error instanceof OcrStreamHttpError
-                        && error.code === 'OCR_RESULT_PROCESSING',
-                });
-            }
-
-            if (!isCurrentOcrRun()) return;
-            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-            if (!data.ocr_result_ref || !uuidPattern.test(data.ocr_result_ref)
-                || !data.ocr_result_revision || !uuidPattern.test(data.ocr_result_revision)) {
-                throw new Error('OCR 검증 결과를 확인할 수 없습니다.');
-            }
-            setOcrResultRef(data.ocr_result_ref);
-            setOcrResultRevision(data.ocr_result_revision);
-            reviseLatestSaveInputs({
-                ocrResultRef: data.ocr_result_ref,
-                ocrResultRevision: data.ocr_result_revision,
-            });
-
-            // 4. provider/model/prompt/preprocess-aware server cache에만 저장한다.
-            // 클라이언트 sessionStorage cache는 Track 1 정확도 실험 동안 사용하지 않는다.
-
-            const autoFilledParts: string[] = [];
-            // 캐시/일반 fallback 응답도 SSE 최종 응답과 동일하게 폼에 반영하고,
-            // 모바일에서는 방문 정보(2단계) -> 리뷰(3단계) 순서로 실제 입력 위치를 보여준다.
-            applyOcrFieldPatch(data);
+    function applyReceiptOcrFields(data: Partial<OCRResult>, isLastPatch: boolean) {
+        applyOcrFieldPatch(data);
+        if (isLastPatch) {
             revealOcrAutoFillSequence(data);
+        } else {
+            const target = getOcrFocusTargetForPatch(data);
+            if (target && target !== "review") {
+                focusOcrTarget(target);
+            }
+        }
+    }
 
-            // 1. 맛집 자동 검색 및 설정
-            // 수정: 이미 선택된 맛집이 있어도(selectedRestaurant) OCR 결과가 있으면 교체 시도 (단, props로 고정된 restaurant가 없어야 함)
-            const manuallyEdited = manuallyEditedOcrFieldsRef.current;
+    async function applyReceiptOcrResult(data: OCRResult, isCurrentOcrRun: () => boolean) {
+        const autoFilledParts: string[] = [];
+        // 캐시/일반 fallback 응답도 SSE 최종 응답과 동일하게 폼에 반영하고,
+        // 모바일에서는 방문 정보(2단계) -> 리뷰(3단계) 순서로 실제 입력 위치를 보여준다.
+        applyOcrFieldPatch(data);
+        revealOcrAutoFillSequence(data);
 
-            const canApplyOcrRestaurant = canReplaceSelectedRestaurantFromOcr({
-                hasSelectedRestaurant: Boolean(selectedRestaurant),
-                manuallyEditedRestaurant: manuallyEdited.has("restaurant"),
-                fieldTrust: data.field_trust,
-            });
+        // 1. 맛집 자동 검색 및 설정
+        // 수정: 이미 선택된 맛집이 있어도(selectedRestaurant) OCR 결과가 있으면 교체 시도 (단, props로 고정된 restaurant가 없어야 함)
+        const manuallyEdited = manuallyEditedOcrFieldsRef.current;
 
-            if (data.store_name && !restaurant && canApplyOcrRestaurant) {
-                const matchedRestaurant = await findRestaurantFromReceiptName(data.store_name);
-                if (!isCurrentOcrRun()) return;
+        const canApplyOcrRestaurant = canReplaceSelectedRestaurantFromOcr({
+            hasSelectedRestaurant: Boolean(selectedRestaurant),
+            manuallyEditedRestaurant: manuallyEdited.has("restaurant"),
+            fieldTrust: data.field_trust,
+        });
 
-                if (matchedRestaurant) {
-                    setSelectedRestaurant(matchedRestaurant);
-                    setSearchQuery(matchedRestaurant.name);
-                    autoFilledParts.push("맛집");
+        if (data.store_name && !restaurant && canApplyOcrRestaurant) {
+            const matchedRestaurant = await findRestaurantFromReceiptName(data.store_name);
+            if (!isCurrentOcrRun()) return;
 
-                    // 만약 기존에 선택된 맛집과 다르다면 알림
-                    if (selectedRestaurant && selectedRestaurant.id !== matchedRestaurant.id) {
-                        toast({
-                            title: "맛집 정보 업데이트",
-                            description: `영수증 정보에 맞춰 맛집이 '${matchedRestaurant.name}'(으)로 변경되었습니다.`,
-                        });
-                    }
-                } else {
-                    // 정확한 일치가 없으면 검색어로 설정하여 목록 노출 유도
-                    setSearchQuery(data.store_name);
-                    setSelectedRestaurant(null); // 기존 선택 해제하여 검색 유도
+            if (matchedRestaurant) {
+                setSelectedRestaurant(matchedRestaurant);
+                setSearchQuery(matchedRestaurant.name);
+                autoFilledParts.push("맛집");
 
-                    // 검색 결과가 나오도록 잠시 대기 후 토스트 메시지 (useEffect에 의해 검색 실행됨)
+                // 만약 기존에 선택된 맛집과 다르다면 알림
+                if (selectedRestaurant && selectedRestaurant.id !== matchedRestaurant.id) {
                     toast({
-                        title: "맛집을 선택해주세요",
-                        description: `'${data.store_name}' 검색 결과를 확인하고 선택해주세요.`,
+                        title: "맛집 정보 업데이트",
+                        description: `영수증 정보에 맞춰 맛집이 '${matchedRestaurant.name}'(으)로 변경되었습니다.`,
                     });
                 }
-            } else if (data.store_name && restaurant && !manuallyEdited.has("restaurant")) {
-                // 이미 선택된 경우 검증만 수행
-                const currentName = selectedRestaurant?.name || restaurant?.name || "";
-                if (!currentName.includes(data.store_name) && !data.store_name.includes(currentName)) {
-                    toast({
-                        title: "정보 불일치 주의",
-                        description: `선택된 맛집(${currentName})과 영수증(${data.store_name})이 달라 보입니다.`,
-                        variant: "destructive"
-                    });
-                }
-            }
-
-            // 2. 날짜 및 시간
-            if (data.date && !manuallyEdited.has("date")) {
-                autoFilledParts.push("방문일");
-            }
-            if (data.time && !manuallyEdited.has("time")) {
-                autoFilledParts.push("시간");
-            }
-
-            // 3. 카테고리
-            if (data.category && !manuallyEdited.has("category")) {
-                // 카테고리 유효성 검사
-                const validCategory = CATEGORIES.find(c => c === data.category);
-                if (validCategory) {
-                    autoFilledParts.push("카테고리");
-                }
-            }
-
-            // 4. 리뷰 내용 (자동 생성된 초안 사용)
-            if (data.review_draft && !manuallyEdited.has("review")) {
-                autoFilledParts.push("리뷰 내용");
-            } else if (data.items && data.items.length > 0 && !manuallyEdited.has("review")) {
-                // 초안이 없으면 기존 방식대로 메뉴 목록 추가
-                const menuText = data.items.map(item => `- ${item.name}: ${item.price?.toLocaleString() || 0}원`).join('\\n');
-                const totalText = data.total_amount ? `\\n총 결제금액: ${data.total_amount.toLocaleString()}원` : '';
-                const newContent = content ? `${content}\\n\\n[영수증 메뉴]\\n${menuText}${totalText}` : `[영수증 메뉴]\\n${menuText}${totalText}`;
-                setContent(newContent);
-                markAiFilledField("review");
-            }
-
-            // 결과 리포트
-            if (autoFilledParts.length > 0) {
-                toast({
-                    title: "영수증 자동 입력 완료",
-                    description: `${autoFilledParts.join(', ')} 정보가 자동으로 입력되었습니다.`,
-                });
             } else {
+                // 정확한 일치가 없으면 검색어로 설정하여 목록 노출 유도
+                setSearchQuery(data.store_name);
+                setSelectedRestaurant(null); // 기존 선택 해제하여 검색 유도
+
+                // 검색 결과가 나오도록 잠시 대기 후 토스트 메시지 (useEffect에 의해 검색 실행됨)
                 toast({
-                    title: "스마트 스캔 완료",
-                    description: "영수증을 분석했으나 자동 입력할 정보를 찾지 못했습니다.",
+                    title: "맛집을 선택해주세요",
+                    description: `'${data.store_name}' 검색 결과를 확인하고 선택해주세요.`,
                 });
             }
-
-            // 분석 성공 시 쿼터 갱신 (실시간 반영)
-            mutateQuota();
-
-        } catch (error) {
-            if (!isCurrentOcrRun() || isAbortError(error)) return;
-            if (isPendingOcrStreamError(error)) {
-                setOcrFallbackNotice({
-                    type: 'pending',
-                    message: '분석 결과를 확인하고 있어요.',
-                    detail: '같은 사진을 다시 보내지 않았습니다. 직접 입력을 계속할 수 있어요.',
+        } else if (data.store_name && restaurant && !manuallyEdited.has("restaurant")) {
+            // 이미 선택된 경우 검증만 수행
+            const currentName = selectedRestaurant?.name || restaurant?.name || "";
+            if (!currentName.includes(data.store_name) && !data.store_name.includes(currentName)) {
+                toast({
+                    title: "정보 불일치 주의",
+                    description: `선택된 맛집(${currentName})과 영수증(${data.store_name})이 달라 보입니다.`,
+                    variant: "destructive"
                 });
-                return;
             }
-            setOcrFallbackNotice({
-                type: 'error',
-                message: 'AI 분석에 실패했어요. 사진은 유지되니 직접 입력하거나 다시 시도할 수 있어요.',
-                detail: error instanceof Error ? error.message : undefined,
-            });
+        }
+
+        // 2. 날짜 및 시간
+        if (data.date && !manuallyEdited.has("date")) {
+            autoFilledParts.push("방문일");
+        }
+        if (data.time && !manuallyEdited.has("time")) {
+            autoFilledParts.push("시간");
+        }
+
+        // 3. 카테고리
+        if (data.category && !manuallyEdited.has("category")) {
+            // 카테고리 유효성 검사
+            const validCategory = CATEGORIES.find(c => c === data.category);
+            if (validCategory) {
+                autoFilledParts.push("카테고리");
+            }
+        }
+
+        // 4. 리뷰 내용 (자동 생성된 초안 사용)
+        if (data.review_draft && !manuallyEdited.has("review")) {
+            autoFilledParts.push("리뷰 내용");
+        } else if (data.items && data.items.length > 0 && !manuallyEdited.has("review")) {
+            // 초안이 없으면 기존 방식대로 메뉴 목록 추가
+            const menuText = data.items.map(item => `- ${item.name}: ${item.price?.toLocaleString() || 0}원`).join('\\n');
+            const totalText = data.total_amount ? `\\n총 결제금액: ${data.total_amount.toLocaleString()}원` : '';
+            const newContent = content ? `${content}\\n\\n[영수증 메뉴]\\n${menuText}${totalText}` : `[영수증 메뉴]\\n${menuText}${totalText}`;
+            setContent(newContent);
+            markAiFilledField("review");
+        }
+
+        // 결과 리포트
+        if (autoFilledParts.length > 0) {
             toast({
-                title: "스마트 스캔 실패",
-                description: "영수증을 분석하지 못했습니다. 직접 입력해주세요.",
-                variant: "destructive"
+                title: "영수증 자동 입력 완료",
+                description: `${autoFilledParts.join(', ')} 정보가 자동으로 입력되었습니다.`,
             });
-        } finally {
-            if (ocrAbortControllerRef.current === abortController) {
-                ocrAbortControllerRef.current = null;
-            }
-            if (ocrRunGenerationRef.current === ocrRunGeneration) {
-                reviseLatestSaveInputs({ isAnalyzing: false, ocrRunGeneration });
-                setIsAnalyzing(false);
-                setOcrProgress(null);
-            }
+        } else {
+            toast({
+                title: "스마트 스캔 완료",
+                description: "영수증을 분석했으나 자동 입력할 정보를 찾지 못했습니다.",
+            });
         }
     }
     // Use the scoped pre-write snapshot; a newer composer may already have saved
@@ -1940,7 +1321,7 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         const stillCurrent = () => composerOpenRef.current && saveOwnerRef.current === ownerAtStart
             && draftScopeRef.current === scopeAtStart;
         closeRequestedRef.current = true;
-        verificationSelectionRef.current.invalidate();
+        cancelPendingReceiptSelection();
         const cancellation = await saveOperationRef.current!.cancel();
         if (!stillCurrent()) return;
         if (cancellation.status === 'blocked') {
@@ -1992,24 +1373,18 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             }
         }
         setSaveRecovery(null);
-        ocrAbortControllerRef.current?.abort();
-        ocrAbortControllerRef.current = null;
         setVisitedDate("");
         setVisitedTime("");
         setCategories([]);
         setContent("");
-        replaceVerificationPhoto(null);
+        resetReceiptStep();
         foodPhotosRef.current = [];
         setFoodPhotos([]);
-        setReceiptVerificationInputMode("ai");
-        setForceOcrRefresh(false);
         setOcrFocusTarget(null);
-        setOcrProgress(null);
-        setOcrFallbackNotice(null);
         setAiFilledFields(new Set());
         setCurrentStep(1);
         onClose();
-    }, [onClose, replaceVerificationPhoto, clearDraft, notifySavedReview, setReceiptVerificationInputMode, currentStep]);
+    }, [onClose, cancelPendingReceiptSelection, resetReceiptStep, clearDraft, notifySavedReview, currentStep]);
 
     const handleDesktopReviewDialogKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
         if (event.key !== 'Escape' || event.defaultPrevented || !event.currentTarget.contains(event.target as Node)) return;
@@ -2229,41 +1604,9 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
         if (isOpen && !isSubmitting) void autoSave();
     }, [isOpen, isSubmitting, autoSave]);
 
-    // SWR을 사용한 쿼터 조회 (자동 캐싱 및 중복 요청 제거)
-    const { data: quota, mutate: mutateQuota } = useSWR(
-        isOpen && user ? '/api/ocr/quota' : null,
-        async (url) => {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('Quota fetch failed');
-            return res.json() as Promise<OcrQuotaPayload>;
-        },
-        {
-            revalidateOnFocus: false, // 포커스 시 재조회 방지 (너무 잦은 조회 방지)
-            dedupingInterval: 60000,  // 1분 내 중복 요청 방지
-        }
-    );
-    const { data: featureReadiness, mutate: mutateFeatureReadiness, isValidating: isCheckingFeatureReadiness } = useSWR(
-        isOpen && user ? '/api/runtime-compatibility/features' : null,
-        () => fetchFeatureDatabaseReadiness(),
-        { revalidateOnFocus: false, dedupingInterval: 60_000, shouldRetryOnError: false },
-    );
-
-    const ocrLimitReached = quota?.unlimited ? false : quota?.remaining === 0;
-    const featureHeld = featureReadiness?.status !== 'ready';
-    const canForceOcrRefresh = process.env.NODE_ENV !== "production" || quota?.unlimited === true;
     const handleUseReceiptPhotoOnly = () => {
         setReceiptVerificationInputMode("manual");
         setCurrentStep(2);
-    };
-
-    const handleRetryReceiptOcr = () => {
-        if (featureHeld || ocrFallbackNotice?.type === 'pending' || !verificationPhoto || isAnalyzing || ocrLimitReached) return;
-        void analyzeReceipt(verificationPhoto);
-    };
-
-    const handleCheckReceiptOcr = () => {
-        if (featureHeld || !verificationPhoto || isAnalyzing) return;
-        void analyzeReceipt(verificationPhoto, undefined, true);
     };
 
     const renderFeatureHoldNotice = () => featureHeld ? (
@@ -2276,110 +1619,6 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
             </Button>
         </div>
     ) : null;
-
-    const renderOcrFallbackNotice = () => {
-        if (!ocrFallbackNotice) return null;
-
-        const isTerminalError = ocrFallbackNotice.type === 'error';
-
-        return (
-            <div className={`rounded-lg border px-3 py-2 text-xs ${isTerminalError ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-border bg-secondary text-foreground'}`} role="status" aria-live="polite">
-                <p className="font-semibold">{ocrFallbackNotice.message}</p>
-                {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
-                {ocrFallbackNotice.type === 'pending' ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="min-h-11 bg-background px-3 text-sm"
-                            disabled={!verificationPhoto || isAnalyzing}
-                            onClick={handleCheckReceiptOcr}
-                        >
-                            결과 확인
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="min-h-11 bg-background px-3 text-sm"
-                            onClick={handleUseReceiptPhotoOnly}
-                        >
-                            직접 입력
-                        </Button>
-                    </div>
-                ) : isTerminalError ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="min-h-11 border-destructive/30 bg-background px-3 text-sm text-destructive hover:bg-destructive/10"
-                            onClick={handleUseReceiptPhotoOnly}
-                        >
-                            사진만 첨부하고 직접 입력
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="min-h-11 border-destructive/30 bg-background px-3 text-sm text-destructive hover:bg-destructive/10"
-                            disabled={!verificationPhoto || isAnalyzing || ocrLimitReached}
-                            onClick={handleRetryReceiptOcr}
-                        >
-                            다시 분석
-                        </Button>
-                    </div>
-                ) : null}
-            </div>
-        );
-    };
-
-    const renderOcrQuotaBadge = useCallback(() => {
-        if (!quota) return null;
-
-        return (
-            <Badge
-                variant="outline"
-                className={`text-xs font-normal border-primary/20 ${quota.unlimited
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : quota.remaining === 0
-                        ? 'bg-amber-50 text-amber-600'
-                        : 'bg-primary/5 text-primary'}`}
-            >
-                AI 분석 남은 횟수: {quota.unlimited ? '무제한' : `${quota.remaining}/${quota.max}회`}
-            </Badge>
-        );
-    }, [quota]);
-
-    const renderForceOcrRefreshToggle = useCallback(() => {
-        if (!canForceOcrRefresh) return null;
-
-        return (
-            <button
-                type="button"
-                className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${forceOcrRefresh
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'}`}
-                onClick={() => setForceOcrRefresh(value => !value)}
-                aria-pressed={forceOcrRefresh}
-            >
-                <span className={`h-2 w-2 rounded-full ${forceOcrRefresh ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
-                {forceOcrRefresh ? '이번 분석은 캐시 없이 재호출' : 'OCR 다시 분석'}
-            </button>
-        );
-    }, [canForceOcrRefresh, forceOcrRefresh]);
-
-    useEffect(() => {
-        if (!ocrLimitReached) return;
-        if (verificationInputMode !== "ai") return;
-        setReceiptVerificationInputMode("manual");
-    }, [ocrLimitReached, setReceiptVerificationInputMode, verificationInputMode]);
-
-    useEffect(() => {
-        if (canForceOcrRefresh) return;
-        setForceOcrRefresh(false);
-    }, [canForceOcrRefresh]);
 
     // 초기 로딩 및 모달 열릴 때 임시 저장 불러오기
     useEffect(() => {
@@ -2583,202 +1822,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                 <div className={`flex-1 overflow-y-auto px-6 py-4 ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                     <div className="space-y-6">
 
-                        {/* 중요 공지 - 컴팩트 버전 */}
-                        <Card className="border-border bg-muted/40 p-4">
-                            <div className="space-y-2 text-sm text-foreground">
-                                <p className="font-semibold flex items-center gap-1">
-                                    영수증 사진 안내
-                                </p>
-                                <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
-                                    <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
-                                    <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
-                                    <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
-                                </ul>
-                            </div>
-                        </Card>
+                        <ReceiptPhotoGuide />
 
-                        {/* 인증 사진 (최상단 배치) */}
                         <div className="space-y-2">
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between gap-2 flex-wrap">
-                                    <Label className="flex items-center gap-2">
-                                        인증 사진 <span className="text-red-500">*</span>
-                                    </Label>
-                                    <div className="flex items-center gap-2 flex-wrap justify-end">
-                                        <Button
-                                            type="button"
-                                            variant={verificationInputMode === "ai" ? "default" : "outline"}
-                                            aria-pressed={verificationInputMode === "ai"}
-                                            size="sm"
-                                            className="min-h-11 px-3 text-sm"
-                                            disabled={featureHeld || ocrLimitReached}
-                                            onClick={() => setReceiptVerificationInputMode("ai")}
-                                        >
-                                            AI 자동 입력
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant={verificationInputMode === "manual" ? "default" : "outline"}
-                                            aria-pressed={verificationInputMode === "manual"}
-                                            size="sm"
-                                            className="min-h-11 px-3 text-sm"
-                                            disabled={featureHeld}
-                                            onClick={() => setReceiptVerificationInputMode("manual")}
-                                        >
-                                            사진만 첨부
-                                        </Button>
-                                        {renderOcrQuotaBadge()}
-                                    </div>
-                                </div>
-                                {verificationInputMode === "manual" && (
-                                    <p className="text-xs text-muted-foreground">
-                                        AI 분석 없이 사진만 첨부합니다. 방문 맛집/일시/카테고리/리뷰 내용을 직접 입력해주세요.
-                                    </p>
-                                )}
-                                {ocrLimitReached && (
-                                    <p className="text-xs text-amber-600">
-                                        AI 분석 한도를 모두 사용했습니다. 사진 첨부 후 필요한 정보를 직접 입력해주세요.
-                                    </p>
-                                )}
-                                {renderForceOcrRefreshToggle()}
-                                {renderFeatureHoldNotice()}
-                                {renderOcrFallbackNotice()}
-                            </div>
-                            <Card
-                                ref={verificationDropRef}
-                                className={`relative p-6 border-dashed transition-colors ${isVerificationDragging
-                                    ? 'border-primary bg-primary/5 cursor-pointer'
-                                    : verificationPhoto
-                                        ? 'border-green-300 bg-green-50/50 cursor-pointer'
-                                        : 'border-border hover:border-primary/50 cursor-pointer'
-                                    }`}
-                                onDragOver={handleDragOver}
-                                onDragEnter={handleVerificationDragEnter}
-                                onDragLeave={handleVerificationDragLeave}
-                                onDrop={featureHeld ? undefined : handleVerificationDrop}
-                                aria-disabled={featureHeld}
-                                onClick={featureHeld ? undefined : openVerificationFileDialog}
-                            >
-                                <div className="flex flex-col items-center gap-4">
-                                    {verificationPhoto ? (
-                                        <div className="w-full space-y-3">
-                                            <div className="flex items-center justify-center relative">
-                                                <div className="relative">
-                                                    <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
-                                                        <ObjectUrlPreviewImage
-                                                            src={verificationPhotoUrl}
-                                                            alt="인증 사진 미리보기"
-                                                            className="h-full w-full object-contain"
-                                                        />
-                                                    </div>
-                                                    <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
-                                                        <CheckCircle2 className="h-4 w-4" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-center">
-                                                <Badge variant="default" className="gap-1 mb-2 bg-green-500">
-                                                    <CheckCircle2 className="h-3 w-3" />
-                                                    영수증 사진 첨부됨
-                                                </Badge>
-                                                <p className="text-sm font-medium">{verificationPhoto.name}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {(verificationPhoto.size / 1024 / 1024).toFixed(1)}MB
-                                                </p>
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full gap-2"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    replaceVerificationPhoto(null);
-                                                }}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                                사진 제거
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full text-center space-y-3">
-                                            <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
-                                                }`}>
-                                                <ImageIcon className={`h-8 w-8 transition-colors ${isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
-                                                    }`} />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium mb-1">
-                                                    {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
-                                                </p>
-                                                <p className="text-sm text-muted-foreground mb-3">
-                                                    {verificationInputMode === "ai" ? (
-                                                        <span className="text-primary font-medium">영수증의 가게명과 방문 정보를 읽어 입력합니다. 입력된 내용은 직접 확인해주세요.</span>
-                                                    ) : (
-                                                        <span className="font-medium">AI 분석 없이 인증 사진만 첨부됩니다. 필요한 정보는 아래에서 직접 입력해주세요.</span>
-                                                    )}
-                                                </p>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="min-h-11 gap-2"
-                                                    disabled={featureHeld}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openVerificationFileDialog();
-                                                    }}
-                                                >
-                                                    <Plus className="h-4 w-4" />
-                                                    사진 선택
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <input ref={verificationFileInputRef} type="file" disabled={featureHeld} accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
-
-                                {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
-                                {isAnalyzing && (
-                                    <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
-                                        <div className="relative mb-4">
-                                            <div className="rounded-full border border-border bg-background p-3">
-                                                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                                            </div>
-                                        </div>
-                                        <h3 className="mb-2 text-lg font-semibold text-foreground">영수증을 읽고 있습니다</h3>
-                                        <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
-                                            {ocrProgress?.message || '가게명과 방문 정보를 확인하고 있습니다'}
-                                        </p>
-                                        {ocrProgress?.fields.length ? (
-                                            <div className="mb-3 flex flex-wrap justify-center gap-1.5">
-                                                {ocrProgress.fields.map((field) => (
-                                                    <Badge key={field} variant="secondary" className="bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-200">
-                                                        ✓ {field}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        ) : null}
-                                        {ocrProgress ? (
-                                            <div className="mb-3 grid w-full max-w-xs grid-cols-5 gap-1" aria-label="AI 분석 진행 단계">
-                                                {OCR_PROGRESS_STEPS.map((step) => {
-                                                    const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
-                                                    return (
-                                                        <div key={step.stage} className={`rounded-full px-2 py-1 text-xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                                                            {step.label}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ) : null}
-                                        {ocrProgress?.fallbackUsed ? (
-                                            <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-xs text-foreground">분석을 계속하고 있습니다. 잠시만 기다려주세요.</p>
-                                        ) : null}
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-                                            <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                            <span>분석된 데이터는 AI 학습에 사용되지 않습니다</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </Card>
+                            <ReceiptStep receipt={receipt} featureHeld={featureHeld} featureHoldNotice={renderFeatureHoldNotice()} onUsePhotoOnly={handleUseReceiptPhotoOnly} />
                         </div>
 
                         {/* 하단 폼 영역 (맛집 정보 ~ 리뷰 내용) */}
@@ -3102,200 +2149,8 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
                                 <div className="space-y-4">
                                 {currentStep === 1 && (
                                     <>
-                                        <Card className="border-border bg-muted/40 p-4">
-                                            <div className="space-y-2 text-sm text-foreground">
-                                                <p className="font-semibold flex items-center gap-1">
-                                                    영수증 사진 안내
-                                                </p>
-                                                <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
-                                                    <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
-                                                    <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
-                                                    <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
-                                                </ul>
-                                            </div>
-                                        </Card>
-
-                                        {/* 인증 사진 (최상단 배치) */}
-                                        <div className="space-y-2">
-                                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                                            <Label className="flex items-center gap-2">
-                                                인증 사진 <span className="text-red-500">*</span>
-                                            </Label>
-                                            <div className="flex items-center gap-2 flex-wrap justify-end">
-                                                <Button
-                                                    type="button"
-                                                    variant={verificationInputMode === "ai" ? "default" : "outline"}
-                                            aria-pressed={verificationInputMode === "ai"}
-                                                    size="sm"
-                                                    className="min-h-11 px-3 text-sm"
-                                                    disabled={featureHeld || ocrLimitReached}
-                                                    onClick={() => setReceiptVerificationInputMode("ai")}
-                                                >
-                                                    AI 자동 입력
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant={verificationInputMode === "manual" ? "default" : "outline"}
-                                            aria-pressed={verificationInputMode === "manual"}
-                                                    size="sm"
-                                                    className="min-h-11 px-3 text-sm"
-                                                    disabled={featureHeld}
-                                            onClick={() => setReceiptVerificationInputMode("manual")}
-                                                >
-                                                    사진만 첨부
-                                                </Button>
-                                                {renderOcrQuotaBadge()}
-                                            </div>
-                                        </div>
-                                        {verificationInputMode === "manual" && (
-                                            <p className="text-xs text-muted-foreground">
-                                                AI 분석 없이 사진만 첨부합니다. 방문 맛집/일시/카테고리/리뷰 내용을 직접 입력해주세요.
-                                            </p>
-                                        )}
-                                        {ocrLimitReached && (
-                                            <p className="text-xs text-amber-600">
-                                                AI 분석 한도를 모두 사용했습니다. 사진 첨부 후 필요한 정보를 직접 입력해주세요.
-                                            </p>
-                                        )}
-                                        {renderForceOcrRefreshToggle()}
-                                        {renderFeatureHoldNotice()}
-                                        {renderOcrFallbackNotice()}
-                                    </div>
-                                    <Card
-                                        ref={verificationDropRef}
-                                        className={`relative p-6 border-dashed transition-colors ${isVerificationDragging
-                                            ? 'border-primary bg-primary/5 cursor-pointer'
-                                            : verificationPhoto
-                                                ? 'border-green-300 bg-green-50/50 cursor-pointer'
-                                                : 'border-border hover:border-primary/50 cursor-pointer'
-                                            }`}
-                                        onDragOver={handleDragOver}
-                                        onDragEnter={handleVerificationDragEnter}
-                                        onDragLeave={handleVerificationDragLeave}
-                                        onDrop={featureHeld ? undefined : handleVerificationDrop}
-                                        aria-disabled={featureHeld}
-                                onClick={featureHeld ? undefined : openVerificationFileDialog}
-                                    >
-                                        <div className="flex flex-col items-center gap-4">
-                                            {verificationPhoto ? (
-                                                <div className="w-full space-y-3">
-                                                    <div className="flex items-center justify-center relative">
-                                                        <div className="relative">
-                                                            <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
-                                                                <ObjectUrlPreviewImage
-                                                                    src={verificationPhotoUrl}
-                                                                    alt="인증 사진 미리보기"
-                                                                    className="h-full w-full object-contain"
-                                                                />
-                                                            </div>
-                                                            <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
-                                                                <CheckCircle2 className="h-4 w-4" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <Badge variant="default" className="gap-1 mb-2 bg-green-500">
-                                                            <CheckCircle2 className="h-3 w-3" />
-                                                            영수증 사진 첨부됨
-                                                        </Badge>
-                                                        <p className="text-sm font-medium">{verificationPhoto.name}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {(verificationPhoto.size / 1024 / 1024).toFixed(1)}MB
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full gap-2"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            replaceVerificationPhoto(null);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                        사진 제거
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <div className="w-full text-center space-y-3">
-                                                    <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
-                                                        }`}>
-                                                        <ImageIcon className={`h-8 w-8 transition-colors ${isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
-                                                            }`} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium mb-1">
-                                                            {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground mb-3">
-                                                            {verificationInputMode === "ai" ? (
-                                                                <span className="text-primary font-medium">영수증의 가게명과 방문 정보를 읽어 입력합니다. 입력된 내용은 직접 확인해주세요.</span>
-                                                            ) : (
-                                                                <span className="font-medium">AI 분석 없이 인증 사진만 첨부됩니다. 필요한 정보는 아래에서 직접 입력해주세요.</span>
-                                                            )}
-                                                        </p>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="min-h-11 gap-2"
-                                                            disabled={featureHeld}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openVerificationFileDialog();
-                                                            }}
-                                                        >
-                                                            <Plus className="h-4 w-4" />
-                                                            사진 선택
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <input ref={verificationFileInputRef} type="file" disabled={featureHeld} accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
-
-                                        {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
-                                        {isAnalyzing && (
-                                            <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
-                                                <div className="relative mb-4">
-                                                    <div className="rounded-full border border-border bg-background p-3">
-                                                        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                                                    </div>
-                                                </div>
-                                                <h3 className="mb-2 text-lg font-semibold text-foreground">영수증을 읽고 있습니다</h3>
-                                                <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
-                                                    {ocrProgress?.message || '가게명과 방문 정보를 확인하고 있습니다'}
-                                                </p>
-                                                {ocrProgress?.fields.length ? (
-                                                    <div className="mb-3 flex flex-wrap justify-center gap-1.5">
-                                                        {ocrProgress.fields.map((field) => (
-                                                            <Badge key={field} variant="secondary" className="bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-200">
-                                                                ✓ {field}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
-                                                ) : null}
-                                                {ocrProgress ? (
-                                                    <div className="mb-3 grid w-full max-w-xs grid-cols-5 gap-1" aria-label="AI 분석 진행 단계">
-                                                        {OCR_PROGRESS_STEPS.map((step) => {
-                                                            const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
-                                                            return (
-                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                                                                    {step.label}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                ) : null}
-                                                {ocrProgress?.fallbackUsed ? (
-                                                    <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-xs text-foreground">분석을 계속하고 있습니다. 잠시만 기다려주세요.</p>
-                                                ) : null}
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-                                                    <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                                    <span>분석된 데이터는 AI 학습에 사용되지 않습니다</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </Card>
+                                        <ReceiptPhotoGuide />
+                                        <ReceiptStep receipt={receipt} featureHeld={featureHeld} featureHoldNotice={renderFeatureHoldNotice()} onUsePhotoOnly={handleUseReceiptPhotoOnly} />
                                     </>
                                 )}
 
@@ -3699,202 +2554,10 @@ function ReviewComposer({ isOpen, onClose, restaurant, onSuccess, inline = false
 
                         <div className="space-y-6 mt-2">
                             <div className="space-y-6">
-                                {/* 중요 공지 - 컴팩트 버전 */}
-                                <Card className="border-border bg-muted/40 p-4">
-                                    <div className="space-y-2 text-sm text-foreground">
-                                        <p className="font-semibold flex items-center gap-1">
-                                            영수증 사진 안내
-                                        </p>
-                                        <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
-                                            <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
-                                            <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
-                                            <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
-                                        </ul>
-                                    </div>
-                                </Card>
+                                <ReceiptPhotoGuide />
 
-                                {/* 인증 사진 (최상단 배치) */}
                                 <div className="space-y-2">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                                            <Label className="flex items-center gap-2">
-                                                인증 사진 <span className="text-red-500">*</span>
-                                            </Label>
-                                            <div className="flex items-center gap-2 flex-wrap justify-end">
-                                                <Button
-                                                    type="button"
-                                                    variant={verificationInputMode === "ai" ? "default" : "outline"}
-                                            aria-pressed={verificationInputMode === "ai"}
-                                                    size="sm"
-                                                    className="min-h-11 px-3 text-sm"
-                                                    disabled={featureHeld || ocrLimitReached}
-                                                    onClick={() => setReceiptVerificationInputMode("ai")}
-                                                >
-                                                    AI 자동 입력
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant={verificationInputMode === "manual" ? "default" : "outline"}
-                                            aria-pressed={verificationInputMode === "manual"}
-                                                    size="sm"
-                                                    className="min-h-11 px-3 text-sm"
-                                                    disabled={featureHeld}
-                                            onClick={() => setReceiptVerificationInputMode("manual")}
-                                                >
-                                                    사진만 첨부
-                                                </Button>
-                                                {renderOcrQuotaBadge()}
-                                            </div>
-                                        </div>
-                                        {verificationInputMode === "manual" && (
-                                            <p className="text-xs text-muted-foreground">
-                                                AI 분석 없이 사진만 첨부합니다. 방문 맛집/일시/카테고리/리뷰 내용을 직접 입력해주세요.
-                                            </p>
-                                        )}
-                                        {ocrLimitReached && (
-                                            <p className="text-xs text-amber-600">
-                                                AI 분석 한도를 모두 사용했습니다. 사진 첨부 후 필요한 정보를 직접 입력해주세요.
-                                            </p>
-                                        )}
-                                        {renderForceOcrRefreshToggle()}
-                                        {renderFeatureHoldNotice()}
-                                        {renderOcrFallbackNotice()}
-                                    </div>
-                                    <Card
-                                        ref={verificationDropRef}
-                                        className={`relative p-6 border-dashed transition-colors ${isVerificationDragging
-                                            ? 'border-primary bg-primary/5 cursor-pointer'
-                                            : verificationPhoto
-                                                ? 'border-green-300 bg-green-50/50 cursor-pointer'
-                                                : 'border-border hover:border-primary/50 cursor-pointer'
-                                            }`}
-                                        onDragOver={handleDragOver}
-                                        onDragEnter={handleVerificationDragEnter}
-                                        onDragLeave={handleVerificationDragLeave}
-                                        onDrop={featureHeld ? undefined : handleVerificationDrop}
-                                        aria-disabled={featureHeld}
-                                onClick={featureHeld ? undefined : openVerificationFileDialog}
-                                    >
-                                        <div className="flex flex-col items-center gap-4">
-                                            {verificationPhoto ? (
-                                                <div className="w-full space-y-3">
-                                                    <div className="flex items-center justify-center relative">
-                                                        <div className="relative">
-                                                            <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
-                                                                <ObjectUrlPreviewImage
-                                                                    src={verificationPhotoUrl}
-                                                                    alt="인증 사진 미리보기"
-                                                                    className="h-full w-full object-contain"
-                                                                />
-                                                            </div>
-                                                            <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
-                                                                <CheckCircle2 className="h-4 w-4" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <Badge variant="default" className="gap-1 mb-2 bg-green-500">
-                                                            <CheckCircle2 className="h-3 w-3" />
-                                                            영수증 사진 첨부됨
-                                                        </Badge>
-                                                        <p className="text-sm font-medium">{verificationPhoto.name}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {(verificationPhoto.size / 1024 / 1024).toFixed(1)}MB
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full gap-2"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            replaceVerificationPhoto(null);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                        사진 제거
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <div className="w-full text-center space-y-3">
-                                                    <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
-                                                        }`}>
-                                                        <ImageIcon className={`h-8 w-8 transition-colors ${isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
-                                                            }`} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium mb-1">
-                                                            {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground mb-3">
-                                                            {verificationInputMode === "ai" ? (
-                                                                <span className="text-primary font-medium">영수증의 가게명과 방문 정보를 읽어 입력합니다. 입력된 내용은 직접 확인해주세요.</span>
-                                                            ) : (
-                                                                <span className="font-medium">AI 분석 없이 인증 사진만 첨부됩니다. 필요한 정보는 아래에서 직접 입력해주세요.</span>
-                                                            )}
-                                                        </p>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="min-h-11 gap-2"
-                                                            disabled={featureHeld}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openVerificationFileDialog();
-                                                            }}
-                                                        >
-                                                            <Plus className="h-4 w-4" />
-                                                            사진 선택
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <input ref={verificationFileInputRef} type="file" disabled={featureHeld} accept={RECEIPT_IMAGE_ACCEPT} onChange={handleVerificationPhotoChange} className="hidden" />
-
-                                        {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
-                                        {isAnalyzing && (
-                                            <div className="absolute inset-0 z-50 bg-background/95 flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
-                                                <div className="relative mb-4">
-                                                    <div className="rounded-full border border-border bg-background p-3">
-                                                        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                                                    </div>
-                                                </div>
-                                                <h3 className="mb-2 text-lg font-semibold text-foreground">영수증을 읽고 있습니다</h3>
-                                                <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
-                                                    {ocrProgress?.message || '가게명과 방문 정보를 확인하고 있습니다'}
-                                                </p>
-                                                {ocrProgress?.fields.length ? (
-                                                    <div className="mb-3 flex flex-wrap justify-center gap-1.5">
-                                                        {ocrProgress.fields.map((field) => (
-                                                            <Badge key={field} variant="secondary" className="bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-200">
-                                                                ✓ {field}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
-                                                ) : null}
-                                                {ocrProgress ? (
-                                                    <div className="mb-3 grid w-full max-w-xs grid-cols-5 gap-1" aria-label="AI 분석 진행 단계">
-                                                        {OCR_PROGRESS_STEPS.map((step) => {
-                                                            const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
-                                                            return (
-                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                                                                    {step.label}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                ) : null}
-                                                {ocrProgress?.fallbackUsed ? (
-                                                    <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-xs text-foreground">분석을 계속하고 있습니다. 잠시만 기다려주세요.</p>
-                                                ) : null}
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-                                                    <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                                    <span>분석된 데이터는 AI 학습에 사용되지 않습니다</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </Card>
+                                    <ReceiptStep receipt={receipt} featureHeld={featureHeld} featureHoldNotice={renderFeatureHoldNotice()} onUsePhotoOnly={handleUseReceiptPhotoOnly} />
                                 </div>
 
                                 {/* 방문 맛집 정보 */}

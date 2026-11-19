@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTrustedAuthCallbackOrigin } from '@/lib/auth/callback-origin';
+import { isAcceptableNewPasswordLength } from '@/lib/auth/password-policy';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CookieOptions } from '@supabase/ssr';
 import type { Database } from '@/integrations/supabase/types';
@@ -394,7 +395,7 @@ function validPasswordSignup(value: Record<string, unknown>): value is PasswordS
   return (hasExactKeys(value, PASSWORD_SIGNUP_KEYS) || hasExactKeys(value, PASSWORD_SIGNUP_LEGACY_KEYS))
     && value.action === 'password_signup'
     && typeof value.email === 'string' && value.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)
-    && typeof value.password === 'string' && value.password.length >= 8 && value.password.length <= 72
+    && typeof value.password === 'string' && isAcceptableNewPasswordLength(value.password)
     && typeof value.nickname === 'string' && value.nickname.trim().length >= 2 && value.nickname.trim().length <= 20
     && (!Object.hasOwn(value, 'next')
       || (typeof value.next === 'string' && value.next === getSafeAuthNextPath(value.next)));

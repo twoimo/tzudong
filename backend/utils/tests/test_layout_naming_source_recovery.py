@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import yaml
 
@@ -84,7 +86,7 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
         result = layout.run_check(root=ROOT, manifest_path=LAYOUT_MANIFEST)
         self.assertEqual(result["errorCode"], None, result)
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["trackedDirectoryCount"], 46)
+        self.assertEqual(result["trackedDirectoryCount"], 48)
         self.assertEqual(result["checks"]["moves"], [])
 
     def test_existing_rename_ledger_is_complete_without_aliases(self) -> None:
@@ -93,6 +95,81 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
         self.assertEqual(result["entryCount"], 5)
         self.assertTrue(all(item["oldReferenceCount"] == 0 for item in result["checks"]["verification"]))
         self.assertTrue(all(item["newDefinitionCount"] == 1 for item in result["checks"]["verification"]))
+
+    @unittest.skipUnless(hasattr(sys, "stdlib_module_names"), "needs Python 3.10+")
+    def test_no_tracked_python_module_shadows_the_standard_library(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z", "--", "*.py"],
+            cwd=ROOT,
+            capture_output=True,
+            check=True,
+        ).stdout.decode("utf-8").split("\0")
+        shadows = []
+        for raw in filter(None, tracked):
+            path = PurePosixPath(raw)
+            name = path.parent.name if path.name == "__init__.py" else path.stem
+            if name in sys.stdlib_module_names:
+                shadows.append(f"{raw} shadows stdlib '{name}'")
+        self.assertEqual(
+            shadows,
+            [],
+            "A script run from that directory, or `unittest discover -s <dir>` "
+            "without `-t .`, puts the directory first on sys.path, so "
+            "`import <name>` in the stdlib or in hypothesis loads the local file. "
+            "Rename the module, as backend/pipeline_control/queue.py became "
+            "file_queue.py.",
+        )
+
+    def test_no_tracked_claude_md_hides_agents_md(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=ROOT,
+            capture_output=True,
+            check=True,
+        ).stdout.decode("utf-8").split("\0")
+        hiding = []
+        for raw in filter(None, tracked):
+            path = PurePosixPath(raw)
+            if path.name not in {"CLAUDE.md", "CLAUDE.local.md"}:
+                continue
+            at_root = str(path.parent) in {".", ".claude"}
+            in_web = raw.startswith("apps/web/") and not raw.startswith("apps/web/performance/")
+            if at_root or in_web:
+                hiding.append(raw)
+        self.assertEqual(
+            hiding,
+            [],
+            "Claude Code stops reading AGENTS.md once a CLAUDE.md exists at or above "
+            "its working directory. Keep guidance in AGENTS.md and delete these files.",
+        )
+
+    def test_discover_reaches_every_pipeline_control_test_module(self) -> None:
+        package = PurePosixPath("backend/pipeline_control")
+        tracked = set(
+            subprocess.run(
+                ["git", "ls-files", "-z", "--", str(package)],
+                cwd=ROOT,
+                capture_output=True,
+                check=True,
+            ).stdout.decode("utf-8").split("\0")
+        )
+        directories = set()
+        for raw in filter(None, tracked):
+            path = PurePosixPath(raw)
+            if path.name.startswith("test_") and path.suffix == ".py":
+                directories.update(
+                    parent for parent in path.parents if parent == package or package in parent.parents
+                )
+        skipped = sorted(
+            str(directory) for directory in directories if f"{directory}/__init__.py" not in tracked
+        )
+        self.assertEqual(
+            skipped,
+            [],
+            "`unittest discover -s backend/pipeline_control -t .` skips a directory "
+            "that has no `__init__.py` and reports no error, so the tests in it "
+            "never run. Add an `__init__.py` to each directory.",
+        )
 
     def test_checkers_are_read_only_and_have_bounded_codes(self) -> None:
         layout_source = LAYOUT_CHECKER.read_text(encoding="utf-8")

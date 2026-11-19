@@ -3,6 +3,7 @@ import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import type { ThumbnailGenerationMode, ThumbnailProviderId } from './types';
+import { isRecord } from '@/lib/validation/records';
 
 export const THUMBNAIL_RELEASE_CANDIDATE_MANIFEST_ENV = 'THUMBNAIL_RELEASE_CANDIDATE_MANIFEST';
 export const THUMBNAIL_RELEASE_PROMOTION_ROOT_ENV = 'THUMBNAIL_RELEASE_PROMOTION_ROOT';
@@ -127,10 +128,6 @@ type PromotionRequest = {
   sourceManifestId?: string;
   promotedBy?: string;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 
 function toString(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';

@@ -1,5 +1,5 @@
 import { buildCanonicalAdminModuleHref, type AdminConsoleRouteModuleId } from './admin-module-routing';
-import { isRecord } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import { ADMIN_PENDING_COUNT_DOMAIN_IDS } from './pending-counts';
 import { parseReviewAutomationSnapshot } from './restaurant-review-automation';
 

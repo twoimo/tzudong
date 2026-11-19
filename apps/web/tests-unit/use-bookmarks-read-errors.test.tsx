@@ -9,7 +9,7 @@ import * as visitMatching from '../lib/restaurant-visit-matching';
 import * as reviewLookup from '../lib/restaurant-review-lookup';
 
 type BookmarkHooks = typeof import('../hooks/use-bookmarks');
-type Call = { table: string; op: 'select' | 'delete'; filters: Array<[string, string, unknown]> };
+type Call = { table: string; op: 'select' | 'delete' | 'insert'; filters: Array<[string, string, unknown]> };
 type Result = { data?: unknown; error?: unknown; count?: number };
 
 const USER_ID = 'user-fixture';
@@ -35,6 +35,7 @@ function fixture(respond: (call: Call) => Result) {
                 select: () => builder,
                 maybeSingle: () => builder,
                 delete() { call.op = 'delete'; return builder; },
+                insert() { call.op = 'insert'; return builder; },
                 eq(column: string, value: unknown) { call.filters.push(['eq', column, value]); return builder; },
                 in(column: string, values: unknown) { call.filters.push(['in', column, values]); return builder; },
                 then: (resolve: (value: Result) => unknown, reject: (reason: unknown) => unknown) =>
@@ -43,8 +44,10 @@ function fixture(respond: (call: Call) => Result) {
             return builder;
         },
     };
+    const toasts: unknown[] = [];
     const modules: Record<string, unknown> = {
         react,
+        '@/hooks/use-toast': { toast: (options: unknown) => { toasts.push(options); } },
         '@tanstack/react-query': reactQuery,
         '@/integrations/supabase/client': { supabase },
         '@/contexts/AuthContext': { useAuth: () => ({ user: { id: USER_ID } }) },
@@ -70,7 +73,7 @@ function fixture(respond: (call: Call) => Result) {
         if (!query) throw new Error('PRODUCTION_QUERY_MISSING');
         return client.fetchQuery(query.options);
     }
-    return { hooks, client, calls, render, fetchRegistered };
+    return { hooks, client, calls, toasts, render, fetchRegistered };
 }
 
 const has = (call: Call, op: string, column: string) => call.filters.some(([kind, name]) => kind === op && name === column);
@@ -101,10 +104,36 @@ describe('bookmark reads that resolve merged duplicate restaurants', () => {
             f.client.setQueryData(['bookmark-ids', USER_ID], [canonical.id]);
             const { toggleBookmark } = f.render(() => f.hooks.useToggleBookmark());
 
-            await expect(toggleBookmark(canonical.id, true)).rejects.toThrow('BOOKMARK_RESTAURANTS_UNAVAILABLE');
+            await toggleBookmark(canonical.id, true);
 
+            expect(f.toasts).toHaveLength(1);
             expect(bookmarkCalls(f.calls)).toEqual([]);
             expect(f.client.getQueryData(['bookmark-ids', USER_ID])).toEqual([canonical.id]);
+        });
+    }
+
+    for (const [action, isBookmarked, op, title] of [
+        ['removal', true, 'delete', '북마크를 해제하지 못했습니다'],
+        ['addition', false, 'insert', '북마크를 저장하지 못했습니다'],
+    ] as const) {
+        test(`a failed ${action} shows one error toast and leaves no unhandled rejection`, async () => {
+            const f = fixture((call) => call.op === op ? providerFailure : relatedLookup(null)(call));
+            f.client.setQueryData(['bookmark-ids', USER_ID], isBookmarked ? [canonical.id] : []);
+            const { toggleBookmark } = f.render(() => f.hooks.useToggleBookmark());
+            const unhandled: unknown[] = [];
+            const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+            process.on('unhandledRejection', onUnhandled);
+            try {
+                toggleBookmark(canonical.id, isBookmarked);
+                while (f.client.isMutating() > 0 || bookmarkCalls(f.calls).length === 0) await Bun.sleep(1);
+                await Bun.sleep(10);
+            } finally {
+                process.off('unhandledRejection', onUnhandled);
+            }
+
+            expect(unhandled).toEqual([]);
+            expect(f.toasts).toEqual([{ title, description: '잠시 후 다시 시도해 주세요.', variant: 'destructive' }]);
+            expect(f.client.getQueryData(['bookmark-ids', USER_ID])).toEqual(isBookmarked ? [canonical.id] : []);
         });
     }
 

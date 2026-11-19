@@ -9,7 +9,7 @@ export const mapPanelIconButtonClass =
   "h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary";
 
 export const pageHeaderIconButtonClass =
-  "h-10 w-10 shrink-0 rounded-full bg-muted/45 shadow-none hover:bg-muted";
+  "h-11 w-11 shrink-0 rounded-lg bg-muted/45 shadow-none hover:bg-muted";
 export const pageHeaderTitleClass =
   `flex items-center gap-2 ${pageHeadingTitleClass}`;
 export const pageHeaderDescriptionClass =
@@ -55,7 +55,7 @@ export function MapPanelHeader({
   const hasSheetActions = isSheet && Boolean(actions);
   const actionsInHeader = isPage || isSheet;
   return (
-    <header className={cn("min-h-14 shrink-0 border-b border-border bg-background px-3 py-3", isPage && "sm:px-5 sm:py-4")} data-layout-primitives="stack" data-map-panel-header="true" data-header-variant={variant}>
+    <header className={cn(isPage ? "min-h-12 shrink-0 border-b border-border bg-background px-3 py-2 sm:px-4 sm:py-3" : "min-h-14 shrink-0 border-b border-border bg-background px-3 py-3")} data-layout-primitives="stack" data-map-panel-header="true" data-header-variant={variant}>
       <div className={cn(isPage ? "flex flex-wrap items-start justify-between gap-3" : "flex min-h-8 items-center gap-2", isSheet && "items-start", hasSheetActions && "flex-wrap min-[360px]:flex-nowrap")}>
         <div className={cn("min-w-0 flex-1", isPage && "basis-[min(11rem,100%)]", isSheet && "flex min-h-11 flex-col justify-center", hasSheetActions && "order-last basis-full min-[360px]:order-none min-[360px]:basis-auto")}>
           {eyebrow ? <p className="mb-0.5 text-2xs font-bold tracking-wide text-brand-garden-text xs:text-xs">{eyebrow}</p> : null}

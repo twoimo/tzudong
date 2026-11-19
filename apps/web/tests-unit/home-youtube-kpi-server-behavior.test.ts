@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { pruneTimedCache } from '../lib/public-insights/timed-cache';
 import { readBoundedJsonRequest } from '../lib/security/bounded-json-request';
 import { createHomeKpiServerTiming, resolveHomeKpiQueryMode } from '../lib/performance/home-kpi-server-timing';
+import * as records from '../lib/validation/records';
 import type { HomeKpiQueryMode, HomeYouTubeKpiObservation } from '../lib/performance/home-kpi-server-timing';
 
 type SnapshotRow = {
@@ -162,6 +163,7 @@ function fixture(options: {
             return client;
         } },
         '@/lib/public-insights/treemap': treemap,
+        '@/lib/validation/records': records,
     }, { console: logger, ...(options.clock ? { performance: { now: options.clock } } : {}) });
     const handler = evaluateModule<(request: Request) => Promise<Response>>('../app/api/home/youtube-kpi/route.ts', 'POST', {
         'next/server': { NextResponse: { json: (body: unknown, init?: ResponseInit) => Response.json(body, init) } },

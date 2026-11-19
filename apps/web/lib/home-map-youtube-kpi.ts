@@ -81,11 +81,9 @@ async function fetchHomeMapYoutubeKpiMetrics(videoIds: string[]): Promise<Map<st
             if (!chunk) return;
 
             try {
-                const response = await fetch('/api/home/youtube-kpi', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ videoIds: chunk }),
-                });
+                const params = new URLSearchParams();
+                for (const videoId of [...chunk].sort()) params.append('videoIds', videoId);
+                const response = await fetch(`/api/home/youtube-kpi?${params}`);
 
                 if (!response.ok) {
                     throw new Error(`home-youtube-kpi:${response.status}`);

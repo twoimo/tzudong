@@ -45,6 +45,9 @@ jobs:
       - name: Verify benchmark scope and fail-closed source identity
         working-directory: .
         run: node --test .github/scripts/classify-ci-benchmark.test.mjs
+      - name: Verify promotion path policy
+        working-directory: .
+        run: node --test .github/scripts/verify-promotion-path.test.mjs
       - name: Verify Cloudflare identity, timeout, and deployment failure paths
         working-directory: .
         run: node --test .github/scripts/run-cloudflare-governance.test.mjs .github/scripts/deploy-cloudflare-governance.test.mjs

@@ -84,8 +84,13 @@ const g003SourceCoverageMatrix = {
         path: 'components/map/NaverMapView.tsx',
         contains: [
           'import { NaverMapSurface } from "@/components/map/naver-map-surface";',
-          'markerLayerVersion',
           '<NaverMapSurface',
+        ],
+      },
+      {
+        path: 'components/map/use-naver-map-cluster-render.ts',
+        contains: [
+          'markerLayerVersion',
         ],
       },
     ],

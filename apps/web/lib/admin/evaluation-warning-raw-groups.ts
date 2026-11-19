@@ -2,7 +2,8 @@ import { Buffer } from 'node:buffer';
 import { findSameVideoDuplicateWarningCandidates, formatSameVideoDuplicateWarning, type SameVideoDuplicateWarningCandidate } from '@/lib/admin-same-video-duplicate-warning';
 import { findRestaurantIdentityWarnings, isSameVideoSameOriginDeleted, deletedRestaurantIdentityWarning } from '@/lib/admin-restaurant-identity-warning';
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
-import { isRecord, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from './normalize-evaluation-record';
+import { normalizeEvaluationRecord, withAdminEvaluationDisplayName } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 
 type Row = ReturnType<typeof withAdminEvaluationDisplayName>;
 type Sample = { id: string; sourceOrder: number };

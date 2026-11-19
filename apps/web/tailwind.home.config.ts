@@ -17,7 +17,6 @@ const homeConfig: Config = {
     './components/map/**/*.{js,ts,jsx,tsx,mdx}',
     './components/search/**/*.{js,ts,jsx,tsx,mdx}',
     './components/filters/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/region/**/*.{js,ts,jsx,tsx,mdx}',
     './components/skeletons/**/*.{js,ts,jsx,tsx,mdx}',
     './components/ui/**/*.{js,ts,jsx,tsx,mdx}',
   ],

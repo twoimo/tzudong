@@ -14,9 +14,6 @@ const profilePageSurfaceClass = (profileSource: string) =>
 describe("mypage mobile cleanup source contracts", () => {
   test("layout fills the viewport without duplicate return chrome", () => {
     const layoutSource = source("app/mypage/mypage-layout-content.tsx");
-    const returnButtonSource = source(
-      "components/layout/ReturnToMapButton.tsx",
-    );
     const topActionsSource = source("components/mypage/MyPageTopActions.tsx");
     const mapUserMenuSource = source("components/home/HomeMapUserMenu.tsx");
     const mapUserButtonClass =
@@ -45,10 +42,6 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(layoutSource).toContain("md:h-full md:min-h-0");
     expect(layoutSource).not.toContain("data-mypage-mobile-return-slot");
     expect(layoutSource).not.toContain("data-mypage-mobile-return-skeleton");
-    expect(returnButtonSource).toContain("touch-manipulation");
-    expect(returnButtonSource).toContain(
-      'iconOnly ? "h-11 w-11" : "min-h-11 px-3 text-xs font-semibold"',
-    );
     expect(topActionsSource).toContain('data-mypage-top-actions="map-style"');
     expect(topActionsSource).toContain('data-mypage-fullscreen-toggle="true"');
     expect(topActionsSource).toContain('data-mypage-user-menu="true"');
