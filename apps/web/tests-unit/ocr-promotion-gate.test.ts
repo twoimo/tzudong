@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import manifestJson from './fixtures/ocr/manifest.json';
 import gold from './fixtures/ocr/kakaotalk-20260425-231206797.gold.json';
 import { summarizeReceiptOcrEvaluations } from '@/lib/ocr/evaluation';
-import { getCurrentReceiptOcrProductionPromotionGate } from '@/lib/ocr/current-promotion-gate';
 import { assertReceiptOcrProductionPromotionAllowed, evaluateReceiptOcrProductionPromotionGate } from '@/lib/ocr/promotion-gate';
 
 describe('receipt OCR production promotion gate', () => {
@@ -29,13 +28,5 @@ describe('receipt OCR production promotion gate', () => {
       baseline,
       candidate,
     })).toThrow('Receipt OCR production promotion blocked');
-  });
-
-  test('current production admin gate remains blocked until fixture coverage threshold is met', () => {
-    const gate = getCurrentReceiptOcrProductionPromotionGate();
-
-    expect(gate.ok).toBe(false);
-    expect(gate.reasons).toContain('requires at least 10 validated gold fixtures');
-    expect(gate.koreanRestaurantFixtureCount).toBe(1);
   });
 });

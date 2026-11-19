@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { parseReceiptOcrWorkflowPolicy } from '@/lib/ocr/workflow-policy';
+import { isRecord } from '@/lib/validation/records';
 
 export const RECEIPT_OCR_RECOVERY_CAPABILITY_VERSION = 'receipt-ocr-indeterminate-recovery-v1';
 export const ADMIN_RECEIPT_OCR_PROMPT_VERSION = 'admin-receipt-summary-v1';
@@ -66,10 +67,6 @@ export type ReceiptOcrExecutionAuthorization = {
   generation: string;
   recoveryOperationId: string | null;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 
 function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
   const actual = Object.keys(value).sort();

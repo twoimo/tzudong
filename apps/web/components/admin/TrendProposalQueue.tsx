@@ -230,7 +230,7 @@ export function TrendProposalQueue() {
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-2xs font-bold tracking-[0.12em] text-primary">트렌드 제안</p>
+          <p className="text-xs font-medium text-primary">트렌드 제안</p>
           <h3 className="break-words text-sm font-bold text-foreground [overflow-wrap:anywhere]">오버레이 제안 검토</h3>
         </div>
         <Badge variant="outline" className="shrink-0 rounded-full border-primary/25 text-primary">
@@ -296,7 +296,7 @@ export function TrendProposalQueue() {
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-2xs font-bold tracking-[0.12em] text-muted-foreground">선택 제안</p>
+                  <p className="text-xs font-medium text-muted-foreground">선택 제안</p>
                   <h4 className="break-words text-base font-bold text-foreground [overflow-wrap:anywhere]">{selectedProposal.label}</h4>
                 </div>
                 <Badge variant="outline" className="rounded-full">

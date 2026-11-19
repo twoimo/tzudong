@@ -230,6 +230,8 @@
     ".github/scripts/verify-ci-results.mjs",
     ".github/scripts/verify-ci-results.test.mjs",
     "backend/**/*requirements*.txt",
-    "apps/web/scripts/verify-dependency-freshness.mjs"
+    "apps/web/scripts/verify-dependency-freshness.mjs",
+    "**/CLAUDE.md",
+    "**/CLAUDE.local.md"
   ]
 }

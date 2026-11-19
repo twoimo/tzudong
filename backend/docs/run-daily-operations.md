@@ -102,6 +102,91 @@ PY
   - residual/staging artifacts
 - 로컬 log tail: manifest가 없거나 파싱 실패할 때만 bounded fallback으로 사용합니다.
 
+## 워커 실행 수명주기
+
+워커는 대상(target)과 프로필마다 실행을 하나만 진행합니다. 실행 상태는
+`backend/log/cron/pipeline-store.json`과 `GET /v1/runs`에 남습니다. 실행이
+`Failed`로 끝나면 `error_code`로 원인을 구분합니다. 아래 표는 수명주기와
+관련된 코드만 다룹니다.
+
+| `error_code` | 원인 |
+| --- | --- |
+| `adapter_failed` | 단계가 0이 아닌 코드로 끝났습니다. 워커 로그에 `operation=step_timeout`이 있으면 단계 제한 시간을 넘긴 것입니다. |
+| `lease_expired` | 워커가 lease를 갱신하지 못했습니다. 워커 프로세스가 죽었거나 호스트가 절전 상태였습니다. |
+| `worker_unexpected` | 실행 중 처리하지 않은 예외가 났습니다. `TZUDONG_PIPELINE_PERSIST` mirror 쓰기 실패도 여기에 속합니다. 워커가 queue에서 가져온 실행을 시작하기 전에 예외로 끝나도 이 코드가 남습니다. 워커 로그의 traceback을 확인합니다. |
+| `worker_interrupted` | 실행 중 워커가 SIGTERM, SIGHUP 또는 Ctrl-C를 받았습니다. 워커가 queue에서 가져온 실행을 시작하기 전에 신호를 받아도 이 코드가 남습니다. |
+| `step_timeout_invalid` | `TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS` 값이 0보다 큰 유한한 수가 아닙니다. |
+
+- 단계 제한 시간은 단계마다 2시간입니다. 시간이 지나면 워커가 그 단계의
+  프로세스 그룹을 종료하고 실행을 `Failed`로 끝냅니다. backfill처럼 한
+  단계가 더 오래 걸리는 실행은 `TZUDONG_PIPELINE_STEP_TIMEOUT_SECONDS`에 초
+  단위 값을 지정합니다.
+- 워커는 live 단계마다 단계 제한 시간에 5분을 더한 길이의 lease를 받습니다.
+  워커가 단계 도중 죽으면 lease가 끝난 뒤의 첫 `create_run`, `claim`,
+  `control` 호출이 실행을 `lease_expired`로 정리하고 대상 lock을 풉니다.
+- 워커가 SIGKILL처럼 정리 없이 죽으면 단계 프로세스는 자기 프로세스 그룹에서
+  계속 실행되고, lease가 끝나도 멈추지 않습니다. 남은 단계는
+  `ps -eo pid,pgid,command | grep -E 'backend/restaurant-(crawling|evaluation)/scripts/'`로
+  찾고 `kill -TERM -<pgid>`로 종료합니다. 대상 lock은 lease가 끝나야 풀립니다.
+  lease가 끝나는 시각은 `GET /v1/runs/{id}`의 `lease_until`(epoch 초)입니다.
+  store는 죽은 워커와 긴 단계를 실행 중인 워커를 구분하지 못하므로,
+  `POST /v1/runs/{id}/cancel`은 lease가 끝나기 전에 lock을 풀지 않습니다.
+  lease가 끝난 뒤에 호출한 cancel은 `illegal_transition`(409)으로 거부되고,
+  그 호출이 실행을 `lease_expired`로 정리합니다.
+- 워커가 실행 중 SIGTERM, SIGHUP 또는 Ctrl-C를 받으면 진행 중인 단계를
+  멈추고, 실행을 `Failed`로 끝내고, 실행 기록과 manifest를 남긴 다음 media
+  cache를 지웁니다. 워커가 기본 실행을 만든 직후, 첫 단계를 시작하기 전에 받은
+  신호도 그 실행을 `Failed`로 끝내고 manifest를 남깁니다. 성공한 live 실행의
+  evidence를 읽는 도중 받은 신호도 실행을 `Failed`로 끝냅니다. 워커가 실행을
+  기록하는 도중 받은 신호는 manifest와 cache 삭제가 끝난 다음 적용되고, 실행은
+  기록된 상태로 남습니다. cache를 지우는 도중 monitor daemon이 SIGKILL을 보내도
+  실행 기록과 manifest는 남고 lock은 풀린 상태입니다.
+- 워커는 queue의 작업을 한꺼번에 가져온 다음 하나씩 실행합니다. 다른 프로세스가
+  queue lock을 잡고 있어 워커가 기다리는 동안 받은 신호는 워커를 바로 끝내고,
+  작업은 queue에 그대로 남습니다. 가져온 실행의 lease는 API가 실행을 만들고
+  30초 뒤에 끝납니다. 앞의 실행이 그보다 오래 걸리면 뒤의 실행은 차례가 오기
+  전에 `lease_expired`로 끝나고, `jobId`가 그 실행의 id인 manifest를 남깁니다.
+  작업을 가져온 뒤에 워커가 신호를 받거나 예외로 끝나면, 아직 `Queued`인 실행도
+  모두 `Failed`로 끝내고 실행마다 manifest를 남깁니다. 가져온 작업은 queue로
+  돌아가지 않습니다. 다시 실행하려면 새 `Idempotency-Key`로 `POST /v1/runs`를
+  호출합니다. 워커가 SIGKILL처럼 정리 없이 죽거나 `TZUDONG_PIPELINE_PERSIST`
+  mirror 쓰기가 계속 실패하면 그 실행들은 `Queued`로 남고, lease가 끝난 뒤
+  `lease_expired`로 정리됩니다.
+- 단계 실행 중 `POST /v1/runs/{id}/pause`를 호출하면 그 단계가 끝날 때까지
+  실행은 `Fetching`으로 남습니다. 워커는 다음 단계를 시작하기 전에 실행을
+  `Paused`로 바꿉니다. 그 전에 `POST /v1/runs/{id}/resume`을 호출하면 pause가
+  취소되고 워커가 실행을 계속합니다. `GET /v1/runs`와 `GET /v1/runs/{id}`는 pause를
+  받은 실행에 `pause_requested: true`를 보여 줍니다. 이 값은 실행이 `Paused`가 된
+  뒤에도 남고, resume이 지웁니다.
+- 단계 실행 중 `POST /v1/runs/{id}/cancel`을 호출하면 그 단계가 끝날 때까지
+  실행은 `Fetching`으로 남고 대상 lock도 유지됩니다. `GET /v1/runs`와
+  `GET /v1/runs/{id}`는 `cancel_requested: true`를 보여 주고, 관리자 콘솔은
+  `취소 요청됨`을 표시하며 실행 제어 버튼을 숨깁니다. 워커는 다음 단계를
+  시작하기 전에 실행을 `Cancelled`로 끝내고 lock을 풉니다. cancel은 취소할 수
+  없습니다. 마지막 단계 도중에 호출한 cancel은 적용되지 않고, 실행은
+  `Succeeded` 또는 `Failed`로 끝납니다. `Queued`나 `Paused` 실행은 cancel 즉시
+  `Cancelled`로 끝납니다.
+- `TZUDONG_PIPELINE_PERSIST`를 켠 상태에서 mirror 쓰기가 실패해도 워커는 끝난
+  실행을 `pipeline-store.json`에 먼저 기록하고 lock을 풉니다. manifest는 이
+  기록을 따르므로 성공한 실행은 `OK` manifest를 남깁니다. 그다음 워커는
+  오류로 끝납니다. 끝난 실행을 mirror나 `pipeline-store.json`에 쓰지 못하면
+  워커 로그에 `operation=run_record_failed`와 오류 종류가 남습니다.
+- mirror 쓰기가 멈추면 워커도 멈춥니다. 성공하지 못한 실행의 manifest는 mirror
+  쓰기 전에 남지만, 성공한 실행의 manifest는 mirror 쓰기가 끝난 다음 씁니다.
+  그동안 monitor daemon이 워커를 SIGKILL로 끝내면 `pipeline-store.json`의
+  `Succeeded` 기록만 남습니다.
+- 실행의 manifest를 쓰지 못해도 워커는 실행을 기록하고 lock을 풉니다. 워커
+  로그에 `operation=run_manifest_failed`와 오류 종류가 남고, 워커는 오류로
+  끝납니다.
+- 다른 실행이 대상 lock을 잡고 있으면 워커는
+  `operation=live_run_refused code=lock_held`를 출력하고 `ERROR` manifest만
+  남깁니다. lock을 잡은 실행은 바꾸지 않습니다.
+- queue에 작업이 없으면 워커는 대상, UTC 날짜, 프로필, 모드(dry-run 또는
+  live)마다 기본 실행을 `TZUDONG_PIPELINE_COUNT`개 만듭니다. 기본값은 1입니다.
+  같은 날 다시 호출하면 단계를 실행하지 않고 `Failed`를 보고합니다. 같은 날
+  다시 실행하려면 새 `Idempotency-Key`로 `POST /v1/runs`를 호출합니다. 워커가
+  그 실행을 30초 안에 claim하지 않으면 실행은 `lease_expired`로 끝납니다.
+
 ## 변경 원칙
 
 - crontab/GHA는 `python3 -m backend.pipeline_control.worker`를 호출합니다.

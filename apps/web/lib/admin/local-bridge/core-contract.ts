@@ -1,3 +1,5 @@
+import { isNonNullObject } from '@/lib/validation/records';
+
 export const LOCAL_BRIDGE_ROUTE_ID = 'local-bridge' as const;
 export const LOCAL_BRIDGE_DEFAULT_URL = 'http://127.0.0.1:17873' as const;
 export const LOCAL_BRIDGE_TOKEN_HEADER = 'Authorization' as const;
@@ -209,13 +211,9 @@ export function redactLocalBridgeSecretText(value: string, token?: string | null
   return redacted.slice(0, 1000);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object';
-}
-
 export function hasExactLocalBridgeImageGenerationProvenance(value: unknown) {
   return Boolean(
-    isRecord(value) &&
+    isNonNullObject(value) &&
     value.providerId === LOCAL_BRIDGE_PROVIDER_ID &&
     value.model === LOCAL_BRIDGE_MODEL &&
     value.modelProvenance === LOCAL_BRIDGE_MODEL_PROVENANCE,

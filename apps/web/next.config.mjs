@@ -303,6 +303,7 @@ const nextConfig = {
     // Turbopack 설정 추가 (Next.js 16 호환성)
     turbopack: {},
     experimental: {
+        agentUpgrade: 'security',
         turbopackFileSystemCacheForDev: false,
         optimizePackageImports: [
             'lucide-react',

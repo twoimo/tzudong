@@ -56,10 +56,10 @@ export default async function AuthRequiredPage({ searchParams }: AuthRequiredPag
                     요청 경로: <span className="font-medium text-foreground">{nextPath}</span>
                 </p>
                 <div className="mt-6 grid gap-2">
-                    <Button asChild>
+                    <Button asChild className="h-11">
                         <Link href={loginPath}>홈에서 로그인하기</Link>
                     </Button>
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" asChild className="h-11">
                         <Link href="/">홈으로 돌아가기</Link>
                     </Button>
                 </div>

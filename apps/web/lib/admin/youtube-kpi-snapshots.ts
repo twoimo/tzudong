@@ -16,6 +16,7 @@ import type {
   InsightTreemapResponse,
   InsightTreemapVideoRow,
 } from '@/lib/public-insights/treemap';
+import { isRecord } from '@/lib/validation/records';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -82,10 +83,6 @@ const HOME_KPI_ROW_KEYS = [
   'view_count', 'like_count', 'comment_count', 'bucket_started_at', 'fetched_at',
 ] as const;
 const HOME_KPI_ENVELOPE_KEYS = new Set(['schemaVersion', 'status', 'rows', 'timings', 'timingValid']);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function parseHomeKpiRpcEnvelope(value: unknown, videoIds: string[]): HomeKpiRpcEnvelope {
   const invalid = () => new Error('home-youtube-kpi:invalid_response');

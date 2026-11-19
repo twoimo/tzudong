@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="2" assertions="1" failures="0" skipped="1" time="0">
+  <testsuite name="tests-unit/alpha.test.ts" file="tests-unit/alpha.test.ts" tests="2" assertions="1" failures="0" skipped="1" time="0" hostname="fixture-host">
+    <testcase name="adds &amp; compares &lt;values&gt;" classname="" time="0" file="tests-unit/alpha.test.ts" line="2" assertions="1" />
+    <testcase name="skipped case" classname="" time="0" file="tests-unit/alpha.test.ts" line="3" assertions="0">
+      <skipped />
+    </testcase>
+  </testsuite>
+</testsuites>

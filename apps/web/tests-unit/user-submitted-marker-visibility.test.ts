@@ -48,6 +48,7 @@ describe('user-submitted marker visibility contract', () => {
   test('keeps admin-only toggle state wired to map filtering and Korean accessible controls', () => {
     const homeClient = readSource('app/home-client.tsx');
     const naverMapView = readSource('components/map/NaverMapView.tsx');
+    const clusterRender = readSource('components/map/use-naver-map-cluster-render.ts');
     const mobileControls = readSource('components/home/MobileControlOverlay.tsx');
     const floatingButton = readSource('components/home/SubmissionFloatingButton.tsx');
 
@@ -60,13 +61,13 @@ describe('user-submitted marker visibility contract', () => {
     expect(naverMapView).toContain('useHomeMapResults({');
     expect(naverMapView).toContain('const displayRestaurants = restaurants;');
     expect(readSource('hooks/use-home-map-results.ts')).toContain('requireComplete: true, homeMapMode: mapMode, showUserSubmittedMarkers');
-    expect(naverMapView).toContain('showUserSubmittedMarkers ? restaurantLookup : buildRestaurantLookup(displayRestaurants)');
-    expect(naverMapView).toContain('[displayRestaurants, restaurantLookup, showUserSubmittedMarkers]');
-    expect(naverMapView).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSearchedRestaurant)');
-    expect(naverMapView).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSelectedRestaurant)');
-    expect(naverMapView).toContain('if (!showUserSubmittedMarkers) {');
-    expect(naverMapView).toContain('setExpandedClusterRestaurantIds([]);');
-    expect(naverMapView).toContain('!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant)');
+    expect(clusterRender).toContain('showUserSubmittedMarkers ? restaurantLookup : buildRestaurantLookup(displayRestaurants)');
+    expect(clusterRender).toContain('[displayRestaurants, restaurantLookup, showUserSubmittedMarkers]');
+    expect(clusterRender).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSearchedRestaurant)');
+    expect(clusterRender).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(publishedSelectedRestaurant)');
+    expect(clusterRender).toContain('if (!showUserSubmittedMarkers) {');
+    expect(clusterRender).toContain('setExpandedClusterRestaurantIds([]);');
+    expect(clusterRender).toContain('!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant)');
     expect(naverMapView).toContain('showUserSubmittedMarkers,');
 
     for (const source of [mobileControls, floatingButton]) {
@@ -103,6 +104,7 @@ describe('user-submitted marker visibility contract', () => {
       'components/home/MobileControlOverlay.tsx',
       'components/home/SubmissionFloatingButton.tsx',
       'components/map/NaverMapView.tsx',
+      'components/map/use-naver-map-cluster-render.ts',
       'components/map/naver-map-surface.tsx',
       'lib/naver-map-marker-visuals.ts',
       'lib/restaurant-marker-kind.ts',

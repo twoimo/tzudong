@@ -995,6 +995,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(stampCardSource).toContain('data-stamp-guide-badge="true"');
     expect(stampCardSource).toContain('data-stamp-guide-close="true"');
     expect(stampCardSource).toContain('aria-label="가이드 닫기"');
+    expect(stampCardSource).toContain('"h-11 w-11"');
     expect(stampOverlaySource).toContain(
       "isUserStampsReady={isGuideCard ? true : isUserStampsReady}",
     );

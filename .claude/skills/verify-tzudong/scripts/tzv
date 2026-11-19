@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=/dev/null
+source "${SKILL_DIR}/../../../.cursor/scripts/lib.sh"
+tzudong_activate_toolchain
+unset DOCKER_HOST DOCKER_CONTEXT || true
+export LOCAL_STACK_REPLAY_STACK=1
+
+REPO="$(cd "${TZUDONG_REPO_ROOT}" && pwd -P)"
+EVIDENCE_ROOT="${REPO}/artifacts/verify-tzudong"
+PROJECT="$(python3 -I - "${REPO}" <<'PY'
+import importlib.util
+import sys
+spec = importlib.util.spec_from_file_location("local_stack", f"{sys.argv[1]}/backend/supabase/scripts/local-stack.py")
+stack = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(stack)
+print(stack._project_name(stack._repository_root(sys.argv[1])))
+PY
+)"
+STATE="${REPO}/backend/supabase/volumes/.local-stack/${PROJECT}"
+PRIV="${STATE}/verify"
+WEB_PORT="${TZV_WEB_PORT:-$(cat "${PRIV}/web-port" 2>/dev/null || echo 18080)}"
+
+die() { printf '[tzv] FAIL %s\n' "$*" >&2; exit 1; }
+say() { printf '[tzv] %s\n' "$*" >&2; }
+
+stack() { python3 "${REPO}/backend/supabase/scripts/local-stack.py" "$@"; }
+
+require_state() {
+  [ -f "${STATE}/stack.env" ] || die "no stack for ${PROJECT}; run 'tzv up' first"
+  mkdir -p "${PRIV}"
+  chmod 700 "${PRIV}"
+}
+
+env_value() {
+  python3 - "$1" "${STATE}/stack.env" <<'PY'
+import sys
+key, path = sys.argv[1], sys.argv[2]
+for line in open(path, encoding="utf-8"):
+    name, _, value = line.rstrip("\n").partition("=")
+    if name == key:
+        print(value)
+        break
+else:
+    sys.exit(1)
+PY
+}
+
+running_services() {
+  docker ps --filter "label=com.docker.compose.project=${PROJECT}" --format '{{.ID}}' | wc -l | tr -d ' '
+}
+
+project_containers() {
+  docker ps -a --filter "label=com.docker.compose.project=${PROJECT}" --format '{{.ID}}' | wc -l | tr -d ' '
+}
+
+db_container() {
+  docker ps --filter "label=com.docker.compose.project=${PROJECT}" \
+    --filter 'label=com.docker.compose.service=db' --format '{{.ID}}'
+}
+
+run_dir() {
+  local id
+  id="${TZV_RUN_ID:-$(cat "${PRIV}/current-run" 2>/dev/null || true)}"
+  [ -n "${id}" ] || die "no run id; start the web server with 'tzv web' or set TZV_RUN_ID"
+  mkdir -p "${EVIDENCE_ROOT}/${id}"
+  printf '%s\n' "${EVIDENCE_ROOT}/${id}"
+}
+
+web_pid() {
+  local pidfile="${PRIV}/web-${WEB_PORT}.pid" pid
+  [ -f "${pidfile}" ] || return 1
+  pid="$(cat "${pidfile}")"
+  kill -0 "${pid}" 2>/dev/null || return 1
+  ps -o command= -p "${pid}" | grep -q 'run-local-dev.mjs' || return 1
+  printf '%s\n' "${pid}"
+}
+
+port_listener() { lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | head -1 || true; }
+
+cmd_up() {
+  [ "$(docker compose version --short 2>/dev/null)" = "2.39.4" ] || die "docker compose must be v2.39.4"
+  docker info >/dev/null 2>&1 || die "docker daemon unreachable"
+  local fresh_state=0
+  [ -d "${STATE}" ] || fresh_state=1
+  stack render >/dev/null || die "local-stack render; a stack.env written without LOCAL_STACK_REPLAY_STACK=1 fails here, see Gotchas"
+  require_state
+  [ "${fresh_state}" = 1 ] && touch "${PRIV}/state-created-by-tzv"
+  if [ "$(running_services)" = 14 ]; then
+    say "stack already running; leaving it as found"
+  elif [ "$(project_containers)" != 0 ] && [ ! -f "${PRIV}/stack-started-by-tzv" ]; then
+    die "a partial stack that tzv did not start exists for ${PROJECT}; inspect it with 'python3 backend/supabase/scripts/local-stack.py status'"
+  else
+    say "starting Supabase stack project=${PROJECT} kong=$(env_value KONG_HTTP_PORT)"
+    touch "${PRIV}/stack-started-by-tzv"
+    stack start >"${PRIV}/stack-start.json" || {
+      tail -c 600 "${PRIV}/stack-start.json" >&2
+      die "local-stack start; run 'tzv down --destroy' before retrying"
+    }
+  fi
+  local db has_schema
+  db="$(db_container)"
+  [ -n "${db}" ] || die "no running db container for ${PROJECT}"
+  has_schema="$(docker exec -i "${db}" psql -U postgres -d postgres -tAc \
+    "select to_regclass('public.restaurants') is not null" | tr -d '[:space:]')" || die "cannot query the db container"
+  if [ "${has_schema}" = "t" ]; then
+    say "schema present; skipping migrations and seed"
+  else
+    local bind=(--project "${PROJECT}" --state-dir "${STATE}" --env-file "${STATE}/stack.env")
+    local patch="${STATE}/local-function-path-patch-local.sql"
+    local scripts="${REPO}/backend/supabase/scripts"
+    say "applying canonical migrations, closure patch, and synthetic seed"
+    ( cd "${REPO}"
+      python3 "${scripts}/local-migrate.py" apply-prerequisite --container "${db}" --allow-local "${bind[@]}"
+      python3 "${scripts}/local-migrate.py" apply --container "${db}" --allow-local "${bind[@]}"
+      python3 "${scripts}/local-function-runtime-scan.py" generate --output "${patch}"
+      python3 "${scripts}/local-function-runtime-scan.py" apply --container "${db}" --patch "${patch}"
+      python3 "${scripts}/local-function-runtime-scan.py" rescan --container "${db}" --patch "${patch}"
+      python3 "${scripts}/local-function-runtime-scan.py" smoke --container "${db}"
+      python3 "${scripts}/local-migrate.py" seed --container "${db}" --allow-local "${bind[@]}"
+      docker exec -i "${db}" psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+        <"${REPO}/backend/supabase/tests/local_runtime_schema_convergence.sql"
+    ) >"${PRIV}/bootstrap.log" 2>&1 || {
+      tail -n 20 "${PRIV}/bootstrap.log" >&2
+      die "bootstrap; do not replay in place: run 'tzv down --destroy', then 'tzv up'"
+    }
+  fi
+  say "stack ready project=${PROJECT} supabase=http://127.0.0.1:$(env_value KONG_HTTP_PORT)"
+}
+
+cmd_web() {
+  local pid run evidence owner
+  require_state
+  if pid="$(web_pid)"; then
+    say "web already running pid=${pid} app=http://127.0.0.1:${WEB_PORT}"
+    return 0
+  fi
+  owner="$(port_listener "${WEB_PORT}")"
+  [ -z "${owner}" ] || die "port ${WEB_PORT} is held by pid ${owner}; set TZV_WEB_PORT to a free one of 3000, 8080, 18080"
+  run="${TZV_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$(git -C "${REPO}" rev-parse --short HEAD)}"
+  printf '%s\n' "${run}" >"${PRIV}/current-run"
+  printf '%s\n' "${WEB_PORT}" >"${PRIV}/web-port"
+  evidence="${EVIDENCE_ROOT}/${run}"
+  mkdir -p "${evidence}"
+  (
+    cd "${REPO}/apps/web"
+    set -m
+    NEXT_PUBLIC_NAVER_CLIENT_ID='' NEXT_PUBLIC_GOOGLE_MAPS_API_KEY='' \
+      NEXT_PUBLIC_PUBLIC_DEMO_MODE='' NEXT_PUBLIC_LIMITED_PUBLIC_MODE='' \
+      nohup node scripts/run-local-dev.mjs --port "${WEB_PORT}" >"${evidence}/web.log" 2>&1 &
+    printf '%s\n' "$!" >"${PRIV}/web-${WEB_PORT}.pid"
+  )
+  say "web starting pid=$(cat "${PRIV}/web-${WEB_PORT}.pid") log=${evidence}/web.log"
+  local deadline=$((SECONDS + ${TZV_WEB_TIMEOUT:-900}))
+  until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "http://127.0.0.1:${WEB_PORT}/" || true)" = "200" ]; do
+    web_pid >/dev/null || { tail -n 20 "${evidence}/web.log" >&2; die "web server exited"; }
+    [ "${SECONDS}" -lt "${deadline}" ] || die "web not ready after ${TZV_WEB_TIMEOUT:-900}s"
+    sleep 5
+  done
+  say "web ready app=http://127.0.0.1:${WEB_PORT} run=${run} evidence=${evidence}"
+}
+
+cmd_doctor() {
+  local failed=0 pid listener code seeded
+  pass() { say "ok   $*"; }
+  flunk() { say "FAIL $*"; failed=1; }
+  require_state
+  say "repo=${REPO} head=$(git -C "${REPO}" rev-parse --short HEAD) branch=$(git -C "${REPO}" branch --show-current)"
+  say "project=${PROJECT} supabase=http://127.0.0.1:$(env_value KONG_HTTP_PORT) app=http://127.0.0.1:${WEB_PORT}"
+  if [ "$(running_services)" = 14 ]; then pass "14 Supabase services running"; else flunk "$(running_services) of 14 Supabase services running"; fi
+  seeded="$(docker exec -i "$(db_container)" psql -U postgres -d postgres -tAc \
+    "select count(*) from public.restaurants where id in ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102')" 2>/dev/null | tr -d '[:space:]' || true)"
+  if [ "${seeded}" = "2" ]; then pass "2 seeded restaurants present"; else flunk "seeded restaurants missing (count=${seeded:-none})"; fi
+  if pid="$(web_pid)"; then
+    listener="$(port_listener "${WEB_PORT}")"
+    if [ -n "${listener}" ] && [ "$(ps -o pgid= -p "${listener}" | tr -d ' ')" = "${pid}" ]; then
+      pass "port ${WEB_PORT} owned by this run (pgid ${pid})"
+    else
+      flunk "port ${WEB_PORT} is not owned by the tzv web server"
+    fi
+  else
+    flunk "no web server started by tzv on port ${WEB_PORT}"
+  fi
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "http://127.0.0.1:${WEB_PORT}/" || true)"
+  if [ "${code}" = "200" ]; then pass "GET / returned 200"; else flunk "GET / returned ${code}"; fi
+  if TZV_STATE_DIR="${STATE}" node "${SKILL_DIR}/scripts/journeys.mjs" login-check >/dev/null; then
+    pass "seeded admin password login"
+  else
+    flunk "seeded admin password login"
+  fi
+  [ "${failed}" = 0 ] || die "doctor found problems"
+  say "doctor ok"
+}
+
+cmd_drive() {
+  [ "$#" -ge 1 ] || die "usage: tzv drive <journey>"
+  require_state
+  web_pid >/dev/null || die "no web server started by tzv on port ${WEB_PORT}; run 'tzv web'"
+  TZV_EVIDENCE_DIR="$(run_dir)" TZV_APP_ORIGIN="http://127.0.0.1:${WEB_PORT}" \
+    TZV_STATE_DIR="${STATE}" TZV_DB_CONTAINER="$(db_container)" \
+    node "${SKILL_DIR}/scripts/journeys.mjs" "$@"
+}
+
+cmd_down() {
+  local pid
+  require_state
+  if pid="$(web_pid)"; then
+    say "stopping web process group ${pid}"
+    kill -TERM -- "-${pid}" 2>/dev/null || true
+    for _ in $(seq 1 20); do kill -0 "${pid}" 2>/dev/null || break; sleep 1; done
+    kill -KILL -- "-${pid}" 2>/dev/null || true
+  fi
+  rm -f "${PRIV}/web-${WEB_PORT}.pid" "${PRIV}/web-port"
+  if [ -f "${PRIV}/stack-started-by-tzv" ]; then
+    say "stopping Supabase stack ${PROJECT}"
+    stack stop >/dev/null || say "local-stack stop failed; containers may still run"
+    rm -f "${PRIV}/stack-started-by-tzv"
+  else
+    say "stack was not started by tzv; leaving it running"
+  fi
+  if [ "${1:-}" = "--destroy" ]; then
+    [ -f "${PRIV}/state-created-by-tzv" ] || die "state dir predates tzv; refusing to destroy it"
+    say "removing volumes and state for ${PROJECT}"
+    ( cd "${REPO}"
+      docker compose --project-name "${PROJECT}" --env-file "${STATE}/stack.env" \
+        -f backend/supabase/docker-compose.yml \
+        -f backend/supabase/docker-compose.local.yml \
+        -f backend/supabase/docker-compose.mail.yml \
+        down --volumes --remove-orphans >/dev/null 2>&1 ) || die "docker compose down --volumes failed for ${PROJECT}"
+    rm -rf -- "${STATE}"
+  fi
+  say "evidence kept under ${EVIDENCE_ROOT}"
+}
+
+cmd_paths() {
+  say "evidence_root=${EVIDENCE_ROOT}"
+  say "state_dir=${STATE} (private: stack.env, logs, pid files)"
+}
+
+case "${1:-}" in
+  up) cmd_up ;;
+  web) cmd_web ;;
+  doctor) cmd_doctor ;;
+  drive) shift; cmd_drive "$@" ;;
+  down) shift; cmd_down "$@" ;;
+  paths) cmd_paths ;;
+  *) die "usage: tzv up | web | doctor | drive <journey> | down [--destroy] | paths" ;;
+esac

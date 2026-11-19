@@ -19,6 +19,7 @@ const expectSourceOrder = (content: string, first: string, second: string) => {
 describe('home map contextual visible-marker restaurants', () => {
   test('keeps raw visible swipe callback separate from contextual presentation payload', () => {
     const naverMapSource = source('components/map/NaverMapView.tsx');
+    const clusterRenderSource = source('components/map/use-naver-map-cluster-render.ts');
     const contractSource = source('lib/home-map-contextual-restaurants.ts');
     const reviewBubbleSource = source('lib/visible-marker-review-bubbles.ts');
 
@@ -31,13 +32,13 @@ describe('home map contextual visible-marker restaurants', () => {
 
     expect(naverMapSource).toContain('onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;');
     expect(naverMapSource).toContain('onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload) => void;');
-    expect(naverMapSource).toContain('const hasExpandedClusterRestaurants = expandedClusterRestaurantIds.length > 0 && contextualRestaurants.length > 0;');
-    expect(naverMapSource).toContain('const contextualRenderMode: HomeMapRenderMode = expandedClusterRestaurantIds.length > 0');
-    expect(naverMapSource).toContain('const contextualIneligibilityReason = hasExpandedClusterRestaurants');
-    expect(naverMapSource).toContain('const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {');
-    expect(naverMapSource).toContain("filters.featuredTheme ?? '',");
-    const compositeMarkerRenderSource = naverMapSource.slice(
-      naverMapSource.indexOf('// ===== 복합 모드: 서울 자치구 (선택적) + Supercluster/개별 마커 ====='),
+    expect(clusterRenderSource).toContain('const hasExpandedClusterRestaurants = expandedClusterRestaurantIds.length > 0 && contextualRestaurants.length > 0;');
+    expect(clusterRenderSource).toContain('const contextualRenderMode: HomeMapRenderMode = expandedClusterRestaurantIds.length > 0');
+    expect(clusterRenderSource).toContain('const contextualIneligibilityReason = hasExpandedClusterRestaurants');
+    expect(clusterRenderSource).toContain('const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {');
+    expect(clusterRenderSource).toContain("filters.featuredTheme ?? '',");
+    const compositeMarkerRenderSource = clusterRenderSource.slice(
+      clusterRenderSource.indexOf('// ===== 복합 모드: 서울 자치구 (선택적) + Supercluster/개별 마커 ====='),
     );
     expect(compositeMarkerRenderSource).toContain('renderExpandedClusterIndividuals(activeIds);');
     expectSourceOrder(
@@ -50,23 +51,23 @@ describe('home map contextual visible-marker restaurants', () => {
       'if (isCluster(feature)) {',
       'if (shouldSkipExpandedClusterMarker(clusterRestaurantIds)) {',
     );
-    expect(naverMapSource).not.toContain('if (expandedClusterRestaurantIdSet.size > 0 || shouldSkipExpandedClusterMarker');
+    expect(naverMapSource + clusterRenderSource).not.toContain('if (expandedClusterRestaurantIdSet.size > 0 || shouldSkipExpandedClusterMarker');
     expect(compositeMarkerRenderSource).not.toContain('if (expandedClusterRestaurantIdSet.size > 0) {');
-    expect(naverMapSource).toContain("if (renderMode !== 'individual') return 'clustered-render-mode';");
-    expect(naverMapSource).toContain('zoom < HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM');
+    expect(clusterRenderSource).toContain("if (renderMode !== 'individual') return 'clustered-render-mode';");
+    expect(clusterRenderSource).toContain('zoom < HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM');
 
     expect(reviewBubbleSource).toContain('VISIBLE_MARKER_REVIEW_BUBBLE_MOBILE_LIMIT = 3');
     expect(reviewBubbleSource).toContain('VISIBLE_MARKER_REVIEW_BUBBLE_DESKTOP_LIMIT = 5');
     expect(reviewBubbleSource).toContain('data-visible-marker-review-bubble="true"');
-    expect(naverMapSource).toContain('filterVisibleMarkerReviewBubbleViewportCandidates(visibleMarkerReviewCandidateRestaurants');
-    expect(naverMapSource).toContain('selectVisibleMarkerReviewBubbleTargets(reviewBubbleCandidateRestaurants');
-    expect(naverMapSource).toContain('buildVisibleMarkerReviewSeed(currentZoom, extendedBounds)');
+    expect(clusterRenderSource).toContain('filterVisibleMarkerReviewBubbleViewportCandidates(visibleMarkerReviewCandidateRestaurants');
+    expect(clusterRenderSource).toContain('selectVisibleMarkerReviewBubbleTargets(reviewBubbleCandidateRestaurants');
+    expect(clusterRenderSource).toContain('buildVisibleMarkerReviewSeed(currentZoom, extendedBounds)');
     expect(naverMapSource).toContain('wrapNaverMarkerContentWithReviewBubble(');
     expect(naverMapSource).toContain("fetchSupabaseRows<VisibleMarkerReviewRow>('reviews'");
     expect(naverMapSource).toContain("VISIBLE_MARKER_REVIEW_SELECT = 'id,restaurant_id,user_id,content,food_photos,created_at,is_pinned'");
-    expect(naverMapSource).not.toContain('import { supabase } from "@/integrations/supabase/client"');
-    const rawCallbackIndex = naverMapSource.indexOf('onVisibleRestaurantsChange?.(swipeCandidates);');
-    const contextualCallbackIndex = naverMapSource.indexOf('onContextualRestaurantsChange?.({');
+    expect(naverMapSource + clusterRenderSource).not.toContain('import { supabase } from "@/integrations/supabase/client"');
+    const rawCallbackIndex = clusterRenderSource.indexOf('onVisibleRestaurantsChange?.(swipeCandidates);');
+    const contextualCallbackIndex = clusterRenderSource.indexOf('onContextualRestaurantsChange?.({');
     expect(rawCallbackIndex).toBeGreaterThan(0);
     expect(contextualCallbackIndex).toBeGreaterThan(rawCallbackIndex);
   });

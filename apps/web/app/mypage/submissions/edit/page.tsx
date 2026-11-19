@@ -44,6 +44,7 @@ import {
   myPageListCardClass,
   myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
+import { getResponseErrorMessage, isRecord, parseValidatedRows } from "@/lib/validation/records";
 
 type SubmissionStatus =
   | "pending"
@@ -122,29 +123,6 @@ const SUBMISSION_ITEM_SELECT = [
 ].join(", ");
 
 type SubmissionRow = Omit<Submission, "items" | "target_restaurant">;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function parseValidatedRows<Row>(
-  values: readonly unknown[],
-  isRow: (value: unknown) => value is Row,
-): Row[] {
-  const rows: Row[] = [];
-
-  for (const value of values) {
-    if (isRow(value)) {
-      rows.push(value);
-    }
-  }
-
-  return rows;
-}
-
-function getResponseErrorMessage(value: unknown): string | null {
-  return isRecord(value) && typeof value.error === "string" ? value.error : null;
-}
-
 
 function isNullableString(value: unknown): value is string | null {
   return typeof value === "string" || value === null;

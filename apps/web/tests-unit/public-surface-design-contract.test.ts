@@ -142,7 +142,6 @@ const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
     '@source "../components/map";',
     '@source "../components/search";',
     '@source "../components/filters";',
-    '@source "../components/region";',
     '@source "../components/skeletons";',
     '@source "../components/ui";',
     '@source "../lib/naver-map-overlay-position-helpers.ts";',
