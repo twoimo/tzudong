@@ -3,7 +3,7 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createSupabaseStorageServerClient } from '@/lib/supabase/storage-server';
 import {
   MAX_STORYBOARD_DOCUMENT_BYTES, MAX_STORYBOARD_IMAGE_BYTES,
-  StoryboardProductionError, assertExecutableStoryboardRequest, assertGeminiStoryboardExecutionPolicy, parseStoryboardDraft,
+  StoryboardProductionError, assertExecutableStoryboardRequest, assertStoryboardProviderPolicy, isAllowedStoryboardModel, parseStoryboardDraft,
   storyboardDraftSceneSchema, storyboardGeminiProductionDocumentSchema, storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema, storyboardProvenanceSchema, storyboardStoredProductionRequestSchema,
   type StoryboardProductionAsset, type StoryboardProductionDocument, type StoryboardProductionProvenance,
@@ -66,7 +66,7 @@ const checkSchema = snapshotSchema.extend({ kind: z.enum(['generate', 'scene']),
 const claimSchema = z.object({ ok: z.literal(true), job: z.object({
   id: productionUuid, projectId: productionUuid, revision: z.number().int().nonnegative(), kind: z.enum(['generate', 'scene']),
   sceneNo: z.number().int().min(1).max(12).nullable(), request: storyboardProductionRequestSchema,
-  document: storyboardGeminiProductionDocumentSchema.nullable(), leaseToken: productionUuid,
+  document: storyboardProductionDocumentSchema.nullable(), leaseToken: productionUuid,
 }).strict().nullable() }).strict();
 const okSchema = z.object({ ok: z.literal(true) }).strict();
 const heartbeatSchema = okSchema.extend({ leaseValid: z.boolean() });
@@ -174,12 +174,16 @@ export function validateGeminiStoryboardProvenance(
   if (!result.success) throw new StoryboardProductionError('invalid_provenance');
   const proof = result.data;
   const provider = request.providers[modality];
-  if (proof.providerId !== 'gemini-api' || proof.verification !== 'official-api' || proof.model !== provider.model
-    || proof.modelEvidence !== 'response' || !proof.responseModel
-    || (proof.responseModel !== provider.model && !new RegExp(`^${provider.model.replaceAll('.', '\\.')}-(?:\\d{3}|\\d{2}-\\d{2})$`).test(proof.responseModel))) {
+  if (proof.providerId !== provider.id || proof.verification !== 'official-api' || proof.model !== provider.model
+    || !isAllowedStoryboardModel(provider.id, provider.model, modality)
+    || (provider.id === 'openai-api' && (modality === 'text'
+      ? proof.modelEvidence !== 'response' || !proof.responseModel || (proof.responseModel !== provider.model && !new RegExp(`^${provider.model.replaceAll('.', '\\.')}-(?:[0-9]{4}-[0-9]{2}-[0-9]{2})$`).test(proof.responseModel))
+      : proof.modelEvidence !== 'installed-catalog-and-request' || proof.responseModel !== null))
+    || (provider.id === 'gemini-api' && (proof.modelEvidence !== 'response' || !proof.responseModel
+      || (proof.responseModel !== provider.model && !new RegExp(`^${provider.model.replaceAll('.', '\\.')}-(?:[0-9]{3}|[0-9]{2}-[0-9]{2})$`).test(proof.responseModel))))) {
     throw new StoryboardProductionError('model_identity_mismatch');
   }
-  const registered = models.find((model) => model.id === provider.model && model.owned_by === 'gemini-api');
+  const registered = models.find((model) => model.id === provider.model && model.owned_by === provider.id);
   if (!registered || !registered.capabilities.includes(modality === 'text' ? 'chat' : 'image')) throw new StoryboardProductionError('model_capability_mismatch');
   return proof;
 }
@@ -248,7 +252,7 @@ export class StoryboardProductionStore {
   }
   async create(ownerId: string, value: unknown) {
     const request = input(storyboardProductionRequestSchema, value);
-    assertGeminiStoryboardExecutionPolicy(request.providers);
+    assertStoryboardProviderPolicy(request.providers);
     if (Buffer.byteLength(JSON.stringify(request), 'utf8') > 60 * 1024) throw new StoryboardProductionError('request_too_large');
     return decode(snapshotSchema, await this.admin(ownerId, 'create', null, null, request));
   }

@@ -38,6 +38,7 @@ import {
 } from "@/lib/profile-mutation";
 import { invalidateProfileDisplayQueries } from "@/lib/profile-display-cache";
 import { cn } from "@/lib/utils";
+import { getTierDisplayName } from "./tier-display";
 
 interface SidebarItemProps {
   href: string;
@@ -52,9 +53,9 @@ function SidebarItem({ href, icon, label, isActive }: SidebarItemProps) {
       href={href}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+        "flex min-h-11 items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
         isActive
-          ? "bg-primary/10 text-primary"
+          ? "bg-muted text-foreground"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
@@ -214,11 +215,7 @@ export function MyPageSidebar() {
   const menuItems = [
     {
       href: "/mypage/profile",
-      icon: (
-        <div className="flex h-4 w-4 items-center justify-center rounded-full border border-current">
-          <span className="h-2 w-2 rounded-full bg-current" />
-        </div>
-      ),
+      icon: <User className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />,
       label: "내 프로필",
     },
     {
@@ -227,12 +224,12 @@ export function MyPageSidebar() {
     {
       href: "/mypage/bookmarks",
       icon: <Bookmark className="h-4 w-4" />,
-      label: "나의 북마크 내역",
+      label: "저장한 맛집",
     },
     {
       href: "/mypage/reviews",
       icon: <MessageSquare className="h-4 w-4" />,
-      label: "나의 리뷰 내역",
+      label: "내 리뷰",
     },
     {
       divider: true,
@@ -240,17 +237,17 @@ export function MyPageSidebar() {
     {
       href: "/mypage/submissions/new",
       icon: <PlusCircle className="h-4 w-4" />,
-      label: "신규 맛집 제보",
+      label: "신규 맛집 제보 내역",
     },
     {
       href: "/mypage/submissions/edit",
       icon: <Edit className="h-4 w-4" />,
-      label: "맛집 수정 요청",
+      label: "맛집 수정 요청 내역",
     },
     {
       href: "/mypage/submissions/recommend",
       icon: <Tv className="h-4 w-4" />,
-      label: "쯔양 맛집 제보",
+      label: "쯔양 맛집 제보 내역",
     },
   ];
 
@@ -267,12 +264,12 @@ export function MyPageSidebar() {
       data-mypage-left-panel-expanded="true"
       data-layout-primitives="sidebar"
     >
-      <div className="flex flex-col items-center space-y-4 p-6 text-center">
+      <div className="flex flex-col items-center space-y-3 border-b border-border p-4 text-center">
         <div className="group relative h-20 w-20 shrink-0 rounded-full">
           <label
             htmlFor="mypage-sidebar-avatar-upload"
             aria-label="프로필 사진 변경"
-            className="relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm group-hover:ring-2 group-hover:ring-primary/30"
+            className="relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2"
             style={{
               width: "5rem",
               height: "5rem",
@@ -300,7 +297,7 @@ export function MyPageSidebar() {
             )}
 
             <span
-              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 group-hover:opacity-100 active:opacity-100"
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 active:opacity-100"
               style={{ borderRadius: "9999px" }}
             >
               {avatarUploading ? (
@@ -326,11 +323,11 @@ export function MyPageSidebar() {
                 e.preventDefault();
                 handleAvatarDelete();
               }}
-              className="absolute -right-1 -top-1 z-20 rounded-full bg-destructive p-1 text-white opacity-0 hover:bg-destructive/90 group-hover:opacity-100"
+              className="absolute -right-3 -top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground opacity-0 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group-hover:opacity-100 group-focus-within:opacity-100"
               title="사진 삭제"
               aria-label="프로필 사진 삭제"
             >
-              <X className="h-3 w-3" />
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card"><X className="h-4 w-4" aria-hidden="true" /></span>
             </button>
           )}
         </div>
@@ -352,14 +349,14 @@ export function MyPageSidebar() {
                 onChange={(e) => setNicknameInput(e.target.value)}
                 placeholder="닉네임"
                 aria-label="닉네임"
-                className="h-9 rounded-xl text-center text-sm"
+                className="h-11 rounded-lg text-center text-base md:text-base"
                 autoFocus
               />
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   size="sm"
-                  className="h-8 rounded-xl text-xs"
+                  className="h-11 rounded-lg text-sm"
                   onClick={handleNicknameChange}
                   disabled={
                     nicknameSaving ||
@@ -376,7 +373,7 @@ export function MyPageSidebar() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 rounded-xl text-xs"
+                  className="h-11 rounded-lg text-sm"
                   onClick={() => {
                     setNicknameInput(displayName);
                     setIsNicknameEditing(false);
@@ -386,33 +383,29 @@ export function MyPageSidebar() {
                   취소
                 </Button>
               </div>
-              <p className="text-2xs text-muted-foreground">
+              <p className="text-xs leading-5 text-muted-foreground">
                 닉네임은 2-20자 사이로 입력해주세요
               </p>
             </div>
           ) : (
             <div
-              className="flex max-w-full items-center gap-2 px-2"
+              className="flex w-full flex-wrap items-center justify-center gap-x-2"
               data-mypage-sidebar-nickname-field="display"
             >
-              <h3 className="truncate text-lg font-bold">{displayName}</h3>
+              <h3 className="max-w-full truncate text-base font-semibold">{displayName}</h3>
               {profile?.tier && (
                 <Badge
                   variant="outline"
-                  className={cn(
-                    "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-2xs",
-                    profile.tier.color,
-                    profile.tier.bgColor,
-                  )}
+                  className="h-6 shrink-0 whitespace-nowrap border-border px-2 py-0 text-xs font-medium text-muted-foreground"
                 >
-                  {profile.tier.name}
+                  {getTierDisplayName(profile.tier.name)}
                 </Badge>
               )}
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-8 rounded-full px-2.5 text-2xs text-muted-foreground"
+                className="h-11 min-w-11 rounded-lg px-2 text-xs text-muted-foreground"
                 onClick={() => {
                   setNicknameInput(displayName);
                   setIsNicknameEditing(true);
@@ -429,22 +422,22 @@ export function MyPageSidebar() {
           )}
         </div>
 
-        <div className="grid w-full grid-cols-3 gap-2 pt-2">
-          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 hover:bg-muted/60">
+        <div className="grid w-full grid-cols-3 gap-2 py-1">
+          <div className="flex flex-col items-center p-2">
             <span className="mb-1 text-xs text-muted-foreground">도장</span>
-            <span className="text-sm font-bold">
+            <span className="text-sm font-semibold tabular-nums">
               {profile?.verifiedReviewCount ?? 0}
             </span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 hover:bg-muted/60">
+          <div className="flex flex-col items-center border-x border-border p-2">
             <span className="mb-1 text-xs text-muted-foreground">리뷰</span>
-            <span className="text-sm font-bold">
+            <span className="text-sm font-semibold tabular-nums">
               {profile?.reviewCount ?? 0}
             </span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 hover:bg-muted/60">
+          <div className="flex flex-col items-center p-2">
             <span className="mb-1 text-xs text-muted-foreground">좋아요</span>
-            <span className="text-sm font-bold">
+            <span className="text-sm font-semibold tabular-nums">
               {profile?.totalLikes ?? 0}
             </span>
           </div>
@@ -453,7 +446,7 @@ export function MyPageSidebar() {
         <Button
           type="button"
           variant="ghost"
-          className="h-9 w-full rounded-xl text-xs"
+          className="h-11 w-full rounded-lg text-sm text-muted-foreground"
           onClick={handleLogout}
           data-mypage-sidebar-session-action="logout"
         >
@@ -462,13 +455,13 @@ export function MyPageSidebar() {
         </Button>
       </div>
 
-      <div className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav aria-label="마이페이지" className="flex-1 space-y-1 px-3 py-3">
         {menuItems.map((item, index) => {
           if (item.divider) {
             return (
               <div
                 key={index}
-                className="h-2"
+                className="mx-3 my-2 border-t border-border"
                 aria-hidden="true"
               />
             );
@@ -486,7 +479,7 @@ export function MyPageSidebar() {
             />
           );
         })}
-      </div>
+      </nav>
       <div className="sticky bottom-0 mt-auto border-t border-border bg-card p-4">
         <Button asChild variant="outline" className="min-h-11 w-full justify-center gap-2 rounded-xl">
           <Link href={homeReturnHref} data-mypage-return-to-map="true">

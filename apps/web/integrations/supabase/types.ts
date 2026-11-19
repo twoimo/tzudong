@@ -1574,6 +1574,10 @@ interface DatabaseSource {
             }
         }
         Functions: {
+            get_home_youtube_kpi_metrics: {
+                Args: { p_video_ids: string[] }
+                Returns: Json
+            }
             allocate_short_url: {
                 Args: {
                     p_target_url: string

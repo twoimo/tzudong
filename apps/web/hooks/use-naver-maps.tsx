@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { NAVER_MAPS_CONFIG } from "@/config/maps";
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
 import {
     isLocalNaverStyleFallbackHost,
     resolveNaverMapScriptUrl,
@@ -138,15 +139,18 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
             scheduledLoadRef.current = null;
             setIsLoading(false);
             if (event.type === 'load' && hasUsableNaverMaps()) {
+                markInitialLoadMilestone('naverSdkReady');
                 installLocalNaverStyleHostFallback();
                 setIsLoaded(true);
                 setLoadError(null);
             } else if (!hasUsableNaverMaps()) {
+                markInitialLoadMilestone('naverSdkError');
                 setLoadError(new Error(event.type === 'load'
                     ? '네이버 지도 API 초기화 실패'
                     : '네이버 지도 API 로딩 실패 - 네트워크 오류'));
             }
         };
+        if (hasUsableNaverMaps()) markInitialLoadMilestone('naverSdkReady');
         document.addEventListener('load', observeScript, true);
         document.addEventListener('error', observeScript, true);
         return () => {
@@ -166,12 +170,14 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
 
         // Client ID 검증
         if (!NAVER_MAPS_CONFIG.clientId && !LOCAL_OFFLINE_MAP) {
+            markInitialLoadMilestone('naverSdkError');
             setLoadError(new Error("네이버 지도 Client ID가 설정되지 않았습니다."));
             return;
         }
 
         // 이미 로드되었는지 확인 - window 객체 재확인
         if (hasUsableNaverMaps()) {
+            markInitialLoadMilestone('naverSdkReady');
             setIsLoaded(true);
             return;
         }
@@ -208,6 +214,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
                 script.onerror = null;
                 installLocalNaverStyleHostFallback();
                 if (hasUsableNaverMaps()) {
+                    markInitialLoadMilestone('naverSdkReady');
                     setIsLoaded(true);
                     setIsLoading(false);
                     return;
@@ -215,11 +222,13 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
                 // A failed live provider must never become a test map. Remove
                 // this failed owned script so a user retry can request it again.
                 script.remove();
+                markInitialLoadMilestone('naverSdkError');
                 setLoadError(new Error("네이버 지도 API 초기화 실패"));
                 setIsLoading(false);
             };
 
             script.onerror = () => {
+                markInitialLoadMilestone('naverSdkError');
                 script.onload = null;
                 script.onerror = null;
                 script.remove();
@@ -231,6 +240,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
                 setIsLoading(false);
             };
 
+            markInitialLoadMilestone('naverSdkRequested');
             document.head.appendChild(script);
         };
 

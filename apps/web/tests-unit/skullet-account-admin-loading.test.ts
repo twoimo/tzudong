@@ -21,7 +21,8 @@ function presentation(path: string, name: string, props: Record<string, unknown>
     compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const exports: { render?: (props: Record<string, unknown>) => Element } = {};
-  const jsx = (type: string, value: Record<string, unknown>): Element => ({ type, props: value });
+  const jsx = (type: string | ((props: Record<string, unknown>) => Element), value: Record<string, unknown>): Element =>
+    typeof type === 'function' ? type(value) : { type, props: value };
   runInNewContext(code, {
     exports,
     require(name: string) {
@@ -31,6 +32,7 @@ function presentation(path: string, name: string, props: Record<string, unknown>
     LoadingSurface: 'LoadingSurface', LoadingPreview: 'LoadingPreview',
     Button: 'Button', X: 'X', UserProfileTabSkeleton: 'UserProfileTabSkeleton',
     AdminPageHeader: 'AdminPageHeader', Clapperboard: 'Clapperboard', ImageIcon: 'ImageIcon',
+    StoryboardWorkspaceSkeleton: () => presentation('components/admin/storyboard/StoryboardWorkspaceSkeleton.tsx', 'StoryboardWorkspaceSkeleton'),
     getAdminModuleTitle: (moduleId: string) => moduleId,
     cn: (...parts: unknown[]) => parts.filter(Boolean).join(' '),
     useFilledSkeletonCount: () => ({ ref: null, count: 3 }),
@@ -47,6 +49,17 @@ function visit(value: unknown, inspect: (node: Element) => void) {
   visit(node.props.children, inspect);
 }
 
+function assertPassiveDom(tree: unknown) {
+  visit(tree, sample => {
+    expect(sample.type).toMatch(/^[a-z][a-z0-9-]*$/);
+    for (const [key, value] of Object.entries(sample.props)) {
+      expect(key).not.toMatch(/^on[A-Z]/);
+      expect(typeof value).not.toBe('function');
+      expect(['src', 'href', 'dangerouslySetInnerHTML'].includes(key)).toBe(false);
+    }
+  });
+}
+
 function assertPassiveSamples(tree: Element) {
   let surfaces = 0;
   visit(tree, node => {
@@ -56,14 +69,7 @@ function assertPassiveSamples(tree: Element) {
     }
     if (node.type !== 'LoadingSurface') return;
     surfaces++;
-    visit(node.props.children, sample => {
-      expect(sample.type).toMatch(/^[a-z][a-z0-9-]*$/);
-      for (const [key, value] of Object.entries(sample.props)) {
-        expect(key).not.toMatch(/^on[A-Z]/);
-        expect(typeof value).not.toBe('function');
-        expect(['src', 'href', 'dangerouslySetInnerHTML'].includes(key)).toBe(false);
-      }
-    });
+    assertPassiveDom(node.props.children);
   });
   expect(surfaces).toBeGreaterThan(0);
 }
@@ -78,7 +84,6 @@ describe('account and admin measured loading samples', () => {
     ['components/admin/AdminUsersPanel.tsx', 'UserTableSkeleton', {}],
     ['components/admin/AdminRestaurantRefreshHistoryPanel.tsx', 'RefreshCandidateListSkeleton', {}],
     ['components/admin/AdminConsoleOverview.tsx', 'AdminDashboardKpiValueSkeleton', {}],
-    ['components/admin/AdminConsoleOverview.tsx', 'AdminStoryboardModuleLoadingSkeleton', {}],
     ['components/admin/AdminConsoleOverview.tsx', 'AdminYoutubeThumbnailModuleLoadingSkeleton', {}],
     ...['chart', 'table', 'ops', 'bubble', 'line', 'stacked', 'diagnosis'].map(variant =>
       ['components/admin/AdminConsoleOverview.tsx', 'AdminDashboardPanelBodySkeleton', { variant }]),
@@ -87,6 +92,35 @@ describe('account and admin measured loading samples', () => {
       assertPassiveSamples(presentation(path, name, props));
     });
   }
+
+  test('storyboard loading renders the actual passive workspace skeleton inside one bounded module scroll body', () => {
+    const tree = presentation('components/admin/AdminConsoleOverview.tsx', 'AdminStoryboardModuleLoadingSkeleton');
+    const nodes: Element[] = [];
+    visit(tree, node => nodes.push(node));
+    expect(tree.props['data-storyboard-viewport-fit']).toBe('bounded');
+    expect(tree.props['aria-busy']).toBe('true');
+    expect(String(tree.props.className).split(/\s+/)).toContain('overflow-hidden');
+    expect(nodes.filter(node => node.type === 'AdminPageHeader')).toHaveLength(1);
+    const scrollBodies = nodes.filter(node => String(node.props.className).split(/\s+/).includes('overflow-y-auto'));
+    expect(scrollBodies).toHaveLength(1);
+    expect(String(scrollBodies[0].props.className).split(/\s+/)).toContain('min-h-0');
+    expect(String(scrollBodies[0].props.className).split(/\s+/)).toContain('overscroll-contain');
+
+    const workspaces = nodes.filter(node => node.props['aria-label'] === '스토리보드 작업 공간 불러오는 중');
+    expect(workspaces).toHaveLength(1);
+    const workspace = workspaces[0];
+    expect(workspace.props['aria-busy']).toBe('true');
+    assertPassiveDom(workspace);
+    let statusCount = 0;
+    let cutCount = 0;
+    visit(workspace, node => {
+      expect(['a', 'button', 'input', 'select', 'textarea', 'img', 'iframe', 'script']).not.toContain(node.type);
+      if (node.props.role === 'status') statusCount++;
+      if (String(node.props.className).includes('min-h-0 rounded-xl border border-border bg-muted/40')) cutCount++;
+    });
+    expect(statusCount).toBe(1);
+    expect(cutCount).toBe(4);
+  });
 
   test('profile header and close action stay outside measured samples', () => {
     const header: Element = { type: 'private-header', props: { children: 'PRIVATE_HEADER_SENTINEL' } };

@@ -593,7 +593,9 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(dashboard).toContain("수집 정상");
     expect(dashboard).toContain("GITHUB_ACTIONS_TOKEN 또는 GH_TOKEN");
     expect(dashboard).toContain("formatSignedNumber(snapshot?.viewDelta)");
-    expect(dashboard).toContain("enabled: isCollectionLogsOpen");
+    expect(dashboard).toContain("enabled: isAdmin || isCollectionLogsOpen");
+    expect(dashboard).toContain("refetchInterval: isAdmin ? 60 * 1000 : false");
+    expect(dashboard).toContain("refetchIntervalInBackground: false");
     expect(dashboard).toContain(
       "data-admin-dashboard-kpi-collection-log-trigger",
     );

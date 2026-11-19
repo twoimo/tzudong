@@ -125,10 +125,10 @@ function FeedLoadingContent() {
     const { ref: loadingFeedRef, count: loadingRowCount } = useFilledSkeletonCount(280, 4);
     return (
         <div ref={loadingFeedRef} data-testid="feed-skeleton">
-            <LoadingSurface label="리뷰 피드를 불러오는 중" className="mx-auto w-full max-w-2xl p-4" style={{ contain: "content" }}>
-                <div className="space-y-4">
+            <LoadingSurface label="리뷰 피드를 불러오는 중" className="mx-auto w-full max-w-2xl p-3 sm:p-4" style={{ contain: "content" }}>
+                <div className="space-y-3">
                     {Array.from({ length: loadingRowCount }, (_, index) => (
-                        <article key={index} className="space-y-3 rounded-lg border border-border/50 p-4">
+                        <article key={index} className="space-y-2 rounded-lg border border-border/50 p-3">
                             <header className="flex items-center gap-3">
                                 <svg viewBox="0 0 36 36" role="img" aria-label="프로필" className="h-9 w-9 shrink-0 rounded-full"><circle cx="18" cy="12" r="6" fill="currentColor" opacity="0.12" /><path d="M5 34a13 13 0 0 1 26 0" fill="currentColor" opacity="0.12" /></svg>
                                 <h3 className="truncate text-sm font-medium leading-4">맛집 여행자</h3>
@@ -616,13 +616,12 @@ export default function FeedContent({
                 {showHeader && (
                     <div className="shrink-0 bg-background">
                         <MapPanelHeader
-                            eyebrow={isOverlay ? undefined : '쯔양 맛집 방문 후기 모음'}
                             title={isOverlay ? '리뷰' : '쯔동여지도 리뷰'}
                             titleAs="h1"
                             variant={isOverlay ? "panel" : "page"}
                             titleIcon={!isOverlay ? <MessageSquareText /> : undefined}
                             count={isLoading ? undefined : allReviews.length}
-                            description={!isOverlay ? (isLoggedIn ? '맛집 방문 후기를 공유해보세요!' : '로그인하여 리뷰를 작성해보세요!') : '맛집을 다녀온 이야기를 나눠요'}
+                            description={!isOverlay ? (isLoggedIn ? '맛집 방문 후기를 공유해보세요' : '로그인하여 리뷰를 작성해보세요') : '맛집을 다녀온 이야기를 나눠요'}
                             onClose={isOverlay ? onClose : undefined}
                             closeLabel="리뷰 패널 닫기"
                             actions={(
@@ -693,7 +692,7 @@ export default function FeedContent({
                 <div className={cn(
                     "flex-1",
                     !hideFloatingButton && !isOverlay
-                        ? "pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+5.5rem)] md:pb-28"
+                        ? "pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+5.5rem)] xl:pb-28"
                         : "pb-8",
                     isOverlay && "overflow-y-auto"
                 )}>
@@ -712,7 +711,7 @@ export default function FeedContent({
                             <p>아직 승인된 리뷰가 없습니다.</p>
                         </div>
                     ) : (
-                        <div className="space-y-4 p-4">
+                        <div className="space-y-3 p-3 sm:p-4">
                             {renderedReviewItems.map(({ review, listIndex, loopIndex }) => {
                                 const optimistic = optimisticLikes[review.id];
                                 const likeCount = optimistic?.count ?? review.likeCount;
@@ -784,7 +783,7 @@ export default function FeedContent({
                             onClick={handleWriteReview}
                             className={cn(
                                 "h-14 w-14 rounded-full shadow-sm bg-primary text-primary-foreground hover:bg-primary/90",
-                                "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
+                                "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 xl:bottom-8"
                             )}
                             size="icon"
                             aria-label="리뷰 작성"

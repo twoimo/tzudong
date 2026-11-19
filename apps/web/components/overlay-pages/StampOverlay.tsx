@@ -1,5 +1,7 @@
 'use client';
 
+import '@/app/home-interactive-globals.css';
+
 import { LoadingSurface } from "@/components/ui/loading-surface";
 
 import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
@@ -288,7 +290,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     return (
         <div
             ref={scrollContainerRef}
-            className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+            className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [scrollbar-width:'none']"
             data-stamp-scroll-container="true"
             data-desktop-left-panel-stamp-mobile-parity="true"
         >

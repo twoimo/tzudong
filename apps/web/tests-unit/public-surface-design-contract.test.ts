@@ -93,6 +93,8 @@ const CSS_OWNERS = [
   'app/app-globals.css',
   'app/home-deferred-globals.css',
   'app/home-detail-globals.css',
+  'app/home-interactive-globals.css',
+  'app/legal-globals.css',
 ] as const;
 
 const CSS_IMPORTERS = {
@@ -115,6 +117,16 @@ const CSS_IMPORTERS = {
   },
 } as const;
 
+const INTERACTIVE_CSS_IMPORTERS = [
+  'components/auth/AuthModal.tsx',
+  'components/profile/ProfileModal.tsx',
+  'components/profile/NicknameSetupModal.tsx',
+  'components/profile/UserProfilePanel.tsx',
+  'components/overlay-pages/FeedOverlay.tsx',
+  'components/overlay-pages/StampOverlay.tsx',
+  'components/overlay-pages/LeaderboardOverlay.tsx',
+] as const;
+
 const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
   'app/home-app-globals.css': [
     '@source "./page.tsx";',
@@ -130,7 +142,6 @@ const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
     '@source "../components/map";',
     '@source "../components/search";',
     '@source "../components/filters";',
-    '@source "../components/region";',
     '@source "../components/skeletons";',
     '@source "../components/ui";',
     '@source "../lib/naver-map-overlay-position-helpers.ts";',
@@ -163,6 +174,28 @@ const FROZEN_SOURCE_SCOPES: Record<string, readonly string[]> = {
     '@source not "../**/*.test.*";',
     '@source not "../tests-unit";',
   ],
+  'app/home-interactive-globals.css': [
+    '@source "../components/auth";',
+    '@source "../components/profile";',
+    '@source "../components/overlay-pages";',
+    '@source "../components/feed";',
+    '@source "../components/stamp";',
+    '@source "../components/leaderboard";',
+    '@source "../components/reviews";',
+    '@source "../components/legal";',
+    '@source "../components/ui";',
+    '@source "../components/home/map-panel-chrome.tsx";',
+    '@source "../components/layout/page-heading-styles.ts";',
+    '@source "../hooks/useUserProfile.ts";',
+    '@source not "../**/*.{test,spec}.{js,jsx,ts,tsx}";',
+    '@source not "../{tests-unit,test,tests,fixtures}/**";',
+  ],
+  'app/legal-globals.css': [
+    '@source "./privacy/page.tsx";',
+    '@source "./data-deletion/page.tsx";',
+    '@source "../components/legal";',
+    '@source "../components/layout/page-heading-styles.ts";',
+  ],
 };
 
 const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
@@ -175,12 +208,13 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
   'admin-evaluation-table',
   'knowledge-graph-canvas',
   'insights-controls',
+  'performance-comparison-table',
+  'performance-samples-table',
 ] as const;
 
-// The former mobile reel remains approved for compatibility; current home chips wrap.
-const CURRENT_HORIZONTAL_SCROLL_OWNERS = APPROVED_HORIZONTAL_SCROLL_OWNERS.filter(
-  (owner) => owner !== 'mobile-theme-filter-reel',
-);
+// Mobile theme controls use their already-approved horizontal owner to keep
+// five touch-sized controls from covering multiple rows of the map.
+const CURRENT_HORIZONTAL_SCROLL_OWNERS = APPROVED_HORIZONTAL_SCROLL_OWNERS;
 
 const COMPATIBLE_TABLE_HORIZONTAL_SCROLL_OWNERS = [
   'mobile-theme-filter-reel',
@@ -269,6 +303,9 @@ function collectOwnerAttributeValues(root: string): string[] {
       }
       const source = readFileSync(fullPath, 'utf8');
       for (const match of source.matchAll(/data-horizontal-scroll-owner="([^"]+)"/g)) {
+        owners.add(match[1]);
+      }
+      for (const match of source.matchAll(/data-horizontal-scroll-owner=\{[^{}?]+\?\s*["']([^"']+)["']\s*:\s*undefined\s*\}/g)) {
         owners.add(match[1]);
       }
       for (const match of source.matchAll(/horizontalScrollOwner="([^"]+)"/g)) {
@@ -367,12 +404,18 @@ describe('public surface design contract', () => {
     expect(readApp('app/s/layout.tsx')).toContain('AppRuntimeLayout');
   });
 
-  test('pins all five CSS owner-to-importer mappings and forbids a sixth Tailwind entry', () => {
+  test('pins CSS owners to their shells, deferred surfaces and public documents', () => {
     const cssFiles = walkCssUnder(appDir);
     expect(cssFiles).toEqual([...CSS_OWNERS].sort());
 
     for (const [owner, { importer, needle }] of Object.entries(CSS_IMPORTERS)) {
       expect(readApp(importer)).toContain(needle);
+    }
+    for (const importer of INTERACTIVE_CSS_IMPORTERS) {
+      expect(readApp(importer)).toMatch(/import ['"]@\/app\/home-interactive-globals\.css['"]/);
+    }
+    for (const importer of ['app/privacy/page.tsx', 'app/data-deletion/page.tsx']) {
+      expect(readApp(importer)).toContain("import '../legal-globals.css'");
     }
 
     const shellSources = [
@@ -382,6 +425,8 @@ describe('public surface design contract', () => {
     ].join('\n');
     expect(shellSources).not.toContain('home-deferred-globals.css');
     expect(shellSources).not.toContain('home-detail-globals.css');
+    expect(shellSources).not.toContain('home-interactive-globals.css');
+    expect(shellSources).not.toContain('legal-globals.css');
 
     expect(readApp('app/globals.css')).not.toContain('@import "tailwindcss"');
     expect(readApp('app/globals.css')).not.toMatch(/^@source /m);
@@ -390,7 +435,7 @@ describe('public surface design contract', () => {
     for (const owner of tailwindOwners) {
       expect(readApp(owner)).toContain('@import "tailwindcss" source(none);');
     }
-    expect(tailwindOwners).toHaveLength(4);
+    expect(tailwindOwners).toHaveLength(6);
 
     const allCss = walkCssUnder(appRoot);
     const extraTailwind = allCss.filter((relativePath) => {
@@ -476,17 +521,55 @@ describe('public surface design contract', () => {
     expect(readApp('app/app-globals.css')).toContain('--admin-sidebar-expanded-width: calc(8.75rem * var(--phi))');
   });
 
-  test('current horizontal owners exclude the retired reel and reject unapproved owners', () => {
+  test('current horizontal owners include the mobile theme reel and reject unapproved owners', () => {
     const owners = collectOwnerAttributeValues(appRoot);
     expect(owners).toEqual([...CURRENT_HORIZONTAL_SCROLL_OWNERS].sort());
     expect(owners.filter((owner) => !(APPROVED_HORIZONTAL_SCROLL_OWNERS as readonly string[]).includes(owner))).toEqual([]);
-    expect(owners).not.toContain('mobile-theme-filter-reel');
+    expect(owners).toContain('mobile-theme-filter-reel');
     expect(owners).not.toContain('naver-cluster');
     expect(owners).not.toContain('naver-map-cluster');
     const designSource = readFileSync(resolve(appRoot, '..', '..', 'docs/product/DESIGN.md'), 'utf8');
     expect(designSource).toContain(
       'Naver map cluster marker overflow remains a provider-specific exception outside this policy',
     );
+  });
+
+  test('performance tables keep their approved horizontal overflow keyboard-accessible and named', () => {
+    const source = ts.createSourceFile('AdminPerformanceAudit.tsx', readApp('components/admin/performance/AdminPerformanceAudit.tsx'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const elements: ts.JsxElement[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxElement(node)) elements.push(node);
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    const attribute = (node: ts.JsxElement, name: string) => node.openingElement.attributes.properties
+      .find((prop): prop is ts.JsxAttribute => ts.isJsxAttribute(prop) && prop.name.getText(source) === name)?.initializer;
+    const stringAttribute = (node: ts.JsxElement, name: string) => {
+      const value = attribute(node, name);
+      return value && ts.isStringLiteral(value) ? value.text : undefined;
+    };
+
+    for (const [owner, label, width] of [
+      ['performance-comparison-table', '성능 구간 비교 표', 'min-w-[540px]'],
+      ['performance-samples-table', '개별 요청 측정 표', 'min-w-[480px]'],
+    ]) {
+      const wrappers = elements.filter((node) => stringAttribute(node, 'data-horizontal-scroll-owner') === owner);
+      expect(wrappers).toHaveLength(1);
+      const wrapper = wrappers[0];
+      expect(wrapper.openingElement.tagName.getText(source)).toBe('div');
+      expect(stringAttribute(wrapper, 'data-allow-horizontal-scroll')).toBe('true');
+      expect(stringAttribute(wrapper, 'className')?.split(/\s+/)).toContain('overflow-x-auto');
+      expect(stringAttribute(wrapper, 'role')).toBe('region');
+      expect(stringAttribute(wrapper, 'aria-label')).toBe(label);
+      const tabIndex = attribute(wrapper, 'tabIndex');
+      expect(tabIndex && ts.isJsxExpression(tabIndex) ? tabIndex.expression?.getText(source) : undefined).toBe('0');
+      const tables = wrapper.children.filter((node): node is ts.JsxElement => ts.isJsxElement(node) && node.openingElement.tagName.getText(source) === 'table');
+      expect(tables).toHaveLength(1);
+      expect(stringAttribute(tables[0], 'className')?.split(/\s+/)).toContain(width);
+      const captions = tables[0].children.filter((node): node is ts.JsxElement => ts.isJsxElement(node) && node.openingElement.tagName.getText(source) === 'caption');
+      expect(captions).toHaveLength(1);
+      expect(stringAttribute(captions[0], 'className')?.split(/\s+/)).toContain('sr-only');
+    }
   });
 
   test('the exported Table compatibility allowlist retains its approved tokens without admitting unknowns', () => {
@@ -506,22 +589,24 @@ describe('public surface design contract', () => {
     expect(tokens).toContain('mobile-theme-filter-reel');
   });
 
-  test('mobile and desktop use the shared wrapping theme filters instead of a horizontal home reel', () => {
-    for (const path of ['components/home/MobileControlOverlay.tsx', 'components/home/home-desktop-control-panel.tsx']) {
-      const source = readApp(path);
-      expect(source).toContain('<HomeMapThemeFilters activeThemeId={selectedTheme} onThemeChange={onThemeChange} />');
-      expect(source).not.toContain('data-horizontal-scroll-owner="mobile-theme-filter-reel"');
-    }
+  test('desktop themes wrap while mobile themes use one approved touch-sized reel', () => {
+    expect(readApp('components/home/MobileControlOverlay.tsx')).toContain('layout="reel"');
+    expect(readApp('components/home/home-desktop-control-panel.tsx')).toContain('<HomeMapThemeFilters activeThemeId={selectedTheme} onThemeChange={onThemeChange} />');
     for (const activeThemeId of [null, 'hot-view'] as const) {
       const html = renderToStaticMarkup(createElement(HomeMapThemeFilters, { activeThemeId, onThemeChange: () => {} }));
       expect(html).toContain('aria-label="쯔양 영상 테마 필터"');
       expect(html).toContain('flex-wrap');
-      expect(html).toContain('min-h-8');
-      expect(html).toContain('whitespace-normal');
-      expect(html.match(/<button\b/g)).toHaveLength(5);
+      expect(html).toContain('min-h-11');
+      expect(html.match(/aria-pressed="(?:true|false)"/g)).toHaveLength(5);
       expect(html.match(/aria-pressed="true"/g) ?? []).toHaveLength(activeThemeId ? 1 : 0);
       expect(html).not.toContain('overflow-x-auto');
       expect(html).not.toContain('data-horizontal-scroll-owner');
+      const mobile = renderToStaticMarkup(createElement(HomeMapThemeFilters, { activeThemeId, onThemeChange: () => {}, layout: 'reel' }));
+      expect(mobile).toContain('overflow-x-auto');
+      expect(mobile).toContain('data-allow-horizontal-scroll="true"');
+      expect(mobile).toContain('data-horizontal-scroll-owner="mobile-theme-filter-reel"');
+      expect(mobile.match(/aria-pressed="(?:true|false)"/g)).toHaveLength(5);
+      expect(mobile.match(/aria-pressed="true"/g) ?? []).toHaveLength(activeThemeId ? 1 : 0);
     }
   });
 

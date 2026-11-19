@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { User, MapPin, Heart, Calendar, CheckCircle, Edit, Share2, Check } from 'lucide-react';
+import { User, Heart, CheckCircle, Edit, Share2, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { BookmarkButton } from '@/components/ui/bookmark-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -68,6 +69,8 @@ export const ReviewCard = React.memo(function ReviewCard({
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
+    const [shareFailed, setShareFailed] = useState(false);
     const [api, setApi] = useState<CarouselApi>();
     const [optimisticLike, setOptimisticLike] = useState({
         isLiked: review.isLikedByUser,
@@ -210,7 +213,10 @@ export const ReviewCard = React.memo(function ReviewCard({
     // 공유 클릭 핸들러 (리뷰 개별 링크 - 단축 URL 사용)
     const handleShareClick = useCallback(async (e: React.MouseEvent) => {
         e.stopPropagation();
-        setIsShareCopied(true); // 로딩 표시
+        if (isSharing) return;
+        setIsSharing(true);
+        setIsShareCopied(false);
+        setShareFailed(false);
 
         // 리뷰 개별 링크 생성 (홈 페이지 기반 - 디바이스 감지 후 처리)
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
@@ -234,12 +240,15 @@ export const ReviewCard = React.memo(function ReviewCard({
                 await navigator.clipboard.writeText(targetUrl);
             }
 
+            setIsShareCopied(true);
             setTimeout(() => setIsShareCopied(false), 2000);
         } catch {
-            console.error('URL 복사 실패');
+            setShareFailed(true);
             setIsShareCopied(false);
+        } finally {
+            setIsSharing(false);
         }
-    }, [review.id, review.restaurantId, review.restaurantName]);
+    }, [isSharing, review.id, review.restaurantId, review.restaurantName]);
 
     // [PERFORMANCE] 날짜 포맷 메모이제이션
     const { visitedDate, submittedDate } = useMemo(() => {
@@ -284,79 +293,112 @@ export const ReviewCard = React.memo(function ReviewCard({
             `}
             {...cardInteractionProps}
         >
-            {/* 헤더 영역 */}
-            <div className="flex items-center justify-between p-3 border-b border-border/30">
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8 bg-primary/10">
-                        {profileAvatarUrl && (
-                            <AvatarImage
-                                src={profileAvatarUrl}
-                                alt={`${avatarName} 프로필 사진`}
-                                className="object-cover"
-                            />
+            <div className="flex items-center justify-between gap-2 px-3 py-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <Avatar className="h-8 w-8 shrink-0 bg-muted">
+                    {profileAvatarUrl && (
+                        <AvatarImage
+                            src={profileAvatarUrl}
+                            alt={`${avatarName} 프로필 사진`}
+                            className="object-cover"
+                        />
+                    )}
+                    <AvatarFallback
+                        className="bg-muted text-foreground text-sm font-semibold"
+                        role="img"
+                        aria-label={`${avatarName} 프로필 사진 대체 표시`}
+                    >
+                        {avatarInitial ? (
+                            <span aria-hidden="true">{avatarInitial}</span>
+                        ) : (
+                            <User className="w-4 h-4" aria-hidden="true" />
                         )}
-                        <AvatarFallback
-                            className="bg-muted text-foreground text-sm font-semibold"
-                            role="img"
-                            aria-label={`${avatarName} 프로필 사진 대체 표시`}
+                    </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-1">
+                        <Link
+                            href={`/user/${review.userId}`}
+                            className="truncate text-sm font-semibold leading-5 text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onUserClick) {
+                                    e.preventDefault();
+                                    onUserClick(review.userId);
+                                }
+                            }}
                         >
-                            {avatarInitial ? (
-                                <span aria-hidden="true">{avatarInitial}</span>
-                            ) : (
-                                <User className="w-4 h-4" aria-hidden="true" />
-                            )}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Link
-                                href={`/user/${review.userId}`}
-                                className="text-sm font-semibold hover:text-primary hover:underline"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (onUserClick) {
-                                        e.preventDefault();
-                                        onUserClick(review.userId);
-                                    }
-                                }}
-                            >
-                                {review.userName}
-                            </Link>
-                            {review.isVerified && (
-                                <Badge variant="default" className="h-4 px-1 text-2xs bg-green-600">
-                                    <CheckCircle className="h-2 w-2 mr-0.5" />
-                                    인증
-                                </Badge>
-                            )}
-                        </div>
-                        <button
-                            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
-                            onClick={handleRestaurantClick}
-                            aria-label={`${review.restaurantName} 맛집 상세 보기`}
-                        >
-                            <MapPin className="w-3 h-3" />
-                            <span className="text-2xs leading-tight">{review.restaurantName}</span>
-                        </button>
+                            {review.userName}
+                        </Link>
+                        {review.isVerified && (
+                            <CheckCircle className="h-3.5 w-3.5 shrink-0 text-foreground" aria-label="인증" />
+                        )}
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {/* 공유 버튼 - 모든 사용자에게 표시 */}
                     <button
-                        className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 ${isShareCopied ? 'text-green-600' : 'text-muted-foreground hover:text-primary'}`}
-                        title={isShareCopied ? "복사됨!" : "리뷰 공유"}
-                        aria-label={isShareCopied ? "리뷰 링크 복사됨" : "리뷰 공유"}
+                        type="button"
+                        className="block w-full truncate text-left text-xs leading-4 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={handleRestaurantClick}
+                        aria-label={`${review.restaurantName} 맛집 상세 보기`}
+                    >
+                        {review.restaurantName}
+                    </button>
+                </div>
+                </div>
+                <div className="flex shrink-0 items-center">
+                    <button
+                        className={cn(
+                            "group flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg px-2 text-muted-foreground transition-colors touch-manipulation hover:text-red-500 active:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                            optimisticLike.isLiked && "text-red-500"
+                        )}
+                        type="button"
+                        onClick={handleLike}
+                        title={`좋아요 ${optimisticLike.count}개`}
+                        aria-label={`좋아요 ${optimisticLike.count}개${optimisticLike.isLiked ? ' 취소' : ' 누르기'}`}
+                        aria-pressed={optimisticLike.isLiked}
+                        data-liked={optimisticLike.isLiked}
+                    >
+                        <Heart
+                            color={optimisticLike.isLiked ? LIKED_HEART_COLOR : undefined}
+                            fill={optimisticLike.isLiked ? LIKED_HEART_COLOR : "none"}
+                            stroke={optimisticLike.isLiked ? LIKED_HEART_COLOR : "currentColor"}
+                            className={cn(
+                                "h-5 w-5 group-active:fill-red-500 group-active:text-red-500 group-active:[&_path]:fill-red-500 group-active:[&_path]:stroke-red-500",
+                                optimisticLike.isLiked
+                                    ? "fill-red-500 text-red-500 [&_path]:fill-red-500 [&_path]:stroke-red-500"
+                                    : "text-muted-foreground group-hover:text-red-500 group-hover:[&_path]:stroke-red-500"
+                            )}
+                        />
+                        <span
+                            className={cn(
+                                "text-xs font-medium tabular-nums transition-colors group-active:text-red-500",
+                                optimisticLike.isLiked ? "text-red-500" : "text-muted-foreground group-hover:text-red-500"
+                            )}
+                        >
+                            {optimisticLike.count > 999 ? '999+' : optimisticLike.count}
+                        </span>
+                    </button>
+                    {review.restaurantId && (
+                        <BookmarkButton
+                            restaurantId={review.restaurantId}
+                            showCount={false}
+                            className="h-11 w-11 shrink-0 rounded-lg border-0 shadow-none"
+                        />
+                    )}
+                    <button
+                        className={`inline-flex h-11 w-11 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 ${isShareCopied ? 'text-green-600' : 'text-muted-foreground hover:text-primary'}`}
+                        type="button"
+                        disabled={isSharing}
+                        aria-busy={isSharing}
+                        title={isShareCopied ? "복사됨" : "리뷰 공유"}
+                        aria-label={isSharing ? "리뷰 링크 복사 중" : isShareCopied ? "리뷰 링크 복사됨" : "리뷰 공유"}
                         onClick={handleShareClick}
                     >
-                        {isShareCopied ? (
-                            <Check className="h-4 w-4" />
-                        ) : (
-                            <Share2 className="h-4 w-4" />
-                        )}
+                        {isShareCopied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
                     </button>
-                    {/* 본인 리뷰: 수정 버튼 */}
                     {isOwnReview && onEditReview && (
                         <button
-                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 text-muted-foreground hover:text-primary"
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            type="button"
                             title="리뷰 수정"
                             aria-label="리뷰 수정"
                             onClick={(e) => {
@@ -376,39 +418,10 @@ export const ReviewCard = React.memo(function ReviewCard({
                             <Edit className="h-4 w-4" />
                         </button>
                     )}
-                    <button
-                        className={cn(
-                            "group -m-1.5 flex items-center gap-1 rounded-full px-1.5 py-1 text-muted-foreground transition-colors touch-manipulation hover:text-red-500 active:text-red-500",
-                            optimisticLike.isLiked && "text-red-500"
-                        )}
-                        onClick={handleLike}
-                        title={`좋아요 ${optimisticLike.count}개`}
-                        aria-label={`좋아요 ${optimisticLike.count}개${optimisticLike.isLiked ? ' 취소' : ' 누르기'}`}
-                        aria-pressed={optimisticLike.isLiked}
-                        data-liked={optimisticLike.isLiked}
-                    >
-                        <Heart
-                            color={optimisticLike.isLiked ? LIKED_HEART_COLOR : undefined}
-                            fill={optimisticLike.isLiked ? LIKED_HEART_COLOR : "none"}
-                            stroke={optimisticLike.isLiked ? LIKED_HEART_COLOR : "currentColor"}
-                            className={cn(
-                                "h-5 w-5 group-active:fill-red-500 group-active:text-red-500 group-active:[&_path]:fill-red-500 group-active:[&_path]:stroke-red-500",
-                                optimisticLike.isLiked
-                                    ? "fill-red-500 text-red-500 scale-110 [&_path]:fill-red-500 [&_path]:stroke-red-500"
-                                    : "text-muted-foreground group-hover:text-red-500 group-hover:[&_path]:stroke-red-500"
-                            )}
-                        />
-                        <span
-                            className={cn(
-                                "text-xs font-medium transition-colors group-active:text-red-500",
-                                optimisticLike.isLiked ? "text-red-500" : "text-muted-foreground group-hover:text-red-500"
-                            )}
-                        >
-                            {optimisticLike.count > 999 ? '999+' : optimisticLike.count}
-                        </span>
-                    </button>
                 </div>
             </div>
+            {shareFailed && <p role="alert" className="px-3 text-sm text-destructive">리뷰 링크를 복사하지 못했습니다. 공유 버튼을 눌러 다시 시도해주세요.</p>}
+            <span role="status" aria-live="polite" className="sr-only">{isShareCopied ? '리뷰 링크를 복사했습니다' : ''}</span>
 
             {/* 사진 영역 */}
             {
@@ -456,39 +469,43 @@ export const ReviewCard = React.memo(function ReviewCard({
                 )
             }
 
-            {/* 내용 영역 */}
-            <div className="p-3 space-y-2">
-                <div>
-                    {review.isEditedByAdmin && (
-                        <Badge variant="outline" className="mb-2 border-orange-500 text-orange-500 text-xs">
-                            ⚠️ 관리자가 수정함
-                        </Badge>
-                    )}
-                    <div className="flex items-baseline gap-1">
-                        <p className={`text-sm leading-relaxed ${!isExpanded && shouldTruncate ? 'truncate' : ''} flex-1`}>
-                            {review.content}
-                        </p>
-                        {!isExpanded && shouldTruncate && (
-                            <button
-                                className="text-xs text-muted-foreground hover:text-primary shrink-0"
-                                aria-label="리뷰 내용 더보기"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsExpanded(true);
-                                }}
-                            >
-                                더보기
-                            </button>
-                        )}
-                    </div>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        방문: {visitedDate}
-                    </span>
-                    <span>작성: {submittedDate}</span>
-                </div>
+            <div className="space-y-1 px-3 pb-3 pt-2">
+                {review.isEditedByAdmin && (
+                    <Badge variant="outline" className="border-border text-xs text-muted-foreground">
+                        관리자가 수정함
+                    </Badge>
+                )}
+                <p className={`text-sm leading-5 ${!isExpanded && shouldTruncate ? 'line-clamp-2' : ''}`}>
+                    <Link
+                        href={`/user/${review.userId}`}
+                        className="mr-1 font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onUserClick) {
+                                e.preventDefault();
+                                onUserClick(review.userId);
+                            }
+                        }}
+                    >
+                        {review.userName}
+                    </Link>
+                    {review.content}
+                </p>
+                {!isExpanded && shouldTruncate && (
+                    <button
+                        type="button"
+                        className="text-sm leading-5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-expanded={isExpanded}
+                        aria-label="리뷰 내용 더보기"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsExpanded(true);
+                        }}
+                    >
+                        더보기
+                    </button>
+                )}
+                <p className="text-xs leading-4 text-muted-foreground">방문 {visitedDate} · 작성 {submittedDate}</p>
             </div>
         </div >
     );

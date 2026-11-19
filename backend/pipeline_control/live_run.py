@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
+from backend.pipeline_control.adapter import stop_signals
 from backend.pipeline_control.dsn_guard import admit_dsn
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.manifest import (
@@ -13,12 +15,15 @@ from backend.pipeline_control.manifest import (
     is_live_execution_success,
     load_json,
     record_parity_attempt,
+    write_compatible_summary,
 )
+from backend.pipeline_control.state_machine import TERMINAL_STATUSES, ControlPlaneError, RunRecord
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.profiles import resolve_compute_profile
 from backend.pipeline_control.targets import assert_admitted
 from backend.pipeline_control.worker import process_one, write_run_manifest
-from backend.pipeline_control.queue import drain
+from backend.pipeline_control.file_queue import drain
+from backend.utils.privacy_log import safe_error_name
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CANDIDATE_DIR = REPO_ROOT / "backend" / "log" / "cron" / "live-runs"
@@ -35,6 +40,7 @@ def run_once(
     queued_run_id: str | None = None,
 ) -> str:
     use_live = live and queued_dry_run is not True
+    requested_mode = "live" if use_live else "dry_run"
     assert_admitted(target)
     admit_dsn(
         data_env=os.environ.get("TZUDONG_DATA_ENV", "local_db"),
@@ -48,7 +54,7 @@ def run_once(
             write_run_manifest(
                 "Failed",
                 manifest,
-                execution_mode="dry_run",
+                execution_mode=requested_mode,
                 store=store,
                 job_id_scope="api_run",
             )
@@ -65,51 +71,102 @@ def run_once(
             write_run_manifest(
                 "Failed",
                 manifest,
-                execution_mode="dry_run",
+                run=_taken_run(store, claimed_id),
+                execution_mode=requested_mode,
                 store=store,
                 job_id_scope="api_run",
             )
             return "Failed"
         return result
-    try:
-        run, _created = store.create_run(
-            target=target,
-            profile=resolve_compute_profile(),
-            idempotency_key=f"liverun{index:02d}-{target}",
-            payload={"index": index, "live": live},
-            actor="live_run",
-            request_id=f"live-{index}",
-            dry_run=not use_live,
+    profile = resolve_compute_profile()
+    mode = "live" if use_live else "dry"
+    utc_date = datetime.fromtimestamp(store.now(), timezone.utc).strftime("%Y-%m-%d")
+    # A stop after create_run waits until process_one has recorded the run.
+    with stop_signals() as stops, stops.held():
+        try:
+            run, _created = store.create_run(
+                target=target,
+                profile=profile,
+                idempotency_key=f"liverun{index:02d}-{target}-{profile}-{mode}-{utc_date}",
+                payload={"index": index, "live": use_live},
+                actor="live_run",
+                request_id=f"live-{index}",
+                dry_run=not use_live,
+            )
+        except ControlPlaneError as exc:
+            if exc.code != "lock_held":
+                raise
+            print(f"operation=live_run_refused code={exc.code}")
+            write_run_manifest(
+                "Failed",
+                manifest,
+                execution_mode=requested_mode,
+                store=store,
+                job_id_scope="worker_execution",
+            )
+            return "Failed"
+        result = process_one(
+            store,
+            live=use_live,
+            runner=runner,
+            manifest_path=manifest,
+            run_id=run.id,
+            job_id_scope="worker_execution",
         )
-    except Exception:
-        for held in list(store.locks.values()):
-            store.finish_failed(held, "stale_live_retry")
-        run, _created = store.create_run(
-            target=target,
-            profile=resolve_compute_profile(),
-            idempotency_key=f"liverun{index:02d}-{target}-retry",
-            payload={"index": index, "live": live, "retry": True},
-            actor="live_run",
-            request_id=f"live-{index}",
-            dry_run=not use_live,
-        )
-    result = process_one(
-        store,
-        live=use_live,
-        runner=runner,
-        manifest_path=manifest,
-        job_id_scope="worker_execution",
-    )
     if result is None:
         write_run_manifest(
             "Failed",
             manifest,
             run=run,
+            execution_mode=requested_mode,
             store=store,
             job_id_scope="worker_execution",
         )
         return "Failed"
     return result
+
+
+def _taken_run(store: MemoryStore, run_id: str) -> RunRecord | None:
+    try:
+        return store.get(run_id)
+    except ControlPlaneError:
+        return None
+
+
+def _manifest_names(manifest: Path, run: RunRecord) -> bool:
+    try:
+        return load_json(manifest).get("jobId") == run.id
+    except (OSError, ValueError):
+        return False
+
+
+def _fail_unclaimed(store: MemoryStore, jobs: list[dict], error: BaseException, live: bool) -> None:
+    """Fail each taken run that is still queued. Write the manifest of each
+    taken run that has ended, unless the attempt that ran it wrote one."""
+    error_code = "worker_unexpected" if isinstance(error, Exception) else "worker_interrupted"
+    for index, job in enumerate(jobs, start=1):
+        run_id = str(job.get("id") or "").strip()
+        manifest = CANDIDATE_DIR / f"run-{index}-current-summary.json"
+        requested_mode = "live" if live and job.get("dry_run") is not True else "dry_run"
+        try:
+            claimed = store.claim(run_id) if run_id else None
+            run = store.finish_failed(claimed.id, error_code) if claimed else _taken_run(store, run_id)
+        except Exception as exc:
+            print(f"operation=run_record_failed error={safe_error_name(exc)}")
+            continue
+        if run is None or run.status not in TERMINAL_STATUSES or _manifest_names(manifest, run):
+            continue
+        try:
+            write_run_manifest(
+                run.status,
+                manifest,
+                run=run,
+                execution_mode=requested_mode,
+                store=store,
+                job_id_scope="api_run",
+            )
+        except Exception as exc:
+            print(f"operation=run_manifest_failed error={safe_error_name(exc)}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -127,19 +184,25 @@ def main(argv: list[str] | None = None) -> int:
         "yes",
     }
     store: MemoryStore = FileStore()
-    queued = drain()
+    with stop_signals() as stops, stops.held():
+        # A stop ends the wait for the queue lock at once. Once the rows are
+        # taken, a stop waits until their runs are recorded.
+        queued = [{"queued": True, **job} for job in drain(waiting=stops.released)]
+        if queued:
+            try:
+                return _run_jobs(store, queued, args.target, live)
+            except BaseException as error:
+                _fail_unclaimed(store, queued, error, live)
+                raise
+    jobs = [{"queued": False} for _ in range(args.count)] or [{"queued": False}]
+    return _run_jobs(store, jobs, args.target, live)
+
+
+def _run_jobs(store: MemoryStore, jobs: list[dict], default_target: str, live: bool) -> int:
     results: list[str] = []
     last_live_manifest = None
-    jobs: list[dict] = []
-    queued_jobs = [{"queued": True, **job} for job in queued]
-    if queued_jobs:
-        jobs.extend(queued_jobs)
-    else:
-        jobs.extend({"queued": False} for _ in range(args.count))
-    if not jobs:
-        jobs = [{"queued": False}]
     for index, job in enumerate(jobs, start=1):
-        target = str(job.get("target") or args.target)
+        target = str(job.get("target") or default_target)
         queued_dry = job.get("dry_run") if job.get("queued") else None
         queued_id = str(job.get("id") or "").strip() if job.get("queued") else None
         result = run_once(
@@ -179,8 +242,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
     if last_live_manifest is not None:
         default = Path(__file__).resolve().parents[2] / "backend" / "log" / "cron" / "current-summary.json"
-        default.parent.mkdir(parents=True, exist_ok=True)
-        default.write_text(last_live_manifest.read_text(encoding="utf-8"), encoding="utf-8")
+        write_compatible_summary(default, load_json(last_live_manifest))
     print(",".join(results))
     return 0 if all(item == "Succeeded" for item in results) else 1
 

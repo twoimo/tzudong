@@ -961,7 +961,7 @@ export async function waitForMockMapReady(page: Page) {
 
 export async function openMobileSearchAndSelect(page: Page, restaurantName: string) {
     await page.getByLabel('맛집 검색 열기').click();
-    await page.getByLabel('맛집 검색어 입력').fill(restaurantName);
+    await page.getByLabel('맛집 이름 검색어 입력').fill(restaurantName);
 
     const searchResult = page.getByRole('button', { name: new RegExp(restaurantName) }).first();
     await expect(searchResult).toBeVisible({ timeout: 15000 });

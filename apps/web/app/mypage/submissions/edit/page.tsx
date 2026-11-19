@@ -9,8 +9,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+import { formatKoreanDate, formatKoreanDateTime } from "@/lib/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +30,7 @@ import {
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
 import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
+import { MyPageSubmissionGuide } from "@/components/mypage/MyPageSubmissionGuide";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -44,6 +44,7 @@ import {
   myPageListCardClass,
   myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
+import { getResponseErrorMessage, isRecord, parseValidatedRows } from "@/lib/validation/records";
 
 type SubmissionStatus =
   | "pending"
@@ -122,29 +123,6 @@ const SUBMISSION_ITEM_SELECT = [
 ].join(", ");
 
 type SubmissionRow = Omit<Submission, "items" | "target_restaurant">;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function parseValidatedRows<Row>(
-  values: readonly unknown[],
-  isRow: (value: unknown) => value is Row,
-): Row[] {
-  const rows: Row[] = [];
-
-  for (const value of values) {
-    if (isRow(value)) {
-      rows.push(value);
-    }
-  }
-
-  return rows;
-}
-
-function getResponseErrorMessage(value: unknown): string | null {
-  return isRecord(value) && typeof value.error === "string" ? value.error : null;
-}
-
 
 function isNullableString(value: unknown): value is string | null {
   return typeof value === "string" || value === null;
@@ -611,16 +589,12 @@ export default function EditSubmissionsPage() {
         <div className={myPageFooterMetaClass}>
           <span>
             요청일:{" "}
-            {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", {
-              locale: ko,
-            })}
+            {formatKoreanDateTime(new Date(submission.created_at))}
           </span>
           {submission.reviewed_at && (
             <span>
               검토일:{" "}
-              {format(new Date(submission.reviewed_at), "yyyy년 M월 d일", {
-                locale: ko,
-              })}
+              {formatKoreanDate(new Date(submission.reviewed_at))}
             </span>
           )}
         </div>
@@ -673,32 +647,29 @@ export default function EditSubmissionsPage() {
     </Card>
   );
 
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="맛집 수정 요청 내역을 불러오는 중…" />;
-  }
 
-  if (isError) {
-    return (
+  return (
+    <MyPageSectionFrame
+      icon={Edit3}
+      eyebrow="제보 관리"
+      title="맛집 수정 요청 내역"
+      description="요청한 정보 수정과 검토 결과를 확인하세요."
+      countLabel={isLoading || (isError && submissions.length === 0) ? undefined : `총 ${submissions.length}건`}
+      data-section="submissions-edit"
+    >
+      <MyPageSubmissionGuide kind="edit" userId={user?.id ?? null} />
+      {isError && (
       <MyPageErrorState
         onRetry={() => void refetch()}
         retrying={isFetching}
         title="맛집 수정 요청을 불러오지 못했습니다"
         description="수정 요청 목록을 다시 불러오려면 잠시 후 재시도해주세요."
       />
-    );
-  }
-
-  return (
-    <MyPageSectionFrame
-      icon={Edit3}
-      eyebrow="제보 관리"
-      title="맛집 수정 요청"
-      description="기존 맛집 정보 수정 요청의 검토 흐름을 확인합니다."
-      countLabel={`총 ${submissions.length}건`}
-      data-section="submissions-edit"
-    >
-      {submissions.length === 0 ? (
-        <MyPageEmptyState
+      )}
+      {isLoading ? (
+        <MyPageSectionSkeleton label="맛집 수정 요청 내역을 불러오는 중…" />
+      ) : submissions.length === 0 ? (
+        !isError && <MyPageEmptyState
           icon={Edit3}
           title="아직 맛집 수정 요청 내역이 없습니다"
           description="잘못된 정보를 발견해 수정 요청하면 이곳에 기록됩니다."

@@ -59,6 +59,8 @@ export interface StampCardProps {
     density?: 'normal' | 'dense';
     /** 카드 레이아웃 variant */
     layout?: 'card' | 'list';
+    /** 첫 화면의 주요 이미지에만 우선 로딩을 지정합니다. */
+    thumbnailPriority?: boolean;
     guideLabel?: string;
     guideTitle?: string;
     guideDescription?: string;
@@ -84,6 +86,7 @@ export const StampCard = memo(function StampCard({
     stampSize,
     density = 'normal',
     layout = 'card',
+    thumbnailPriority = false,
     guideLabel,
     guideTitle,
     guideDescription,
@@ -196,6 +199,7 @@ export const StampCard = memo(function StampCard({
                             videoId={currentVideoId}
                             alt={`${restaurantDisplayName} 썸네일`}
                             sizes="112px"
+                            priority={thumbnailPriority}
                             className={cn(
                                 "h-full w-full object-cover",
                                 showStamp ? "grayscale opacity-60" : ""
@@ -232,6 +236,7 @@ export const StampCard = memo(function StampCard({
                             videoId={currentVideoId}
                             alt={`${restaurantDisplayName} 썸네일`}
                             sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, (max-width: 1999px) 400px, 20vw"
+                            priority={thumbnailPriority}
                             className={cn(
                                 "w-full h-full object-cover",
                                 showStamp ? "grayscale opacity-60" : ""
@@ -302,7 +307,7 @@ export const StampCard = memo(function StampCard({
                                         onClick={handleGuideClose}
                                         className={cn(
                                             "pointer-events-auto absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80",
-                                            isCompact ? "w-5 h-5" : "w-6 h-6"
+                                            "h-11 w-11"
                                         )}
                                         aria-label="가이드 닫기"
                                         data-stamp-guide-close="true"

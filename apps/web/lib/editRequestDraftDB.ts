@@ -1,12 +1,18 @@
-import { draftStorageOwnerKey, draftPublicOwnerId, legacyDraftStorageOwnerKeys } from '@/lib/privacy/draft-storage-owner';
-import { assertBrowserDraftWrite, beginBrowserDraftCleanup, captureBrowserDraftEpoch, isBrowserDraftEpochCurrent, type BrowserDraftEpoch } from '@/lib/privacy/browser-draft-lifecycle';
-import { openDB, DBSchema, IDBPDatabase, IDBPObjectStore } from 'idb';
-import { MAX_EDIT_SUBMISSION_BYTES } from '@/lib/restaurant-edit-submit-contract';
+import { createBoundedDraftStore } from '@/lib/drafts/bounded-draft-store';
 import {
-    PRIVACY_UNSAFE_VALUE_REASON,
-    PrivacyUnsafeValueError,
-    assertPrivacySafe,
-} from '@/lib/privacy/sanitize';
+    isBoundedIdentifier,
+    isWithinRecordBytes,
+    normalizeDraftPhone,
+    normalizeStringArray,
+    normalizeText,
+    readDraftLifetime,
+    readOptionalChoice,
+    readPlainDataArray,
+    readPlainDataRecord,
+} from '@/lib/drafts/draft-fields';
+import { draftStorageOwnerKey, draftPublicOwnerId } from '@/lib/privacy/draft-storage-owner';
+import { MAX_EDIT_SUBMISSION_BYTES } from '@/lib/restaurant-edit-submit-contract';
+import { PRIVACY_UNSAFE_VALUE_REASON, assertPrivacySafe } from '@/lib/privacy/sanitize';
 
 export interface EditRequestDraft {
     userId: string;
@@ -31,27 +37,9 @@ type PersistedEditRequestDraft = Omit<EditRequestDraft, 'currentStep' | 'request
     expiresAt: number;
 };
 
-interface EditRequestDraftDB extends DBSchema {
-    'edit-request-drafts': {
-        key: [string, string];
-        value: PersistedEditRequestDraft;
-        indexes: {
-            'by-user': string;
-            'by-user-saved-at': [string, string];
-            'by-expires-at': number;
-        };
-    };
-}
-
-const DB_NAME = 'tzudong-edit-request-drafts';
-const DB_VERSION = 2;
-const STORE_NAME = 'edit-request-drafts';
 const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const MAX_DRAFTS_PER_USER = 20;
-const MAX_SWEEP_RECORDS = 50;
 // Valid submit payloads also need room for owner, step and expiry metadata.
 const MAX_RECORD_BYTES = MAX_EDIT_SUBMISSION_BYTES + 1024;
-const MAX_IDENTIFIER_LENGTH = 128;
 const MAX_NAME_LENGTH = 200;
 const MAX_ADDRESS_LENGTH = 500;
 const MAX_PHONE_LENGTH = 40;
@@ -60,7 +48,8 @@ const MAX_CATEGORY_LENGTH = 64;
 const MAX_REVIEW_COUNT = 100;
 const MAX_LINK_LENGTH = 2_048;
 const MAX_REVIEW_TEXT_LENGTH = 4_000;
-const legacyRecoveryPositions = new WeakMap<BrowserDraftEpoch, { namespace: number; after?: [string, string] }>();
+const DRAFT_STEPS = [1, 2, 3] as const;
+const REQUEST_KINDS = ['edit', 'closure'] as const;
 
 const DRAFT_FIELDS = new Set([
     'userId',
@@ -86,131 +75,6 @@ const YOUTUBE_REVIEW_FIELDS = new Set([
     'restaurant_id',
 ]);
 
-function isBoundedIdentifier(value: unknown): value is string {
-    return typeof value === 'string'
-        && value.length > 0
-        && value.length <= MAX_IDENTIFIER_LENGTH
-        && /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value);
-}
-function readNonNegativeSafeInteger(value: unknown): number | null {
-    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
-}
-
-
-function isKnownProxy(value: object): boolean {
-    try {
-        const runtime = globalThis as typeof globalThis & {
-            process?: {
-                getBuiltinModule?: (name: string) => unknown;
-            };
-        };
-        const getBuiltinModule = runtime.process?.getBuiltinModule;
-        if (typeof getBuiltinModule !== 'function') return false;
-
-        const util = getBuiltinModule('node:util') as {
-            types?: {
-                isProxy?: (candidate: object) => boolean;
-            };
-        } | undefined;
-
-        return util?.types?.isProxy?.(value) === true;
-    } catch {
-        return true;
-    }
-}
-
-// Browsers have no trap-free Proxy identity API. Without Node/Bun's detector, descriptor
-// inspection rejects observable exotic shapes but cannot synchronously identify a transparent Proxy.
-function readPlainDataRecord(value: unknown, allowedFields: ReadonlySet<string>): Record<string, unknown> | null {
-    if (!value || typeof value !== 'object' || isKnownProxy(value) || Array.isArray(value)) return null;
-
-    try {
-        if (Object.getPrototypeOf(value) !== Object.prototype) return null;
-
-        const keys = Reflect.ownKeys(value);
-        if (keys.length > allowedFields.size || keys.some((key) => typeof key !== 'string' || !allowedFields.has(key))) {
-            return null;
-        }
-
-        const descriptors = Object.getOwnPropertyDescriptors(value);
-        const snapshot: Record<string, unknown> = {};
-        for (const key of keys) {
-            const descriptor = descriptors[key as string];
-            if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) return null;
-            snapshot[key as string] = descriptor.value;
-        }
-        return snapshot;
-    } catch {
-        return null;
-    }
-}
-
-function readPlainDataArray(value: unknown): unknown[] | null {
-    if (!value || typeof value !== 'object' || isKnownProxy(value) || !Array.isArray(value)) return null;
-
-    try {
-        if (Object.getPrototypeOf(value) !== Array.prototype) return null;
-
-        const keys = Reflect.ownKeys(value);
-        if (keys.some((key) => key !== 'length' && (typeof key !== 'string' || !/^(0|[1-9]\d*)$/.test(key)))) {
-            return null;
-        }
-
-        const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
-        const length = lengthDescriptor && Object.hasOwn(lengthDescriptor, 'value')
-            ? readNonNegativeSafeInteger(lengthDescriptor.value)
-            : null;
-        if (length === null) return null;
-        if (keys.length !== length + 1) return null;
-        const descriptors = Object.getOwnPropertyDescriptors(value);
-
-        const snapshot: unknown[] = [];
-        for (let index = 0; index < length; index += 1) {
-            const descriptor = descriptors[String(index)];
-            if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) return null;
-            snapshot.push(descriptor.value);
-        }
-        return snapshot;
-    } catch {
-        return null;
-    }
-}
-
-function containsMediaReference(value: string): boolean {
-    return /(?:data|blob):|\bbase64\b/i.test(value);
-}
-
-function normalizeText(value: unknown, maxLength: number): string | null {
-    if (typeof value !== 'string' || value.length > maxLength || containsMediaReference(value)) return null;
-    return value.trim();
-}
-
-function normalizeStringArray(value: unknown, maxItems: number, maxItemLength: number): string[] | null {
-    const values = readPlainDataArray(value);
-    if (!values || values.length > maxItems) return null;
-
-    const normalized: string[] = [];
-    for (const item of values) {
-        const text = normalizeText(item, maxItemLength);
-        if (!text || normalized.includes(text)) return null;
-        normalized.push(text);
-    }
-    return normalized;
-}
-
-function normalizeDraftPhone(value: unknown): string | null {
-    const phone = normalizeText(value, MAX_PHONE_LENGTH);
-    if (phone === null) return null;
-    if (!phone) return '';
-    if (!/^\+?[\d\s().-]*$/.test(phone)) return null;
-
-    const canonical = phone.replace(/[^\d+]/g, '');
-    const digits = canonical.replace(/\+/g, '');
-    if (digits.length > 20) return null;
-    // A draft may contain a prefix; final submission validates business numbers.
-    return digits.length < 7 ? phone : canonical;
-}
-
 function normalizeYoutubeReviews(value: unknown): EditRequestDraft['youtube_reviews'] | null {
     const values = readPlainDataArray(value);
     if (!values || values.length > MAX_REVIEW_COUNT) return null;
@@ -235,30 +99,6 @@ function normalizeYoutubeReviews(value: unknown): EditRequestDraft['youtube_revi
     return reviews;
 }
 
-function isInputCurrentStep(value: unknown): value is 1 | 2 | 3 | undefined {
-    return value === undefined || value === 1 || value === 2 || value === 3;
-}
-
-function isStoredCurrentStep(value: unknown): value is 1 | 2 | 3 | null {
-    return value === null || value === 1 || value === 2 || value === 3;
-}
-
-function isInputRequestKind(value: unknown): value is 'edit' | 'closure' | undefined {
-    return value === undefined || value === 'edit' || value === 'closure';
-}
-
-function isStoredRequestKind(value: unknown): value is 'edit' | 'closure' | null {
-    return value === null || value === 'edit' || value === 'closure';
-}
-
-function isWithinRecordByteLimit(value: PersistedEditRequestDraft): boolean {
-    try {
-        return new TextEncoder().encode(JSON.stringify(value)).byteLength <= MAX_RECORD_BYTES;
-    } catch {
-        return false;
-    }
-}
-
 function hasOnlyPrivacySafeText(draft: Omit<PersistedEditRequestDraft, 'phone'>): boolean {
     try {
         // Phone is validated separately as an explicit restaurant business-contact field.
@@ -272,36 +112,24 @@ function hasOnlyPrivacySafeText(draft: Omit<PersistedEditRequestDraft, 'phone'>)
     }
 }
 
-function readDraft(value: unknown, allowStoredFields: boolean, now = Date.now()): PersistedEditRequestDraft | null {
+function readDraft(value: unknown, allowStoredFields: boolean, now: number): PersistedEditRequestDraft | null {
     const record = readPlainDataRecord(value, allowStoredFields ? STORED_DRAFT_FIELDS : DRAFT_FIELDS);
     if (!record) return null;
 
     const userId = record.userId;
     const restaurantId = record.restaurantId;
-    const currentStep = record.currentStep;
-    const requestKind = record.requestKind;
-    const normalizedRequestKind = requestKind === 'edit' || requestKind === 'closure'
-        ? requestKind
-        : null;
+    const currentStep = readOptionalChoice(record.currentStep, DRAFT_STEPS, allowStoredFields);
+    const requestKind = readOptionalChoice(record.requestKind, REQUEST_KINDS, allowStoredFields);
     const name = normalizeText(record.name, MAX_NAME_LENGTH);
     const address = normalizeText(record.address, MAX_ADDRESS_LENGTH);
-    const phone = normalizeDraftPhone(record.phone);
+    const phone = normalizeDraftPhone(record.phone, MAX_PHONE_LENGTH);
     const category = normalizeStringArray(record.category, MAX_CATEGORY_COUNT, MAX_CATEGORY_LENGTH);
     const youtubeReviews = normalizeYoutubeReviews(record.youtube_reviews);
 
-    const currentStepIsValid = allowStoredFields
-        ? isStoredCurrentStep(currentStep)
-        : isInputCurrentStep(currentStep);
-    const requestKindIsValid = allowStoredFields
-        ? isStoredRequestKind(requestKind)
-        : isInputRequestKind(requestKind);
-    const normalizedCurrentStep = currentStep === 1 || currentStep === 2 || currentStep === 3
-        ? currentStep
-        : null;
     if (!isBoundedIdentifier(userId)
         || !isBoundedIdentifier(restaurantId)
-        || !currentStepIsValid
-        || !requestKindIsValid
+        || !currentStep.valid
+        || !requestKind.valid
         || name === null
         || address === null
         || phone === null
@@ -310,39 +138,25 @@ function readDraft(value: unknown, allowStoredFields: boolean, now = Date.now())
         return null;
     }
 
-    const savedAt = allowStoredFields ? normalizeText(record.savedAt, 32) : new Date(now).toISOString();
-    const savedAtMs = savedAt ? Date.parse(savedAt) : Number.NaN;
-    const expiresAt = allowStoredFields ? record.expiresAt : now + DRAFT_TTL_MS;
-    if (savedAt === null
-        || !Number.isFinite(savedAtMs)
-        || typeof expiresAt !== 'number'
-        || !Number.isSafeInteger(expiresAt)
-        || expiresAt !== savedAtMs + DRAFT_TTL_MS
-        || savedAtMs > now + 5 * 60 * 1000
-        || (allowStoredFields && expiresAt <= now)) {
-        return null;
-    }
+    const lifetime = readDraftLifetime(record, allowStoredFields, now, DRAFT_TTL_MS);
+    if (!lifetime) return null;
 
     const draft: PersistedEditRequestDraft = {
         userId: allowStoredFields ? userId : draftStorageOwnerKey(userId),
         restaurantId,
-        currentStep: normalizedCurrentStep,
-        requestKind: normalizedRequestKind,
+        currentStep: currentStep.value,
+        requestKind: requestKind.value,
         name,
         address,
         phone,
         category,
         youtube_reviews: youtubeReviews,
-        savedAt,
-        expiresAt,
+        savedAt: lifetime.savedAt,
+        expiresAt: lifetime.expiresAt,
     };
 
     const { phone: _phone, ...privacySafeFields } = draft;
-    return isWithinRecordByteLimit(draft) && hasOnlyPrivacySafeText(privacySafeFields) ? draft : null;
-}
-
-function getDraftKey(userId: string, restaurantId: string): [string, string] {
-    return [draftStorageOwnerKey(userId), restaurantId];
+    return isWithinRecordBytes(draft, MAX_RECORD_BYTES) && hasOnlyPrivacySafeText(privacySafeFields) ? draft : null;
 }
 
 function toPublicDraft(draft: PersistedEditRequestDraft): EditRequestDraft {
@@ -365,300 +179,34 @@ function toPublicDraft(draft: PersistedEditRequestDraft): EditRequestDraft {
     return publicDraft;
 }
 
-async function sweepExpiredDrafts(db: IDBPDatabase<EditRequestDraftDB>): Promise<void> {
-    const now = Date.now();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const expiryIndex = tx.store.index('by-expires-at');
-    let expiredCursor = await expiryIndex.openCursor(IDBKeyRange.upperBound(now));
-    let processed = 0;
+const store = createBoundedDraftStore({
+    dbName: 'tzudong-edit-request-drafts',
+    dbVersion: 2,
+    storeName: 'edit-request-drafts',
+    slotField: 'restaurantId',
+    isSlot: isBoundedIdentifier,
+    maxDraftsPerUser: 20,
+    sweepBatchSize: 50,
+    parseInput: (draft: Omit<EditRequestDraft, 'savedAt'>, now) => readDraft(draft, false, now),
+    parseStored: (value, now) => readDraft(value, true, now),
+    toPublic: toPublicDraft,
+    invalidInputError: PRIVACY_UNSAFE_VALUE_REASON,
+    invalidRowSweep: 'restart-from-first-key',
+    legacyRecovery: 'resume-after-last-key',
+    pruneOnRead: false,
+    extraSweepOnSave: false,
+});
 
-    while (expiredCursor && processed < MAX_SWEEP_RECORDS) {
-        await expiredCursor.delete();
-        processed += 1;
-        expiredCursor = await expiredCursor.continue();
-    }
-    await tx.done;
-
-    const invalidTx = db.transaction(STORE_NAME, 'readwrite');
-    let invalidCursor = await invalidTx.store.openCursor();
-    processed = 0;
-    while (invalidCursor && processed < MAX_SWEEP_RECORDS) {
-        if (!readDraft(invalidCursor.value, true, now)) await invalidCursor.delete();
-        processed += 1;
-        invalidCursor = await invalidCursor.continue();
-    }
-    await invalidTx.done;
-}
-
-async function enforceUserDraftLimit(
-    store: IDBPObjectStore<EditRequestDraftDB, ['edit-request-drafts'], 'edit-request-drafts', 'readwrite'>,
-    userId: string,
-    epoch: BrowserDraftEpoch,
-): Promise<void> {
-    const index = store.index('by-user-saved-at');
-    const range = IDBKeyRange.bound([draftStorageOwnerKey(userId), ''], [draftStorageOwnerKey(userId), '\uffff']);
-    const countedDrafts = readNonNegativeSafeInteger(await index.count(range));
-    if (countedDrafts === null) throw new Error('임시 저장 데이터 수를 확인할 수 없습니다.');
-
-    let draftCount = countedDrafts;
-    let cursor = await index.openCursor(range);
-
-    while (cursor && draftCount > MAX_DRAFTS_PER_USER) {
-        assertBrowserDraftWrite(userId, epoch);
-        await cursor.delete();
-        draftCount -= 1;
-        cursor = await cursor.continue();
-    }
-}
-
-async function initDB(): Promise<IDBPDatabase<EditRequestDraftDB>> {
-    const db = await openDB<EditRequestDraftDB>(DB_NAME, DB_VERSION, {
-        upgrade(database, oldVersion) {
-            if (oldVersion < DB_VERSION && database.objectStoreNames.contains(STORE_NAME)) {
-                database.deleteObjectStore(STORE_NAME);
-            }
-
-            if (!database.objectStoreNames.contains(STORE_NAME)) {
-                const store = database.createObjectStore(STORE_NAME, {
-                    keyPath: ['userId', 'restaurantId'],
-                });
-                store.createIndex('by-user', 'userId');
-                store.createIndex('by-user-saved-at', ['userId', 'savedAt']);
-                store.createIndex('by-expires-at', 'expiresAt');
-            }
-        },
-    });
-
-    await sweepExpiredDrafts(db);
-    return db;
-}
+export const {
+    getDraft,
+    hasDraft,
+    deleteDraft,
+    deleteAllDraftsByUser,
+    getAllDraftsByUser,
+    cleanupOldDrafts,
+    recoverLegacyDrafts,
+} = store;
 
 export async function saveDraft(draft: Omit<EditRequestDraft, 'savedAt'>): Promise<void> {
-    const normalizedDraft = readDraft(draft, false);
-    if (!normalizedDraft) throw new Error(PRIVACY_UNSAFE_VALUE_REASON);
-
-    const epoch = captureBrowserDraftEpoch(draft.userId);
-    assertBrowserDraftWrite(draft.userId, epoch);
-
-    try {
-        const db = await initDB();
-        assertBrowserDraftWrite(draft.userId, epoch);
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        // Wait for this readwrite transaction to acquire its store before
-        // admitting the write. A pre-transaction localStorage check alone
-        // leaves a gap while another tab can finish a cleanup transaction.
-        await transaction.store.get(getDraftKey(draft.userId, normalizedDraft.restaurantId));
-        assertBrowserDraftWrite(draft.userId, epoch);
-        await transaction.store.put(normalizedDraft);
-        await enforceUserDraftLimit(transaction.store, draft.userId, epoch);
-        await transaction.done;
-    } catch (error) {
-        if (error instanceof PrivacyUnsafeValueError) throw new Error(PRIVACY_UNSAFE_VALUE_REASON);
-        throw new Error('임시 저장에 실패했습니다.');
-    }
-}
-
-export async function getDraft(userId: string, restaurantId: string): Promise<EditRequestDraft | null> {
-    if (!isBoundedIdentifier(userId) || !isBoundedIdentifier(restaurantId)) return null;
-
-    const epoch = captureBrowserDraftEpoch(userId);
-    if (!isBrowserDraftEpochCurrent(userId, epoch, true)) throw new Error('DRAFT_READ_UNAVAILABLE');
-
-    let transactionDone: Promise<unknown> | undefined;
-    try {
-        const db = await initDB();
-        const key = getDraftKey(userId, restaurantId);
-        assertBrowserDraftWrite(userId, epoch);
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        transactionDone = transaction.done;
-        const stored = await transaction.store.get(key);
-        const draft = readDraft(stored, true);
-        if (!draft || draft.userId !== draftStorageOwnerKey(userId) || draft.restaurantId !== restaurantId) {
-            if (stored) { assertBrowserDraftWrite(userId, epoch); await transaction.store.delete(key); }
-            await transaction.done;
-            return null;
-        }
-        await transaction.done;
-        return isBrowserDraftEpochCurrent(userId, epoch, true) ? toPublicDraft(draft) : null;
-    } catch {
-        await transactionDone?.catch(() => {});
-        if (!isBrowserDraftEpochCurrent(userId, epoch, true)) return null;
-        throw new Error('DRAFT_READ_UNAVAILABLE');
-    }
-}
-
-export async function hasDraft(userId: string, restaurantId: string): Promise<boolean> {
-    return (await getDraft(userId, restaurantId)) !== null;
-}
-
-export async function deleteDraft(userId: string, restaurantId: string): Promise<void> {
-    if (!isBoundedIdentifier(userId) || !isBoundedIdentifier(restaurantId)) return;
-
-    const epoch = captureBrowserDraftEpoch(userId);
-    let db: IDBPDatabase<EditRequestDraftDB> | undefined;
-    try {
-        db = await initDB();
-        if (!isBrowserDraftEpochCurrent(userId, epoch)) return;
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const deletions: Promise<void>[] = [];
-        try {
-            // Acquire the transaction before checking the session, then remove both
-            // versions of this explicit discard atomically. Otherwise a later import
-            // could resurrect the old text.
-            await transaction.store.get(getDraftKey(userId, restaurantId));
-            if (isBrowserDraftEpochCurrent(userId, epoch)) {
-                deletions.push(transaction.store.delete(getDraftKey(userId, restaurantId)));
-                for (const legacyOwner of legacyDraftStorageOwnerKeys(userId)) {
-                    deletions.push(transaction.store.delete([legacyOwner, restaurantId]));
-                }
-                await Promise.all(deletions);
-            }
-            await transaction.done;
-        } catch {
-            try { transaction.abort(); } catch { /* It may already have completed. */ }
-            await Promise.allSettled(deletions);
-            await transaction.done.catch(() => {});
-            throw new Error('DRAFT_DELETE_FAILED');
-        }
-    } catch {
-        throw new Error('임시 저장 데이터 삭제에 실패했습니다.');
-    } finally { db?.close(); }
-}
-
-export async function deleteAllDraftsByUser(userId: string, cleanupEpoch?: BrowserDraftEpoch): Promise<boolean> {
-    if (!isBoundedIdentifier(userId)) return false;
-    const epoch = cleanupEpoch ?? beginBrowserDraftCleanup(userId);
-    try {
-        const db = await initDB();
-        if (!isBrowserDraftEpochCurrent(userId, epoch)) return false;
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const index = transaction.store.index('by-user');
-        let remaining = 0;
-        for (const ownerKey of [draftStorageOwnerKey(userId), ...legacyDraftStorageOwnerKeys(userId)]) {
-            let cursor = await index.openCursor(ownerKey);
-            let deleted = 0;
-            while (cursor && deleted < 100) {
-                if (!isBrowserDraftEpochCurrent(userId, epoch)) { await transaction.done; return false; }
-                await cursor.delete();
-                deleted++;
-                cursor = await cursor.continue();
-            }
-            const count = readNonNegativeSafeInteger(await index.count(ownerKey));
-            if (count === null) { await transaction.done; return false; }
-            remaining += count;
-        }
-        await transaction.done;
-        return remaining === 0 && isBrowserDraftEpochCurrent(userId, epoch);
-    } catch { return false; }
-}
-
-export async function getAllDraftsByUser(userId: string): Promise<EditRequestDraft[]> {
-    if (!isBoundedIdentifier(userId)) return [];
-
-    const epoch = captureBrowserDraftEpoch(userId);
-    if (!isBrowserDraftEpochCurrent(userId, epoch, true)) return [];
-
-    try {
-        const db = await initDB();
-        assertBrowserDraftWrite(userId, epoch);
-        const transaction = db.transaction(STORE_NAME, 'readwrite');
-        const index = transaction.store.index('by-user-saved-at');
-        const range = IDBKeyRange.bound([draftStorageOwnerKey(userId), ''], [draftStorageOwnerKey(userId), '\uffff']);
-        const drafts: EditRequestDraft[] = [];
-        let cursor = await index.openCursor(range);
-        let processed = 0;
-        const now = Date.now();
-
-        while (cursor && processed < MAX_DRAFTS_PER_USER) {
-            const draft = readDraft(cursor.value, true, now);
-            if (!draft || draft.userId !== draftStorageOwnerKey(userId)) {
-                assertBrowserDraftWrite(userId, epoch);
-                await cursor.delete();
-            } else {
-                drafts.push(toPublicDraft(draft));
-            }
-            processed += 1;
-            cursor = await cursor.continue();
-        }
-
-        await transaction.done;
-        return isBrowserDraftEpochCurrent(userId, epoch, true) ? drafts : [];
-    } catch {
-        return [];
-    }
-}
-
-export async function cleanupOldDrafts(): Promise<void> {
-    try {
-        const db = await initDB();
-        await sweepExpiredDrafts(db);
-    } catch {
-        // Cleanup is best effort and never exposes stored values.
-    }
-}
-
-// Explicit, owner-scoped recovery preserves timestamps/expiry and never replaces
-// an existing current draft. Old clients may still write legacy rows afterward;
-// those rows never become an automatic restore source.
-export async function recoverLegacyDrafts(userId: string): Promise<number> {
-    if (!isBoundedIdentifier(userId)) return 0;
-    const epoch = captureBrowserDraftEpoch(userId);
-    assertBrowserDraftWrite(userId, epoch);
-    const db = await initDB();
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    try {
-        const index = transaction.store.index('by-user');
-        const existingCount = readNonNegativeSafeInteger(await index.count(draftStorageOwnerKey(userId)));
-        if (existingCount === null) throw new Error('DRAFT_RECOVERY_FAILED');
-        let count = existingCount;
-        let imported = 0;
-        let scanned = 0;
-        const legacyOwners = legacyDraftStorageOwnerKeys(userId);
-        const progress = legacyRecoveryPositions.get(epoch);
-        let namespace = progress?.namespace ?? 0;
-        let after = progress?.after;
-        for (; namespace < legacyOwners.length && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER; namespace++) {
-            const legacyOwner = legacyOwners[namespace];
-            // A closed upper endpoint cannot become an exclusive lower bound.
-            if (after && after[1] >= '\uffff') { after = undefined; continue; }
-            let cursor = await transaction.store.openCursor(IDBKeyRange.bound(
-                after ?? [legacyOwner, ''], [legacyOwner, '\uffff'], after !== undefined,
-            ));
-            after = undefined;
-            while (cursor && scanned < MAX_DRAFTS_PER_USER && count < MAX_DRAFTS_PER_USER) {
-                const row = readDraft(cursor.value, true);
-                const candidate = row && readDraft({ ...row, userId: draftStorageOwnerKey(userId) }, true);
-                if (candidate && row && row.userId === legacyOwner) {
-                    const key = getDraftKey(userId, row.restaurantId);
-                    const existing = await transaction.store.get(key);
-                    assertBrowserDraftWrite(userId, epoch);
-                    if (existing === undefined) {
-                        await transaction.store.put(candidate);
-                        // Move only after the validated copy is admitted. Both operations
-                        // share this transaction; failure preserves the original.
-                        assertBrowserDraftWrite(userId, epoch);
-                        await cursor.delete();
-                        imported++;
-                        count++;
-                    }
-                }
-                scanned++;
-                after = cursor.primaryKey;
-                if (scanned >= MAX_DRAFTS_PER_USER || count >= MAX_DRAFTS_PER_USER) break;
-                cursor = await cursor.continue();
-            }
-            if (cursor) break;
-            after = undefined;
-        }
-        await transaction.done;
-        assertBrowserDraftWrite(userId, epoch);
-        // Commit progress with the copy, never with an aborted or stale session.
-        if (namespace < legacyOwners.length) legacyRecoveryPositions.set(epoch, { namespace, after });
-        else legacyRecoveryPositions.delete(epoch);
-        return imported;
-    } catch {
-        try { transaction.abort(); } catch { /* It may already have completed. */ }
-        await transaction.done.catch(() => {});
-        throw new Error('DRAFT_RECOVERY_FAILED');
-    } finally { db.close(); }
+    await store.saveDraft(draft);
 }

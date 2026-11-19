@@ -2,21 +2,21 @@
 
 import {
   Clock3,
+  Eye,
   MessageCircle,
+  Percent,
   Repeat2,
-  Sparkles,
-  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import type { HomeMapThemeFilterId } from "@/lib/home-map-theme-filters";
 import { cn } from "@/lib/utils";
 
 const HOME_MAP_THEME_FILTER_ICONS = {
-  "hot-view": TrendingUp,
+  "hot-view": Eye,
   "comment-hot": MessageCircle,
   "fresh-video": Clock3,
   "repeat-video": Repeat2,
-  "fan-signal": Sparkles,
+  "fan-signal": Percent,
 } satisfies Record<HomeMapThemeFilterId, LucideIcon>;
 
 type HomeMapThemeFilterIconProps = {
@@ -34,8 +34,8 @@ export function HomeMapThemeFilterIcon({
     <Icon
       aria-hidden="true"
       focusable="false"
-      strokeWidth={2.25}
-      className={cn("h-3.5 w-3.5 shrink-0", className)}
+      strokeWidth={2}
+      className={cn("h-4 w-4 shrink-0", className)}
     />
   );
 }

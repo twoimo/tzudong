@@ -3,7 +3,7 @@
 [data-slot="button"] { font-weight: 550; transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease; }
 [data-slot="button"][data-variant="outline"] { background: hsl(var(--card)); }
 [data-slot="button"]:focus-visible { outline-offset: 3px; }
-[data-slot="input"] { background: hsl(var(--card)); }
+[data-slot="input"], [data-slot="textarea"] { background: hsl(var(--card)); }
 [data-slot="dialog-content"] { border-radius: 1rem; background: hsl(var(--card)); }
 [data-slot="table"] { font-variant-numeric: tabular-nums; }
 [data-slot="table-head"] { font-size: 0.75rem; font-weight: 550; color: hsl(var(--muted-foreground)); }

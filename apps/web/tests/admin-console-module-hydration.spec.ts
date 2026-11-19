@@ -277,12 +277,15 @@ test.describe('admin console module hydration smoke', () => {
     );
   });
 
-  test('renders the production Recharts series, legend, and zero-value tooltip', async ({ page }, testInfo) => {
+  test('renders the production ztd series, legend, and zero-value tooltip after loading', async ({ page }, testInfo) => {
     test.setTimeout(90_000);
 
     const runtimeErrors: string[] = [];
     attachRuntimeErrorCollectors(page, runtimeErrors);
+    let releaseMetrics!: () => void;
+    const metricsReady = new Promise<void>((resolve) => { releaseMetrics = resolve; });
     await page.route('**/api/admin/youtube-kpis**', async (route) => {
+      await metricsReady;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -313,61 +316,100 @@ test.describe('admin console module hydration smoke', () => {
       [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
       [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
     });
-    await gotoAndHidePopup(page, '/admin');
+    const trendLoading = page.locator(
+      '[data-admin-dashboard-skeleton-card="trend"], [data-admin-dashboard-widget-card="trend"]',
+    ).locator('[data-admin-dashboard-dynamic-skeleton="line"]');
+    try {
+      await gotoAndHidePopup(page, '/admin');
+      await expect(trendLoading).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator('[data-admin-dashboard-line-chart="ztd"]')).toHaveCount(0);
+    } finally {
+      releaseMetrics();
+    }
 
     const trendCard = page.locator('[data-admin-dashboard-widget-card="trend"]');
-    const trendChart = trendCard.locator('[data-admin-dashboard-line-chart="recharts"]');
-    const bubbleChart = page.locator('[data-admin-dashboard-bubble-chart="recharts"]');
-    const trendChartSizeGate = trendChart.locator(
-      '[data-admin-dashboard-chart-size-ready="true"]',
-    );
-    const bubbleChartSizeGate = bubbleChart.locator(
-      '[data-admin-dashboard-chart-size-ready="true"]',
-    );
+    const trendChart = trendCard.locator('[data-admin-dashboard-line-chart="ztd"]');
+    const bubbleChart = page.locator('[data-admin-dashboard-bubble-chart="ztd"]');
+    const trendPlot = trendChart.getByRole('group', { name: '조회수, 참여, 참여율 정규화 비교 추이', exact: true });
+    const bubblePlot = bubbleChart.getByRole('group', { name: '영상별 조회수와 참여 규모 분산', exact: true });
+    const trendSvg = trendPlot.locator('svg.ztd-svg');
+    const bubbleSvg = bubblePlot.locator('svg.ztd-svg');
+    const trendSeries = trendSvg.locator('path[fill="none"][stroke-linecap="round"]');
+    const trendRows = trendPlot.locator('table tbody tr');
     const legend = page.getByLabel('영상별 성과 분포 지표 숨김/보임');
     await expect(trendChart).toBeVisible({ timeout: 30_000 });
     await expect(bubbleChart).toBeVisible({ timeout: 30_000 });
-    await expect(trendChartSizeGate).toBeVisible();
-    await expect(bubbleChartSizeGate).toBeVisible();
+    await expect(trendLoading).toHaveCount(0);
+    await expect(trendSvg).toBeVisible();
+    await expect(bubbleSvg).toBeVisible();
     await expect(legend).toBeVisible();
     await expect(legend.getByRole('button', { name: '조회수 숨기기' })).toBeVisible();
-    await expect(trendChart.locator('.recharts-line-curve')).toHaveCount(3);
-    await expect(trendChart.locator('.recharts-line-dots circle')).toHaveCount(9);
+    await expect(trendSeries).toHaveCount(3);
+    await expect(trendSvg.locator('circle')).toHaveCount(9);
+    await expect(trendRows).toHaveCount(3);
+    await expect(trendRows.nth(1).getByRole('cell')).toHaveText('조회수 0, 참여 0, 참여율 0');
+    await expect(bubbleSvg.locator('circle.ztd-mark')).toHaveCount(3);
+    await expect(bubblePlot.locator('table tbody tr')).toHaveCount(3);
+    await expect(bubblePlot.getByRole('row', { name: /차트 영값 영상/ }).getByRole('cell')).toContainText('x 0, y 0');
 
-    const initialTrendHeight = await trendChartSizeGate.evaluate(
+    // Read the rendered SVG after ResizeObserver measurement, rather than the
+    // removed library's readiness marker or an arbitrary settling delay.
+    for (const svg of [trendSvg, bubbleSvg]) {
+      await expect.poll(() => svg.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const viewBox = (element as SVGSVGElement).viewBox.baseVal;
+        return bounds.width > 0 && bounds.height > 0 && viewBox.width > 0
+          && Math.abs(bounds.width - viewBox.width) <= 1;
+      })).toBe(true);
+    }
+    const initialTrendHeight = await trendSvg.evaluate(
       (element) => element.getBoundingClientRect().height,
     );
-    const initialBubbleHeight = await bubbleChartSizeGate.evaluate(
+    const initialBubbleHeight = await bubbleSvg.evaluate(
       (element) => element.getBoundingClientRect().height,
     );
     expect(initialTrendHeight).toBeGreaterThan(0);
     expect(initialBubbleHeight).toBeGreaterThan(0);
 
-    const zeroValueDot = trendChart.locator('.recharts-line-dots').last().locator('circle').nth(1);
+    const zeroValueDot = trendSeries.last().locator('..').locator('circle').nth(1);
     await zeroValueDot.hover();
-    const tooltip = page.locator('[data-admin-dashboard-tooltip-kind="trend-simple"]');
+    const tooltip = trendPlot.locator('.ztd-tip');
     await expect(tooltip).toBeVisible();
-    await expect(tooltip).toContainText('0점');
+    await expect(tooltip.locator('p').nth(1)).toHaveText(/:\s*0$/);
+    await trendPlot.focus();
+    await trendPlot.press('Home');
+    await trendPlot.press('ArrowRight');
+    await expect(tooltip.locator('p').nth(1)).toHaveText(/:\s*0$/);
+    await expect(trendPlot.locator('[aria-live="polite"]')).toContainText('조회수 0, 참여 0, 참여율 0');
+    await trendPlot.press('Escape');
+    await expect(tooltip).toHaveCount(0);
 
     await legend.getByRole('button', { name: '조회수 숨기기' }).click();
     await expect(legend.getByRole('button', { name: '조회수 보이기' })).toBeVisible();
-    await expect(trendChart.locator('.recharts-line-curve')).toHaveCount(2);
+    await expect(trendSeries).toHaveCount(2);
+    await expect(trendSvg.locator('circle')).toHaveCount(6);
+    await expect(trendRows.nth(1).getByRole('cell')).toHaveText('참여 0, 참여율 0');
 
     const trendViewToggle = trendCard.locator(
       '[data-admin-dashboard-card-view-toggle="true"]',
     );
     await trendViewToggle.getByRole('button', { name: '표' }).click();
-    await expect(trendCard.locator('[data-admin-dashboard-table-view="true"]')).toBeVisible();
+    const trendTable = trendCard.locator('[data-admin-dashboard-table-view="true"]');
+    await expect(trendTable).toBeVisible();
+    await expect(trendTable.locator('tbody tr')).toHaveCount(3);
+    await expect(trendTable.getByRole('columnheader', { name: '조회수', exact: true })).toHaveCount(0);
+    await expect(trendTable.getByRole('columnheader', { name: '참여', exact: true })).toBeVisible();
     await expect(trendChart).toHaveCount(0);
     await expect(bubbleChart).toBeVisible();
 
     await trendViewToggle.getByRole('button', { name: '그래프' }).click();
     await expect(trendChart).toBeVisible();
-    await expect(trendChart.locator('.recharts-line-curve')).toHaveCount(2);
+    await expect(trendSeries).toHaveCount(2);
+    await expect(trendRows.nth(1).getByRole('cell')).toHaveText('참여 0, 참여율 0');
     await expect(legend.getByRole('button', { name: '조회수 보이기' })).toBeVisible();
     await expect
       .poll(async () => {
-        const recoveredHeight = await trendChartSizeGate.evaluate(
+        const recoveredHeight = await trendSvg.evaluate(
           (element) => element.getBoundingClientRect().height,
         );
         return Math.abs(recoveredHeight - initialTrendHeight);
@@ -375,7 +417,7 @@ test.describe('admin console module hydration smoke', () => {
       .toBeLessThanOrEqual(2);
     await expect
       .poll(async () => {
-        const recoveredHeight = await bubbleChartSizeGate.evaluate(
+        const recoveredHeight = await bubbleSvg.evaluate(
           (element) => element.getBoundingClientRect().height,
         );
         return Math.abs(recoveredHeight - initialBubbleHeight);

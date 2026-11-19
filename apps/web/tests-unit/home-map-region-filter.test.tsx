@@ -10,6 +10,7 @@ import { MapFilterTriggerLabel } from '../components/filters/MapFilterTriggerLab
 import { homeMapResultStatusText, type HomeMapResultSummary } from '../lib/home-map-result-summary';
 import { cn } from '../lib/utils';
 import type { HomeMapRegionFilterProps } from '../components/home/HomeMapRegionFilter';
+import { getHomeMapRegionOptionCount } from '../components/home/home-map-region-option-count';
 
 type Element = React.ReactElement<Record<string, unknown>>;
 const summary: HomeMapResultSummary = {
@@ -32,6 +33,7 @@ function fixture(overrides: Partial<HomeMapRegionFilterProps> = {}) {
     let states: unknown[] = [];
     let cursor = 0;
     let mountedKey: string | null | undefined;
+    let focusCount = 0;
     const calls: string[] = [];
     let props: HomeMapRegionFilterProps = {
         mapMode: 'domestic', value: 'all', options, resultSummary: summary,
@@ -41,6 +43,11 @@ function fixture(overrides: Partial<HomeMapRegionFilterProps> = {}) {
     vm.runInNewContext(compiled, { exports, require(name: string) {
         if (name === 'react') return {
             useId: () => 'region-filter-status',
+            useRef(initial: unknown) {
+                const index = cursor++;
+                if (index >= states.length) states[index] = { current: initial };
+                return states[index];
+            },
             useState(initial: unknown) {
                 const index = cursor++;
                 if (index >= states.length) states[index] = initial;
@@ -67,6 +74,8 @@ function fixture(overrides: Partial<HomeMapRegionFilterProps> = {}) {
         if (mountedKey !== keyed.key) { states = []; mountedKey = keyed.key; }
         cursor = 0;
         tree = (keyed.type as (input: HomeMapRegionFilterProps) => Element)(props);
+        const inputRef = one('CommandInput').props.ref as { current: unknown };
+        inputRef.current = { focus: () => { focusCount += 1; } };
     }
     function nodes(type: Element['type']): Element[] {
         const found: Element[] = [];
@@ -92,6 +101,13 @@ function fixture(overrides: Partial<HomeMapRegionFilterProps> = {}) {
     render();
     return {
         calls, nodes, one, render,
+        trigger: () => nodes('Button').find((node) => node.props.role === 'combobox')!,
+        get focusCount() { return focusCount; },
+        resetSearch() {
+            const resetButton = nodes('Button').find((node) => typeof node.props.onClick === 'function')!;
+            (resetButton.props.onClick as () => void)();
+            render();
+        },
         open: () => invoke('Popover', 'onOpenChange', true),
         close: () => invoke('Popover', 'onOpenChange', false),
         search: (query: string) => invoke('CommandInput', 'onValueChange', query),
@@ -141,7 +157,7 @@ describe('HomeMapRegionFilter controlled UI', () => {
             expect(f.nodes('span').some((node) => String(node.props.className).includes('tabular-nums'))).toBe(false);
             const liveStatus = f.nodes('span').find((node) => node.props.role === 'status')!;
             expect(liveStatus.props.children).toBe(homeMapResultStatusText(resultSummary));
-            expect(f.one('Button').props['aria-describedby']).toBe(liveStatus.props.id);
+            expect(f.trigger().props['aria-describedby']).toBe(liveStatus.props.id);
         });
     }
 
@@ -155,7 +171,6 @@ describe('HomeMapRegionFilter controlled UI', () => {
         expect(filter('us-id', ' united ')).toBe(1);
         expect(filter('us-id', '')).toBe(1);
         expect(filter('missing', '서울')).toBe(0);
-        expect(renderToStaticMarkup(<>{f.one('CommandEmpty').props.children as React.ReactNode}</>)).toBe('지역을 찾을 수 없습니다.');
         f.render({ options: [], value: undefined });
         expect(f.nodes('CommandItem')).toHaveLength(0);
         expect(f.one(MapFilterTriggerLabel).props.label).toBe('지역');
@@ -177,6 +192,23 @@ describe('HomeMapRegionFilter controlled UI', () => {
         expect(f.one('CommandInput').props.value).toBe('');
         f.select('all');
         expect(f.calls).toEqual(['seoul-id', 'all']);
+    });
+
+    test('empty-search recovery restores all options and input focus without changing the selected region', () => {
+        const f = fixture({ value: 'seoul-id' });
+        f.open();
+        f.search('일치하지 않는 검색어');
+        const filter = f.one('Command').props.filter as (value: string, query: string) => number;
+        expect(options.every((option) => filter(option.value, f.one('CommandInput').props.value as string) === 0)).toBe(true);
+
+        f.resetSearch();
+
+        expect(f.one('CommandInput').props.value).toBe('');
+        expect(options.every((option) => filter(option.value, f.one('CommandInput').props.value as string) === 1)).toBe(true);
+        expect(f.focusCount).toBe(1);
+        expect(f.one('Popover').props.open).toBe(true);
+        expect(f.one(MapFilterTriggerLabel).props.label).toBe('서울특별시');
+        expect(f.calls).toEqual([]);
     });
 
     test('selecting the current value closes and resets search without emitting another selection', () => {
@@ -206,8 +238,8 @@ describe('HomeMapRegionFilter controlled UI', () => {
         expect(f.one('Command').props.onKeyDown).toBeUndefined();
         expect(f.one('CommandInput').props.onKeyDown).toBeUndefined();
         expect(f.one('PopoverContent').props.onEscapeKeyDown).toBeUndefined();
-        expect(f.one('Button').props.type).toBe('button');
-        expect(f.one('Button').props['aria-expanded']).toBe(true);
+        expect(f.trigger().props.type).toBe('button');
+        expect(f.trigger().props['aria-expanded']).toBe(true);
     });
 
     test('mode changes remount closed search state and switch region/country semantics and icon', () => {
@@ -218,8 +250,8 @@ describe('HomeMapRegionFilter controlled UI', () => {
         f.render({ mapMode: 'overseas', value: 'japan', options: [{ value: 'japan', label: '일본', count: 5 }] });
         expect(f.one('Popover').props.open).toBe(false);
         expect(f.one('CommandInput').props.value).toBe('');
-        expect(f.one('Button').props['aria-label']).toBe('국가 선택');
-        expect(f.one('Button').props.title).toBe('국가 필터: 일본');
+        expect(f.trigger().props['aria-label']).toBe('국가 선택: 일본');
+        expect(f.trigger().props.title).toBe('국가 필터: 일본');
         expect(f.one('CommandInput').props['aria-label']).toBe('국가 검색');
         expect(f.one('Command').props.label).toBe('국가 검색');
         expect(f.one(MapFilterTriggerLabel).props.icon).toBe(Globe);
@@ -231,5 +263,35 @@ describe('HomeMapRegionFilter controlled UI', () => {
         expect(f.one('Popover').props.open).toBe(false);
         expect(f.one('CommandInput').props.value).toBe('');
         expect(f.calls).toEqual([]);
+    });
+});
+
+describe('home map region count scope', () => {
+    test('keeps a selected region zero distinct from unqueried regions and the national total', () => {
+        const current = { ...summary, count: 0, regionCounts: {} };
+        const scope = { mapMode: 'domestic' as const, selectedRegion: '울산광역시', selectedCountry: null };
+        expect(getHomeMapRegionOptionCount(current, scope, '울산광역시')).toBe(0);
+        expect(getHomeMapRegionOptionCount(current, scope, '서울특별시')).toBeUndefined();
+        expect(getHomeMapRegionOptionCount(current, scope, 'all')).toBeUndefined();
+    });
+
+    test('publishes regional facets and the total when the current query covers all domestic regions', () => {
+        const current = { ...summary, count: 17, regionCounts: { 서울특별시: 12, 부산광역시: 5 } };
+        const scope = { mapMode: 'domestic' as const, selectedRegion: null, selectedCountry: null };
+        expect(getHomeMapRegionOptionCount(current, scope, 'all')).toBe(17);
+        expect(getHomeMapRegionOptionCount(current, scope, '서울특별시')).toBe(12);
+        expect(getHomeMapRegionOptionCount(current, scope, '부산광역시')).toBe(5);
+        expect(getHomeMapRegionOptionCount(current, scope, '울산광역시')).toBe(0);
+    });
+
+    test('only publishes the queried country and hides pending or failed counts', () => {
+        const current = { ...summary, count: 7, countryCounts: { 일본: 7 } };
+        const scope = { mapMode: 'overseas' as const, selectedRegion: null, selectedCountry: '일본' };
+        expect(getHomeMapRegionOptionCount(current, scope, '일본')).toBe(7);
+        expect(getHomeMapRegionOptionCount(current, scope, '미국')).toBeUndefined();
+        expect(getHomeMapRegionOptionCount(current, { ...scope, selectedCountry: null }, '일본')).toBeUndefined();
+        for (const status of ['pending', 'error', 'select-country'] as const) {
+            expect(getHomeMapRegionOptionCount({ ...current, status }, scope, '일본')).toBeUndefined();
+        }
     });
 });

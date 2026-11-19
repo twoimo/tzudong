@@ -47,20 +47,12 @@ describe('G002 popup and insights hardening contracts', () => {
 
   test('popup close and today-dismiss semantics stay separate', () => {
     const combinedPopupSource = source('components/layout/CombinedPopup.tsx');
-    const dailyPopupSource = source('components/recommendation/DailyRecommendationPopup.tsx');
 
     const combinedCloseBody = combinedPopupSource.match(/const handleClose = useCallback\([\s\S]*?\}, \[\]\);/)?.[0] ?? '';
     const combinedDismissBody = combinedPopupSource.match(/const handleDismissToday = useCallback\([\s\S]*?\}, \[\]\);/)?.[0] ?? '';
     expect(combinedCloseBody).toContain('setIsVisible(false)');
     expect(combinedCloseBody).not.toContain('localStorage.setItem');
     expect(combinedDismissBody).toContain("writeBrowserStorageString('local', DISMISSED_DATE_KEY, getTodayString())");
-
-    const dailyCloseBody = dailyPopupSource.match(/const handleClose = \(\) => \{[\s\S]*?\n    \};/)?.[0] ?? '';
-    const dailyDismissBody = dailyPopupSource.match(/const handleDismissToday = \(\) => \{[\s\S]*?\n    \};/)?.[0] ?? '';
-    expect(dailyCloseBody).toContain('setIsVisible(false)');
-    expect(dailyCloseBody).not.toContain('localStorage.setItem');
-    expect(dailyDismissBody).toContain("writeBrowserStorageString('local', POPUP_STORAGE_KEY, tomorrow.toISOString())");
-    expect(dailyPopupSource).toContain('const shouldShowPopup = isHomePage;');
   });
 
   test('insights treemap keeps guidance in an operable popover and chart description', () => {
@@ -68,9 +60,9 @@ describe('G002 popup and insights hardening contracts', () => {
 
     expect(insightsSource).toContain('aria-label="트리맵 읽는 법"');
     expect(insightsSource).toContain('<PopoverTrigger asChild>');
-    expect(insightsSource).toContain('<PopoverContent aria-label="트리맵 읽는 법" side="bottom"');
+    expect(insightsSource).toMatch(/<PopoverContent[^>]*aria-label="트리맵 읽는 법"[^>]*side="bottom"/);
     expect(insightsSource).toContain('<p>{treemapLegendText}</p>');
-    expect(insightsSource).toContain('onOpenAutoFocus={(event) => event.preventDefault()}');
+    expect(insightsSource).toContain('event.preventDefault(); treemapHelpPanelRef.current?.focus();');
     expect(insightsSource).toContain('id="insights-treemap-legend"');
     expect(insightsSource).toContain('id="insights-treemap-small-cell-guidance"');
     expect(insightsSource).toContain('aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance"');

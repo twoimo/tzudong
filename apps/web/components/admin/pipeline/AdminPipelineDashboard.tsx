@@ -1,5 +1,6 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
@@ -9,17 +10,17 @@ import { useEffect, useRef, useState } from "react";
 import { RefreshCw, ChevronRight, SlidersHorizontal, Workflow } from "lucide-react";
 import { PIPELINE_CONTROL_CONFIRMATION_TEXT, PIPELINE_LIVE_ENQUEUE_CONFIRMATION } from "@/lib/admin/pipeline-control";
 import { parsePipelineActionPreview, pipelineApplyBody, type PipelineActionInput, type PipelineActionPreview } from "@/lib/admin/pipeline-action-preview";
-import { buildPipelineStages, canControlPipelineJob, parsePipelineManifest, parsePipelineStatus, pipelineJobsForDisplay, pipelineDisplayIsReliable, PIPELINE_FLOW_DOCUMENT, PIPELINE_JOB_LABELS, type PipelineStageId } from "@/lib/admin/pipeline-flow-view-model";
-import { isRecord } from "@/lib/admin/normalize-evaluation-record";
+import { buildPipelineStages, parsePipelineManifest, parsePipelineStatus, pipelineJobRow, pipelineJobsForDisplay, pipelineDisplayIsReliable, PIPELINE_FLOW_DOCUMENT, PIPELINE_JOB_LABELS, type PipelineStageId } from "@/lib/admin/pipeline-flow-view-model";
+import { isRecord } from "@/lib/validation/records";
 import { adminQueryLastReadFailed } from "@/lib/admin/query-read-state";
 import { PipelineFlowDiagram, formatPipelineDuration, COMPACT_STAGE_LABELS } from "./PipelineFlowDiagram";
 import styles from "./PipelineFlowDiagram.module.css";
 
 const ACTIVE_JOB_STATUSES = new Set(["Queued", "Fetching", "Inserting"]);
-const ACTION_LABELS = { enqueue: "수집 실행", pause: "일시 정지", resume: "다시 시작", cancel: "실행 취소" };
+const ENQUEUE_LABEL = "수집 실행";
 const LOOPBACK_GRAFANA_DASHBOARD_PREFIX = "http://127.0.0.1:3001/d/tzudong-pipeline-frozen-counters";
-const buttonClass = "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium disabled:opacity-50";
-const inputClass = "min-h-9 w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-sm";
+const buttonClass = "inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-border px-3 text-xs font-medium disabled:opacity-50";
+const inputClass = "min-h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm";
 function allowLoopbackGrafanaIframe() {
   return process.env.NODE_ENV !== "production" && typeof window !== "undefined" && window.location.hostname === "127.0.0.1";
 }
@@ -73,7 +74,7 @@ export function AdminPipelineDashboard() {
   const [enqueueProfile, setEnqueueProfile] = useState<"heavy_local" | "lite_gha">("heavy_local");
   const [confirmationText, setConfirmationText] = useState("");
   const [liveConfirmationText, setLiveConfirmationText] = useState("");
-  const [preview, setPreview] = useState<PipelineActionPreview | null>(null);
+  const [preview, setPreview] = useState<(PipelineActionPreview & { label: string }) | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
@@ -87,7 +88,7 @@ export function AdminPipelineDashboard() {
     if (refreshing) return;
     await Promise.allSettled([query.refetch(), manifestQuery.refetch()]);
   };
-  const prepare = async (input: PipelineActionInput) => {
+  const prepare = async (input: PipelineActionInput, label: string) => {
     if (inFlight.current) return;
     inFlight.current = true; setBusy(true); setMessage(null); setPreview(null); setConfirmationText(""); setLiveConfirmationText("");
     try {
@@ -96,7 +97,7 @@ export function AdminPipelineDashboard() {
         ...(input.runId ? { runId: input.runId } : {}), ...(input.action === "enqueue" ? { dryRun: !input.live } : {}) });
       if (result.status === 409) { await refresh(); setMessage("실행 상태가 바뀌었습니다. 새 목록에서 다시 미리보기 하세요."); return; }
       if (!result.ok) { setMessage("미리보기를 만들 수 없습니다. 연결과 권한을 확인하세요."); return; }
-      setPreview(parsePipelineActionPreview(result.payload, input, identity));
+      setPreview({ ...parsePipelineActionPreview(result.payload, input, identity), label });
     } catch { setMessage("유효한 미리보기를 확인하지 못했습니다. 새로고침 후 다시 시도하세요."); }
     finally { inFlight.current = false; setBusy(false); }
   };
@@ -129,7 +130,7 @@ export function AdminPipelineDashboard() {
     setControlsOpen(open);
     if (!open) { setPreview(null); setConfirmationText(""); setLiveConfirmationText(""); setShowGrafana(false); }
   };
-  return <section data-admin-pipeline-dashboard="true" className={`${styles.workspace} admin-surface`}>
+  return <section data-admin-pipeline-dashboard="true" className={`${styles.workspace} admin-surface ${featurePolish.polishedRoot}`}>
     <Sheet open={controlsOpen} onOpenChange={changeControlsOpen}>
       <AdminPageHeader title={getAdminModuleTitle("pipeline")} icon={Workflow}
         data-admin-module-header="compact" data-admin-module-header-module="pipeline"
@@ -146,10 +147,10 @@ export function AdminPipelineDashboard() {
     <section className="admin-detail-section min-w-0" aria-labelledby="pipeline-jobs-title">
       <div className="flex flex-wrap items-center justify-between gap-1 bg-muted/30 px-3 py-2"><h3 id="pipeline-jobs-title" className="text-sm font-semibold">{snapshot?.source === "github_actions" ? "최근 실행" : "현재 실행"}</h3><span className="text-[11px] text-muted-foreground">{snapshot ? formatCheckedAt(new Date(query.dataUpdatedAt).toISOString()) : "조회 미확인"}</span></div>
       <ul data-admin-pipeline-jobs="true" className="space-y-1 p-1">
-        {jobs.map(job => <li key={job.id} data-admin-pipeline-job={job.id} className="flex flex-wrap items-center justify-between gap-2 bg-muted/20 px-3 py-2 text-xs">
-          <div className="min-w-0 space-y-1"><p className="flex flex-wrap gap-2"><strong className="font-semibold">{job.target}</strong><span>{PIPELINE_JOB_LABELS[job.status]}</span><span className="text-muted-foreground">{modeLabel(job.dry_run)}</span></p><details className="text-[11px] text-muted-foreground"><summary className="cursor-pointer">실행 정보{job.hasError ? " · 오류 기록" : ""}</summary><p className="mt-1 break-all">{job.profile === "heavy_local" ? "로컬" : job.profile === "lite_gha" ? "GitHub Actions" : "환경 미확인"} · {job.id} · 단계 {job.adapter_index ?? "미확인"}</p></details></div>
-          <div className="flex gap-1">{(["pause", "resume", "cancel"] as const).filter(action => canControlPipelineJob(snapshot?.source, job, action)).map(action => <button key={action} type="button" {...{ [`data-admin-pipeline-${action}`]: "true" }} disabled={!controlsReady} className={buttonClass} onClick={() => void prepare({ action, target: job.target, profile: job.profile as "heavy_local" | "lite_gha", runId: job.id })}>{ACTION_LABELS[action]}</button>)}</div>
-        </li>)}
+        {jobs.map(job => { const row = pipelineJobRow(snapshot?.source, job); return <li key={job.id} data-admin-pipeline-job={job.id} className="flex flex-wrap items-center justify-between gap-2 bg-muted/20 px-3 py-2 text-xs">
+          <div className="min-w-0 space-y-1"><p className="flex flex-wrap gap-2"><strong className="font-semibold">{job.target}</strong><span>{row.label}</span><span className="text-muted-foreground">{modeLabel(job.dry_run)}</span></p>{row.note ? <p className="text-[11px] text-muted-foreground">{row.note}</p> : null}<details className="text-[11px] text-muted-foreground"><summary className="cursor-pointer">실행 정보{job.hasError ? " · 오류 기록" : ""}</summary><p className="mt-1 break-all">{job.profile === "heavy_local" ? "로컬" : job.profile === "lite_gha" ? "GitHub Actions" : "환경 미확인"} · {job.id} · 단계 {job.adapter_index ?? "미확인"}</p></details></div>
+          <div className="flex gap-1">{row.controls.map(({ action, label }) => <button key={action} type="button" {...{ [`data-admin-pipeline-${action}`]: "true" }} disabled={!controlsReady} className={buttonClass} onClick={() => void prepare({ action, target: job.target, profile: job.profile as "heavy_local" | "lite_gha", runId: job.id }, label)}>{label}</button>)}</div>
+        </li>; })}
       </ul>
       {!jobs.length ? <p className="px-3 py-3 text-xs text-muted-foreground">{!snapshot ? "실행 목록 미확인" : !reliable ? "유효한 실행 목록을 확인하지 못했습니다." : snapshot.source === "github_actions" ? "최근 실행 기록 없음" : "현재 등록된 실행 없음"}</p> : null}
       <details data-admin-pipeline-failures="true" className="bg-muted/30 px-3 py-2 text-xs"><summary className="cursor-pointer font-medium">최근 실패 {failureCount === null ? "미확인" : `${failureCount}건`}</summary>{failureCount === null ? <p className="pt-2 text-muted-foreground">실패 목록을 확인할 수 없습니다.</p> : failureCount === 0 ? <p className="pt-2 text-muted-foreground">조회 범위에 실패 기록이 없습니다.</p> : <ul className="mt-2 space-y-2">{snapshot?.failures.map(job => <li key={job.id} className="break-all">{job.target} · {job.id}<span className="ml-2 text-muted-foreground">{modeLabel(job.dry_run)}</span></li>)}</ul>}</details>
@@ -160,11 +161,11 @@ export function AdminPipelineDashboard() {
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label className="space-y-1 text-xs"><span>수집 대상</span><input className={inputClass} value={enqueueTarget} maxLength={128} disabled={!!preview || busy} onChange={event => setEnqueueTarget(event.target.value)} list="pipeline-target-options" /><datalist id="pipeline-target-options">{snapshot?.targets.map(target => <option key={target.id} value={target.id} />)}</datalist></label>
         <label className="space-y-1 text-xs"><span>실행 환경</span><select className={inputClass} value={enqueueProfile} disabled={!!preview || busy} onChange={event => setEnqueueProfile(event.target.value as "heavy_local" | "lite_gha")}><option value="heavy_local">로컬 · 미디어 처리 포함</option><option value="lite_gha">GitHub Actions · 경량 처리</option></select></label>
-        <div className="flex flex-wrap gap-2 sm:col-span-2"><button type="button" data-admin-pipeline-enqueue="true" disabled={!controlsReady || !/^[A-Za-z0-9_-]{1,128}$/.test(enqueueTarget)} className={buttonClass} onClick={() => void prepare({ action: "enqueue", target: enqueueTarget, profile: enqueueProfile })}>테스트 실행 미리보기</button><button type="button" data-admin-pipeline-enqueue-live="true" disabled={!controlsReady || !/^[A-Za-z0-9_-]{1,128}$/.test(enqueueTarget)} className={buttonClass} onClick={() => void prepare({ action: "enqueue", target: enqueueTarget, profile: enqueueProfile, live: true })}>실제 수집 미리보기</button></div>
+        <div className="flex flex-wrap gap-2 sm:col-span-2"><button type="button" data-admin-pipeline-enqueue="true" disabled={!controlsReady || !/^[A-Za-z0-9_-]{1,128}$/.test(enqueueTarget)} className={buttonClass} onClick={() => void prepare({ action: "enqueue", target: enqueueTarget, profile: enqueueProfile }, ENQUEUE_LABEL)}>테스트 실행 미리보기</button><button type="button" data-admin-pipeline-enqueue-live="true" disabled={!controlsReady || !/^[A-Za-z0-9_-]{1,128}$/.test(enqueueTarget)} className={buttonClass} onClick={() => void prepare({ action: "enqueue", target: enqueueTarget, profile: enqueueProfile, live: true }, ENQUEUE_LABEL)}>실제 수집 미리보기</button></div>
       </div>
       {snapshot?.source !== "job_api" ? <p className="mt-2 text-xs text-muted-foreground">수집 서버 연결 후 실행할 수 있습니다.</p> : null}
       {preview ? <div ref={previewPanel} tabIndex={-1} data-pipeline-preview className="admin-detail-section mt-3 space-y-2 p-3 outline-none">
-        <p className="text-sm font-semibold">{ACTION_LABELS[preview.action]} 확인</p><p className="break-all text-xs">{preview.target} · {preview.profile}{preview.action === "enqueue" ? ` · ${modeLabel(preview.dryRun)}` : ` · ${preview.runId}`}</p><p className="text-[11px] text-muted-foreground">유효 시간 {new Date(preview.expiresAt).toLocaleTimeString("ko-KR")} · 적용 후 실행 목록을 다시 조회합니다.</p>
+        <p className="text-sm font-semibold">{preview.label} 확인</p><p className="break-all text-xs">{preview.target} · {preview.profile}{preview.action === "enqueue" ? ` · ${modeLabel(preview.dryRun)}` : ` · ${preview.runId}`}</p><p className="text-[11px] text-muted-foreground">유효 시간 {new Date(preview.expiresAt).toLocaleTimeString("ko-KR")} · 적용 후 실행 목록을 다시 조회합니다.</p>
         <label className="block space-y-1 text-xs"><span>확인 문구 ({PIPELINE_CONTROL_CONFIRMATION_TEXT})</span><input className={inputClass} value={confirmationText} onChange={event => setConfirmationText(event.target.value)} autoComplete="off" /></label>
         {preview.action === "enqueue" && !preview.dryRun ? <label className="block space-y-1 text-xs"><span>실제 수집 확인 ({PIPELINE_LIVE_ENQUEUE_CONFIRMATION})</span><input className={inputClass} value={liveConfirmationText} onChange={event => setLiveConfirmationText(event.target.value)} autoComplete="off" /></label> : null}
         <div className="flex gap-2"><button type="button" data-pipeline-apply disabled={busy || confirmationText !== PIPELINE_CONTROL_CONFIRMATION_TEXT || (preview.action === "enqueue" && !preview.dryRun && liveConfirmationText !== PIPELINE_LIVE_ENQUEUE_CONFIRMATION)} onClick={() => void apply()} className={`${buttonClass} bg-primary text-primary-foreground`}>확인 후 적용</button><button type="button" disabled={busy} className={buttonClass} onClick={() => setPreview(null)}>닫기</button></div>
@@ -193,10 +194,10 @@ export function AdminPipelineDashboard() {
         <SheetHeader className="pr-8 text-left"><SheetTitle id="pipeline-stage-title" tabIndex={-1} className="text-base outline-none">{selectedStage.label}</SheetTitle><SheetDescription>{COMPACT_STAGE_LABELS[selectedStage.state]}{selectedStage.state !== "manual" ? ` · ${formatPipelineDuration(selectedStage.durationSeconds)}` : ""}</SheetDescription></SheetHeader>
         <div id="pipeline-stage-body" className="admin-detail-section mt-4 space-y-3">
           <p className="text-xs text-muted-foreground">마지막 배치 기록 · {manifestLabel} · {formatCheckedAt(manifest?.checkedAt)}</p>
-          <div className="grid gap-1.5 text-xs sm:grid-cols-2"><p><span className="mr-2 text-muted-foreground">입력</span>{selectedStage.input}</p><p><span className="mr-2 text-muted-foreground">출력</span>{selectedStage.output}</p></div>
-          <p data-pipeline-explanation className="mt-1.5 text-xs leading-5 text-muted-foreground">{selectedStage.contract}</p>
+          <div className="grid gap-2 text-xs sm:grid-cols-2"><p><span className="mr-2 text-muted-foreground">입력</span>{selectedStage.input}</p><p><span className="mr-2 text-muted-foreground">출력</span>{selectedStage.output}</p></div>
+          <p data-pipeline-explanation className="mt-2 text-xs leading-5 text-muted-foreground">{selectedStage.contract}</p>
           <details className="mt-2 text-[11px] text-muted-foreground"><summary className="cursor-pointer">세부 기록·근거</summary>
-            {selectedStage.details.length ? <ul className="mt-2 space-y-1">{selectedStage.details.map(detail => <li key={detail.name} className="flex flex-wrap justify-between gap-x-3 gap-y-1 rounded-md bg-muted/30 px-2 py-1.5"><span className="break-words">{detail.name}</span><span>{detail.event ? ({ completed: "완료", failed: "실패", optional_skipped: "선택 생략", downstream_skipped: "선행 단계로 생략" })[detail.event.status] : "미확인"} · {formatPipelineDuration(detail.event?.durationSeconds ?? null)}</span></li>)}</ul> : null}
+            {selectedStage.details.length ? <ul className="mt-2 space-y-1">{selectedStage.details.map(detail => <li key={detail.name} className="flex flex-wrap justify-between gap-x-3 gap-y-1 rounded-md bg-muted/30 px-2 py-2"><span className="break-words">{detail.name}</span><span>{detail.event ? ({ completed: "완료", failed: "실패", optional_skipped: "선택 생략", downstream_skipped: "선행 단계로 생략" })[detail.event.status] : "미확인"} · {formatPipelineDuration(detail.event?.durationSeconds ?? null)}</span></li>)}</ul> : null}
             <p className="mt-2 break-all">{selectedStage.source}</p><p>backend/ARCHITECTURE.md · backend/DATA_CONTRACTS.md</p><p className="break-all">{PIPELINE_FLOW_DOCUMENT}</p>
           </details>
 

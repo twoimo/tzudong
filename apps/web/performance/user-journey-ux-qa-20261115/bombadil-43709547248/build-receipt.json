@@ -1,0 +1,41 @@
+{
+  "schema": "tzudong-bombadil-component-qa-v1",
+  "scope": "isolated-actual-components-synthetic-state",
+  "createdAtUtc": "2026-11-15T11:35:12.203Z",
+  "sourceSha": "50ce8726e2424fe2f6460eb5dbc55c5cb3ed0579",
+  "worktreeDirty": false,
+  "sourceHashes": {
+    "apps/web/package.json": "5d3885bed3c4b86b9212c24963c7f5a192e0e13693cb6e7aa493d4b8e55faf8d",
+    "apps/web/package-lock.json": "a3ec2e853dd6cfb5664311097204e63da53eabc8c421be7da137e901daad04c4",
+    ".github/chrome-for-testing.v1.json": "81f9db2648405ba5ac43d0816739b0cde2901fbfc3a25955444d676810cf038c",
+    "scripts/run-bombadil-qa.mjs": "2e61e1b191b51162ddbbf0f4e5af8d6c3053e05ae43ad6ec1eafac8ae4f4e4a8",
+    "apps/web/tests/bombadil/build.mjs": "368420bcacf456cd4782da37ae78a4dcda50ae2847c2d17235d2aa61e90fc1e9",
+    "apps/web/tests/bombadil/fixture-entry.tsx": "ee59bbccf47589ef800e0ffdafdbe301efaeea0d941b6055e35f7cd5f49efee4",
+    "apps/web/tests/bombadil/input.css": "56864a2ab5ce7b12583d7f1baa09e940a77082f72b57dde6b6e1cb2bcf1f3a49",
+    "apps/web/tests/bombadil/specification.js": "d9a67f54cf4de969f6934a20e0ff6880965d5c481df4c4750db55842dc7887f8",
+    "apps/web/tests/bombadil/policy.mjs": "fbb4ed06deffb8e2e2260e71bf96da23a553ba7de5e7a957caeefeb5332c5bc9",
+    "apps/web/tests/bombadil/fixture-server.mjs": "afd51ff86a86bb9c55ca3b2ad5cd22e2ee4e93ae9fd9f21eb39003ab253a5d92",
+    "apps/web/tests/bombadil/hosted-run.mjs": "8fa8f5ca0b82d4fb5dcf08993802c16e80bbaecacabfe3299c48ec61bce18357",
+    "apps/web/public/images/ui-noise.png": "7ec26e4f3efb7636225d678a6a3a65d3e7e671ac260f18ec1c496d6efc14a26b",
+    "apps/web/components/home/DeviceLocationDisclosure.tsx": "1742cdf7cff67fe3f21d44d91916a6741a513e78665db6c73d9043b689b25a17",
+    "apps/web/components/home/HomeMapThemeFilters.tsx": "09e92d48116f611ce6279a33feef646c665f2e629f57dfb35cc203d8210e4f38",
+    "apps/web/components/home/HomeMapRegionFilter.tsx": "059b46f82a0e8b65f1847473855732737184e2a4197897551c5bd46d37800d95",
+    "apps/web/components/map/MapThemeNotice.tsx": "b8123f5bc9a2d63b270d1ba27c4d9fc4cdc9d357809475f9db08f82d5a2e014f",
+    "apps/web/components/admin/performance/AdminPerformanceAudit.tsx": "665a5e822c4faff4720496215ab6b6e59ab3efc9458e4baf4844f695f337fc91",
+    "apps/web/lib/admin/performance-audit-snapshot.json": "981a1ba9a4b5773a550b0b0e49d6e8b26ee08bca3e0e22b153e7ccb24923b5b9",
+    "apps/web/components/admin/thumbnail-generator/ThumbnailBriefEditor.tsx": "f5317cd7682f7affe39b046f1aa888a2f61de861c41225d4f9e1aeec40345696",
+    "apps/web/components/admin/storyboard/StoryboardComicBoard.tsx": "15d5a4479538829c72ee9cd4e8a11d075e8772698bcbb31388d658e9753d843e",
+    "apps/web/components/admin/storyboard/StoryboardConversation.tsx": "1d2dcee6d457233ea31a633e811be3e1ea93a77435d78e70f3c36882734ce921",
+    "apps/web/components/admin/storyboard/StoryboardWorkspaceSkeleton.tsx": "bd371b2cde40b2dfd6d376ce2f0c1343e3f70b646805a3134c12d11c176f3536",
+    "apps/web/tests/fixtures/local-storyboard-ui/next-image-shim.ts": "bf9876adfa7e9504d0fab86626113754c62c4f72325add7b8faf74e7dda4d14e"
+  },
+  "node": "v24.22.1",
+  "bunVersion": "1.4.0",
+  "browserLaunched": false,
+  "productionRequests": 0,
+  "providerRequests": 0,
+  "assets": {
+    "javascriptSha256": "e78d8e5a4da74853b465e9da0c43c01b44ed04813376c0fa7b8bc50a520721b0",
+    "cssSha256": "3192f50ec6ec19ce45e2e69c39ae5b4f9d5db61961ddc1036059d3f8803bce79"
+  }
+}

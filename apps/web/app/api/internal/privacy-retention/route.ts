@@ -22,6 +22,7 @@ const MAX_REQUEST_BYTES = 16 * 1024;
 const MAX_PROVIDER_RESPONSE_BYTES = 1024;
 const CAPABILITY_HEADER = 'x-privacy-retention-capability';
 const PROVIDER_CAPABILITY_HEADER = 'x-privacy-retention-provider-capability';
+const PROVIDER_TIMEOUT_MS = 8_000;
 const NO_STORE_HEADERS = {
   'Cache-Control': 'no-store, max-age=0',
   Pragma: 'no-cache',
@@ -195,6 +196,7 @@ const privateProvider = (): PrivacyRetentionProvider | null => {
         },
         body: JSON.stringify(body),
         cache: 'no-store',
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       });
     } catch {
       throw new PrivacyRetentionRunnerError('privacy_retention_provider_unavailable');

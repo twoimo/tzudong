@@ -2591,7 +2591,10 @@ test('classifies the Windows Store Python alias diagnostic as an unavailable run
     expect(generatorSource).toContain('overflow-auto');
     expect(workspaceSource).toContain('data-local-storyboard-workspace="true"');
     expect(workspaceSource).toContain('data-admin-storyboard-toolbar="true"');
-    expect(workspaceSource).toContain('aria-label="프로젝트 설정과 기록"');
+    expect(workspaceSource).toContain('aria-label="이야기 기획"');
+    expect(workspaceSource).toContain('<StoryboardComicBoard');
+    expect(workspaceSource).toContain('<StoryboardConversation');
+    expect(workspaceSource).toContain('aria-label="작업 공간 보기"');
     expect(workspaceSource).toContain('aria-labelledby="local-scenes-title"');
     expect(workspaceSource.indexOf('data-admin-storyboard-toolbar="true"')).toBeLessThan(
       workspaceSource.indexOf('aria-labelledby="local-scenes-title"'),

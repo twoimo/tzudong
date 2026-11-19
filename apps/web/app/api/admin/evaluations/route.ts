@@ -17,9 +17,8 @@ export async function GET(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
-  const supabase = createSupabaseServiceRoleClient();
-
   try {
+    const supabase = createSupabaseServiceRoleClient();
     if (request && new URL(request.url).searchParams.get('view') === 'page') {
       const { query, limit, cursor } = parseEvaluationPageQuery(new URL(request.url).searchParams);
       const scope=createHash('sha256').update(`${process.env.NEXT_PUBLIC_SUPABASE_URL??''}:${process.env.SUPABASE_SERVICE_ROLE_KEY??''}`).digest('hex');

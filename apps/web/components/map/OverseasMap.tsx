@@ -7,7 +7,9 @@ import type { Restaurant } from '@/types/restaurant';
 import { syncPopularityMarkerInteraction, syncPopularityMarkerZoom } from '@/lib/evidence-engineering/popularity-marker';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useHomeMapResults } from '@/hooks/use-home-map-results';
+import { useHomeViewportMode } from '@/hooks/useHomeViewportMode';
 import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
+import { OverseasMapStatusOverlay } from '@/components/map/overseas-map-status-overlay';
 import { Button } from '@/components/ui/button';
 import { OVERSEAS_MAP_STYLE_URL, OVERSEAS_MAP_WORKER_URL } from '@/lib/overseas-map-provider';
 import {
@@ -102,6 +104,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     const [isMapLoaded, setIsMapLoaded] = useState(false);
     const [mapIssue, setMapIssue] = useState<'error' | 'slow' | null>(null);
     const [mapAttempt, setMapAttempt] = useState(0);
+    const viewportMode = useHomeViewportMode();
 
 
     // Update ref whenever prop changes
@@ -117,7 +120,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     }, [onMapInteraction]);
 
 
-    const { data: restaurants = EMPTY_RESTAURANTS, isLoading: isLoadingRestaurants, summary } = useHomeMapResults({
+    const { data: restaurants = EMPTY_RESTAURANTS, summary } = useHomeMapResults({
         mapMode: 'overseas', filters, selectedRegion: null, selectedCountry,
     });
 
@@ -456,11 +459,13 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                     </Button>
                 </div>
             )}
-            {isMapLoaded && isLoadingRestaurants && (
-                <div className="pointer-events-none absolute inset-x-3 top-28 z-10 flex justify-center" role="status">
-                    <span className="rounded-full bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm">맛집 핀을 불러오고 있어요</span>
-                </div>
-            )}
+            <OverseasMapStatusOverlay
+                activeThemeId={filters.featuredTheme}
+                isMapLoaded={isMapLoaded}
+                viewportMode={viewportMode}
+                resultStatus={summary.status}
+                restaurantCount={restaurantsToShow.length}
+            />
         </div>
     );
 };

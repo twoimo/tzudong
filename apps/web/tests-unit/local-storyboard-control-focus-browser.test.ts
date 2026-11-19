@@ -33,6 +33,7 @@ const workers = [{ id: 'fixture-gemini-worker', online: true, lastHeartbeat: now
 const reply = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } });
 window.fetch = async (url, init = {}) => {
   const path = new URL(url, location.href).pathname, method = init.method || 'GET';
+  if (path === '/api/admin/storyboard/production/assistant') return reply({ ok: true, configured: false, provider: null });
   if (path === '/api/admin/storyboard/production' && method === 'GET') return reply({ ok: true, readiness: READY, workers, projects: [summary(A), summary(B)] });
   const id = path.split('/').at(-1);
   if (!projects[id]) throw new Error('Unexpected fixture request');
@@ -87,13 +88,14 @@ localTest('storyboard cancel, new project and a failed library pick keep a keybo
       await cancel.focus();
       await page.keyboard.press('Enter');
       const heading = page.getByRole('heading', { name: '저장된 제작 요청' });
-      await playwrightExpect(page.getByLabel('저장된 스토리보드').getByRole('status')).toContainText('취소됨');
+      await playwrightExpect(page.getByLabel('저장된 스토리보드').getByRole('status', { name: '프로젝트 저장 상태', exact: true })).toContainText('취소됨');
       await playwrightExpect(heading).toBeFocused();
 
       await page.getByRole('button', { name: '새 프로젝트' }).focus();
       await page.keyboard.press('Enter');
       await playwrightExpect(page.locator('#local-storyboard-prompt')).toBeFocused();
 
+      await page.getByRole('button', { name: '프로젝트 목록', exact: true }).click();
       await page.getByRole('button', { name: /Project B/ }).click();
       await playwrightExpect(page.getByRole('alert').filter({ hasText: '요청 상태를 확인하지 못했습니다' })).toBeVisible();
       await playwrightExpect(page.locator('#local-project-select')).toBeFocused();

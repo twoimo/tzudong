@@ -1,0 +1,286 @@
+{
+  "version": 1,
+  "migrations": [
+    {
+      "id": "storyboard_gemini_execution_v1",
+      "path": "backend/supabase/migrations/20261013093518_storyboard_gemini_execution_v1.sql",
+      "sha256": "84d351dead86ef90040b6949fe4a6dc93eb91a783c1b7a78531c7f564ea4ff4e",
+      "expectedPriorState": {
+        "query": "SELECT jsonb_build_object(\n 'server_major',current_setting('server_version_num')::integer/10000,\n 'functions',(SELECT coalesce(jsonb_object_agg(p.proname,jsonb_build_object('sha256',encode(sha256(convert_to(pg_get_functiondef(p.oid),'UTF8')),'hex'),'owner',pg_get_userbyid(p.proowner),'securityDefiner',p.prosecdef,'config',p.proconfig,'volatility',p.provolatile,'parallel',p.proparallel)),'{}'::jsonb) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('storyboard_production_admin','storyboard_production_worker','storyboard_production_model_available','storyboard_production_reject_archived_write')),\n 'constraints',(SELECT jsonb_object_agg(c.conname,pg_get_constraintdef(c.oid)) FROM pg_constraint c WHERE c.conrelid IN ('public.admin_storyboard_production_projects'::regclass,'public.admin_storyboard_production_revisions'::regclass)),\n 'archiveTriggers',(SELECT coalesce(jsonb_agg(t.tgname ORDER BY t.tgname),'[]'::jsonb) FROM pg_trigger t WHERE NOT t.tgisinternal AND t.tgname LIKE 'storyboard_archive_%'),\n 'activeJobs',(SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE status IN ('queued','claimed'))\n)::text;\n",
+        "expected": {
+          "functions": {
+            "storyboard_production_admin": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "31c887d70c5ac094e8162c58dfdeaf1fddc440e870815a023cc4c0f36e8c0ac7",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            },
+            "storyboard_production_worker": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "ad450e343e61883f5e2e8af39162601adbb93e94e6b5415fac4a6881cbc6816f",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            },
+            "storyboard_production_model_available": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "a92a9daa25f3e90e41f5537bc9617de28fff5b12762f39a4f77a569bc38dc43a",
+              "parallel": "u",
+              "volatility": "i",
+              "securityDefiner": false
+            }
+          },
+          "activeJobs": 0,
+          "constraints": {
+            "admin_storyboard_production_projects_pkey": "PRIMARY KEY (id)",
+            "admin_storyboard_production_projects_check": "CHECK (((document IS NULL) OR ((jsonb_typeof(document) = 'object'::text) AND (octet_length((document)::text) <= 196608) AND ((document ->> 'schema'::text) = 'storyboard-mlx-v1'::text) AND ((document ->> 'projectId'::text) = (id)::text) AND (((document ->> 'revision'::text))::integer = revision))))",
+            "admin_storyboard_production_revisions_pkey": "PRIMARY KEY (project_id, revision)",
+            "admin_storyboard_production_revisions_check": "CHECK (((jsonb_typeof(document) = 'object'::text) AND (octet_length((document)::text) <= 196608) AND ((document ->> 'schema'::text) = 'storyboard-mlx-v1'::text) AND ((document ->> 'projectId'::text) = (project_id)::text) AND (((document ->> 'revision'::text))::integer = revision)))",
+            "admin_storyboard_production_projects_title_check": "CHECK ((length(title) <= 200))",
+            "admin_storyboard_production_projects_status_check": "CHECK ((status = ANY (ARRAY['waiting_worker'::text, 'generating'::text, 'awaiting_import'::text, 'partial'::text, 'ready'::text, 'failed'::text, 'cancelled'::text])))",
+            "admin_storyboard_production_projects_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+            "admin_storyboard_production_projects_request_check": "CHECK (((jsonb_typeof(request) = 'object'::text) AND (octet_length((request)::text) <= 65536) AND ((request ->> 'workflow'::text) = 'storyboard-mlx-v1'::text)))",
+            "admin_storyboard_production_projects_revision_check": "CHECK ((revision >= 0))",
+            "admin_storyboard_production_projects_id_owner_id_key": "UNIQUE (id, owner_id)",
+            "admin_storyboard_production_revisions_revision_check": "CHECK ((revision >= 0))",
+            "admin_storyboard_production_projects_owner_id_request_id_key": "UNIQUE (owner_id, request_id)",
+            "admin_storyboard_production_revisions_project_id_owner_id_fkey": "FOREIGN KEY (project_id, owner_id) REFERENCES admin_storyboard_production_projects(id, owner_id) ON DELETE CASCADE"
+          },
+          "server_major": 17,
+          "archiveTriggers": []
+        }
+      },
+      "terminalReadback": {
+        "query": "SELECT jsonb_build_object(\n 'server_major',current_setting('server_version_num')::integer/10000,\n 'functions',(SELECT coalesce(jsonb_object_agg(p.proname,jsonb_build_object('sha256',encode(sha256(convert_to(pg_get_functiondef(p.oid),'UTF8')),'hex'),'owner',pg_get_userbyid(p.proowner),'securityDefiner',p.prosecdef,'config',p.proconfig,'volatility',p.provolatile,'parallel',p.proparallel)),'{}'::jsonb) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('storyboard_production_admin','storyboard_production_worker','storyboard_production_model_available','storyboard_production_reject_archived_write')),\n 'constraints',(SELECT jsonb_object_agg(c.conname,pg_get_constraintdef(c.oid)) FROM pg_constraint c WHERE c.conrelid IN ('public.admin_storyboard_production_projects'::regclass,'public.admin_storyboard_production_revisions'::regclass)),\n 'archiveTriggers',(SELECT coalesce(jsonb_agg(t.tgname ORDER BY t.tgname),'[]'::jsonb) FROM pg_trigger t WHERE NOT t.tgisinternal AND t.tgname LIKE 'storyboard_archive_%'),\n 'activeJobs',(SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE status IN ('queued','claimed'))\n)::text;\n",
+        "expected": {
+          "functions": {
+            "storyboard_production_admin": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "0a36fb53735e87d669e80f2dd26bb832d0ee142d2478ce7ade05895114196c12",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            },
+            "storyboard_production_worker": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "f7d42776b043badc35f5b79a38d5c94ea000093b50c9846e4af03376d53f31c3",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            },
+            "storyboard_production_model_available": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "a92a9daa25f3e90e41f5537bc9617de28fff5b12762f39a4f77a569bc38dc43a",
+              "parallel": "u",
+              "volatility": "i",
+              "securityDefiner": false
+            },
+            "storyboard_production_reject_archived_write": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "5bedea19f7757628292ded7431a4973d72a0f8ebc461777b4af30f08e8ef4d68",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            }
+          },
+          "activeJobs": 0,
+          "constraints": {
+            "admin_storyboard_production_projects_pkey": "PRIMARY KEY (id)",
+            "admin_storyboard_production_revisions_pkey": "PRIMARY KEY (project_id, revision)",
+            "admin_storyboard_production_projects_title_check": "CHECK ((length(title) <= 200))",
+            "admin_storyboard_production_projects_status_check": "CHECK ((status = ANY (ARRAY['waiting_worker'::text, 'generating'::text, 'awaiting_import'::text, 'partial'::text, 'ready'::text, 'failed'::text, 'cancelled'::text])))",
+            "admin_storyboard_production_projects_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+            "admin_storyboard_production_projects_revision_check": "CHECK ((revision >= 0))",
+            "admin_storyboard_production_projects_id_owner_id_key": "UNIQUE (id, owner_id)",
+            "admin_storyboard_production_revisions_revision_check": "CHECK ((revision >= 0))",
+            "admin_storyboard_production_projects_request_workflow_check": "CHECK (((jsonb_typeof(request) = 'object'::text) AND (octet_length((request)::text) <= 65536) AND (((request ->> 'workflow'::text) = 'storyboard-mlx-v1'::text) OR (((request ->> 'workflow'::text) = 'storyboard-gemini-v1'::text) AND ((request #>> '{providers,externalAI}'::text[]) = 'true'::text) AND ((request #>> '{providers,text,id}'::text[]) = 'gemini-api'::text) AND ((request #>> '{providers,text,model}'::text[]) = 'gemini-3.8-flash'::text) AND ((request #>> '{providers,image,id}'::text[]) = 'gemini-api'::text) AND ((request #>> '{providers,image,model}'::text[]) = ANY (ARRAY['gemini-3.1-flash-image'::text, 'gemini-3-pro-image'::text]))))))",
+            "admin_storyboard_production_projects_document_workflow_check": "CHECK (((document IS NULL) OR ((jsonb_typeof(document) = 'object'::text) AND (octet_length((document)::text) <= 196608) AND ((document ->> 'schema'::text) = (request ->> 'workflow'::text)) AND ((document ->> 'projectId'::text) = (id)::text) AND (((document ->> 'revision'::text))::integer = revision))))",
+            "admin_storyboard_production_projects_owner_id_request_id_key": "UNIQUE (owner_id, request_id)",
+            "admin_storyboard_production_revisions_document_workflow_check": "CHECK (((jsonb_typeof(document) = 'object'::text) AND (octet_length((document)::text) <= 196608) AND ((document ->> 'schema'::text) = ANY (ARRAY['storyboard-mlx-v1'::text, 'storyboard-gemini-v1'::text])) AND ((document ->> 'projectId'::text) = (project_id)::text) AND (((document ->> 'revision'::text))::integer = revision)))",
+            "admin_storyboard_production_revisions_project_id_owner_id_fkey": "FOREIGN KEY (project_id, owner_id) REFERENCES admin_storyboard_production_projects(id, owner_id) ON DELETE CASCADE"
+          },
+          "server_major": 17,
+          "archiveTriggers": [
+            "storyboard_archive_assets_write_guard",
+            "storyboard_archive_events_write_guard",
+            "storyboard_archive_jobs_write_guard",
+            "storyboard_archive_projects_write_guard",
+            "storyboard_archive_restores_write_guard",
+            "storyboard_archive_revisions_write_guard"
+          ]
+        }
+      }
+    },
+    {
+      "id": "storyboard_openai_execution",
+      "path": "backend/supabase/migrations/20261113090000_storyboard_openai_execution.sql",
+      "sha256": "e2cf79eb435de2b760a3cc218371dafbe64a3344e41bdb9034437e2d2ae6f4a3",
+      "expectedPriorState": {
+        "query": "SELECT jsonb_build_object(\n 'server_major',current_setting('server_version_num')::integer/10000,\n 'functions',(SELECT coalesce(jsonb_object_agg(p.proname,jsonb_build_object('sha256',encode(sha256(convert_to(pg_get_functiondef(p.oid),'UTF8')),'hex'),'owner',pg_get_userbyid(p.proowner),'securityDefiner',p.prosecdef,'config',p.proconfig,'volatility',p.provolatile,'parallel',p.proparallel)),'{}'::jsonb) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('storyboard_production_admin','storyboard_production_worker','storyboard_production_model_available','storyboard_production_reject_archived_write')),\n 'constraints',(SELECT jsonb_object_agg(c.conname,pg_get_constraintdef(c.oid)) FROM pg_constraint c WHERE c.conrelid IN ('public.admin_storyboard_production_projects'::regclass,'public.admin_storyboard_production_revisions'::regclass)),\n 'archiveTriggers',(SELECT coalesce(jsonb_agg(t.tgname ORDER BY t.tgname),'[]'::jsonb) FROM pg_trigger t WHERE NOT t.tgisinternal AND t.tgname LIKE 'storyboard_archive_%'),\n 'activeJobs',(SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE status IN ('queued','claimed'))\n)::text;\n",
+        "expected": {
+          "functions": {
+            "storyboard_production_admin": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "0a36fb53735e87d669e80f2dd26bb832d0ee142d2478ce7ade05895114196c12",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            },
+            "storyboard_production_worker": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "f7d42776b043badc35f5b79a38d5c94ea000093b50c9846e4af03376d53f31c3",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            },
+            "storyboard_production_model_available": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "a92a9daa25f3e90e41f5537bc9617de28fff5b12762f39a4f77a569bc38dc43a",
+              "parallel": "u",
+              "volatility": "i",
+              "securityDefiner": false
+            },
+            "storyboard_production_reject_archived_write": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "5bedea19f7757628292ded7431a4973d72a0f8ebc461777b4af30f08e8ef4d68",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            }
+          },
+          "activeJobs": 0,
+          "constraints": {
+            "admin_storyboard_production_projects_pkey": "PRIMARY KEY (id)",
+            "admin_storyboard_production_revisions_pkey": "PRIMARY KEY (project_id, revision)",
+            "admin_storyboard_production_projects_title_check": "CHECK ((length(title) <= 200))",
+            "admin_storyboard_production_projects_status_check": "CHECK ((status = ANY (ARRAY['waiting_worker'::text, 'generating'::text, 'awaiting_import'::text, 'partial'::text, 'ready'::text, 'failed'::text, 'cancelled'::text])))",
+            "admin_storyboard_production_projects_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+            "admin_storyboard_production_projects_revision_check": "CHECK ((revision >= 0))",
+            "admin_storyboard_production_projects_id_owner_id_key": "UNIQUE (id, owner_id)",
+            "admin_storyboard_production_revisions_revision_check": "CHECK ((revision >= 0))",
+            "admin_storyboard_production_projects_request_workflow_check": "CHECK (((jsonb_typeof(request) = 'object'::text) AND (octet_length((request)::text) <= 65536) AND (((request ->> 'workflow'::text) = 'storyboard-mlx-v1'::text) OR (((request ->> 'workflow'::text) = 'storyboard-gemini-v1'::text) AND ((request #>> '{providers,externalAI}'::text[]) = 'true'::text) AND ((request #>> '{providers,text,id}'::text[]) = 'gemini-api'::text) AND ((request #>> '{providers,text,model}'::text[]) = 'gemini-3.8-flash'::text) AND ((request #>> '{providers,image,id}'::text[]) = 'gemini-api'::text) AND ((request #>> '{providers,image,model}'::text[]) = ANY (ARRAY['gemini-3.1-flash-image'::text, 'gemini-3-pro-image'::text]))))))",
+            "admin_storyboard_production_projects_document_workflow_check": "CHECK (((document IS NULL) OR ((jsonb_typeof(document) = 'object'::text) AND (octet_length((document)::text) <= 196608) AND ((document ->> 'schema'::text) = (request ->> 'workflow'::text)) AND ((document ->> 'projectId'::text) = (id)::text) AND (((document ->> 'revision'::text))::integer = revision))))",
+            "admin_storyboard_production_projects_owner_id_request_id_key": "UNIQUE (owner_id, request_id)",
+            "admin_storyboard_production_revisions_document_workflow_check": "CHECK (((jsonb_typeof(document) = 'object'::text) AND (octet_length((document)::text) <= 196608) AND ((document ->> 'schema'::text) = ANY (ARRAY['storyboard-mlx-v1'::text, 'storyboard-gemini-v1'::text])) AND ((document ->> 'projectId'::text) = (project_id)::text) AND (((document ->> 'revision'::text))::integer = revision)))",
+            "admin_storyboard_production_revisions_project_id_owner_id_fkey": "FOREIGN KEY (project_id, owner_id) REFERENCES admin_storyboard_production_projects(id, owner_id) ON DELETE CASCADE"
+          },
+          "server_major": 17,
+          "archiveTriggers": [
+            "storyboard_archive_assets_write_guard",
+            "storyboard_archive_events_write_guard",
+            "storyboard_archive_jobs_write_guard",
+            "storyboard_archive_projects_write_guard",
+            "storyboard_archive_restores_write_guard",
+            "storyboard_archive_revisions_write_guard"
+          ]
+        }
+      },
+      "terminalReadback": {
+        "query": "SELECT jsonb_build_object(\n 'server_major',current_setting('server_version_num')::integer/10000,\n 'functions',(SELECT coalesce(jsonb_object_agg(p.proname,jsonb_build_object('sha256',encode(sha256(convert_to(pg_get_functiondef(p.oid),'UTF8')),'hex'),'owner',pg_get_userbyid(p.proowner),'securityDefiner',p.prosecdef,'config',p.proconfig,'volatility',p.provolatile,'parallel',p.proparallel)),'{}'::jsonb) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('storyboard_production_admin','storyboard_production_worker','storyboard_production_model_available','storyboard_production_reject_archived_write')),\n 'constraints',(SELECT jsonb_object_agg(c.conname,pg_get_constraintdef(c.oid)) FROM pg_constraint c WHERE c.conrelid IN ('public.admin_storyboard_production_projects'::regclass,'public.admin_storyboard_production_revisions'::regclass)),\n 'archiveTriggers',(SELECT coalesce(jsonb_agg(t.tgname ORDER BY t.tgname),'[]'::jsonb) FROM pg_trigger t WHERE NOT t.tgisinternal AND t.tgname LIKE 'storyboard_archive_%'),\n 'activeJobs',(SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE status IN ('queued','claimed'))\n)::text;\n",
+        "expected": {
+          "functions": {
+            "storyboard_production_admin": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "8b942639c41f94c801a2b53c6db5f9a171f7ed97a08f4e8af181cef7783eefb5",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            },
+            "storyboard_production_worker": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "2f5ff2dd202d64399fcbc6d668baafaccc73cfb24d3babc0c5c57104fdde485d",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            },
+            "storyboard_production_model_available": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "587bba7ed592404f053d827517c7582ea5fefb11f99200412c9b54305b1a7119",
+              "parallel": "u",
+              "volatility": "i",
+              "securityDefiner": false
+            },
+            "storyboard_production_reject_archived_write": {
+              "owner": "postgres",
+              "config": [
+                "search_path=\"\""
+              ],
+              "sha256": "5bedea19f7757628292ded7431a4973d72a0f8ebc461777b4af30f08e8ef4d68",
+              "parallel": "u",
+              "volatility": "v",
+              "securityDefiner": false
+            }
+          },
+          "activeJobs": 0,
+          "constraints": {
+            "admin_storyboard_production_projects_pkey": "PRIMARY KEY (id)",
+            "admin_storyboard_production_revisions_pkey": "PRIMARY KEY (project_id, revision)",
+            "admin_storyboard_production_projects_title_check": "CHECK ((length(title) <= 200))",
+            "admin_storyboard_production_projects_status_check": "CHECK ((status = ANY (ARRAY['waiting_worker'::text, 'generating'::text, 'awaiting_import'::text, 'partial'::text, 'ready'::text, 'failed'::text, 'cancelled'::text])))",
+            "admin_storyboard_production_projects_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+            "admin_storyboard_production_projects_revision_check": "CHECK ((revision >= 0))",
+            "admin_storyboard_production_projects_id_owner_id_key": "UNIQUE (id, owner_id)",
+            "admin_storyboard_production_revisions_revision_check": "CHECK ((revision >= 0))",
+            "admin_storyboard_production_projects_request_workflow_check": "CHECK (((jsonb_typeof(request) = 'object'::text) AND (octet_length((request)::text) <= 65536) AND (((request ->> 'workflow'::text) = 'storyboard-mlx-v1'::text) OR (((request ->> 'workflow'::text) = 'storyboard-gemini-v1'::text) AND (((request #>> '{providers,externalAI}'::text[]) = 'true'::text) IS TRUE) AND (((((request #>> '{providers,text,id}'::text[]) = 'gemini-api'::text) AND ((request #>> '{providers,text,model}'::text[]) = 'gemini-3.8-flash'::text)) OR (((request #>> '{providers,text,id}'::text[]) = 'openai-api'::text) AND ((request #>> '{providers,text,model}'::text[]) = 'gpt-5.6-luna'::text))) IS TRUE) AND (((((request #>> '{providers,image,id}'::text[]) = 'gemini-api'::text) AND ((request #>> '{providers,image,model}'::text[]) = ANY (ARRAY['gemini-3.1-flash-image'::text, 'gemini-3-pro-image'::text]))) OR (((request #>> '{providers,image,id}'::text[]) = 'openai-api'::text) AND ((request #>> '{providers,image,model}'::text[]) = 'gpt-image-2.6-flare'::text))) IS TRUE)))))",
+            "admin_storyboard_production_projects_document_workflow_check": "CHECK (((document IS NULL) OR ((jsonb_typeof(document) = 'object'::text) AND (octet_length((document)::text) <= 196608) AND ((document ->> 'schema'::text) = (request ->> 'workflow'::text)) AND ((document ->> 'projectId'::text) = (id)::text) AND (((document ->> 'revision'::text))::integer = revision))))",
+            "admin_storyboard_production_projects_owner_id_request_id_key": "UNIQUE (owner_id, request_id)",
+            "admin_storyboard_production_revisions_document_workflow_check": "CHECK (((jsonb_typeof(document) = 'object'::text) AND (octet_length((document)::text) <= 196608) AND ((document ->> 'schema'::text) = ANY (ARRAY['storyboard-mlx-v1'::text, 'storyboard-gemini-v1'::text])) AND ((document ->> 'projectId'::text) = (project_id)::text) AND (((document ->> 'revision'::text))::integer = revision)))",
+            "admin_storyboard_production_revisions_project_id_owner_id_fkey": "FOREIGN KEY (project_id, owner_id) REFERENCES admin_storyboard_production_projects(id, owner_id) ON DELETE CASCADE"
+          },
+          "server_major": 17,
+          "archiveTriggers": [
+            "storyboard_archive_assets_write_guard",
+            "storyboard_archive_events_write_guard",
+            "storyboard_archive_jobs_write_guard",
+            "storyboard_archive_projects_write_guard",
+            "storyboard_archive_restores_write_guard",
+            "storyboard_archive_revisions_write_guard"
+          ]
+        }
+      }
+    }
+  ]
+}

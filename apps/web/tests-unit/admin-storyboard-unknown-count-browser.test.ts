@@ -17,6 +17,9 @@ async function bundle() {
     const empty = { ok: true, projects: [], workers: [], readiness: { schemaVersion: 1, status: 'ready', code: 'FEATURE_DATABASE_READY' } };
     globalThis.fetch = async input => {
       const url = new URL(String(input), location.href);
+      if (url.pathname === '/api/admin/storyboard/production/assistant') {
+        return Response.json({ ok: true, configured: false, provider: null });
+      }
       if (url.pathname === '/api/admin/storyboard/production' && fixture.mode === 'ok') {
         return new Response(JSON.stringify(empty), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
@@ -63,6 +66,10 @@ const setMode = (page: Page, mode: 'fail' | 'ok') => page.evaluate(next => {
         await page.addInitScript(() => { (globalThis as unknown as { process: unknown }).process = { env: { NODE_ENV: 'test' } }; });
         await page.goto('https://storyboard-count.test/admin');
         await page.addScriptTag({ content: script });
+        const toggle = page.getByRole('button', { name: '프로젝트 목록', exact: true });
+        await playwrightExpect(toggle).toHaveAttribute('aria-expanded', 'false');
+        await toggle.click();
+        await playwrightExpect(toggle).toHaveAttribute('aria-expanded', 'true');
 
         const library = page.locator('#local-storyboard-project-library');
         await playwrightExpect(library.getByRole('alert')).toContainText('프로젝트 목록을 불러오지 못했습니다.');

@@ -10,51 +10,24 @@
 @source not "../{tests-unit,test,tests,fixtures}/**";
 /* Tailwind v4 explicit retention for utilities assembled outside scanned route source. */
 @source inline("lg:block lg:flex lg:hidden lg:table-cell");
-@source inline("lg:border-r lg:grid lg:overflow-y-auto lg:px-0 lg:sticky sm:col-span-2 sm:grid-cols-2 sm:grid-cols-5 lg:col-span-2 lg:col-span-3 lg:col-span-4 lg:col-span-5 lg:col-span-6 lg:flex-row lg:grid-cols-10 lg:flex-1 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:h-full lg:justify-between lg:min-h-0 lg:overflow-hidden lg:overflow-visible xl:grid-cols-3 xl:grid-cols-4 xl:grid-cols-[1.1fr_0.9fr]");
+@source inline("lg:border-r lg:grid lg:overflow-y-auto lg:px-0 lg:sticky sm:col-span-2 sm:grid-cols-2 sm:grid-cols-5 lg:col-span-2 lg:col-span-3 lg:col-span-4 lg:col-span-5 lg:col-span-6 lg:flex-row lg:grid-cols-10 lg:flex-1 lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:h-full lg:justify-between lg:min-h-0 lg:overflow-hidden lg:overflow-visible xl:grid-cols-3 xl:grid-cols-4 xl:grid-cols-[1.1fr_0.9fr]");
 @source inline("font-sans font-black font-extrabold gap-0 flex-nowrap justify-end md:justify-end md:p-4 md:border-y-0 overflow-visible overflow-y-visible px-0.5 grid-cols-[5.5rem_minmax(0,1fr)_3rem] grid-rows-2 grid-rows-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(0,1fr)_auto] min-h-[132px] min-h-[190px] min-h-[220px] min-h-[230px] min-h-[280px] min-w-[8%] min-w-fit sm:max-w-none sm:min-w-fit sm:p-1.5 sm:p-3.5 text-sm text-lg sm:text-xl tracking-[-0.035em] tracking-[0.01em] tracking-[0.04em] bg-border/70 bg-muted-foreground/25 bg-muted-foreground/28 bg-muted-foreground/30 bg-muted-foreground/35 bg-muted-foreground/45 bg-muted-foreground/55 bg-muted/25 bg-muted/35 bg-muted/45 bg-teal-50 bg-teal-500/55 bg-teal-500/75 border-teal-500/25 dark:bg-muted-foreground/35 dark:bg-muted/20 dark:bg-muted/35 dark:bg-teal-400/55 dark:bg-teal-400/75 dark:bg-teal-950/35 dark:border-teal-400/30 dark:text-emerald-300 md:block md:flex md:hidden md:flex-row md:flex-wrap md:items-start md:justify-between md:gap-1 md:w-auto md:overflow-visible md:pb-0 sm:inline bg-sky-50 bg-sky-50/20 bg-sky-500 bg-teal-500 bg-rose-50 bg-rose-500 bg-orange-50 bg-amber-500 bg-amber-600 text-white text-teal-700 text-sky-700 text-rose-700 text-amber-700 border-sky-500/35 dark:bg-sky-400 dark:bg-sky-950/20 dark:bg-teal-400 dark:bg-teal-500 dark:bg-rose-400 dark:bg-rose-500 dark:bg-amber-400 dark:bg-amber-500 dark:text-white dark:text-teal-300 dark:text-sky-300 dark:text-rose-300 dark:text-amber-300 dark:border-sky-400/30 dark:border-sky-400/45");
 @source inline("-z-10 text-foreground bg-brand-tangerine-tint fill-brand-tangerine/40 scale-110 text-foreground/65 active:text-foreground text-[12px] font-medium font-bold leading-none tracking-normal");
 @source inline("text-yellow-500 text-muted-foreground text-amber-600");
 @source inline("top-[calc(env(safe-area-inset-top)_+_126px)] bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))_+_env(safe-area-inset-bottom)_+_0.75rem)] z-[61] z-[70]");
 /* General-runtime Tailwind v4 owner; keep this import out of the root home stylesheet. */
 
-/* ============================================
-   모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)
-   
-   문제: 모바일 브라우저(삼성 인터넷, Safari 등)에서 100vh가
-   URL 바와 하단 네비게이션을 포함한 높이로 계산되어 콘텐츠가 잘림.
-   
-   해결: 
-   1. 신규 CSS 단위(dvh/svh) 사용 - Safari 15.4+, Chrome 108+, Samsung Internet 20+
-   2. JavaScript fallback으로 --vh 변수 설정 - 구형 브라우저 지원
-   ============================================ */
+/* Baseline Widely available: let the browser track its dynamic viewport. */
 
 :root {
-  /* JavaScript fallback 변수 (동적 업데이트됨) */
-  --vh: 1vh;
 
-  /* 전체 높이 계산 - 우선순위: dvh > svh > JS fallback > vh */
-  --full-height: 100vh;
+  --full-height: 100dvh;
   /* 기본값 (fallback) */
 }
 
-/* dvh 지원 브라우저용 */
-@supports (height: 100dvh) {
-  :root {
-    --full-height: 100dvh;
-  }
-}
-
-/* svh 지원 브라우저용 (dvh 미지원 시) */
-@supports (height: 100svh) and (not (height: 100dvh)) {
-  :root {
-    --full-height: 100svh;
-  }
-}
 
 /* 스크롤바 숨김 유틸리티 */
 .scrollbar-hide {
-  -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
   /* Firefox */
 }
@@ -73,7 +46,6 @@
     [class*="overflow-x-auto"],
     [class*="overflow-auto"]
   ) {
-    -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
@@ -730,7 +702,6 @@ div[style*="z-index"] > div > .custom-marker {
 [data-admin-console-inline-module-panel="true"],
 [data-scroll-owner="route-control-pane"] {
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
 [data-storyboard-chat-log="true"]::-webkit-scrollbar,
@@ -751,7 +722,7 @@ div[style*="z-index"] > div > .custom-marker {
 
 @media (max-width: 767px) {
   [data-admin-console-layout="sidebar-content"] {
-    grid-template-rows: 3.5rem minmax(0, 1fr);
+    grid-template-rows: var(--admin-mobile-header-height, 3.5rem) minmax(0, 1fr);
     transition: grid-template-rows 300ms cubic-bezier(0.22, 1, 0.36, 1);
     will-change: grid-template-rows;
   }
@@ -803,12 +774,6 @@ div[style*="z-index"] > div > .custom-marker {
     max-width: 100%;
   }
 
-  /* Recharts 3 measures inside a zero-width, overflow-visible element.
-     Clamp its outer responsive container; a percentage cap on the inner
-     wrapper collapses the painted chart to zero on mobile. */
-  [data-admin-dashboard-management="true"] .recharts-responsive-container {
-    max-width: 100% !important;
-  }
 }
 
 [data-admin-dashboard-bar-chart="rank-distribution"]

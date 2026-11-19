@@ -24,6 +24,8 @@ tzudong_find_node24_bin() {
   for candidate in \
     "${HOME}"/.nvm/versions/node/v24*/bin \
     /usr/local/node24/bin \
+    /opt/homebrew/opt/node@24/bin \
+    /usr/local/opt/node@24/bin \
     /usr/bin \
     /usr/local/bin; do
     if [ -x "${candidate}/node" ] && "${candidate}/node" --version 2>/dev/null | grep -q '^v24\.'; then

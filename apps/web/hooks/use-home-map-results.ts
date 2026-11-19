@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { markInitialLoadMilestone } from '@/lib/performance/initial-load-milestones';
 import type { FilterState } from '@/components/filters/filter-state';
 import type { Region } from '@/types/restaurant';
 import { useRestaurants } from '@/hooks/use-restaurants';
@@ -17,6 +18,9 @@ export function useHomeMapResults({ mapMode, filters, selectedRegion, selectedCo
         ? buildNaverRestaurantsQueryOptions({ compact: true, filters, selectedRegion })
         : buildOverseasRestaurantsQueryOptions({ filters, selectedCountry, refreshTrigger: 0 });
     const query = useRestaurants({ ...options, requireComplete: true, homeMapMode: mapMode, showUserSubmittedMarkers });
+    useEffect(() => {
+        if (mapMode === 'domestic' && query.isError) markInitialLoadMilestone('dataError');
+    }, [mapMode, query.isError]);
     // Shared provider placeholders belong to the previous filter, not this result set.
     const isPending = query.isPending || query.isPlaceholderData;
     const summary = useMemo(() => buildHomeMapResultSummary({

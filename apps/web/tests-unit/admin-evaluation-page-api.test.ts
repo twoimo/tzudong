@@ -1,11 +1,12 @@
 import { describe, expect, mock, test } from 'bun:test';
 mock.module('server-only',()=>({}));
-let authStatus=200;let revision='1';let creations=0;let rawError:unknown=null;
+let authStatus=200;let revision='1';let creations=0;let rawError:unknown=null;let serviceRoleKeyMissing=false;
 const calls:string[]=[];
 const row={id:'00000000-0000-4000-8000-000000000001',name:'fixture',approved_name:'fixture',status:'pending',created_at:'2026-01-01T00:00:00Z',youtube_link:''};
 const stats={total:1,pending:1,approved:0,hold:0,db_conflict:0,ready_for_approval:0,unconfirmed_map:0,missing:0,not_selected:0,deleted:0};
 mock.module('@/lib/auth/require-admin',()=>({requireAdmin:async()=>authStatus===200?{ok:true}:{ok:false,response:Response.json({error:'Unauthorized'},{status:authStatus})}}));
 mock.module('@/lib/supabase/service-role',()=>({createSupabaseServiceRoleClient:()=>{
+  if(serviceRoleKeyMissing)throw new Error('Supabase environment variables are missing (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY).');
   creations++;return {
     rpc:async(name:string)=>{calls.push(name);if(name==='admin_evaluation_revision')return {data:revision,error:null};if(name==='admin_evaluation_raw_warning_groups')return rawError?{data:null,error:rawError}:{data:{codecVersion:1,mode:'flat',revision,pageIds:[row.id],totalRows:0,rowOffset:0,tuples:[],hasMore:false,cursor:null},error:null};if(name==='admin_evaluation_warning_groups')return {data:{revision,groups:[{id:row.id,sameVideo:{count:0,candidates:[]},deleted:{count:0,samples:[]}}]},error:null};if(name!=='admin_evaluation_page')throw new Error('full_snapshot_forbidden');return {data:{revision,records:[row],stats,filteredTotal:1,hasMore:false,afterId:null},error:null};},
     from:(name:string)=>{calls.push(name);if(name!=='restaurants')throw new Error('unexpected_view');const chain={select:()=>chain,range:()=>chain,order:()=>chain,then:(resolve:(r:unknown)=>unknown)=>Promise.resolve({data:[row],error:null}).then(resolve)};return chain;},
@@ -44,6 +45,16 @@ describe('admin paginated HTTP read contract',()=>{
       expect(response.status).toBe(500);expect(await response.json()).toEqual({error:'Failed to load admin evaluation records.'});
       expect(calls).toEqual(['admin_evaluation_revision','admin_evaluation_page','admin_evaluation_raw_warning_groups']);
     }finally{rawError=null;if(previous===undefined)delete process.env.ADMIN_EVALUATION_WARNING_READ_PATH;else process.env.ADMIN_EVALUATION_WARNING_READ_PATH=previous;}
+  });
+  test('a missing service-role key returns the fixed private failure on both read paths',async()=>{
+    serviceRoleKeyMissing=true;
+    try{
+      for(const url of ['https://tzudong.app/api/admin/evaluations','https://tzudong.app/api/admin/evaluations?view=page']){
+        const response=await GET(new Request(url));
+        expect(response.status).toBe(500);expect(response.headers.get('cache-control')).toBe('private, no-store');
+        expect(await response.json()).toEqual({error:'Failed to load admin evaluation records.'});
+      }
+    }finally{serviceRoleKeyMissing=false;}
   });
 });
 

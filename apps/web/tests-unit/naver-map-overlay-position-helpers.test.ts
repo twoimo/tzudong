@@ -16,7 +16,7 @@ describe('naver map overlay position helpers', () => {
 
         expect(result.centerOffsetStyle).toEqual({});
         expect(result.floatingBadgePositionClass).toContain('safe-area-inset-top');
-        expect(result.floatingBadgePositionClass).toContain('top-[calc(env(safe-area-inset-top)_+_114px)]');
+        expect(result.floatingBadgePositionClass).toContain('top-[var(--mobile-map-controls-bottom,calc(env(safe-area-inset-top)_+_136px))]');
         expect(result.floatingBadgePositionClass).toContain('z-[70]');
         expect(result.floatingBadgePositionClass).toContain('mobile-map-status-badge');
         expect(result.floatingToastPositionClass).toContain('right-3');

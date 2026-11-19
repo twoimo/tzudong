@@ -1,43 +1,25 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState } from 'react';
-import { BREAKPOINTS } from '@/hooks/useDeviceType';
+import { useLayoutEffect, useState } from 'react';
+import { DESKTOP_MIN_WIDTH_QUERY } from '@/lib/viewport-breakpoints';
 
 export type HomeViewportMode = 'pending' | 'mobileOrTablet' | 'desktop';
-
-function resolveHomeViewportMode(): Exclude<HomeViewportMode, 'pending'> {
-    return window.innerWidth <= BREAKPOINTS.tabletMax ? 'mobileOrTablet' : 'desktop';
-}
 
 export function useHomeViewportMode(): HomeViewportMode {
     const [mode, setMode] = useState<HomeViewportMode>('pending');
 
     useLayoutEffect(() => {
-        setMode(resolveHomeViewportMode());
-    }, []);
-
-    useEffect(() => {
-        let resizeRafId = 0;
-
+        const mediaQuery = window.matchMedia(DESKTOP_MIN_WIDTH_QUERY);
         const updateMode = () => {
-            if (resizeRafId) return;
-
-            resizeRafId = window.requestAnimationFrame(() => {
-                resizeRafId = 0;
-                const nextMode = resolveHomeViewportMode();
-                setMode((previousMode) => previousMode === nextMode ? previousMode : nextMode);
-            });
+            const nextMode = mediaQuery.matches ? 'desktop' : 'mobileOrTablet';
+            setMode((previousMode) => previousMode === nextMode ? previousMode : nextMode);
         };
 
-        window.addEventListener('resize', updateMode, { passive: true });
-        window.addEventListener('orientationchange', updateMode, { passive: true });
+        mediaQuery.addEventListener('change', updateMode);
+        updateMode();
 
         return () => {
-            if (resizeRafId) {
-                window.cancelAnimationFrame(resizeRafId);
-            }
-            window.removeEventListener('resize', updateMode);
-            window.removeEventListener('orientationchange', updateMode);
+            mediaQuery.removeEventListener('change', updateMode);
         };
     }, []);
 

@@ -1,14 +1,16 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { EvaluationEvidenceRecovery } from '@/components/admin/EvaluationEvidenceRecovery';
 
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminEvaluationLoadingTable } from "@/components/admin/AdminEvaluationLoadingTable";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
 import { createPortal } from 'react-dom';
 import { useRestaurantManagementHeader } from '@/components/admin/RestaurantManagementWorkspace';
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense, type FocusEvent } from 'react';
-import { isEvaluationRecordStatus, isRecord, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
+import { isEvaluationRecordStatus, isNullableString, isStringArray, isNullableStringArray, isNullableRecord, parseNumericEvaluationMetric, parseBooleanEvaluationMetric, parseCategoryEvaluationMetric, parseCategoryValidityEvaluationMetric, isLocationMatchEvidenceFamily, isLocationMatchPendingReason, parseLocationMatchSecondPass, parseLocationMatchAddress, parseLocationMatchResult, parseEvaluationResults, parseYoutubeMeta, parseDbErrorDetails, getString, getNullableString, getNullableNumber, normalizeEvaluationRecord, withAdminEvaluationDisplayName } from '@/lib/admin/normalize-evaluation-record';
 import { fetchAdminEvaluationPage, isEvaluationCursorStale, type EvaluationWarnings } from '@/lib/admin/evaluation-page-client';
 import { filterEvaluationRecords } from '@/lib/admin/evaluation-query';
 import { useInitialLoadPending } from '@/lib/use-initial-load-pending';
@@ -95,6 +97,7 @@ import {
   ADMIN_MODAL_FOOTER,
   ADMIN_MODAL_SCROLL_BODY,
 } from '@/components/admin/admin-modal-styles';
+import { isRecord, parseValidatedRows } from '@/lib/validation/records';
 
 const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
@@ -316,22 +319,6 @@ type RestaurantRequestListRow =
     | 'review_audit_id'
     | 'updated_at'
   >>;
-
-function parseValidatedRows<Row>(
-  values: readonly unknown[],
-  isRow: (value: unknown) => value is Row,
-): Row[] {
-  const rows: Row[] = [];
-
-  for (const value of values) {
-    if (isRow(value)) {
-      rows.push(value);
-    }
-  }
-
-  return rows;
-}
-
 
 function isSubmissionRow(value: unknown): value is SubmissionRow {
   if (!isRecord(value)) return false;
@@ -594,7 +581,7 @@ const ADMIN_EVALUATION_STATIC_STATUS_FILTERS = ['전체', '미처리', '승인�
 function AdminEvaluationStaticMobileLoadingControls() {
   return (
     <div className="space-y-2 lg:hidden" data-admin-evaluation-static-loading-controls="true">
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 gap-2">
         {ADMIN_EVALUATION_STATIC_STATUS_FILTERS.map((label, index) => (
           <Button
             key={label}
@@ -617,13 +604,13 @@ function AdminEvaluationStaticMobileLoadingControls() {
         </div>
       </div>
 
-      <div className="flex min-w-0 items-center justify-between gap-2 py-0.5">
-        <div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">
+      <div className="flex min-w-0 items-center justify-between gap-2 py-1">
+        <div className="min-w-0 truncate px-1 text-xs text-muted-foreground">
           <span>검수 항목</span>
           <span className="ml-1 font-medium">집계 중</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button type="button" variant="outline" size="sm" disabled className="h-8 rounded-full px-2.5 text-xs font-semibold disabled:opacity-100">
+          <Button type="button" variant="outline" size="sm" disabled className="h-8 rounded-full px-3 text-xs font-semibold disabled:opacity-100">
             상세 필터
           </Button>
           <Button type="button" variant="ghost" size="sm" disabled aria-label="필터 초기화" className="h-8 w-8 rounded-full p-0 text-muted-foreground disabled:opacity-100">
@@ -660,13 +647,13 @@ function AdminEvaluationStaticCardSkeleton({ count }: { count: number }) {
 
                   </svg>
 
-                  <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="min-w-0 flex-1 space-y-2">
 
                     <h3 className="text-sm font-semibold">맛집 검수 항목</h3>
 
                     <p className="text-xs">영상과 맛집 정보</p>
 
-                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+                    <div className="grid grid-cols-3 gap-2 text-xs">
 
                       <span>검수</span>
 
@@ -719,9 +706,9 @@ function AdminEvaluationRouteSkeleton() {
 
       <span className="sr-only">관리자 데이터 검수 화면의 필터, 테이블 행, 액션 영역을 불러오는 중입니다.</span>
 
-      <div className="border-b border-border bg-card px-3 py-2.5">
+      <div className="border-b border-border bg-card px-3 py-3">
 
-        <div className="flex min-h-10 items-start justify-between gap-2.5 lg:items-center">
+        <div className="flex min-h-10 items-start justify-between gap-3 lg:items-center">
 
           <div className="min-w-0 flex-1">
 
@@ -733,14 +720,14 @@ function AdminEvaluationRouteSkeleton() {
 
             </div>
 
-            <div className="mt-0.5 truncate text-xs text-muted-foreground">
+            <div className="mt-1 truncate text-xs text-muted-foreground">
               필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
             </div>
 
           </div>
 
           <div
-            className="flex shrink-0 items-center justify-end gap-1.5"
+            className="flex shrink-0 items-center justify-end gap-2"
             data-admin-evaluation-view-actions="top-right"
           >
 
@@ -788,69 +775,7 @@ function AdminEvaluationRouteSkeleton() {
 
         <AdminEvaluationStaticCardSkeleton count={mobileCardsCount} />
 
-        <div
-          ref={frameRef}
-          className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex"
-        >
-
-          <LoadingSurface label="검수 목록 로딩 중">
-
-            <div
-              className="grid bg-muted/35 px-2 py-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
-            >
-
-              {
-                ["선택", "검수 항목", "평가", "분류", "상태", "주소", "영상", "기록", "작업"].map(label => (
-                  <span key={label}>
-
-                    {label}
-
-                  </span>
-                ))
-              }
-
-            </div>
-
-            <div className="divide-y divide-border">
-
-              {
-                Array.from({ length: rowCount }, (_, index) => (
-                  <div
-                    key={index}
-                    className="grid min-h-16 items-center gap-2 p-2 text-xs lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
-                  >
-
-                    <span>선택</span>
-
-                    <div>
-
-                      <p className="text-sm font-semibold">맛집 검수 항목</p>
-
-                      <p className="mt-1">영상과 맛집 정보</p>
-
-                    </div>
-
-                    {
-                      ["평가", "분류", "상태", "주소", "영상", "기록"].map(label => (
-                        <span key={label}>
-
-                          {label}
-
-                        </span>
-                      ))
-                    }
-
-                    <span>상세 보기</span>
-
-                  </div>
-                ))
-              }
-
-            </div>
-
-          </LoadingSurface>
-
-        </div>
+        <AdminEvaluationLoadingTable frameRef={frameRef} rowCount={rowCount} />
 
       </div>
 
@@ -2211,7 +2136,7 @@ function AdminEvaluationPage({
   return (
     <div
       ref={scrollContainerRef}
-      className="flex h-full min-h-0 flex-col overflow-auto"
+      className={`flex h-full min-h-0 flex-col overflow-auto ${featurePolish.polishedRoot}`}
       id="scroll-container"
       data-admin-embedded-module-shell={embedded ? "true" : undefined}
       data-admin-embedded-module-id={embedded ? embeddedModuleId : undefined}
@@ -2235,11 +2160,11 @@ function AdminEvaluationPage({
       />}
       {/* Standalone modules retain their own header; the restaurant workspace owns its primary row. */}
       {((!embedded && !compactReviewHeader) || deepLinkFilter) && <div
-        className={embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}
+        className={embedded ? "shrink-0 border-b border-border bg-card px-2 py-2" : "border-b border-border bg-card px-3 py-3 sm:px-4 sm:py-3"}
         data-admin-module-header={embedded ? "compact" : undefined}
         data-admin-module-header-module={embedded ? embeddedModuleId : undefined}
       >
-        <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
+        <div className={embedded ? "flex flex-row items-start justify-between gap-2 lg:items-center" : "flex flex-row items-start justify-between gap-3 lg:items-center"}>
           <div className="min-w-0 flex-1">
             {!embedded && !compactReviewHeader && <div className="flex items-center gap-2">
               <AdminEvaluationTitleIcon embedded={embedded} />
@@ -2279,7 +2204,7 @@ function AdminEvaluationPage({
                 </Button>
               </div>
             )}
-            {!embedded && !compactReviewHeader && <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
+            {!embedded && !compactReviewHeader && <div className={embedded ? "mt-1 truncate text-xs text-muted-foreground" : "mt-1 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
               {embeddedModuleId === 'restaurants' ? reviewSummary : pendingQueueSummaryContent}
             </div>}
           </div>
@@ -2292,7 +2217,7 @@ function AdminEvaluationPage({
               onSelectStatuses={setSelectedStatuses}
               showStatusChips={!showSubmissionView}
             >
-              <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right" data-admin-module-actions={embedded ? "top-right" : undefined}>
+              <div className="ml-auto flex items-center justify-end gap-2 lg:gap-1" data-admin-evaluation-view-actions="top-right" data-admin-module-actions={embedded ? "top-right" : undefined}>
                 {reviewViewActions}
                 {!embedded && (
                   <>
@@ -2316,7 +2241,7 @@ function AdminEvaluationPage({
                       <span className="lg:hidden">제보</span>
                       {totalPendingCount > 0 && (
                         <>
-                          <span className="inline-flex md:inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-2xs font-semibold leading-none text-white lg:hidden">
+                          <span className="inline-flex md:inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-2 py-1 text-2xs font-semibold leading-none text-white lg:hidden">
                             {totalPendingCount > 99 ? '99+' : totalPendingCount}
                           </span>
                           <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white lg:flex">

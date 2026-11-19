@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { DESKTOP_MIN_WIDTH_QUERY } from '../lib/viewport-breakpoints';
 import {
     buildDesktopStampHomeRedirectPath,
     buildHomeAuthLoginPath,
@@ -70,25 +71,31 @@ describe('requested user login continuation', () => {
         );
     });
 
-    test('closing a resumed composer releases the resize guard at every breakpoint', () => {
+    test('closing a resumed composer releases the viewport guard at integer and fractional breakpoints', () => {
         const source = readFileSync(path.join(webRoot, 'app/stamp/page.tsx'), 'utf8');
         const body = source.split('{/* 리뷰 모달 (Review Modal) */}')[1]
             .split('onClose={() => {')[1].split('}}\n                    restaurant=')[0];
-        const close = new Function('window', 'BREAKPOINTS', 'reviewContinuationHandled',
+        const close = new Function('window', 'DESKTOP_MIN_WIDTH_QUERY', 'reviewContinuationHandled',
             'setIsReviewModalOpen', 'router', 'buildDesktopStampHomeRedirectPath', body);
         const id = '11111111-1111-4111-8111-111111111111';
-        for (const width of [390, 820, 1440]) {
+        for (const width of [390, 767.25, 767.75, 768, 820, 1279, 1279.25, 1279.75, 1280, 1440]) {
             const guard = { current: id as string | null };
             const redirects: string[] = [];
             let open = true;
             const search = `?restaurant=${id}`; // continuation already consumed writeReview
-            close({ innerWidth: width, location: { search } }, { tabletMax: 1023 }, guard,
+            close({
+                matchMedia: (query: string) => {
+                    expect(query).toBe('(min-width: 1280px)');
+                    return { matches: width >= 1280 };
+                },
+                location: { search },
+            }, DESKTOP_MIN_WIDTH_QUERY, guard,
                 (value: boolean) => { open = value; }, { replace: (value: string) => redirects.push(value) },
                 buildDesktopStampHomeRedirectPath);
             expect(open).toBe(false);
             expect(guard.current).toBeNull();
-            expect(redirects).toEqual(width > 1023 ? [`/?restaurant=${id}&panel=stamp`] : []);
-            // The page's resize listener can now route mobile/tablet back to the desktop panel.
+            expect(redirects).toEqual(width >= 1280 ? [`/?restaurant=${id}&panel=stamp`] : []);
+            // The page's media-query listener can now route mobile/tablet back to the desktop panel.
             if (!guard.current) redirects.push(buildDesktopStampHomeRedirectPath(search)!);
             expect(redirects.at(-1)).toBe(`/?restaurant=${id}&panel=stamp`);
         }
@@ -98,11 +105,14 @@ describe('requested user login continuation', () => {
         const modal = readFileSync(path.join(webRoot, 'components/auth/AuthModal.tsx'), 'utf8');
         const onboardingRoute = readFileSync(path.join(webRoot, 'app/api/privacy/onboarding/route.ts'), 'utf8');
 
-        expect(modal).toContain('const MAX_SIGNUP_PASSWORD_LENGTH = 72;');
-        expect(modal).toContain('password.length > MAX_SIGNUP_PASSWORD_LENGTH');
-        expect(modal).toContain('8자 이상 72자 이하로 입력해주세요.');
-        expect(modal.match(/maxLength=\{isExistingAccountRecovery \? undefined : MAX_SIGNUP_PASSWORD_LENGTH\}/g)).toHaveLength(4);
-        expect(onboardingRoute).toContain('value.password.length <= 72');
-        expect(modal).not.toContain('MAX_SIGNUP_PASSWORD_LENGTH = 12');
+        const passwordPolicy = readFileSync(path.join(webRoot, 'lib/auth/password-policy.ts'), 'utf8');
+        expect(passwordPolicy).toContain('export const MAX_NEW_PASSWORD_LENGTH = 72;');
+        expect(passwordPolicy).toContain('export const MIN_NEW_PASSWORD_LENGTH = 8;');
+        expect(modal).toContain('isAcceptableNewPasswordLength(password)');
+        expect(modal).toContain('NEW_PASSWORD_LENGTH_HINT');
+        expect(modal.match(/maxLength=\{isExistingAccountRecovery \? undefined : MAX_NEW_PASSWORD_LENGTH\}/g)).toHaveLength(4);
+        expect(onboardingRoute).toContain('isAcceptableNewPasswordLength(value.password)');
+        expect(modal).not.toContain('= 12');
+        expect(onboardingRoute).not.toContain('value.password.length <= 72');
     });
 });

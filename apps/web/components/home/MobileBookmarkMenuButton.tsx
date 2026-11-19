@@ -44,7 +44,7 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false, op
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        'relative h-9 w-9 rounded-full border border-border bg-background !text-primary',
+                        'relative h-11 w-11 shrink-0 rounded-full border border-border bg-background !text-primary',
                         'hover:border-primary/40 hover:bg-primary/10 hover:!text-primary',
                         'data-[state=open]:border-primary/50 data-[state=open]:bg-primary/10 data-[state=open]:!text-primary',
                         '[&_svg]:!text-primary',

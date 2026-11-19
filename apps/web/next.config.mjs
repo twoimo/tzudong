@@ -303,12 +303,11 @@ const nextConfig = {
     // Turbopack 설정 추가 (Next.js 16 호환성)
     turbopack: {},
     experimental: {
+        agentUpgrade: 'security',
         turbopackFileSystemCacheForDev: false,
         optimizePackageImports: [
             'lucide-react',
             'date-fns',
-            'recharts',
-            '@radix-ui/react-accordion',
             '@radix-ui/react-alert-dialog',
             '@radix-ui/react-dialog',
             '@radix-ui/react-dropdown-menu',
@@ -317,8 +316,6 @@ const nextConfig = {
             '@radix-ui/react-tabs',
             '@radix-ui/react-tooltip',
             '@radix-ui/react-toast',
-            'framer-motion',
-            'react-hook-form',
             'zod',
             'cmdk',
         ],

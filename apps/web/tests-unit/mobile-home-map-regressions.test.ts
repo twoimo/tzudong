@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import vm from 'node:vm';
+import ts from 'typescript';
 
 import type { Restaurant } from '../types/restaurant';
 import { getAdjacentRestaurantByStep } from '../lib/home-map-keyboard-navigation';
@@ -27,6 +29,120 @@ const makeRestaurant = (id: string, name: string): Restaurant =>
         lat: 37.5665,
         lng: 126.978,
     }) as Restaurant;
+
+type MapPadding = { top: number; bottom: number; left: number; right: number } | undefined;
+const mapContainerSource = ts.createSourceFile('home-map-container.tsx',
+    source('components/home/home-map-container.tsx'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+function mapViewportExpression(kind: 'padding' | 'resize') {
+    let expression: ts.Expression | undefined;
+    const visit = (node: ts.Node) => {
+        if (kind === 'padding' && ts.isVariableDeclaration(node)
+            && node.name.getText(mapContainerSource) === 'mapPadding') expression = node.initializer;
+        if (kind === 'resize' && ts.isCallExpression(node) && node.expression.getText(mapContainerSource) === 'useEffect'
+            && node.arguments[0]?.getText(mapContainerSource).includes('setViewportHeight(viewport.height)')) {
+            expression = node.arguments[0];
+        }
+        ts.forEachChild(node, visit);
+    };
+    visit(mapContainerSource);
+    if (!expression) throw new Error(`HOME_MAP_${kind.toUpperCase()}_EXPRESSION_MISSING`);
+    return ts.transpileModule(`(${expression.getText(mapContainerSource)})`, {
+        compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+}
+
+function mapPaddingHarness() {
+    const code = mapViewportExpression('padding');
+    let dependencies: unknown[] | undefined;
+    let cached: MapPadding;
+    let calculations = 0;
+    const state = {
+        isPanelOpen: true, isMapFullscreen: false, isDesktop: false,
+        renderDesktopDetailPanel: true, sheetHeight: 50, viewportHeight: 844,
+    };
+    return {
+        calculations: () => calculations,
+        render(overrides: Partial<typeof state> = {}, layoutHeight = 844): MapPadding {
+            Object.assign(state, overrides);
+            // Execute the production callback AND its dependency array. Retain
+            // the memo across renders so a missing resize dependency fails.
+            return vm.runInNewContext(code, {
+                ...state,
+                window: { innerHeight: layoutHeight },
+                useMemo: (calculate: () => MapPadding, next: unknown[]) => {
+                    if (!dependencies || next.some((value, index) => !Object.is(value, dependencies![index]))) {
+                        cached = calculate();
+                        calculations++;
+                        dependencies = [...next];
+                    }
+                    return cached;
+                },
+            }) as MapPadding;
+        },
+    };
+}
+
+describe('overseas map padding follows the rendered detail sheet viewport', () => {
+    test('the actual resize effect refreshes memoized padding without changing the sheet percentage', () => {
+        const map = mapPaddingHarness();
+        expect(map.render()?.bottom).toBe(422);
+        const listeners = new Map<string, () => void>();
+        const viewport = {
+            height: 844,
+            addEventListener: (type: string, listener: () => void) => listeners.set(type, listener),
+            removeEventListener: (type: string) => listeners.delete(type),
+        };
+        const viewportHeightRef = { current: 844 };
+        let viewportHeight = 844;
+        let sheetHeight = 50;
+        let renderFrame: (() => void) | undefined;
+        const mount = vm.runInNewContext(mapViewportExpression('resize'), {
+            window: { visualViewport: viewport },
+            viewportHeightRef,
+            isDraggingRef: { current: false },
+            setViewportHeight: (value: number) => { viewportHeight = value; },
+            setSheetHeight: (update: (current: number) => number) => { sheetHeight = update(sheetHeight); },
+            getCurrentMaxHeight: () => 100,
+            PEEK_SHEET_HEIGHT: 25,
+            requestAnimationFrame: (callback: () => void) => { renderFrame = callback; return 1; },
+            cancelAnimationFrame: () => {},
+        }) as () => () => void;
+        const cleanup = mount();
+        viewport.height = 390;
+        listeners.get('resize')!();
+        expect(viewportHeight).toBe(844);
+        renderFrame!();
+        expect(viewportHeightRef.current).toBe(390);
+        expect(sheetHeight).toBe(50);
+        expect(map.render({ viewportHeight, sheetHeight }, 390)?.bottom).toBe(195);
+        expect(map.calculations()).toBe(2);
+        cleanup();
+        expect(listeners.size).toBe(0);
+    });
+
+    test('visual viewport height stays authoritative when the layout viewport is taller', () => {
+        const map = mapPaddingHarness();
+        expect(map.render({ viewportHeight: 500 }, 844)?.bottom).toBe(250);
+        expect(map.render({}, 936)?.bottom).toBe(250);
+        expect(map.calculations()).toBe(1);
+    });
+
+    test('desktop offsets, fullscreen, and closed-panel behavior remain unchanged', () => {
+        const map = mapPaddingHarness();
+        expect(map.render({ isDesktop: true })).toEqual({ top: 0, bottom: 0, left: 0, right: 400 });
+        expect(map.render({ renderDesktopDetailPanel: false })).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+        expect(map.render({ isMapFullscreen: true })).toBeUndefined();
+        expect(map.render({ isMapFullscreen: false, isPanelOpen: false })).toBeUndefined();
+    });
+
+    test('sheet padding keeps the existing percentage bounds', () => {
+        const map = mapPaddingHarness();
+        expect(map.render({ sheetHeight: -10 })?.bottom).toBe(0);
+        expect(map.render({ sheetHeight: 150 })?.bottom).toBe(844);
+        expect(map.render({ sheetHeight: 25 })?.bottom).toBe(211);
+    });
+});
 
 describe('mobile home map regression guards', () => {
     test('search-selected restaurant can still swipe to a different visible restaurant', () => {
@@ -236,13 +352,15 @@ describe('mobile home map regression guards', () => {
 
     test('cluster marker zoom jumps immediately without Naver morph animation', () => {
         const mapSource = source('components/map/NaverMapView.tsx');
+        const clusterRenderSource = source('components/map/use-naver-map-cluster-render.ts');
 
         expect(mapSource).toContain('const jumpWithPanelOffset = useCallback');
         expect(mapSource).toContain('map.setZoom(targetZoom, false)');
         expect(mapSource).toContain('map.setCenter(adjustedCenter)');
-        expect(mapSource).toContain('jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom)');
-        expect(mapSource).toContain('jumpWithPanelOffset(lat, lng, targetZoom)');
-        expect(mapSource).not.toContain('morphWithPanelOffset');
+        expect(mapSource).toContain('jumpWithPanelOffset(center.lat, center.lng, targetZoom)');
+        expect(clusterRenderSource).toContain('center: cluster.center,');
+        expect(clusterRenderSource).toContain('center: { lat, lng },');
+        expect(mapSource + clusterRenderSource).not.toContain('morphWithPanelOffset');
     });
     test('mobile restaurant detail sheet peeks on map interaction without skipping fullscreen tap sequence', () => {
         const containerSource = source('components/home/home-map-container.tsx');
@@ -320,7 +438,44 @@ describe('mobile home map regression guards', () => {
         expect(overlaySource).toContain('data-mobile-category-sheet-commit="immediate"');
         expect(overlaySource).toContain('onCategoryChange([])');
         expect(overlaySource).toContain('onCategoryChange(newCategories)');
-        expect(overlaySource).toContain('선택 즉시 지도에 반영됩니다.');
+
+        // Exercise the real JSX callbacks; wording must not decide whether selection commits.
+        const parsed = ts.createSourceFile('MobileControlOverlay.tsx', overlaySource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+        const handlers: ts.ArrowFunction[] = [];
+        const visit = (node: ts.Node) => {
+            if (ts.isJsxAttribute(node) && node.name.getText(parsed) === 'onClick'
+                && node.initializer && ts.isJsxExpression(node.initializer)
+                && node.initializer.expression && ts.isArrowFunction(node.initializer.expression)) {
+                handlers.push(node.initializer.expression);
+            }
+            ts.forEachChild(node, visit);
+        };
+        visit(parsed);
+        const toggle = handlers.find((handler) => handler.getText(parsed).includes('onCategoryChange(newCategories)'));
+        const clear = handlers.find((handler) => ts.isBlock(handler.body)
+            && handler.body.statements.length === 1
+            && handler.getText(parsed).includes('onCategoryChange([])'));
+        const invoke = (handler: ts.ArrowFunction | undefined, selectedCategories: readonly string[], category = '') => {
+            expect(handler).toBeDefined();
+            const changes: string[][] = [];
+            const code = ts.transpileModule(`(${handler!.getText(parsed)})`, {
+                compilerOptions: { target: ts.ScriptTarget.ES2022 },
+            }).outputText;
+            const click = vm.runInNewContext(code, {
+                selectedCategories,
+                category,
+                isSelected: selectedCategories.includes(category),
+                onCategoryChange: (next: string[]) => { changes.push([...next]); },
+            }) as () => void;
+            click();
+            return changes;
+        };
+        const selected = Object.freeze(['한식', '분식']);
+        expect(invoke(toggle, selected, '양식')).toEqual([['한식', '분식', '양식']]);
+        expect(invoke(toggle, selected, '한식')).toEqual([['분식']]);
+        expect(invoke(clear, selected)).toEqual([[]]);
+        expect(selected).toEqual(['한식', '분식']);
+
         const desktopPanelSource = source('components/home/home-desktop-control-panel.tsx');
         expect(desktopPanelSource).toContain('선택하면 즉시 적용됩니다.');
         expect(desktopPanelSource).toContain('onCategoryChange={onCategoryChange}');

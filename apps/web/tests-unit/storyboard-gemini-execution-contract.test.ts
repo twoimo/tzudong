@@ -67,7 +67,7 @@ function archivedProject(): ProductionProject {
   return { id, revision: 3, request, document, status: 'ready', createdAt: now, updatedAt: now };
 }
 
-describe('Gemini-only execution and readable archive boundary', () => {
+describe('provider allowlists and readable archive boundary', () => {
   test('decodes historical projects but never admits them as executable requests', () => {
     const project = archivedProject();
     expect(project.request.workflow).toBe(STORYBOARD_ARCHIVE_WORKFLOW);
@@ -75,7 +75,7 @@ describe('Gemini-only execution and readable archive boundary', () => {
     expect(() => assertExecutableStoryboardRequest(project.request)).toThrow('archived_project_read_only');
   });
 
-  test('rejects a non-Gemini create before any database or queue RPC', async () => {
+  test('rejects unknown providers and models before any database or queue RPC', async () => {
     let rpcCalls = 0;
     const database: ProductionDatabase = {
       async rpc() { rpcCalls++; return { data: null, error: null }; },
@@ -88,7 +88,7 @@ describe('Gemini-only execution and readable archive boundary', () => {
       sceneCount: 5,
       providers: {
         externalAI: true,
-        text: { id: 'openai-api', model: 'other-text' },
+        text: { id: 'other-provider', model: 'other-text' },
         image: { id: 'xai-api', model: 'other-image' },
       },
     };
@@ -155,7 +155,6 @@ describe('Gemini-only execution and readable archive boundary', () => {
     for (const path of removed) expect(existsSync(join(webRoot, path))).toBe(false);
 
     const activeRuntime = [
-      'lib/admin/storyboard/outbound-worker.ts',
       'lib/admin/storyboard/production-store.ts',
       'lib/admin/storyboard/production-api.ts',
       'components/admin/storyboard/LocalStoryboardWorkspace.tsx',
@@ -163,7 +162,7 @@ describe('Gemini-only execution and readable archive boundary', () => {
       'scripts/storyboard-gemini-worker.ts',
       'app/api/admin/storyboard/production/[id]/images/route.ts',
     ];
-    const forbidden = /local-mlx|chatgpt-manual|grok-manual|openai-api|xai-api|mlx-client|mlx-transport/;
+    const forbidden = /local-mlx|chatgpt-manual|grok-manual|xai-api|mlx-client|mlx-transport/;
     for (const path of activeRuntime) expect(readFileSync(join(webRoot, path), 'utf8')).not.toMatch(forbidden);
     expect(readFileSync(join(webRoot, 'app/api/admin/storyboard/production/[id]/images/route.ts'), 'utf8'))
       .toContain('retiredStoryboardApi');

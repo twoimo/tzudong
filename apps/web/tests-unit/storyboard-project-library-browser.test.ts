@@ -46,6 +46,7 @@ window.fetch=async(url,init={})=>{
  const method=init.method||'GET',path=new URL(url,location.href).pathname;
  fixture.calls.push(method+' '+path);
  if(method!=='GET')throw new Error('Writes are prohibited in the library fixture');
+ if(path==='/api/admin/storyboard/production/assistant')return Response.json({ok:true,configured:false,provider:null});
  if(path==='/api/admin/storyboard/production'){
   if(fixture.mode==='pending')await new Promise(resolve=>{fixture.release=resolve;});
   if(fixture.mode==='failure')throw new TypeError('Fixture offline');
@@ -104,6 +105,12 @@ async function run(check: (page: Page) => Promise<void>, width = 1423, id?: stri
     await page.addScriptTag({ content: script });
     await page.getByRole("heading", { name: "스토리보드 생성", exact: true }).waitFor();
     await browserExpect(page.getByLabel("프로젝트 선택", { exact: true }).locator("option")).toHaveCount(3);
+    if (!id) {
+      const toggle = page.getByRole("button", { name: "프로젝트 목록", exact: true });
+      await browserExpect(toggle).toHaveAttribute("aria-expanded", "false");
+      await toggle.click();
+      await browserExpect(toggle).toHaveAttribute("aria-expanded", "true");
+    }
     await check(page);
     expect(errors).toEqual([]); expect(blocked).toEqual([]);
     expect(await page.evaluate(() => window.storyboardLibraryFixture.calls.every(call => call.startsWith("GET ")))).toBe(true);
@@ -161,8 +168,9 @@ browserTest("library keeps loaded rows during refresh errors and exposes recover
 browserTest("held readiness preserves project reads while blocking create and edit mutations", () => run(async page => {
   await page.evaluate(() => { window.storyboardLibraryFixture.readiness = "held"; });
   await refresh(page).click();
-  await page.getByText("데이터베이스 전환이 완료될 때까지 새 생성과 변경은 보류됩니다. 저장된 프로젝트와 이력은 계속 확인할 수 있습니다.", { exact: true }).waitFor();
+  await page.getByText("새 생성과 변경은 준비 중이에요. 저장된 프로젝트와 이력은 계속 볼 수 있어요.", { exact: true }).waitFor();
   expect(await list(page).getByRole("button").count()).toBe(2);
+  await page.getByRole("button", { name: "제작 요청", exact: true }).click();
   expect(await page.getByLabel("제작 요청", { exact: true }).isDisabled()).toBe(true);
   expect(await page.getByRole("button", { name: "프로젝트 만들기", exact: true }).isDisabled()).toBe(true);
   await firstProject(page).click();

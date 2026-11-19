@@ -10,8 +10,7 @@
 
 :root {
   color-scheme: light;
-  --vh: 1vh;
-  --full-height: 100vh;
+  --full-height: 100dvh;
   --font-sans: var(--font-pretendard, "Pretendard"), "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display-fallback: "Noto Serif KR", "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
   --font-noto-serif-kr: var(--font-display, "Noto Serif KR"), "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
@@ -43,14 +42,6 @@
   --brand-tangerine-ink: 18 100% 74%;
   --brand-garden-tint: 146 18% 16%;
   --brand-garden-text: 146 42% 68%;
-}
-
-@supports (height: 100dvh) {
-  :root { --full-height: 100dvh; }
-}
-
-@supports (height: 100svh) and (not (height: 100dvh)) {
-  :root { --full-height: 100svh; }
 }
 
 
@@ -95,18 +86,22 @@ html[data-local-workspace="true"] [data-local-workspace-app="true"] {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  --full-height: calc(100vh - var(--local-workspace-banner-height));
+  --full-height: calc(100dvh - var(--local-workspace-banner-height));
   height: var(--full-height);
   overflow: hidden;
   transform: translateZ(0);
 }
 
-/* Legal documents use the document scroll, including inside the local shell. */
+/* Legal documents keep document scrolling even after an app route has loaded
+   its fixed-height body styles, including inside the local shell. */
+html:has([data-legal-page="true"]) body,
 html[data-local-workspace="true"]:has([data-legal-page="true"]) body {
   height: auto;
   overflow-y: auto;
 }
 
+[data-local-workspace-app="true"]:has([data-legal-page="true"]),
+/* Outrank the local fixed-height shell even when home CSS loads after root CSS. */
 html[data-local-workspace="true"] [data-local-workspace-app="true"]:has([data-legal-page="true"]) {
   flex: 0 0 auto;
   min-height: var(--full-height, 100vh);
@@ -147,13 +142,19 @@ body:has([data-legal-page="true"]) {
   overflow-x: hidden;
 }
 
-[data-legal-page="true"],
-[data-legal-page="true"] article,
-[data-legal-page="true"] .font-mono {
-  max-width: 100%;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: break-all;
+@layer base {
+  /* Utilities such as max-w-3xl must win over this defensive width cap. */
+  [data-legal-page="true"],
+  [data-legal-page="true"] article,
+  [data-legal-page="true"] .font-mono {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  [data-legal-page="true"] .font-mono {
+    word-break: break-all;
+  }
 }
 
 [data-centered-error-state="viewport"] {
@@ -213,6 +214,16 @@ body:has([data-legal-page="true"]) {
   display: flex;
   justify-content: center;
   margin-top: 1.25rem;
+}
+
+[data-mobile-only-route="contents"] {
+  display: contents;
+}
+
+@media (min-width: 1280px) {
+  [data-mobile-only-route] {
+    display: none !important;
+  }
 }
 
 [data-centered-error-state="viewport"] a {

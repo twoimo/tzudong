@@ -1,17 +1,16 @@
 import * as React from "react";
-
-const MOBILE_BREAKPOINT = 768;
+import { TABLET_MIN_WIDTH_QUERY } from "@/lib/viewport-breakpoints";
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const mql = window.matchMedia(TABLET_MIN_WIDTH_QUERY);
     const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      setIsMobile(!mql.matches);
     };
     mql.addEventListener("change", onChange);
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    onChange();
     return () => mql.removeEventListener("change", onChange);
   }, []);
 

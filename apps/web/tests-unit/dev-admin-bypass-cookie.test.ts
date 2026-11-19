@@ -4,7 +4,6 @@ import {
     DEV_ADMIN_BYPASS_COOKIE_NAME,
     createDevAdminBypassCookieValue,
     getDevAdminBypassCookieFromHeader,
-    isDevAdminBypassLocalHost,
     resolveDevAdminBootstrapNext,
     validateDevAdminBypassCookie,
 } from '@/lib/auth/dev-admin-bypass-cookie'
@@ -13,6 +12,7 @@ import {
     E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS,
     E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
 } from '@/lib/e2e-admin-route-bypass'
+import { LOOPBACK_HOST_CASES } from './fixtures/loopback-host-cases'
 
 const now = Date.UTC(2026, 5, 9, 9, 0, 0)
 const enabledEnv = {
@@ -54,14 +54,20 @@ describe('dev admin bypass cookie', () => {
         await expect(validateDevAdminBypassCookie({ cookieValue: 'not.a.cookie', host: 'localhost:8080', env: enabledEnv, now })).resolves.toEqual({ ok: false, reason: 'malformed_cookie' })
     })
 
-    test('limits local-host parsing and bootstrap next targets', () => {
-        expect(isDevAdminBypassLocalHost('localhost:8080')).toBe(true)
-        expect(isDevAdminBypassLocalHost('LOCALHOST:8080')).toBe(true)
-        expect(isDevAdminBypassLocalHost('[::1]:8080')).toBe(true)
-        expect(isDevAdminBypassLocalHost('localhost.evil.test')).toBe(false)
-        expect(isDevAdminBypassLocalHost('localhost@evil.test')).toBe(false)
-        expect(isDevAdminBypassLocalHost('example.com, localhost')).toBe(false)
+    test('accepts a valid cookie only from loopback Host header values', async () => {
+        const cookieValue = await createDevAdminBypassCookieValue({
+            env: enabledEnv,
+            now,
+            nonce: 'unit-test-nonce',
+        })
 
+        for (const { host, isLoopback } of LOOPBACK_HOST_CASES) {
+            const result = await validateDevAdminBypassCookie({ cookieValue, host, env: enabledEnv, now })
+            expect(result.ok, JSON.stringify(host)).toBe(isLoopback)
+        }
+    })
+
+    test('limits bootstrap next targets', () => {
         expect(resolveDevAdminBootstrapNext(null)).toBe('/admin?module=youtube-thumbnail-generator')
         expect(resolveDevAdminBootstrapNext('/admin?module=youtube-thumbnail-generator')).toBe('/admin?module=youtube-thumbnail-generator')
         expect(resolveDevAdminBootstrapNext('/admin?module=overview')).toBe('/admin?module=overview')

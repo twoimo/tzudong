@@ -8,8 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+import { formatKoreanDateTime } from "@/lib/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +28,7 @@ import {
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
 import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
+import { MyPageSubmissionGuide } from "@/components/mypage/MyPageSubmissionGuide";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -41,6 +41,7 @@ import {
   myPageListCardClass,
   myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
+import { getResponseErrorMessage, isRecord, parseValidatedRows } from "@/lib/validation/records";
 
 interface RestaurantRequest {
   id: string;
@@ -79,29 +80,6 @@ const RESTAURANT_REQUEST_SELECT = [
   "geocoding_success",
   "created_at",
 ].join(", ");
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function parseValidatedRows<Row>(
-  values: readonly unknown[],
-  isRow: (value: unknown) => value is Row,
-): Row[] {
-  const rows: Row[] = [];
-
-  for (const value of values) {
-    if (isRow(value)) {
-      rows.push(value);
-    }
-  }
-
-  return rows;
-}
-
-function getResponseErrorMessage(value: unknown): string | null {
-  return isRecord(value) && typeof value.error === "string" ? value.error : null;
-}
-
 
 function isNullableString(value: unknown): value is string | null {
   return typeof value === "string" || value === null;
@@ -382,9 +360,7 @@ export default function RecommendSubmissionsPage() {
           <div className={myPageFooterMetaClass}>
             <span>
               추천일:{" "}
-              {format(new Date(request.created_at), "yyyy년 M월 d일 HH:mm", {
-                locale: ko,
-              })}
+              {formatKoreanDateTime(new Date(request.created_at))}
             </span>
           </div>
           {deleteTarget?.id === request.id && (
@@ -439,32 +415,29 @@ export default function RecommendSubmissionsPage() {
     );
   };
 
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="쯔양 맛집 제보 내역을 불러오는 중…" />;
-  }
-
-  if (isError) {
-    return (
-      <MyPageErrorState
-        onRetry={() => void refetch()}
-        retrying={isFetching}
-        title="쯔양 맛집 제보를 불러오지 못했습니다"
-        description="추천한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
-    );
-  }
 
   return (
     <MyPageSectionFrame
       icon={Heart}
       eyebrow="제보 관리"
-      title="쯔양 맛집 제보"
-      description="쯔양에게 추천한 맛집과 위치 확인 상태를 차분하게 확인합니다."
-      countLabel={`총 ${requests.length}건`}
+      title="쯔양 맛집 제보 내역"
+      description="쯔양에게 추천한 맛집과 위치 확인 상태를 확인하세요."
+      countLabel={isLoading || (isError && requests.length === 0) ? undefined : `총 ${requests.length}건`}
       data-section="submissions-recommend"
     >
-      {requests.length === 0 ? (
-        <MyPageEmptyState
+      <MyPageSubmissionGuide kind="recommend" userId={user?.id ?? null} />
+      {isError && (
+      <MyPageErrorState
+        onRetry={() => void refetch()}
+        retrying={isFetching}
+        title="쯔양 맛집 제보 내역을 불러오지 못했습니다"
+        description="추천한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
+      />
+      )}
+      {isLoading ? (
+        <MyPageSectionSkeleton label="쯔양 맛집 제보 내역을 불러오는 중…" />
+      ) : requests.length === 0 ? (
+        !isError && <MyPageEmptyState
           icon={Heart}
           title="아직 쯔양에게 추천한 맛집이 없습니다"
           description="추천한 맛집은 이곳에서 다시 확인할 수 있습니다."

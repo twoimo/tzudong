@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import '../legal-globals.css';
 import Link from 'next/link';
 import { pageHeadingTitleClass } from '@/components/layout/page-heading-styles';
 
 import { buildPublicMetadata } from '@/lib/seo';
-import { siteConfig, supportMailto } from '@/lib/site-config';
+import { HydratedContactEmail, HydratedSupportLink } from '@/components/legal/HydratedContactEmail';
+import { siteConfig } from '@/lib/site-config';
 import {
   PRIVACY_POLICY_CONTENT_SHA256,
   PRIVACY_POLICY_PUBLICATION,
@@ -56,9 +58,11 @@ export default function DataDeletionPage() {
             <Link className="rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted" href={siteConfig.legal.privacyPath}>
               개인정보 처리방침
             </Link>
-            <a className="rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted" href={supportMailto('쯔동여지도 데이터 삭제 요청')}>
-              지원 요청 보내기
-            </a>
+            <HydratedSupportLink
+              className="rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted"
+              label="request"
+              subject="쯔동여지도 데이터 삭제 요청"
+            />
           </div>
         </header>
 
@@ -103,17 +107,19 @@ export default function DataDeletionPage() {
         <section className="mt-8 space-y-4">
           <h2 className="text-lg font-semibold">로그인할 수 없을 때의 지원 요청</h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            {siteConfig.contact.email}로 삭제 요청 사실만 알려 주세요. 이메일 본문에 비밀번호, 인증 토큰, 주민등록번호, 이미지 원본, 원시 OCR 결과, 정확한 위치 또는 그 밖의 개인정보를 붙이지 마세요. 지원 담당자가 최소 정보 확인이 가능한 안전한 후속 절차를 안내하며, 확인 전에는 요청을 완료로 처리하지 않습니다.
+            문의처(<HydratedContactEmail />)로 삭제 요청 사실만 알려 주세요. 이메일 본문에 비밀번호, 인증 토큰, 주민등록번호, 이미지 원본, 원시 OCR 결과, 정확한 위치 또는 그 밖의 개인정보를 붙이지 마세요. 지원 담당자가 최소 정보 확인이 가능한 안전한 후속 절차를 안내하며, 확인 전에는 요청을 완료로 처리하지 않습니다.
           </p>
-          <a className="inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90" href={supportMailto('쯔동여지도 데이터 삭제 요청')}>
-            {siteConfig.contact.email}로 지원 요청하기
-          </a>
+          <HydratedSupportLink
+            className="inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            label="address"
+            subject="쯔동여지도 데이터 삭제 요청"
+          />
         </section>
 
         <footer className="mt-8 rounded-xl bg-muted/40 p-4 text-xs leading-5 text-muted-foreground">
           <p>처리방침 연결 버전: {PRIVACY_POLICY_PUBLICATION.version}</p>
           <p className="mt-1 min-w-0 break-all font-mono">내용 SHA-256: {PRIVACY_POLICY_CONTENT_SHA256}</p>
-          <p className="mt-1">문의처: {siteConfig.contact.email}</p>
+          <p className="mt-1">문의처: <HydratedContactEmail /></p>
         </footer>
       </article>
     </main>

@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  ADMIN_MODULE_GROUPS,
   ADMIN_MODULE_TITLES,
+  getAdminModuleGroup,
   getAdminModuleTitle,
   getAdminPageMetadata,
 } from "../lib/admin/admin-module-metadata";
@@ -12,8 +14,8 @@ import {
 import { ADMIN_SIDEBAR_ITEM_IDS } from "../lib/admin/sidebar-order";
 
 describe("admin module title metadata", () => {
-  test("covers every route and all 15 sidebar modules with a non-empty title", () => {
-    expect(ADMIN_SIDEBAR_ITEM_IDS).toHaveLength(15);
+  test("covers every route and all 16 sidebar modules with a non-empty title", () => {
+    expect(ADMIN_SIDEBAR_ITEM_IDS).toHaveLength(16);
     expect(Object.keys(ADMIN_MODULE_TITLES).sort()).toEqual(
       [...ADMIN_CONSOLE_MODULE_IDS].sort(),
     );
@@ -21,6 +23,16 @@ describe("admin module title metadata", () => {
     for (const moduleId of ADMIN_CONSOLE_MODULE_IDS) {
       expect(getAdminModuleTitle(moduleId).trim()).not.toBe("");
     }
+  });
+
+  test("groups all 16 visible capabilities without exposing the refresh-history subview", () => {
+    const groupedIds = Object.values(ADMIN_MODULE_GROUPS).flat();
+    expect(groupedIds).toHaveLength(16);
+    expect(new Set(groupedIds).size).toBe(16);
+    expect(groupedIds.sort()).toEqual(
+      ADMIN_SIDEBAR_ITEM_IDS.slice().sort(),
+    );
+    expect(getAdminModuleGroup("restaurant-refresh-history")).toBe("검수·데이터");
   });
 
   test("uses the restaurant root title for its legacy refresh-history route", () => {
@@ -63,6 +75,6 @@ describe("admin module title metadata", () => {
       module: "<script>unknown</script>",
       video_id: "private-record-reference",
       issue: "private-issue-reference",
-    }).title).toBe("대시보드 (KPI) - 관리자 콘솔 - 쯔동여지도");
+    }).title).toBe("운영 대시보드 - 관리자 콘솔 - 쯔동여지도");
   });
 });

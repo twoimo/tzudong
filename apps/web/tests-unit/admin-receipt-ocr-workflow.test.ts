@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, jest, mock, test } from 'bun:test';
 import {
   mkdtempSync,
   readFileSync,
@@ -331,6 +331,29 @@ describe('trusted administrator receipt OCR workflow', () => {
       fetchImpl: async () => new Response(null, { status: 204 }),
     });
     expect(accepted).toEqual({ status: 'accepted', httpStatus: 204 });
+  });
+
+  test('bounds a stalled dispatch so the reset row gets the indeterminate readback', async () => {
+    jest.useFakeTimers();
+    let pending: Promise<unknown>;
+    try {
+      pending = dispatchReceiptOcrWorkflow({
+        url: 'https://api.github.com/repos/example/project/actions/workflows/ocr-review-receipts.yml/dispatches',
+        token: 'synthetic-token',
+        inputs: {},
+        fetchImpl: (_input, init) => new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+        }),
+      });
+      jest.advanceTimersByTime(30_000);
+    } finally {
+      jest.useRealTimers();
+    }
+    const outcome = await Promise.race([
+      pending,
+      new Promise((resolve) => setTimeout(() => resolve('still pending'), 50)),
+    ]);
+    expect(outcome).toEqual({ status: 'indeterminate', httpStatus: null });
   });
 
   test('serializes JSONB snapshot CAS in the real PostgREST request URL', async () => {

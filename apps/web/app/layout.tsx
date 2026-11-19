@@ -4,10 +4,11 @@ import localFont from "next/font/local";
 import { Noto_Serif_KR } from "next/font/google";
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { resolveRootLayoutResourceHintPolicy } from "@/lib/root-layout-resource-hints";
-import { VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE } from "@/lib/viewport-height-bootstrap";
 import { RootSpeedInsights } from "./root-speed-insights";
 import { LocalWorkspaceBanner } from "@/components/home/LocalWorkspaceBanner";
 import { LoadingProvider } from "@/components/ui/loading-surface";
+import { buildPaintCalibrationDiagnosticScript } from "@/lib/performance/paint-calibration-diagnostic";
+import { PAINT_CALIBRATION_REQUEST_HEADER } from "@/lib/performance/paint-calibration-request";
 import "./globals.css";
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ const notoSerifKr = Noto_Serif_KR({
     subsets: ["latin"],
     variable: "--font-display",
     display: "swap",
+    preload: false,
 });
 export const metadata: Metadata = {
     metadataBase: new URL(siteUrl),
@@ -111,7 +113,9 @@ export default async function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const nonce = (await headers()).get("x-nonce") ?? undefined;
+    const requestHeaders = await headers();
+    const nonce = requestHeaders.get("x-nonce") ?? undefined;
+    const paintCalibration = requestHeaders.get(PAINT_CALIBRATION_REQUEST_HEADER) === "1";
 
     return (
         <html
@@ -121,14 +125,12 @@ export default async function RootLayout({
             suppressHydrationWarning
         >
             <head>
+                {paintCalibration && <script nonce={nonce} dangerouslySetInnerHTML={{
+                    __html: buildPaintCalibrationDiagnosticScript(process.env.VERCEL_GIT_COMMIT_SHA),
+                }} />}
                 {/* [AEO] AI Engine Discovery */}
                 <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM Content Summary" />
                 <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM Full Dataset Context" />
-                <script
-                    nonce={nonce}
-                    suppressHydrationWarning
-                    dangerouslySetInnerHTML={{ __html: VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE }}
-                />
                 {/* [PERF] 네트워크 최적화: 초기 렌더에 필요한 도메인만 Preconnect (TCP+TLS 핸드쉐이크 선행) */}
                 {/* Supabase API - 데이터 페칭 핵심 */}
                 {supabasePreconnectUrl ? (

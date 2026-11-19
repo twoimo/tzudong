@@ -101,6 +101,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     const [completedSubmission, setCompletedSubmission] = useState<EditSubmissionAttempt | null>(null);
     const mobileFormRef = useRef<HTMLFormElement>(null);
     const desktopEditPanelRef = useRef<HTMLElement>(null);
+    const dialogOpenerRef = useRef<HTMLElement | null>(null);
     const desktopEditPanelDragRef = useRef<DesktopEditPanelDragState | null>(null);
     const shouldRenderMapPanel = presentation === 'map-panel' && !isMobileOrTablet;
 
@@ -378,8 +379,10 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     }, [moveDesktopEditPanelByKeyboard]);
 
     const handleDesktopEditDialogKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
+        if (event.defaultPrevented || !event.currentTarget.contains(event.target as Node)) return;
         if (event.key === 'Escape') {
             event.preventDefault();
+            event.stopPropagation();
             void handleClose();
             return;
         }
@@ -409,12 +412,16 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     useEffect(() => {
         if (!shouldRenderMapPanel || !isOpen) return;
 
+        const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         const frame = window.requestAnimationFrame(() => {
             const [firstFocusableElement] = getDesktopEditPanelFocusableElements(desktopEditPanelRef.current);
             (firstFocusableElement ?? desktopEditPanelRef.current)?.focus({ preventScroll: true });
         });
 
-        return () => window.cancelAnimationFrame(frame);
+        return () => {
+            window.cancelAnimationFrame(frame);
+            if (opener?.isConnected) opener.focus({ preventScroll: true });
+        };
     }, [isOpen, shouldRenderMapPanel]);
 
     const handleNextStep = () => {
@@ -435,7 +442,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     };
 
     const draftStatus = lastSavedAt && (
-        <div className="flex items-center gap-1 text-2xs text-muted-foreground">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
             {isSaving ? (
                 <>
                     <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -531,25 +538,24 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 카테고리 <span className="text-red-500">*</span>
             </Label>
             {editFormData.category.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 rounded-lg border bg-muted/50 p-3">
+                <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/50 p-3">
                     {editFormData.category.map((category) => (
-                        <Badge key={category} variant="secondary" className="text-xs">
+                        <button
+                            key={category}
+                            type="button"
+                            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={`${category} 카테고리 선택 해제`}
+                            onClick={() => {
+                                handleEditFormChange('category', editFormData.category.filter(c => c !== category));
+                            }}
+                        >
                             {category}
-                            <button
-                                type="button"
-                                className="ml-1.5 rounded-full p-0.5 hover:bg-destructive/20"
-                                aria-label={`${category} 카테고리 삭제`}
-                                onClick={() => {
-                                    handleEditFormChange('category', editFormData.category.filter(c => c !== category));
-                                }}
-                            >
-                                <X className="h-3 w-3" />
-                            </button>
-                        </Badge>
+                            <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
                     ))}
                 </div>
             )}
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
                 {RESTAURANT_CATEGORIES.map((category) => {
                     const isSelected = editFormData.category.includes(category);
                     return (
@@ -557,6 +563,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                             key={category}
                             type="button"
                             variant={isSelected ? "default" : "outline"}
+                            aria-pressed={isSelected}
                             size="sm"
                             onClick={() => {
                                 handleEditFormChange(
@@ -566,7 +573,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                                         : [...editFormData.category, category]
                                 );
                             }}
-                            className="h-8 text-xs"
+                            className="min-h-11 px-3 text-sm"
                         >
                             {category}
                         </Button>
@@ -779,7 +786,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             >
                 <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                        <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                        <p className="text-xs font-medium text-muted-foreground">
                             {currentStep} / {EDIT_RESTAURANT_REQUEST_STEPS.length} · {EDIT_RESTAURANT_REQUEST_STEPS[currentStep - 1].title}
                         </p>
                         <h2 id={mobileTitleId} className="truncate text-xl font-semibold text-foreground">
@@ -793,11 +800,11 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 <p id={mobileDescriptionId} className="text-sm text-muted-foreground">
                     {restaurant.name}의 정보를 3단계로 확인하고 수정 요청을 제출해주세요.
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="수정 요청 단계 진행률">
+                <div className="mt-3 grid grid-cols-3 gap-2" aria-label="수정 요청 단계 진행률">
                     {EDIT_RESTAURANT_REQUEST_STEPS.map((step) => (
                         <div key={step.id} className="space-y-1">
                             <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-brand-tangerine' : 'bg-muted'}`} />
-                            <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                            <span className={`block text-center text-xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                 {step.shortTitle}
                             </span>
                         </div>
@@ -820,7 +827,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                         </Button>
                     ) : (
                         <Button type="button" variant="outline" onClick={() => void handleClose()} className="min-w-24" disabled={isClosing || isSubmitting}>
-                            취소
+                            닫기
                         </Button>
                     )}
                     {currentStep < 3 ? (
@@ -861,7 +868,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         return (
             <section
                 ref={desktopEditPanelRef}
-                className="fixed bottom-24 right-6 top-6 z-[90] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
+                className="fixed bottom-24 right-6 top-6 z-[90] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-background shadow-xl"
                 style={{ transform: `translate3d(${desktopEditPanelPosition.x}px, ${desktopEditPanelPosition.y}px, 0)` }}
                 data-desktop-map-edit-panel="true"
                 role="dialog"
@@ -881,6 +888,16 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) void handleClose(); }}>
             {isOpen && (
                 <DialogContent
+                    onOpenAutoFocus={() => {
+                        dialogOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                    }}
+                    onCloseAutoFocus={(event) => {
+                        if (dialogOpenerRef.current?.isConnected) {
+                            event.preventDefault();
+                            dialogOpenerRef.current.focus({ preventScroll: true });
+                        }
+                        dialogOpenerRef.current = null;
+                    }}
                     className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]"
                     onPointerDownOutside={(e) => {
                         // Popover 내부 클릭 시 Dialog가 닫히지 않도록
@@ -900,7 +917,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                     <DialogHeader className="relative">
                         {/* 자동 저장 상태 표시 - 좌측 상단 */}
                         {lastSavedAt && (
-                            <div className="absolute -top-1 left-0 flex items-center gap-1 text-2xs text-muted-foreground">
+                            <div className="absolute -top-1 left-0 flex items-center gap-1 text-xs text-muted-foreground">
                                 {isSaving ? (
                                     <>
                                         <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -1052,21 +1069,21 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                                                 </PopoverContent>
                                             </Popover>
                                             {editFormData.category.length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                <div className="mt-2 flex flex-wrap gap-2">
                                                     {editFormData.category.map((category) => (
-                                                        <Badge key={category} variant="secondary" className="text-xs">
+                                                        <button
+                                                            key={category}
+                                                            type="button"
+                                                            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                            aria-label={`${category} 카테고리 선택 해제`}
+                                                            onClick={() => {
+                                                                const newCategories = editFormData.category.filter(c => c !== category);
+                                                                handleEditFormChange('category', newCategories);
+                                                            }}
+                                                        >
                                                             {category}
-                                                            <button
-                                                                type="button"
-                                                                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                                onClick={() => {
-                                                                    const newCategories = editFormData.category.filter(c => c !== category);
-                                                                    handleEditFormChange('category', newCategories);
-                                                                }}
-                                                            >
-                                                                <X className="h-3 w-3" />
-                                                            </button>
-                                                        </Badge>
+                                                            <X className="h-4 w-4" aria-hidden="true" />
+                                                        </button>
                                                     ))}
                                                 </div>
                                             )}
@@ -1108,7 +1125,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
 
                             <div className="flex gap-2 pt-4">
                                 <Button type="button" variant="outline" onClick={() => void handleClose()} className="flex-1" disabled={isClosing || isSubmitting}>
-                                    취소
+                                    닫기
                                 </Button>
                                 <Button type="submit" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitting}>
                                     {completedSubmission ? '제출 완료' : isSubmitting ? '제출 중...' : '수정 요청 제출'}

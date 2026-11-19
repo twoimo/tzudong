@@ -34,6 +34,39 @@ function renderOverlay(overrides: Partial<ComponentProps<typeof NaverMapOverlayS
 }
 
 describe('NaverMapOverlayStack', () => {
+    test('places selected theme criteria in the same slot without hiding loading, errors or empty results', () => {
+        const ready = renderOverlay({ activeThemeId: 'hot-view' });
+        expect(ready).toContain('data-map-overlay-kind="theme"');
+        expect(ready.match(/<button/g)).toHaveLength(1);
+        expect(ready).toContain('aria-haspopup="dialog"');
+        expect(ready).toContain('aria-expanded="false"');
+        for (const override of [
+            { isLoadingRestaurants: true },
+            { isLoaded: false },
+            { restaurantsLength: 0 },
+            { mapToast: { message: '확인 필요', type: 'error' as const, isVisible: true } },
+        ]) {
+            const html = renderOverlay({ activeThemeId: 'hot-view', ...override });
+            expect(html).not.toContain('data-map-overlay-kind="theme"');
+            expect(html).not.toContain('필터 기준 보기');
+        }
+    });
+
+    test('keeps ready theme criteria reachable while count or online notices are scheduled', () => {
+        for (const override of [
+            { showRestaurantCount: true },
+            { showOnlineUsers: true },
+            { showRestaurantCount: true, showOnlineUsers: true },
+        ]) {
+            const html = renderOverlay({ activeThemeId: 'hot-view', ...override });
+            expect(html).toContain('data-map-overlay-kind="theme"');
+            expect(html.match(/<button/g)).toHaveLength(1);
+            expect(html).toContain('필터 기준 보기');
+            expect(html).not.toContain('3개의 맛집 발견');
+            expect(html).not.toContain('2명이 함께 보는 중');
+        }
+    });
+
     test('mounts exactly the loading notice at the highest priority', () => {
         const html = renderOverlay({
             announcementToastTitle: '공지',
@@ -67,6 +100,7 @@ describe('NaverMapOverlayStack', () => {
 
     test('mounts the announcement button only while it owns the visible slot', () => {
         const html = renderOverlay({
+            activeThemeId: 'hot-view',
             announcementToastTitle: '중요 공지',
             showAnnouncementToast: true,
             showOnlineUsers: true,
@@ -79,6 +113,7 @@ describe('NaverMapOverlayStack', () => {
         expect(html).not.toContain('mapOverlayFade');
         expect(html).not.toContain('3개의 맛집 발견');
         expect(html).not.toContain('2명이 함께 보는 중');
+        expect(html).not.toContain('필터 기준 보기');
     });
 
     test('keeps the empty state persistent and non-interactive', () => {
@@ -143,9 +178,10 @@ describe('NaverMapOverlayStack', () => {
         };
         let previousKind: ReturnType<typeof resolveNaverMapOverlayKind> = null;
         let announcementMounts = 0;
-        const reconcile = (restaurantsLength = 3) => {
+        const reconcile = (restaurantsLength = 3, hasActiveTheme = false) => {
             const kind = resolveNaverMapOverlayKind({
                 hasAnnouncementTitle: true,
+                hasActiveTheme,
                 isLoaded: true,
                 isLoadingRestaurants: false,
                 isMapToastVisible: state.mapToast,
@@ -217,5 +253,14 @@ describe('NaverMapOverlayStack', () => {
             restaurantsLength: 0,
             showAnnouncementToast: state.announcement,
         })).toContain('data-map-overlay-kind="empty"');
+
+        show('restaurantCount', NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS);
+        show('onlineUsers', NAVER_MAP_ONLINE_USERS_HIDE_DELAY_MS);
+        expect(reconcile(3, true)).toBe('theme');
+        expect(state.restaurantCount).toBe(false);
+        expect(state.onlineUsers).toBe(false);
+        expect(reconcile(3, false)).toBe(null);
+        advanceBy(NAVER_MAP_ONLINE_USERS_HIDE_DELAY_MS);
+        expect(reconcile(3, false)).toBe(null);
     });
 });

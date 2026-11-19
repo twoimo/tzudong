@@ -2,10 +2,12 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@/lib/supabase/server';
+import { checkAdminAccess } from '@/lib/auth/admin-access';
 import {
   getDevAdminBypassCookieFromHeader,
   validateDevAdminBypassCookie,
 } from '@/lib/auth/dev-admin-bypass-cookie';
+import { isLoopbackHost } from '@/lib/auth/loopback-host';
 import {
   E2E_ADMIN_ROUTE_BYPASS_HEADER,
   E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER,
@@ -28,27 +30,6 @@ type RequireAdminOptions = {
 };
 
 
-function normalizeHostName(value: string) {
-  const firstValue = value.split(',')[0]?.trim().toLowerCase() ?? '';
-
-  if (firstValue.startsWith('[')) {
-    const closingBracketIndex = firstValue.indexOf(']');
-    return closingBracketIndex > 1 ? firstValue.slice(1, closingBracketIndex) : firstValue;
-  }
-
-  if (firstValue === '::1') return firstValue;
-  if (firstValue.includes(':') && firstValue.split(':').length > 2) return firstValue;
-
-  return firstValue.split(':')[0] ?? '';
-}
-
-function isLocalPlaywrightHost(value: string | null) {
-  if (!value) return false;
-
-  const normalizedHostName = normalizeHostName(value);
-  return normalizedHostName === 'localhost' || normalizedHostName === '127.0.0.1' || normalizedHostName === '::1';
-}
-
 async function getE2EAdminApiBypassUserId(options: RequireAdminOptions = {}) {
   if (!isE2EAdminRouteBypassEnvEnabled()) return null;
 
@@ -58,7 +39,7 @@ async function getE2EAdminApiBypassUserId(options: RequireAdminOptions = {}) {
   if (
     requestHeaders.get(E2E_ADMIN_ROUTE_BYPASS_HEADER) === '1' &&
     requestToken === getE2EAdminRouteBypassExpectedToken() &&
-    isLocalPlaywrightHost(requestHeaders.get('host'))
+    isLoopbackHost(requestHeaders.get('host'))
   ) {
     return 'e2e-admin-route-bypass';
   }
@@ -91,40 +72,16 @@ export async function requireAdmin(options: RequireAdminOptions = {}): Promise<R
       response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
     };
   }
-  const { data: activeSession, error: activeSessionError } = await supabase
-    .rpc('is_current_auth_session_active' as never)
-    .returns<boolean>();
+  const adminAccess = await checkAdminAccess(supabase, user.id);
 
-  if (activeSessionError || activeSession !== true) {
+  if (adminAccess === 'inactive-session') {
     return {
       ok: false,
       response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
     };
   }
 
-  const { data: role, error: roleError } = await supabase
-    .from('user_roles' as never)
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('role', 'admin')
-    .maybeSingle()
-    .returns<{ role: string }>();
-
-  if (roleError || !role) {
-    return {
-      ok: false,
-      response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
-    };
-  }
-
-  const { data: accountStatus, error: accountStatusError } = await supabase
-    .from('user_account_status' as never)
-    .select('account_status, disabled_at')
-    .eq('user_id', user.id)
-    .maybeSingle()
-    .returns<{ account_status: string; disabled_at: string | null }>();
-
-  if (accountStatusError || accountStatus?.account_status !== 'active' || accountStatus.disabled_at !== null) {
+  if (adminAccess !== 'active-admin') {
     return {
       ok: false,
       response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),

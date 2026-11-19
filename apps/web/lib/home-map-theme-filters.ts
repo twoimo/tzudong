@@ -28,14 +28,14 @@ const YOUTUBE_METADATA_BACKED_HOME_MAP_THEME_FILTER_IDS = [
 export const HOME_MAP_THEME_FILTERS = [
     {
         id: 'hot-view',
-        label: '조회수 폭발',
+        label: '조회수 상위',
         ariaLabel: '조회수가 높은 쯔양 영상 맛집 필터',
         description: '지역·카테고리 조건에 맞고 조회수 지표가 있는 맛집의 영상별 최대 조회수 상위 20% (올림, 경계 동률 포함)',
     },
     {
         id: 'comment-hot',
-        label: '댓글 폭주',
-        ariaLabel: '댓글 반응이 많은 쯔양 영상 맛집 필터',
+        label: '댓글 수 상위',
+        ariaLabel: '댓글 수가 많은 쯔양 영상 맛집 필터',
         description: '지역·카테고리 조건에 맞고 댓글 지표가 있는 맛집의 영상별 최대 댓글 수 상위 20% (올림, 경계 동률 포함)',
     },
     {
@@ -46,14 +46,14 @@ export const HOME_MAP_THEME_FILTERS = [
     },
     {
         id: 'repeat-video',
-        label: '재등장 맛집',
+        label: '두 번 이상 등장',
         ariaLabel: '쯔양 영상에 두 번 이상 등장한 맛집 필터',
         description: '연결된 쯔양 영상이 2개 이상인 재등장 맛집',
     },
     {
         id: 'fan-signal',
-        label: '반응 찐함',
-        ariaLabel: '조회수 대비 댓글 반응이 진한 쯔양 영상 맛집 필터',
+        label: '댓글 비율 상위',
+        ariaLabel: '조회수 대비 댓글 비율이 높은 쯔양 영상 맛집 필터',
         description: '맛집별 최대 조회수의 중앙값 이상인 영상 중 댓글/조회수 비율이 높은 맛집 상위 20% (올림, 경계 동률 포함)',
     },
 ] as const satisfies ReadonlyArray<HomeMapThemeFilter>;

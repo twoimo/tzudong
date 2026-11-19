@@ -233,6 +233,7 @@ describe('admin map overlays contract', () => {
       source('app/home-client.tsx'),
       source('components/home/home-map-container.tsx'),
       source('components/map/NaverMapView.tsx'),
+      source('components/map/use-naver-map-cluster-render.ts'),
     ].join('\n');
 
     expect(publicSources).not.toContain('/api/admin/map-overlays');

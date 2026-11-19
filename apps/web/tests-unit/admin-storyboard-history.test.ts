@@ -208,7 +208,7 @@ describe('admin storyboard local history persistence', () => {
   });
 });
 
-test('labels the read-only archive separately from current Gemini project history', () => {
+test('labels the read-only archive separately from current production project history', () => {
   const archiveSource = readFileSync(
     join(process.cwd(), 'components/admin/storyboard/AdminStoryboardGenerator.tsx'),
     'utf8',
@@ -219,7 +219,7 @@ test('labels the read-only archive separately from current Gemini project histor
   );
   expect(archiveSource).toContain('data-storyboard-archive="read-only"');
   expect(archiveSource).toContain('이전 스토리보드 기록');
-  expect(archiveSource).toContain('저장된 결과입니다. 새 생성은 아래 Gemini 작업 공간에서 진행하세요.');
+  expect(archiveSource).toContain('이전에 저장된 결과예요. 새로운 이야기는 새 프로젝트에서 만들 수 있어요.');
   expect(workspaceSource).toContain('프로젝트 변경 이력');
   expect(workspaceSource).toContain('과거 버전 복원');
 });

@@ -9,20 +9,22 @@ const base = { requestId: crypto.randomUUID(), prompt: 'provider boundary', scen
 
 describe('storyboard executable and archived provider allowlists', () => {
   test('keeps historical provider identifiers decode-only under the archived workflow', () => {
-    for (const id of ['local-mlx', 'chatgpt-manual', 'grok-manual', 'manual', 'openai-api', 'xai-api'] as const) {
+    for (const id of ['local-mlx', 'chatgpt-manual', 'grok-manual', 'manual', 'xai-api'] as const) {
       const value = { ...base, workflow: STORYBOARD_ARCHIVE_WORKFLOW,
         providers: { externalAI: true, text: { id, model: 'historical-text' }, image: { id, model: 'historical-image' } } };
       expect(storyboardStoredProductionRequestSchema.safeParse(value).success).toBe(true);
       expect(storyboardProductionRequestSchema.safeParse(value).success).toBe(false);
     }
   });
-  test('admits only the fixed Gemini provider for executable requests', () => {
+  test('admits only fixed Gemini/OpenAI model pairs for executable requests', () => {
     const value = { ...base, workflow: STORYBOARD_WORKFLOW, providers: { externalAI: true,
       text: { id: 'gemini-api', model: 'gemini-3.8-flash' },
       image: { id: 'gemini-api', model: 'gemini-3.1-flash-image' } } };
     expect(storyboardProductionRequestSchema.safeParse(value).success).toBe(true);
     expect(storyboardProductionRequestSchema.safeParse({ ...value, providers: { ...value.providers,
       image: { id: 'openai-api', model: 'other' } } }).success).toBe(false);
+    expect(storyboardProductionRequestSchema.safeParse({ ...value, providers: { externalAI: true,
+      text: { id: 'openai-api', model: 'gpt-5.6-luna' }, image: { id: 'openai-api', model: 'gpt-image-2.6-flare' } } }).success).toBe(true);
   });
   test('requires the selected text and image models on the same fresh exact worker', () => {
     const text = { id: 'gemini-3.8-flash', owned_by: 'gemini-api' as const, capabilities: ['chat'],

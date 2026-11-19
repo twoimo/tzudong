@@ -30,14 +30,20 @@ export function PipelineFlowDiagram({ stages, selected, onSelect }: { stages: Pi
   const vertical = width < 1050;
   const nodeWidth = vertical ? Math.min(196, width / 2 - 24) : Math.min(164, (width - 40) / 7 - 18);
   const nodeHeight = 64;
+  const verticalRankCount = 7;
+  const verticalRankGap = 24;
+  const verticalEdgePadding = 24;
+  const verticalLayoutMinHeight = 2 * verticalEdgePadding + verticalRankCount * nodeHeight + (verticalRankCount - 1) * verticalRankGap;
+  const diagramHeight = vertical ? Math.max(height, verticalLayoutMinHeight) : height;
   const order: PipelineStageId[] = ['collect', 'media', 'transcript', 'extract', 'select', 'evaluate', 'persist', 'review'];
   const rank: Record<PipelineStageId, number> = { collect: 0, media: 1, transcript: 1, extract: 2, select: 3, evaluate: 4, persist: 5, review: 6 };
   const horizontalInset = nodeWidth / 2 + 22;
-  const verticalInset = 64;
+  const verticalContentHeight = nodeHeight + (verticalRankCount - 1) * (nodeHeight + verticalRankGap);
+  const verticalInset = (diagramHeight - verticalContentHeight) / 2 + nodeHeight / 2;
   const positions = new Map(stages.map(stage => {
     const branch = stage.id === 'media' ? -1 : stage.id === 'transcript' ? 1 : 0;
     return [stage.id, vertical
-      ? { x: width / 2 + branch * Math.min(width / 4, 160), y: verticalInset + rank[stage.id] * (height - 2 * verticalInset) / 6 }
+      ? { x: width / 2 + branch * Math.min(width / 4, 160), y: verticalInset + rank[stage.id] * (nodeHeight + verticalRankGap) }
       : { x: horizontalInset + rank[stage.id] * (width - 2 * horizontalInset) / 6, y: height / 2 + branch * Math.min(170, height * .28) }];
   }));
   const move = (id: PipelineStageId, direction: number) => {
@@ -45,7 +51,7 @@ export function PipelineFlowDiagram({ stages, selected, onSelect }: { stages: Pi
     svg.current?.querySelector<SVGGElement>(`[data-pipeline-stage="${next}"]`)?.focus();
   };
   return <div ref={host} className={styles.diagramHost} data-pipeline-flow-diagram data-flow-direction={vertical ? "vertical" : "horizontal"}>
-    <svg ref={svg} width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} className={styles.diagram} role="group" aria-label="크롤러 데이터 흐름 · 방향키로 이동, Enter로 단계 상세 열기">
+    <svg ref={svg} width="100%" height="100%" viewBox={`0 0 ${width} ${diagramHeight}`} className={styles.diagram} role="group" aria-label="크롤러 데이터 흐름 · 방향키로 이동, Enter로 단계 상세 열기">
       <defs><marker id={arrowId} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8Z" className={styles.arrow} /></marker></defs>
       {PIPELINE_FLOW_EDGES.map(edge => {
         const a = positions.get(edge.from)!, b = positions.get(edge.to)!;
@@ -60,7 +66,7 @@ export function PipelineFlowDiagram({ stages, selected, onSelect }: { stages: Pi
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(stage.id); }
           if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) { event.preventDefault(); move(stage.id, event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1); }
         }}>
-          <rect x={p.x - nodeWidth / 2} y={p.y - nodeHeight / 2} width={nodeWidth} height={nodeHeight} rx="12" />
+          <rect x={p.x - nodeWidth / 2} y={p.y - nodeHeight / 2} width={nodeWidth} height={nodeHeight} rx="0" />
           <text x={p.x} y={p.y - 6} textAnchor="middle" className={styles.title}>{stage.label}</text>
           <text x={p.x} y={p.y + 16} textAnchor="middle" className={styles.status}>{COMPACT_STAGE_LABELS[stage.state]}</text>
         </g>;

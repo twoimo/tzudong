@@ -30,7 +30,7 @@ const packageABindingCoverageMatrix = {
   publicHomeShell: ['viewport-shell', 'overlay-stack', 'cluster'],
   naverMap: ['overlay-stack', 'frame'],
   mobileControls: ['cluster', 'wrap-row', 'overlay-stack'],
-  homeMobileThemeFilterWrap: ['cluster', 'wrap-row'],
+  homeMobileThemeFilterWrap: ['cluster', 'reel'],
   visibleMarkerListDetail: ['list-detail', 'frame', 'stack'],
   adminShellSidebar: ['fixed-sidenav-shell', 'scroll-body-shell', 'sidebar'],
   adminOverviewMapInfo: ['panel-layout', 'list-detail', 'frame', 'cluster'],
@@ -84,8 +84,13 @@ const g003SourceCoverageMatrix = {
         path: 'components/map/NaverMapView.tsx',
         contains: [
           'import { NaverMapSurface } from "@/components/map/naver-map-surface";',
-          'markerLayerVersion',
           '<NaverMapSurface',
+        ],
+      },
+      {
+        path: 'components/map/use-naver-map-cluster-render.ts',
+        contains: [
+          'markerLayerVersion',
         ],
       },
     ],
@@ -104,7 +109,8 @@ const g003SourceCoverageMatrix = {
         path: 'components/home/HomeMapThemeFilters.tsx',
         contains: [
           'flex-wrap',
-          'min-h-8',
+          'min-h-11',
+          'data-horizontal-scroll-owner={layout === "reel" ? "mobile-theme-filter-reel" : undefined}',
           'aria-pressed={isSelected}',
         ],
       },
@@ -190,7 +196,23 @@ const g003SourceCoverageMatrix = {
         contains: [
           'data-local-storyboard-workspace="true"',
           'data-admin-storyboard-toolbar="true"',
-          'aria-label="프로젝트 설정과 기록"',
+          'data-layout-primitives="scroll-body-shell stack"',
+          'data-layout-primitives="split-sidebar panel-layout"',
+          'data-layout-primitives="form-flow"',
+          'data-scroll-owner="storyboard-workspace"',
+          'data-scroll-owner="storyboard-create-request"',
+          'aria-label="이야기 기획"',
+          'aria-label="작업 공간 보기"',
+        ],
+      },
+      {
+        path: 'components/admin/storyboard/StoryboardConversation.tsx',
+        contains: [
+          'data-layout-primitives="scroll-body-shell stack"',
+          'data-scroll-owner="storyboard-conversation"',
+          'aria-labelledby="storyboard-conversation-title"',
+          'role="log"',
+          'aria-live="polite"',
         ],
       },
       {
@@ -347,6 +369,28 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     }
   });
 
+  test('storyboard scroll owners name the actual bounded workspace, request and conversation regions', () => {
+    for (const [path, owner, bounds] of [
+      ['components/admin/storyboard/LocalStoryboardWorkspace.tsx', 'storyboard-workspace', ['h-full', 'min-h-0', 'min-w-0']],
+      ['components/admin/storyboard/LocalStoryboardWorkspace.tsx', 'storyboard-create-request', ['max-h-[min(74vh,720px)]', 'overscroll-contain']],
+      ['components/admin/storyboard/StoryboardConversation.tsx', 'storyboard-conversation', ['min-h-0', 'flex-1', 'overscroll-contain']],
+    ] as const) {
+      const source = readSource(path);
+      const tags = [...source.matchAll(new RegExp(`<\\w+\\b[^>]*data-scroll-owner="${owner}"[^>]*>`, 'g'))];
+      expect(tags, `${owner} must name exactly one rendered scroll region`).toHaveLength(1);
+      const classes = tags[0][0].match(/className="([^"]+)"/)?.[1].split(/\s+/) ?? [];
+      expect(classes).toContain('overflow-y-auto');
+      for (const bound of bounds) expect(classes).toContain(bound);
+    }
+    const workspace = readSource('components/admin/storyboard/LocalStoryboardWorkspace.tsx');
+    const panels = [...workspace.matchAll(/<div data-layout-primitives="split-sidebar panel-layout" className="([^"]+)"/g)];
+    expect(panels).toHaveLength(2);
+    for (const panel of panels) {
+      expect(panel[1].split(/\s+/)).toContain('min-w-0');
+      expect(panel[1].split(/\s+/)).toContain('lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]');
+    }
+  });
+
   test('fails on unknown data-layout-primitives tokens without requiring future hooks to exist', () => {
     const tokens = collectLayoutPrimitiveTokens();
     const unknownTokens = tokens.filter(({ token }) => !primitiveAllowlist.has(token));
@@ -385,7 +429,7 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     }
   });
 
-  test('G012 public map wraps theme filters and keeps fixed controls shrink-safe and keyboard-safe', () => {
+  test('G012 public map limits horizontal scroll to the mobile theme reel and keeps fixed controls shrink-safe and keyboard-safe', () => {
     const homeMapSource = readSource('components/home/home-map-container.tsx');
     const mobileControlsSource = readSource('components/home/MobileControlOverlay.tsx');
     const submissionSource = readSource('components/home/SubmissionFloatingButton.tsx');
@@ -396,13 +440,14 @@ describe('StyleGallery primitive taxonomy source contract', () => {
       (match) => match[0],
     );
     const horizontalOwners = Array.from(
-      publicMapSource.matchAll(/data-horizontal-scroll-owner="([^"]+)"/g),
+      publicMapSource.matchAll(/data-horizontal-scroll-owner=\{[^{}?]+\?\s*"([^"]+)"\s*:\s*undefined\s*\}/g),
       (match) => match[1],
     );
 
-    expect(horizontalOverflowUtilities).toEqual([]);
-    expect(horizontalOwners).toEqual([]);
+    expect(horizontalOverflowUtilities).toEqual(['overflow-x-auto']);
+    expect(horizontalOwners).toEqual(['mobile-theme-filter-reel']);
     expect(readSource('components/home/HomeMapThemeFilters.tsx')).toContain('flex-wrap');
+    expect(mobileControlsSource).toContain('layout="reel"');
     expect(mobileControlsSource).toContain('id="tzudong-mobile-category-slider"');
 
     expect(homeMapSource).toContain(

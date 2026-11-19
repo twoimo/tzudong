@@ -77,16 +77,25 @@ describe('public insights treemap route support', () => {
     expect(insightsSource).not.toContain('data-insights-treemap-context="true"');
   });
 
-  test('chooses treemap label foreground from measured color contrast', () => {
+  test('uses ztd-charts treemap with weighted areas and accessible interactions', () => {
     const insightsSource = source('app/insights/insights-client.tsx');
+    const chartSource = source('app/insights/insights-treemap.tsx');
 
-    expect(insightsSource).toContain("const TREEMAP_DARK_FOREGROUND = '#17202f';");
-    expect(insightsSource).toContain('function getHexColorRelativeLuminance(color: string): number');
-    expect(insightsSource).toContain('function getColorContrastRatio(firstColor: string, secondColor: string): number');
-    expect(insightsSource).toContain('const foregroundColor = getTreemapTextColor(leaf.color);');
-    expect(insightsSource).toContain('color: tile.foregroundColor');
-    expect(insightsSource).not.toContain("color: '#ffffff'");
-    expect(insightsSource).not.toContain("textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px'");
+    expect(insightsSource).toContain("import { ThemeProvider, type ChartEvent } from 'ztd-charts';");
+    expect(chartSource).toContain("import { Treemap, type ChartEvent, type TreemapProps } from 'ztd-charts';");
+    expect(insightsSource).toContain('<InsightsTreemap');
+    expect(chartSource).toContain('<Treemap {...chartProps} tooltip={false} onHover={handleHover} onClick={activate} />');
+    expect(insightsSource).toContain('data={chartRows} label="title" value="value"');
+    expect(insightsSource).toContain("group={viewMode === 'category' ? 'category' : undefined}");
+    expect(insightsSource).toContain('onHover={handleChartHover} onClick={handleChartActivate}');
+    expect(insightsSource).toContain('previewContent={(leaf) => <TreemapDetailContent leaf={leaf}');
+    expect(chartSource).toContain('onHover?.(event)');
+    expect(chartSource).toContain('onClick?.(event)');
+    expect(insightsSource).toContain('description={`${treemapLegendText} ${treemapSmallCellGuidance}`}');
+    expect(insightsSource).toContain('aria-describedby="insights-treemap-legend insights-treemap-small-cell-guidance"');
+    expect(insightsSource).toContain('className="sr-only"');
+    expect(insightsSource).not.toContain('buildTreemapLayout');
+    expect(insightsSource).not.toContain("from 'd3-hierarchy'");
   });
 
   test('builds the exact public treemap CDN cache header', () => {

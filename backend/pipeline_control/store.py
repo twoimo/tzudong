@@ -11,19 +11,23 @@ from backend.pipeline_control.state_machine import (
     ACTIVE_LOCK_STATUSES,
     ADAPTER_STEPS,
     ControlPlaneError,
+    FAIL_FROM,
     Profile,
     RunRecord,
+    SUCCEED_FROM,
     TARGET_IDLE,
     apply_transition,
     heartbeat,
     lock_key,
     payload_hash,
     stale_reclaim_eligible,
+    step_boundary,
 )
 from backend.pipeline_control.metrics import record
 from backend.pipeline_control.persist import persist_mutation
 
 LEASE_TTL_SECONDS = 30.0
+STEP_LEASE_MARGIN_SECONDS = 300.0
 PUBLIC_LIST_KEYS = (
     "id",
     "target",
@@ -32,11 +36,14 @@ PUBLIC_LIST_KEYS = (
     "error_code",
     "dry_run",
     "adapter_index",
+    "pause_requested",
+    "cancel_requested",
 )
 OPERATOR_FAILURE_CAP = 20
 _OPERATOR_PROFILES = ("heavy_local", "lite_gha")
 _STATUS_RANK = {"Inserting": 3, "Fetching": 2, "Queued": 1, "Paused": 0}
 _PROFILE_RANK = {"heavy_local": 1, "lite_gha": 0}
+_BOUNDARY_TRANSITIONS = {"Paused": "pause_approved", "Cancelled": "cancel_approved"}
 
 
 class MemoryStore:
@@ -75,6 +82,25 @@ class MemoryStore:
             audit=audit,
         )
 
+    def _persist_finished(
+        self,
+        run: RunRecord,
+        audit: dict[str, Any],
+        held_lock_key: str | None = None,
+    ) -> None:
+        # A finished run is committed here before the durable mirror, so a
+        # mirror outage raises but cannot leave the run holding its lock.
+        self._commit()
+        self._persist(run, lock_held=False, audit=audit, held_lock_key=held_lock_key)
+
+    def _commit(self) -> None:
+        pass
+
+    def _release(self, run: RunRecord) -> None:
+        key = lock_key(run.target, run.profile)
+        if self.locks.get(key) == run.id:
+            del self.locks[key]
+
     def _reclaim(self) -> None:
         now = self.now()
         for key, run_id in list(self.locks.items()):
@@ -89,12 +115,7 @@ class MemoryStore:
                     transition="lease_reclaim",
                     request_id=run.request_id,
                 )
-                self._persist(
-                    run,
-                    lock_held=False,
-                    held_lock_key=key,
-                    audit=self.audit[-1],
-                )
+                self._persist_finished(run, self.audit[-1], held_lock_key=key)
 
     def create_run(
         self,
@@ -153,7 +174,7 @@ class MemoryStore:
         run = self.get(run_id)
         apply_transition(run, action, self.now(), LEASE_TTL_SECONDS)
         if run.status == "Cancelled":
-            self.locks.pop(lock_key(run.target, run.profile), None)
+            self._release(run)
         self._audit(actor=actor, job_id=run.id, transition=action, request_id=request_id)
         self._persist(
             run,
@@ -162,10 +183,24 @@ class MemoryStore:
         )
         return run
 
-    def beat(self, run_id: str) -> RunRecord:
+    def beat(self, run_id: str, lease_ttl: float = LEASE_TTL_SECONDS) -> RunRecord:
         run = self.get(run_id)
-        heartbeat(run, self.now(), LEASE_TTL_SECONDS)
-        self._persist(run, lock_held=True, audit=None)
+        before = run.status
+        step_boundary(run, self.now(), lease_ttl)
+        if run.status == before:
+            self._persist(run, lock_held=True, audit=None)
+            return run
+        self._audit(
+            actor="worker",
+            job_id=run.id,
+            transition=_BOUNDARY_TRANSITIONS[run.status],
+            request_id=run.request_id,
+        )
+        if run.status == "Cancelled":
+            self._release(run)
+            self._persist_finished(run, self.audit[-1])
+        else:
+            self._persist(run, lock_held=True, audit=self.audit[-1])
         return run
 
     def claim(self, run_id: str | None = None) -> RunRecord | None:
@@ -191,54 +226,52 @@ class MemoryStore:
 
     def finish_dry_run(self, run_id: str) -> RunRecord:
         run = self.get(run_id)
-        if run.status == "Cancelled":
-            return run
-        if run.status == "Paused":
+        if run.status not in SUCCEED_FROM:
             return run
         run.adapter_index = len(ADAPTER_STEPS)
         run.status = "Succeeded"
-        self.locks.pop(lock_key(run.target, run.profile), None)
+        self._release(run)
         self._audit(
             actor="worker",
             job_id=run.id,
             transition="dry_run_succeeded",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_succeeded_total")
         return run
 
     def finish_succeeded(self, run_id: str) -> RunRecord:
         run = self.get(run_id)
-        if run.status == "Cancelled":
-            return run
-        if run.status == "Paused":
+        if run.status not in SUCCEED_FROM:
             return run
         run.adapter_index = len(ADAPTER_STEPS)
         run.status = "Succeeded"
-        self.locks.pop(lock_key(run.target, run.profile), None)
+        self._release(run)
         self._audit(
             actor="worker",
             job_id=run.id,
             transition="succeeded",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_succeeded_total")
         return run
 
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
         run = self.get(run_id)
+        if run.status not in FAIL_FROM:
+            return run
         run.status = "Failed"
         run.error_code = error_code
-        self.locks.pop(lock_key(run.target, run.profile), None)
+        self._release(run)
         self._audit(
             actor="worker",
             job_id=run.id,
             transition="failed",
             request_id=run.request_id,
         )
-        self._persist(run, lock_held=False, audit=self.audit[-1])
+        self._persist_finished(run, self.audit[-1])
         record("tzudong_pipeline_runs_failed_total")
         return run
 

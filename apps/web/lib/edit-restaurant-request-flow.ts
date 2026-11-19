@@ -24,9 +24,6 @@ export const EDIT_RESTAURANT_REQUEST_KIND_OPTIONS = [
     description: string;
 }>;
 
-export const CLOSED_RESTAURANT_REQUEST_ADMIN_NOTE =
-    '폐업 제보: 사용자가 이 맛집이 폐업했거나 더 이상 영업하지 않는다고 알려왔습니다. 관리자 검토 후 상태/노출 여부를 결정하세요.';
-
 export const EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT =
     '정보 수정은 상호, 주소, 전화번호, 카테고리 오류뿐 아니라 가게 이전처럼 실제 위치가 바뀐 경우에도 사용할 수 있습니다.';
 
@@ -68,12 +65,6 @@ export function validateEditRestaurantRequestStep(
     }
 
     return null;
-}
-
-export function getEditRestaurantRequestAdminNote(formData: EditRestaurantRequestFormData) {
-    return formData.requestKind === 'closure'
-        ? CLOSED_RESTAURANT_REQUEST_ADMIN_NOTE
-        : null;
 }
 
 export function validateEditRestaurantRequest(formData: EditRestaurantRequestFormData) {

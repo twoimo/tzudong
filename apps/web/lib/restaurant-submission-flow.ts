@@ -68,13 +68,35 @@ export function isRecognizedYouTubeUrl(value: string): boolean {
     return normalizeCanonicalYouTubeWatchUrl(value) !== null;
 }
 
+export type RestaurantSubmissionFieldErrors = Partial<Record<keyof RestaurantSubmissionFormData, string>>;
+
+export function getRestaurantSubmissionFieldErrors(
+    mode: RestaurantSubmissionMode,
+    data: RestaurantSubmissionFormData,
+): RestaurantSubmissionFieldErrors {
+    const errors: RestaurantSubmissionFieldErrors = {};
+    if (!isMeaningfulRestaurantName(data.restaurant_name)) errors.restaurant_name = '맛집 이름을 2자 이상 입력해주세요';
+    if (!isMeaningfulAddress(data.address)) errors.address = '맛집의 주소를 확인해주세요';
+    if (!hasRequiredCategory(data.categories)) errors.categories = '카테고리를 하나 이상 선택해주세요';
+
+    if (mode === 'new') {
+        if (!data.youtube_link.trim()) errors.youtube_link = '유튜브 영상 링크를 입력해주세요';
+        else if (!isRecognizedYouTubeUrl(data.youtube_link)) errors.youtube_link = '유효한 유튜브 링크를 입력해주세요';
+    } else if (!data.description.trim() || data.description.trim().length < 10 || !isMeaningfulRequestDescription(data.description)) {
+        errors.description = '추천 이유를 10자 이상 입력해주세요';
+    }
+
+    return errors;
+}
+
 export function validateRestaurantSubmissionStep(
     step: RestaurantSubmissionStep,
     mode: RestaurantSubmissionMode,
     data: RestaurantSubmissionFormData
 ): string | null {
+    const errors = getRestaurantSubmissionFieldErrors(mode, data);
     if (step === 1) {
-        if (!isMeaningfulRestaurantName(data.restaurant_name) || !isMeaningfulAddress(data.address) || !hasRequiredCategory(data.categories)) {
+        if (errors.restaurant_name || errors.address || errors.categories) {
             return '맛집 이름, 주소, 카테고리는 필수입니다';
         }
 
@@ -82,23 +104,7 @@ export function validateRestaurantSubmissionStep(
     }
 
     if (step === 2) {
-        if (mode === 'new') {
-            if (!data.youtube_link.trim()) {
-                return '유튜브 영상 링크를 입력해주세요';
-            }
-
-            if (!isRecognizedYouTubeUrl(data.youtube_link)) {
-                return '유효한 유튜브 링크를 입력해주세요';
-            }
-
-            return null;
-        }
-
-        if (!data.description.trim() || data.description.trim().length < 10 || !isMeaningfulRequestDescription(data.description)) {
-            return '추천 이유를 10자 이상 입력해주세요';
-        }
-
-        return null;
+        return (mode === 'new' ? errors.youtube_link : errors.description) ?? null;
     }
 
     return validateRestaurantSubmission(mode, data);

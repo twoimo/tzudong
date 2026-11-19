@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { DESKTOP_MIN_WIDTH_QUERY, TABLET_MIN_WIDTH_QUERY } from '@/lib/viewport-breakpoints';
 
-const BREAKPOINTS = {
-    mobileMax: 767,
-    tabletMax: 1279,
+const DEVICE_MEDIA_QUERIES = {
+    tabletOrDesktop: TABLET_MIN_WIDTH_QUERY,
+    desktop: DESKTOP_MIN_WIDTH_QUERY,
+    landscape: '(orientation: landscape)',
+    coarsePointer: '(pointer: coarse)',
 } as const;
+
+type DeviceMediaQueries = Record<keyof typeof DEVICE_MEDIA_QUERIES, MediaQueryList>;
 
 export interface DeviceType {
     isMobile: boolean;
@@ -22,7 +27,7 @@ function isBrowserMobileOrTabletViewport(): boolean {
         return false;
     }
 
-    return window.innerWidth <= BREAKPOINTS.tabletMax;
+    return !window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches;
 }
 
 function getDesktopDeviceType(): DeviceType {
@@ -37,22 +42,15 @@ function getDesktopDeviceType(): DeviceType {
     };
 }
 
-function calculateDeviceTypeSnapshot(): DeviceType {
-    if (typeof window === 'undefined') {
-        return getDesktopDeviceType();
-    }
-
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const isLandscape = width > height;
-
+function calculateDeviceTypeSnapshot(queries: DeviceMediaQueries): DeviceType {
+    const isLandscape = queries.landscape.matches;
     const isTouch =
-        window.matchMedia('(pointer: coarse)').matches ||
+        queries.coarsePointer.matches ||
         navigator.maxTouchPoints > 0;
 
-    const isMobile = width <= BREAKPOINTS.mobileMax;
-    const isTablet = width > BREAKPOINTS.mobileMax && width <= BREAKPOINTS.tabletMax;
-    const isDesktop = width > BREAKPOINTS.tabletMax;
+    const isMobile = !queries.tabletOrDesktop.matches;
+    const isDesktop = queries.desktop.matches;
+    const isTablet = !isMobile && !isDesktop;
 
     const viewportClass: DeviceType['viewportClass'] = isMobile
         ? 'mobile'
@@ -87,36 +85,27 @@ function resolveDeviceTypeState(previous: DeviceType, next: DeviceType): DeviceT
     return areDeviceTypesEqual(previous, next) ? previous : next;
 }
 
-function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    return ((...args: Parameters<T>) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => fn(...args), delay);
-    }) as T;
-}
-
 export function useDeviceType(): DeviceType {
     const [deviceType, setDeviceType] = useState<DeviceType>(getDesktopDeviceType);
 
-    const calculateDeviceType = useCallback(() => {
-        return calculateDeviceTypeSnapshot();
-    }, []);
-
     useEffect(() => {
-        setDeviceType((previous) => resolveDeviceTypeState(previous, calculateDeviceType()));
-
-        const debouncedUpdate = debounce(() => {
-            setDeviceType((previous) => resolveDeviceTypeState(previous, calculateDeviceType()));
-        }, 50);
-
-        window.addEventListener('resize', debouncedUpdate, { passive: true });
-        window.addEventListener('orientationchange', debouncedUpdate, { passive: true });
+        const queries: DeviceMediaQueries = {
+            tabletOrDesktop: window.matchMedia(DEVICE_MEDIA_QUERIES.tabletOrDesktop),
+            desktop: window.matchMedia(DEVICE_MEDIA_QUERIES.desktop),
+            landscape: window.matchMedia(DEVICE_MEDIA_QUERIES.landscape),
+            coarsePointer: window.matchMedia(DEVICE_MEDIA_QUERIES.coarsePointer),
+        };
+        const updateDeviceType = () => {
+            setDeviceType((previous) => resolveDeviceTypeState(previous, calculateDeviceTypeSnapshot(queries)));
+        };
+        const mediaQueries = Object.values(queries);
+        mediaQueries.forEach(query => query.addEventListener('change', updateDeviceType));
+        updateDeviceType();
 
         return () => {
-            window.removeEventListener('resize', debouncedUpdate);
-            window.removeEventListener('orientationchange', debouncedUpdate);
+            mediaQueries.forEach(query => query.removeEventListener('change', updateDeviceType));
         };
-    }, [calculateDeviceType]);
+    }, []);
 
     return deviceType;
 }
@@ -130,4 +119,4 @@ export function useImmediateMobileOrTablet(): boolean {
     return useIsMobile();
 }
 
-export { BREAKPOINTS };
+export { BREAKPOINTS } from '@/lib/viewport-breakpoints';

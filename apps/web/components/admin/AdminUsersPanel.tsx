@@ -1,5 +1,6 @@
 "use client";
 
+import featurePolish from "@/components/admin/AdminFeaturePolish.module.css";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getAdminModuleTitle } from "@/lib/admin/admin-module-metadata";
 
@@ -223,7 +224,7 @@ function SummaryMetric({ label, value, tone = "default", isLoading = false }: { 
   return (
     <div
       className={cn(
-        "flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs",
+        "flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-xs",
         tone === "primary" && "border-primary/20 bg-primary/10",
         tone === "danger" && "border-destructive/20 bg-destructive/10",
       )}
@@ -719,7 +720,7 @@ export default function AdminUsersPanel({
                       <Label htmlFor="selected-username" className="admin-field-label">사용자명</Label>
                       <Input disabled={isMutating || isLoading || Boolean(pendingReadback)} id="selected-username" value={profileForm.username} onChange={(event) => setProfileForm((current) => ({ ...current, username: event.target.value }))} className="rounded-lg" />
                     </div>
-                    <div className="space-y-1.5 md:col-span-2">
+                    <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="selected-avatar" className="admin-field-label">아바타 URL</Label>
                       <Input disabled={isMutating || isLoading || Boolean(pendingReadback)} id="selected-avatar" value={profileForm.avatarUrl} onChange={(event) => setProfileForm((current) => ({ ...current, avatarUrl: event.target.value }))} className="rounded-lg" />
                     </div>
@@ -803,7 +804,7 @@ export default function AdminUsersPanel({
   return (
     <section
       aria-labelledby="admin-users-title"
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
+      className={`flex h-full min-h-0 flex-col overflow-hidden bg-background ${featurePolish.polishedRoot}`}
       data-admin-embedded-module-shell="true"
       data-admin-embedded-module-id="users"
     >
@@ -892,13 +893,13 @@ export default function AdminUsersPanel({
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-foreground">{managedUser.nickname}</p>
-                            <p className="mt-0.5 truncate text-xs text-muted-foreground">{managedUser.email || managedUser.id}</p>
+                            <p className="mt-1 truncate text-xs text-muted-foreground">{managedUser.email || managedUser.id}</p>
                           </div>
                           <Button type="button" variant={isSelected ? "default" : "outline"} size="sm" className="h-11 shrink-0 rounded-md md:h-8" onClick={() => requestIntent({ type: "select", id: managedUser.id })} aria-pressed={isSelected} disabled={isMutating || Boolean(pendingReadback)} aria-label={`${managedUser.nickname} 상세 보기${sortOrder === "lastSignIn" ? `, 최근 로그인 ${formatListDateTime(managedUser.lastSignInAt)}` : ""}`} data-admin-users-detail-button>
                             {isSelected ? "선택됨" : "상세"}
                           </Button>
                         </div>
-                        <div className="mt-2 flex flex-wrap gap-1.5" aria-label="사용자 상태 요약">
+                        <div className="mt-2 flex flex-wrap gap-2" aria-label="사용자 상태 요약">
                           <RoleBadge isAdmin={managedUser.isAdmin} />
                           <StatusBadge user={managedUser} />
                           {sortOrder === "lastSignIn" && <span className="self-center whitespace-nowrap text-xs tabular-nums text-muted-foreground">로그인 {formatListDateTime(managedUser.lastSignInAt)}</span>}

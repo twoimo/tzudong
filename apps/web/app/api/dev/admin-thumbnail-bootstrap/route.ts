@@ -4,9 +4,9 @@ import {
   DEV_ADMIN_BYPASS_COOKIE_NAME,
   DEV_ADMIN_BYPASS_MAX_AGE_SECONDS,
   createDevAdminBypassCookieValue,
-  isDevAdminBypassLocalHost,
   resolveDevAdminBootstrapNext,
 } from '@/lib/auth/dev-admin-bypass-cookie'
+import { isLoopbackHost } from '@/lib/auth/loopback-host'
 import {
   getE2EAdminRouteBypassExpectedToken,
   isE2EAdminRouteBypassEnvEnabled,
@@ -30,8 +30,8 @@ function isTokenMatch(actual: string, expected: string) {
 
 export async function GET(request: NextRequest) {
   if (!isE2EAdminRouteBypassEnvEnabled()) return forbidden(404)
-  if (!isDevAdminBypassLocalHost(request.nextUrl.hostname)) return forbidden()
-  if (!isDevAdminBypassLocalHost(request.headers.get('host'))) return forbidden()
+  if (!isLoopbackHost(request.nextUrl.hostname)) return forbidden()
+  if (!isLoopbackHost(request.headers.get('host'))) return forbidden()
 
   const expectedToken = getE2EAdminRouteBypassExpectedToken()
   const requestToken = request.nextUrl.searchParams.get('token')?.trim() ?? ''

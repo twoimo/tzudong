@@ -1,0 +1,1274 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mode",
+    "binding",
+    "capture",
+    "support",
+    "viewport",
+    "navigation",
+    "primary",
+    "late"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "enum": [
+        "production-paint-calibration.snapshot.v1"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "paint-calibration"
+      ]
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gitSha",
+        "hostname",
+        "pathname"
+      ],
+      "properties": {
+        "gitSha": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hostname": {
+          "type": "string",
+          "enum": [
+            "www.tzudong.app",
+            "tzudong.app",
+            "other"
+          ]
+        },
+        "pathname": {
+          "type": "string",
+          "enum": [
+            "/"
+          ]
+        }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instrumentationVersion",
+        "primaryCutoffMs",
+        "finalCutoffMs",
+        "observerSetupMs",
+        "primaryCheckpointAtMs",
+        "finalizedAtMs",
+        "frameProbeIntervalMs",
+        "maxFrameProbes",
+        "caps",
+        "lateObservationBasis",
+        "lateDeliveryBasis",
+        "observerStatsBasis",
+        "performanceComparisonEligible"
+      ],
+      "properties": {
+        "instrumentationVersion": {
+          "type": "string",
+          "enum": [
+            "20261115.paint.1"
+          ]
+        },
+        "primaryCutoffMs": {
+          "const": 20000
+        },
+        "finalCutoffMs": {
+          "const": 30000
+        },
+        "observerSetupMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "primaryCheckpointAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "finalizedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "frameProbeIntervalMs": {
+          "const": 500
+        },
+        "maxFrameProbes": {
+          "const": 40
+        },
+        "caps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "paintEntries",
+            "lcpEntries",
+            "longTasks",
+            "paintTimeline"
+          ],
+          "properties": {
+            "paintEntries": {
+              "const": 16
+            },
+            "lcpEntries": {
+              "const": 24
+            },
+            "longTasks": {
+              "const": 100
+            },
+            "paintTimeline": {
+              "const": 8
+            }
+          }
+        },
+        "lateObservationBasis": {
+          "type": "string",
+          "enum": [
+            "passive-observers-only"
+          ]
+        },
+        "lateDeliveryBasis": {
+          "type": "string",
+          "enum": [
+            "deliveries-after-primary-checkpoint"
+          ]
+        },
+        "observerStatsBasis": {
+          "type": "string",
+          "enum": [
+            "independent-per-segment"
+          ]
+        },
+        "performanceComparisonEligible": {
+          "const": false
+        }
+      }
+    },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "navigation",
+        "paint",
+        "largestContentfulPaint",
+        "longTask",
+        "animationFrame"
+      ],
+      "properties": {
+        "navigation": {
+          "type": "boolean"
+        },
+        "paint": {
+          "type": "boolean"
+        },
+        "largestContentfulPaint": {
+          "type": "boolean"
+        },
+        "longTask": {
+          "type": "boolean"
+        },
+        "animationFrame": {
+          "type": "boolean"
+        }
+      }
+    },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initial",
+        "primary",
+        "final"
+      ],
+      "properties": {
+        "initial": {
+          "$ref": "#/$defs/viewport"
+        },
+        "primary": {
+          "$ref": "#/$defs/viewport"
+        },
+        "final": {
+          "$ref": "#/$defs/viewport"
+        }
+      }
+    },
+    "navigation": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "startTimeMs",
+            "responseStartMs",
+            "responseEndMs",
+            "domInteractiveMs",
+            "domContentLoadedMs",
+            "loadEventEndMs",
+            "activationStartMs",
+            "redirectCount"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "navigate",
+                "reload",
+                "back_forward",
+                "prerender",
+                "unknown"
+              ]
+            },
+            "startTimeMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "responseStartMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "responseEndMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "domInteractiveMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "domContentLoadedMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "loadEventEndMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "activationStartMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "redirectCount": {
+              "$ref": "#/$defs/nullableNumber"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "primary": {
+      "$ref": "#/$defs/primary"
+    },
+    "late": {
+      "$ref": "#/$defs/late"
+    }
+  },
+  "$defs": {
+    "number": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 86400000
+    },
+    "nullableNumber": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "nullableCount": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nullableBoolean": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "height",
+        "dpr"
+      ],
+      "properties": {
+        "width": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "height": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "dpr": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registered",
+        "callbackCount",
+        "callbackEntryCount",
+        "drainedEntryCount",
+        "receivedEntryCount",
+        "acceptedEntryCount",
+        "afterCutoffCount",
+        "invalidEntryCount",
+        "handlerErrorCount",
+        "droppedByCapCount"
+      ],
+      "properties": {
+        "registered": {
+          "type": "boolean"
+        },
+        "callbackCount": {
+          "$ref": "#/$defs/count"
+        },
+        "callbackEntryCount": {
+          "$ref": "#/$defs/count"
+        },
+        "drainedEntryCount": {
+          "$ref": "#/$defs/count"
+        },
+        "receivedEntryCount": {
+          "$ref": "#/$defs/count"
+        },
+        "acceptedEntryCount": {
+          "$ref": "#/$defs/count"
+        },
+        "afterCutoffCount": {
+          "$ref": "#/$defs/count"
+        },
+        "invalidEntryCount": {
+          "$ref": "#/$defs/count"
+        },
+        "handlerErrorCount": {
+          "$ref": "#/$defs/count"
+        },
+        "droppedByCapCount": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "paint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startTimeMs",
+        "receivedAtMs",
+        "delivery",
+        "entryWindow",
+        "accepted",
+        "name"
+      ],
+      "properties": {
+        "startTimeMs": {
+          "$ref": "#/$defs/number"
+        },
+        "receivedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "delivery": {
+          "type": "string",
+          "enum": [
+            "callback",
+            "drain"
+          ]
+        },
+        "entryWindow": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "tail",
+            "outside"
+          ]
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string",
+          "enum": [
+            "first-paint",
+            "first-contentful-paint",
+            "other"
+          ]
+        }
+      }
+    },
+    "lcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startTimeMs",
+        "receivedAtMs",
+        "delivery",
+        "entryWindow",
+        "accepted",
+        "renderTimeMs",
+        "loadTimeMs",
+        "size",
+        "elementKind",
+        "region",
+        "loading",
+        "fetchPriority",
+        "resource"
+      ],
+      "properties": {
+        "startTimeMs": {
+          "$ref": "#/$defs/number"
+        },
+        "receivedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "delivery": {
+          "type": "string",
+          "enum": [
+            "callback",
+            "drain"
+          ]
+        },
+        "entryWindow": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "tail",
+            "outside"
+          ]
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "renderTimeMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "loadTimeMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "size": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "elementKind": {
+          "type": "string",
+          "enum": [
+            "image",
+            "video",
+            "svg",
+            "background-image",
+            "text",
+            "unavailable"
+          ]
+        },
+        "region": {
+          "type": "string",
+          "enum": [
+            "desktop-latest-card",
+            "desktop-home-panel",
+            "map",
+            "static-skeleton",
+            "other",
+            "unavailable"
+          ]
+        },
+        "loading": {
+          "type": "string",
+          "enum": [
+            "lazy",
+            "eager",
+            "auto",
+            "unavailable"
+          ]
+        },
+        "fetchPriority": {
+          "type": "string",
+          "enum": [
+            "high",
+            "low",
+            "auto",
+            "unavailable"
+          ]
+        },
+        "resource": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "applicable",
+            "matched",
+            "category",
+            "timingDetailAvailable",
+            "startTimeMs",
+            "requestStartMs",
+            "responseEndMs"
+          ],
+          "properties": {
+            "applicable": {
+              "type": "boolean"
+            },
+            "matched": {
+              "type": "boolean"
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "same-origin-image",
+                "cross-origin-image",
+                "unavailable"
+              ]
+            },
+            "timingDetailAvailable": {
+              "type": "boolean"
+            },
+            "startTimeMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "requestStartMs": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "responseEndMs": {
+              "$ref": "#/$defs/nullableNumber"
+            }
+          }
+        }
+      }
+    },
+    "longTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startTimeMs",
+        "receivedAtMs",
+        "delivery",
+        "entryWindow",
+        "accepted",
+        "durationMs",
+        "endTimeMs"
+      ],
+      "properties": {
+        "startTimeMs": {
+          "$ref": "#/$defs/number"
+        },
+        "receivedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "delivery": {
+          "type": "string",
+          "enum": [
+            "callback",
+            "drain"
+          ]
+        },
+        "entryWindow": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "tail",
+            "outside"
+          ]
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "durationMs": {
+          "$ref": "#/$defs/number"
+        },
+        "endTimeMs": {
+          "$ref": "#/$defs/number"
+        }
+      }
+    },
+    "timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observedAtMs",
+        "entries",
+        "readError",
+        "capReached"
+      ],
+      "properties": {
+        "observedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "entries": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "startTimeMs",
+              "entryWindow"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "first-paint",
+                  "first-contentful-paint",
+                  "other"
+                ]
+              },
+              "startTimeMs": {
+                "$ref": "#/$defs/nullableNumber"
+              },
+              "entryWindow": {
+                "type": "string",
+                "enum": [
+                  "primary",
+                  "tail",
+                  "outside",
+                  "invalid"
+                ]
+              }
+            }
+          }
+        },
+        "readError": {
+          "type": "boolean"
+        },
+        "capReached": {
+          "type": "boolean"
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visibilityAtSetup",
+        "focusAtSetup",
+        "firstHiddenAtMs",
+        "firstFocusAtMs",
+        "firstBlurAtMs",
+        "firstTrustedInputAtMs",
+        "firstResizeAtMs",
+        "observedAtMs",
+        "visibilityChangeCount",
+        "focusEventCount",
+        "blurEventCount",
+        "trustedInputCount",
+        "resizeCount",
+        "focusSampleCount",
+        "focusTrueSampleCount",
+        "focusFalseSampleCount",
+        "focusUnknownSampleCount",
+        "prerenderingAtSetup",
+        "wasDiscarded",
+        "visibilityAtRead",
+        "focusAtRead",
+        "contextUnchanged"
+      ],
+      "properties": {
+        "visibilityAtSetup": {
+          "type": "string",
+          "enum": [
+            "visible",
+            "hidden"
+          ]
+        },
+        "focusAtSetup": {
+          "$ref": "#/$defs/nullableBoolean"
+        },
+        "firstHiddenAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "firstFocusAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "firstBlurAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "firstTrustedInputAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "firstResizeAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "observedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "visibilityChangeCount": {
+          "$ref": "#/$defs/count"
+        },
+        "focusEventCount": {
+          "$ref": "#/$defs/count"
+        },
+        "blurEventCount": {
+          "$ref": "#/$defs/count"
+        },
+        "trustedInputCount": {
+          "$ref": "#/$defs/count"
+        },
+        "resizeCount": {
+          "$ref": "#/$defs/count"
+        },
+        "focusSampleCount": {
+          "$ref": "#/$defs/count"
+        },
+        "focusTrueSampleCount": {
+          "$ref": "#/$defs/count"
+        },
+        "focusFalseSampleCount": {
+          "$ref": "#/$defs/count"
+        },
+        "focusUnknownSampleCount": {
+          "$ref": "#/$defs/count"
+        },
+        "prerenderingAtSetup": {
+          "type": "boolean"
+        },
+        "wasDiscarded": {
+          "type": "boolean"
+        },
+        "visibilityAtRead": {
+          "type": "string",
+          "enum": [
+            "visible",
+            "hidden"
+          ]
+        },
+        "focusAtRead": {
+          "$ref": "#/$defs/nullableBoolean"
+        },
+        "contextUnchanged": {
+          "type": "boolean"
+        }
+      }
+    },
+    "frames": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestedCount",
+        "completedCount",
+        "skippedPendingCount",
+        "cancelledCount",
+        "capReached",
+        "pendingAtPrimaryEnd",
+        "pendingRequestedAtMs",
+        "maxDelayMs",
+        "workMs",
+        "samples"
+      ],
+      "properties": {
+        "requestedCount": {
+          "$ref": "#/$defs/count"
+        },
+        "completedCount": {
+          "$ref": "#/$defs/count"
+        },
+        "skippedPendingCount": {
+          "$ref": "#/$defs/count"
+        },
+        "cancelledCount": {
+          "$ref": "#/$defs/count"
+        },
+        "capReached": {
+          "type": "boolean"
+        },
+        "pendingAtPrimaryEnd": {
+          "type": "boolean"
+        },
+        "pendingRequestedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "maxDelayMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "workMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "samples": {
+          "type": "array",
+          "maxItems": 40,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requestedAtMs",
+              "callbackAtMs",
+              "frameTimestampMs",
+              "withinPrimary"
+            ],
+            "properties": {
+              "requestedAtMs": {
+                "$ref": "#/$defs/number"
+              },
+              "callbackAtMs": {
+                "$ref": "#/$defs/nullableNumber"
+              },
+              "frameTimestampMs": {
+                "$ref": "#/$defs/nullableNumber"
+              },
+              "withinPrimary": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observedAtMs",
+        "basis",
+        "homeChromeReady",
+        "homeMobileChromeReady",
+        "homePanelReady",
+        "staticSkeletonPresent",
+        "desktopPanelPresent",
+        "desktopPopularItemCount",
+        "desktopLatestItemCount",
+        "desktopPanelAlertCount",
+        "mapImageCount",
+        "completeMapImageCount",
+        "markerCount",
+        "firstLatestImageComplete",
+        "firstLatestImageNaturalWidth",
+        "mapElementPresent"
+      ],
+      "properties": {
+        "observedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "primary-checkpoint-dom-state"
+          ]
+        },
+        "homeChromeReady": {
+          "type": "boolean"
+        },
+        "homeMobileChromeReady": {
+          "type": "boolean"
+        },
+        "homePanelReady": {
+          "type": "boolean"
+        },
+        "staticSkeletonPresent": {
+          "type": "boolean"
+        },
+        "desktopPanelPresent": {
+          "type": "boolean"
+        },
+        "desktopPopularItemCount": {
+          "$ref": "#/$defs/count"
+        },
+        "desktopLatestItemCount": {
+          "$ref": "#/$defs/count"
+        },
+        "desktopPanelAlertCount": {
+          "$ref": "#/$defs/count"
+        },
+        "mapImageCount": {
+          "$ref": "#/$defs/count"
+        },
+        "completeMapImageCount": {
+          "$ref": "#/$defs/count"
+        },
+        "markerCount": {
+          "$ref": "#/$defs/count"
+        },
+        "firstLatestImageComplete": {
+          "type": "boolean"
+        },
+        "firstLatestImageNaturalWidth": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "mapElementPresent": {
+          "type": "boolean"
+        }
+      }
+    },
+    "primary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observerStats",
+        "paintEntries",
+        "lcpEntries",
+        "longTasks",
+        "entryCapReached",
+        "observerWorkMs",
+        "errors",
+        "observedAtMs",
+        "paintTimeline",
+        "context",
+        "frames",
+        "milestones",
+        "milestoneCounts",
+        "initialLatestQueryClaimed",
+        "readiness",
+        "readbackWorkMs"
+      ],
+      "properties": {
+        "observerStats": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "paint",
+            "largest-contentful-paint",
+            "longtask"
+          ],
+          "properties": {
+            "paint": {
+              "$ref": "#/$defs/stats"
+            },
+            "largest-contentful-paint": {
+              "$ref": "#/$defs/stats"
+            },
+            "longtask": {
+              "$ref": "#/$defs/stats"
+            }
+          }
+        },
+        "paintEntries": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/paint"
+          }
+        },
+        "lcpEntries": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/lcp"
+          }
+        },
+        "longTasks": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/longTask"
+          }
+        },
+        "entryCapReached": {
+          "type": "boolean"
+        },
+        "observerWorkMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 7,
+          "items": {
+            "type": "string",
+            "enum": [
+              "FOCUS_READ_FAILED",
+              "OBSERVER_ENTRY_HANDLER_FAILED",
+              "OBSERVER_REGISTRATION_FAILED",
+              "OBSERVER_DRAIN_FAILED",
+              "PAINT_TIMELINE_READ_FAILED",
+              "RAF_REQUEST_FAILED",
+              "OBSERVER_CALLBACK_READ_FAILED"
+            ]
+          }
+        },
+        "observedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "paintTimeline": {
+          "$ref": "#/$defs/timeline"
+        },
+        "context": {
+          "$ref": "#/$defs/context"
+        },
+        "frames": {
+          "$ref": "#/$defs/frames"
+        },
+        "milestones": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "initialLoad",
+            "criticalPath"
+          ],
+          "properties": {
+            "initialLoad": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "homeClientCommitted",
+                "viewportResolved",
+                "dataQueryStarted",
+                "dataFetchCompleted",
+                "dataMergeCompleted",
+                "dataReady",
+                "dataError",
+                "naverSdkRequested",
+                "naverSdkReady",
+                "naverSdkError",
+                "mapConstructionStarted",
+                "mapConstructed",
+                "mapConstructionError",
+                "clusterIndexStarted",
+                "clusterIndexReady",
+                "controlsWrapperMounted",
+                "mobileControlsMounted",
+                "desktopPanelSettled"
+              ],
+              "properties": {
+                "homeClientCommitted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "viewportResolved": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "dataQueryStarted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "dataFetchCompleted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "dataMergeCompleted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "dataReady": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "dataError": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "naverSdkRequested": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "naverSdkReady": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "naverSdkError": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "mapConstructionStarted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "mapConstructed": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "mapConstructionError": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "clusterIndexStarted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "clusterIndexReady": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "controlsWrapperMounted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "mobileControlsMounted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "desktopPanelSettled": {
+                  "$ref": "#/$defs/nullableNumber"
+                }
+              }
+            },
+            "criticalPath": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "desktopImplementationLoadStarted",
+                "desktopImplementationLoadReady",
+                "mobileImplementationLoadStarted",
+                "mobileImplementationLoadReady",
+                "latestQueryStarted",
+                "latestRestaurantRowsReady",
+                "latestKpiStarted",
+                "latestKpiReady",
+                "latestSortReady",
+                "latestFirstCardCommitted"
+              ],
+              "properties": {
+                "desktopImplementationLoadStarted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "desktopImplementationLoadReady": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "mobileImplementationLoadStarted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "mobileImplementationLoadReady": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "latestQueryStarted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "latestRestaurantRowsReady": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "latestKpiStarted": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "latestKpiReady": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "latestSortReady": {
+                  "$ref": "#/$defs/nullableNumber"
+                },
+                "latestFirstCardCommitted": {
+                  "$ref": "#/$defs/nullableNumber"
+                }
+              }
+            }
+          }
+        },
+        "milestoneCounts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fetchedRows",
+            "restaurantCount",
+            "clusterInputCount"
+          ],
+          "properties": {
+            "fetchedRows": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "restaurantCount": {
+              "$ref": "#/$defs/nullableCount"
+            },
+            "clusterInputCount": {
+              "$ref": "#/$defs/nullableCount"
+            }
+          }
+        },
+        "initialLatestQueryClaimed": {
+          "type": "boolean"
+        },
+        "readiness": {
+          "$ref": "#/$defs/readiness"
+        },
+        "readbackWorkMs": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    },
+    "late": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observerStats",
+        "paintEntries",
+        "lcpEntries",
+        "longTasks",
+        "entryCapReached",
+        "observerWorkMs",
+        "errors",
+        "observedAtMs",
+        "paintTimeline",
+        "context"
+      ],
+      "properties": {
+        "observerStats": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "paint",
+            "largest-contentful-paint",
+            "longtask"
+          ],
+          "properties": {
+            "paint": {
+              "$ref": "#/$defs/stats"
+            },
+            "largest-contentful-paint": {
+              "$ref": "#/$defs/stats"
+            },
+            "longtask": {
+              "$ref": "#/$defs/stats"
+            }
+          }
+        },
+        "paintEntries": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/paint"
+          }
+        },
+        "lcpEntries": {
+          "type": "array",
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/lcp"
+          }
+        },
+        "longTasks": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/longTask"
+          }
+        },
+        "entryCapReached": {
+          "type": "boolean"
+        },
+        "observerWorkMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "errors": {
+          "type": "array",
+          "maxItems": 7,
+          "items": {
+            "type": "string",
+            "enum": [
+              "FOCUS_READ_FAILED",
+              "OBSERVER_ENTRY_HANDLER_FAILED",
+              "OBSERVER_REGISTRATION_FAILED",
+              "OBSERVER_DRAIN_FAILED",
+              "PAINT_TIMELINE_READ_FAILED",
+              "RAF_REQUEST_FAILED",
+              "OBSERVER_CALLBACK_READ_FAILED"
+            ]
+          }
+        },
+        "observedAtMs": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "paintTimeline": {
+          "$ref": "#/$defs/timeline"
+        },
+        "context": {
+          "$ref": "#/$defs/context"
+        }
+      }
+    }
+  }
+}

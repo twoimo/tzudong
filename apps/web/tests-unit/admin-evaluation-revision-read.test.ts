@@ -5,11 +5,15 @@ let revisionReads: string[] = [];
 let rowReads = 0;
 let allowed = true;
 let rowError = false;
+let serviceRoleKeyMissing = false;
 mock.module('@/lib/auth/require-admin', () => ({ requireAdmin: async () => allowed ? { ok: true } : { ok: false, response: new Response(null,{status:403}) } }));
-mock.module('@/lib/supabase/service-role', () => ({ createSupabaseServiceRoleClient: () => ({
-  rpc: async () => ({ data: revisionReads.shift(), error: null }),
-  from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => { rowReads++; return { data: { id:'00000000-0000-0000-0000-000000000001' },error:rowError?'fixture':null }; } }) }) }),
-}) }));
+mock.module('@/lib/supabase/service-role', () => ({ createSupabaseServiceRoleClient: () => {
+  if (serviceRoleKeyMissing) throw new Error('Supabase environment variables are missing (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY).');
+  return {
+    rpc: async () => ({ data: revisionReads.shift(), error: null }),
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => { rowReads++; return { data: { id:'00000000-0000-0000-0000-000000000001' },error:rowError?'fixture':null }; } }) }) }),
+  };
+} }));
 const { GET } = await import('@/app/api/admin/evaluations/[id]/route');
 const context = { params: Promise.resolve({ id:'00000000-0000-0000-0000-000000000001' }) };
 const originalFetch=globalThis.fetch;
@@ -38,6 +42,14 @@ describe('revision-bound detail reads',()=>{
     expect((await GET(new Request('http://fixture.test/api'),context)).status).toBe(200);
     rowError=true;
     expect((await GET(new Request('http://fixture.test/api'),context)).status).toBe(500);rowError=false;
+  });
+  test('a missing service-role key returns the fixed private read failure',async()=>{
+    serviceRoleKeyMissing=true;
+    try{
+      const response=await GET(new Request('http://fixture.test/api'),context);
+      expect(response.status).toBe(500);expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+      expect(await response.json()).toEqual({error:'EVALUATION_READ_FAILED'});
+    }finally{serviceRoleKeyMissing=false;}
   });
 });
 

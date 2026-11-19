@@ -91,14 +91,14 @@ describe('home map youtube KPI enrichment', () => {
         });
         const originalFetch = globalThis.fetch;
         let requestCount = 0;
-        globalThis.fetch = (async (_input, init) => {
+        globalThis.fetch = (async (input) => {
             requestCount += 1;
-            const body = JSON.parse(String(init?.body)) as { videoIds: string[] };
-            if (body.videoIds.includes('id000000100')) {
+            const videoIds = new URL(String(input), 'https://home.fixture.invalid').searchParams.getAll('videoIds');
+            if (videoIds.includes('id000000100')) {
                 return new Response(null, { status: 503 });
             }
 
-            const videoId = body.videoIds[0];
+            const videoId = videoIds[0];
             return new Response(JSON.stringify({
                 metrics: [{
                     videoId,

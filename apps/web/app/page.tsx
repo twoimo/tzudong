@@ -1,6 +1,8 @@
 // [SSR] 서버 컴포넌트 - SEO 메타데이터와 홈 지도 런타임
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { DEFAULT_DESCRIPTION, homeJsonLd, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME } from '@/lib/seo';
+import { buildInitialLoadDiagnosticScript, isInitialLoadDiagnosticRequest } from '@/lib/performance/initial-load-diagnostic';
 import { HomeRuntimeShell } from './home-runtime-shell';
 import HomeClient from './home-client';
 
@@ -38,9 +40,16 @@ export const metadata: Metadata = {
 };
 
 // [SSR] 서버 컴포넌트 홈 페이지 - / 진입 즉시 실제 홈 지도 런타임을 시작합니다.
-export default function HomePage() {
+export default async function HomePage({ searchParams }: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+    const diagnostic = isInitialLoadDiagnosticRequest(await searchParams);
+    const nonce = diagnostic ? (await headers()).get('x-nonce') ?? undefined : undefined;
     return (
         <>
+            {diagnostic && <script nonce={nonce} dangerouslySetInnerHTML={{
+                __html: buildInitialLoadDiagnosticScript(process.env.VERCEL_GIT_COMMIT_SHA),
+            }} />}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd).replace(/</g, '\\u003c') }}

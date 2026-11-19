@@ -19,14 +19,14 @@ export const myPageResponsiveListClass =
 export const myPageResponsiveMediaListClass = "grid gap-3 xl:grid-cols-2";
 export const myPageListContentClass = "p-4";
 export const myPageCardTitleClass =
-  "truncate text-base font-semibold tracking-tight sm:text-lg";
+  "truncate text-base font-semibold sm:text-lg";
 export const myPageInfoPanelClass =
   "space-y-2 rounded-2xl bg-muted/45 p-3 text-sm";
 export const myPageItemGroupClass = "rounded-xl bg-muted/45 p-3";
 export const myPageFooterMetaClass =
   "flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-2 text-xs text-muted-foreground";
 export const myPageInlineLinkClass =
-  "inline-flex -my-1 min-h-8 min-w-0 items-center gap-1 truncate py-1 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-sm py-2 text-sm font-medium text-foreground hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 interface MyPageSectionFrameProps {
   icon: LucideIcon;
@@ -67,10 +67,10 @@ export function MyPageSectionFrame({
         <div className="flex items-start justify-between gap-3 sm:flex-row sm:items-start">
           <div className="flex min-w-0 items-start gap-3">
             <span
-              className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:flex"
+              className="hidden h-11 w-11 shrink-0 items-center justify-center text-muted-foreground sm:flex"
               aria-hidden="true"
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" strokeWidth={1.5} />
             </span>
             <div className="min-w-0">
               <p className="text-xs font-medium text-muted-foreground">
@@ -84,11 +84,11 @@ export function MyPageSectionFrame({
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 sm:pt-1">
+          <div className="flex shrink-0 items-center gap-2 sm:pt-1">
             {countLabel && (
               <Badge
                 variant="secondary"
-                className="border-transparent bg-transparent px-0 py-0 text-xs text-muted-foreground hover:bg-transparent sm:rounded-full sm:bg-secondary sm:px-3 sm:py-1 sm:text-secondary-foreground sm:hover:bg-secondary/80"
+                className="border-0 bg-transparent px-0 py-0 text-sm font-normal text-muted-foreground hover:bg-transparent"
               >
                 {countLabel}
               </Badge>
@@ -134,14 +134,14 @@ export function MyPageEmptyState({
   action,
 }: MyPageEmptyStateProps) {
   return (
-    <Card className="border-dashed border-border/80 bg-card/80">
-      <CardContent className="grid min-h-64 place-items-center px-5 py-12 text-center text-muted-foreground">
+    <Card className="border-border bg-card">
+      <CardContent className="grid min-h-56 place-items-center px-4 py-10 text-center text-muted-foreground">
         <div className="mx-auto max-w-sm space-y-3">
           <span
-            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"
+            className="mx-auto flex h-10 w-10 items-center justify-center text-muted-foreground"
             aria-hidden="true"
           >
-            <Icon className="h-7 w-7" />
+            <Icon className="h-6 w-6" strokeWidth={1.5} />
           </span>
           <div>
             <p className="text-base font-semibold text-foreground">{title}</p>
@@ -169,10 +169,10 @@ export function MyPageErrorState({
 }: MyPageErrorStateProps) {
   return (
     <Card className="border-destructive/25 bg-destructive/5">
-      <CardContent className="px-5 py-8 text-sm text-destructive" role="alert">
+      <CardContent className="px-4 py-6 text-sm text-destructive" role="alert">
         <p className="font-semibold">{title}</p>
         <p className="mt-1 leading-6 text-destructive/80">{description}</p>
-        {onRetry && <Button type="button" variant="outline" className="mt-4" disabled={retrying} onClick={onRetry}>다시 시도</Button>}
+        {onRetry && <Button type="button" variant="outline" className="mt-4 min-h-11" disabled={retrying} onClick={onRetry}>다시 시도</Button>}
       </CardContent>
     </Card>
   );

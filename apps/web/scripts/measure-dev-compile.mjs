@@ -150,8 +150,6 @@ async function main() {
     first_home_next_ms: null,
     first_home_app_ms: null,
     warm_home_ms: null,
-    first_script_ms: null,
-    script_status: null,
     health_status: null,
     home_status: null,
     warm_home_status: null,
@@ -229,10 +227,6 @@ async function main() {
     result.first_home_ms = home.elapsed_ms;
     result.home_status = home.status;
 
-    const script = await timedFetch(`${baseUrl}/scripts/viewport-height-fix.js`, { timeoutAt, label: 'GET /scripts/viewport-height-fix.js' });
-    result.first_script_ms = script.elapsed_ms;
-    result.script_status = script.status;
-
     const warmHome = await timedFetch(`${baseUrl}/`, { timeoutAt, label: 'warm GET /' });
     result.warm_home_ms = warmHome.elapsed_ms;
     result.warm_home_status = warmHome.status;
@@ -252,7 +246,6 @@ async function main() {
 
     if (!health.ok) result.errors.push('DEV_COMPILE_HEALTH_HTTP_STATUS');
     if (!home.ok) result.errors.push('DEV_COMPILE_HOME_HTTP_STATUS');
-    if (!script.ok) result.errors.push('DEV_COMPILE_SCRIPT_HTTP_STATUS');
     if (!warmHome.ok) result.errors.push('DEV_COMPILE_WARM_HOME_HTTP_STATUS');
   } catch {
     result.errors.push('DEV_COMPILE_EXECUTION_FAILED');

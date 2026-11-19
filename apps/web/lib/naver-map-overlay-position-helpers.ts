@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
 const MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS =
-    'top-[calc(env(safe-area-inset-top)_+_114px)]';
+    'top-[var(--mobile-map-controls-bottom,calc(env(safe-area-inset-top)_+_136px))]';
 const MOBILE_BADGE_POSITION_CLASS =
     `mobile-map-status-badge fixed ${MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS} left-1/2 -translate-x-1/2 transition-[left] duration-300 ease-in-out z-[70]`;
 const DESKTOP_BADGE_POSITION_CLASS =

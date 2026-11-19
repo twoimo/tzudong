@@ -6,6 +6,7 @@ import { parseReceiptOcrWorkflowPolicy } from '@/lib/ocr/workflow-policy';
 
 export const RECEIPT_OCR_WORKFLOW_FILE = 'ocr-review-receipts.yml';
 export const RECEIPT_OCR_WORKFLOW_REF = 'main';
+export const RECEIPT_OCR_WORKFLOW_FETCH_TIMEOUT_MS = 10_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type ReceiptOcrWorkflowDispatchResult =
@@ -57,7 +58,7 @@ export function buildBoundReceiptOcrRecoveryWorkflowInputs(input: {
   };
 }
 
-/** A non-204 or transport loss is indeterminate: callers must preserve reset state. */
+/** A non-204, transport loss or timeout is indeterminate: callers must preserve reset state. */
 export async function dispatchReceiptOcrWorkflow(input: {
   url: string;
   token: string;
@@ -76,6 +77,7 @@ export async function dispatchReceiptOcrWorkflow(input: {
         ref: RECEIPT_OCR_WORKFLOW_REF,
         inputs: input.inputs,
       }),
+      signal: AbortSignal.timeout(RECEIPT_OCR_WORKFLOW_FETCH_TIMEOUT_MS),
     });
     if (response.status === 204) return { status: 'accepted', httpStatus: 204 };
     await response.body?.cancel().catch(() => undefined);

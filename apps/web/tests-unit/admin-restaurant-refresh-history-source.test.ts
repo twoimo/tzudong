@@ -38,7 +38,7 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(consoleSource).toContain('case "restaurant-refresh-history"');
     expect(sidebarOrderSource).not.toContain('"restaurant-refresh-history"');
     expect(sidebarOrderSource).toContain(
-      '검수: ["restaurants", "submissions", "reviews"]',
+      '"검수·데이터": ["restaurants", "submissions", "reviews"]',
     );
   });
 

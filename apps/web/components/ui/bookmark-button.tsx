@@ -33,7 +33,8 @@ const BookmarkButtonComponent = ({
     const { user } = useAuth();
     const { data: bookmarkIds = new Set() } = useBookmarkIds();
     const { toggleBookmark, isLoading } = useToggleBookmark();
-    const { data: bookmarkCount = 0 } = useBookmarkCount(restaurantId);
+    // The review card hides the count, so it must not request one per restaurant.
+    const { data: bookmarkCount = 0 } = useBookmarkCount(showCount ? restaurantId : "");
 
     const isBookmarked = user ? bookmarkIds.has(restaurantId) : false;
 
@@ -63,7 +64,7 @@ const BookmarkButtonComponent = ({
                     isBookmarked && "bg-primary/10 border-primary text-primary hover:bg-primary/20",
                     className
                 )}
-                title={!user ? `로그인 후 북마크하기 (${bookmarkCount}개)` : isBookmarked ? "북마크 해제" : "북마크 추가"}
+                title={!user ? (showCount ? `로그인 후 북마크하기 (${bookmarkCount}개)` : "로그인 후 북마크하기") : isBookmarked ? "북마크 해제" : "북마크 추가"}
             >
                 <Bookmark className={cn("h-4 w-4", isBookmarked && "fill-current")} />
                 {showCount && bookmarkCount > 0 && (

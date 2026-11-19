@@ -1,0 +1,139 @@
+{
+  "schemaVersion": "initial-load-production-attempts.v1",
+  "scope": "Attempted anonymous canonical production measurement; no measured performance trials.",
+  "sourceSha": "9316871f4220cd487b0e9575415ed2d760de8997",
+  "deploymentId": "dpl_A2pdeTvSXQj52ixi3z9WMstWby8y",
+  "canonicalUrl": "https://www.tzudong.app/",
+  "productionMetricSamples": 0,
+  "fieldAdmissionCount": 0,
+  "g003AdmissionCount": 0,
+  "attempts": [
+    {
+      "runId": "43598614632",
+      "runAttempt": "1",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/43598614632",
+      "runEvidence": "run-43598614632.json",
+      "runSha256": "8705180d6d9f392beeede72a1b1c06d3aa1363310d01fade0138535b71928de8",
+      "archiveSha256": "1180bf21c029bcb6624dd64dda05afec4723a825dcded9da88c0f369a75d495e",
+      "status": "invalid",
+      "failures": [
+        "HEALTH_READBACK_HTTP_ERROR"
+      ],
+      "trialCount": 0,
+      "startedAt": "2026-11-14T13:13:17.539Z",
+      "endedAt": "2026-11-14T13:13:18.241Z",
+      "healthReadbackFailure": null
+    },
+    {
+      "runId": "43599036723",
+      "runAttempt": "1",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/43599036723",
+      "runEvidence": "run-43599036723.json",
+      "runSha256": "f44defd36dfb18e0c2f27e978a5895a63f9c14c254a39beaef730cc54028a08d",
+      "archiveSha256": "9a228b69da6a090835125bf8f74a90645791ba313903a407ac6da81471e2b315",
+      "status": "invalid",
+      "failures": [
+        "HEALTH_READBACK_HTTP_403"
+      ],
+      "trialCount": 0,
+      "startedAt": "2026-11-14T13:18:35.850Z",
+      "endedAt": "2026-11-14T13:18:36.967Z",
+      "healthReadbackFailure": null
+    },
+    {
+      "runId": "43599674200",
+      "runAttempt": "1",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/43599674200",
+      "runEvidence": "run-43599674200.json",
+      "runSha256": "215fbf40964f5d21483ce30b77990cdb559cc85e015fb1df5790d2a2b17809e4",
+      "archiveSha256": "2c0624669091359106686fc9a756707767982cd19ad418f7c072ad7dce93eb05",
+      "status": "invalid",
+      "failures": [
+        "HEALTH_READBACK_UNAVAILABLE"
+      ],
+      "trialCount": 0,
+      "startedAt": "2026-11-14T13:25:57.787Z",
+      "endedAt": "2026-11-14T13:25:58.770Z",
+      "healthReadbackFailure": {
+        "transport": "browser-public-navigation",
+        "isolatedFromMeasuredBrowser": true,
+        "credentialsUsed": false,
+        "browser": {
+          "product": "Google Chrome for Testing",
+          "version": "156.0.8078.4",
+          "executable": "/home/runner/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome"
+        },
+        "observedAt": "2026-11-14T13:25:58.480Z",
+        "httpStatus": null,
+        "pageClassification": "unavailable"
+      }
+    },
+    {
+      "runId": "43600158140",
+      "runAttempt": "1",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/43600158140",
+      "runEvidence": "run-43600158140.json",
+      "runSha256": "aa5697972701f2e340cebccb1ef9ba0b0e2d86d31e0c833088a91aa1d836553e",
+      "archiveSha256": "f764a9b62bb4b5cce24d182fb2c294badb5e81e30fe2fb33fe46074f7d9eaed8",
+      "status": "invalid",
+      "failures": [
+        "HEALTH_BROWSER_SANDBOX_UNAVAILABLE"
+      ],
+      "trialCount": 0,
+      "startedAt": "2026-11-14T13:31:57.195Z",
+      "endedAt": "2026-11-14T13:31:58.390Z",
+      "healthReadbackFailure": {
+        "transport": "browser-public-navigation",
+        "isolatedFromMeasuredBrowser": true,
+        "credentialsUsed": false,
+        "browser": {
+          "product": "Google Chrome for Testing",
+          "version": "156.0.8078.4",
+          "executable": "/home/runner/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome"
+        },
+        "observedAt": "2026-11-14T13:31:58.104Z",
+        "stage": "launch",
+        "httpStatus": null,
+        "pageClassification": "unavailable"
+      }
+    },
+    {
+      "runId": "43600568543",
+      "runAttempt": "1",
+      "url": "https://github.com/twoimo/tzudong/actions/runs/43600568543",
+      "runEvidence": "run-43600568543.json",
+      "runSha256": "3d6dd4827f70fcb4fb1eea416700e07625b48f78e2b5a75d74793cd78484f7c4",
+      "archiveSha256": "f52a7eb1d27273924baa3bf78ac2d2a73dcf363de77f99b959d9a67013d2b43d",
+      "status": "invalid",
+      "failures": [
+        "HEALTH_READBACK_HTTP_403"
+      ],
+      "trialCount": 0,
+      "startedAt": "2026-11-14T13:36:42.153Z",
+      "endedAt": "2026-11-14T13:36:43.631Z",
+      "healthReadbackFailure": {
+        "transport": "browser-public-navigation",
+        "isolatedFromMeasuredBrowser": true,
+        "credentialsUsed": false,
+        "browser": {
+          "product": "Google Chrome for Testing",
+          "version": "156.0.8078.4",
+          "executable": "/home/runner/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome"
+        },
+        "browserLaunch": {
+          "headless": true,
+          "sandboxMode": "disabled-for-disposable-ci",
+          "scope": "disposable-github-runner-browser-process",
+          "explicitArgs": [
+            "--no-sandbox"
+          ],
+          "noSandboxObserved": true
+        },
+        "observedAt": "2026-11-14T13:36:43.560Z",
+        "stage": "projection",
+        "httpStatus": 403,
+        "pageClassification": "challenge_document"
+      }
+    }
+  ]
+}

@@ -501,9 +501,22 @@ jobs:
       - run: npm ci --no-audit --fund=false
       - name: Install backend dependencies with bounded network retry
         run: bash ../../.github/scripts/install-backend-npm-dependencies.sh
+      - name: Verify home KPI RPC on the exact hosted PostgreSQL build
+        working-directory: .
+        run: |
+          python3 -m unittest backend.supabase.tests.test_home_youtube_kpi_fixture
+          python3 backend/supabase/tests/run_home_youtube_kpi_rpc.py --output "$RUNNER_TEMP/home-kpi-rpc/receipt.json"
+      - name: Retain home KPI database evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: home-kpi-pg17-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/home-kpi-rpc/receipt.json
+          if-no-files-found: error
+          retention-days: 90
       - run: npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0
       - run: npx tsc --noEmit --pretty false
-      - run: cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs
+      - run: cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs backend/bin/tests/node-dependency-compatibility.test.mjs apps/web/scripts/__tests__/admin-revision-safeupdate-operation.test.mjs apps/web/scripts/__tests__/atomic-edit-submission-operation.test.mjs apps/web/scripts/__tests__/atomic-edit-submission-bundle-operation.test.mjs apps/web/scripts/__tests__/sponsorship-predecessor-custody.test.mjs
       - run: cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=${{ github.run_id }} SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
       - run: bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
 

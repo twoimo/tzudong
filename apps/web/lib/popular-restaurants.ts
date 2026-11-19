@@ -4,6 +4,7 @@ import { comparePopularRestaurants } from '@/lib/popular-restaurant-score';
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
 import { sanitizePostgrestOrTerm } from '@/lib/overseas-region-matching';
 import type { Restaurant } from '@/types/restaurant';
+import type { PaintCalibrationLatestQueryMarker } from '@/lib/performance/paint-calibration-milestones';
 
 export const POPULAR_RESTAURANTS_QUERY_KEY = ['popular-searches-composite-v1'] as const;
 export const LATEST_RESTAURANTS_QUERY_KEY = ['latest-restaurants'] as const;
@@ -165,6 +166,7 @@ export type PopularRestaurantListArgs = RestaurantListArgs & {
 type LatestRestaurantPageArgs = Omit<RestaurantListArgs, 'limit'> & {
   fetchLimit: number;
   offset?: number;
+  onCalibrationPhase?: PaintCalibrationLatestQueryMarker;
 };
 
 export type LatestRestaurantPage = {
@@ -547,7 +549,9 @@ export async function fetchLatestRestaurantPage({
   selectedRegion,
   isKoreanOnly = false,
   sort = 'latest',
+  onCalibrationPhase,
 }: LatestRestaurantPageArgs): Promise<LatestRestaurantPage> {
+  onCalibrationPhase?.('latestQueryStarted');
   const pageSize = Math.max(1, fetchLimit);
   const pageOffset = Math.max(0, offset);
   const data = await fetchSupabaseRows<Restaurant>(
@@ -575,13 +579,17 @@ export async function fetchLatestRestaurantPage({
   );
 
   const rawRestaurants = data ?? [];
+  onCalibrationPhase?.('latestRestaurantRowsReady');
+  const cohort = mergeRestaurants(rawRestaurants)
+    .filter(isApprovedRestaurant)
+    .filter((restaurant) =>
+      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+    );
+  onCalibrationPhase?.('latestKpiStarted');
   const mergedRestaurants = await attachPopularYouTubeMetrics(
-    mergeRestaurants(rawRestaurants)
-      .filter(isApprovedRestaurant)
-      .filter((restaurant) =>
-        matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
-      ),
+    cohort,
   );
+  onCalibrationPhase?.('latestKpiReady');
   const reviewLikesById = sort === 'popular'
     ? await fetchReviewLikeTotals(mergedRestaurants.map((restaurant) => restaurant.id))
     : new Map<string, number>();
@@ -595,6 +603,7 @@ export async function fetchLatestRestaurantPage({
       const aTime = latestRestaurantSortTime(a, sort);
       return sort === 'oldest' ? aTime - bTime : bTime - aTime;
     });
+  onCalibrationPhase?.('latestSortReady');
   const hasMore = rawRestaurants.length === pageSize;
 
   return {

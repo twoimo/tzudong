@@ -9,6 +9,7 @@ import {
     getSafeAuthNextPath,
     type AuthRedirectReason,
 } from '@/lib/auth/auth-redirect'
+import { checkAdminAccess } from '@/lib/auth/admin-access'
 import {
     getCurrentPrivacyEligibility,
     hasLivePrivacyEligibilityReceipt,
@@ -253,42 +254,15 @@ export async function updateSession(
             return adminUnauthorizedResponse(request, supabaseResponse);
         }
 
-        let activeSession: boolean | null = null;
-        let activeSessionError = false;
-        try {
-            const { data, error } = await supabase
-                .rpc('is_current_auth_session_active' as never)
-                .returns<boolean>();
-            activeSession = typeof data === 'boolean' ? data : null;
-            activeSessionError = Boolean(error) || typeof data !== 'boolean';
-        } catch {
-            activeSessionError = true;
-        }
+        const adminAccess = await checkAdminAccess(supabase, authUserId);
 
-        if (activeSessionError || activeSession !== true) {
+        if (adminAccess === 'inactive-session') {
             await signOutRejectedPrivacySession(supabase);
             clearSupabaseAuthCookies(request, supabaseResponse);
             return adminUnauthorizedResponse(request, supabaseResponse);
         }
 
-        const { data: role, error: roleError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', authUserId)
-            .eq('role', 'admin')
-            .maybeSingle();
-
-        if (roleError || !role) {
-            return adminForbiddenResponse(request, supabaseResponse);
-        }
-
-        const { data: accountStatus, error: accountStatusError } = await supabase
-            .from('user_account_status')
-            .select('account_status')
-            .eq('user_id', authUserId)
-            .maybeSingle();
-
-        if (accountStatusError || accountStatus?.account_status !== 'active') {
+        if (adminAccess !== 'active-admin') {
             return adminForbiddenResponse(request, supabaseResponse);
         }
     }

@@ -43,9 +43,9 @@ describe("app back navigation state contracts", () => {
     const reviewDraftSource = source("lib/reviewDraftDB.ts");
     const reviewEditModalSource = source("components/reviews/ReviewEditModal.tsx");
 
-    expect(reviewDraftSource).toContain("const DB_VERSION = 3");
+    expect(reviewDraftSource).toContain("dbVersion: 3,");
     expect(reviewDraftSource).toContain("REVIEW_DRAFT_TTL_MS = 24 * 60 * 60 * 1000");
-    expect(reviewDraftSource).toContain("keyPath: ['userId', 'restaurantId']");
+    expect(reviewDraftSource).toContain("slotField: 'restaurantId',");
     expect(reviewDraftSource).toContain("const persistedDraft: PersistedReviewDraft = {");
     expect(reviewDraftSource).toContain("const publicDraft: ReviewDraft = {");
     expect(reviewDraftSource).toContain("expiresAt: now + REVIEW_DRAFT_TTL_MS");

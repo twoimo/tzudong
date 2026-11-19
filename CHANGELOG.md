@@ -8,12 +8,47 @@ full scope, verification records and limitations of each release.
 
 ## Unreleased
 
+### Fixed
+
+- Remove the empty desktop row between the thumbnail canvas and its tools,
+  retaining the 16:9 canvas and small-height fitting behavior.
+- Keep storyboard direct-writing and proposal-transfer guidance consistent
+  with the existing production readiness hold.
+
 ### Changed
 
+- Consolidate map and administrator status, tighten video/thumbnail workflows,
+  add a four-panel storyboard with explicitly configured planning chat, and expose
+  retained performance evidence in the administrator sidebar. See the scoped
+  [UI/UX QA record](docs/releases/user-journey-ux-qa-20261115.md) and
+  [Bombadil component harness](docs/operations/bombadil-qa.md) for verification limits.
 - Organize repository and documentation entry points for users and contributors.
 - Restore the bilingual release chronology and preserve the original August
   operational records in the [changelog archive](docs/archive/changelog/CHANGELOG.md).
 - Add release channels, a release-note template and GitHub note categories.
+
+## [1.2.10](https://github.com/twoimo/tzudong/releases/tag/v1.2.10) — 2026-11-14
+
+### Fixed
+
+- Restore native bookmark detail and map links while preserving domestic/overseas
+  navigation and search return paths ([#3828](https://github.com/twoimo/tzudong/pull/3828)).
+- Distinguish failed reads from empty results; retain input and page context with
+  retry and filter recovery, and show zero counts only for queried regions.
+- Restore opener focus after closing authentication and review dialogs, and move
+  focus to the first invalid restaurant-submission field.
+- Add explicit retry and a 15-second timeout for policy reads while preserving
+  signup input and consent choices; ignore cancelled or superseded responses.
+- Clarify discovery labels and account-setting hierarchy; improve spacing with
+  44px primary controls and 16px inputs on small screens.
+- Replace interpolated hook source in the My Page render fixture with a static
+  literal for the CodeQL follow-up, preserving the existing assertions.
+
+## [1.2.8](https://github.com/twoimo/tzudong/releases/tag/v1.2.8) — 2026-11-13
+
+- Compact the administrator dashboard and storyboard controls; add opt-in, ephemeral macOS receipt OCR with no automatic cloud fallback.
+- Simplify project guidance and preserve existing routes, data and fail-closed readiness.
+- Source publication only: production was not promoted because post-merge checks found a missing documentation ownership entry. The follow-up correction is tracked in PR #3831.
 
 ## [1.2.7](https://github.com/twoimo/tzudong/releases/tag/v1.2.7) — 2026-09-27
 

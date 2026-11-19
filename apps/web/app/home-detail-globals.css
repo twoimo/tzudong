@@ -10,23 +10,11 @@
 @source not "../**/*.test.*";
 @source not "../tests-unit";
 
-/* ============================================
-   모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)
-   
-   문제: 모바일 브라우저(삼성 인터넷, Safari 등)에서 100vh가
-   URL 바와 하단 네비게이션을 포함한 높이로 계산되어 콘텐츠가 잘림.
-   
-   해결: 
-   1. 신규 CSS 단위(dvh/svh) 사용 - Safari 15.4+, Chrome 108+, Samsung Internet 20+
-   2. JavaScript fallback으로 --vh 변수 설정 - 구형 브라우저 지원
-   ============================================ */
+/* Baseline Widely available: let the browser track its dynamic viewport. */
 
 :root {
-  /* JavaScript fallback 변수 (동적 업데이트됨) */
-  --vh: 1vh;
 
-  /* 전체 높이 계산 - 우선순위: dvh > svh > JS fallback > vh */
-  --full-height: 100vh;
+  --full-height: 100dvh;
   --font-sans: var(--font-pretendard, "Pretendard"), "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display-fallback: "Noto Serif KR", "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
   --font-noto-serif-kr: var(--font-display, "Noto Serif KR"), "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
@@ -34,24 +22,9 @@
   /* 기본값 (fallback) */
 }
 
-/* dvh 지원 브라우저용 */
-@supports (height: 100dvh) {
-  :root {
-    --full-height: 100dvh;
-  }
-}
-
-/* svh 지원 브라우저용 (dvh 미지원 시) */
-@supports (height: 100svh) and (not (height: 100dvh)) {
-  :root {
-    --full-height: 100svh;
-  }
-}
 
 /* 스크롤바 숨김 유틸리티 */
 .scrollbar-hide {
-  -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
   /* Firefox */
 }
@@ -70,7 +43,6 @@
     [class*="overflow-x-auto"],
     [class*="overflow-auto"]
   ) {
-    -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
@@ -297,8 +269,6 @@ div[style*="z-index"]>div>.custom-marker {
   }
 }
 */
-
-
 
 
 @layer utilities {

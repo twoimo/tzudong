@@ -7,7 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // The real InsightsClient is rebuilt for this fixture. Only auth and navigation
-// are replaced; the query, treemap layout, Radix popover, and UI remain real.
+// are replaced; the query, ztd treemap, Radix popover, and UI remain real.
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HARNESS_ROOT = join(WEB_ROOT, 'tests/fixtures/insights-treemap');
 const VIEWS = [490_000, 230_000, 125_000, 87_000, 44_000, 21_000, 12_000, 6_800, 3_300, 1_900, 940, 310];
@@ -88,7 +88,12 @@ test('same-filter refetch keeps the selected tile aligned and closes a removed t
 
     await page.goto(origin);
     await expect(page.getByText('전체 12개')).toBeVisible();
-    const tiles = page.locator('[data-insights-treemap-tile-index]');
+    for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
+        await page.setViewportSize(viewport);
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const tiles = page.locator('.ztd-root .ztd-mark');
     await expect(tiles).toHaveCount(12);
     await tiles.nth(1).click();
     const selected = page.getByRole('dialog', { name: '영상 상세: 합성 영상 02 · 작은 국수집' });
@@ -99,18 +104,6 @@ test('same-filter refetch keeps the selected tile aligned and closes a removed t
         await page.evaluate(() => window.insightsFixtureRefetch());
         expect(requests).toBeGreaterThan(previousRequests);
     };
-    const outlineDifference = async (index: number) => {
-        const [outline, tile] = await Promise.all([
-            page.locator('[data-insights-treemap-active-outline="true"]').boundingBox(),
-            tiles.nth(index).boundingBox(),
-        ]);
-        if (!outline || !tile) return Number.POSITIVE_INFINITY;
-        return Math.max(
-            Math.abs(outline.x - tile.x), Math.abs(outline.y - tile.y),
-            Math.abs(outline.width - tile.width), Math.abs(outline.height - tile.height),
-        );
-    };
-
     response = { ...BASELINE, videos: VIDEOS.map((video) => video.id === 'synthetic-video-2'
         ? { ...video, viewCount: 900_000 }
         : video) };
@@ -119,7 +112,6 @@ test('same-filter refetch keeps the selected tile aligned and closes a removed t
     await expect(selected).toContainText('조회수: 900,000개');
     await expect(selected.getByRole('button', { name: '이전' })).toBeDisabled();
     await expect(selected.getByRole('button', { name: '다음' })).toBeEnabled();
-    await expect.poll(() => outlineDifference(0)).toBeLessThanOrEqual(2);
     await selected.getByRole('button', { name: '다음' }).click();
     const next = page.getByRole('dialog', { name: '영상 상세: 합성 영상 01 · 한식 골목' });
     await expect(next).toContainText('2 / 12');

@@ -18,6 +18,7 @@ import {
 import {
   STORYBOARD_GEMINI_DEFAULT_IMAGE_MODEL, STORYBOARD_GEMINI_TEXT_MODEL, storyboardGeminiDeclaredModels,
 } from '../lib/admin/storyboard/gemini-models';
+import { STORYBOARD_OPENAI_TEXT_MODEL, STORYBOARD_OPENAI_IMAGE_MODEL } from '../lib/admin/storyboard/openai-models';
 import {
   FEATURE_DATABASE_HELD, FEATURE_DATABASE_READY, type FeatureDatabaseReadiness,
 } from '../lib/runtime-feature-readiness-contract';
@@ -159,6 +160,27 @@ describe('worker authentication and proof boundary', () => {
     expect(workerOperationSchema.safeParse({ action: 'draft', jobId, leaseToken, document: project().document }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'scene-error', jobId, leaseToken, sceneNo: 1, errorCode: 'raw provider response' }).success).toBe(false);
     expect(workerOperationSchema.safeParse({ action: 'claim', serviceRoleKey: 'not-accepted' }).success).toBe(false);
+  });
+  test('requires response evidence for OpenAI text and catalog/request evidence only for images', () => {
+    const request = storyboardProductionRequestSchema.parse({ ...req(), providers: { externalAI: true,
+      text: { id: 'openai-api', model: STORYBOARD_OPENAI_TEXT_MODEL }, image: { id: 'openai-api', model: STORYBOARD_OPENAI_IMAGE_MODEL } } });
+    const models = [
+      { id: STORYBOARD_OPENAI_TEXT_MODEL, owned_by: 'openai-api' as const, capabilities: ['chat'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      { id: STORYBOARD_OPENAI_IMAGE_MODEL, owned_by: 'openai-api' as const, capabilities: ['image'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+    ];
+    const text = { providerId: 'openai-api' as const, model: STORYBOARD_OPENAI_TEXT_MODEL, verification: 'official-api' as const,
+      generatedAt: new Date().toISOString(), requestId: randomUUID(), responseId: 'resp_x', responseModel: STORYBOARD_OPENAI_TEXT_MODEL,
+      modelEvidence: 'response' as const, usage: { inputTokens: 2, outputTokens: 3, totalTokens: 5 } };
+    const image = { ...text, model: STORYBOARD_OPENAI_IMAGE_MODEL, responseId: null, responseModel: null,
+      modelEvidence: 'installed-catalog-and-request' as const };
+    expect(validateGeminiStoryboardProvenance(text, request, models, 'text').responseId).toBe('resp_x');
+    expect(validateGeminiStoryboardProvenance({ ...text, responseModel: `${STORYBOARD_OPENAI_TEXT_MODEL}-2026-11-13` }, request, models, 'text').responseModel)
+      .toBe(`${STORYBOARD_OPENAI_TEXT_MODEL}-2026-11-13`);
+    expect(() => validateGeminiStoryboardProvenance({ ...text, modelEvidence: 'installed-catalog-and-request', responseModel: null }, request, models, 'text'))
+      .toThrow('model_identity_mismatch');
+    expect(validateGeminiStoryboardProvenance(image, request, models, 'image').modelEvidence).toBe('installed-catalog-and-request');
+    expect(() => validateGeminiStoryboardProvenance({ ...image, modelEvidence: 'response', responseModel: STORYBOARD_OPENAI_IMAGE_MODEL }, request, models, 'image'))
+      .toThrow('model_identity_mismatch');
   });
   test('requires the configured Gemini model, declared catalog capability and response evidence', () => {
     expect(validateGeminiStoryboardProvenance(proof(), req(), models, 'image').verification).toBe('official-api');
@@ -367,7 +389,7 @@ describe('admin/API contracts and bounded failures', () => {
     expect(productionActionSchema.safeParse({ action: 'import-text', revision: 0, projectId: randomUUID(),
       schema: STORYBOARD_WORKFLOW, draft: draft(), provenance: proof() }).success).toBe(false);
   });
-  test('non-Gemini providers are rejected before any persistence dispatch', async () => {
+  test('unknown providers are rejected before any persistence dispatch', async () => {
     let calls = 0;
     const handlers = api(new StoryboardProductionStore({ database: { ...unusedDb, async rpc() {
       calls++; return { data: null, error: null };

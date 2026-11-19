@@ -1,0 +1,1262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "production-attribution.snapshot.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mode",
+    "capture",
+    "binding",
+    "viewport",
+    "support",
+    "navigation",
+    "paints",
+    "longTasks",
+    "resources",
+    "milestones",
+    "milestoneCounts",
+    "fontsReadyMs",
+    "fontReadinessBasis",
+    "completeness",
+    "legacyTtiMs",
+    "legacyTtiStatus"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "production-attribution.snapshot.v1"
+    },
+    "mode": {
+      "const": "initial-load"
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cutoffMs",
+        "observerSetupMs",
+        "frozenAtMs",
+        "freezeReason",
+        "instrumentationVersion",
+        "visibilityAtStart",
+        "firstHiddenAtMs",
+        "trustedInputCount",
+        "firstTrustedInputAtMs",
+        "resizeCount",
+        "firstResizeAtMs",
+        "resourceBufferOverflow",
+        "entryCapReached",
+        "observerWorkMs",
+        "readinessWorkMs",
+        "readinessSamples",
+        "readinessSamplingIntervalMs",
+        "contextUnchanged"
+      ],
+      "properties": {
+        "cutoffMs": {
+          "const": 20000
+        },
+        "observerSetupMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 3600000
+        },
+        "frozenAtMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 3600000
+        },
+        "freezeReason": {
+          "enum": [
+            "deadline"
+          ]
+        },
+        "instrumentationVersion": {
+          "enum": [
+            "20261115.1"
+          ]
+        },
+        "visibilityAtStart": {
+          "enum": [
+            "visible",
+            "hidden"
+          ]
+        },
+        "firstHiddenAtMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "trustedInputCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "firstTrustedInputAtMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "resizeCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "firstResizeAtMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "resourceBufferOverflow": {
+          "type": "boolean"
+        },
+        "entryCapReached": {
+          "type": "boolean"
+        },
+        "observerWorkMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 3600000
+        },
+        "readinessWorkMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 3600000
+        },
+        "readinessSamples": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40
+        },
+        "readinessSamplingIntervalMs": {
+          "const": 500
+        },
+        "contextUnchanged": {
+          "type": "boolean"
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gitSha",
+        "hostname",
+        "pathname"
+      ],
+      "properties": {
+        "gitSha": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            }
+          ]
+        },
+        "hostname": {
+          "enum": [
+            "www.tzudong.app",
+            "tzudong.app",
+            "other"
+          ]
+        },
+        "pathname": {
+          "const": "/"
+        }
+      }
+    },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initial",
+        "final"
+      ],
+      "properties": {
+        "initial": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "height",
+            "dpr"
+          ],
+          "properties": {
+            "width": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "height": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "dpr": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 10
+            }
+          }
+        },
+        "final": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "height",
+            "dpr"
+          ],
+          "properties": {
+            "width": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "height": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "dpr": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 10
+            }
+          }
+        }
+      }
+    },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "navigation",
+        "paint",
+        "largestContentfulPaint",
+        "resource",
+        "longTask"
+      ],
+      "properties": {
+        "navigation": {
+          "type": "boolean"
+        },
+        "paint": {
+          "type": "boolean"
+        },
+        "largestContentfulPaint": {
+          "type": "boolean"
+        },
+        "resource": {
+          "type": "boolean"
+        },
+        "longTask": {
+          "type": "boolean"
+        }
+      }
+    },
+    "navigation": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "startTime",
+            "activationStart",
+            "workerStart",
+            "domainLookupStart",
+            "domainLookupEnd",
+            "connectStart",
+            "connectEnd",
+            "secureConnectionStart",
+            "requestStart",
+            "responseStart",
+            "responseEnd",
+            "domInteractive",
+            "domContentLoadedEventEnd",
+            "loadEventEnd",
+            "redirectCount",
+            "transferSize",
+            "encodedBodySize",
+            "decodedBodySize"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "navigate",
+                "reload",
+                "back_forward",
+                "prerender",
+                "unknown"
+              ]
+            },
+            "startTime": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "activationStart": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "workerStart": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "domainLookupStart": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "domainLookupEnd": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "connectStart": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "connectEnd": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "secureConnectionStart": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "requestStart": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "responseStart": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "responseEnd": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "domInteractive": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "domContentLoadedEventEnd": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "loadEventEnd": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 3600000
+            },
+            "redirectCount": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000
+                }
+              ]
+            },
+            "transferSize": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            "encodedBodySize": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000
+            },
+            "decodedBodySize": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1000000000
+            }
+          }
+        }
+      ]
+    },
+    "paints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fpMs",
+        "fcpMs",
+        "windowLcp"
+      ],
+      "properties": {
+        "fpMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "fcpMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "windowLcp": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "startTimeMs",
+                "observedAtMs",
+                "renderTimeMs",
+                "loadTimeMs",
+                "size",
+                "elementKind",
+                "resourceCategory",
+                "resourceApplicable",
+                "resourceStartMs",
+                "resourceRequestStartMs",
+                "resourceResponseEndMs",
+                "timingDetailAvailable",
+                "ttfbMs",
+                "resourceLoadDelayMs",
+                "resourceLoadDurationMs",
+                "elementRenderDelayMs"
+              ],
+              "properties": {
+                "startTimeMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "observedAtMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 3600000
+                },
+                "renderTimeMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "loadTimeMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "size": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 100000000
+                },
+                "elementKind": {
+                  "enum": [
+                    "image",
+                    "video",
+                    "svg",
+                    "background-image",
+                    "text",
+                    "unavailable"
+                  ]
+                },
+                "resourceCategory": {
+                  "enum": [
+                    null,
+                    "same-origin-font",
+                    "same-origin-css",
+                    "same-origin-script",
+                    "same-origin-api",
+                    "same-origin-image",
+                    "same-origin-other",
+                    "supabase-restaurants",
+                    "supabase-other",
+                    "naver-sdk",
+                    "naver-image",
+                    "naver-other",
+                    "other",
+                    "unclassified"
+                  ]
+                },
+                "resourceApplicable": {
+                  "type": "boolean"
+                },
+                "resourceStartMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "resourceRequestStartMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "resourceResponseEndMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "timingDetailAvailable": {
+                  "type": "boolean"
+                },
+                "ttfbMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "resourceLoadDelayMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "resourceLoadDurationMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "elementRenderDelayMs": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 20000
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "longTasks": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "count",
+            "totalDurationMs",
+            "longTaskBlockingSumMs",
+            "maxDurationMs",
+            "windowStartMs",
+            "windowEndMs",
+            "crossingCutoffCount",
+            "completedEntries"
+          ],
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 250
+            },
+            "totalDurationMs": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 20000
+            },
+            "longTaskBlockingSumMs": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 20000
+            },
+            "maxDurationMs": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 20000
+            },
+            "windowStartMs": {
+              "const": 0
+            },
+            "windowEndMs": {
+              "const": 20000
+            },
+            "crossingCutoffCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 250
+            },
+            "completedEntries": {
+              "type": "array",
+              "maxItems": 250,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "startTimeMs",
+                  "durationMs"
+                ],
+                "properties": {
+                  "startTimeMs": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 20000
+                  },
+                  "durationMs": {
+                    "type": "number",
+                    "minimum": 50,
+                    "maximum": 20000
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "byCategory",
+        "overflow",
+        "completedEntriesOnly",
+        "incompleteRequestCount"
+      ],
+      "properties": {
+        "byCategory": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "maxItems": 13,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "category",
+                  "count",
+                  "completedCount",
+                  "knownTimingCount",
+                  "unknownTimingCount",
+                  "transferBytesKnown",
+                  "encodedBytesKnown",
+                  "decodedBytesKnown",
+                  "zeroTransferKnownCount",
+                  "networkTransferKnownCount",
+                  "totalDurationMs",
+                  "firstStartMs",
+                  "lastResponseEndMs"
+                ],
+                "properties": {
+                  "category": {
+                    "enum": [
+                      "same-origin-font",
+                      "same-origin-css",
+                      "same-origin-script",
+                      "same-origin-api",
+                      "same-origin-image",
+                      "same-origin-other",
+                      "supabase-restaurants",
+                      "supabase-other",
+                      "naver-sdk",
+                      "naver-image",
+                      "naver-other",
+                      "other",
+                      "unclassified"
+                    ]
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2000
+                  },
+                  "completedCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2000
+                  },
+                  "knownTimingCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2000
+                  },
+                  "unknownTimingCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2000
+                  },
+                  "transferBytesKnown": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10000000000
+                  },
+                  "encodedBytesKnown": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10000000000
+                  },
+                  "decodedBytesKnown": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10000000000
+                  },
+                  "zeroTransferKnownCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2000
+                  },
+                  "networkTransferKnownCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2000
+                  },
+                  "totalDurationMs": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 40000000
+                  },
+                  "firstStartMs": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 20000
+                  },
+                  "lastResponseEndMs": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 20000
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "overflow": {
+          "type": "boolean"
+        },
+        "completedEntriesOnly": {
+          "const": true
+        },
+        "incompleteRequestCount": {
+          "type": "null"
+        }
+      }
+    },
+    "milestones": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "homeClientCommitted",
+        "viewportResolved",
+        "dataQueryStarted",
+        "dataFetchCompleted",
+        "dataMergeCompleted",
+        "dataReady",
+        "dataError",
+        "naverSdkRequested",
+        "naverSdkReady",
+        "naverSdkError",
+        "mapConstructionStarted",
+        "mapConstructed",
+        "mapConstructionError",
+        "clusterIndexStarted",
+        "clusterIndexReady",
+        "controlsWrapperMounted",
+        "mobileControlsMounted",
+        "desktopPanelSettled",
+        "controlsReady",
+        "mapVisible",
+        "desktopPanelReady",
+        "initialSkeletonHidden"
+      ],
+      "properties": {
+        "homeClientCommitted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "viewportResolved": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "dataQueryStarted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "dataFetchCompleted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "dataMergeCompleted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "dataReady": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "dataError": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "naverSdkRequested": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "naverSdkReady": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "naverSdkError": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "mapConstructionStarted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "mapConstructed": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "mapConstructionError": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "clusterIndexStarted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "clusterIndexReady": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "controlsWrapperMounted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "mobileControlsMounted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "desktopPanelSettled": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "controlsReady": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "mapVisible": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "desktopPanelReady": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "initialSkeletonHidden": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        }
+      }
+    },
+    "milestoneCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fetchedRows",
+        "restaurantCount",
+        "clusterInputCount"
+      ],
+      "properties": {
+        "fetchedRows": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          ]
+        },
+        "restaurantCount": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          ]
+        },
+        "clusterInputCount": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          ]
+        }
+      }
+    },
+    "fontsReadyMs": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 20000
+    },
+    "fontReadinessBasis": {
+      "const": "initial-document-fonts-ready-promise"
+    },
+    "completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observedAtMs",
+        "controlsReady",
+        "mapVisible",
+        "visibleTileCount",
+        "visibleMarkerCount",
+        "desktopPanelReady",
+        "initialSkeletonVisible",
+        "desktopPanelAlertCount",
+        "desktopPopularItemCount",
+        "desktopLatestItemCount",
+        "dataReady",
+        "mapConstructed",
+        "diagnosticErrors"
+      ],
+      "properties": {
+        "observedAtMs": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "controlsReady": {
+          "type": "boolean"
+        },
+        "mapVisible": {
+          "type": "boolean"
+        },
+        "visibleTileCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "visibleMarkerCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "desktopPanelReady": {
+          "type": "boolean"
+        },
+        "initialSkeletonVisible": {
+          "type": "boolean"
+        },
+        "desktopPanelAlertCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "desktopPopularItemCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "desktopLatestItemCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "dataReady": {
+          "type": "boolean"
+        },
+        "mapConstructed": {
+          "type": "boolean"
+        },
+        "diagnosticErrors": {
+          "type": "array",
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "OBSERVER_REGISTRATION_FAILED",
+              "FONT_READINESS_FAILED",
+              "HOME_DATA_ERROR",
+              "NAVER_SDK_ERROR",
+              "MAP_CONSTRUCTION_ERROR"
+            ]
+          }
+        }
+      }
+    },
+    "legacyTtiMs": {
+      "type": "null"
+    },
+    "legacyTtiStatus": {
+      "const": "not-collected"
+    }
+  }
+}

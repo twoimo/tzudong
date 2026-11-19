@@ -158,7 +158,6 @@ await context.addInitScript((fixtureOwner: string) => {
 await context.route('**/*', (route) => { if (new URL(route.request().url()).origin === origin) return route.continue(); externalRequests++; return route.abort(); });
 const page = await context.newPage(); page.setDefaultTimeout(12_000); page.on('pageerror', (error) => errors.push(error.message.slice(0, 200)));
 async function generate() {
-  await page.getByRole('button', { name: '유튜브 썸네일 채팅 설정 열기' }).click();
   await page.locator('[data-thumbnail-gemini-generate]').click();
   await expect(page.locator('[data-thumbnail-gemini-status]')).toBeVisible();
   await expect.poll(() => posts).toBeGreaterThan(0);

@@ -5,6 +5,7 @@ import {
   StoryboardProductionError, storyboardDraftSchema, storyboardProvenanceSchema,
 } from './production-contract';
 import { isAllowedStoryboardGeminiWorkerModel } from './gemini-models';
+import { isAllowedStoryboardOpenAIWorkerModel } from './openai-models';
 
 if (typeof window !== 'undefined') throw new Error('Storyboard worker authentication is server-only.');
 
@@ -12,8 +13,8 @@ export const productionUuid = z.uuid().transform((value) => value.toLowerCase())
 export const productionModelSchema = z.object({
   id: z.string().min(1).max(200),
   // Legacy worker catalog rows remain decodable for diagnostics; the heartbeat schema below
-  // admits execution only when every descriptor matches the fixed Gemini policy.
-  owned_by: z.enum(['gemini-api', 'mlx-serve']).optional(),
+  // admits only fixed, provider-owned Gemini or OpenAI descriptors for execution.
+  owned_by: z.enum(['gemini-api', 'openai-api', 'mlx-serve']).optional(),
   capabilities: z.array(z.string().min(1).max(80)).max(32),
   loaded: z.boolean(),
   bytes_on_disk: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
@@ -22,8 +23,8 @@ export const productionModelSchema = z.object({
 export const productionModelsSchema = z.array(productionModelSchema).max(64)
   .refine((models) => new Set(models.map((model) => model.id)).size === models.length);
 export const storyboardGeminiHeartbeatModelsSchema = productionModelsSchema.refine(
-  (models) => models.every(isAllowedStoryboardGeminiWorkerModel),
-  { message: 'invalid_storyboard_gemini_worker_models' },
+  (models) => models.length > 0 && models.every((model) => isAllowedStoryboardGeminiWorkerModel(model) || isAllowedStoryboardOpenAIWorkerModel(model)),
+  { message: 'invalid_storyboard_worker_models' },
 );
 export type ProductionModel = z.infer<typeof productionModelSchema>;
 

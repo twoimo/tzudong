@@ -6,11 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useLeaderboard, type LeaderboardUser } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
 import { useHydration } from "@/hooks/useHydration";
-
-interface PresencePayload {
-    user_id?: string;
-    presence_ref?: string;
-}
+import { startOnlinePresence } from "@/lib/online-presence";
 
 const RankingWidgetComponent = () => {
     const { user } = useAuth();
@@ -26,34 +22,11 @@ const RankingWidgetComponent = () => {
         return (leaderboardData as LeaderboardUser[]).find((leaderboardUser) => leaderboardUser.id === user.id)?.rank ?? null;
     }, [user, leaderboardData]);
 
-    // Real-time online users
-    useEffect(() => {
-        const channel = supabase.channel('online-users')
-            .on('presence', { event: 'sync' }, () => {
-                const state = channel.presenceState();
-                // 고유 user_id만 카운트 (동일 유저의 여러 탭/브라우저를 1명으로 계산)
-                const uniqueUserIds = new Set<string>();
-                Object.entries(state).forEach(([presenceKey, presences]) => {
-                    (presences as PresencePayload[]).forEach((presence) => {
-                        // 로그인 사용자는 user_id로, 비로그인은 presence_ref로 식별
-                        uniqueUserIds.add(presence.user_id || presence.presence_ref || presenceKey);
-                    });
-                });
-                setOnlineUsers(uniqueUserIds.size);
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await channel.track({
-                        user_id: user?.id,
-                        online_at: new Date().toISOString(),
-                    });
-                }
-            });
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user]);
+    useEffect(() => startOnlinePresence({
+        client: supabase,
+        channelName: 'online-users',
+        onCount: setOnlineUsers,
+    }), []);
 
     // Get rank color (메모이제이션)
     const rankColorClass = useMemo(() => {

@@ -112,6 +112,57 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
       .toEqual(['claim', 'draft', 'image', 'image', 'image', 'image', 'image', 'finish']);
     expect(f.generated).toEqual(['scene 1', 'scene 2', 'scene 3', 'scene 4', 'scene 5']);
   });
+  test('single-provider worker does not claim a mixed-provider job without both selected models', async () => {
+    const value = job();
+    value.request = storyboardProductionRequestSchema.parse({ ...value.request, providers: { externalAI: true,
+      text: { id: 'openai-api', model: 'gpt-5.6-luna' }, image: { id: 'gemini-api', model: 'gemini-3.1-flash-image' } } });
+    const f = fixture(value);
+    const openai = { async models() { return [
+      { id: 'gpt-5.6-luna', owned_by: 'openai-api' as const, capabilities: ['chat'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      { id: 'gpt-image-2.6-flare', owned_by: 'openai-api' as const, capabilities: ['image'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+    ]; }, async draft() { throw new Error('must_not_claim'); }, async image() { throw new Error('must_not_claim'); } };
+    expect(await new OutboundStoryboardWorker({ api: f.api, openai, admitMemory: f.admitMemory }).runOnce()).toBe('idle');
+    expect(f.claimedJobs()).toBe(0); expect(f.calls.some(call => call.action === 'draft')).toBe(false);
+  });
+  test('dual-provider worker completes a mixed OpenAI text and Gemini image job', async () => {
+    const value = job();
+    value.request = storyboardProductionRequestSchema.parse({ ...value.request, providers: { externalAI: true,
+      text: { id: 'openai-api', model: 'gpt-5.6-luna' }, image: { id: 'gemini-api', model: 'gemini-3.1-flash-image' } } });
+    const f = fixture(value); const openai = {
+      async models() { return [
+        { id: 'gpt-5.6-luna', owned_by: 'openai-api' as const, capabilities: ['chat'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+        { id: 'gpt-image-2.6-flare', owned_by: 'openai-api' as const, capabilities: ['image'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      ]; },
+      async draft() { return { draft: draft(), provenance: { providerId: 'openai-api' as const, model: 'gpt-5.6-luna', verification: 'official-api' as const,
+        generatedAt: new Date().toISOString(), requestId: randomUUID(), responseId: 'resp_mixed', responseModel: 'gpt-5.6-luna', modelEvidence: 'response' as const } }; },
+      async image() { throw new Error('wrong_provider'); },
+    };
+    expect(await new OutboundStoryboardWorker({ api: f.api, gemini: f.gemini, openai, admitMemory: f.admitMemory }).runOnce()).toBe('completed');
+    expect(f.claimedJobs()).toBe(1); expect(f.calls.find(call => call.action === 'draft')).toMatchObject({ provenance: { providerId: 'openai-api' } });
+    expect(f.generated).toEqual(['scene 1','scene 2','scene 3','scene 4','scene 5']);
+  });
+  test('OpenAI worker claims only its account-available models and completes durable text/image stages', async () => {
+    const value = job();
+    value.request = storyboardProductionRequestSchema.parse({ ...value.request, providers: { externalAI: true,
+      text: { id: 'openai-api', model: 'gpt-5.6-luna' }, image: { id: 'openai-api', model: 'gpt-image-2.6-flare' } } });
+    const f = fixture(value); const generated: string[] = [];
+    const openai = {
+      async models() { return [
+        { id: 'gpt-5.6-luna', owned_by: 'openai-api' as const, capabilities: ['chat'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+        { id: 'gpt-image-2.6-flare', owned_by: 'openai-api' as const, capabilities: ['image'], loaded: false, bytes_on_disk: 0, bytes_resident: 0 },
+      ]; },
+      async draft() { return { draft: draft(), provenance: { providerId: 'openai-api' as const, model: 'gpt-5.6-luna', verification: 'official-api' as const,
+        generatedAt: new Date().toISOString(), requestId: randomUUID(), responseId: 'resp_test', responseModel: 'gpt-5.6-luna', modelEvidence: 'response' as const,
+        usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } } }; },
+      async image(_request: unknown, prompt: string) { generated.push(prompt); return { bytes: await fixturePixels, provenance: { providerId: 'openai-api' as const, model: 'gpt-image-2.6-flare', verification: 'official-api' as const,
+        generatedAt: new Date().toISOString(), requestId: randomUUID(), responseId: null, responseModel: null,
+        modelEvidence: 'installed-catalog-and-request' as const, usage: { inputTokens: 5, outputTokens: 272, totalTokens: 277 } } }; },
+    };
+    expect(await new OutboundStoryboardWorker({ api: f.api, openai, admitMemory: f.admitMemory }).runOnce()).toBe('completed');
+    expect(f.claimedJobs()).toBe(1); expect(f.calls.find(call => call.action === 'draft')).toMatchObject({ provenance: { providerId: 'openai-api', responseId: 'resp_test' } });
+    expect(generated).toEqual(['scene 1','scene 2','scene 3','scene 4','scene 5']);
+    expect(f.calls.filter(call => call.action === 'image')).toHaveLength(5); expect(f.calls.at(-1)).toMatchObject({ action: 'finish' });
+  });
   test('an empty queue does not invoke any generation', async () => {
     const f = fixture(null);
     expect(await new OutboundStoryboardWorker(f).runOnce()).toBe('idle');

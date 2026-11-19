@@ -25,14 +25,15 @@ export function UserProfileProgressiveSkeleton({
             aria-live="polite"
             aria-busy="true"
             aria-label={label}
-            className="flex h-full min-h-[calc(100vh-4rem)] flex-col bg-background"
+            className="flex h-full min-h-0 flex-col overflow-y-auto bg-background"
+            data-user-profile-scroll="true"
             data-user-profile-panel-skeleton="true"
             data-user-profile-route-skeleton="true"
         >
 
             {header}
 
-            <div className="border-b border-border/70 bg-background p-4">
+            <div className="shrink-0 border-b border-border/70 bg-background p-4">
 
                 <div className="flex items-center justify-between gap-3">
 
@@ -107,7 +108,7 @@ export function UserProfileProgressiveSkeleton({
 
             </div>
 
-            <div className="border-b border-border/70 bg-background px-3 py-2">
+            <div className="shrink-0 border-b border-border/70 bg-background px-3 py-2">
 
                 <LoadingSurface label={label}>
 

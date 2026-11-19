@@ -41,6 +41,13 @@ jobs:
           bun-version: '1.4.0'
       # These suites use Bun/Node built-ins and repository-local modules only.
       # Keep every governance check without installing the web runtime graph.
+      # This required job remains available when Workers Builds minutes run out.
+      - name: Verify benchmark scope and fail-closed source identity
+        working-directory: .
+        run: node --test .github/scripts/classify-ci-benchmark.test.mjs
+      - name: Verify promotion path policy
+        working-directory: .
+        run: node --test .github/scripts/verify-promotion-path.test.mjs
       - name: Verify Cloudflare identity, timeout, and deployment failure paths
         working-directory: .
         run: node --test .github/scripts/run-cloudflare-governance.test.mjs .github/scripts/deploy-cloudflare-governance.test.mjs

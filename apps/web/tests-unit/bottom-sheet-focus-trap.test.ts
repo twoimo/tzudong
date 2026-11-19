@@ -138,6 +138,19 @@ describe('bottom sheet strict modal pointer blocking', () => {
             shouldBlockModalOutsidePointerDown(alertDialogTarget as unknown as Node, primary, [])
         ).toBe(false);
     });
+    test('lets the nested dialog backdrop dismiss its own dialog', () => {
+        const primary = createContainer('sheet', ['sheet-button']);
+        const overlayTarget = {
+            id: 'dialog-backdrop',
+            closest: (selector: string) => selector.includes('[data-slot="dialog-overlay"]')
+                ? overlayTarget
+                : null,
+        };
+
+        expect(
+            shouldBlockModalOutsidePointerDown(overlayTarget as unknown as Node, primary, [])
+        ).toBe(false);
+    });
 });
 
 describe('bottom sheet modal sibling hiding', () => {

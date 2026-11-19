@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
+import '../legal-globals.css';
 import Link from 'next/link';
 import { pageHeadingTitleClass } from '@/components/layout/page-heading-styles';
 
+import { HydratedSupportLink } from '@/components/legal/HydratedContactEmail';
 import { PrivacyPolicyContent } from '@/components/legal/PrivacyPolicyContent';
 import { buildPublicMetadata } from '@/lib/seo';
 import { siteConfig } from '@/lib/site-config';
@@ -32,9 +34,11 @@ export default function PrivacyPage() {
             <Link className="rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted" href={siteConfig.legal.dataDeletionPath}>
               데이터 삭제 요청 안내
             </Link>
-            <a className="rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted" href={`mailto:${siteConfig.contact.email}`}>
-              문의하기
-            </a>
+            <HydratedSupportLink
+              className="rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted"
+              label="contact"
+              subject={siteConfig.contact.mailtoSubject}
+            />
           </div>
         </header>
         <PrivacyPolicyContent />

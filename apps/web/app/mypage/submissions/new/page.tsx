@@ -9,8 +9,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+import { formatKoreanDate, formatKoreanDateTime } from "@/lib/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +30,7 @@ import {
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
 import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
+import { MyPageSubmissionGuide } from "@/components/mypage/MyPageSubmissionGuide";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -44,6 +44,7 @@ import {
   myPageListCardClass,
   myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
+import { getResponseErrorMessage, isRecord, parseValidatedRows } from "@/lib/validation/records";
 
 type SubmissionStatus =
   | "pending"
@@ -111,29 +112,6 @@ const SUBMISSION_ITEM_SELECT = [
 ].join(", ");
 
 type SubmissionRow = Omit<Submission, "items">;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function parseValidatedRows<Row>(
-  values: readonly unknown[],
-  isRow: (value: unknown) => value is Row,
-): Row[] {
-  const rows: Row[] = [];
-
-  for (const value of values) {
-    if (isRow(value)) {
-      rows.push(value);
-    }
-  }
-
-  return rows;
-}
-
-function getResponseErrorMessage(value: unknown): string | null {
-  return isRecord(value) && typeof value.error === "string" ? value.error : null;
-}
-
 
 function isNullableString(value: unknown): value is string | null {
   return typeof value === "string" || value === null;
@@ -524,16 +502,12 @@ export default function NewSubmissionsPage() {
         <div className={myPageFooterMetaClass}>
           <span>
             제보일:{" "}
-            {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", {
-              locale: ko,
-            })}
+            {formatKoreanDateTime(new Date(submission.created_at))}
           </span>
           {submission.reviewed_at && (
             <span>
               검토일:{" "}
-              {format(new Date(submission.reviewed_at), "yyyy년 M월 d일", {
-                locale: ko,
-              })}
+              {formatKoreanDate(new Date(submission.reviewed_at))}
             </span>
           )}
         </div>
@@ -586,32 +560,29 @@ export default function NewSubmissionsPage() {
     </Card>
   );
 
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="신규 맛집 제보 내역을 불러오는 중…" />;
-  }
-
-  if (isError) {
-    return (
-      <MyPageErrorState
-        onRetry={() => void refetch()}
-        retrying={isFetching}
-        title="신규 맛집 제보를 불러오지 못했습니다"
-        description="제보 내역을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
-    );
-  }
 
   return (
     <MyPageSectionFrame
       icon={PlusCircle}
       eyebrow="제보 관리"
-      title="신규 맛집 제보"
-      description="새로 제보한 맛집의 처리 상태와 영상 항목을 확인합니다."
-      countLabel={`총 ${submissions.length}건`}
+      title="신규 맛집 제보 내역"
+      description="제보한 맛집의 검토 결과와 영상 정보를 확인하세요."
+      countLabel={isLoading || (isError && submissions.length === 0) ? undefined : `총 ${submissions.length}건`}
       data-section="submissions-new"
     >
-      {submissions.length === 0 ? (
-        <MyPageEmptyState
+      <MyPageSubmissionGuide kind="new" userId={user?.id ?? null} />
+      {isError && (
+      <MyPageErrorState
+        onRetry={() => void refetch()}
+        retrying={isFetching}
+        title="신규 맛집 제보 내역을 불러오지 못했습니다"
+        description="제보 내역을 확인할 수 없습니다. 다시 시도하거나 지도로 돌아가 다른 작업을 이어가세요."
+      />
+      )}
+      {isLoading ? (
+        <MyPageSectionSkeleton label="신규 맛집 제보 내역을 불러오는 중…" />
+      ) : submissions.length === 0 ? (
+        !isError && <MyPageEmptyState
           icon={PlusCircle}
           title="아직 신규 맛집 제보 내역이 없습니다"
           description="새로운 맛집을 제보하면 이곳에서 검토 상태를 확인할 수 있습니다."

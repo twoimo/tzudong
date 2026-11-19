@@ -1,7 +1,9 @@
-import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import type { ThumbnailGenerationMode, ThumbnailProviderId } from './types';
+import { isRecord } from '@/lib/validation/records';
 
 export const THUMBNAIL_RELEASE_CANDIDATE_MANIFEST_ENV = 'THUMBNAIL_RELEASE_CANDIDATE_MANIFEST';
 export const THUMBNAIL_RELEASE_PROMOTION_ROOT_ENV = 'THUMBNAIL_RELEASE_PROMOTION_ROOT';
@@ -126,10 +128,6 @@ type PromotionRequest = {
   sourceManifestId?: string;
   promotedBy?: string;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
 
 function toString(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -562,7 +560,13 @@ export async function promoteThumbnailReleaseCandidate(
     sha256: candidate.sha256,
   };
   await mkdir(promotionRoot, { recursive: true });
-  await writeFile(join(promotionRoot, 'current.json'), `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  const temporaryPath = join(promotionRoot, `.current.json.${process.pid}.${randomBytes(8).toString('hex')}.tmp`);
+  try {
+    await writeFile(temporaryPath, `${JSON.stringify(state, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
+    await rename(temporaryPath, join(promotionRoot, 'current.json'));
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
 
   return {
     ...payload,

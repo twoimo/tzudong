@@ -91,8 +91,16 @@ describe('repo design contract source', () => {
     });
     expect(inventory.public_or_account_pages).toHaveLength(23);
     expect(inventory.admin_legacy_or_canonical_pages).toHaveLength(5);
-    expect(publicContract).toContain(
-      'pins all five CSS owner-to-importer mappings',
-    );
+    const cssOwnershipContract = publicContract.match(
+      /test\('pins CSS owners to their shells, deferred surfaces and public documents', \(\) => \{([\s\S]*?)\n  \}\);/,
+    )?.[1];
+    expect(cssOwnershipContract).toBeDefined();
+    // Keep the inventory contract responsible for both the original shell
+    // mappings and the newly owned deferred/document stylesheets.
+    expect(cssOwnershipContract).toContain('Object.entries(CSS_IMPORTERS)');
+    expect(cssOwnershipContract).toContain('INTERACTIVE_CSS_IMPORTERS');
+    expect(cssOwnershipContract).toContain("['app/privacy/page.tsx', 'app/data-deletion/page.tsx']");
+    expect(cssOwnershipContract).toContain("expect(shellSources).not.toContain('home-interactive-globals.css')");
+    expect(cssOwnershipContract).toContain("expect(shellSources).not.toContain('legal-globals.css')");
   });
 });
