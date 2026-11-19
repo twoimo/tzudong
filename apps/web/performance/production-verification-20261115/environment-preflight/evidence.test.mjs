@@ -222,9 +222,9 @@ test('real fixed public source digests survive the unchanged object privacy boun
   const sources = await readSourceDigests();
   const contractBytes = await readFile(new URL('../../../../../.github/chrome-for-testing.v1.json', import.meta.url));
   const contractHex = sha256(contractBytes);
-  assert.equal(contractHex, '81f9db2648405ba5ac43d0816739b0cde2901fbfc3a25955444d676810cf038c');
-  assert.throws(() => assertPrivacySafeText(contractHex), error => error.code === 'PRIVACY_UNSAFE_VALUE');
-  assert.throws(() => assertPrivacySafe({ sourceHashes: { browserContract: contractHex } }), error => error.code === 'PRIVACY_UNSAFE_VALUE');
+  assert.equal(contractHex, 'e53ca39fbb8eb91634ec4e4bd9b56a694afaf47889c020111f9d8526b189d40e');
+  assert.doesNotThrow(() => assertPrivacySafeText(contractHex));
+  assert.doesNotThrow(() => assertPrivacySafe({ sourceHashes: { browserContract: contractHex } }));
   assert.throws(() => assertPrivacySafe({ message: 'example.user@example.test' }), error => error.code === 'PRIVACY_UNSAFE_VALUE');
   assert.equal(Buffer.from(sources.browserContract).toString('hex'), contractHex);
   assert.equal(Buffer.from(sources.fixture).toString('hex'), '4a6a605bf2d535b77554f793af3787aaa1b79bb71e27b5d6461838a7f3115771');

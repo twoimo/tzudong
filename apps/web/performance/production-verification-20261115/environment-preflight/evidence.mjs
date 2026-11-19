@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { assertPrivacySafe } from '../../../lib/privacy/sanitize.ts';
 
-export const PINS = Object.freeze({ nodeMajor: 24, chrome: '156.0.8078.4', playwright: '1.64.1', lighthouse: '13.5.0' });
+export const PINS = Object.freeze({ nodeMajor: 24, chrome: '159.0.8154.6', playwright: '1.65.1', lighthouse: '13.5.0' });
 export const PROFILES = Object.freeze([
   { id: 'mobile', width: 390, height: 844, dpr: 2 },
   { id: 'tablet', width: 820, height: 1180, dpr: 2 },
