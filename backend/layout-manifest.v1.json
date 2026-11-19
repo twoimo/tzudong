@@ -128,6 +128,37 @@
       "vcsTracked": true
     },
     {
+      "path": ".claude",
+      "depth": 1,
+      "ownership": "Claude Code 프로젝트 스킬 정의 소유 경계",
+      "allowedContents": [
+        "Claude Code가 불러오는 프로젝트 전용 스킬"
+      ],
+      "forbiddenContents": [
+        "제품 런타임 소스",
+        "시크릿 값 리터럴",
+        "로컬 에이전트 상태와 worktree"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": ".claude/skills",
+      "depth": 2,
+      "ownership": "저장소 범위 Claude Code 스킬",
+      "allowedContents": [
+        "저장소 전용 스킬 지침(SKILL.md)과 기능 검증 맵",
+        "스킬 본문이 호출 방법을 보여 주는 로컬 검증 보조 스크립트"
+      ],
+      "forbiddenContents": [
+        "제품 런타임 소스",
+        "시크릿 값 리터럴",
+        "검증 증거와 세션 파일"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": ".taste-skill",
       "depth": 1,
       "ownership": "taste-skill이 프로젝트별로 생성한 선택된 아트 방향 원장",

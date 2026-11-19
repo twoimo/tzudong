@@ -266,7 +266,7 @@ jobs:
           python -m pip install --require-hashes --only-binary=:all: -r backend/supabase/scripts/g037-hosted-closure-requirements.txt
           export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
           test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
-          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests backend.supabase.tests.test_g037_readonly_transaction_postgres backend.supabase.tests.test_release_readiness_observation -v
+          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.pipeline_control.test_store_parity_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests backend.supabase.tests.test_g037_readonly_transaction_postgres backend.supabase.tests.test_release_readiness_observation -v
 
       - name: Verify local event delivery and recovery
         env:
@@ -312,6 +312,10 @@ jobs:
           backend.bin.tests.test_tooling_gate_unittest
           backend.pipeline_control.test_tag_fixity_pbt
           backend.pipeline_control.test_tooling_selection_unittest
+          backend.pipeline_control.test_ledger_integrity_pbt
+          backend.pipeline_control.test_perf_noise_pbt
+          backend.pipeline_control.test_perf_path_pbt
+          backend.pipeline_control.test_performance_evidence_unittest
 
       - name: Verify recovered local-foundation contracts
         run: >-
@@ -325,6 +329,7 @@ jobs:
           backend.pipeline_control.test_run_summary_unittest
           backend.pipeline_control.test_step_composition_pbt
           backend.pipeline_control.tests.test_es_index
+          backend.pipeline_control.tests.test_container_runtime
 
       - name: Verify current-input phase gates
         run: >-
@@ -377,6 +382,7 @@ jobs:
           backend.pipeline_control.test_publish_readback_pbt
           backend.pipeline_control.test_publish_schedule_unittest
           backend.pipeline_control.test_publish_worker_unittest
+          backend.pipeline_control.tests.test_batch_upsert
           backend.pipeline_control.tests.test_batch_upsert_publication_allowlist
           backend.supabase.tests.test_local_compose_inputs
 

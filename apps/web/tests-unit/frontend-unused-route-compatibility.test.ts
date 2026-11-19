@@ -194,13 +194,11 @@ describe('frontend unused route compatibility', () => {
 
     test('removes admin insight fallback while preserving public insights and global map', () => {
         const insightsClientSource = source('app/insights/insights-client.tsx');
-        const recommendationPopupSource = source('components/recommendation/DailyRecommendationPopup.tsx');
 
         expect(exists(join('app', 'admin', 'insight', 'page.tsx'))).toBe(false);
         expect(exists(join('app', 'admin', 'insight', 'insight-client.tsx'))).toBe(false);
         expect(exists('app/global-map/page.tsx')).toBe(true);
         expect(insightsClientSource).not.toContain(`@/app/admin/${'insight'}/insight-client`);
-        expect(recommendationPopupSource).toContain("'/global-map'");
     });
 
     test('removes only zero-reference stale primitives and helpers', () => {

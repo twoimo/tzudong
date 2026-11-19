@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 from collections import Counter
 from pathlib import Path, PurePosixPath
 
@@ -278,6 +279,37 @@ def build(base: str, source: str) -> dict[str, object]:
     }
 
 
+def _drift(committed_text: str | None, document: dict[str, object]) -> list[str]:
+    try:
+        committed = json.loads(committed_text) if committed_text is not None else None
+    except json.JSONDecodeError:
+        committed = None
+    if not isinstance(committed, dict):
+        return ["manifest file is missing or not a JSON object"]
+    lines = [
+        f"top-level field {key}"
+        for key in sorted(set(document) | set(committed))
+        if key != "entries" and document.get(key) != committed.get(key)
+    ]
+    committed_entries = {
+        (row.get("sourceStatus"), row.get("basePath"), row.get("sourcePath")): row
+        for row in committed.get("entries") or []
+        if isinstance(row, dict)
+    }
+    for entry in document["entries"]:
+        key = (entry["sourceStatus"], entry["basePath"], entry["sourcePath"])
+        old = committed_entries.pop(key, None)
+        if old is None:
+            lines.append(f"{entry['sourcePath']}: entry missing from the manifest")
+        elif old != entry:
+            fields = sorted(
+                name for name in set(entry) | set(old) if entry.get(name) != old.get(name)
+            )
+            lines.append(f"{entry['sourcePath']}: {', '.join(fields)}")
+    lines.extend(f"{key[2]}: entry no longer in the source delta" for key in committed_entries)
+    return lines
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default=DEFAULT_BASE)
@@ -288,8 +320,16 @@ def main() -> int:
     document = build(args.base, args.source)
     rendered = json.dumps(document, ensure_ascii=False, indent=2) + "\n"
     if args.check:
-        if not args.output.is_file() or args.output.read_text(encoding="utf-8") != rendered:
+        committed = args.output.read_text(encoding="utf-8") if args.output.is_file() else None
+        if committed != rendered:
             print("platform_modernization_reconciliation_stale")
+            for line in _drift(committed, document) or ["formatting differs"]:
+                print(f"  {line}")
+            regenerate = [arg for arg in sys.argv[1:] if arg != "--check"]
+            print(
+                "Regenerate and commit the manifest: python3 "
+                + " ".join([Path(__file__).resolve().relative_to(ROOT).as_posix(), *regenerate])
+            )
             return 1
         print("platform_modernization_reconciliation_current")
         return 0

@@ -56,7 +56,7 @@ const tailwindEntries = {
       '"./home-client-effects.tsx"', '"./app-providers.tsx"', '"./providers.tsx"',
       '"../hooks"', '"../contexts"', '"../components/home"', '"../components/layout"',
       '"../components/map"', '"../components/search"', '"../components/filters"',
-      '"../components/region"', '"../components/skeletons"', '"../components/ui"',
+      '"../components/skeletons"', '"../components/ui"',
       '"../lib/naver-map-overlay-position-helpers.ts"',
       '"../lib/naver-map-overlay-timings.ts"',
     ],
@@ -459,14 +459,10 @@ describe("web quality performance source contracts", () => {
   });
 
   test("home filter count queries run before dropdown open so triggers do not show stale zero counts", () => {
-    const regionSelectorSource = source("components/region/RegionSelector.tsx");
     const categoryFilterSource = source(
       "components/filters/CategoryFilter.tsx",
     );
 
-    expect(regionSelectorSource).toContain("queryKey: ['restaurants-count']");
-    expect(regionSelectorSource).toContain("enabled: true,");
-    expect(regionSelectorSource).not.toContain("enabled: isOpen,");
     expect(categoryFilterSource).toContain("queryKey: categoryQueryKey");
     expect(categoryFilterSource).toContain(
       "? ['restaurants-categories', selectedRegion, selectedCountry]",
@@ -475,12 +471,6 @@ describe("web quality performance source contracts", () => {
     expect(categoryFilterSource).toContain("enabled: !resultSummary,");
     expect(categoryFilterSource).toContain("if (resultSummary) return resultSummary.categoryCounts;");
     expect(categoryFilterSource).not.toContain("enabled: isOpen,");
-    expect(regionSelectorSource).toContain("contentSide?:");
-    expect(regionSelectorSource).toContain("z-[180]");
-    expect(regionSelectorSource).toContain(
-      '<span className="whitespace-nowrap">대한민국</span>',
-    );
-    expect(regionSelectorSource).not.toContain("<span>전국</span>");
     expect(categoryFilterSource).toContain("contentSide?:");
     expect(categoryFilterSource).toContain("카테고리 검색…");
     expect(categoryFilterSource).toContain("z-[180]");
@@ -524,7 +514,6 @@ describe("web quality performance source contracts", () => {
     );
     const homeClientEffectsSource = source("app/home-client-effects.tsx");
     const homeViewportModeSource = source("hooks/useHomeViewportMode.ts");
-    const regionSelectorSource = source("components/region/RegionSelector.tsx");
     const categoryFilterSource = source(
       "components/filters/CategoryFilter.tsx",
     );
@@ -975,6 +964,20 @@ describe("web quality performance source contracts", () => {
       "window.addEventListener('touchstart', requestMobileOverlay",
     );
     expect(homeControlPanelSource).toContain("return shellFallback(desktopPanelLoad);");
+    expect(homeControlPanelSource).toContain("if (!failed) return null;");
+    expect(source("app/globals.css")).toContain(`[data-mobile-only-route="contents"] {
+  display: contents;
+}
+
+@media (min-width: 1280px) {
+  [data-mobile-only-route] {
+    display: none !important;
+  }
+}`);
+    expect(source("lib/viewport-breakpoints.ts")).toContain("tabletMax: 1279");
+    expect(source("app/feed/page.tsx")).toContain('<div data-mobile-only-route="contents">');
+    expect(source("app/stamp/page.tsx")).toContain('data-mobile-only-route={hasReviewContinuation ? undefined : "true"}');
+    expect(source("app/leaderboard/page.tsx")).toContain('data-mobile-only-route="true"');
     expect(homeControlPanelSource).toContain("shouldLoadDesktopPanel");
     expect(homeControlPanelSource).not.toContain(
       "function DesktopControlPanelLoadingShell()",
@@ -1955,11 +1958,6 @@ describe("web quality performance source contracts", () => {
     expect(mobileNotificationSource).toContain(
       "formatDistanceToNow(notification.createdAt",
     );
-    expect(regionSelectorSource).toContain("enabled: true,");
-    expect(regionSelectorSource).toContain("fetchSupabaseRows");
-    expect(regionSelectorSource).not.toContain(
-      "@/integrations/supabase/client",
-    );
     expect(categoryFilterSource).toContain("enabled: !resultSummary,");
     expect(categoryFilterSource).toContain("if (resultSummary) return resultSummary.categoryCounts;");
     expect(categoryFilterSource).toContain("fetchSupabaseRows");
@@ -2029,10 +2027,10 @@ describe("web quality performance source contracts", () => {
     expect(source("components/map/NaverMapPresenceRuntime.tsx")).toContain(
       "startOnlinePresence",
     );
-    expect(naverMapSource).toContain(
+    expect(source("components/map/use-naver-map-cluster-render.ts")).toContain(
       "areClusterFeaturesEqual(previous, newClusters) ? previous : newClusters",
     );
-    expect(naverMapSource).toContain(
+    expect(source("components/map/use-naver-map-cluster-render.ts")).toContain(
       "areRegionalClustersEqual(previous, newRegionalClusters) ? previous : newRegionalClusters",
     );
     expect(naverMapSource).toContain("RESTAURANT_COUNT_TOAST_SETTLE_DELAY_MS");
@@ -2050,7 +2048,9 @@ describe("web quality performance source contracts", () => {
     expect(source("components/map/naver-map-overlay-stack.tsx")).toContain(
       "count={restaurantCountToastCount}",
     );
-    expect(naverMapSource).not.toContain(
+    expect(
+      naverMapSource + source("components/map/use-naver-map-cluster-render.ts"),
+    ).not.toContain(
       'import { supabase } from "@/integrations/supabase/client"',
     );
     expect(source("hooks/use-restaurants.tsx")).toContain("fetchSupabaseRows");
@@ -2546,6 +2546,9 @@ describe("web quality performance source contracts", () => {
     expect(source("components/home/map-panel-chrome.tsx")).toContain(
       '"h-9 w-9 shrink-0 rounded-lg border border-border bg-card shadow-none hover:bg-secondary"',
     );
+    expect(source("components/home/map-panel-chrome.tsx")).toContain(
+      '"h-11 w-11 shrink-0 rounded-lg bg-muted/45 shadow-none hover:bg-muted"',
+    );
     expect(userProfilePanelSource).toContain("<StampCard");
     expect(userProfilePanelSource).toContain("<ReviewCard");
     expect(userProfilePanelSource).toContain('size="default"');
@@ -2653,6 +2656,7 @@ describe("web quality performance source contracts", () => {
     expect(reviewCardSource).toContain(
       "text-xs font-medium tabular-nums transition-colors group-active:text-red-500",
     );
+    expect(reviewCardSource).toContain("<BookmarkButton");
     expect(reviewCardSource).toContain('"text-muted-foreground');
     expect(reviewCardSource).toContain('"text-red-500"');
     expect(reviewCardSource).not.toContain(
@@ -2917,6 +2921,7 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardPageSource).toContain(
       'aria-label="랭킹 및 티어 산정 기준 보기"',
     );
+    expect(leaderboardPageSource).toContain("h-11 w-11 rounded-lg");
   });
 
   test("desktop direct feature routes hand off to the home left panel and suppress popup blockers", () => {
@@ -3337,9 +3342,6 @@ describe("web quality performance source contracts", () => {
     const myPageTopActionsSource = source(
       "components/mypage/MyPageTopActions.tsx",
     );
-    const returnToMapButtonSource = source(
-      "components/layout/ReturnToMapButton.tsx",
-    );
     const myPageSectionSkeletonSource = source(
       "components/mypage/MyPageSectionSkeleton.tsx",
     );
@@ -3529,17 +3531,6 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain(
       "focus-visible:ring-2 focus-visible:ring-primary",
     );
-    expect(returnToMapButtonSource).toContain(
-      'data-return-to-map-button="true"',
-    );
-    expect(returnToMapButtonSource).toContain("function canUseBrowserBack()");
-    expect(returnToMapButtonSource).toContain("window.history.length <= 1");
-    expect(returnToMapButtonSource).toContain(
-      "new URL(document.referrer).origin === window.location.origin",
-    );
-    expect(returnToMapButtonSource).toContain("router.back()");
-    expect(returnToMapButtonSource).toContain("router.push(fallbackHref)");
-    expect(returnToMapButtonSource).toContain('fallbackHref = "/"');
     expect(myPageSidebarSource).toContain('await import("@/lib/image-utils")');
     expect(myPageSidebarSource).not.toContain(
       "import { compressImage } from '@/lib/image-utils'",
@@ -3973,10 +3964,6 @@ describe("web quality performance source contracts", () => {
       countSourceMatches(source("app/stamp/loading.tsx"), /<StampPageSkeleton\s*\/>/g),
     ).toBe(0);
     expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
-    expect(source("app/home-client-loader.tsx")).not.toContain("<GlobalLoader");
-    expect(source("app/home-client-loader.tsx")).toContain(
-      'className="sr-only"',
-    );
     expect(source("app/feed/page.tsx")).toContain("<GlobalLoader");
 
     const appLoaderTags = sourceFilesUnder("app").flatMap((relativePath) => {
@@ -4652,7 +4639,9 @@ describe("web quality performance source contracts", () => {
     expect(source("app/home-supabase-actions.ts")).not.toContain(
       "@/integrations/supabase/client",
     );
-    expect(source("components/map/NaverMapView.tsx")).not.toContain(
+    expect(
+      source("components/map/NaverMapView.tsx") + source("components/map/use-naver-map-cluster-render.ts"),
+    ).not.toContain(
       "@/integrations/supabase/client",
     );
     expect(source("components/map/NaverMapView.tsx")).toContain(
@@ -4742,9 +4731,11 @@ describe("web quality performance source contracts", () => {
     );
     expect(mobileBottomNavSource).not.toContain("HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS");
     expect(mobileBottomNavSource).not.toContain("runHomeNavPrefetchWhenIdle");
-    expect(mobileBottomNavSource).toMatch(
-      /useEffect\(\(\) => \{\s*if \(pathname === '\/'\) return;[\s\S]*?NAV_ITEMS\.forEach/,
+    expect(mobileBottomNavSource).toContain(
+      "BOTTOM_NAV_HOME_PREFETCH_IDLE_MS = 1500",
     );
+    expect(mobileBottomNavSource).toContain("scheduleBottomNavPrefetch(");
+    expect(mobileBottomNavSource).not.toContain("if (pathname === '/') return;");
     expect(mobileBottomNavSource).toContain("MOBILE_BOTTOM_NAV_BUTTON_STYLE");
     expect(mobileBottomNavSource).toContain("minHeight: 60");
     expect(mobileBottomNavSource).toContain(

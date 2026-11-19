@@ -26,7 +26,8 @@ describe("admin console dashboard overhaul source contract", () => {
       source.indexOf("function AdminDashboardOpsSummaryCard("),
     );
 
-    expect(source).toContain("lg:grid-rows-[auto_auto_auto] lg:content-start");
+    expect(source).toContain("lg:grid-rows-[auto_minmax(160px,1fr)_minmax(160px,1fr)]");
+    expect(source).not.toContain("lg:content-start");
     expect(source).not.toMatch(/(?:-?(?:m(?:t|b|l|r|x|y)?|p(?:t|b|l|r|x|y)?|gap(?:-x|-y)?|space-x|space-y))-(?:0\.5|1\.5|2\.5)\b/);
     expect(kpiCard).toContain("grid-rows-[auto_minmax(0,1fr)]");
     expect(kpiCard).toContain("truncate whitespace-nowrap text-xs");

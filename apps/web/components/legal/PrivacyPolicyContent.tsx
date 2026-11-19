@@ -2,7 +2,6 @@
 
 import { memo, useEffect, useState } from 'react';
 
-import { siteConfig } from '@/lib/site-config';
 import {
   OFFICIAL_PRIVACY_AUTHORITY_LINKS,
   parsePrivacyPolicyPublicationReadback,
@@ -132,7 +131,7 @@ const PrivacyPolicyContentComponent = () => (
 
         {section.id === 'rights-contact' ? (
           <div className="mt-3 rounded-md bg-muted p-3 text-muted-foreground">
-            <p>문의처: <HydratedContactEmail email={siteConfig.contact.email} /></p>
+            <p>문의처: <HydratedContactEmail /></p>
           </div>
         ) : null}
 

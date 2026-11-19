@@ -1,4 +1,4 @@
-import { isRecord } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import { isReviewAutomationCoverage, type ReviewAutomationCoverage } from './review-automation-coverage';
 
 export type ReviewRun = { id: string; started_at: string; scanned: number; approved: number; held: number; recheck: number; protected: number };

@@ -216,6 +216,16 @@ body:has([data-legal-page="true"]) {
   margin-top: 1.25rem;
 }
 
+[data-mobile-only-route="contents"] {
+  display: contents;
+}
+
+@media (min-width: 1280px) {
+  [data-mobile-only-route] {
+    display: none !important;
+  }
+}
+
 [data-centered-error-state="viewport"] a {
   display: inline-flex;
   align-items: center;

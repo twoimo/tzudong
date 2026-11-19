@@ -237,6 +237,19 @@ hash, because `pg_dump` output can differ without the schema differing and a gat
 fires on formatting gets switched off rather than fixed. Nightly run 43156573526
 passed the gate against the committed baseline.
 
+The object set leaves out the `realtime.messages_YYYY_MM_DD` partitions. The realtime
+service creates them for a window around the current date, so they depend on the day
+the stack started. A name is left out only when its date is ASCII digits and
+`pg_inherits` lists it as a partition of `realtime.messages`, so a plain table or a
+non-ASCII lookalike with the same shape is still checked. On 2026-11-16 the
+2026-11-12 baseline listed five of them, a fresh stack lacked three, and
+`local-stack.py start` failed with `baseline_provision`. `capture`, `check`, and
+`provision` read names through `object_names`, and the drift gate compares two
+captures, so all four leave the partitions out. The committed list
+drops from 260 to 255 names. `schema.sql` keeps the partition DDL that `pg_dump` wrote.
+A restore onto a bare PostgreSQL 17 cluster creates those five partitions and the gate
+ignores them. The platform-preserving restore skips the `realtime` schema.
+
 ### Why the first pin attempt failed
 
 Measured 2026-11-12, after reverting the attempt: `local-migrate.py` validates the whole

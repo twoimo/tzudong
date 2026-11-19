@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { EvaluationRecord } from '@/types/evaluation';
-import { normalizeEvaluationRecord, withAdminEvaluationDisplayName, isRecord } from './normalize-evaluation-record';
+import { normalizeEvaluationRecord, withAdminEvaluationDisplayName } from './normalize-evaluation-record';
+import { isRecord } from '@/lib/validation/records';
 import { filterEvaluationRecords, evaluationStats, type EvaluationQuery } from './evaluation-query';
 import { compareAdminEvaluationsByLatestDesc } from './evaluation-records';
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';

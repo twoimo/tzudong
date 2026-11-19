@@ -1,5 +1,5 @@
-import { isRecord } from './normalize-evaluation-record';
-import { PIPELINE_GAUGE_KEYS, type PipelineGaugeKey } from './pipeline-control';
+import { isRecord } from '@/lib/validation/records';
+import { isUuid, PIPELINE_GAUGE_KEYS, type PipelineGaugeKey } from './pipeline-control';
 import { parseGithubWorkflowState } from './operations-view-model';
 
 export const PIPELINE_FLOW_DOCUMENT = 'docs/architecture/admin-crawler-console-20261004.dataflow.json';
@@ -74,7 +74,7 @@ export function buildPipelineStages(manifest: PipelineManifestView | undefined) 
 }
 export type PipelineStageView = ReturnType<typeof buildPipelineStages>[number];
 export const PIPELINE_JOB_LABELS: Record<string, string> = { Queued: '대기', Fetching: '수집 중', Inserting: '저장 중', Paused: '일시 정지', Cancelled: '취소', Failed: '실패', Succeeded: '완료', Unknown: '미확인' };
-export type PipelineJobView = { id: string; target: string; profile: 'heavy_local' | 'lite_gha' | 'unknown'; status: string; dry_run?: boolean; adapter_index: number | null; hasError: boolean };
+export type PipelineJobView = { id: string; target: string; profile: 'heavy_local' | 'lite_gha' | 'unknown'; status: string; pending: 'pause' | 'cancel' | null; dry_run?: boolean; adapter_index: number | null; hasError: boolean };
 export type PipelineStatusView = { source: 'job_api' | 'github_actions' | 'unknown'; partial: boolean; jobs: PipelineJobView[]; failures: PipelineJobView[]; targets: Array<{ id: string; status: string }>; gauges: Partial<Record<PipelineGaugeKey, number>>; environment: string; hardware: string };
 
 export function parsePipelineStatus(value: unknown): PipelineStatusView {
@@ -85,7 +85,9 @@ export function parsePipelineStatus(value: unknown): PipelineStatusView {
     if (!isRecord(item) || !token(item.id) || !token(item.target)) { partial = true; return []; }
     const status = typeof item.status === 'string' && Object.hasOwn(PIPELINE_JOB_LABELS, item.status) ? item.status : 'Unknown';
     if (status === 'Unknown') partial = true;
-    return [{ id: item.id, target: item.target, profile: item.profile === 'heavy_local' || item.profile === 'lite_gha' ? item.profile : 'unknown', status, dry_run: typeof item.dry_run === 'boolean' ? item.dry_run : undefined, adapter_index: count(item.adapter_index) ? item.adapter_index : null, hasError: Boolean(item.error_code) } satisfies PipelineJobView];
+    const executing = source === 'job_api' && (status === 'Fetching' || status === 'Inserting');
+    const pending = !executing ? null : item.cancel_requested === true ? 'cancel' : item.pause_requested === true ? 'pause' : null;
+    return [{ id: item.id, target: item.target, profile: item.profile === 'heavy_local' || item.profile === 'lite_gha' ? item.profile : 'unknown', status, pending, dry_run: typeof item.dry_run === 'boolean' ? item.dry_run : undefined, adapter_index: count(item.adapter_index) ? item.adapter_index : null, hasError: Boolean(item.error_code) } satisfies PipelineJobView];
   });
   const jobs = parseJobs(value.jobs), failures = source === 'github_actions' ? [] : parseJobs(value.failures);
   const targets = value.targets.flatMap(item => {
@@ -117,7 +119,19 @@ export function pipelineDisplayIsReliable(snapshot: PipelineStatusView | undefin
   return Boolean(snapshot && !snapshot.partial && pipelineJobsForDisplay(snapshot, manifest).every(job => job.status !== 'Unknown'));
 }
 
-export function canControlPipelineJob(source: PipelineStatusView['source'] | undefined, job: PipelineJobView, action: 'pause' | 'resume' | 'cancel') {
-  const statuses = action === 'pause' ? ['Queued', 'Fetching', 'Inserting'] : action === 'resume' ? ['Paused'] : ['Queued', 'Fetching', 'Inserting', 'Paused'];
-  return source === 'job_api' && job.profile !== 'unknown' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(job.id) && statuses.includes(job.status);
+export type PipelineJobControl = { action: 'pause' | 'resume' | 'cancel'; label: string };
+export type PipelineJobRow = { label: string; note: string | null; controls: readonly PipelineJobControl[] };
+const PAUSE: PipelineJobControl = { action: 'pause', label: '일시 정지' }, CANCEL: PipelineJobControl = { action: 'cancel', label: '실행 취소' };
+const STATUS_CONTROLS: Record<string, readonly PipelineJobControl[]> = { Queued: [PAUSE, CANCEL], Fetching: [PAUSE, CANCEL], Inserting: [PAUSE, CANCEL], Paused: [{ action: 'resume', label: '다시 시작' }, CANCEL] };
+// The backend pauses or cancels a Fetching or Inserting run at its next step boundary, and a cancel wins over a pause.
+// Until then, resume withdraws a pause. Nothing withdraws a cancel.
+const PENDING_ROWS: Record<'pause' | 'cancel', PipelineJobRow> = {
+  pause: { label: '일시 정지 요청됨', note: '현재 단계가 끝나면 멈춥니다.', controls: [{ action: 'resume', label: '일시 정지 요청 취소' }, CANCEL] },
+  cancel: { label: '취소 요청됨', note: '현재 단계가 끝나면 취소됩니다.', controls: [] },
+};
+
+export function pipelineJobRow(source: PipelineStatusView['source'] | undefined, job: PipelineJobView): PipelineJobRow {
+  const row = job.pending ? PENDING_ROWS[job.pending] : { label: PIPELINE_JOB_LABELS[job.status], note: null, controls: STATUS_CONTROLS[job.status] ?? [] };
+  const controllable = source === 'job_api' && job.profile !== 'unknown' && isUuid(job.id);
+  return controllable ? row : { ...row, controls: [] };
 }
