@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 import { useCallback, useMemo } from "react";
 import type { Restaurant } from "@/types/restaurant";
 import { createCanonicalVisitedLookup } from "@/lib/restaurant-visit-matching";
@@ -385,11 +386,20 @@ export function useToggleBookmark() {
         },
     });
 
+    // 실패를 여기서 알리므로 호출부가 기다리지 않아도 처리되지 않은 거부가 남지 않습니다.
     const toggleBookmark = useCallback(async (restaurantId: string, isBookmarked: boolean) => {
-        if (isBookmarked) {
-            await removeBookmark.mutateAsync(restaurantId);
-        } else {
-            await addBookmark.mutateAsync(restaurantId);
+        try {
+            if (isBookmarked) {
+                await removeBookmark.mutateAsync(restaurantId);
+            } else {
+                await addBookmark.mutateAsync(restaurantId);
+            }
+        } catch {
+            toast({
+                title: isBookmarked ? '북마크를 해제하지 못했습니다' : '북마크를 저장하지 못했습니다',
+                description: '잠시 후 다시 시도해 주세요.',
+                variant: 'destructive',
+            });
         }
     }, [addBookmark, removeBookmark]);
 

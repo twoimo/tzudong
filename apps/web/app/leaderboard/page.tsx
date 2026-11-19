@@ -122,11 +122,10 @@ export default function LeaderboardPage() {
         }
     }, [isLoading, currentUser, leaderboardData]);
 
-    if (!isMounted) return null;
     if (typeof window !== 'undefined' && window.matchMedia(DESKTOP_MIN_WIDTH_QUERY).matches) return null;
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-hidden relative">
+        <div className="flex flex-col h-full bg-background overflow-hidden relative" data-mobile-only-route="true">
             <div
                 ref={scrollRef}
                 className="h-full overflow-y-auto"
@@ -140,7 +139,6 @@ export default function LeaderboardPage() {
                 <MapPanelHeader
                     variant="page"
                     titleAs="h1"
-                    eyebrow="리뷰로 쌓는 맛집 랭킹"
                     title="쯔동여지도 랭킹"
                     titleIcon={<Trophy />}
                     titleAddon={(
@@ -149,7 +147,7 @@ export default function LeaderboardPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0"
+                                                className="hidden xs:inline-flex h-11 w-11 rounded-lg hover:bg-muted shrink-0"
                                                 title="랭킹 및 티어 산정 기준 보기"
                                                 aria-label="랭킹 및 티어 산정 기준 보기"
                                             >
@@ -179,7 +177,7 @@ export default function LeaderboardPage() {
                                         </PopoverContent>
                                     </Popover>
                     )}
-                    description="맛집 리뷰를 작성하고 랭킹을 올려보세요!"
+                    description="맛집 리뷰를 작성하고 랭킹을 올려보세요"
                     actions={(
                             <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
                                 <TabsList className="h-8">

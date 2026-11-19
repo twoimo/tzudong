@@ -16,7 +16,7 @@ import {
 import { fillExtendedBounds, getExtendedBounds } from '../lib/naver-map-view-helpers';
 
 const rendererSource = readFileSync(
-    new URL('../components/map/NaverMapView.tsx', import.meta.url),
+    new URL('../components/map/use-naver-map-cluster-render.ts', import.meta.url),
     'utf8',
 );
 
@@ -29,8 +29,8 @@ function runRendererSource<T>(source: string, bindings: Record<string, unknown>)
 }
 
 const viewportHelperStart = rendererSource.indexOf('function getNaverMarkerViewportKey(');
-const viewportHelperEnd = rendererSource.indexOf('\nconst NaverMapAnnouncementRuntime', viewportHelperStart);
-if (viewportHelperStart < 0 || viewportHelperEnd < 0) throw new Error('NAVER_VIEWPORT_HELPER_ANCHOR_MISSING');
+const viewportHelperEnd = rendererSource.indexOf('\n}\n', viewportHelperStart) + 2;
+if (viewportHelperStart < 0 || viewportHelperEnd < 2) throw new Error('NAVER_VIEWPORT_HELPER_ANCHOR_MISSING');
 const getViewportKey = runRendererSource<(map: unknown, element: unknown) => string>(
     `${rendererSource.slice(viewportHelperStart, viewportHelperEnd)}\nreturn getNaverMarkerViewportKey;`,
     { fillExtendedBounds },
@@ -272,7 +272,7 @@ describe('expanded cluster flow invariants', () => {
                 activeVisibleMarkerReviewBubbles: {}, isMobileOrTablet: true,
                 wrapNaverMarkerContentWithReviewBubble: (content: string) => content,
                 createIndividualMarkerPosition: () => null, anchorForMarker: () => null,
-                handleMarkerRestaurantSelection: () => undefined,
+                onMarkerSelect: () => undefined,
                 markerPool: {
                     acquire: (id: string) => markerIds.add(id),
                     releaseExcept: (ids: Set<string>) => {

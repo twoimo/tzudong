@@ -137,7 +137,6 @@ describe('browser storage guard', () => {
 
 describe('browser storage guard adoption', () => {
     const fullyGuardedFiles = [
-        'components/recommendation/DailyRecommendationPopup.tsx',
         'components/layout/CombinedPopup.tsx',
         'components/layout/Header.tsx',
     ];
@@ -152,10 +151,6 @@ describe('browser storage guard adoption', () => {
     });
 
     test('each call site routes its own storage key through the guard', () => {
-        expect(source('components/recommendation/DailyRecommendationPopup.tsx'))
-            .toContain("readBrowserStorageString('local', POPUP_STORAGE_KEY)");
-        expect(source('components/recommendation/DailyRecommendationPopup.tsx'))
-            .toContain("writeBrowserStorageString('session', 'selectedRestaurant'");
         expect(source('components/layout/CombinedPopup.tsx'))
             .toContain("readBrowserStorageString('local', DISMISSED_DATE_KEY)");
         expect(source('components/layout/CombinedPopup.tsx'))

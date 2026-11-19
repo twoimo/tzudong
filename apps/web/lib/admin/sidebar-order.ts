@@ -1,3 +1,5 @@
+import { isRecord } from '@/lib/validation/records';
+
 export const ADMIN_SIDEBAR_SECTIONS = [
   "대시보드",
   "검수·데이터",
@@ -70,10 +72,6 @@ const legacyItemSection: Record<string, AdminSidebarSectionLabel> = {
   llm: "플랫폼 도구",
   audit: "플랫폼 도구",
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
 
 function normalizeSection(value: unknown): AdminSidebarSectionLabel | null {
   if (typeof value !== "string") return null;

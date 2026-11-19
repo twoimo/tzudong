@@ -19,6 +19,7 @@ import type {
   ThumbnailGeneratorPayload,
   ThumbnailReferenceRole,
 } from './types';
+import { isNonNullObject } from '@/lib/validation/records';
 
 export const THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID = LOCAL_BRIDGE_ROUTE_ID;
 export const THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL = LOCAL_BRIDGE_DEFAULT_URL;
@@ -82,10 +83,6 @@ export class ThumbnailLocalBridgeContractError extends LocalBridgeContractError 
 const thumbnailLocalBridgeError = (code: LocalBridgeContractErrorCode, message: string) => (
   new ThumbnailLocalBridgeContractError(code, message)
 );
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object';
-}
 
 export function normalizeThumbnailLocalBridgeUrl(value: unknown) {
   return normalizeLocalBridgeUrl(value, thumbnailLocalBridgeError);
@@ -153,15 +150,15 @@ export function buildThumbnailLocalBridgeImagesRequest(
 export function normalizeThumbnailLocalBridgeImagesResponse(
   value: unknown,
 ): ThumbnailLocalBridgeImagesResponse {
-  if (!isRecord(value)) {
+  if (!isNonNullObject(value)) {
     throw new ThumbnailLocalBridgeContractError(
       'untrusted_bridge_response',
       '로컬 브릿지가 JSON 객체를 반환하지 않았습니다.',
     );
   }
   const payload = value as Partial<ThumbnailLocalBridgeImagesResponse>;
-  const result = isRecord(payload.result) ? payload.result as ThumbnailGenerationResult : null;
-  const baseImage = result && isRecord(result.baseImage) ? result.baseImage : null;
+  const result = isNonNullObject(payload.result) ? payload.result as ThumbnailGenerationResult : null;
+  const baseImage = result && isNonNullObject(result.baseImage) ? result.baseImage : null;
   const hasExactLocalBridgeProvenance = Boolean(
     baseImage &&
     hasExactLocalBridgeImageGenerationProvenance(baseImage) &&

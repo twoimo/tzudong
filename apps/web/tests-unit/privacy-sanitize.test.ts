@@ -180,6 +180,10 @@ describe('privacy sanitizer', () => {
       source('components/modals/RestaurantSubmissionModal.tsx'),
       source('components/reviews/ReviewEditModal.tsx'),
       source('components/reviews/ReviewModal.tsx'),
+      source('components/reviews/receipt-step/use-receipt-step.ts'),
+      source('components/reviews/receipt-step/receipt-ocr.ts'),
+      source('components/reviews/receipt-step/ReceiptStep.tsx'),
+      source('components/reviews/review-photo-files.ts'),
     ];
 
     expect(authContextSource).toContain('DEBUG_LOG_EVENT.AUTH_PROFILE_LOOKUP_FAILED');

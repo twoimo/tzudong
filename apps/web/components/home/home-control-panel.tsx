@@ -67,6 +67,20 @@ const loadHomeDesktopControlPanel = async () => {
 
 type MobileControlOverlayProps = Omit<HomeControlPanelProps, 'viewportMode'>;
 
+/** The static home skeleton already holds the first paint. A titled menu here appears, then vanishes when the real controls mount. */
+export function MapMenuLoadShell({ failed, onRetry, className }: {
+    failed: boolean;
+    onRetry: () => void;
+    className: string;
+}) {
+    if (!failed) return null;
+    return (
+        <aside className={className}>
+            <DeferredPanelFallback title="지도 메뉴" failed onRetry={onRetry} />
+        </aside>
+    );
+}
+
 const loadMobileControlOverlay = async () => {
     markPaintCalibrationMilestone('mobileImplementationLoadStarted');
     const mod = await import('@/components/home/MobileControlOverlay');
@@ -196,12 +210,15 @@ function HomeControlPanelComponent({
 
     const DeferredMobileControlOverlay = mobileOverlayLoad.Component;
     const DeferredHomeDesktopControlPanel = desktopPanelLoad.Component;
-    const shellFallback = (load: { failed: boolean; retry: () => void }) => <aside
-        className={shouldRenderMobile
-            ? 'fixed left-4 right-4 top-4 z-40 max-h-[calc(100dvh-2rem)] overflow-auto rounded-2xl border border-border bg-background shadow-lg'
-            : `fixed bottom-4 top-4 z-40 w-[min(392px,calc(100vw-2rem))] overflow-auto rounded-2xl border border-border bg-background shadow-lg ${desktopPanelSide === 'right' ? 'right-4' : 'left-4'}`}>
-        <DeferredPanelFallback title="지도 메뉴" failed={load.failed} onRetry={load.retry} />
-    </aside>;
+    const shellFallback = (load: { failed: boolean; retry: () => void }) => (
+        <MapMenuLoadShell
+            failed={load.failed}
+            onRetry={load.retry}
+            className={shouldRenderMobile
+                ? 'fixed left-4 right-4 top-4 z-40 max-h-[calc(100dvh-2rem)] overflow-auto rounded-2xl border border-border bg-background shadow-lg'
+                : `fixed bottom-4 top-4 z-40 w-[min(392px,calc(100vw-2rem))] overflow-auto rounded-2xl border border-border bg-background shadow-lg ${desktopPanelSide === 'right' ? 'right-4' : 'left-4'}`}
+        />
+    );
     if (shouldRenderMobile) {
         if (!DeferredMobileControlOverlay) {
             return shellFallback(mobileOverlayLoad);

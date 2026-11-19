@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import hashlib
 import subprocess
+import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path, PurePosixPath
@@ -221,6 +222,42 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(
             result.stdout.strip(), "platform_modernization_reconciliation_current"
+        )
+
+    def test_stale_check_names_the_drifted_entry_and_the_regenerate_command(self) -> None:
+        document = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        worker = next(
+            entry for entry in document["entries"]
+            if entry["sourcePath"] == "backend/pipeline_control/worker.py"
+        )
+        worker["candidateGitBlobSha1"] = "0" * 40
+        with tempfile.TemporaryDirectory() as raw:
+            stale = Path(raw) / "manifest.json"
+            stale.write_text(
+                json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
+            result = subprocess.run(
+                [
+                    "python3",
+                    "backend/bin/build_platform_modernization_reconciliation.py",
+                    "--check",
+                    "--output",
+                    str(stale),
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+            )
+        lines = result.stdout.splitlines()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(lines[0], "platform_modernization_reconciliation_stale")
+        self.assertIn("  backend/pipeline_control/worker.py: candidateGitBlobSha1", lines)
+        self.assertTrue(
+            lines[-1].endswith(
+                "python3 backend/bin/build_platform_modernization_reconciliation.py"
+                f" --output {stale}"
+            ),
+            lines[-1],
         )
 
     def test_manifest_binds_candidate_content_without_a_commit_self_reference(self) -> None:

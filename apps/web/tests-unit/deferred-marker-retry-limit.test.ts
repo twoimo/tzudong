@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { Transpiler } from 'bun';
 import { readFileSync } from 'node:fs';
 
-const source = readFileSync(new URL('../components/map/NaverMapView.tsx', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../components/map/use-naver-map-cluster-render.ts', import.meta.url), 'utf8');
 const compile = (code: string, bindings: Record<string, unknown>) => {
     const js = new Transpiler({ loader: 'tsx' }).transformSync(`function run() { ${code} }`);
     return new Function(...Object.keys(bindings), `${js}\nreturn run();`)(...Object.values(bindings));

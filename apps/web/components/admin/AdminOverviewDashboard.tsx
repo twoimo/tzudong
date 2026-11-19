@@ -1297,7 +1297,7 @@ function AdminMapInfoPanel({
 
               <div className="absolute inset-x-0 bottom-0 bg-black/75 p-3 text-white">
                 <div className="min-w-0">
-                  <p className="text-2xs font-bold tracking-[0.14em] text-white/75">
+                  <p className="text-xs font-medium text-white/75">
                     선택한 마커
                   </p>
                   <h2
@@ -1332,7 +1332,7 @@ function AdminMapInfoPanel({
         ) : (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-2xs font-bold tracking-[0.12em] text-primary">
+              <p className="text-xs font-medium text-primary">
                 선택한 마커
               </p>
               <h2
@@ -1477,7 +1477,7 @@ function AdminMapInfoPanel({
           data-admin-route-readiness-panel="local-heuristic"
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-2xs font-bold tracking-[0.12em] text-primary">
+            <p className="text-xs font-medium text-primary">
               동선 준비도
             </p>
             <Badge

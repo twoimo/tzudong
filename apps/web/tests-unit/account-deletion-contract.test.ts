@@ -467,6 +467,37 @@ describe('G014 durable account deletion contract', () => {
     expect(response.status).toBe(202);
     expect(rpcCalls.map(({ name }) => name)).toEqual(['read_current_account_deletion_status']);
   });
+  test('resumes database cleanup after a committed apply start without consuming another proof', async () => {
+    resetAccountDeletionRouteSpies();
+    let statusReadbacks = 0;
+    rpcResult = (name) => {
+      if (name === 'read_current_account_deletion_status') {
+        statusReadbacks += 1;
+        return statusReadbacks === 1
+          ? { data: [applyingRow()], error: null }
+          : { data: [applyingRow({
+            reason_code: 'DB_READBACK_PASSED',
+            db_readback_passed: true,
+          })], error: null };
+      }
+      if (name === 'apply_account_deletion_database_cleanup') {
+        return { data: [databaseRow()], error: null };
+      }
+      throw new Error(`unexpected RPC ${name}`);
+    };
+
+    const response = await accountDeletionDelete(
+      accountDeletionRequest('DELETE', JSON.stringify(validApplyRequest())),
+    );
+
+    expect(response.status).toBe(202);
+    expect(rpcCalls.map(({ name }) => name)).toEqual([
+      'read_current_account_deletion_status',
+      'apply_account_deletion_database_cleanup',
+      'read_current_account_deletion_status',
+    ]);
+    expect(rpcCalls.some(({ name }) => name === 'begin_account_deletion_apply_with_reauth')).toBe(false);
+  });
   test('fails closed for different-key, later-phase, or malformed progressed replay readback', async () => {
     for (const replayRow of [
       applyingRow({
